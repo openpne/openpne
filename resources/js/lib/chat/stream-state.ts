@@ -320,13 +320,25 @@ export function mergeTouched<M extends ChatStreamRow>(
  * the aggregate the write answered with. See {@link applyReactionOutcome} for why the answer's own
  * counts are dropped. Update-only for the reason above, and unsorted because reacting moves nothing
  * in the keyset order.
+ *
+ * `versionAtSend` is the watermark the tap was sent under, and the move only applies while the
+ * watermark still stands there. Once it has moved, the poll owns the row — even the viewer's own
+ * flag: their other tab may have acted after this tap, and what the poll delivered is the server's
+ * later word on it. Skipping never loses the write itself: a poll whose watermark passed the
+ * write's version delivered its outcome in the same answer, and one that stopped short leaves the
+ * watermark below it, so the next asks.
  */
 export function applyReaction<M extends ChatStreamRow>(
     state: ChatStreamState<M>,
     id: number,
     emoji: string,
     op: ReactionOp,
+    versionAtSend?: number,
 ): ChatStreamState<M> {
+    if (state.reactionsVersion !== versionAtSend) {
+        return state;
+    }
+
     if (!state.messages.some((message) => message.id === id)) {
         return state;
     }

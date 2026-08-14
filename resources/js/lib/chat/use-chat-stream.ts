@@ -347,6 +347,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
      * and moved the watermark past it — would put back a count no later poll will correct. Whether
      * it landed is the caller's answer: the optimistic guess it is holding is settled either way.
      *
+     * The watermark at send rides along, and {@link applyReaction} drops the move if it is no
+     * longer the list's — the poll got there first, and what it delivered includes the server's
+     * later word on the viewer's own flag (their other tab may have moved it).
+     *
      * Not held to a generation, for the reason a deletion is not: a chip row is a fact about the
      * message rather than about the page it is on, and moving a row the list no longer holds is
      * already nothing.
@@ -356,6 +360,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
             if (reactions === undefined) {
                 throw new Error('this conversation has no reactions: no endpoints were declared');
             }
+
+            const versionAtSend = stateRef.current.reactionsVersion;
 
             const response = await fetch(op === 'add' ? reactions.add(id) : reactions.remove(id), {
                 method: 'POST',
@@ -371,7 +377,7 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
                 return false;
             }
 
-            setState((current) => applyReaction(current, id, emoji, op));
+            setState((current) => applyReaction(current, id, emoji, op, versionAtSend));
 
             return true;
         },

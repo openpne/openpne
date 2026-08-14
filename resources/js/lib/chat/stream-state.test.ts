@@ -519,10 +519,11 @@ test('a write moves one row and leaves a row it does not name alone', () => {
 });
 
 /**
- * Why the write is folded in as the move it made rather than as the row it answered with. The
- * answer describes the moment the server wrote; by the time a slow one lands the poll may have
- * delivered someone else's change and moved the watermark past it, so the answer's counts are
- * behind and nothing will ask for them again.
+ * Why the write is folded in as the move it made rather than as the row it answered with, and only
+ * while the watermark still stands where the tap left. The answer describes the moment the server
+ * wrote; by the time a slow one lands the poll may have delivered later changes — someone else's
+ * count, or the server's later word on the viewer's own flag from their other tab — and moved the
+ * watermark past them, so nothing would ever ask for a correction.
  */
 test('a write answered after the poll has moved the row on cannot take the row back', () => {
     const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
@@ -530,9 +531,31 @@ test('a write answered after the poll has moved the row on cannot take the row b
     // The poll gets there first, carrying both the viewer's own add and the one made after it.
     const polled = mergeTouched(state, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 2, true)] }], 9);
 
-    // …and the answer to the viewer's own tap arrives late, saying what was true at version 8.
-    const settled = applyReaction(polled, 1, '\u{1F44D}', 'add');
+    // …and the answer to the viewer's own tap, sent when the watermark stood at 7, arrives late.
+    const settled = applyReaction(polled, 1, '\u{1F44D}', 'add', 7);
 
     assert.deepEqual(chipsOf(settled, 1), [chip('\u{1F44D}', 2, true)]);
     assert.equal(settled.reactionsVersion, 9, 'and the watermark stays where the poll left it');
+});
+
+test('a late add cannot resurrect what the viewer took back from another tab', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+
+    // The other tab removed the emoji after this tab's add committed; the poll delivered the
+    // server's final word — the viewer no longer holds it.
+    const polled = mergeTouched(state, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 2, false)] }], 9);
+
+    const settled = applyReaction(polled, 1, '\u{1F44D}', 'add', 7);
+
+    assert.equal(settled, polled, 'the stale answer moves nothing, own flag included');
+});
+
+test('a late remove cannot take back what the viewer re-added from another tab', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+
+    const polled = mergeTouched(state, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 3, true)] }], 9);
+
+    const settled = applyReaction(polled, 1, '\u{1F44D}', 'remove', 7);
+
+    assert.equal(settled, polled, 'the stale answer moves nothing, own flag included');
 });
