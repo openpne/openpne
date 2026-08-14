@@ -99,9 +99,12 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         select(held.current.filter((_, i) => i !== index));
     };
 
+    // A picture is a message: the bar sends words, attachments, or both — it is only idle with neither.
+    const nothingToSend = body.trim() === '' && images.length === 0;
+
     const submit = async (event: FormEvent) => {
         event.preventDefault();
-        if (sending || body.trim() === '') {
+        if (sending || nothingToSend) {
             return;
         }
 
@@ -207,7 +210,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                         className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-[9px] leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>
-                <Button type="submit" size="icon" disabled={sending || body.trim() === ''} aria-busy={sending} aria-label={t('Send')} className="shrink-0">
+                <Button type="submit" size="icon" disabled={sending || nothingToSend} aria-busy={sending} aria-label={t('Send')} className="shrink-0">
                     {sending ? <Spinner size={5} /> : <SendHorizontal className="size-5" aria-hidden />}
                 </Button>
             </div>

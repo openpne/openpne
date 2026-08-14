@@ -4,8 +4,8 @@ namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\ConversationSummary;
 use App\Models\DirectMessage;
+use App\Support\ChatPreview;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
 
 /**
  * Modern surface shape for the conversation list. `counterpart` is null for the withdrawn bucket,
@@ -13,12 +13,6 @@ use Illuminate\Support\Str;
  */
 class ConversationListSerializer
 {
-    /**
-     * How much of a body travels. The row shows one line and clips it in CSS, so this is a payload
-     * bound, not the visible truncation. Nothing is appended: the ellipsis belongs to the clip.
-     */
-    private const PREVIEW_LIMIT = 140;
-
     /**
      * No author on the preview: the row's title already names the only other person in a 1:1
      * conversation, so an attribution line would only ever repeat it (or name the viewer).
@@ -57,19 +51,16 @@ class ConversationListSerializer
     }
 
     /**
-     * The line the row leads with: the message's body, or its subject when a mailbox message carries
-     * only one (a message written as chat has no subject, and an upgraded one may have no body).
+     * The line the row leads with: the message's body, its subject when a mailbox message carries
+     * only one (a message written as chat has no subject, and an upgraded one may have no body), and
+     * failing both a message with nothing but pictures saying so. ConversationList supplies
+     * `files_exists`.
      */
     private static function preview(DirectMessage $latest): string
     {
-        $body = self::oneLine((string) $latest->body);
-
-        return $body === '' ? self::oneLine((string) $latest->subject) : $body;
-    }
-
-    /** One line: every run of whitespace becomes a single space, so a multi-line body cannot grow the row. */
-    private static function oneLine(string $text): string
-    {
-        return Str::limit(trim(preg_replace('/\s+/u', ' ', $text) ?? $text), self::PREVIEW_LIMIT, '');
+        return ChatPreview::lineOrImages(
+            [(string) $latest->body, (string) $latest->subject],
+            (bool) $latest->files_exists,
+        );
     }
 }

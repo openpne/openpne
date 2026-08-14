@@ -3,9 +3,12 @@
 namespace Tests\Feature\DirectMessage\Conversation;
 
 use App\Models\DirectMessage;
+use App\Models\DirectMessageFile;
 use App\Models\Member;
 use App\Support\Feature;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 
 /** The `/messages` screen: the conversations, and the drafts box carried under them. */
 class ConversationListScreenTest extends ConversationTestCase
@@ -70,6 +73,49 @@ class ConversationListScreenTest extends ConversationTestCase
 
         $this->actingAs($viewer)->get('/messages')
             ->assertInertia(fn ($page) => $page->where('conversations.data.0.latest.body', 'Only a subject'));
+    }
+
+    /** Last in the order: a message with neither words nor a subject is one with nothing but pictures. */
+    public function test_the_preview_falls_back_to_a_picture(): void
+    {
+        Notification::fake();
+        [$viewer, $other] = Member::factory()->count(2)->create();
+
+        $this->actingAs($other)
+            ->post("/messages/{$viewer->getKey()}", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
+            ->assertCreated();
+
+        $this->actingAs($viewer)->get('/messages')
+            ->assertInertia(fn ($page) => $page->where('conversations.data.0.latest.body', __('Image')));
+    }
+
+    /** The subject outranks the stand-in: a mailbox message that carries one has words of its own. */
+    public function test_a_subject_outranks_the_picture_stand_in(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $message = $this->at($other, $viewer, '2026-08-14 09:00:00', ['subject' => 'Holiday photos', 'body' => '']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $message->getKey()]);
+
+        $this->actingAs($viewer)->get('/messages')
+            ->assertInertia(fn ($page) => $page->where('conversations.data.0.latest.body', 'Holiday photos'));
+    }
+
+    /**
+     * "0" is a message, and so is a subject of "0". Each step down the body → subject → picture order
+     * tests emptiness strictly, not PHP's truthiness, or a member's own words would read as a picture.
+     */
+    public function test_a_body_or_subject_of_zero_is_previewed_as_itself(): void
+    {
+        [$viewer, $other, $third] = Member::factory()->count(3)->create();
+        $body = $this->at($other, $viewer, '2026-08-14 09:00:00', ['body' => '0']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $body->getKey()]);
+        $subject = $this->at($third, $viewer, '2026-08-14 08:00:00', ['subject' => '0', 'body' => '']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $subject->getKey()]);
+
+        $this->actingAs($viewer)->get('/messages')
+            ->assertInertia(fn ($page) => $page
+                ->where('conversations.data.0.latest.body', '0')
+                ->where('conversations.data.1.latest.body', '0'));
     }
 
     public function test_drafts_ride_under_the_list(): void

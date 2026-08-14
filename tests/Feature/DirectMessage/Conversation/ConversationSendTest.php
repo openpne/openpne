@@ -71,7 +71,8 @@ class ConversationSendTest extends ConversationTestCase
         $this->assertFalse($written['read']);
     }
 
-    public function test_an_empty_body_is_rejected(): void
+    /** Nothing to say and nothing to show: the one thing the bar cannot send. */
+    public function test_an_empty_body_with_no_picture_is_rejected(): void
     {
         [$viewer, $counterpart] = Member::factory()->count(2)->create();
 
@@ -80,6 +81,65 @@ class ConversationSendTest extends ConversationTestCase
             ->assertJsonValidationErrorFor('body');
 
         $this->assertDatabaseCount('direct_messages', 0);
+    }
+
+    /** The body is what the attachment stands in for; it is stored empty, not null. */
+    public function test_a_message_can_be_pictures_alone(): void
+    {
+        Notification::fake();
+        [$viewer, $counterpart] = Member::factory()->count(2)->create();
+
+        $id = $this->actingAs($viewer)
+            ->post("/messages/{$counterpart->getKey()}", ['images' => [$this->upload()]])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame('', DirectMessage::findOrFail($id)->body);
+        $this->assertDatabaseHas('direct_message_files', ['direct_message_id' => $id, 'number' => 1]);
+    }
+
+    /** TrimStrings then ConvertEmptyStringsToNull, so a bar of spaces reaches the write as the empty body it is. */
+    public function test_a_body_of_only_whitespace_is_the_same_as_none(): void
+    {
+        Notification::fake();
+        [$viewer, $counterpart] = Member::factory()->count(2)->create();
+
+        $id = $this->actingAs($viewer)
+            ->post("/messages/{$counterpart->getKey()}", ['body' => "   \n  ", 'images' => [$this->upload()]])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame('', DirectMessage::findOrFail($id)->body);
+    }
+
+    /**
+     * The empty body is normalized back to a string for the write; a body that is not a string is
+     * left for the `string` rule to refuse, so an attachment cannot carry one past validation.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    #[DataProvider('bodiesThatAreNotStrings')]
+    public function test_a_body_of_the_wrong_type_is_refused(array $payload): void
+    {
+        [$viewer, $counterpart] = Member::factory()->count(2)->create();
+
+        $response = $this->actingAs($viewer)
+            ->postJson("/messages/{$counterpart->getKey()}", $payload)
+            ->assertJsonValidationErrorFor('body');
+
+        // The type rule, not "say something": a value of the wrong shape is present, and coercing it
+        // to a string would send it as words the member never wrote.
+        $this->assertNotSame(__('Enter a message or attach an image.'), $response->json('errors.body.0'));
+        $this->assertDatabaseCount('direct_messages', 0);
+    }
+
+    /** @return array<string, array{array<string, mixed>}> */
+    public static function bodiesThatAreNotStrings(): array
+    {
+        return [
+            'a number' => [['body' => 123]],
+            'an array' => [['body' => ['nope']]],
+        ];
     }
 
     public function test_a_body_of_exactly_the_cap_is_accepted_and_one_point_over_is_not(): void

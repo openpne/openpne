@@ -15,8 +15,10 @@ use App\Support\SnsSettingKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /**
@@ -372,6 +374,119 @@ class TalkImageTest extends TalkTestCase
 
         $this->actingAs($author)->get($url)->assertOk();
         $this->actingAs(Member::factory()->create())->get($url)->assertNotFound();
+    }
+
+    // --- a picture is a message ---
+
+    /** The body is what the attachment stands in for; it is stored empty, not null. */
+    public function test_a_message_can_be_pictures_alone(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['images' => [$this->upload()]])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame('', GroupMessage::findOrFail($id)->body);
+        $this->assertDatabaseHas('group_message_images', ['group_message_id' => $id, 'number' => 1]);
+    }
+
+    /** TrimStrings then ConvertEmptyStringsToNull, so a bar of spaces reaches the write as the empty body it is. */
+    public function test_a_body_of_only_whitespace_is_the_same_as_none(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => "   \n  ", 'images' => [$this->upload()]])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame('', GroupMessage::findOrFail($id)->body);
+    }
+
+    /** The other arm of required_without_all: a pre-deploy tab sends `image`, and it excuses the body too. */
+    public function test_the_legacy_single_image_wire_also_stands_in_for_a_body(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['image' => $this->upload()])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame('', GroupMessage::findOrFail($id)->body);
+        $this->assertDatabaseHas('group_message_images', ['group_message_id' => $id, 'number' => 1]);
+    }
+
+    public function test_a_message_with_neither_words_nor_pictures_is_refused(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $this->actingAs($author)
+            ->postJson("/groups/{$group->getKey()}/talk", [])
+            ->assertJsonValidationErrorFor('body');
+
+        $this->assertDatabaseCount('group_messages', 0);
+    }
+
+    /**
+     * The empty body is normalized back to a string for the write; a body that is not a string is
+     * left for the `string` rule to refuse, so an attachment cannot carry one past validation.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    #[DataProvider('bodiesThatAreNotStrings')]
+    public function test_a_body_of_the_wrong_type_is_refused(array $payload): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $response = $this->actingAs($author)
+            ->postJson("/groups/{$group->getKey()}/talk", $payload)
+            ->assertJsonValidationErrorFor('body');
+
+        // The type rule, not "say something": a value of the wrong shape is present, and coercing it
+        // to a string would post it as words the member never wrote.
+        $this->assertNotSame(__('Enter a message or attach an image.'), $response->json('errors.body.0'));
+        $this->assertDatabaseCount('group_messages', 0);
+    }
+
+    /** @return array<string, array{array<string, mixed>}> */
+    public static function bodiesThatAreNotStrings(): array
+    {
+        return [
+            'a number' => [['body' => 123]],
+            'an array' => [['body' => ['nope']]],
+        ];
+    }
+
+    /**
+     * A picture-only message has no text for a range to describe, so a forged one resolves to
+     * nothing — the row is dropped and nobody is told about a mention that was never written.
+     */
+    public function test_a_forged_mention_on_a_picture_only_message_stores_and_notifies_nothing(): void
+    {
+        Notification::fake();
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $target = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", [
+                'mentions' => [['member_id' => $target->getKey(), 'offset' => 0, 'length' => 4]],
+                'images' => [$this->upload()],
+            ])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertDatabaseCount('group_message_mentions', 0);
+        $this->assertSame('', GroupMessage::findOrFail($id)->body);
+        Notification::assertNothingSent();
     }
 
     // --- validation ---

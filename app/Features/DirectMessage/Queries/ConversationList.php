@@ -170,10 +170,12 @@ class ConversationList
             ? new Collection
             : Member::query()->whereIn('id', $memberIds)->with('avatar.file')->get()->keyBy('id');
 
+        // Whether there are pictures, not how many: the preview's stand-in for a message with no
+        // words never counts them (App\Support\ChatPreview).
         $messageIds = $rows->pluck('latest_id')->map(static fn ($id): int => (int) $id)->all();
         $messages = $messageIds === []
             ? new Collection
-            : DirectMessage::query()->whereIn('id', $messageIds)->get()->keyBy('id');
+            : DirectMessage::query()->whereIn('id', $messageIds)->withExists('files')->get()->keyBy('id');
 
         return $rows->map(fn (object $row): ConversationSummary => new ConversationSummary(
             counterpart: $row->counterpart_id === null ? null : $members[(int) $row->counterpart_id],

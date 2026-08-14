@@ -3,8 +3,8 @@
 namespace App\Features\GroupTalk\Serializers;
 
 use App\Features\GroupTalk\TalkRoom;
+use App\Support\ChatPreview;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
 
 /**
  * Modern surface shape for the room list. `id` is the group's — the row opens its talk, and the
@@ -13,13 +13,6 @@ use Illuminate\Support\Str;
  */
 class TalkRoomSerializer
 {
-    /**
-     * How much of a body travels. The row shows one line and clips it in CSS, so this is a payload
-     * bound, not the visible truncation — twenty 5,000-code-point bodies per page is what it exists
-     * to stop. Nothing is appended: the ellipsis belongs to the clip.
-     */
-    private const PREVIEW_LIMIT = 140;
-
     /**
      * @return array{id: int, name: string, imageUrl: string|null, unread: int, muted: bool, latest: array{body: string, authorName: string|null, createdAt: string}|null}
      */
@@ -34,7 +27,9 @@ class TalkRoomSerializer
             'unread' => $room->unread,
             'muted' => $room->muted,
             'latest' => $latest === null ? null : [
-                'body' => self::preview($latest->body),
+                // A message with nothing but pictures says so, rather than leaving the row's
+                // "author: " trailing into nothing. JoinedTalkRooms supplies `images_exists`.
+                'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->images_exists),
                 'authorName' => $latest->author?->name,
                 'createdAt' => $latest->created_at->toIso8601String(),
             ],
@@ -56,11 +51,5 @@ class TalkRoomSerializer
                 'total' => $paginator->total(),
             ],
         ];
-    }
-
-    /** One line: every run of whitespace becomes a single space, so a multi-line body cannot grow the row. */
-    private static function preview(string $body): string
-    {
-        return Str::limit(trim(preg_replace('/\s+/u', ' ', $body) ?? $body), self::PREVIEW_LIMIT, '');
     }
 }
