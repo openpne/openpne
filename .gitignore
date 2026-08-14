@@ -30,3 +30,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Agent tooling state must never land in the repo (personal environment, not project code).
+.claude/
+.mcp.json

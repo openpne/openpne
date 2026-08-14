@@ -2,6 +2,7 @@
 
 namespace App\Features\DirectMessage;
 
+use App\Features\DirectMessage\Actions\DeleteConversation;
 use App\Features\DirectMessage\Actions\MarkConversationRead;
 use App\Features\DirectMessage\Actions\SendDirectMessage;
 use App\Features\DirectMessage\Exceptions\DirectMessageActionException;
@@ -9,6 +10,7 @@ use App\Features\DirectMessage\Queries\ConversationList;
 use App\Features\DirectMessage\Queries\ConversationMessages;
 use App\Features\DirectMessage\Queries\ConversationUnreadSnapshot;
 use App\Features\DirectMessage\Queries\ListDirectMessages;
+use App\Features\DirectMessage\Queries\RecipientCandidates;
 use App\Features\DirectMessage\Serializers\ConversationListSerializer;
 use App\Features\DirectMessage\Serializers\ConversationMessageSerializer;
 use App\Features\DirectMessage\Serializers\DirectMessageSerializer;
@@ -18,6 +20,7 @@ use App\Http\Requests\DirectMessage\StoreChatMessageRequest;
 use App\Models\DirectMessage;
 use App\Models\Member;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -55,6 +58,27 @@ class ConversationController extends Controller
             'drafts' => DirectMessageSerializer::paginator(
                 $drafts($viewer, DirectMessageBox::Draft, pageName: self::DRAFT_PAGE),
             ),
+        ]);
+    }
+
+    /**
+     * Who to write to, chosen before there is a conversation to write in. A screen rather than a
+     * dialog: it is the hub's primary action, and on a phone it is the whole sheet.
+     */
+    public function new(): InertiaResponse
+    {
+        return Inertia::render('message/new');
+    }
+
+    /** What the picker's search reads (JSON), on the keystroke-rate limiter the mention pickers use. */
+    public function recipients(Request $request, RecipientCandidates $query): JsonResponse
+    {
+        $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+
+        $candidates = $query($this->viewer(), $request->string('q')->value());
+
+        return response()->json([
+            'candidates' => array_map([DirectMessageSerializer::class, 'memberRef'], $candidates->all()),
         ]);
     }
 
@@ -123,6 +147,20 @@ class ConversationController extends Controller
     }
 
     /**
+     * Take this conversation off the viewer's screens. Never a 404 for an empty one: the member asked
+     * for it to be gone, and it is.
+     */
+    public function delete(Member $member, DeleteConversation $action): RedirectResponse
+    {
+        return $this->deleteConversation($this->counterpart($member), $action);
+    }
+
+    public function deleteWithdrawn(DeleteConversation $action): RedirectResponse
+    {
+        return $this->deleteConversation(null, $action);
+    }
+
+    /**
      * One page either side of a cursor the client was handed: `after` for the poll, `before` for
      * "load older", `context` for the page a position sits in. A cursor that does not parse is simply
      * no cursor — pagination is a position, not a permission, and the conversation's own predicate
@@ -171,6 +209,15 @@ class ConversationController extends Controller
             // a link names a message, the boundary names what has not been read.
             'unreadSnapshot' => ConversationMessageSerializer::unreadSnapshot($unread($viewer, $counterpart)),
         ]);
+    }
+
+    private function deleteConversation(?Member $counterpart, DeleteConversation $action): RedirectResponse
+    {
+        $action($this->viewer(), $counterpart);
+
+        // The list, not the room that was just emptied: what the delete left behind is a screen with
+        // nothing on it.
+        return redirect()->route('message.chat.index')->with('status', __('Deleted the conversation.'));
     }
 
     private function markRead(MarkConversationReadRequest $request, ?Member $counterpart, MarkConversationRead $action): Response

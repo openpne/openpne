@@ -862,11 +862,17 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // are, redirecting here for a Modern viewer.
     Route::prefix('messages')->middleware(EnsureFeatureEnabled::class.':directMessage')->controller(ConversationController::class)->group(function () {
         Route::get('/', 'index')->name('message.chat.index');
-        // Declared before {member} so the literal is never read as a member id. Everyone whose
-        // account is gone shares one conversation: a withdrawn member leaves no id to key one by.
+        // Every literal is declared before {member} so none is ever read as a member id. The picker
+        // is where a conversation with nothing in it yet is opened from, and its search rides the
+        // keystroke-rate limiter the mention pickers use.
+        Route::get('/new', 'new')->name('message.chat.new');
+        Route::get('/recipients', 'recipients')->middleware('throttle:mention-search')->name('message.chat.recipients');
+        // Everyone whose account is gone shares one conversation: a withdrawn member leaves no id to
+        // key one by.
         Route::get('/withdrawn', 'showWithdrawn')->name('message.chat.withdrawn');
         Route::get('/withdrawn/messages', 'withdrawnMessages')->name('message.chat.withdrawn.messages');
         Route::post('/withdrawn/read', 'readWithdrawn')->name('message.chat.withdrawn.read');
+        Route::post('/withdrawn/delete', 'deleteWithdrawn')->name('message.chat.withdrawn.delete');
         Route::get('/{member}', 'show')->whereNumber('member')->name('message.chat.show');
         Route::get('/{member}/messages', 'messages')->whereNumber('member')->name('message.chat.messages');
         // The same per-member limit the mailbox's compose carries: one member's sending budget, not
@@ -875,6 +881,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // The reader's own state, so it is not throttled as posting: reading is what opening the
         // screen does.
         Route::post('/{member}/read', 'read')->whereNumber('member')->name('message.chat.read');
+        // Per-side and never a retraction, so it is the viewer's own state too rather than a write
+        // anyone else sees (DeleteConversation).
+        Route::post('/{member}/delete', 'delete')->whereNumber('member')->name('message.chat.delete');
     });
 });
 

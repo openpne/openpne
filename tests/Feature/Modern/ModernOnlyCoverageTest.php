@@ -54,6 +54,7 @@ class ModernOnlyCoverageTest extends TestCase
         'unread.counts',
         'timeline.mention_candidates',
         'group.talk.mention_candidates',
+        'message.chat.recipients',
         'message.chat.withdrawn.messages',
     ];
 
@@ -95,7 +96,7 @@ class ModernOnlyCoverageTest extends TestCase
         'member.config.mfa.edit', 'member.config.notifications.edit',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent',
-        'message.chat.index', 'message.chat.withdrawn',
+        'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.invite',
         'notifications.index',
     ];
@@ -147,6 +148,7 @@ class ModernOnlyCoverageTest extends TestCase
             'community create form' => ['/groups/edit'],
             'invite' => ['/invite'],
             'conversation list' => ['/messages'],
+            'new message picker' => ['/messages/new'],
             // The mailbox boxes: each redirects into the conversation list, which is what renders.
             'message index' => ['/message'],
             'message index alias' => ['/message/index'],
