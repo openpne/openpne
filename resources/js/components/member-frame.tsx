@@ -33,9 +33,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
     return (
         <main
             className={cn(
-                // 12px below sm only, under the 16 that iOS/Material call standard: the frame is the
-                // outermost of three paddings on the same line (frame → card body → field box), so it
-                // gives up 4px to leave the inner two roomy. The strip of page background it still shows
+                // 12px below sm only: the frame is the outermost of three paddings on the same line
+                // (frame → card body → field box), so it gives up 4px of the usual 16 to leave the
+                // inner two roomy. The strip of page background it still shows
                 // is what keeps a card reading as a surface on the page rather than as the page itself.
                 // From sm up it restores 16 — the width is only scarce on a phone, and `max-w` is
                 // border-box, so changing it there would widen every content column too.
