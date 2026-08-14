@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     bottomNavSections,
+    chromeRecedes,
+    hasBottomNav,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
@@ -242,6 +244,41 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'message/edit': {},
 };
 
+/**
+ * Every screen the registry classifies as a conversation — a room someone stays in, reading and
+ * writing in the same place. Enumerated for the same reason the two sets above are: below lg these
+ * lose the bottom bar and stop receding, so joining or leaving the set is a UX decision. The direct
+ * message re-skin is the next entry.
+ */
+const CONVERSATION_SCREENS: Record<string, Record<string, unknown>> = {
+    'group/talk/index': { group: cyclists },
+};
+
+test('a conversation drops the bottom bar and keeps its chrome still', () => {
+    for (const [component, props] of Object.entries(CONVERSATION_SCREENS)) {
+        const room = chrome(component, props);
+
+        assert.equal(room.conversation, true, component);
+        assert.equal(hasBottomNav(room), false, component);
+        assert.equal(chromeRecedes(room), false, component);
+        // Not a sheet: the bar keeps the back control and the room it names, and nothing floats over
+        // a composer that is already on screen.
+        assert.ok(!room.compose, component);
+        assert.ok(!room.form, component);
+        assert.notEqual(room.scope, undefined, component);
+        assert.equal(room.action, undefined, component);
+    }
+});
+
+test('an ordinary page keeps the bottom bar and lets its chrome recede', () => {
+    for (const component of ['dashboard', 'notifications/index', 'community/show', 'group/topic/index']) {
+        const page = chrome(component, { group: cyclists, canPost: true });
+
+        assert.equal(hasBottomNav(page), true, component);
+        assert.equal(chromeRecedes(page), true, component);
+    }
+});
+
 test('a compose screen is a form with no floating action', () => {
     for (const [component, props] of Object.entries(COMPOSE_SCREENS)) {
         const sheet = chrome(component, props);
@@ -249,6 +286,7 @@ test('a compose screen is a form with no floating action', () => {
         assert.equal(sheet.compose, true, component);
         assert.equal(sheet.form, true, component);
         // The sheet has no bottom bar to float above, and its actions live in the sheet header.
+        assert.equal(hasBottomNav(sheet), false, component);
         assert.equal(sheet.action, undefined, component);
     }
 });

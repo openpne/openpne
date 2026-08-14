@@ -203,7 +203,7 @@ export function TalkComposer({
                         placeholder={t('Message :name', { name: groupName })}
                         rows={1}
                         autoGrow
-                        // The bar stands at the viewport's foot: below it there is only the bottom nav.
+                        // The bar stands at the foot of the screen, with nothing under it to open into.
                         popup="above"
                         value={body}
                         onChange={setBody}

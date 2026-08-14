@@ -97,6 +97,28 @@ export interface Chrome {
      * cold-load fallback and the desktop breadcrumb.
      */
     compose?: boolean;
+    /**
+     * A screen where reading and writing sit together and the member stays: a conversation. Below lg
+     * it draws no bottom bar and its chrome does not recede, so the composer stands at the true foot
+     * of the screen — a bar that slid away under it would open a gap for the next message to show
+     * through. Its bar keeps the back control and the scope identity: this is somewhere you go into,
+     * not a sheet you close (←, not ✖).
+     */
+    conversation?: boolean;
+}
+
+/**
+ * Whether the phone's bottom tab bar stands under this page. The shell renders the bar and reserves
+ * its space (`--modern-bottom-offset`) from this one answer, so what is drawn and what is left clear
+ * for it cannot disagree.
+ */
+export function hasBottomNav(chrome: Chrome): boolean {
+    return !chrome.compose && !chrome.conversation;
+}
+
+/** Whether the mobile chrome recedes as the reader scrolls — see `form` and `conversation`. */
+export function chromeRecedes(chrome: Chrome): boolean {
+    return !chrome.form && !chrome.conversation;
 }
 
 export interface NavSection {
@@ -426,6 +448,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             title: t('Talk'),
             context: communityContext(group),
             scope: communityScope(group),
+            conversation: true,
         };
     },
     'group/topic/show': (props) => {
