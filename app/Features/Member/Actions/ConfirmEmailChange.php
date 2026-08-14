@@ -43,9 +43,9 @@ class ConfirmEmailChange
                 'remember_token' => Str::random(60),
             ])->save();
 
-            // 失効契約 (b): the registered address is the proof channel an admin-issued MFA reset link is
-            // sent to, so changing it voids any pending reset — same compensating-control shape as a
-            // password change voiding a pending email change. Member is locked above; the
+            // Invalidation contract (b): the registered address is the proof channel an admin-issued MFA
+            // reset link is sent to, so changing it voids any pending reset — same compensating-control
+            // shape as a password change voiding a pending email change. Member is locked above; the
             // global Member → mfa_reset_requests order holds.
             MfaResetRequest::where('member_id', $member->getKey())->delete();
 

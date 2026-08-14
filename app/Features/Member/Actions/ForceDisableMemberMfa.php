@@ -20,11 +20,11 @@ use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
  * session and REQUIRES the second-factor proof (fail-closed) precisely because a proof is available;
  * this one exists for the two contexts where it is not. Their contracts must not be merged.
  *
- * 失効契約 (a): removing the factor also drops any pending reset link. The link proves the factor that
- * existed when it was issued; without this, a "send → disable → re-enable within the TTL" sequence
- * would leave the old link live against the new factor. Global lock order is Member → mfa_reset_requests
- * (this locks the Member row, then deletes the reset row), so a concurrent {@see ConsumeMfaReset} — which
- * locks Member first too — cannot deadlock against it.
+ * Invalidation contract (a): removing the factor also drops any pending reset link. The link proves
+ * the factor that existed when it was issued; without this, a "send → disable → re-enable within the
+ * TTL" sequence would leave the old link live against the new factor. Global lock order is
+ * Member → mfa_reset_requests (this locks the Member row, then deletes the reset row), so a concurrent
+ * {@see ConsumeMfaReset} — which locks Member first too — cannot deadlock against it.
  */
 class ForceDisableMemberMfa
 {

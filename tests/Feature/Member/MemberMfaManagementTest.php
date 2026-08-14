@@ -346,8 +346,9 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_step_up_disable_drops_a_pending_admin_reset_link(): void
     {
-        // 失効契約 (a): the member's own step-up disable drops any pending admin-issued reset link, so a
-        // "send → self-disable → re-enable within the TTL" sequence cannot leave the old link live.
+        // Invalidation contract (a): the member's own step-up disable drops any pending admin-issued
+        // reset link, so a "send → self-disable → re-enable within the TTL" sequence cannot leave the
+        // old link live.
         $member = $this->memberWithTwoFactor();
         MfaResetRequest::create([
             'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
@@ -411,8 +412,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_regenerating_codes_drops_a_pending_admin_reset_link(): void
     {
-        // 失効契約: regenerating proves current authenticator possession, so an outstanding admin-issued
-        // lost-factor reset link is moot — the regenerate transaction drops it.
+        // Invalidation contract: regenerating proves current authenticator possession, so an outstanding
+        // admin-issued lost-factor reset link is moot — the regenerate transaction drops it.
         $member = $this->memberWithTwoFactor();
         MfaResetRequest::create([
             'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
