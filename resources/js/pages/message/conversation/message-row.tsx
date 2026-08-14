@@ -19,6 +19,11 @@ import type { ConversationMessage } from './types';
 export function ConversationMessageRow({ message, highlighted = false }: { message: ConversationMessage; highlighted?: boolean }) {
     const t = useT();
     const author = message.author;
+    // Trimmed rather than compared to '': an upgraded body may be whitespace.
+    const hasBody = message.body.trim() !== '';
+    // What the pictures sit under. A chat message with neither is the one that closes the gap; a
+    // mailbox row showing only its subject keeps the rhythm it has always had.
+    const hasTextAbove = hasBody || Boolean(message.subject);
 
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
@@ -62,10 +67,14 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
                     {message.subject}
                 </Heading>
             )}
-            <p className="mt-1 whitespace-pre-wrap break-words">
-                <UserText text={message.body} />
-            </p>
-            <ImageGrid images={message.images} variant="boxed" className="mt-2" />
+            {/* A message may be nothing but pictures, and an empty paragraph would leave its height
+                behind. */}
+            {hasBody && (
+                <p className="mt-1 whitespace-pre-wrap break-words">
+                    <UserText text={message.body} />
+                </p>
+            )}
+            <ImageGrid images={message.images} variant="boxed" className={hasTextAbove ? 'mt-2' : 'mt-1'} />
         </li>
     );
 }

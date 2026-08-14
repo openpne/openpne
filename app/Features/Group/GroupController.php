@@ -38,6 +38,7 @@ use App\Http\Requests\Group\GroupRequest;
 use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\Member;
+use App\Support\ChatPreview;
 use App\Support\Feature;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
@@ -145,7 +146,9 @@ class GroupController extends Controller
                 // The talk card: one line of the newest message, so the group page says what is
                 // being talked about rather than only that talk exists.
                 'talkPreview' => $talkPreview === null ? null : [
-                    'body' => $talkPreview->body,
+                    // The room list's own line, so the card and the list read the same — including
+                    // the stand-in a message with nothing but pictures leads with.
+                    'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->images_exists),
                     'authorName' => $talkPreview->author?->name,
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ],

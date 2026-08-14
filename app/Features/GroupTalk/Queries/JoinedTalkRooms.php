@@ -106,10 +106,13 @@ class JoinedTalkRooms
     {
         // The bodies for this page in one statement: the ordering already named the exact rows, so
         // this is a lookup by primary key rather than a "newest message" query per room.
+        //
+        // Whether there are pictures, not how many: the preview's stand-in for a message with no
+        // words never counts them (App\Support\ChatPreview).
         $ids = $groups->pluck('latest_message_id')->filter()->values()->all();
         $messages = $ids === []
             ? new Collection
-            : GroupMessage::query()->whereIn('id', $ids)->with('author')->get()->keyBy('id');
+            : GroupMessage::query()->whereIn('id', $ids)->with('author')->withExists('images')->get()->keyBy('id');
 
         return $groups->map(fn (Group $group): TalkRoom => new TalkRoom(
             group: $group,

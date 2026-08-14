@@ -18,18 +18,32 @@ class StoreGroupMessageRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // Before the length check, so a CRLF body is not measured a line-break longer than the one
-        // the member typed — and so a stored body's newlines match the offsets mentions will carry.
-        if (is_string($this->input('body'))) {
-            $this->merge(['body' => MentionRules::normalizeNewlines($this->input('body'))]);
+        $body = $this->input('body');
+
+        if ($body === null) {
+            // What a picture-only message arrives as: the global ConvertEmptyStringsToNull turns the
+            // composer's empty field into null, and TrimStrings has already made a whitespace-only
+            // one empty. Back to a string, so `body === ''` is the one shape "no words" takes and
+            // the write is handed a string either way; rules() decides whether that is allowed.
+            $this->merge(['body' => '']);
+        } elseif (is_string($body)) {
+            // Before the length check, so a CRLF body is not measured a line-break longer than the
+            // one the member typed — and so a stored body's newlines match the offsets mentions will
+            // carry.
+            $this->merge(['body' => MentionRules::normalizeNewlines($body)]);
         }
+        // Anything else is left exactly as it came, for the `string` rule to refuse: coercing it
+        // here would let an attachment carry a body of the wrong type past validation.
     }
 
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'body' => ['required', 'string', 'max:'.self::MAX_BODY],
+            // A picture is a message: the body may be empty when something is attached, whichever
+            // wire named it. `required_without_all` is implicit, so it is still asked when `nullable`
+            // would otherwise stop the chain.
+            'body' => ['nullable', 'string', 'max:'.self::MAX_BODY, 'required_without_all:images,image'],
             // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post
             // with attachments. A refusal takes the whole message down, so nothing is half-sent.
             ...PostImageRules::rules(),
@@ -45,6 +59,17 @@ class StoreGroupMessageRequest extends FormRequest
     public function attributes(): array
     {
         return [...PostImageRules::attributes(), 'image' => __('Images')];
+    }
+
+    /**
+     * The default names both upload fields to say the body is required — a sentence about the wire,
+     * not about what the member has to do.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['body.required_without_all' => __('Enter a message or attach an image.')];
     }
 
     /**

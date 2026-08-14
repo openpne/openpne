@@ -444,6 +444,7 @@
     "End": "終了",
     "Enlarge": "拡大表示",
     "Enter a color as a 6-digit hex code, for example #2563eb.": "色は #2563eb のような6桁の16進数で入力してください。",
+    "Enter a message or attach an image.": "メッセージを入力するか、画像を添付してください。",
     "Enter an email address to send a registration link.": "登録用リンクを送るメールアドレスを入力してください。",
     "Enter an http:// or https:// address.": "http:// または https:// のアドレスを入力してください。",
     "Enter an internal path starting with / or an http(s):// URL.": "/ で始まる内部パス、または http(s):// の URL を入力してください。",

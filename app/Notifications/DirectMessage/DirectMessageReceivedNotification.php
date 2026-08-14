@@ -11,6 +11,7 @@ use App\Notifications\Concerns\RendersMailTemplate;
 use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\ChatPreview;
 use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -82,7 +83,12 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             // The extension wording's flat variable names, so an imported body renders as-is.
             'member_name' => $this->sender->name,
             'message_subject' => $this->message->subject,
-            'message_body' => $this->message->body,
+            // A message written as chat may be nothing but pictures, which would leave the mail's
+            // body line blank; it says so instead. A legacy subject-only row carries no attachment
+            // and stays as empty as it has always been.
+            'message_body' => (string) $this->message->body !== ''
+                ? $this->message->body
+                : ChatPreview::imagesLine($this->message->files()->exists()),
             'url' => route('message.receive.show', ['message' => $this->message->getKey()]),
         ]);
     }

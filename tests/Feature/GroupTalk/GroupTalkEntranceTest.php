@@ -6,6 +6,7 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -103,6 +104,34 @@ class GroupTalkEntranceTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page
                 ->where('talkPreview.body', 'still here')
                 ->where('talkPreview.authorName', null));
+    }
+
+    /**
+     * The card reads through LatestGroupMessage, which is not the room list's query — the stand-in
+     * for a message with nothing but pictures has to be pinned on this path of its own.
+     */
+    public function test_a_picture_only_message_previews_as_a_picture(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $author = $this->memberOf($group);
+
+        $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
+            ->assertCreated();
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('talkPreview.body', __('Image')));
+    }
+
+    /** "0" is a message. The fallback to the stand-in tests emptiness strictly, not PHP's truthiness. */
+    public function test_a_body_of_zero_is_previewed_as_itself(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $author = $this->memberOf($group);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'body' => '0']);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('talkPreview.body', '0'));
     }
 
     public function test_an_empty_conversation_previews_nothing(): void
