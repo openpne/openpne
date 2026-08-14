@@ -3,6 +3,7 @@
 namespace App\Features\DirectMessage;
 
 use App\Features\DirectMessage\Actions\MarkConversationRead;
+use App\Features\DirectMessage\Actions\SendDirectMessage;
 use App\Features\DirectMessage\Exceptions\DirectMessageActionException;
 use App\Features\DirectMessage\Queries\ConversationMessages;
 use App\Features\DirectMessage\Queries\ConversationUnreadSnapshot;
@@ -10,25 +11,27 @@ use App\Features\DirectMessage\Serializers\ConversationMessageSerializer;
 use App\Features\DirectMessage\Serializers\DirectMessageSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DirectMessage\MarkConversationReadRequest;
+use App\Http\Requests\DirectMessage\StoreChatMessageRequest;
 use App\Models\DirectMessage;
 use App\Models\Member;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * One conversation with one member, read as chat: the stored mailbox rows composed back into the two
- * directions of a single thread (ConversationScope). Read-only — composing, marking read and the
- * conversation list are the mailbox's still.
+ * One conversation with one member, read and written as chat: the stored mailbox rows composed back
+ * into the two directions of a single thread (ConversationScope). The conversation list, the trash
+ * and the reply flow are the mailbox's still.
  *
  * Renders Inertia directly rather than through SurfaceResolver: chat has no OpenPNE 3 counterpart, so
  * there is no Classic screen to be compatible with, as a group's talk takes the same shape.
  *
  * The page ships the newest slice, or the one a `?m=` deep link lands in; everything after it moves
- * over JSON — "load older" walks back by keyset and a poll asks what has arrived since. Composing is
- * the mailbox's still; marking read is the reader's own act and belongs to the screen doing it.
+ * over JSON — "load older" walks back by keyset, a poll asks what has arrived since, and a send comes
+ * back as the one message it wrote.
  */
 class ConversationController extends Controller
 {
@@ -44,6 +47,42 @@ class ConversationController extends Controller
     public function showWithdrawn(Request $request, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
         return $this->conversation($request, null, $query, $unread);
+    }
+
+    /**
+     * Write into the conversation. There is no such route for the withdrawn bucket: it names no
+     * member to deliver to, so that conversation is read-only by construction.
+     *
+     * Returns the message it wrote, in the shape the paging endpoint uses, so the composer appends it
+     * rather than re-reading the page.
+     */
+    public function store(StoreChatMessageRequest $request, Member $member, SendDirectMessage $action): JsonResponse
+    {
+        $viewer = $this->viewer();
+        $counterpart = $this->counterpart($member);
+
+        try {
+            $message = $action(
+                $viewer,
+                // A message written here has no subject and no lineage: the conversation is linear,
+                // and the screen has nothing to show for either.
+                new DirectMessageComposeData($counterpart->getKey(), subject: null, body: $request->validated('body')),
+                asDraft: false,
+                images: $request->pickedImages(),
+            );
+        } catch (DirectMessageActionException) {
+            // A block or a ban, which is the same refusal the mailbox's compose gets. Reported
+            // against `body` so the composer shows it over the message it is still holding.
+            throw ValidationException::withMessages(['body' => __('Cannot send the message.')]);
+        }
+
+        // The sender is the viewer; hand the model over rather than re-reading the row just written.
+        $message->setRelation('sender', $viewer->loadMissing('avatar.file'));
+        // PostImages creates the join rows through the relation, which does not populate it, and the
+        // receipt is what answers `read` — load both rather than letting the serializer lazy-load.
+        $message->load(['files.file', 'recipients']);
+
+        return response()->json(ConversationMessageSerializer::message($message, $viewer, $counterpart), 201);
     }
 
     /**
@@ -101,6 +140,10 @@ class ConversationController extends Controller
                 $counterpart,
             ),
             'anchor' => $anchor === null ? null : (int) $anchor->getKey(),
+            // Whether this conversation has a composer at all. The withdrawn bucket never does — it
+            // names no member to deliver to — and a blocked or banned counterpart is refused at the
+            // same gate the mailbox's compose uses, so the bar is not offered rather than shown dead.
+            'canSend' => $counterpart !== null && DirectMessageAccess::canSend($viewer, $counterpart),
             // Where the reader stands in this conversation, independent of the slice `?m=` opened:
             // a link names a message, the boundary names what has not been read.
             'unreadSnapshot' => ConversationMessageSerializer::unreadSnapshot($unread($viewer, $counterpart)),
