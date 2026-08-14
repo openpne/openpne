@@ -1,5 +1,5 @@
 import type { GridImage } from '@/components/image-grid';
-import type { ChatPage, ChatStreamRow, ChatUnreadSnapshot } from '@/lib/chat/types';
+import type { ChatPage, ChatReactionChip, ChatStreamRow, ChatUnreadSnapshot } from '@/lib/chat/types';
 import type { MentionEntity } from '@/lib/entity-split';
 import type { MemberRef } from '@/pages/community/types';
 
@@ -10,8 +10,17 @@ export interface TalkMessage extends ChatStreamRow {
     mentions: MentionEntity[];
     /** Attached images in slot order — up to MAX_POST_IMAGES from the composer, N from migrated content. */
     images: GridImage[];
+    /** The emoji on this message, in the order they first appeared. Always sent, empty for none. */
+    reactions: ChatReactionChip[];
     isOwn: boolean;
     canDelete: boolean;
+}
+
+/** Who holds one emoji on a message: the exact count, and at most MessageReactors::PER_EMOJI names. */
+export interface TalkReactorGroup {
+    emoji: string;
+    count: number;
+    members: MemberRef[];
 }
 
 export type TalkPage = ChatPage<TalkMessage>;

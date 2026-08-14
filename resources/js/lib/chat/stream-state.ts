@@ -1,3 +1,4 @@
+import { applyReactionOutcome, type ReactionOp } from './reaction-overlay.ts';
 import type { ChatPage, ChatStreamRow } from './types';
 
 /**
@@ -39,6 +40,15 @@ export interface ChatStreamState<M extends ChatStreamRow> {
     window: ChatWindow;
     /** Which list a response was asked of — see {@link applied}. Moves on every window change. */
     generation: number;
+    /**
+     * How far this list has read the reactions the conversation's messages carry, and what the next
+     * poll asks after. Undefined for a surface that has none — it is what makes the poll ask.
+     *
+     * It lives here, beside the list, rather than in a ref of its own: {@link applied} then guards
+     * it with everything else, so a response the window change made worthless cannot move the
+     * watermark past changes the list it landed in never saw.
+     */
+    reactionsVersion?: number;
 }
 
 /**
@@ -157,7 +167,7 @@ function merge<M extends ChatStreamRow>(
 
     const messages = [...held.values()].filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
-    return { messages, hasOlder, deleted: state.deleted, window, generation };
+    return { messages, hasOlder, deleted: state.deleted, window, generation, reactionsVersion: state.reactionsVersion };
 }
 
 /**
@@ -168,7 +178,16 @@ function merge<M extends ChatStreamRow>(
 function replace<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>, window: ChatWindow): ChatStreamState<M> {
     const messages = page.messages.filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
-    return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window, generation: state.generation + 1 };
+    return {
+        messages,
+        hasOlder: page.hasOlder,
+        deleted: state.deleted,
+        window,
+        generation: state.generation + 1,
+        // Carried across the change: how far the reactions have been read is a fact about the
+        // conversation, not about the stretch of it on screen.
+        reactionsVersion: state.reactionsVersion,
+    };
 }
 
 /**
@@ -177,8 +196,15 @@ function replace<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatP
  * forward read's is, rather than assumed live. Standing in a history window from the first render is
  * what stops the poll appending rows that do not follow the last one on screen.
  */
-export function initial<M extends ChatStreamRow>(page: ChatPage<M>): ChatStreamState<M> {
-    const empty: ChatStreamState<M> = { messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' }, generation: 0 };
+export function initial<M extends ChatStreamRow>(page: ChatPage<M>, reactionsVersion?: number): ChatStreamState<M> {
+    const empty: ChatStreamState<M> = {
+        messages: [],
+        hasOlder: false,
+        deleted: new Set(),
+        window: { kind: 'latest' },
+        generation: 0,
+        reactionsVersion,
+    };
 
     return merge(empty, page.messages, page.hasOlder, windowAfter(page));
 }
@@ -259,6 +285,69 @@ export function markDeleted<M extends ChatStreamRow>(state: ChatStreamState<M>, 
         deleted,
         window: state.window,
         generation: state.generation,
+        reactionsVersion: state.reactionsVersion,
+    };
+}
+
+/**
+ * The poll's second answer: the messages whose reactions changed, and the watermark to ask after
+ * next. **Update-only** — a row whose id is not already held is dropped rather than inserted, which
+ * is what keeps the list one contiguous stretch: a reaction on a message from an hour ago says
+ * nothing about the messages between it and the page on screen.
+ *
+ * The watermark moves whether or not anything applied. It is the server's account of what has been
+ * reported, and a change to a row outside the window has been reported — asking for it again would
+ * hand back the same row for as long as nobody scrolls to it.
+ */
+export function mergeTouched<M extends ChatStreamRow>(
+    state: ChatStreamState<M>,
+    rows: readonly M[],
+    reactionsVersion?: number,
+): ChatStreamState<M> {
+    const held = new Set(state.messages.map((message) => message.id));
+    const applicable = rows.filter((row) => held.has(row.id));
+    const merged = applicable.length === 0 ? state : merge(state, applicable, state.hasOlder);
+
+    if (reactionsVersion === undefined || reactionsVersion === merged.reactionsVersion) {
+        return merged;
+    }
+
+    return { ...merged, reactionsVersion };
+}
+
+/**
+ * One's own tap, once the write said it landed: the move applied to the row as it stands now, not
+ * the aggregate the write answered with. See {@link applyReactionOutcome} for why the answer's own
+ * counts are dropped. Update-only for the reason above, and unsorted because reacting moves nothing
+ * in the keyset order.
+ *
+ * `versionAtSend` is the watermark the tap was sent under, and the move only applies while the
+ * watermark still stands there. Once it has moved, the poll owns the row — even the viewer's own
+ * flag: their other tab may have acted after this tap, and what the poll delivered is the server's
+ * later word on it. Skipping never loses the write itself: a poll whose watermark passed the
+ * write's version delivered its outcome in the same answer, and one that stopped short leaves the
+ * watermark below it, so the next asks.
+ */
+export function applyReaction<M extends ChatStreamRow>(
+    state: ChatStreamState<M>,
+    id: number,
+    emoji: string,
+    op: ReactionOp,
+    versionAtSend?: number,
+): ChatStreamState<M> {
+    if (state.reactionsVersion !== versionAtSend) {
+        return state;
+    }
+
+    if (!state.messages.some((message) => message.id === id)) {
+        return state;
+    }
+
+    return {
+        ...state,
+        messages: state.messages.map((message) =>
+            message.id === id ? { ...message, reactions: applyReactionOutcome(message.reactions ?? [], emoji, op) } : message,
+        ),
     };
 }
 
