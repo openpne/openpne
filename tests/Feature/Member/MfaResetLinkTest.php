@@ -24,8 +24,8 @@ use Tests\TestCase;
 
 /**
  * The admin-issued two-factor reset link flow: an admin mails the member's registered address a link; the
- * locked-out member (a guest) opens it and clears their factor with their account password. See TASK-122
- * / docs/internals/security.md for the boundary invariant and the invalidation contract.
+ * locked-out member (a guest) opens it and clears their factor with their account password. See
+ * docs/internals/security.md for the boundary invariant and the invalidation contract.
  */
 class MfaResetLinkTest extends TestCase
 {

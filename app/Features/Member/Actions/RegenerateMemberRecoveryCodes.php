@@ -35,7 +35,7 @@ class RegenerateMemberRecoveryCodes
             ($this->generate)($fresh);
 
             // 失効契約: regenerating just proved current authenticator possession, so any outstanding
-            // admin-issued lost-factor reset link is moot — drop it (TASK-122). Member is locked above;
+            // admin-issued lost-factor reset link is moot — drop it. Member is locked above;
             // the global Member → mfa_reset_requests order holds.
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 

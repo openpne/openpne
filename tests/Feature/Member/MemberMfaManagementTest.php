@@ -412,7 +412,7 @@ class MemberMfaManagementTest extends TestCase
     public function test_regenerating_codes_drops_a_pending_admin_reset_link(): void
     {
         // 失効契約: regenerating proves current authenticator possession, so an outstanding admin-issued
-        // lost-factor reset link is moot — the regenerate transaction drops it (TASK-122).
+        // lost-factor reset link is moot — the regenerate transaction drops it.
         $member = $this->memberWithTwoFactor();
         MfaResetRequest::create([
             'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
