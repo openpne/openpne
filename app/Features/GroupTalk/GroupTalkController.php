@@ -11,16 +11,20 @@ use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Queries\TalkUnreadSnapshot;
+use App\Features\GroupTalk\Queries\TouchedGroupMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
 use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
 use App\Models\Group;
 use App\Models\GroupMessage;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -43,6 +47,9 @@ class GroupTalkController extends Controller
         // Resolved after the gate, so a link into a conversation the viewer may not read changes
         // nothing about the refusal.
         $anchor = $this->anchor($group, $request->query('m'));
+        // Before the page is read, never after: a reaction landing between the two would otherwise
+        // sit below the watermark the client starts polling from and never be asked for again.
+        $reactionsVersion = TalkReactionVersion::of($group);
 
         return Inertia::render('group/talk/index', [
             'group' => GroupSerializer::summary($group),
@@ -59,6 +66,11 @@ class GroupTalkController extends Controller
             // "from here" divider has to keep naming the line the reader opened on, while the shared
             // `unread` badge prop next to it goes on tracking the live count.
             'talkUnreadSnapshot' => GroupMessageSerializer::unreadSnapshot($unread($group, $viewer)),
+            'reactionsVersion' => $reactionsVersion,
+            // The vocabulary travels with the page rather than being duplicated in the bundle, so
+            // App\Features\Reactions\ReactionVocabulary stays the one place it is written down and a
+            // tab open across a deploy cannot offer an emoji the server has stopped accepting.
+            'reactionVocabulary' => ReactionVocabulary::all(),
         ]);
     }
 
@@ -87,7 +99,7 @@ class GroupTalkController extends Controller
      * does not parse is simply no cursor — pagination is a position, not a permission, and the gate
      * above already decided the audience.
      */
-    public function messages(Request $request, Group $group, GroupTalkMessages $query): JsonResponse
+    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched): JsonResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -95,6 +107,11 @@ class GroupTalkController extends Controller
         $context = GroupTalkCursor::tryParse($request->query('context'));
         $after = GroupTalkCursor::tryParse($request->query('after'));
         $before = GroupTalkCursor::tryParse($request->query('before'));
+        $reactionsAfter = $this->reactionsAfter($request->query('reactionsAfter'));
+
+        // Read before the page, for the reason show() reads it before its own — and only when a
+        // client asked, so the ordinary poll costs what it always did.
+        $snapshot = $reactionsAfter === null ? null : TalkReactionVersion::of($group);
 
         $page = match (true) {
             $context !== null => $query->around($group, $context),
@@ -103,7 +120,51 @@ class GroupTalkController extends Controller
             default => $query->latest($group),
         };
 
-        return response()->json(GroupMessageSerializer::page($page, GroupTalkPermissions::for($group, $viewer)));
+        $permissions = GroupTalkPermissions::for($group, $viewer);
+        $payload = GroupMessageSerializer::page($page, $permissions);
+
+        if ($reactionsAfter !== null) {
+            $payload += $this->touched($touched($group, $reactionsAfter), $permissions, $snapshot ?? 0);
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * The reaction watermark a client is polling from, or null for one that does not speak the
+     * protocol — a tab loaded before this shipped, or a surface (direct messages) that shares the
+     * poll and has no reactions. Its answer keeps the shape it has always had, down to the absence
+     * of these two keys.
+     *
+     * Unparseable is read as absent rather than refused, exactly as a malformed cursor is: a poll
+     * that 422s would take the whole conversation off the screen over a watermark.
+     */
+    private function reactionsAfter(mixed $value): ?int
+    {
+        return is_string($value) && ctype_digit($value) ? (int) $value : null;
+    }
+
+    /**
+     * The messages whose reactions changed since the client's watermark, and the watermark to come
+     * back with.
+     *
+     * A full page means the catch-up is not finished, so the watermark is the last row returned
+     * rather than the snapshot: moving it to the snapshot would step over everything the cap left
+     * behind. Only an exhausted read may take the snapshot, which was read before the page and so
+     * cannot be ahead of anything this answer omits.
+     *
+     * @param  Collection<int, GroupMessage>  $rows  one over the cap, as the query returns them
+     * @return array{touched: list<array>, reactionsVersion: int}
+     */
+    private function touched(Collection $rows, GroupTalkPermissions $permissions, int $snapshot): array
+    {
+        $capped = $rows->count() > GroupTalkMessages::PER_PAGE;
+        $rows = $rows->take(GroupTalkMessages::PER_PAGE);
+
+        return [
+            'touched' => $rows->map(fn (GroupMessage $message): array => GroupMessageSerializer::message($message, $permissions))->values()->all(),
+            'reactionsVersion' => $capped ? (int) $rows->last()->reactions_version : $snapshot,
+        ];
     }
 
     /**
@@ -141,6 +202,9 @@ class GroupTalkController extends Controller
         // PostImages creates the join rows through the relation, which does not populate it — load
         // them explicitly rather than letting the serializer lazy-load one query per attachment.
         $message->loadMissing('images.file');
+        // A message a moment old has no reactions by construction; say so rather than pay a query to
+        // be told.
+        $message->setRelation('reactions', new EloquentCollection);
 
         return response()->json(
             GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer)),

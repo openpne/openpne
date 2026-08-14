@@ -39,6 +39,7 @@ would silently change nothing for the sites that matter — the ones with no row
 | `group_message_images` | join rows to `files`, numbered slots, shaped exactly like `timeline_post_images` — see [Images](#images) |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
+| `reactions` (+ `groups.talk_reaction_seq`, `group_messages.reactions_version`) | the emoji on a message, keyed polymorphically so the surfaces after talk share the table — see [Reactions](#reactions) |
 
 `group_message_mentions` and `group_message_images` are both written by the composer — see
 [Mentions](#mentions) and [Images](#images).
@@ -409,6 +410,83 @@ purge after:
   group, before the group row goes. Talk is flat, so there is no parent whose purge would reach the
   rest; the arm walks them all, beside the existing topic, event and timeline arms.
 
+## Reactions
+
+An emoji on a message, in the `reactions` table — polymorphic from the first row, because talk is
+where reactions land first and not where they stop. `reactable_id` therefore carries no foreign key,
+which is the whole reason two of the three deletion paths below have to sweep by hand.
+
+It is **Slack-shaped, not LINE-shaped**: the unique key is `(reactable_type, reactable_id, member_id,
+emoji)`, so one member may hold several emoji on one message. Going the other way later would have to
+throw rows away, which is why the wide key is a decision rather than the shape that fell out. On
+MySQL `emoji` is `utf8mb4_bin`, since the default collation equates a code point with its
+VS16-qualified form (`U+2764` = `U+2764 U+FE0F`) and SQLite's binary TEXT does not — the two engines
+would otherwise disagree about what counts as one reaction.
+
+[`ReactionVocabulary`](../../app/Features/Reactions/ReactionVocabulary.php) is the only place the set
+is written down, its size included: the add rule reads it, the page ships it to the picker as
+`reactionVocabulary`, and the tests pin its bytes. Nothing in the bundle holds a copy, so a tab open
+across a deploy cannot offer an emoji the server has stopped taking. What may be **added** is that
+set; what may be **removed** is whatever the member is holding, unchecked — otherwise narrowing the
+vocabulary would strand every reaction already written with a retired emoji.
+
+Add and remove are two URLs rather than one toggle, for the reason [mute](#mute) is a state rather
+than a flip: a tap that is retried, doubled, or racing the poll has to settle where the member
+pointed. Both are idempotent at the row level — the insert leans on the unique key, the delete on a
+`WHERE` — and both answer with the message's **whole** chip row, so a reaction someone else added in
+the meantime arrives in the same response. Writing is `canPost` (reacting is speaking in the room),
+reading the reactor list is `canView`, and a refusal is the usual 404.
+
+Who reacted is deliberately not in that payload: it is the one part of a reaction whose size grows
+with the room, so the names come from `GET .../reactions` when a dialog is opened, and nowhere else.
+
+Nothing notifies. The room's unread badge is what tells a member something happened here, and a
+reaction did not happen *to* them in the sense a mention does.
+
+### The version is the second watermark
+
+The poll reads forward from a `(created_at, id)` position, and a reaction moves neither — so a
+thumbs-up on a message already on screen is invisible to it. `groups.talk_reaction_seq` issues a
+number per change and the touched `group_messages.reactions_version` records it
+([`TalkReactionVersion`](../../app/Features/GroupTalk/TalkReactionVersion.php)); the `UPDATE` on the
+group row is the serialization point, so a version is unique and monotonic **within the group** by
+construction. A timestamp was the obvious alternative and is wrong for the reason the read cursor
+does not use one either: at one-second resolution a strict `>` drops everything sharing its second.
+
+`GET .../talk/messages` therefore takes an optional `reactionsAfter`, and answers with two extra
+fields when it does — `touched` (whole messages, serialized exactly as a page's are, in version
+order) and `reactionsVersion` (the watermark to come back with). Three rules make that safe:
+
+- Only a state change bumps. Re-adding what is already there, or removing what is not, moves nothing
+  — a no-op that bumped would wake every open tab in the group to re-read a row that reads the same.
+- The watermark is read **before** the page query, never after: a reaction landing between the two
+  would otherwise sit below the position the client starts from and never be asked for again.
+- A capped page reports the **last row it returned**, not that snapshot. Taking the snapshot with
+  rows left behind would step over them; only an exhausted read may move to it.
+
+A client that sends no watermark is answered in the shape it has always had, down to the absence of
+both keys — a tab predating this, and the direct-message conversation that shares the poll and has no
+reactions. An unparseable value is read as none, as an unparseable cursor is.
+
+Live agreement is the **latest window's** only, like the poll itself: the history window does not
+poll, so it catches up when the reader returns to the newest page. And one write is exempt on
+purpose — a withdrawing member's rows go by FK cascade, which bumps nothing, so an open tab keeps
+showing them until it is reloaded. Advancing every group's counter on a withdrawal is not worth what
+it buys.
+
+Reactions are invisible to unread. They create no message row, and no unread read looks at a version,
+so cursors, badges and the room list's order cannot move because someone reacted.
+
+### Reclaiming the rows
+
+The reverse of the polymorphic column: nothing cascades a reaction away with the thing it is on.
+
+- [`DeleteGroupMessage::purge()`](../../app/Features/GroupTalk/Actions/DeleteGroupMessage.php) —
+  beside the image bytes, and for the same reason.
+- [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) — every reaction in the
+  group, inside the same lock transaction as the image sweep.
+- A withdrawing member's own, which *is* a cascade: `member_id` is a real foreign key.
+
 ## Access
 
 [`GroupTalkAccess`](../../app/Features/GroupTalk/GroupTalkAccess.php), succeeding
@@ -472,3 +550,22 @@ role once per request and the serializer asks it per row.
 13. A link may name a message (`?m=`), and naming one is neither a permission nor a reading: the
     group's gate still answers first, an unusable id falls back to the newest page, and the cursor
     only moves from the foot of the live window.
+14. A reaction is not a message. It writes no `group_messages` row and no unread read looks at a
+    version, so cursors, badges and the room list's order cannot move because of one — and nothing
+    notifies, since the room's badge is what says something happened here.
+15. `reactable_type` is written through the model's morph alias, never as a literal — the OpenPNE 3
+    `nice` transfer included, when it arrives.
+16. At most one row per (content, member, emoji), so a member may hold several emoji on one message.
+    Narrowing that to one is lossy, which is why the wide key is a decision rather than a default.
+17. `ReactionVocabulary` is the only place the set is written down, its size included. It bounds what
+    may be added; what may be removed is whatever the member holds, and the column takes any short
+    utf8mb4 string.
+18. Every state change through the app bumps the version and a no-op does not, so a watermark only
+    moves for something worth re-reading. The withdrawal cascade is the one exempt write; the client
+    merges a touched row only over an id it already holds.
+19. Reading a message's reactions is `canView` and writing one is `canPost`, with no per-row filter
+    either way and 404 for every refusal — the conversation's own rules.
+20. Three paths take reactions away: the message's delete, the group's teardown, and the member's
+    withdrawal. Only the last is a cascade, because `reactable_id` carries no foreign key.
+21. Live agreement is the latest window's alone. A history window catches up on return, and a poll
+    that carries no watermark is answered as one that never asked.

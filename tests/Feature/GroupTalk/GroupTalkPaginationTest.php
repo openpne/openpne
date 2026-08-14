@@ -167,10 +167,14 @@ class GroupTalkPaginationTest extends TalkTestCase
         $group = $this->group();
         $viewer = $this->memberOf($group);
         foreach (range(1, 20) as $i) {
-            GroupMessage::factory()->create([
+            $message = GroupMessage::factory()->create([
                 'group_id' => $group->getKey(),
                 'member_id' => $this->memberOf($group)->getKey(),
             ]);
+            // Reactions are counted off the loaded relation, so a page that carries them must still
+            // cost the same fan-out — including the `mine` answer, which reads no member row.
+            $message->reactions()->create(['member_id' => $viewer->getKey(), 'emoji' => "\u{1F44D}"]);
+            $message->reactions()->create(['member_id' => $this->memberOf($group)->getKey(), 'emoji' => "\u{1F389}"]);
         }
 
         $this->actingAs($viewer);

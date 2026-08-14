@@ -9,8 +9,10 @@ use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
 use App\Models\Member;
+use App\Models\Reaction;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
+use Illuminate\Support\Collection;
 
 /**
  * Modern surface shapes for a group's talk. `author` is null for a withdrawn member (the FK SET
@@ -25,7 +27,7 @@ use DateTimeInterface;
 class GroupMessageSerializer
 {
     /**
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
     {
@@ -37,9 +39,38 @@ class GroupMessageSerializer
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
             'images' => $message->images->map([self::class, 'image'])->values()->all(),
+            'reactions' => self::reactions($message, $permissions),
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
         ];
+    }
+
+    /**
+     * The emoji on a message, counted — the whole authoritative state of its chip row, which is why
+     * the add and remove endpoints answer with this same shape rather than a delta the client would
+     * have to apply.
+     *
+     * Who reacted is deliberately not here: a chip row's payload would then grow with the room, and
+     * the names are only ever wanted when someone opens the list (GroupTalkReactionController::index).
+     *
+     * Counted off the loaded relation, so a page costs no query per message and no query per emoji;
+     * the relation's order is what puts the first-used emoji first.
+     *
+     * @return list<array{emoji: string, count: int, mine: bool}>
+     */
+    public static function reactions(GroupMessage $message, GroupTalkPermissions $permissions): array
+    {
+        $viewer = $permissions->member->getKey();
+
+        return $message->reactions
+            ->groupBy('emoji')
+            ->map(fn (Collection $rows, string $emoji): array => [
+                'emoji' => $emoji,
+                'count' => $rows->count(),
+                'mine' => $rows->contains(fn (Reaction $reaction): bool => $reaction->member_id === $viewer),
+            ])
+            ->values()
+            ->all();
     }
 
     /**

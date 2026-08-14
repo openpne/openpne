@@ -265,6 +265,7 @@ Content-posting and mail-triggering member writes carry named per-minute limiter
 | `direct-message-send` | 10 / 30 | member id / client IP | direct message compose send, draft-edit send |
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept |
 | `group-join` | 15 / 40 | member id / client IP | community join, member approve, member decline |
+| `reaction` | 60 / 120 | member id / client IP | group talk reaction add, remove |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
