@@ -602,7 +602,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
 /**
  * Modern components with intentionally no context crumb, checked by ChromeContextCoverageTest so a
  * new page cannot land unclassified. Hub tops and tab-switch pages have no parent to crumb to;
- * member/show and community/show are top-level entities no surveyed SNS crumbs back from; the rest
+ * member/show and community/show are top-level entities with no parent context; the rest
  * are orphaned entry points with no inbound nav today (tracked separately, out of this pass's scope).
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [

@@ -28,8 +28,8 @@ use Illuminate\Queue\SerializesModels;
  * every record that mentions it, and is the part that touches the network. Keeping them apart is
  * what lets a thousand posts of the same link cost one request.
  *
- * Only the first URL becomes a card. That is what Twitter, Slack and Mastodon all do, and a body
- * full of links is better served by the links themselves than by a stack of cards.
+ * Only the first URL becomes a card: a body full of links is better served by the links themselves
+ * than by a stack of cards.
  */
 class SyncLinkCard implements ShouldBeUnique, ShouldQueue
 {

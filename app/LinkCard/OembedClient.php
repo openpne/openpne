@@ -12,9 +12,8 @@ use App\Outbound\SafeHttpFetcher;
  *
  * Only the structured fields are used. **The `html` field is never touched** — it is provider-authored
  * markup, usually an iframe, and this app has one place where trusted HTML is produced (BodyRenderer)
- * and one place where it is injected (RichBody). Mastodon refuses oEmbed's `rich` type for the same
- * reason. A card is drawn from text and a self-hosted image, so there is nothing here that markup
- * could add.
+ * and one place where it is injected (RichBody). A card is drawn from text and a self-hosted image,
+ * so there is nothing here that markup could add.
  *
  * The request goes through SafeHttpFetcher like any other: the endpoint URL came out of a stranger's
  * page and deserves exactly as much suspicion as the page did.

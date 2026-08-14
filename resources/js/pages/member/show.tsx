@@ -179,9 +179,8 @@ export default function MemberShow() {
                 {digest && <StatsRow ownerId={owner.id} stats={digest.stats} />}
             </Panel>
 
-            {/* Structured profile fields are self-declared identity, so they sit next to the header
-                (Facebook's Intro card, Mastodon's fields under the bio, mixi's profile table) with
-                the activity previews after. */}
+            {/* Structured profile fields are self-declared identity, so they sit next to the header,
+                with the activity previews after. */}
             {fields.length > 0 ? (
                 <Panel>
                     <dl className="divide-y divide-border">

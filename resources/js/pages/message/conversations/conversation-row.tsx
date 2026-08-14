@@ -27,8 +27,8 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
                         {name}
                     </Link>
                 </p>
-                {/* No author prefix: the row's title already names the only other person here, and a
-                    1:1 preview needs no attribution — the shape LINE's talk list settled. */}
+                {/* No author prefix: the row's title already names the only other person here, so a
+                    1:1 preview needs no attribution. */}
                 <p className="mt-0.5 truncate text-sm text-muted-foreground">{latest.body}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
