@@ -10,8 +10,11 @@ namespace App\Features\Reactions;
  *
  * The bytes are stored and the glyph is the reader's own font, so the selection rule is age rather
  * than taste: every entry is Unicode 6.1 (2012) or older, which is what keeps it from arriving as
- * tofu on a device that stopped receiving font updates. Removing an entry is safe — a reaction can
- * always be taken back, whether or not its emoji is still offered.
+ * tofu on a device that stopped receiving font updates.
+ *
+ * Removing an entry is safe: what is already written can always be taken back, and a picker rendered
+ * before the change — the prop is fixed at render time, so a tab open across a deploy still holds
+ * the old set — is refused by the add rule rather than writing a retired emoji.
  */
 final class ReactionVocabulary
 {

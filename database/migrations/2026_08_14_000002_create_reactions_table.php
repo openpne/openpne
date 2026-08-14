@@ -10,9 +10,8 @@ use Illuminate\Support\Facades\Schema;
  * first surface to carry reactions, and the ones that follow (timeline, direct messages, entries,
  * board posts) are the same row with a different `reactable_type`.
  *
- * Slack-shaped rather than LINE-shaped: the unique key includes `emoji`, so one member may hold
- * several reactions on one message. Narrowing that later is lossy, which is why it is a decision
- * rather than an accident of the key.
+ * The unique key includes `emoji`, so one member may hold several reactions on one message.
+ * Narrowing that later is lossy, which is why the wide key is a decision rather than an accident.
  *
  * `reactable_id` carries no foreign key — a polymorphic column cannot — so every deletion path that
  * does not go through the model has to sweep these rows itself

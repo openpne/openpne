@@ -26,15 +26,15 @@ final class TalkReactionVersion
     /**
      * Record that $message changed, and give it the next version in its group.
      *
-     * Caller must be inside a transaction, and must only call this when something actually changed:
-     * a no-op that bumped would wake every open tab in the group to re-read a row that reads the
-     * same.
+     * Caller must be holding the group row through {@see TalkWriteLock::hold()}, and must only call
+     * this when something actually changed: a no-op that bumped would wake every open tab in the
+     * group to re-read a row that reads the same.
      *
-     * The `UPDATE groups` is the serialization point. It takes the group row's exclusive lock until
-     * commit, so two concurrent reactions in one group are ordered rather than interleaved, and the
-     * value read back is the one this transaction issued. That is what makes a version unique and
-     * monotonic within the group — the property the poll's strict `>` depends on, and the reason a
-     * reader can take "the newest version I have seen" from any row it was handed.
+     * That lock is the serialization point. Under it two concurrent reactions in one group are
+     * ordered rather than interleaved, so the value read back is the one this transaction issued —
+     * which is what makes a version unique and monotonic within the group, the property the poll's
+     * strict `>` depends on and the reason a reader can take "the newest version I have seen" from
+     * any row it was handed.
      */
     public static function bump(GroupMessage $message): void
     {

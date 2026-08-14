@@ -15,7 +15,7 @@ use App\Models\Member;
  *
  * Posting follows membership alone: topic_post_authority is deliberately not consulted, so an
  * admins-only board does not also silence the group's chat. An Everyone group is therefore readable
- * by any member and writable only by its own — a Slack public channel, not a broadcast.
+ * by any member and writable only by its own: open to read, joined to speak, not a broadcast.
  *
  * Talk history applies NO per-row filter, and that is a contract rather than an omission. The
  * community timeline this replaces hid a row whose author had since left the group, and a row whose

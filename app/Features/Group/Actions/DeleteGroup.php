@@ -74,7 +74,9 @@ class DeleteGroup
 
             // `reactions.reactable_id` is polymorphic and so carries no foreign key: the cascade that
             // takes the messages away would leave every reaction on them behind, pointing at ids that
-            // no longer exist. Under the same lock, for the same reason the image sweep is.
+            // no longer exist. Under the same lock, for the same reason the image sweep is — and in
+            // the order every reaction write takes it (App\Features\GroupTalk\TalkWriteLock), so a
+            // teardown and a reaction queue rather than deadlock.
             DB::table('reactions')
                 ->where('reactable_type', (new GroupMessage)->getMorphClass())
                 ->whereIn('reactable_id', DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'))

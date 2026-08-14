@@ -3,9 +3,11 @@
 namespace Tests\Feature\GroupTalk;
 
 use App\Features\Group\Actions\DeleteGroup;
+use App\Features\GroupTalk\Queries\MessageReactors;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Models\Reaction;
 use App\Support\SnsSettingKey;
 
 /**
@@ -88,7 +90,7 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->assertSame($version, $this->seq($group), 'a no-op moved the reaction version');
     }
 
-    /** Slack-shaped, not LINE-shaped: a second emoji joins the first rather than replacing it. */
+    /** The key is wide by decision: a second emoji joins the first rather than replacing it. */
     public function test_a_second_emoji_from_the_same_member_is_an_addition(): void
     {
         $group = $this->group();
@@ -261,9 +263,58 @@ class TalkReactionTest extends TalkReactionTestCase
             ->assertOk()
             // Grouped in the order the emoji first appeared, and the members in the order they reacted.
             ->assertJsonPath('groups.0.emoji', $this->emoji(1))
+            ->assertJsonPath('groups.0.count', 2)
             ->assertJsonPath('groups.0.members.0.id', $first->getKey())
             ->assertJsonPath('groups.0.members.1.id', $second->getKey())
             ->assertJsonPath('groups.1.emoji', $this->emoji(0))
             ->assertJsonCount(1, 'groups.1.members');
+    }
+
+    /**
+     * The names are the one part of a reaction that grows with the room, so the list is bounded and
+     * the count is not: past the cap a dialog knows how many there are and shows the first of them.
+     */
+    public function test_the_reactor_list_caps_the_names_but_not_the_count(): void
+    {
+        $group = $this->group();
+        $message = $this->message($group);
+        $total = MessageReactors::PER_EMOJI + 5;
+        $reactors = Member::factory()->count($total)->create();
+
+        $at = now();
+        Reaction::insert($reactors->map(fn (Member $reactor): array => [
+            'reactable_type' => $message->getMorphClass(),
+            'reactable_id' => $message->getKey(),
+            'member_id' => $reactor->getKey(),
+            'emoji' => $this->emoji(0),
+            'created_at' => $at,
+            'updated_at' => $at,
+        ])->all());
+
+        $this->actingAs($this->memberOf($group))
+            ->getJson("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/reactions")
+            ->assertOk()
+            ->assertJsonPath('groups.0.count', $total)
+            ->assertJsonCount(MessageReactors::PER_EMOJI, 'groups.0.members')
+            // The cap takes the first to react, not an arbitrary hundred.
+            ->assertJsonPath('groups.0.members.0.id', $reactors->first()->getKey());
+    }
+
+    /** One grouped read serves a whole page, so each message must still get its own chips. */
+    public function test_a_page_gives_every_message_its_own_chips(): void
+    {
+        $group = $this->group();
+        $mine = $this->message($group);
+        $theirs = $this->message($group);
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+
+        $this->react($viewer, $group, $mine, $this->emoji(0))->assertOk();
+        $this->react($other, $group, $theirs, $this->emoji(1))->assertOk();
+
+        $page = $this->actingAs($viewer)->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk();
+
+        $page->assertJsonPath('messages.0.reactions', [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => true]]);
+        $page->assertJsonPath('messages.1.reactions', [['emoji' => $this->emoji(1), 'count' => 1, 'mine' => false]]);
     }
 }

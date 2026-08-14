@@ -26,12 +26,14 @@ class GroupTalkMessages
     public const PER_PAGE = 50;
 
     /**
-     * Everything the serializer reads per row, in a fixed number of further queries whatever the
-     * page size. Shared with {@see TouchedGroupMessages}, which serializes the same shape.
+     * The relations the serializer reads per row, in a fixed number of further queries whatever the
+     * page size. Shared with {@see TouchedGroupMessages}, which serializes the same shape. Reactions
+     * are not among them: they are counted in SQL rather than hydrated ({@see
+     * MessageReactionAggregates}).
      *
      * @var list<string>
      */
-    public const WITH = ['author.avatar.file', 'mentions', 'images.file', 'reactions'];
+    public const WITH = ['author.avatar.file', 'mentions', 'images.file'];
 
     /**
      * How much of the conversation rides above the position an around() page opens on. A landing

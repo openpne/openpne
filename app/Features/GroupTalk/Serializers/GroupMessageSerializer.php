@@ -9,10 +9,8 @@ use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
 use App\Models\Member;
-use App\Models\Reaction;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
-use Illuminate\Support\Collection;
 
 /**
  * Modern surface shapes for a group's talk. `author` is null for a withdrawn member (the FK SET
@@ -27,9 +25,12 @@ use Illuminate\Support\Collection;
 class GroupMessageSerializer
 {
     /**
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row, as
+     *                                                                         MessageReactionAggregates counts it. Passed in rather than read off the model: the rows
+     *                                                                         behind a chip are one per reactor, and no page hydrates them.
      * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
      */
-    public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
+    public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions): array
     {
         return [
             'id' => $message->getKey(),
@@ -39,38 +40,10 @@ class GroupMessageSerializer
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
             'images' => $message->images->map([self::class, 'image'])->values()->all(),
-            'reactions' => self::reactions($message, $permissions),
+            'reactions' => $reactions,
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
         ];
-    }
-
-    /**
-     * The emoji on a message, counted — the whole authoritative state of its chip row, which is why
-     * the add and remove endpoints answer with this same shape rather than a delta the client would
-     * have to apply.
-     *
-     * Who reacted is deliberately not here: a chip row's payload would then grow with the room, and
-     * the names are only ever wanted when someone opens the list (GroupTalkReactionController::index).
-     *
-     * Counted off the loaded relation, so a page costs no query per message and no query per emoji;
-     * the relation's order is what puts the first-used emoji first.
-     *
-     * @return list<array{emoji: string, count: int, mine: bool}>
-     */
-    public static function reactions(GroupMessage $message, GroupTalkPermissions $permissions): array
-    {
-        $viewer = $permissions->member->getKey();
-
-        return $message->reactions
-            ->groupBy('emoji')
-            ->map(fn (Collection $rows, string $emoji): array => [
-                'emoji' => $emoji,
-                'count' => $rows->count(),
-                'mine' => $rows->contains(fn (Reaction $reaction): bool => $reaction->member_id === $viewer),
-            ])
-            ->values()
-            ->all();
     }
 
     /**
@@ -99,13 +72,15 @@ class GroupMessageSerializer
     /**
      * A page of the conversation, oldest first, and what lies either side of it.
      *
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  chip rows by message id;
+     *                                                                                     a message nobody reacted to has no key
      * @return array{messages: list<array>, hasOlder: bool, hasNewer: bool}
      */
-    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions): array
+    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions, array $reactions): array
     {
         return [
             'messages' => $page->messages
-                ->map(fn (GroupMessage $message): array => self::message($message, $permissions))
+                ->map(fn (GroupMessage $message): array => self::message($message, $permissions, $reactions[$message->getKey()] ?? []))
                 ->values()
                 ->all(),
             'hasOlder' => $page->hasOlder,

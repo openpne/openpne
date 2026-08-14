@@ -416,19 +416,21 @@ An emoji on a message, in the `reactions` table — polymorphic from the first r
 where reactions land first and not where they stop. `reactable_id` therefore carries no foreign key,
 which is the whole reason two of the three deletion paths below have to sweep by hand.
 
-It is **Slack-shaped, not LINE-shaped**: the unique key is `(reactable_type, reactable_id, member_id,
-emoji)`, so one member may hold several emoji on one message. Going the other way later would have to
-throw rows away, which is why the wide key is a decision rather than the shape that fell out. On
+**One member may hold several emoji on one message**: the unique key is `(reactable_type,
+reactable_id, member_id, emoji)`. Narrowing it to one emoji per member later would have to throw rows
+away, which is why the wide key is a decision rather than the shape that fell out. On
 MySQL `emoji` is `utf8mb4_bin`, since the default collation equates a code point with its
 VS16-qualified form (`U+2764` = `U+2764 U+FE0F`) and SQLite's binary TEXT does not — the two engines
 would otherwise disagree about what counts as one reaction.
 
 [`ReactionVocabulary`](../../app/Features/Reactions/ReactionVocabulary.php) is the only place the set
 is written down, its size included: the add rule reads it, the page ships it to the picker as
-`reactionVocabulary`, and the tests pin its bytes. Nothing in the bundle holds a copy, so a tab open
-across a deploy cannot offer an emoji the server has stopped taking. What may be **added** is that
-set; what may be **removed** is whatever the member is holding, unchecked — otherwise narrowing the
-vocabulary would strand every reaction already written with a retired emoji.
+`reactionVocabulary`, and the tests pin its bytes. Nothing in the bundle holds a copy, so one render
+draws its picker from one set. A prop is fixed at render time, though — a tab left open across a
+deploy goes on offering what it was rendered with, and what closes that skew is the server: the add
+rule refuses a retired emoji with a 422 and the client's optimistic chip reverts. What may be
+**added** is that set; what may be **removed** is whatever the member is holding, unchecked —
+otherwise narrowing the vocabulary would strand every reaction already written with a retired emoji.
 
 Add and remove are two URLs rather than one toggle, for the reason [mute](#mute) is a state rather
 than a flip: a tap that is retried, doubled, or racing the poll has to settle where the member
@@ -437,8 +439,17 @@ pointed. Both are idempotent at the row level — the insert leans on the unique
 the meantime arrives in the same response. Writing is `canPost` (reacting is speaking in the room),
 reading the reactor list is `canView`, and a refusal is the usual 404.
 
-Who reacted is deliberately not in that payload: it is the one part of a reaction whose size grows
-with the room, so the names come from `GET .../reactions` when a dialog is opened, and nowhere else.
+That chip row is counted in SQL and never hydrated
+([`MessageReactionAggregates`](../../app/Features/GroupTalk/Queries/MessageReactionAggregates.php)):
+one grouped read serves a whole page, and a write answers from the same query. The chips are a
+handful of numbers, but the rows behind them are one per reactor per emoji — reading them per page
+and per poll would cost the size of the room for something the payload never names.
+
+Who reacted is exactly that part, so the names come from `GET .../reactions` when a dialog is opened,
+and nowhere else. That read is bounded too
+([`MessageReactors`](../../app/Features/GroupTalk/Queries/MessageReactors.php)): an emoji's count is
+exact and the first hundred reactors travel with it, in the order they reacted. Past that the dialog
+has the number and no more — the list is read by a person.
 
 Nothing notifies. The room's unread badge is what tells a member something happened here, and a
 reaction did not happen *to* them in the sense a mention does.
@@ -477,12 +488,29 @@ it buys.
 Reactions are invisible to unread. They create no message row, and no unread read looks at a version,
 so cursors, badges and the room list's order cannot move because someone reacted.
 
+### One lock order
+
+A gate is answered before the write it guards runs, and `reactable_id` carries no foreign key — so
+nothing at the engine level would refuse a reaction onto a message, or a group, deleted in between,
+and what it left would be a row nothing ever collects. Every reaction write therefore takes
+[`TalkWriteLock`](../../app/Features/GroupTalk/TalkWriteLock.php) first: the group's row
+exclusively, then the message re-read under it, both as locking reads so they see what is committed
+rather than the transaction's snapshot. A message that is gone is the talk's usual 404.
+
+The order is the same everywhere, which is what keeps these paths from deadlocking as well as from
+racing: the add, the remove, a message's own purge and the group teardown that sweeps a whole
+conversation all take the group row before they touch a reaction. Holding it is also what makes the
+version's increment the group's serialization point. The single order is a property of the code
+rather than something a single-connection test can show; the tests pin the refusal and the rollback.
+
 ### Reclaiming the rows
 
 The reverse of the polymorphic column: nothing cascades a reaction away with the thing it is on.
 
 - [`DeleteGroupMessage::purge()`](../../app/Features/GroupTalk/Actions/DeleteGroupMessage.php) —
-  beside the image bytes, and for the same reason.
+  beside the image bytes, and for the same reason. Sweep and delete are one transaction under the
+  lock above, so a reaction arriving mid-purge cannot outlive the message it is on; only the File
+  bytes go after the commit.
 - [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) — every reaction in the
   group, inside the same lock transaction as the image sweep.
 - A withdrawing member's own, which *is* a cascade: `member_id` is a real foreign key.
@@ -496,8 +524,7 @@ The reverse of the polymorphic column: nothing cascades a reaction away with the
   group answers "who may read this" the same way everywhere, and an Everyone group whose timeline
   any member could read does not lose that audience when its history becomes talk.
 - **Post = membership**, and `topic_post_authority` is deliberately not consulted: an admins-only
-  board must not also silence the group's chat. Read-public and write-members is the Slack public
-  channel shape.
+  board must not also silence the group's chat. Open to read, joined to speak.
 - **Delete = the author, or anyone who manages the group** (admin or sub-admin) — a linear chat needs
   the moderation reach the boards already give. Deletion is physical.
 
@@ -569,3 +596,7 @@ role once per request and the serializer asks it per row.
     withdrawal. Only the last is a cascade, because `reactable_id` carries no foreign key.
 21. Live agreement is the latest window's alone. A history window catches up on return, and a poll
     that carries no watermark is answered as one that never asked.
+22. Every write that touches a reaction takes the group row's exclusive lock first and re-reads the
+    message under it — the one order, shared with the message's purge and the group's teardown.
+23. Nothing about a chip row grows with the room: the counts are aggregated in SQL rather than
+    hydrated, and the reactor list ships an exact count with at most a hundred names.
