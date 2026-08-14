@@ -24,6 +24,10 @@ test('the rungs that clear the source are folded into the first of them', () => 
     assert.equal(fitSrcSet(ladder, 500, 500), '/a320 320w, /a640 500w');
 });
 
+test('a sliver never rounds to 0w: every rung is 1w and collapses to the first', () => {
+    assert.equal(fitSrcSet(ladder, 1, 4096), '/a320 1w');
+});
+
 test('an unknown size yields no srcset rather than a derived one', () => {
     assert.equal(fitSrcSet(ladder, null, 3024), null);
     assert.equal(fitSrcSet(ladder, 4032, null), null);

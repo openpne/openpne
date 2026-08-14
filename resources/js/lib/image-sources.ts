@@ -44,7 +44,9 @@ export function fitSrcSet(sources: FitSource[], width: number | null, height: nu
         // width and the rungs collapse onto one descriptor. Two candidates claiming the same `w`
         // leaves the browser's pick arbitrary, so only the first — the cheapest — is offered.
         const scale = Math.min(1, source.box / width, source.box / height);
-        const intrinsic = Math.round(width * scale);
+        // max(1, …) mirrors Intervention's proportionalWidth: a 1x4096 sliver scales to a 1px-wide
+        // variant, never 0 — and 0w is not a valid descriptor.
+        const intrinsic = Math.max(1, Math.round(width * scale));
 
         if (!widths.has(intrinsic)) {
             widths.add(intrinsic);
