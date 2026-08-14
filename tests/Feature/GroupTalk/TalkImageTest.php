@@ -173,10 +173,9 @@ class TalkImageTest extends TalkTestCase
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
             ->assertInertia(fn ($page) => $page
-                ->has('page.messages.0.images.0.fitUrl')
-                ->has('page.messages.0.images.0.fit2xUrl')
-                ->has('page.messages.0.images.0.squareUrl')
-                ->has('page.messages.0.images.0.square2xUrl')
+                ->has('page.messages.0.images.0.fitSources', 3)
+                ->has('page.messages.0.images.0.cropSources.tall', 2)
+                ->has('page.messages.0.images.0.cropSources.wide', 2)
                 // The upload recorded the size, so the client can reserve the box before the bytes.
                 ->where('page.messages.0.images.0.width', 40)
                 ->where('page.messages.0.images.0.height', 40));

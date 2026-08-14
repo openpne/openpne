@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Files\FileStorage;
+use App\Files\ImageDimensions;
 use App\Models\File;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
@@ -66,9 +67,6 @@ class BackfillImageDimensionsCommand extends Command
             return null;
         }
 
-        $size = @getimagesizefromstring($bytes);
-
-        // A zero side is no size at all (FileUploader applies the same rule at ingestion).
-        return $size === false || $size[0] < 1 || $size[1] < 1 ? null : [$size[0], $size[1]];
+        return ImageDimensions::fromBytes($bytes);
     }
 }

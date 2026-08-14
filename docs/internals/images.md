@@ -7,39 +7,44 @@ An uploaded picture is stored once and drawn from generated variants, served at 
 covers the part a caller decides: **which variant to ask for**, and the intrinsic size that travels
 beside it.
 
-## Ask for twice the box
+## A variant is a source, not a box
 
-Where CSS decides the size (every Modern surface), the variant is a *source*, not the painted box.
-A screen at DPR 2 draws twice the CSS pixels, so a source the size of the box is upscaled on most
-phones. Surfaces therefore ship a pair — the box size and its double — as a `srcset` with **`1x` /
-`2x` descriptors**.
+Where CSS decides the size (every Modern surface), a variant is a candidate in a `srcset` and the
+browser picks from it. Attachment serializers therefore ship **ladders**, not a pair keyed to one
+placement: the same record is drawn in a 300px post cell and a 160px boxed cell, and a candidate
+list that names densities for one of those is wrong for the other. Naming a 1200px source "2x"
+only holds if the box is 600 CSS px wide.
 
-`w` descriptors are not used. A `w` candidate states its real intrinsic width, and a fit variant's
-intrinsic width depends on the source's aspect ratio: `w600_h600` of a landscape photo is 600 wide,
-of a portrait it is narrower. Producing a correct `w` list would mean computing every candidate per
-image from `files.width`/`height` — and being unable to produce one at all wherever that is null. An
-`x` descriptor names the density it suits, which is true regardless of the picture.
+So the descriptors are `w` — each candidate states its real intrinsic width, and the browser
+combines that with the `sizes` the placement declares. Density follows from the two, per placement,
+instead of being asserted by the server.
 
-A fit pair is not always a true 1x/2x: a fit variant never upscales, so for a source between the two
-sizes the 2x candidate comes back at the original size, short of double. That is the best the source
-has, and omitting the candidate leaves the same screen upscaling the 1x one instead. A square pair
-has no such gap and pays for it the other way — a crop fills its box exactly, so a small source is
-upscaled into a large, soft file that is the stated density in name only.
+## The two ladders
 
-## Fit or square
+| | shape | descriptor | for |
+|---|---|---|---|
+| `fitSources` | scales inside a square box, keeps the aspect ratio, never upscales | 320 / 640 / 1200 box | a picture shown at its own shape |
+| `cropSources` | centre-crops to fill the cell ratio exactly, upscaling a smaller source | 300 / 600 wide, per ratio | a fixed-shape grid cell |
 
-Both forms come from the same whitelist entry, and the choice follows what the layout does with the
-result:
+`cropSources` is keyed by cell ratio — `tall` is 3:4 (the two-image cells and the three-image left
+cell), `wide` is 3:2 (the three-image right cells). The crop happens **once, on the server, at the
+ratio the cell actually is**. Cropping to a square and letting CSS `object-fit: cover` finish the
+job is not the same picture: cover scales until the shorter side fills, so a square source in a 3:2
+cell is zoomed 1.33x past what a 3:2 crop would show and loses the top and bottom of the frame.
+Extreme aspect ratios lose more. CSS `cover` is still applied on the cell, but with the source
+already at the cell's ratio it only scales — it does not re-crop.
 
-| | | for |
-|---|---|---|
-| fit (`thumbnailUrl(600, 600)`) | scales inside the box, keeps the aspect ratio, never upscales | a picture shown at its own shape |
-| square (`thumbnailUrl(600, 600, square: true)`) | centre-crops to fill the box exactly, upscaling a smaller source | a fixed-shape cell drawn with `object-fit: cover` |
+A crop candidate's intrinsic width is exactly the number in the URL, so its `w` descriptor is
+literal. A fit candidate's is not: `w640_h640` of a landscape photo is 640 wide, of a portrait it is
+narrower, and of a source smaller than the box it is the source's own width. The client derives it
+from `width`/`height`, which travel in the same entry. **With no recorded size there is nothing to
+derive**, so a surface then drops the `srcset` and paints the middle candidate (640) alone.
 
-A cover cell fed a fit variant downloads pixels it then crops away, and a picture shown at its own
-shape fed a square variant is a picture with its edges cut off. Every attachment serializer ships
-both pairs (`fitUrl` / `fit2xUrl`, `squareUrl` / `square2xUrl`) so a surface picks per placement
-rather than per record.
+The ladders are shared across every placement, which is what makes them safe to serve without
+knowing the placement — and what leaves a floor: the smallest candidate is larger than the smallest
+box any surface paints, so a 160px boxed cell at 1x still fetches a 300px-class crop. That is a
+bounded overshoot of tens of kilobytes, taken deliberately: closing it means per-placement
+candidates, and every added size multiplies cached variants across the whole file corpus.
 
 `thumbnailUrl` — the 120px square — stays on those entries for the surfaces that read it.
 
@@ -47,8 +52,8 @@ rather than per record.
 
 `allowed_sizes` is a whitelist of `WxH` targets, and an unlisted one is a 404, so a request cannot
 drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in every stored format,
-under the current cache generation: an added size multiplies cached variants across the whole file
-corpus. Add the partner of a size a surface actually paints, not a size that might be wanted.
+under the current cache generation. Add a size a surface actually paints, not a size that might be
+wanted.
 
 ## files.width / files.height
 
@@ -57,6 +62,17 @@ already holding. Both columns are nullable, and **null means unknown** — a non
 before the columns existed, OpenPNE 3 data (which records no dimensions), or bytes that do not
 decode. A zero side counts as unknown too: a header-only decode reports one, and consumers divide by
 it.
+
+The recorded size is the **rendered** size, not the container's declared one.
+[`ImageDimensions`](../../app/Files/ImageDimensions.php) reads EXIF Orientation and swaps the sides
+for the quarter-turn values (5-8), because delivery decodes through intervention/image, which
+auto-orients before it scales: a photo shot sideways declares 4032x3024 and draws 3024x4032. This
+holds on both ingestion paths — the metadata stripper drops EXIF but re-emits Orientation in a
+minimal APP1 precisely so rotation survives, so stripped bytes still declare the unrotated size.
+
+Reading Orientation needs `ext-exif` (a Composer `suggest`, and already required for thumbnails of
+rotated photos to render upright at all). Without it the swap does not happen and the declared size
+is recorded — the same reading intervention/image makes when it cannot auto-orient either.
 
 Consumers must handle null rather than substituting a guess: a reserved box of the wrong shape moves
 the layout twice, once when it is reserved and again when the picture disagrees with it.
@@ -77,11 +93,13 @@ changing it moves the layout. Classic keeps its 120px square.
 ## Key invariants
 
 - A variant request is a source for a `srcset`, never the painted box — except on Classic.
-- Density (`x`) descriptors only. A `w` descriptor would have to be derived per image, and cannot be
-  derived at all for a file with no recorded size.
-- Cover cells take the square variant; anything drawn at its own aspect ratio takes the fit variant.
-- Every size a surface asks for is in `allowed_sizes`, in both the size and its double.
+- `w` descriptors only, and only ever a candidate's true intrinsic width. A fit ladder without
+  `files.width`/`height` to derive from ships no `srcset` at all.
+- A cell is cropped server-side at its own ratio; CSS `cover` may scale that source but never
+  re-crops it to a different shape.
+- Every size a surface asks for is in `allowed_sizes`, at every rung of the ladder.
 - `files.width` / `files.height` are nullable and null means unknown. Nothing may treat a missing
   size as an error, and nothing may invent one.
-- A fit variant is at most the source's own size; a square variant is always exactly its box, source
+- A recorded size is the size the picture renders at, EXIF Orientation applied.
+- A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.

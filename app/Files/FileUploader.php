@@ -97,10 +97,10 @@ class FileUploader
     }
 
     /**
-     * The image's intrinsic pixel size, or [null, null] for anything else. Only an image is read
+     * The image's rendered pixel size, or [null, null] for anything else. Measured from the bytes
+     * that will actually be stored, since stripping rewrites the container. Only an image is read
      * into memory — a video or archive would be a pointless multi-megabyte allocation. Bytes that
      * do not decode still upload (the size stays unknown); it is metadata, not a validation gate.
-     * A zero side counts as no size: a header-only decode reports one, and consumers divide by it.
      *
      * @return array{0: int|null, 1: int|null}
      */
@@ -110,9 +110,8 @@ class FileUploader
             return [null, null];
         }
 
-        $size = @getimagesizefromstring($stripped ?? (string) file_get_contents($upload->getRealPath()));
-
-        return $size === false || $size[0] < 1 || $size[1] < 1 ? [null, null] : [$size[0], $size[1]];
+        return ImageDimensions::fromBytes($stripped ?? (string) file_get_contents($upload->getRealPath()))
+            ?? [null, null];
     }
 
     private function shouldStrip(string $mime): bool

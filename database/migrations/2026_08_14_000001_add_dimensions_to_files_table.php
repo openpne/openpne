@@ -5,9 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * The intrinsic pixel size of a stored image, so a surface can reserve the box before the bytes
- * arrive. Nullable: a non-image has no size, and rows written before this column (or whose bytes do
- * not decode) stay NULL until `openpne:backfill-image-dimensions` fills them.
+ * The pixel size a stored image renders at — EXIF Orientation applied, since delivery auto-orients —
+ * so a surface can reserve the box before the bytes arrive. Nullable: a non-image has no size, and
+ * rows written before this column (or whose bytes do not decode) stay NULL until
+ * `openpne:backfill-image-dimensions` fills them.
  */
 return new class extends Migration
 {

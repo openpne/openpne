@@ -73,8 +73,8 @@ class File extends Model
      * URL of a thumbnail variant, in the OpenPNE 3-compatible /cache/img form. The size
      * must be whitelisted (config openpne.images.allowed_sizes) to resolve.
      *
-     * Where CSS sizes the image (every Modern surface), the size asked for here is a source
-     * for a 1x/2x srcset, not the painted box — see docs/internals/images.md for picking it.
+     * Where CSS sizes the image (every Modern surface), the size asked for here is one candidate
+     * in a srcset, not the painted box — see docs/internals/images.md for picking it.
      * Classic is the exception: its `<img>` carries no dimensions, so the size requested here
      * *is* the rendered size and changing it moves the layout.
      */

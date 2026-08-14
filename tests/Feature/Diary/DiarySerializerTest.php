@@ -124,7 +124,7 @@ class DiarySerializerTest extends TestCase
 
         $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail($diary->getKey()));
 
-        $this->assertSame($file->thumbnailUrl(600, 600), $detail['images'][0]['fitUrl']);
+        $this->assertSame($file->thumbnailUrl(640, 640), $detail['images'][0]['fitSources'][1]['url']);
         $this->assertSame(1600, $detail['images'][0]['width']);
         // thumbnails is derived from the same entries and stays the 120px square list it was.
         $this->assertSame([$file->thumbnailUrl(120, 120, square: true)], $detail['thumbnails']);

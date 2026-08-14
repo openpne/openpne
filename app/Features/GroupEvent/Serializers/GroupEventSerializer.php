@@ -52,7 +52,7 @@ class GroupEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(GroupEvent $event): array
     {
@@ -77,7 +77,7 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupEventComment $comment, Member $viewer): array
     {
@@ -128,7 +128,7 @@ class GroupEventSerializer
      * surface takes and why the intrinsic size travels with them. Tolerates a row whose File is
      * gone (defensive; the join cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */
     public static function image(GroupEventImage|GroupEventCommentImage $image): array
     {
@@ -138,10 +138,21 @@ class GroupEventSerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
-            'fitUrl' => $file?->thumbnailUrl(600, 600) ?? '',
-            'fit2xUrl' => $file?->thumbnailUrl(1200, 1200) ?? '',
-            'squareUrl' => $file?->thumbnailUrl(600, 600, square: true) ?? '',
-            'square2xUrl' => $file?->thumbnailUrl(1200, 1200, square: true) ?? '',
+            'fitSources' => $file ? [
+                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
+                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
+                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
+            ] : [],
+            'cropSources' => $file ? [
+                'tall' => [
+                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
+                ],
+                'wide' => [
+                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
+                ],
+            ] : [],
             'width' => $file?->width,
             'height' => $file?->height,
         ];

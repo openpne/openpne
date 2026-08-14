@@ -158,8 +158,8 @@ class ConversationSerializerTest extends ConversationTestCase
             ->getJson("/messages/{$other->getKey()}/messages")
             ->json('messages.0.images.0');
 
-        $this->assertSame($file->thumbnailUrl(600, 600), $image['fitUrl']);
-        $this->assertSame($file->thumbnailUrl(1200, 1200, square: true), $image['square2xUrl']);
+        $this->assertSame($file->thumbnailUrl(640, 640), $image['fitSources'][1]['url']);
+        $this->assertSame($file->thumbnailUrl(600, 800, square: true), $image['cropSources']['tall'][1]['url']);
         $this->assertSame(1600, $image['width']);
         $this->assertSame(900, $image['height']);
     }

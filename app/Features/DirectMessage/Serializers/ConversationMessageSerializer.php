@@ -22,7 +22,7 @@ use DateTimeInterface;
 class ConversationMessageSerializer
 {
     /**
-     * @return array{id: int, cursor: string, body: string, subject: string|null, createdAt: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, isOwn: bool, read: bool|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>}
+     * @return array{id: int, cursor: string, body: string, subject: string|null, createdAt: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, isOwn: bool, read: bool|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}
      */
     public static function message(DirectMessage $message, Member $viewer, ?Member $counterpart): array
     {

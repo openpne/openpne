@@ -11,8 +11,9 @@ use Tests\TestCase;
 
 /**
  * files.width / files.height: recorded at upload, and filled for older rows by
- * `openpne:backfill-image-dimensions`. Both paths are fail-open — a size that cannot be read
- * leaves NULL rather than failing the upload or the run (docs/internals/images.md).
+ * `openpne:backfill-image-dimensions`. The recorded size is the one the image renders at, EXIF
+ * Orientation applied. Both paths are fail-open — a size that cannot be read leaves NULL rather
+ * than failing the upload or the run (docs/internals/images.md).
  */
 class ImageDimensionsTest extends TestCase
 {
@@ -35,6 +36,42 @@ class ImageDimensionsTest extends TestCase
         $this->assertSame('image/gif', $file->type);
         $this->assertSame(6, $file->width);
         $this->assertSame(6, $file->height);
+    }
+
+    public function test_an_upload_records_the_size_a_rotated_photo_renders_at(): void
+    {
+        // The fixture declares 12x6 and carries Orientation 6, so it draws 6x12 — which is what
+        // ImageCache produces, because intervention/image auto-orients before it scales.
+        $file = $this->upload($this->rotatedPhoto());
+
+        $this->assertSame(6, $file->width);
+        $this->assertSame(12, $file->height);
+    }
+
+    public function test_an_unstripped_upload_records_the_rotated_size_too(): void
+    {
+        // Stripping rewrites the container, so the two upload paths measure different bytes. The
+        // stripper re-emits Orientation instead of baking the rotation into the pixels, so both
+        // still declare 12x6 and both need the swap.
+        config(['openpne.images.strip_metadata' => false]);
+
+        $file = $this->upload($this->rotatedPhoto());
+
+        $this->assertSame(6, $file->width);
+        $this->assertSame(12, $file->height);
+    }
+
+    public function test_the_backfill_records_the_size_a_rotated_photo_renders_at(): void
+    {
+        // OpenPNE 3 bytes arrive with their EXIF intact, so this is the path that meets an
+        // un-stripped rotation most often.
+        $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'));
+
+        $this->backfill();
+
+        $file->refresh();
+        $this->assertSame(6, $file->width);
+        $this->assertSame(12, $file->height);
     }
 
     public function test_a_non_image_upload_records_no_size(): void
@@ -133,6 +170,12 @@ class ImageDimensionsTest extends TestCase
     private function backfill(): void
     {
         $this->artisan('openpne:backfill-image-dimensions')->assertSuccessful();
+    }
+
+    /** SOF 12x6 with EXIF Orientation 6: a landscape container that renders 6x12 portrait. */
+    private function rotatedPhoto(): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent('r.jpg', $this->fixture('jpeg-gps-orientation.jpg'));
     }
 
     private function fixture(string $name): string

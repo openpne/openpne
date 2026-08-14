@@ -4,8 +4,9 @@ namespace App\Files;
 
 /**
  * A validated thumbnail transform parsed from an OpenPNE 3-style geometry segment
- * (`w120_h120`, `w_h` for the original size, `w120_h120_sq` for a center-cropped
- * square). null from fromGeometry() means the request is malformed or asks for a
+ * (`w120_h120`, `w_h` for the original size, `w120_h120_sq` to center-crop and fill the
+ * box exactly — OpenPNE 3 only ever asked for a square one, hence the token, but the box
+ * may be any ratio). null from fromGeometry() means the request is malformed or asks for a
  * size outside the whitelist — the caller turns that into a 404, so a request cannot
  * drive arbitrary-size generation.
  */
