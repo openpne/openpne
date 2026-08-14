@@ -179,11 +179,14 @@ navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
 static-trail form bar.
 The registry's `conversation` flag marks a room a member stays in, reading and
-writing in the same place — group talk today. Below lg it also drops the bottom bar
-and holds its chrome still, so the composer stands at the true foot of the screen: a
-bar sliding out from under it would open a gap for the next message to show through.
-Its top bar stays the ordinary back-plus-scope one — a conversation is somewhere you
-go into, not a sheet you close.
+writing in the same place — group talk and a direct message room. Below lg it also
+drops the bottom bar and holds its chrome still, and its composer takes
+`--modern-bottom-offset` as the last of its own padding instead of standing on it, so
+the bar reaches the foot of the screen at every scroll position. Anything left under
+it — a bar sliding away, the home-indicator strip — is a band the conversation shows
+through; a room with no composer to stand there takes that strip back itself. Its top
+bar stays the ordinary back-plus-scope one — a conversation is somewhere you go into,
+not a sheet you close.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

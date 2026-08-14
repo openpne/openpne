@@ -51,8 +51,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                         ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
                           // inside its height, the bottom bar's sits above the row, and both vars mean
                           // the same thing — how much of the screen the bar takes. With no bar the var
-                          // is the home-indicator strip alone, so what stands on it (a sheet, a
-                          // conversation's composer) stands at the foot of the screen.
+                          // is the home-indicator strip alone: a sheet ends above it, and a
+                          // conversation's composer paints it as the last of its own height.
                           '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))] lg:[--modern-bottom-offset:0px]'
                         : '[--modern-bottom-offset:env(safe-area-inset-bottom)] lg:[--modern-bottom-offset:0px]',
                 )}
@@ -69,7 +69,12 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     inert={exiting || undefined}
                     onAnimationEnd={onAnimationEnd}
                     className={cn(
-                        'min-w-0 flex-1 pb-[var(--modern-bottom-offset)]',
+                        'min-w-0 flex-1',
+                        // A conversation carries its own foot: the composer takes the strip as the last
+                        // of its own padding, and a room with no composer takes it back on its last
+                        // box. Reserving it here as well would hold the bar that much higher, with the
+                        // conversation scrolling through the band underneath it.
+                        !chrome.conversation && 'pb-[var(--modern-bottom-offset)]',
                         compose && (exiting ? 'max-lg:motion-safe:animate-modern-sheet-out' : 'max-lg:motion-safe:animate-modern-sheet'),
                     )}
                 >
