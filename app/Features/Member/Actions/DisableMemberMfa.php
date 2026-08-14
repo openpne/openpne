@@ -66,7 +66,7 @@ class DisableMemberMfa
 
             // 失効契約 (a): the factor this member had is gone, so any admin-issued reset link for it must
             // die too — otherwise a "send → self-disable → re-enable within the TTL" sequence would leave
-            // the old link live against the new factor (TASK-122). Member is already locked above; the
+            // the old link live against the new factor. Member is already locked above; the
             // global Member → mfa_reset_requests order holds.
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 

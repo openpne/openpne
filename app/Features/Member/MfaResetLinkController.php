@@ -21,7 +21,7 @@ use Inertia\Response as InertiaResponse;
  * not the visitor is logged in — the locked-out member opens it as a guest — so it lives outside the
  * authenticated member-config routes, in its own controller so "controller = auth boundary" holds.
  *
- * Boundary invariant (TASK-122, docs/internals/security.md): the admin panel gains no direct account
+ * Boundary invariant (docs/internals/security.md): the admin panel gains no direct account
  * takeover ability. The link is delivered only to the member's registered mailbox and the reset is gated
  * on the member's own account password — both evidence outside the admin's reach — so even a malicious or
  * hijacked admin cannot use this to seize an account. GET only renders (a mail scanner / prefetch must

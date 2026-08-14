@@ -267,7 +267,7 @@ enum MailTemplate: string
                 variables: [],
             ),
             self::MfaResetLink => new MailTemplateDefinition(
-                // OpenPNE-4-only: the admin-issued two-factor reset link (TASK-122); OpenPNE 3 had no such flow.
+                // OpenPNE-4-only: the admin-issued two-factor reset link; OpenPNE 3 had no such flow.
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Two-factor authentication reset (link)',

@@ -18,10 +18,10 @@ use Tests\TestCase;
 /**
  * Lockout recovery: openpne:member:disable-mfa clears a member's TOTP secret and recovery
  * codes and revokes every session — gated by server access, for the member who lost both the
- * authenticator and the recovery codes. Since TASK-122 the command runs on the shared
- * ForceDisableMemberMfa core; the pins below keep its externally observed behavior fixed across
- * that extraction (all-session revoke even for a pending set-up, the via=cli audit log, and the
- * 失効契約 drop of any pending admin reset link).
+ * authenticator and the recovery codes. The command delegates to the shared ForceDisableMemberMfa
+ * core; the pins below keep its externally observed behavior fixed against that shared core
+ * (all-session revoke even for a pending set-up, the via=cli audit log, and the 失効契約 drop of
+ * any pending admin reset link).
  */
 class DisableMemberMfaCommandTest extends TestCase
 {

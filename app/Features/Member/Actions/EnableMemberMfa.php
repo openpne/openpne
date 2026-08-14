@@ -37,7 +37,7 @@ class EnableMemberMfa
 
             // Defense-in-depth for 失効契約 (a): starting a fresh set-up drops any lingering reset link
             // (the disable that preceded this already did, but a reset link must never carry across a
-            // factor's lifecycle — TASK-122).
+            // factor's lifecycle).
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;
