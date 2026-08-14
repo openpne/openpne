@@ -1,18 +1,18 @@
 <?php
 
 /**
- * Catalog of OpenPNE preset profile fields (OpenPNE 3 preset_profile.yml 互換).
+ * Catalog of OpenPNE preset profile fields, compatible with OpenPNE 3's preset_profile.yml.
  *
- * - キーは preset 識別子。`op_preset_<key>` という profiles.name で登録される。
- * - caption_key は __() で翻訳される文字列(lang/ja.json に対応訳を置く)。
- * - choices は select/radio 用(key=保存値、value=表示翻訳キー)。OpenPNE 3 は選択肢の
- *   「値」側を member_profile.value に保存する(sex なら Female / Man)ので key にそれを置く。
- *   preset の選択肢はこの catalog から出し、profile_options テーブルは使わない。
- * - region_select は OpenPNE の getRawPresetName() 互換: region_JP / region_US 等は
- *   同じ name=op_preset_region で value_type が JP / US に切り替わる(UNIQUE 制約のため
- *   同時に 1 つだけ登録可)。
- * - default_public_flag は OpenPNE では 0 だが 1-4 でないため、登録時に 1(SNS)へ
- *   正規化する(PresetProfileSeeder / ProfileUpgrade / 管理画面作成のいずれも)。
+ * - The key is the preset identifier; the field registers under the profiles.name `op_preset_<key>`.
+ * - caption_key is a string translated through __() (lang/ja.json carries the ja side).
+ * - choices drives select/radio (key = stored value, value = display translation key). OpenPNE 3
+ *   stores the choice's *value* side in member_profile.value (Female / Man for sex), so the key
+ *   holds that. Preset choices come from this catalog; the profile_options table is unused.
+ * - region_select follows OpenPNE 3's getRawPresetName(): region_JP / region_US and the rest all
+ *   register under the same name=op_preset_region with value_type switching to JP / US, so the
+ *   UNIQUE constraint admits only one of them at a time.
+ * - default_public_flag is 0 in OpenPNE 3, outside its own 1-4 scale, so registration normalizes it
+ *   to Visibility::Members (PresetProfileSeeder, ProfileUpgrade and admin-panel creation alike).
  */
 
 return [

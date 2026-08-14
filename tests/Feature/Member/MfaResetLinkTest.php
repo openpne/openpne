@@ -294,12 +294,12 @@ class MfaResetLinkTest extends TestCase
         $this->assertFalse($member->fresh()->hasEnabledTwoFactorAuthentication());
     }
 
-    // --- 失効契約 (invalidation contract) ------------------------------------------------------------
+    // --- invalidation contract ----------------------------------------------------------------------
 
     public function test_disabling_then_reenabling_within_the_ttl_kills_the_old_link(): void
     {
-        // 失効契約 (a): send → disable → re-enable a new factor within the TTL must not leave the old link
-        // live against the new factor.
+        // Invalidation contract (a): send → disable → re-enable a new factor within the TTL must not
+        // leave the old link live against the new factor.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
@@ -315,7 +315,8 @@ class MfaResetLinkTest extends TestCase
 
     public function test_confirming_an_email_change_kills_the_old_link(): void
     {
-        // 失効契約 (b): the address is the proof channel, so changing it voids a pending reset.
+        // Invalidation contract (b): the address is the proof channel, so changing it voids a pending
+        // reset.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 

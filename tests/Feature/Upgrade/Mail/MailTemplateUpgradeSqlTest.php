@@ -164,7 +164,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
     public function test_a_migrated_customized_body_renders_through_the_service(): void
     {
         // An admin customized the OpenPNE 3 friend-accepted body; after the upgrade the OpenPNE 4 service
-        // must render exactly that wording (the cutover requirement: same 文面).
+        // must render exactly that wording (the cutover requirement: the member sees the same text).
         $this->seedMail(3, 'pc_friendLinkComplete');
         $this->seedTranslation(3, 'ja_JP', 'フレンド成立のお知らせ', '{{ member.name }}さんとフレンドになりました。');
 

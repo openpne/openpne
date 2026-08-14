@@ -20,8 +20,8 @@ use Tests\TestCase;
  * codes and revokes every session — gated by server access, for the member who lost both the
  * authenticator and the recovery codes. The command delegates to the shared ForceDisableMemberMfa
  * core; the pins below keep its externally observed behavior fixed against that shared core
- * (all-session revoke even for a pending set-up, the via=cli audit log, and the 失効契約 drop of
- * any pending admin reset link).
+ * (all-session revoke even for a pending set-up, the via=cli audit log, and the invalidation-contract
+ * drop of any pending admin reset link).
  */
 class DisableMemberMfaCommandTest extends TestCase
 {
@@ -118,7 +118,7 @@ class DisableMemberMfaCommandTest extends TestCase
 
     public function test_it_drops_a_pending_admin_reset_link(): void
     {
-        // 失効契約 (a): clearing the factor also drops any pending admin-issued reset link.
+        // Invalidation contract (a): clearing the factor also drops any pending admin-issued reset link.
         $member = Member::factory()->create(['email' => 'amy@example.com']);
         app(EnableTwoFactorAuthentication::class)($member, force: true);
         $member->forceFill(['two_factor_confirmed_at' => now()])->save();
