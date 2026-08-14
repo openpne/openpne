@@ -26,6 +26,10 @@ export default function MessageNew() {
     // Null until the first answer lands: an empty state before anything has been asked would tell the
     // member there is nobody to write to.
     const [candidates, setCandidates] = useState<MessageMember[] | null>(null);
+    // A failed search is not "no members found" — the rate limiter alone makes a refusal an ordinary
+    // event under fast typing, and choosing a person is this screen's only job, so a dead end has to
+    // say it can be retried. The next keystroke (or the same term settling) asks again.
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -36,12 +40,13 @@ export default function MessageNew() {
                 signal: controller.signal,
             })
                 .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
-                .then((body: { candidates?: MessageMember[] }) => setCandidates(body.candidates ?? []))
+                .then((body: { candidates?: MessageMember[] }) => {
+                    setFailed(false);
+                    setCandidates(body.candidates ?? []);
+                })
                 .catch(() => {
-                    // A refused or failed search leaves the list empty and says nothing more than the
-                    // empty state does: the member is looking for a name, not for an error.
                     if (!controller.signal.aborted) {
-                        setCandidates([]);
+                        setFailed(true);
                     }
                 });
         }, SEARCH_DEBOUNCE_MS);
@@ -79,10 +84,21 @@ export default function MessageNew() {
             {/* The list changes under a member who is typing rather than navigating, so how many
                 names it now holds is announced. */}
             <p role="status" className="sr-only">
-                {candidates === null ? '' : t(':count members found', { count: candidates.length })}
+                {failed
+                    ? t('The search failed. Wait a moment and try again.')
+                    : candidates === null
+                      ? ''
+                      : t(':count members found', { count: candidates.length })}
             </p>
 
-            {candidates !== null &&
+            {failed && (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('The search failed. Wait a moment and try again.')}</p>
+                </Panel>
+            )}
+
+            {!failed &&
+                candidates !== null &&
                 (candidates.length === 0 ? (
                     <Panel>
                         <p className="text-sm text-muted-foreground">
