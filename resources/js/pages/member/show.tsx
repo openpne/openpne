@@ -168,7 +168,7 @@ export default function MemberShow() {
                             </>
                         )}
                         {messageEntry && (
-                            <ActionLink href={`/message/sendToFriend?id=${owner.id}`} variant="outline">
+                            <ActionLink href={`/messages/${owner.id}`} variant="outline">
                                 <Mail className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Send a message')}
                             </ActionLink>

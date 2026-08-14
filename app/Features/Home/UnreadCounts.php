@@ -2,7 +2,7 @@
 
 namespace App\Features\Home;
 
-use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
+use App\Features\DirectMessage\Queries\CountUnreadConversations;
 use App\Features\Friend\Queries\CountReceivedFriendRequests;
 use App\Features\GroupTalk\Queries\CountGroupsWithUnreadTalk;
 use App\Features\Notifications\Queries\CountUnreadNotifications;
@@ -26,7 +26,7 @@ class UnreadCounts
 
     public function __construct(
         private readonly CountReceivedFriendRequests $friendRequests,
-        private readonly CountUnreadDirectMessages $unreadMessages,
+        private readonly CountUnreadConversations $unreadMessages,
         private readonly CountUnreadNotifications $notifications,
         private readonly CountGroupsWithUnreadTalk $groupTalks,
     ) {}
@@ -38,6 +38,8 @@ class UnreadCounts
         // member to, so a badge would only point at a 404.
         return $this->cache[$viewer->getKey()] ??= [
             'friendRequests' => Feature::Friend->enabled() ? ($this->friendRequests)($viewer) : 0,
+            // Conversations with something new, not messages — see CountUnreadConversations, and the
+            // groups badge below, which counts rooms for the same reason.
             'unreadMessages' => Feature::DirectMessage->enabled() ? ($this->unreadMessages)($viewer) : 0,
             'notifications' => ($this->notifications)($viewer),
             // Groups with something new, not messages — see CountGroupsWithUnreadTalk. Layer-1 like

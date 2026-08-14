@@ -30,12 +30,18 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Private messages (OpenPNE 3 message module), dual-surface across the read pages (the four boxes and
- * the per-message show), composing (compose/reply/send), draft editing, and the trash actions
- * (single-message and bulk trash/restore/purge): each serves Classic Blade or Modern Inertia per
- * SurfaceResolver, and a submit redirects on the surface it came from. Modern confirms a purge inline,
- * so only the GET confirm pages (purgeConfirm, bulk purge) stay Classic-only, rendered through the
- * classic() helper with the OpenPNE 3 page_message_* body id.
+ * Private messages, the OpenPNE 3 message module: the four boxes, the per-message show, composing
+ * (compose/reply/send), draft editing, and the trash actions (single-message and bulk
+ * trash/restore/purge).
+ *
+ * **The reading pages are Classic's alone.** A Modern viewer reads the same store as chat
+ * (ConversationController), so every GET here that has a chat equivalent answers them with a
+ * redirect into it rather than a second reading of the same rows — the URLs stay OpenPNE 3's,
+ * durable and already in members' mail. What Modern still renders from this controller is the draft
+ * form, which no conversation holds; what Classic still renders is every page, unchanged, through
+ * the classic() helper with the OpenPNE 3 page_message_* body id.
+ *
+ * The write actions are surface-agnostic and redirect on the surface they came from.
  */
 class DirectMessageController extends Controller
 {
@@ -44,51 +50,63 @@ class DirectMessageController extends Controller
     /** OpenPNE 3 message/index forwards to the inbox (staying on the request's surface). */
     public function index(Request $request): RedirectResponse
     {
-        return redirect()->route('message.receive');
+        return $this->isModern($request)
+            ? redirect()->route('message.chat.index')
+            : redirect()->route('message.receive');
     }
 
-    public function receive(Request $request, ListDirectMessages $query): View|InertiaResponse
+    public function receive(Request $request, ListDirectMessages $query): View|RedirectResponse
     {
         return $this->list($request, DirectMessageBox::Receive, $query);
     }
 
-    public function send(Request $request, ListDirectMessages $query): View|InertiaResponse
+    public function send(Request $request, ListDirectMessages $query): View|RedirectResponse
     {
         return $this->list($request, DirectMessageBox::Sent, $query);
     }
 
-    public function draft(Request $request, ListDirectMessages $query): View|InertiaResponse
+    public function draft(Request $request, ListDirectMessages $query): View|RedirectResponse
     {
         return $this->list($request, DirectMessageBox::Draft, $query);
     }
 
-    public function trash(Request $request, ListDirectMessages $query): View|InertiaResponse
+    public function trash(Request $request, ListDirectMessages $query): View|RedirectResponse
     {
         return $this->list($request, DirectMessageBox::Trash, $query);
     }
 
-    public function showReceived(Request $request, int $message, ShowDirectMessage $query): View|InertiaResponse
+    public function showReceived(Request $request, int $message, ShowDirectMessage $query): View|RedirectResponse
     {
         return $this->show($request, DirectMessageBox::Receive, $message, $query);
     }
 
-    public function showSent(Request $request, int $message, ShowDirectMessage $query): View|InertiaResponse
+    public function showSent(Request $request, int $message, ShowDirectMessage $query): View|RedirectResponse
     {
         return $this->show($request, DirectMessageBox::Sent, $message, $query);
     }
 
-    public function showTrashed(Request $request, int $message, ShowDirectMessage $query): View|InertiaResponse
+    public function showTrashed(Request $request, int $message, ShowDirectMessage $query): View|RedirectResponse
     {
         return $this->show($request, DirectMessageBox::Trash, $message, $query);
     }
 
     /** Compose a new message to a member (OpenPNE 3 sendToFriend?id=). */
-    public function compose(Request $request): View|InertiaResponse
+    public function compose(Request $request): View|RedirectResponse
     {
         $recipient = Member::find((int) $request->query('id'));
+
+        if ($this->isModern($request)) {
+            // Chat writes in the conversation, so this is a way into one. A missing or self-addressed
+            // recipient names no conversation and lands on the list — there is nothing here for a
+            // 404 to tell the member to do.
+            return $recipient === null || $this->viewer()->is($recipient)
+                ? redirect()->route('message.chat.index')
+                : redirect()->route('message.chat.show', ['member' => $recipient->getKey()]);
+        }
+
         abort_if($recipient === null || $this->viewer()->is($recipient), 404);
 
-        return $this->composeForm($request, $recipient);
+        return $this->composeForm($recipient);
     }
 
     public function store(ComposeDirectMessageRequest $request, SendDirectMessage $action): RedirectResponse
@@ -103,8 +121,14 @@ class DirectMessageController extends Controller
     }
 
     /** Reply to a received message: compose to its sender, carrying the thread links (OpenPNE 3 reply). */
-    public function reply(Request $request, int $message): View|InertiaResponse
+    public function reply(Request $request, int $message): View|RedirectResponse
     {
+        if ($this->isModern($request)) {
+            // Answering is writing in the conversation, and the quote and the thread links are the
+            // mailbox form's own — a conversation is linear and reads neither.
+            return $this->conversationOf($message);
+        }
+
         $original = DirectMessage::with('recipients')->findOrFail($message);
         $viewer = $this->viewer();
         // Reply is an inbox action: only on a live received message. A trashed or purged receipt has
@@ -113,14 +137,12 @@ class DirectMessageController extends Controller
         abort_if($original->sender === null, 404); // a withdrawn sender cannot be replied to
 
         return $this->composeForm(
-            $request,
             $original->sender,
             parentId: (int) $original->getKey(),
             threadId: $original->thread_id !== null ? (int) $original->thread_id : (int) $original->getKey(),
             // Reply prefills "Re:" + the original subject and the body quoted line-by-line.
             subject: 'Re:'.(string) $original->subject,
             body: $this->quote((string) $original->body),
-            parentSubject: (string) $original->subject,
         );
     }
 
@@ -184,16 +206,15 @@ class DirectMessageController extends Controller
         return redirect()->route('message.trash')->with('status', __('The message was restored.'));
     }
 
-    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Modern confirms inline. */
+    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Modern has no trash screen. */
     public function purgeConfirm(Request $request, int $message, ShowDirectMessage $query): View|RedirectResponse
     {
+        if ($this->isModern($request)) {
+            return $this->conversationOf($message);
+        }
+
         $view = $query($this->viewer(), DirectMessageBox::Trash, $message);
         abort_if($view === null, 404);
-
-        // Modern confirms purging inline — send a Modern viewer back to the trashed message.
-        if (SurfaceResolver::resolve($request, 'directMessage') === SurfaceResolver::MODERN) {
-            return redirect()->route('message.trash.show', ['message' => $message]);
-        }
 
         return $this->classic('message.purge_confirm', ['message' => $view->message]);
     }
@@ -250,30 +271,15 @@ class DirectMessageController extends Controller
         return redirect()->route($trashList)->with('status', __('The message was deleted.'));
     }
 
-    private function composeForm(Request $request, Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = '', ?string $parentSubject = null): View|InertiaResponse
+    /** The OpenPNE 3 compose form, Classic's alone: a Modern viewer writes in the conversation. */
+    private function composeForm(Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View
     {
-        return $this->respondWith($request, 'directMessage', [
-            SurfaceResolver::CLASSIC => fn () => view('message.compose', [
-                'recipient' => $recipient,
-                'parentId' => $parentId,
-                'threadId' => $threadId,
-                'subject' => $subject,
-                'body' => $body,
-            ]),
-            SurfaceResolver::MODERN => function () use ($recipient, $parentId, $threadId, $subject, $body, $parentSubject) {
-                $recipient->loadMissing('avatar.file');
-
-                return Inertia::render('message/compose', [
-                    'recipient' => DirectMessageSerializer::memberRef($recipient),
-                    'parentId' => $parentId,
-                    'threadId' => $threadId,
-                    'subject' => $subject,
-                    'body' => $body,
-                    // The reply crumb's label (the original subject, before the "Re:" prefix above);
-                    // null on a fresh compose.
-                    'parentSubject' => $parentSubject,
-                ]);
-            },
+        return $this->classic('message.compose', [
+            'recipient' => $recipient,
+            'parentId' => $parentId,
+            'threadId' => $threadId,
+            'subject' => $subject,
+            'body' => $body,
         ]);
     }
 
@@ -320,31 +326,81 @@ class DirectMessageController extends Controller
         );
     }
 
-    private function list(Request $request, DirectMessageBox $box, ListDirectMessages $query): View|InertiaResponse
+    /** Whether this request is answered as chat rather than as the mailbox. */
+    private function isModern(Request $request): bool
     {
-        // The query runs inside the chosen closure: only Classic draws the status icons, so only
-        // it pays the replied lookup.
-        return $this->respondWith($request, 'directMessage', [
-            SurfaceResolver::CLASSIC => fn () => view('message.list', [
-                'box' => $box,
-                'messages' => $query($this->viewer(), $box, withRepliedStatus: true),
-            ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('message/index', [
-                'box' => $box->value,
-                'messages' => DirectMessageSerializer::paginator($query($this->viewer(), $box)),
-            ]),
+        return SurfaceResolver::resolve($request, 'directMessage') === SurfaceResolver::MODERN;
+    }
+
+    /**
+     * Where a mailbox URL naming one message lands on the chat surface: the conversation it belongs
+     * to, seen from the viewer's side — the counterpart is the recipient of what they sent and the
+     * sender of what they received, and a null one is the withdrawn bucket. `$anchor` carries the
+     * message on as `?m=`, which the conversation honours best-effort.
+     *
+     * 404 unless the viewer is a party to the message. These ids are sequential and the URLs are
+     * public, so a redirect that named the other side would answer "who is member N corresponding
+     * with" for any id — something the boxes' own gates never let through. A draft belongs to no
+     * conversation at all, only to the form that is still writing it.
+     */
+    private function conversationOf(int $messageId, bool $anchor = false): RedirectResponse
+    {
+        $message = DirectMessage::with('recipients')->findOrFail($messageId);
+        $viewerId = (int) $this->viewer()->getKey();
+        $viewerIsSender = (int) $message->sender_id === $viewerId;
+
+        abort_if($message->is_draft, 404);
+        abort_unless(
+            $viewerIsSender || $message->recipients->contains(
+                fn (DirectMessageRecipient $receipt): bool => (int) $receipt->recipient_id === $viewerId
+            ),
+            404,
+        );
+
+        // An upgraded multi-recipient send sits in several conversations; a URL can land in one. The
+        // lowest receipt id — the first delivery written — is the rule, fixed here rather than left
+        // to whatever order the relation loaded in.
+        $counterpartId = $viewerIsSender
+            ? $message->recipients->sortBy('id')->first()?->recipient_id
+            : $message->sender_id;
+        $query = $anchor ? ['m' => $messageId] : [];
+
+        return $counterpartId === null
+            ? redirect()->route('message.chat.withdrawn', $query)
+            : redirect()->route('message.chat.show', ['member' => (int) $counterpartId] + $query);
+    }
+
+    private function list(Request $request, DirectMessageBox $box, ListDirectMessages $query): View|RedirectResponse
+    {
+        // The boxes are the mailbox's reading of the store; chat's is the conversation list, which
+        // carries the drafts box as a section of itself.
+        if ($this->isModern($request)) {
+            // A submit still lands on its box and is forwarded from here, so the flash it wrote has
+            // to survive the extra hop — otherwise every write on this surface loses its answer.
+            $request->session()->reflash();
+
+            return redirect()->route('message.chat.index');
+        }
+
+        return $this->classic('message.list', [
+            'box' => $box,
+            'messages' => $query($this->viewer(), $box, withRepliedStatus: true),
         ]);
     }
 
-    private function show(Request $request, DirectMessageBox $box, int $messageId, ShowDirectMessage $query): View|InertiaResponse
+    private function show(Request $request, DirectMessageBox $box, int $messageId, ShowDirectMessage $query): View|RedirectResponse
     {
+        // Resolved before the box query, which marks a received message read: the conversation draws
+        // its own unread boundary, and a read stamped on the way past would erase the line the
+        // reader is being sent to.
+        if ($this->isModern($request)) {
+            return $this->conversationOf($messageId, anchor: true);
+        }
+
         $view = $query($this->viewer(), $box, $messageId);
         abort_if($view === null, 404);
 
-        return $this->respondWith($request, 'directMessage', [
-            SurfaceResolver::CLASSIC => fn () => view('message.show', ['view' => $view]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('message/show', ['message' => DirectMessageSerializer::view($view)]),
-        ]);
+        return $this->classic('message.show', ['view' => $view]);
     }
 
     /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id from the parity. */

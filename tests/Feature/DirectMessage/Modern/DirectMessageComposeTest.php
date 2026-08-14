@@ -12,6 +12,11 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
+/**
+ * What the OpenPNE 3 compose flow still does under chat. The GET forms redirect into the
+ * conversation (DirectMessageRoutesTest covers where); the submits are surface-agnostic and land
+ * back in the mailbox's own boxes, which redirect on from there.
+ */
 class DirectMessageComposeTest extends TestCase
 {
     use RefreshDatabase;
@@ -30,59 +35,6 @@ class DirectMessageComposeTest extends TestCase
         $this->get(route('message.compose', ['id' => $recipient->getKey()]))->assertRedirect('/login');
         $this->get(route('message.reply', $message))->assertRedirect('/login');
         $this->post(route('message.compose.store'))->assertRedirect('/login');
-    }
-
-    public function test_modern_compose_renders_the_form_for_a_recipient(): void
-    {
-        [$viewer, $recipient] = Member::factory()->count(2)->create();
-
-        $this->actingAs($viewer)
-            ->get(route('message.compose', ['id' => $recipient->getKey()]))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/compose')
-                ->where('recipient.id', $recipient->getKey())
-                ->where('parentId', null)
-                ->where('threadId', null)
-                ->where('subject', '')
-                ->where('body', '')
-                ->where('parentSubject', null)
-            );
-    }
-
-    public function test_modern_compose_404s_for_self_or_a_missing_recipient(): void
-    {
-        $member = Member::factory()->create();
-
-        $this->actingAs($member)->get(route('message.compose', ['id' => $member->getKey()]))->assertNotFound();
-        $this->actingAs($member)->get(route('message.compose', ['id' => 999999]))->assertNotFound();
-    }
-
-    public function test_modern_reply_prefills_the_thread_and_quoted_body(): void
-    {
-        Notification::fake();
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $original = app(SendDirectMessage::class)($sender, new DirectMessageComposeData($recipient->getKey(), 'Original', "Line one\nLine two"), asDraft: false);
-
-        $this->actingAs($recipient)
-            ->get(route('message.reply', $original))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/compose')
-                ->where('recipient.id', $sender->getKey())
-                ->where('parentId', $original->getKey())
-                ->where('threadId', $original->getKey())
-                ->where('subject', 'Re:Original')
-                ->where('body', "> Line one\n> Line two")
-                ->where('parentSubject', 'Original')
-            );
-    }
-
-    public function test_modern_reply_404s_for_a_non_recipient(): void
-    {
-        Notification::fake();
-        [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
-        $original = app(SendDirectMessage::class)($sender, new DirectMessageComposeData($recipient->getKey(), 'Original', 'Body'), asDraft: false);
-
-        $this->actingAs($stranger)->get(route('message.reply', $original))->assertNotFound();
     }
 
     public function test_modern_store_sends_and_redirects_to_the_sent_box(): void
@@ -163,13 +115,36 @@ class DirectMessageComposeTest extends TestCase
         $this->assertSame(0, DirectMessage::count());
     }
 
-    public function test_modern_only_serves_the_canonical_compose_as_inertia(): void
+    /** The submit lands on its box and is forwarded on, so its answer has to survive the extra hop. */
+    public function test_a_submits_flash_reaches_the_conversation_list(): void
+    {
+        Notification::fake();
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+
+        $this->actingAs($sender)
+            ->post(route('message.compose.store'), [
+                'to' => $recipient->getKey(),
+                'subject' => 'Hello there',
+                'body' => 'Body text',
+                'action' => 'send',
+            ])
+            ->assertRedirect(route('message.send'));
+
+        $this->actingAs($sender)->get(route('message.send'))
+            ->assertRedirect(route('message.chat.index'))
+            ->assertSessionHas('status');
+
+        $this->actingAs($sender)->get(route('message.chat.index'))
+            ->assertInertia(fn ($page) => $page->where('flash.status', __('The message was sent successfully.')));
+    }
+
+    public function test_modern_only_sends_the_compose_url_into_the_conversation(): void
     {
         config()->set('openpne.surface_mode', 'modern_only');
         [$viewer, $recipient] = Member::factory()->count(2)->create();
 
         $this->actingAs($viewer)
             ->get(route('message.compose', ['id' => $recipient->getKey()]))
-            ->assertInertia(fn ($page) => $page->component('message/compose'));
+            ->assertRedirect(route('message.chat.show', ['member' => $recipient->getKey()]));
     }
 }

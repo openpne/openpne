@@ -2,13 +2,15 @@
 
 A direct message is stored as OpenPNE 3 stored it: the authored row in `direct_messages`, one receipt
 per recipient in `direct_message_recipients`, and each side's read and trash state on its own side's
-columns. The mailbox screens (`/message/*`) read it as four boxes.
+columns. The mailbox screens (`/message/*`) read it as four boxes, and are what Classic renders.
 
-The chat screen is a **second reading of the same rows** — no new table, no new column. A conversation
-is the pair *viewer ⟷ counterpart*, and both directions of it are composed back out of the storage on
-every read: `/messages/{member}` renders it and `/messages/{member}/messages` serves the pages after
-the first. Restoring from the trash and the reply flow stay the mailbox's, and a message written on
-either screen appears on the other because there is only one store.
+Chat is a **second reading of the same rows** — no new table, no new column. A conversation is the
+pair *viewer ⟷ counterpart*, and both directions of it are composed back out of the storage on every
+read: `/messages` lists them, `/messages/{member}` renders one, and `/messages/{member}/messages`
+serves the pages after the first. Under Modern this reading replaces the boxes outright —
+[Modern reads the store as chat](#modern-reads-the-store-as-chat) — while the trash and the draft
+form stay the mailbox's, and a message written on either surface appears on the other because there
+is only one store.
 
 ## A conversation is two arms over one table
 
@@ -48,6 +50,34 @@ The code is **not** shared, and that is deliberate — see [Separate from group 
 [`ConversationCursor`](../../app/Features/DirectMessage/ConversationCursor.php) are the direct-message
 side of it. A `?m=` link is best-effort in the same way: honoured only for a message this conversation
 can see, and any other id opens the newest page with no anchor.
+
+## The conversation list
+
+`/messages` is the room list of the same correspondence: one row per counterpart, most recently
+written in first, each carrying what it leads with and the viewer's unread.
+[`ConversationList`](../../app/Features/DirectMessage/Queries/ConversationList.php) follows the rule
+[group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list) sets out — **the order is decided
+in SQL, before the page is cut** — for the same reason and by the same means: two correlated
+subselects for the newest `(created_at, id)`, since the tuple cannot be read in one statement without
+a row constructor or a lateral join, then one lookup by key for the bodies the ordering has already
+named.
+
+The counterparts themselves are a `UNION` of the two arms in the `FROM` clause. That is what
+`ConversationScope` refuses for *reading* a conversation, and it is right here because this set is
+never ordered or sliced — it is deduplicated and nothing else. Deduplication is also what collapses
+the withdrawn bucket: `UNION` treats NULL as equal to NULL, so every departed member arrives as the
+single row they are read as.
+
+What each row leads with is `ConversationScope`'s own two arms, correlated to the row's counterpart
+instead of a bound member — a shape the scope's Eloquent builder cannot be reused in, and where the
+counterpart comparison has to be written out as `= it OR (both IS NULL)` (MySQL's `<=>` is not SQL
+SQLite speaks). So the two readings are held together by test rather than by shared code:
+`ConversationListBeltTest` seeds one matrix and asserts that every row says what opening that
+conversation says, and that the rows are exactly the conversations with anything in them.
+
+**Drafts ride under the list.** A draft has no receipt, so it is in neither arm of any conversation
+and has nowhere else to be found; the mailbox's drafts box is a section of this screen, paged by its
+own `draft_page` parameter so moving one list never moves the other.
 
 ## What the mailbox holds and a conversation has to place
 
@@ -93,8 +123,9 @@ composer appends what it wrote instead of re-reading the page.
 The notification the send raises re-runs its eligibility immediately before each channel delivers
 ([notifications.md](notifications.md#delivery-time-re-checks)): its mail carries the body, and a queued
 job can outlive a ban, a block, or the recipient purging their receipt (trash does not revoke reading,
-so a trashed message still arrives). Where that mail *lands* is unchanged — the mailbox's
-`/message/read/{id}` — because the URL is durable and already in members' mail.
+so a trashed message still arrives). The URL that mail carries is unchanged — the mailbox's
+`/message/read/{id}`, durable and already in members' mail — and under Modern it now arrives in the
+conversation, on that message ([Modern reads the store as chat](#modern-reads-the-store-as-chat)).
 
 ## Unread
 
@@ -145,9 +176,54 @@ A trashed receipt is deliberately left alone. It is not on the chat screen, so n
 and restoring it from the mailbox's trash has to hand back a message that has never been opened.
 
 An accepted report asks the shell to re-read its badge counts
-([`lib/unread-refresh.ts`](../../resources/js/lib/unread-refresh.ts)); the badge itself stays
+([`lib/unread-refresh.ts`](../../resources/js/lib/unread-refresh.ts)).
+
+### Two counts, two questions
+
+The Modern badge is
+[`CountUnreadConversations`](../../app/Features/DirectMessage/Queries/CountUnreadConversations.php):
+**how many conversations have something new**, not how many messages — a message count is dominated
+by whoever wrote most, which says nothing about where to go next, and it is the reading the group
+badge already takes ([group-talk.md](group-talk.md#two-different-numbers)). `COUNT(DISTINCT sender_id)` skips the null
+sender, so the withdrawn bucket is added back as the single conversation it is read as.
+
+The Classic home caution keeps
 [`CountUnreadDirectMessages`](../../app/Features/DirectMessage/Queries/CountUnreadDirectMessages.php),
-the inbox's own count, which falls as the receipts are opened.
+the inbox's own message count: it links into the mailbox, where the number it announces is the rows
+waiting there. Same receipts, different question — which is why the two are separate queries reaching
+the screen as separate props rather than one number two screens disagree about.
+
+## Modern reads the store as chat
+
+The mailbox URLs are OpenPNE 3's, durable, and already in members' mail and bookmarks, so **none of
+them moves**. What changes under Modern is what they answer: every reading page has a chat equivalent,
+so [`DirectMessageController`](../../app/Features/DirectMessage/DirectMessageController.php) redirects
+into it rather than rendering a second reading of the same rows. Classic renders every one of them
+unchanged.
+
+| the OpenPNE 3 URL | where a Modern viewer lands |
+|---|---|
+| `/message`, `/message/index`, and the four boxes | `/messages` — the drafts box is a section of it |
+| `/message/read/{id}`, `/check/{id}`, `/checkDelete/{id}` | the conversation the message is in, `?m={id}` |
+| `/message/deleteConfirm/{id}` | the same conversation (Modern confirms a purge inline) |
+| `/message/reply/{id}` | the same conversation, with no anchor — answering is writing in it |
+| `/message/sendToFriend?id={member}` | that member's conversation, or `/messages` when the id names none |
+| `/message/edit/{id}` | nothing: the draft form is the one mailbox screen Modern still renders |
+
+The redirect resolves the counterpart from the viewer's side — the recipient of what they sent, the
+sender of what they received — and **404s unless the viewer is a party to the message**. The ids are
+sequential and the URLs are public, so a redirect that named the other side would answer "who is
+member N corresponding with" for any id, which the boxes' own gates never let through. A draft is a
+404 here too: it belongs to no conversation, only to the form still writing it.
+
+The resolution happens **before** the box query, which marks a received message read as a side effect
+— that is how the mail's own `/message/read/{id}` still lands on an unread boundary rather than
+erasing the line it is sending the reader to. The `?m=` it carries is best-effort like any other
+([Ordering and paging](#ordering-and-paging)).
+
+The submits are untouched and surface-agnostic: they redirect to the box they always did, which
+forwards on from there — and the forward reflashes, so the answer the write wrote survives the extra
+hop instead of being aged out on a page nobody sees.
 
 ## Separate from group talk
 
@@ -179,3 +255,5 @@ published content, and a private message is not that.
    idempotent and order between reports does not matter.
 9. A message written as chat carries no subject and no lineage, and every send — from either screen —
    goes through `SendDirectMessage`.
+10. No mailbox URL moves. What a Modern viewer gets from one is a redirect into the chat reading, and
+    only ever for a message they are a party to.

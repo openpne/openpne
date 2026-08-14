@@ -5,6 +5,7 @@ namespace App\Features\Home;
 use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
+use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
 use App\Features\Group\Queries\PendingJoinRequestCounts;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\Home\Queries\JoinedGroupActivity;
@@ -32,7 +33,7 @@ class HomeController extends Controller
     /** Items shown per digest section on the Modern dashboard. */
     private const PREVIEW = 5;
 
-    public function index(Request $request, GadgetService $gadgets, UnreadCounts $unread): View|RedirectResponse
+    public function index(Request $request, GadgetService $gadgets, UnreadCounts $unread, CountUnreadDirectMessages $unreadMessages): View|RedirectResponse
     {
         $viewer = $request->user();
         if ($viewer === null) {
@@ -53,9 +54,13 @@ class HomeController extends Controller
             'adminTransferGroups' => Feature::Group->enabled()
                 ? Group::where('pending_admin_member_id', $viewer->getKey())->get()
                 : collect(),
-            // The remaining cautions are the header badge numbers, read from the same request-scoped
-            // service the shell reads, so a caution and its badge can never disagree.
+            // The friend-request caution is the header badge number, read from the same
+            // request-scoped service the shell reads, so a caution and its badge cannot disagree.
             'unread' => $unread->for($viewer),
+            // Messages are counted separately: this caution links into the mailbox, where the number
+            // it announces is the rows waiting there. The Modern badge counts conversations instead
+            // (CountUnreadConversations), which is a different question about the same receipts.
+            'unreadMessages' => Feature::DirectMessage->enabled() ? $unreadMessages($viewer) : 0,
         ]);
     }
 

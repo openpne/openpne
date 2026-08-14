@@ -235,14 +235,15 @@ class MarkConversationReadTest extends ConversationTestCase
         $this->report($viewer, $other, $orphan->getKey())->assertNotFound();
     }
 
-    /** The shell's badge is the inbox's own count, and reading the conversation is what drops it. */
+    /** The shell's badge counts conversations with something new, and reading one is what drops it. */
     public function test_the_nav_badge_falls_as_the_conversation_is_read(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
         $this->at($other, $viewer, 'first', 0);
         $newest = $this->at($other, $viewer, 'second', 1);
 
-        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('unread.unreadMessages', 2);
+        // Two messages, one conversation.
+        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('unread.unreadMessages', 1);
 
         $this->report($viewer, $other, $newest->getKey())->assertNoContent();
 

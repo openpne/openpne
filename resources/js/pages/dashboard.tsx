@@ -28,8 +28,8 @@ interface DashboardProps extends PageProps {
 }
 
 /**
- * Attention notices — pending friend requests, unread messages, and join requests awaiting the
- * viewer's approval. Layer-1 "needs action" counts only: the layer-3 unread-notification count is
+ * Attention notices — pending friend requests, conversations with something new, and join requests
+ * awaiting the viewer's approval. Layer-1 "needs action" counts only: the layer-3 unread-notification count is
  * the nav bell / bottom bar's job — a row restating that badge would say nothing new while
  * occupying the top of the dashboard.
  */
@@ -60,8 +60,8 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
                 {unreadMessages > 0 && (
                     <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href="/message" className={stretchedLink}>
-                                {t(':count unread messages', { count: unreadMessages })}
+                            <Link href="/messages" className={stretchedLink}>
+                                {t(':count conversations with new messages', { count: unreadMessages })}
                             </Link>
                         </span>
                     </ListRow>

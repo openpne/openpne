@@ -26,22 +26,23 @@ class ListDirectMessages
 
     /**
      * $withRepliedStatus opts into the inbox replied lookup (one extra query) — only the Classic
-     * status icons read it, so only that surface pays for it.
+     * status icons read it, so only that surface pays for it. $pageName names the query parameter
+     * the page number is read from, for a screen that shows a box beside another paged list.
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */
-    public function __invoke(Member $viewer, DirectMessageBox $box, int $perPage = self::PER_PAGE, bool $withRepliedStatus = false): LengthAwarePaginator
+    public function __invoke(Member $viewer, DirectMessageBox $box, int $perPage = self::PER_PAGE, bool $withRepliedStatus = false, string $pageName = 'page'): LengthAwarePaginator
     {
         return match ($box) {
-            DirectMessageBox::Receive => $this->received($viewer, $perPage, $withRepliedStatus),
-            DirectMessageBox::Sent => $this->authored($viewer, false, $perPage),
-            DirectMessageBox::Draft => $this->authored($viewer, true, $perPage),
-            DirectMessageBox::Trash => $this->trash($viewer, $perPage),
+            DirectMessageBox::Receive => $this->received($viewer, $perPage, $withRepliedStatus, $pageName),
+            DirectMessageBox::Sent => $this->authored($viewer, false, $perPage, $pageName),
+            DirectMessageBox::Draft => $this->authored($viewer, true, $perPage, $pageName),
+            DirectMessageBox::Trash => $this->trash($viewer, $perPage, $pageName),
         };
     }
 
     /** @return LengthAwarePaginator<int, DirectMessageListItem> */
-    private function received(Member $viewer, int $perPage, bool $withRepliedStatus): LengthAwarePaginator
+    private function received(Member $viewer, int $perPage, bool $withRepliedStatus, string $pageName): LengthAwarePaginator
     {
         $page = DirectMessageRecipient::query()
             ->ofDelivered()
@@ -51,7 +52,7 @@ class ListDirectMessages
             // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message,
             // so a message delivered later sorts by its delivery time, not its authoring time.
             ->orderByDesc('created_at')
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], $pageName);
 
         $replied = $withRepliedStatus ? $this->repliedTo($viewer, $page->getCollection()->map(
             static fn (DirectMessageRecipient $r): int => (int) $r->direct_message_id
@@ -102,7 +103,7 @@ class ListDirectMessages
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */
-    private function authored(Member $viewer, bool $draft, int $perPage): LengthAwarePaginator
+    private function authored(Member $viewer, bool $draft, int $perPage, string $pageName): LengthAwarePaginator
     {
         return DirectMessage::query()
             ->where('sender_id', $viewer->getKey())
@@ -110,7 +111,7 @@ class ListDirectMessages
             ->senderLive()
             ->with($draft ? 'draftRecipient.avatar.file' : 'recipients.recipient.avatar.file')
             ->orderByDesc('created_at')
-            ->paginate($perPage)
+            ->paginate($perPage, ['*'], $pageName)
             ->through(fn (DirectMessage $m): DirectMessageListItem => new DirectMessageListItem(
                 (int) $m->getKey(),
                 $draft ? $m->draftRecipient : $m->recipients->first()?->recipient,
@@ -127,7 +128,7 @@ class ListDirectMessages
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */
-    private function trash(Member $viewer, int $perPage): LengthAwarePaginator
+    private function trash(Member $viewer, int $perPage, string $pageName): LengthAwarePaginator
     {
         $id = $viewer->getKey();
 
@@ -146,7 +147,7 @@ class ListDirectMessages
             ->select('id as direct_message_id', 'sender_deleted_at as sort_at', DB::raw("'sent' as role"))
             ->toBase();
 
-        $page = $received->unionAll($sent)->orderByDesc('sort_at')->paginate($perPage);
+        $page = $received->unionAll($sent)->orderByDesc('sort_at')->paginate($perPage, ['*'], $pageName);
 
         /** @var array<int, \stdClass> $rows */
         $rows = $page->items();

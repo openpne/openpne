@@ -179,12 +179,15 @@ export const NAV_SECTIONS: NavSection[] = [
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
         feature: 'friend',
     },
+    // The badge counts conversations with something new, not messages — see
+    // CountUnreadConversations, as the groups entry above counts rooms. The match stays the bare
+    // `/message` prefix, which covers the conversation list and the mailbox URLs alike.
     {
-        href: '/message',
+        href: '/messages',
         match: ['/message'],
         icon: Mail,
         label: MESSAGES,
-        badge: { count: 'unreadMessages', label: t(':count unread messages') },
+        badge: { count: 'unreadMessages', label: t(':count conversations with new messages') },
         feature: 'directMessage',
     },
     {
@@ -217,7 +220,7 @@ const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], ex
  * point for the composition — rather than something an administrator picks; per-site composition is
  * a later question, and a unit switched off still drops its tab through visibleNavSections.
  */
-const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications', '/message'];
+const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications', '/messages'];
 
 export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
     const visible = visibleNavSections(enabled);
@@ -311,23 +314,8 @@ const memberScope = (member: MemberRef): ChromeScope => ({
     avatarColor: member.avatarColor,
 });
 
-// The message page's own box map keeps the row paths/bulk actions; the hub tabs live here.
-const messageTabs = (active: string): ChromeTab[] => [
-    { href: '/message/receiveList', label: t('Inbox'), active: active === 'receive' },
-    { href: '/message/sendList', label: t('Sent Message'), active: active === 'sent' },
-    { href: '/message/draftList', label: t('Drafts'), active: active === 'draft' },
-    { href: '/message/dustList', label: t('Trash'), active: active === 'trash' },
-];
-
-type MessageBoxSlug = 'receive' | 'sent' | 'draft' | 'trash';
-
-// Where a message's box crumbs back to (message/show, message/edit's fixed drafts box).
-const MESSAGE_BOX_PARENT: Record<MessageBoxSlug, { href: string; label: ChromeLabel }> = {
-    receive: { href: '/message/receiveList', label: t('Inbox') },
-    sent: { href: '/message/sendList', label: t('Sent Message') },
-    draft: { href: '/message/draftList', label: t('Drafts') },
-    trash: { href: '/message/dustList', label: t('Trash') },
-};
+// The one place messages are listed, and so the parent every message-scoped screen crumbs back to.
+const MESSAGES_HUB: Chrome['context'] = [{ href: '/messages', label: MESSAGES }];
 
 const CONFIG_CONTEXT: Chrome['context'] = [{ href: '/member/config', label: SETTINGS }];
 
@@ -560,22 +548,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabsLabel: FRIENDS,
         tabs: friendTabs('requests'),
     }),
-    // One Messages hub: stable h1 (= nav label) with the four boxes as tabs; the active box lives
-    // in the tabs and the browser Head title, not the h1.
-    'message/index': (props) => ({
-        mode: 'section',
-        title: MESSAGES,
-        tabsLabel: MESSAGES,
-        tabs: messageTabs((props as { box: string }).box),
-    }),
-    'message/show': (props) => {
-        const { message } = props as unknown as { message: { box: MessageBoxSlug; counterparties: MemberRef[] } };
-        // One counterparty is a scope the bar can name. A sent message can carry several recipients
-        // and a fully withdrawn thread none — neither resolves to a single member, so the bar keeps
-        // the box label instead (the same exactly-one rule Classic's show header applies).
-        const only = message.counterparties.length === 1 ? message.counterparties[0] : undefined;
-        return { context: [MESSAGE_BOX_PARENT[message.box]], scope: only ? memberScope(only) : undefined };
-    },
+    // The Messages hub: the conversations, with the drafts box under them. No action button —
+    // writing starts from a conversation or from the person's profile, not from a blank form.
+    'message/conversations/index': () => ({ mode: 'section', title: MESSAGES }),
     // The conversation is the page, so no action button. Its counterpart is the room's identity: the
     // bar's scope while they still exist, and the heading otherwise — a withdrawn bucket has no
     // member page for a scope to link to, and no name for the bar to carry.
@@ -585,28 +560,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return {
             mode: 'contextual',
             title: counterpart ? MESSAGES : t('Withdrawn member'),
-            context: counterpart ? memberContext(counterpart) : [{ href: '/message', label: MESSAGES }],
+            context: counterpart ? memberContext(counterpart) : MESSAGES_HUB,
             scope: counterpart ? memberScope(counterpart) : undefined,
             conversation: true,
-        };
-    },
-    // Reply crumbs back to the original message (its box, then the message itself); a fresh compose
-    // crumbs to the Messages hub. parentSubject is null except when replying.
-    'message/compose': (props) => {
-        const { parentId, parentSubject } = props as unknown as { parentId: number | null; parentSubject: string | null };
-        return {
-            gap: '6',
-            form: true,
-            compose: true,
-            context:
-                parentId !== null && parentSubject !== null
-                    ? [
-                          MESSAGE_BOX_PARENT.receive,
-                          // Legacy subjects can be empty; fall back as the box pages do so the
-                          // crumb link keeps an accessible name.
-                          { href: `/message/read/${parentId}`, label: parentSubject || t('(No subject)') },
-                      ]
-                    : [{ href: '/message', label: MESSAGES }],
         };
     },
     'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
@@ -624,7 +580,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    'message/edit': { gap: '6', form: true, compose: true, context: [MESSAGE_BOX_PARENT.draft] },
+    'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
@@ -652,7 +608,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'community/recent',
     'community/show',
     'timeline/index',
-    'message/index',
+    'message/conversations/index',
     'member/search',
     'member/config',
     'notifications/index',

@@ -5,8 +5,6 @@ interface PaginationMeta {
     total: number;
 }
 
-export type MessageBoxSlug = 'receive' | 'sent' | 'draft' | 'trash';
-
 export interface MessageMember {
     id: number;
     name: string;
@@ -18,12 +16,27 @@ export interface MessageRow {
     id: number;
     counterparty: MessageMember | null; // null → withdrawn member
     subject: string;
-    date: string; // ISO 8601 (delivery time for the inbox, authoring/trash time otherwise)
-    unread: boolean; // only ever true in the inbox
+    date: string; // ISO 8601
+    unread: boolean;
 }
 
 export interface PaginatedMessages {
     data: MessageRow[];
+    meta: PaginationMeta;
+}
+
+/**
+ * One conversation on the list. There is no id: the row is addressed by its counterpart, and a null
+ * one is the withdrawn bucket every departed member's messages fall into.
+ */
+export interface ConversationRowData {
+    counterpart: MessageMember | null;
+    unread: number;
+    latest: { body: string; createdAt: string };
+}
+
+export interface PaginatedConversations {
+    data: ConversationRowData[];
     meta: PaginationMeta;
 }
 
@@ -39,17 +52,4 @@ export interface MessageDraftForm {
     body: string;
     recipient: MessageMember | null; // fixed when the draft was created; null → withdrawn
     images: MessageImage[]; // current attachments, each removable by id
-}
-
-export interface MessageDetail {
-    id: number;
-    subject: string;
-    body: string;
-    createdAt: string; // ISO 8601
-    images: MessageImage[];
-    counterparties: MessageMember[]; // To when the viewer sent it, the single From otherwise
-    viewerIsSender: boolean;
-    box: MessageBoxSlug;
-    previousId: number | null; // adjacent messages within the box, null at the ends
-    nextId: number | null;
 }

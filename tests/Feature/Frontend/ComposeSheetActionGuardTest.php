@@ -27,7 +27,6 @@ class ComposeSheetActionGuardTest extends TestCase
 
     /** Compose pages whose header actions post from their own click handlers (send/draft pair). */
     private const CLICK_SUBMIT_PAGES = [
-        'pages/message/compose.tsx',
         'pages/message/edit.tsx',
     ];
 

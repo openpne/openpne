@@ -72,6 +72,15 @@ class ModernOnlyCoverageTest extends TestCase
         'group.members.demote.show',
         'group.members.drop.show',
         'group.members.transfer.show',
+        // The mailbox's reading pages. Modern reads the same store as chat, so each of these lands
+        // in the conversation list or in one conversation (see DirectMessageController).
+        'message.index',
+        'message.index_compat',
+        'message.receive',
+        'message.send',
+        'message.draft',
+        'message.trash',
+        'message.compose',
     ];
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
@@ -86,8 +95,7 @@ class ModernOnlyCoverageTest extends TestCase
         'member.config.mfa.edit', 'member.config.notifications.edit',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent',
-        'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
-        'message.chat.withdrawn',
+        'message.chat.index', 'message.chat.withdrawn',
         'member.invite',
         'notifications.index',
     ];
@@ -138,6 +146,8 @@ class ModernOnlyCoverageTest extends TestCase
             'notification feed' => ['/notifications'],
             'community create form' => ['/groups/edit'],
             'invite' => ['/invite'],
+            'conversation list' => ['/messages'],
+            // The mailbox boxes: each redirects into the conversation list, which is what renders.
             'message index' => ['/message'],
             'message index alias' => ['/message/index'],
             'message inbox' => ['/message/receiveList'],
@@ -159,7 +169,6 @@ class ModernOnlyCoverageTest extends TestCase
         $uris = [
             "/friend/link?id={$target->getKey()}",
             "/block/add?id={$target->getKey()}",
-            "/message/sendToFriend?id={$target->getKey()}",
         ];
         foreach ($uris as $uri) {
             $this->actingAs($viewer)->get($uri)
@@ -421,7 +430,8 @@ class ModernOnlyCoverageTest extends TestCase
             'recipient_id' => $viewer->getKey(),
             'recipient_deleted_at' => now(),
         ]);
+        // Modern has no trash screen at all now: the purge confirm lands in the conversation.
         $this->actingAs($viewer)->get(route('message.trash.purge.confirm', ['message' => $message->getKey()]))
-            ->assertRedirect(route('message.trash.show', ['message' => $message->getKey()]));
+            ->assertRedirect(route('message.chat.show', ['member' => $friend->getKey()]));
     }
 }

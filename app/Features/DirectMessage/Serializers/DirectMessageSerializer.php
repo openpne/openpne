@@ -3,17 +3,15 @@
 namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\DirectMessageListItem;
-use App\Features\DirectMessage\DirectMessageView;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageFile;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Modern surface shapes for private messages. counterparty/sender is null for a withdrawn member (a
- * deleted account leaves the row). Datetimes are ISO strings (the client formats them). Which box a
- * page shows, and the per-box show/action routes, are the controller's concern — the client builds
- * those URLs from the box slug.
+ * Modern surface shapes for what the mailbox still owns under chat: the drafts box and the draft
+ * form. counterparty/recipient is null for a withdrawn member (a deleted account leaves the row),
+ * and datetimes are ISO strings the client formats.
  */
 class DirectMessageSerializer
 {
@@ -31,30 +29,6 @@ class DirectMessageSerializer
             'subject' => $item->subject,
             'date' => $item->date->toIso8601String(),
             'unread' => $item->unread,
-        ];
-    }
-
-    /**
-     * The message show shape: the body and images plus the counterparties (To when the viewer sent
-     * it, the single From otherwise), and the adjacent-message ids for the in-box pager.
-     *
-     * @return array{id: int, subject: string, body: string, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, counterparties: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>, viewerIsSender: bool, box: string, previousId: int|null, nextId: int|null}
-     */
-    public static function view(DirectMessageView $view): array
-    {
-        $message = $view->message;
-
-        return [
-            'id' => $message->getKey(),
-            'subject' => (string) $message->subject,
-            'body' => (string) $message->body,
-            'createdAt' => $message->created_at->toIso8601String(),
-            'images' => $message->files->map([self::class, 'image'])->all(),
-            'counterparties' => array_values(array_filter(array_map([self::class, 'member'], $view->counterparties))),
-            'viewerIsSender' => $view->viewerIsSender,
-            'box' => $view->box->value,
-            'previousId' => $view->previousId,
-            'nextId' => $view->nextId,
         ];
     }
 
