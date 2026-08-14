@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { useAutoGrow } from '@/lib/auto-grow';
 import { useT } from '@/lib/i18n';
 import { candidatesUrlFor } from '@/lib/mention-candidates-url';
 import {
@@ -138,39 +139,7 @@ export function MentionTextarea({
         field.current?.setSelectionRange(at, at);
     });
 
-    // Whether the previous render held text — the transition to empty is the moment below.
-    const held = useRef(false);
-
-    useLayoutEffect(() => {
-        const element = field.current;
-        if (!autoGrow || element === null) {
-            return;
-        }
-        // An empty box stands at its CSS height: the placeholder renders into scrollHeight, so
-        // measuring here would size the bar to a wrapped placeholder instead of one line.
-        if (value === '') {
-            element.style.height = '';
-            // iOS WebKit (reported on device, PWA and Safari; not reproducible in desktop
-            // WebKit) intermittently keeps the placeholder's box at the cleared text's width
-            // until something re-lays the field out — after a send, the placeholder paints
-            // cut to the sent text. Re-asserting the attribute rebuilds the box; the reflow
-            // read between the writes keeps them from coalescing into a no-op.
-            if (held.current) {
-                const placeholder = element.placeholder;
-                element.placeholder = '';
-                void element.offsetWidth;
-                element.placeholder = placeholder;
-            }
-            held.current = false;
-
-            return;
-        }
-        held.current = true;
-        // Measured from nothing: an already-set height is a floor the content can never shrink under.
-        element.style.height = 'auto';
-        // The box is border-box, so scrollHeight — the padding box — is short by the two borders.
-        element.style.height = `${element.scrollHeight + element.offsetHeight - element.clientHeight}px`;
-    }, [autoGrow, value]);
+    useAutoGrow(field, value, autoGrow);
 
     const close = useCallback(() => {
         setTrigger(null);

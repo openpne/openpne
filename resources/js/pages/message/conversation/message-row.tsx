@@ -55,9 +55,10 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
             </div>
             {/* Mailbox messages carry a subject and chat ones do not, so it names this message rather
                 than repeating the room — which is the heading recipe's job, and the one place weight
-                is spent (docs/internals/typography.md). */}
+                is spent (docs/internals/typography.md). h2, because the page title is the h1 and
+                nothing sits between: h3 would skip a rank. */}
             {message.subject && (
-                <Heading as="h3" variant="section" className="mt-1 break-words">
+                <Heading as="h2" variant="section" className="mt-1 break-words">
                     {message.subject}
                 </Heading>
             )}

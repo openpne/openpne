@@ -163,13 +163,15 @@ notifications subtract the same set. Who hears what, and why, is
 A queued notification decides its channels when it is *enqueued* and delivers them later. For most
 kinds that gap is harmless: the recipient already holds the thing being announced. It is not harmless
 where the mail carries content the recipient's access to can lapse — a ban, a new block, a revoked
-friendship on a Friends thread, a member who has left the group — so every timeline notification and
-the group talk mention re-run their eligibility in `shouldSend()`, the one hook `NotificationSender`
-consults immediately before each channel send
+friendship on a Friends thread, a member who has left the group, a message the recipient has purged —
+so every timeline notification, the group talk mention and the direct message re-run their eligibility
+in `shouldSend()`, the one hook `NotificationSender` consults immediately before each channel send
 ([`TimelineNotificationEligibility`](../../app/Features/Timeline/TimelineNotificationEligibility.php),
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php),
-each composed with the feature gate through a trait alias). `via()` cannot serve this: it runs at enqueue
-time, and `SendQueuedNotifications` replays the channels decided back then.
+and [`DirectMessageReceivedNotification`](../../app/Notifications/DirectMessage/DirectMessageReceivedNotification.php)'s
+own — asked once, so it stays with the notification — each composed with the feature gate through a
+trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
+the channels decided back then.
 
 ## Web push
 

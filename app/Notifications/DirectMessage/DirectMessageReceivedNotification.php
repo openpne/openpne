@@ -2,6 +2,7 @@
 
 namespace App\Notifications\DirectMessage;
 
+use App\Features\Block\BlockLookup;
 use App\Mail\Template\MailTemplate;
 use App\Models\DirectMessage;
 use App\Models\Member;
@@ -24,9 +25,18 @@ use Illuminate\Notifications\Notification;
  */
 class DirectMessageReceivedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
-    use GatedByFeature;
+    use GatedByFeature {
+        shouldSend as private featureShouldSend;
+    }
     use Queueable;
     use RendersMailTemplate;
+
+    /**
+     * A sender who withdrew between the send and its delivery takes the notification with them, and
+     * so does a purged message: the queued job cannot restore either model, and "Withdrawn member
+     * sent you a message" announces something nobody can open.
+     */
+    public bool $deleteWhenMissingModels = true;
 
     public function __construct(
         public readonly Member $sender,
@@ -36,6 +46,19 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
     public static function feature(): Feature
     {
         return Feature::DirectMessage;
+    }
+
+    /**
+     * The delivery-time re-check (docs/internals/notifications.md#delivery-time-re-checks). The mail
+     * carries the body, so every fact that decides whether the recipient may read this message is
+     * asked again here — SerializesModels hands the job fresh rows, so the answer is current.
+     */
+    public function shouldSend(Member $notifiable, string $channel): bool
+    {
+        return $this->featureShouldSend($notifiable, $channel)
+            && ! $notifiable->is_login_rejected
+            && ! BlockLookup::hasAnyBlockBetween($notifiable, $this->sender)
+            && $this->stillTheirs($notifiable);
     }
 
     /** @return list<string> */
@@ -72,6 +95,19 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             'sender_id' => $this->sender->getKey(),
             'direct_message_id' => $this->message->getKey(),
         ];
+    }
+
+    /**
+     * Whether this message is still the recipient's to read: a receipt of theirs that has not been
+     * purged. Purge is the one side-state that revokes reading (trash does not — a trashed message is
+     * restorable and still theirs), so a purged message must not be carried out by mail.
+     */
+    private function stillTheirs(Member $notifiable): bool
+    {
+        return $this->message->recipients()
+            ->where('recipient_id', $notifiable->getKey())
+            ->whereNull('recipient_purged_at')
+            ->exists();
     }
 
     private function recipientWants(Member $notifiable, NotificationChannel $channel): bool

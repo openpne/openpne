@@ -7,8 +7,10 @@ import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { MessageMember } from '../types';
+import { ConversationComposer } from './composer';
 import { ConversationMessageRow } from './message-row';
 import type { ConversationPage, ConversationUnreadSnapshot } from './types';
 
@@ -19,6 +21,8 @@ interface ConversationProps extends PageProps {
     /** The message a `?m=` link opened on; null for an ordinary visit. `page` is the slice it sits in. */
     anchor: number | null;
     unreadSnapshot: ConversationUnreadSnapshot | null;
+    /** Whether this conversation has a composer at all: false for the withdrawn bucket and a refused pair. */
+    canSend: boolean;
 }
 
 /** How close to the foot still counts as reading the newest message. */
@@ -35,19 +39,21 @@ const atFoot = (): boolean => window.innerHeight + window.scrollY >= document.do
 
 export default function MessageConversation() {
     const t = useT();
-    const { counterpart, page, anchor, unreadSnapshot } = usePage<ConversationProps>().props;
+    const { counterpart, page, anchor, unreadSnapshot, canSend } = usePage<ConversationProps>().props;
     // A departed member leaves no id to key a conversation by, so every one of them is addressed by
     // the bucket's own literal.
     const path = `/messages/${counterpart?.id ?? 'withdrawn'}`;
     // Memoized because the stream's poll and reads hang off their identity: rebuilt every render, the
     // interval would be torn down and started again each time the page re-rendered.
     const endpoints = useMemo(
-        // Composing is still the mailbox's, so the stream is handed no write endpoints at all.
-        () => ({ messages: (query: string) => `${path}/messages${query}` }),
-        [path],
+        // The conversation is read-only wherever it cannot be written to — the withdrawn bucket, a
+        // blocked or banned pair — and the stream is handed no send endpoint at all there.
+        () => ({ messages: (query: string) => `${path}/messages${query}`, send: canSend ? path : undefined }),
+        [path, canSend],
     );
     const stream = useChatStream(endpoints, page);
     const messages = stream.messages;
+    const streamSend = stream.send;
     const atLatest = stream.window.kind === 'latest';
     const generation = stream.generation;
 
@@ -210,6 +216,20 @@ export default function MessageConversation() {
         });
     };
 
+    // Your own send always lands you on your own words. The pinned gate protects someone reading
+    // back through history from being yanked by the *counterpart's* arrivals; writing is the opposite
+    // intent — and it is claimed before the write, because what the write commits may be rendered
+    // before this handler is resumed to say so.
+    const send = async (body: string, images: File[]) => {
+        pinned.current = true;
+        await streamSend(body, images);
+        setAtBottom(true);
+    };
+
+    // Built once so the list's bottom rhythm and the pill's offset answer to the same fact: whether
+    // the page ends on a bar or on its own last row.
+    const composer = counterpart !== null && canSend ? <ConversationComposer counterpartName={counterpart.name} onSend={send} /> : null;
+
     return (
         <>
             <Head title={counterpart?.name ?? t('Withdrawn member')} />
@@ -226,10 +246,9 @@ export default function MessageConversation() {
                 </div>
             )}
 
-            {/* The frame gives its bottom padding up to the composer a talk stands on its foot; with
-                nothing to stand there, the list takes the rhythm back rather than ending the page on
-                the screen's edge. */}
-            <Panel flush className="max-lg:mb-8">
+            {/* With no composer standing on the page's foot, the list takes that rhythm back rather
+                than ending the page on the screen's edge. */}
+            <Panel flush className={composer === null ? 'max-lg:mb-8' : undefined}>
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
@@ -275,15 +294,23 @@ export default function MessageConversation() {
             </Panel>
 
             {/* Zero-height and sticky rather than fixed: the pill belongs over the conversation, and
-                the viewport it would otherwise be centred in is wider than the column at lg. */}
+                the viewport it would otherwise be centred in is wider than the column at lg. Its foot
+                sits one line above the composer, which stands on the same bottom offset. */}
             {!atBottom && (
-                <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+1rem)] z-20 flex h-0 items-end justify-center">
+                <div
+                    className={cn(
+                        'pointer-events-none sticky z-20 flex h-0 items-end justify-center',
+                        composer === null ? 'bottom-[calc(var(--modern-bottom-offset)+1rem)]' : 'bottom-[calc(var(--modern-bottom-offset)+4.25rem)]',
+                    )}
+                >
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
                         {t('Jump to latest')}
                     </Button>
                 </div>
             )}
+
+            {composer}
         </>
     );
 }

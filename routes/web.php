@@ -867,6 +867,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/withdrawn/read', 'readWithdrawn')->name('message.chat.withdrawn.read');
         Route::get('/{member}', 'show')->whereNumber('member')->name('message.chat.show');
         Route::get('/{member}/messages', 'messages')->whereNumber('member')->name('message.chat.messages');
+        // The same per-member limit the mailbox's compose carries: one member's sending budget, not
+        // one screen's. The withdrawn bucket has no counterpart to deliver to and so no store route.
+        Route::post('/{member}', 'store')->whereNumber('member')->middleware('throttle:direct-message-send')->name('message.chat.store');
         // The reader's own state, so it is not throttled as posting: reading is what opening the
         // screen does.
         Route::post('/{member}/read', 'read')->whereNumber('member')->name('message.chat.read');
