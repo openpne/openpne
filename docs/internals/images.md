@@ -11,7 +11,7 @@ beside it.
 
 Where CSS decides the size (every Modern surface), a variant is a candidate in a `srcset` and the
 browser picks from it. Attachment serializers therefore ship **ladders**, not a pair keyed to one
-placement: the same record is drawn in a 300px post cell and a 160px boxed cell, and a candidate
+placement: the same record is drawn in a 300px post cell and a 192px boxed cell, and a candidate
 list that names densities for one of those is wrong for the other. Naming a 1200px source "2x"
 only holds if the box is 600 CSS px wide.
 
@@ -43,7 +43,7 @@ derive**, so a surface then drops the `srcset` and paints the middle candidate (
 
 The ladders are shared across every placement, which is what makes them safe to serve without
 knowing the placement — and what leaves a floor: the smallest candidate is larger than the smallest
-box any surface paints, so a 160px boxed cell at 1x still fetches a 300px-class crop. That is a
+box any surface paints, so a 192px boxed cell at 1x still fetches a 300px-class crop. That is a
 bounded overshoot of tens of kilobytes, taken deliberately: closing it means per-placement
 candidates, and every added size multiplies cached variants across the whole file corpus.
 

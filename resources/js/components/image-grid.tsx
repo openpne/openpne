@@ -24,12 +24,12 @@ export type ImageGridVariant = 'post' | 'boxed';
  */
 const HERO_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 37.5rem, 92vw',
-    boxed: 'min(20rem, 92vw)',
+    boxed: 'min(24rem, 92vw)',
 };
 
 const CELL_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 18.75rem, 46vw',
-    boxed: '10rem',
+    boxed: '12rem',
 };
 
 /**
@@ -96,7 +96,7 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                         'block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         sized ? 'w-full' : 'w-fit max-w-full',
                         !sized && (variant === 'boxed' ? 'max-h-[20rem]' : 'max-h-[min(70vh,32rem)]'),
-                        !sized && variant === 'boxed' && 'max-w-[20rem]',
+                        !sized && variant === 'boxed' && 'max-w-[24rem]',
                         className,
                     )}
                     style={
@@ -105,7 +105,7 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                                   aspectRatio: `${hero.width} / ${hero.height}`,
                                   maxWidth:
                                       variant === 'boxed'
-                                          ? `min(100%, 20rem, ${hero.width}px, calc(20rem * (${hero.width} / ${hero.height})))`
+                                          ? `min(100%, 24rem, ${hero.width}px, calc(20rem * (${hero.width} / ${hero.height})))`
                                           : `min(100%, ${hero.width}px, calc(min(70vh, 32rem) * (${hero.width} / ${hero.height})))`,
                               }
                             : undefined
@@ -149,7 +149,7 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                     'grid w-full grid-cols-2 gap-0.5 overflow-hidden rounded-lg',
                     !wrapped && 'aspect-[3/2]',
                     three && 'grid-rows-2',
-                    variant === 'boxed' && 'max-w-[20rem]',
+                    variant === 'boxed' && 'max-w-[24rem]',
                     className,
                 )}
             >
