@@ -75,6 +75,8 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
     const hero = images.length === 1 ? images[0] : null;
 
     if (hero) {
+        const sized = hero.width !== null && hero.height !== null && hero.width > 0 && hero.height > 0;
+
         return (
             <>
                 <button
@@ -82,9 +84,32 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                     onClick={openAt(0)}
                     aria-label={`${t('Image')} 1`}
                     aria-haspopup="dialog"
-                    // The focus ring rides the image, not this box: a height-capped picture is
-                    // narrower than the button that shrinks around its intrinsic width.
-                    className={cn('group block w-fit max-w-full focus-visible:outline-none', variant === 'boxed' && 'max-w-[20rem]', className)}
+                    // With the size known, the button IS the picture's box, sized entirely up front:
+                    // `aspect-ratio` gives the height, and max-width carries every cap — the container,
+                    // the picture's own width (a small source is never stretched), and the height limit
+                    // multiplied through the ratio. The height cap must live in the width formula: an
+                    // <img> width attribute (or any non-auto width) stays put while max-height clamps,
+                    // squashing tall pictures, and the css-sizing-4 max-height→width transfer only
+                    // applies to auto widths, which a button resolves as shrink-to-fit, not stretch.
+                    // Without a size the <img> sizes itself instead (correct shape, no reservation).
+                    className={cn(
+                        'block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        sized ? 'w-full' : 'w-fit max-w-full',
+                        !sized && (variant === 'boxed' ? 'max-h-[20rem]' : 'max-h-[min(70vh,32rem)]'),
+                        !sized && variant === 'boxed' && 'max-w-[20rem]',
+                        className,
+                    )}
+                    style={
+                        sized
+                            ? {
+                                  aspectRatio: `${hero.width} / ${hero.height}`,
+                                  maxWidth:
+                                      variant === 'boxed'
+                                          ? `min(100%, 20rem, ${hero.width}px, calc(20rem * (${hero.width} / ${hero.height})))`
+                                          : `min(100%, ${hero.width}px, calc(min(70vh, 32rem) * (${hero.width} / ${hero.height})))`,
+                              }
+                            : undefined
+                    }
                 >
                     <img
                         ref={(el) => {
@@ -93,16 +118,16 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                         src={fitFallbackUrl(hero.fitSources) ?? ''}
                         srcSet={fitSrcSet(hero.fitSources, hero.width, hero.height) ?? undefined}
                         sizes={HERO_SIZES[variant]}
-                        // The attributes reserve the shape before the bytes land, as the presentational
-                        // width hint `max-w-full` caps and `h-auto` derives the height from. Left off
-                        // when the size is unknown: a box of the wrong shape moves the layout twice
-                        // instead of once. Nothing here may set `w-auto` — that drops the hint.
                         width={hero.width ?? undefined}
                         height={hero.height ?? undefined}
                         alt=""
                         className={cn(
-                            'h-auto max-w-full rounded-lg group-focus-visible:ring-2 group-focus-visible:ring-ring',
-                            variant === 'boxed' ? 'max-h-[20rem]' : 'max-h-[min(70vh,32rem)]',
+                            sized
+                                ? 'h-full w-full object-cover'
+                                : cn(
+                                      'h-auto max-w-full rounded-lg',
+                                      variant === 'boxed' ? 'max-h-[20rem]' : 'max-h-[min(70vh,32rem)]',
+                                  ),
                         )}
                     />
                 </button>
