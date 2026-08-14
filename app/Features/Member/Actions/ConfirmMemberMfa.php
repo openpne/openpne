@@ -45,8 +45,8 @@ class ConfirmMemberMfa
             ($this->confirm)($fresh, $code);
             SessionRevocation::revokeMember($fresh, $exceptSessionId);
 
-            // Defense-in-depth for 失効契約 (a): the newly live factor must never inherit a reset link
-            // issued against an earlier factor.
+            // Defense-in-depth for invalidation contract (a): the newly live factor must never inherit
+            // a reset link issued against an earlier factor.
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;

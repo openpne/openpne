@@ -22,8 +22,9 @@ use Illuminate\Validation\ValidationException;
  * not trusted from the controller's earlier unlocked lookup — a concurrent disable/re-send/expiry, or a
  * withdrawal, between the lookup and here must not disable a factor off a stale link nor 404.
  *
- * Global lock order is Member → mfa_reset_requests (shared with ForceDisableMemberMfa, whose 失効契約
- * delete runs under the Member lock this already holds): lock the Member row first, then the token row.
+ * Global lock order is Member → mfa_reset_requests (shared with ForceDisableMemberMfa, whose
+ * invalidation-contract delete runs under the Member lock this already holds): lock the Member row
+ * first, then the token row.
  *
  * @throws ValidationException the account password did not match (rolls back; the token survives)
  */
@@ -74,11 +75,11 @@ class ConsumeMfaReset
             }
 
             // Clear the factor, revoke every session, and drop the pending row (ForceDisableMemberMfa's
-            // 失効契約). Nested in this transaction: the Member lock is already held.
+            // invalidation contract). Nested in this transaction: the Member lock is already held.
             app(ForceDisableMemberMfa::class)($locked);
 
-            // Explicit single-use burn (ForceDisable's 失効契約 delete already removed this same row; the
-            // delete is idempotent and documents intent).
+            // Explicit single-use burn (ForceDisable's invalidation-contract delete already removed this
+            // same row; the delete is idempotent and documents intent).
             $row->delete();
 
             return MfaResetResult::reset($locked);

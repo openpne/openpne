@@ -161,8 +161,8 @@ return [
             'confirm' => true,
             'window' => 1,
         ]),
-        // update password, profile update, email verification, passkeys は
-        // 後続 PR で必要になった時に Features::*() を再有効化する
+        // update password, profile update, email verification and passkeys stay off: re-enable the
+        // matching Features::*() when a later PR actually needs one.
     ],
 
 ];
