@@ -111,6 +111,31 @@ class DirectMessageRoutesTest extends TestCase
         $this->assertNull($message->recipients()->first()->fresh()->read_at);
     }
 
+    /**
+     * An upgraded multi-recipient send sits in several conversations and a URL can land in one:
+     * the first delivery written — the lowest receipt id — names it, not the relation's load order.
+     */
+    public function test_a_senders_multi_recipient_url_lands_deterministically(): void
+    {
+        [$sender, $second, $third] = Member::factory()->count(3)->create();
+        $message = $this->deliver($sender, $second);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $third->getKey()]);
+
+        $this->actingAs($sender)->get(route('message.send.show', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $second->getKey()]).'?m='.$message->getKey());
+    }
+
+    /** The rule holds when the first delivery's member has withdrawn: the bucket is the landing. */
+    public function test_the_first_delivery_names_the_landing_even_when_it_is_withdrawn(): void
+    {
+        [$sender, $active] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, null);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $active->getKey()]);
+
+        $this->actingAs($sender)->get(route('message.send.show', $message))
+            ->assertRedirect(route('message.chat.withdrawn').'?m='.$message->getKey());
+    }
+
     /** Replying is writing in the conversation, so it opens it with no anchor. */
     public function test_reply_lands_on_the_conversation(): void
     {

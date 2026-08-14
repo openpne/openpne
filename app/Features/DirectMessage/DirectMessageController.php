@@ -357,7 +357,12 @@ class DirectMessageController extends Controller
             404,
         );
 
-        $counterpartId = $viewerIsSender ? $message->recipients->first()?->recipient_id : $message->sender_id;
+        // An upgraded multi-recipient send sits in several conversations; a URL can land in one. The
+        // lowest receipt id — the first delivery written — is the rule, fixed here rather than left
+        // to whatever order the relation loaded in.
+        $counterpartId = $viewerIsSender
+            ? $message->recipients->sortBy('id')->first()?->recipient_id
+            : $message->sender_id;
         $query = $anchor ? ['m' => $messageId] : [];
 
         return $counterpartId === null

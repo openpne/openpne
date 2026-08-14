@@ -6,6 +6,7 @@ use App\Features\DirectMessage\ConversationSummary;
 use App\Features\DirectMessage\Queries\ConversationList;
 use App\Models\DirectMessage;
 use App\Models\Member;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 
 /**
@@ -58,6 +59,32 @@ class ConversationListTest extends ConversationTestCase
         $this->at($later, $viewer, '2026-08-14 09:00:00');
 
         $this->assertSame(['later', 'earlier'], $this->names($this->list($viewer)));
+    }
+
+    public function test_a_shared_latest_still_cuts_pages_without_loss_or_repeat(): void
+    {
+        // An upgraded multi-recipient send is the shared latest of every conversation it landed in,
+        // so (latest_at, latest_id) ties across rows and the counterpart is the final tie-break —
+        // active conversations by id descending, the withdrawn bucket last. A one-per-page walk must
+        // meet every conversation exactly once, whatever the engine's own tie order.
+        [$viewer, $a, $b] = Member::factory()->count(3)->create();
+        $a->forceFill(['name' => 'a'])->save();
+        $b->forceFill(['name' => 'b'])->save();
+
+        $shared = $this->at($viewer, $a, '2026-08-14 09:00:00');
+        $shared->recipients()->create(['recipient_id' => $b->getKey()]);
+        $shared->recipients()->create(['recipient_id' => null]);
+
+        $this->assertSame(['b', 'a', 'withdrawn'], $this->names($this->list($viewer)));
+
+        $pages = [];
+        foreach ([1, 2, 3] as $page) {
+            Paginator::currentPageResolver(fn (): int => $page);
+            $pages[] = $this->names($this->list($viewer, 1));
+        }
+        Paginator::currentPageResolver(fn (): int => 1);
+
+        $this->assertSame([['b'], ['a'], ['withdrawn']], $pages);
     }
 
     /** The order is decided before the page is cut: a conversation talked in belongs at the top. */

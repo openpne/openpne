@@ -47,9 +47,16 @@ class ConversationList
             ->selectSub($this->newest($viewerId, 'id'), 'latest_id')
             ->selectSub($this->unread($viewerId), 'unread_count')
             // No "nothing said yet" case for the order to place: a counterpart is here because a
-            // message is.
+            // message is. The counterpart itself is the final tie-break — an upgraded
+            // multi-recipient send is the shared latest of every conversation it landed in, so
+            // (latest_at, latest_id) alone is not a total order, and an offset page boundary would
+            // duplicate or drop a row on whatever order the engine felt like. The withdrawn bucket
+            // sorts last within such a tie, spelled as a CASE because where an engine collates NULL
+            // in a descending sort is not a portable answer.
             ->orderByDesc('latest_at')
             ->orderByDesc('latest_id')
+            ->orderByRaw('case when heads.counterpart_id is null then 1 else 0 end')
+            ->orderByDesc('heads.counterpart_id')
             ->paginate($perPage);
 
         return $page->setCollection($this->summaries($page->getCollection()));
