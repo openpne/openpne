@@ -106,8 +106,9 @@ class ConversationController extends Controller
      * The message `?m=` asked to open on, or null for the ordinary newest page.
      *
      * Best-effort by contract, and resolved through the conversation's own predicate: a link naming a
-     * message from another conversation, a draft, one either side has trashed, or nothing that parses
-     * opens the newest page instead. A stale link is a link to a conversation that has moved on, and
+     * message from another conversation, a draft, one the viewer's own side has trashed or purged, or
+     * nothing that parses opens the newest page instead. (The counterpart's trash never hides a row
+     * here — visibility is per-side.) A stale link is a link to a conversation that has moved on, and
      * arriving in it beats being refused.
      */
     private function anchor(Member $viewer, ?Member $counterpart, mixed $id): ?DirectMessage

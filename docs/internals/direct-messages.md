@@ -56,9 +56,9 @@ has needs an answer here.
 
 | what | how the conversation reads it |
 |---|---|
-| `subject` | shown above the body when it is non-null, left out otherwise. A message written as chat has none. |
+| `subject` | shown above the body when it is non-empty. Null and the empty string alike draw nothing — the storage keeps that distinction, the screen has nothing to show for either. A message written as chat has none. |
 | null `body` | serialized as the empty string; a subject-only message is still a message. |
-| draft | never in a conversation, and not by a rule of its own: a draft has no receipt, so neither arm reaches it. It stays the drafts box's. |
+| draft | never in a conversation: a draft has no receipt, so neither arm reaches it — and the scope still states `is_draft = false` as a belt against a stray receipt. It stays the drafts box's. |
 | `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the mailbox's trash screen. |
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
 | `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and reads neither. |

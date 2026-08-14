@@ -212,6 +212,20 @@ class ConversationPaginationTest extends ConversationTestCase
         }
     }
 
+    /** A query-string array (`?before[]=`) is malformed like any other unparseable cursor, not a 500. */
+    public function test_an_array_cursor_is_read_as_no_cursor(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $this->conversation($viewer, $other, 3);
+
+        foreach (['before', 'after', 'context'] as $param) {
+            $this->actingAs($viewer)
+                ->getJson("/messages/{$other->getKey()}/messages?{$param}[]=x")
+                ->assertOk()
+                ->assertJsonCount(3, 'messages');
+        }
+    }
+
     /** A page is one read plus the fan-out, whatever its length. */
     public function test_reading_a_page_costs_no_query_per_message(): void
     {

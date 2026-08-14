@@ -22,10 +22,10 @@ final readonly class ConversationCursor
         return new self(CarbonImmutable::instance($message->created_at), (int) $message->getKey());
     }
 
-    /** Parse a cursor the client echoed back, or null when it is absent or malformed. */
-    public static function tryParse(?string $value): ?self
+    /** Parse a cursor the client echoed back, or null when it is absent or malformed — an array query (`?before[]=`) included. */
+    public static function tryParse(mixed $value): ?self
     {
-        if ($value === null || ! str_contains($value, '|')) {
+        if (! is_string($value) || ! str_contains($value, '|')) {
             return null;
         }
 
