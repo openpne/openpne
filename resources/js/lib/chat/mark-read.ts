@@ -1,5 +1,5 @@
 /**
- * What the talk page should tell the server it has read, and how a report settles.
+ * What a chat page should tell the server it has read, and how a report settles.
  *
  * The id reported is the newest **rendered** message — the server resolves the tuple from the id it
  * is given, so reporting anything else would mark messages read that were never on screen. The
