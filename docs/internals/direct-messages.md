@@ -120,6 +120,19 @@ body at 5,000 code points and normalizes CRLF to LF before measuring it, exactly
 no length limit and keep it. The reply is the message in the paging endpoint's own shape, so the
 composer appends what it wrote instead of re-reading the page.
 
+### Who a new one may be with
+
+A conversation is addressed by its counterpart, so starting one is choosing a member, and
+[`RecipientCandidates`](../../app/Features/DirectMessage/Queries/RecipientCandidates.php) is what
+`/messages/new` may offer. It is the **first of two gates**: it restates `canSend` as a filter, so a
+name it offers reaches a conversation with a composer in it — and the send asks the same question
+again, since a block can arrive between the two.
+
+Friends lead and a term reaches the rest of the site, the two tiers the timeline's mention picker
+takes. A blank term stops at the friends: it is what the screen opens on, and the site's roster in
+name order is no answer to "who do I write to". Nothing bounds the name, unlike the mention picker —
+a recipient is an id, and carries no text into the message.
+
 The notification the send raises re-runs its eligibility immediately before each channel delivers
 ([notifications.md](notifications.md#delivery-time-re-checks)): its mail carries the body, and a queued
 job can outlive a ban, a block, or the recipient purging their receipt (trash does not revoke reading,
@@ -193,6 +206,32 @@ the inbox's own message count: it links into the mailbox, where the number it an
 waiting there. Same receipts, different question — which is why the two are separate queries reaching
 the screen as separate props rather than one number two screens disagree about.
 
+## Deleting a conversation
+
+`POST /messages/{member}/delete` (and `/messages/withdrawn/delete`) takes the whole thing off the
+viewer's screens.
+[`DeleteConversation`](../../app/Features/DirectMessage/Actions/DeleteConversation.php) sets
+`*_deleted_at` and `*_purged_at` together on the viewer's own side of each arm — one statement per
+arm, conditioned by `ConversationScope`'s `outbound` and `inbound`, so what leaves is exactly what
+the conversation was showing.
+
+- **Per-side, so it is not a retraction**, and the screen says so before it acts.
+- **Trash and purge move together.** The trash is somewhere to change your mind about one message;
+  answering "delete this conversation" by moving all of it there would be answering something else.
+  One statement per arm is also what keeps purge ⇒ deleted.
+- **A draft is not in it** — no receipt, no conversation — and stays in the drafts box under the list.
+- **Idempotent**, since only live rows are touched: an already-purged row keeps the time it went, a
+  second delete moves nothing, and an empty conversation is no 404. The member asked for it to be
+  gone, and it is.
+- **The next message brings it back, holding only itself.** Nothing records that a conversation was
+  deleted — the list is composed out of the rows the viewer still holds — so this is the chat
+  semantics falling out of the reading model rather than being implemented.
+
+Attachment bytes stay: purge revokes the purging side's *view* (`DirectMessageAccess::canViewMessage`),
+and the message is still the other side's. And because the sender's copy is one row with one
+sender-side column, deleting a conversation takes an upgraded OpenPNE 3 multi-recipient send out of
+the other conversations it was sent to as well.
+
 ## Modern reads the store as chat
 
 The mailbox URLs are OpenPNE 3's, durable, and already in members' mail and bookmarks, so **none of
@@ -257,3 +296,7 @@ published content, and a private message is not that.
    goes through `SendDirectMessage`.
 10. No mailbox URL moves. What a Modern viewer gets from one is a redirect into the chat reading, and
     only ever for a message they are a party to.
+11. Deleting a conversation writes no record of itself. It moves the viewer's own side of the rows
+    that side still holds, and a conversation is gone exactly while nothing is left in it.
+12. What the recipient picker offers is `canSend` stated as a filter. The send re-asks it, and
+    neither may be the only one that does.
