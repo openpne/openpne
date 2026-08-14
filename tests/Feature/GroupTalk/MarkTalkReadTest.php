@@ -72,6 +72,10 @@ class MarkTalkReadTest extends TalkTestCase
         Carbon::setTestNow('2026-08-14 09:00:00');
         $group = $this->group();
         $member = $this->memberOf($group);
+        // The factory membership's talk_read_at is its DB default — the wall clock, which the mock
+        // above does not reach — so the monotonic guard would refuse a cursor at the mocked instant.
+        DB::table('group_members')->where('group_id', $group->getKey())
+            ->update(['talk_read_at' => Carbon::parse('2026-08-14 08:00:00'), 'talk_read_message_id' => 0]);
         $first = GroupMessage::factory()->create(['group_id' => $group->getKey()]);
         $second = GroupMessage::factory()->create(['group_id' => $group->getKey()]);
         $url = "/groups/{$group->getKey()}/talk/read";
