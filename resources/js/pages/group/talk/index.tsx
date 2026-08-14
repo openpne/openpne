@@ -304,7 +304,10 @@ export default function GroupTalkIndex() {
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} onSend={send} />
             ) : (
-                <p className="text-sm text-muted-foreground">{t('Join this %community% to post.')}</p>
+                // The frame gives its bottom padding up to the composer standing on the screen's foot;
+                // with no composer to stand there, this line takes the rhythm back rather than ending
+                // the page on the screen's edge.
+                <p className="text-sm text-muted-foreground max-lg:pb-8">{t('Join this %community% to post.')}</p>
             )}
         </>
     );

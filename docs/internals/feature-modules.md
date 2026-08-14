@@ -178,6 +178,12 @@ close control is used, which is the one exit that animates: a system back and th
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
 static-trail form bar.
+The registry's `conversation` flag marks a room a member stays in, reading and
+writing in the same place — group talk today. Below lg it also drops the bottom bar
+and holds its chrome still, so the composer stands at the true foot of the screen: a
+bar sliding out from under it would open a gap for the next message to show through.
+Its top bar stays the ordinary back-plus-scope one — a conversation is somewhere you
+go into, not a sheet you close.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

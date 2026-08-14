@@ -10,6 +10,10 @@ Modern only — talk has no OpenPNE 3 counterpart, so there is no Classic screen
 with. [`GroupTalkController`](../../app/Features/GroupTalk/GroupTalkController.php) renders Inertia
 directly, as `/groups/recent` does.
 
+The room is the chrome registry's one **conversation** screen
+([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does
+not recede, so the composer is the last thing on the screen at every scroll position.
+
 ## It shipped switched off (historical)
 
 `groupTalk` is an ordinary feature unit now: absent row means on, and only a stored `'0'` takes it
