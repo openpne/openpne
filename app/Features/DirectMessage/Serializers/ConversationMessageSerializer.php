@@ -60,6 +60,26 @@ class ConversationMessageSerializer
     }
 
     /**
+     * The unread boundary as the page reads it: the first unread message in two shapes — the tuple
+     * the divider is drawn from, and the same position as a cursor the jump hands straight back.
+     *
+     * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot
+     * @return array{count: int, firstUnread: array{at: string, id: int}, cursor: string}|null
+     */
+    public static function unreadSnapshot(?array $snapshot): ?array
+    {
+        if ($snapshot === null) {
+            return null;
+        }
+
+        return [
+            'count' => $snapshot['count'],
+            'firstUnread' => ['at' => self::instant($snapshot['at']), 'id' => $snapshot['id']],
+            'cursor' => (string) new ConversationCursor($snapshot['at'], $snapshot['id']),
+        ];
+    }
+
+    /**
      * Whether the counterpart has opened one of the viewer's own messages: null when there is nothing
      * to report — a message the viewer received, or one in the withdrawn bucket, where no receipt
      * names a member.

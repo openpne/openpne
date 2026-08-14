@@ -4,7 +4,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
-import { dividerBeforeId } from '@/lib/chat/unread';
+import { dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { useT } from '@/lib/i18n';
@@ -80,7 +80,7 @@ export default function GroupTalkIndex() {
     // and nothing else — which is what makes them survive the mark-read that fires seconds later.
     // The snapshot's cursor is the boundary as a position, so the jump still lands on it long after
     // the stored one has moved to the foot of the conversation.
-    const dividerId = dividerBeforeId(messages, talkUnreadSnapshot, stream.hasOlder);
+    const dividerId = dividerBeforeId(messages, readThroughBoundary(talkUnreadSnapshot), stream.hasOlder);
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && talkUnreadSnapshot !== null && talkUnreadSnapshot.count > 0 ? talkUnreadSnapshot : null;

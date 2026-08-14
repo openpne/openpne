@@ -1,4 +1,4 @@
-import type { ChatPage, ChatStreamRow } from '@/lib/chat/types';
+import type { ChatFirstUnreadSnapshot, ChatPage, ChatStreamRow } from '@/lib/chat/types';
 import type { MessageImage, MessageMember } from '../types';
 
 export interface ConversationMessage extends ChatStreamRow {
@@ -13,3 +13,6 @@ export interface ConversationMessage extends ChatStreamRow {
 }
 
 export type ConversationPage = ChatPage<ConversationMessage>;
+
+/** Where the unread boundary stood when the page was rendered — see the divider note in index.tsx. */
+export type ConversationUnreadSnapshot = ChatFirstUnreadSnapshot;

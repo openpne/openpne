@@ -864,8 +864,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // account is gone shares one conversation: a withdrawn member leaves no id to key one by.
         Route::get('/withdrawn', 'showWithdrawn')->name('message.chat.withdrawn');
         Route::get('/withdrawn/messages', 'withdrawnMessages')->name('message.chat.withdrawn.messages');
+        Route::post('/withdrawn/read', 'readWithdrawn')->name('message.chat.withdrawn.read');
         Route::get('/{member}', 'show')->whereNumber('member')->name('message.chat.show');
         Route::get('/{member}/messages', 'messages')->whereNumber('member')->name('message.chat.messages');
+        // The reader's own state, so it is not throttled as posting: reading is what opening the
+        // screen does.
+        Route::post('/{member}/read', 'read')->whereNumber('member')->name('message.chat.read');
     });
 });
 

@@ -34,44 +34,53 @@ class ConversationScope
      */
     public static function apply(Builder $query, Member $viewer, ?Member $counterpart): Builder
     {
-        $viewerId = (int) $viewer->getKey();
-        $counterpartId = $counterpart === null ? null : (int) $counterpart->getKey();
-
         // A draft belongs to neither arm — it has no receipt at all, so it is invisible to the
         // recipient and stays in the sender's drafts box rather than in the conversation.
         return $query
             ->where('is_draft', false)
             ->where(fn (Builder $conversation) => $conversation
-                ->where(fn (Builder $sent) => self::sent($sent, $viewerId, $counterpartId))
-                ->orWhere(fn (Builder $received) => self::received($received, $viewerId, $counterpartId)));
+                ->where(fn (Builder $sent) => self::sent($sent, $viewer, $counterpart))
+                ->orWhere(fn (Builder $received) => self::received($received, $viewer, $counterpart)));
+    }
+
+    /**
+     * The message half of the received arm: delivered, and written by the counterpart. Public
+     * because unread asks the same set from the receipt side — what is unread, and what a report may
+     * mark read, is what this conversation received — and the two readings must not drift apart.
+     *
+     * @param  Builder<DirectMessage>  $query
+     */
+    public static function inbound(Builder $query, ?Member $counterpart): void
+    {
+        $query->where('is_draft', false);
+        self::isCounterpart($query, 'sender_id', $counterpart);
     }
 
     /** What the viewer sent to the counterpart, minus what the viewer has trashed or purged. */
-    private static function sent(Builder $query, int $viewer, ?int $counterpart): void
+    private static function sent(Builder $query, Member $viewer, ?Member $counterpart): void
     {
         $query
-            ->where('sender_id', $viewer)
+            ->where('sender_id', $viewer->getKey())
             ->whereNull('sender_deleted_at')
             ->whereNull('sender_purged_at')
             ->whereHas('recipients', fn (Builder $receipt) => self::isCounterpart($receipt, 'recipient_id', $counterpart));
     }
 
     /** What the counterpart sent the viewer, minus what the viewer has trashed or purged. */
-    private static function received(Builder $query, int $viewer, ?int $counterpart): void
+    private static function received(Builder $query, Member $viewer, ?Member $counterpart): void
     {
-        self::isCounterpart($query, 'sender_id', $counterpart);
+        self::inbound($query, $counterpart);
 
         $query->whereHas('recipients', fn (Builder $receipt) => $receipt
-            ->where('recipient_id', $viewer)
-            ->whereNull('recipient_deleted_at')
-            ->whereNull('recipient_purged_at'));
+            ->where('recipient_id', $viewer->getKey())
+            ->recipientLive());
     }
 
     /**
      * @param  Builder<DirectMessage>|Builder<DirectMessageRecipient>  $query
      */
-    private static function isCounterpart(Builder $query, string $column, ?int $counterpart): void
+    private static function isCounterpart(Builder $query, string $column, ?Member $counterpart): void
     {
-        $counterpart === null ? $query->whereNull($column) : $query->where($column, $counterpart);
+        $counterpart === null ? $query->whereNull($column) : $query->where($column, $counterpart->getKey());
     }
 }

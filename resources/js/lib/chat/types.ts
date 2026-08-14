@@ -28,3 +28,22 @@ export interface ChatUnreadSnapshot {
     /** The same position as an opaque pagination cursor — what asks for the page it sits in. */
     cursor: string;
 }
+
+/**
+ * The same, for a conversation that holds no cursor to read a boundary from: the position is the
+ * oldest message still waiting. Null when nothing is — there is no row to name.
+ */
+export interface ChatFirstUnreadSnapshot {
+    count: number;
+    /** The oldest unread message's own `(created_at, id)` tuple. */
+    firstUnread: { at: string; id: number };
+    /** The same position as an opaque pagination cursor — what asks for the page it sits in. */
+    cursor: string;
+}
+
+/**
+ * A boundary as the divider reads it. The two kinds are the two ways a feature knows where reading
+ * stopped, and they place the line on either side of the row they name: a `readThrough` position is
+ * the last row already read, a `firstUnread` position is the first row not read.
+ */
+export type ChatUnreadBoundary = { kind: 'readThrough'; at: string; id: number } | { kind: 'firstUnread'; at: string; id: number };

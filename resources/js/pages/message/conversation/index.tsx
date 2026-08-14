@@ -1,14 +1,16 @@
 import { Head, usePage } from '@inertiajs/react';
-import { ArrowDown } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useMarkRead } from '@/lib/chat/use-mark-read';
+import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageMember } from '../types';
 import { ConversationMessageRow } from './message-row';
-import type { ConversationPage } from './types';
+import type { ConversationPage, ConversationUnreadSnapshot } from './types';
 
 interface ConversationProps extends PageProps {
     /** Who the conversation is with; null is the bucket every withdrawn member's messages fall into. */
@@ -16,6 +18,7 @@ interface ConversationProps extends PageProps {
     page: ConversationPage;
     /** The message a `?m=` link opened on; null for an ordinary visit. `page` is the slice it sits in. */
     anchor: number | null;
+    unreadSnapshot: ConversationUnreadSnapshot | null;
 }
 
 /** How close to the foot still counts as reading the newest message. */
@@ -32,13 +35,16 @@ const atFoot = (): boolean => window.innerHeight + window.scrollY >= document.do
 
 export default function MessageConversation() {
     const t = useT();
-    const { counterpart, page, anchor } = usePage<ConversationProps>().props;
+    const { counterpart, page, anchor, unreadSnapshot } = usePage<ConversationProps>().props;
+    // A departed member leaves no id to key a conversation by, so every one of them is addressed by
+    // the bucket's own literal.
+    const path = `/messages/${counterpart?.id ?? 'withdrawn'}`;
     // Memoized because the stream's poll and reads hang off their identity: rebuilt every render, the
     // interval would be torn down and started again each time the page re-rendered.
     const endpoints = useMemo(
-        // Read-only for now, so the stream is handed no write endpoints at all.
-        () => ({ messages: (query: string) => `/messages/${counterpart?.id ?? 'withdrawn'}/messages${query}` }),
-        [counterpart?.id],
+        // Composing is still the mailbox's, so the stream is handed no write endpoints at all.
+        () => ({ messages: (query: string) => `${path}/messages${query}` }),
+        [path],
     );
     const stream = useChatStream(endpoints, page);
     const messages = stream.messages;
@@ -46,8 +52,18 @@ export default function MessageConversation() {
     const generation = stream.generation;
 
     // Whether the reader is standing at the newest message, which is what the "jump to latest" pill
-    // answers to.
+    // answers to — and, with the live window, what counts as having read what arrived.
     const [atBottom, setAtBottom] = useState(true);
+    useMarkRead(`${path}/read`, messages[messages.length - 1]?.id, atBottom && atLatest);
+
+    // The line the visit opened on. Both this and the banner below come off the render-time snapshot
+    // and nothing else — which is what makes them survive the mark-read that fires seconds later.
+    // The snapshot's cursor is the boundary as a position, so the jump still lands on it after every
+    // receipt behind it has been opened.
+    const dividerId = dividerBeforeId(messages, firstUnreadBoundary(unreadSnapshot), stream.hasOlder);
+    // The backlog the page cannot draw a line for, because the boundary is further back than it has
+    // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
+    const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
 
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
@@ -63,7 +79,7 @@ export default function MessageConversation() {
     // A move the reader asked for, and the list it was asked from. It is spent on the render that
     // carries its own answer — the generation moves only when a window change lands, so a poll or a
     // merge arriving in between cannot spend it and leave the jump un-made.
-    const goTo = useRef<{ from: number } | null>(null);
+    const goTo = useRef<{ target: 'divider' | 'bottom'; from: number } | null>(null);
     // The newest message the pin last answered. The pin follows new content, not new array identity:
     // merges rebuild the list for reasons that move nothing (a re-read row).
     const tail = useRef<number | undefined>(undefined);
@@ -120,7 +136,13 @@ export default function MessageConversation() {
             goTo.current = null;
             // A jump outranks both rules below: the reader named the place, so neither the held
             // anchor nor the pin gets to answer for this render.
-            window.scrollTo({ top: document.documentElement.scrollHeight });
+            if (asked.target === 'bottom') {
+                window.scrollTo({ top: document.documentElement.scrollHeight });
+            } else {
+                // Mid-viewport, so the last of what was already read stays visible above the line —
+                // landing on the boundary with nothing above it reads as the start of the thread.
+                document.querySelector('[data-conversation-divider]')?.scrollIntoView({ block: 'center' });
+            }
 
             return;
         }
@@ -153,9 +175,22 @@ export default function MessageConversation() {
         void stream.loadOlder();
     };
 
+    // The move is claimed before the read, since the state it lands on may be committed before this
+    // handler resumes; a read that brings nothing back gives it up again rather than leaving a jump
+    // armed for whatever changes the list next.
+    const jumpToContext = (cursor: string) => {
+        const asked = { target: 'divider' as const, from: generation };
+        goTo.current = asked;
+        void stream.openContext(cursor).then((moved) => {
+            // Only give up the move if it is still the one this click made.
+            if (!moved && goTo.current === asked) {
+                goTo.current = null;
+            }
+        });
+    };
+
     // From the live window this is a scroll; from a history window the newest messages are not even
-    // loaded, so it is a read first and the scroll lands on what comes back. The move is claimed
-    // before the read, since the state it lands on may be committed before this handler resumes.
+    // loaded, so it is a read first and the scroll lands on what comes back.
     const jumpToLatest = () => {
         pinned.current = true;
 
@@ -165,7 +200,7 @@ export default function MessageConversation() {
             return;
         }
 
-        const asked = { from: generation };
+        const asked = { target: 'bottom' as const, from: generation };
         goTo.current = asked;
         void stream.returnToLatest().then((moved) => {
             // Only give up the move if it is still the one this click made.
@@ -178,6 +213,18 @@ export default function MessageConversation() {
     return (
         <>
             <Head title={counterpart?.name ?? t('Withdrawn member')} />
+
+            {backlog !== null && (
+                // Sticky, because the reader opens at the foot of the conversation and the boundary
+                // this offers is a page or more above them — a band at the top of the list would be
+                // out of sight exactly when it is needed.
+                <div className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 flex justify-center">
+                    <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
+                        <ArrowUp className="size-4" aria-hidden />
+                        {t('Jump to :count unread messages', { count: backlog.count })}
+                    </Button>
+                </div>
+            )}
 
             {/* The frame gives its bottom padding up to the composer a talk stands on its foot; with
                 nothing to stand there, the list takes the rhythm back rather than ending the page on
@@ -196,7 +243,24 @@ export default function MessageConversation() {
                 ) : (
                     <List>
                         {messages.map((message) => (
-                            <ConversationMessageRow key={message.id} message={message} highlighted={message.id === highlightId} />
+                            <Fragment key={message.id}>
+                                {message.id === dividerId && (
+                                    // The separator is inside the row rather than being it: a list
+                                    // may only hold list items, and an <li role="separator"> is the
+                                    // one thing axe's `list` rule refuses. Its label is the whole of
+                                    // what it says, so what it draws is hidden.
+                                    <li data-conversation-divider="" className="px-4 py-2 sm:px-5">
+                                        <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
+                                            <span aria-hidden className="h-px flex-1 bg-selected/50" />
+                                            <span aria-hidden className="text-xs text-selected">
+                                                {t('Unread from here')}
+                                            </span>
+                                            <span aria-hidden className="h-px flex-1 bg-selected/50" />
+                                        </div>
+                                    </li>
+                                )}
+                                <ConversationMessageRow message={message} highlighted={message.id === highlightId} />
+                            </Fragment>
                         ))}
                     </List>
                 )}
