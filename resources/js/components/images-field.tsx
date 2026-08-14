@@ -13,10 +13,9 @@ const PASSTHROUGH_BYTES = 2 * 1024 * 1024;
 /**
  * Re-encode one picked image down to MAX_EDGE on the longest side. Phone cameras default to
  * 24MP+, which trips the server's byte/pixel caps (or PHP's own upload limits) — and no reader
- * ever sees more than a thumbnail-sized render, so shrinking before upload is pure win
- * (WhatsApp/LINE/Instagram do the same). EXIF — GPS included — does not survive the canvas,
- * which is the norm for SNS uploads. Returns the original when it cannot be decoded; the
- * server validation answers those.
+ * ever sees more than a thumbnail-sized render, so shrinking before upload is pure win. EXIF — GPS
+ * included — does not survive the canvas, which is as much the point as the size is. Returns the
+ * original when it cannot be decoded; the server validation answers those.
  */
 export async function shrink(file: File): Promise<File> {
     // A GIF stays as picked: the canvas would flatten its animation. Oversized ones fail visibly.

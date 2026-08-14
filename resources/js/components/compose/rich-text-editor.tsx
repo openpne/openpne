@@ -55,7 +55,7 @@ type RichTextEditorProps = {
 // Below Tailwind's md (768px): the row carries the compact button set and demotes the rest into "More".
 const COMPACT_QUERY = '(max-width: 767.98px)';
 
-// size-9 (36px) resting; pointer-coarse bumps every target to 44px (Apple HIG / Material touch floor).
+// size-9 (36px) resting; pointer-coarse bumps every target to a 44px touch target.
 const TOOLBAR_BUTTON_CLASS =
     'inline-flex size-9 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-accent aria-pressed:text-accent-foreground';
 

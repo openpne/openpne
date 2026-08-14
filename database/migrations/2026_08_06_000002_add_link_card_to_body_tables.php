@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Schema;
 /*
  * Attaches a link card to the bodies that can carry one.
  *
- * A column per body table rather than a polymorphic join: one record has at most one card (the
- * first URL in it, as Twitter, Slack and Mastodon all do), so the relation is one-to-one from this
- * side and a column keeps referential integrity, eager loading and nullOnDelete simple.
+ * A column per body table rather than a polymorphic join: one record has at most one card (the first
+ * URL in it), so the relation is one-to-one from this side and a column keeps referential integrity,
+ * eager loading and nullOnDelete simple.
  *
  * `link_card_synced_at` is not decoration. It is what distinguishes "this body has no card because
  * it has no URL" from "this body has never been looked at" — a record posted before the feature was
