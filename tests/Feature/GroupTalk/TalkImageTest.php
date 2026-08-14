@@ -165,6 +165,22 @@ class TalkImageTest extends TalkTestCase
                 ->has('page.messages.0.images.0.thumbnailUrl'));
     }
 
+    public function test_the_serializer_ships_the_fit_sources_and_the_uploaded_size(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
+            ->assertInertia(fn ($page) => $page
+                ->has('page.messages.0.images.0.fitSources', 3)
+                ->has('page.messages.0.images.0.cropSources.tall', 2)
+                ->has('page.messages.0.images.0.cropSources.wide', 2)
+                // The upload recorded the size, so the client can reserve the box before the bytes.
+                ->where('page.messages.0.images.0.width', 40)
+                ->where('page.messages.0.images.0.height', 40));
+    }
+
     /** The write's own response is what the composer appends, so it has to carry the same list. */
     public function test_the_write_response_ships_all_three_in_slot_order(): void
     {

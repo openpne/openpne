@@ -25,7 +25,7 @@ use DateTimeInterface;
 class GroupMessageSerializer
 {
     /**
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string}>, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
     {
@@ -115,11 +115,12 @@ class GroupMessageSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated
-     * behind the talk's read access. Tolerates a row whose File is gone (defensive; the join
-     * cascades with it).
+     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
+     * all FilePolicy-gated behind the talk's read access. See docs/internals/images.md for which
+     * one a surface takes and why the intrinsic size travels with them. Tolerates a row whose File
+     * is gone (defensive; the join cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */
     public static function image(GroupMessageImage $image): array
     {
@@ -129,6 +130,23 @@ class GroupMessageSerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+            'fitSources' => $file ? [
+                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
+                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
+                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
+            ] : [],
+            'cropSources' => $file ? [
+                'tall' => [
+                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
+                ],
+                'wide' => [
+                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
+                ],
+            ] : [],
+            'width' => $file?->width,
+            'height' => $file?->height,
         ];
     }
 

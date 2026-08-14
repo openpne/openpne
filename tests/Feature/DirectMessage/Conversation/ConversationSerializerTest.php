@@ -143,6 +143,27 @@ class ConversationSerializerTest extends ConversationTestCase
         }
     }
 
+    public function test_an_attachment_carries_the_fit_sources_and_its_recorded_size(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $message = $this->deliver($viewer, $other, ['body' => 'with a picture']);
+        $file = File::factory()->create(['type' => 'image/png', 'width' => 1600, 'height' => 900]);
+        DirectMessageFile::factory()->create([
+            'direct_message_id' => $message->getKey(),
+            'file_id' => $file->getKey(),
+            'number' => 1,
+        ]);
+
+        $image = $this->actingAs($viewer)
+            ->getJson("/messages/{$other->getKey()}/messages")
+            ->json('messages.0.images.0');
+
+        $this->assertSame($file->thumbnailUrl(640, 640), $image['fitSources'][1]['url']);
+        $this->assertSame($file->thumbnailUrl(600, 800, square: true), $image['cropSources']['tall'][1]['url']);
+        $this->assertSame(1600, $image['width']);
+        $this->assertSame(900, $image['height']);
+    }
+
     public function test_every_message_carries_its_own_cursor(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
