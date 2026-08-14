@@ -6,9 +6,12 @@ namespace Tests\Feature\Mail;
 
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageFile;
 use App\Models\Member;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Support\SnsSettingKey;
@@ -64,6 +67,46 @@ class MailTemplateNotificationTest extends TestCase
         app()->setLocale('en');
         $en = $this->renderMailText((new FriendRequestedNotification($requester))->toMail($recipient));
         $this->assertStringContainsString('Bob sent you a friend request', $en);
+    }
+
+    /**
+     * A message written as chat may be nothing but pictures, and a site whose wording quotes the
+     * body — the OpenPNE 3 notification extension's, which is why `message_body` is offered at all —
+     * would otherwise mail a blank line. The stand-in says what arrived instead. A body-less message
+     * with no attachment (a legacy subject-only row) stays as wordless as it has always been.
+     */
+    public function test_a_picture_only_message_mails_the_stand_in_for_its_body(): void
+    {
+        $this->quoteTheBodyInTheMessageMail();
+        [$sender, $recipient] = Member::factory()->count(2)->create()->all();
+        $pictures = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => null, 'body' => '']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $pictures->getKey()]);
+        $subjectOnly = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => 'Only a subject', 'body' => '']);
+
+        app()->setLocale('en');
+        $this->assertStringContainsString(
+            'Body: '.__('Image'),
+            $this->renderMailText((new DirectMessageReceivedNotification($sender, $pictures))->toMail($recipient)),
+        );
+        $this->assertStringContainsString(
+            "Body: \n",
+            $this->renderMailText((new DirectMessageReceivedNotification($sender, $subjectOnly))->toMail($recipient)),
+        );
+    }
+
+    /** The stock OpenPNE 3 wording links to the message rather than quoting it; this is the wording that quotes it. */
+    private function quoteTheBodyInTheMessageMail(): void
+    {
+        $id = DB::table('mail_templates')->insertGetId([
+            'key' => MailTemplate::DirectMessageReceived->value,
+            'is_enabled' => true,
+        ]);
+        DB::table('mail_template_translations')->insert([
+            'mail_template_id' => $id,
+            'locale' => 'en',
+            'subject' => 'A message arrived',
+            'body' => "Body: {{ message_body }}\n",
+        ]);
     }
 
     public function test_member_name_renders_verbatim_without_app_generated_html(): void

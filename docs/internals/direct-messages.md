@@ -88,6 +88,7 @@ has needs an answer here.
 |---|---|
 | `subject` | shown above the body when it is non-empty. Null and the empty string alike draw nothing — the storage keeps that distinction, the screen has nothing to show for either. A message written as chat has none. |
 | null `body` | serialized as the empty string; a subject-only message is still a message. |
+| empty `body` | what a chat send writes when the message is pictures alone. Indistinguishable from the row above on the screen, and deliberately so — both draw no paragraph. |
 | draft | never in a conversation: a draft has no receipt, so neither arm reaches it — and the scope still states `is_draft = false` as a belt against a stray receipt. It stays the drafts box's. |
 | `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the mailbox's trash screen. |
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
@@ -119,6 +120,15 @@ body at 5,000 code points and normalizes CRLF to LF before measuring it, exactly
 **The cap is this screen's alone**: the mailbox's compose and draft forms are OpenPNE 3 screens with
 no length limit and keep it. The reply is the message in the paging endpoint's own shape, so the
 composer appends what it wrote instead of re-reading the page.
+
+It also takes words **or** at least one attachment, and refuses only a message with neither —
+[group-talk.md](group-talk.md#a-picture-is-a-message) has the shape, which this request repeats
+without the second upload wire and without mentions. That contract is the chat endpoint's; the
+mailbox forms keep OpenPNE 3's required subject and body, and the Modern draft screen is a mailbox
+form, not a chat one. Where a message with no words is listed — the conversation list, and the
+received-message mail on a site whose wording quotes the body — a stand-in
+([`ChatPreview`](../../app/Support/ChatPreview.php)) says a picture arrived. The list reaches it last:
+body, then subject, then the stand-in.
 
 ### Who a new one may be with
 

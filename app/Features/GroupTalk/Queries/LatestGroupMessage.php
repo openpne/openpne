@@ -23,6 +23,9 @@ class LatestGroupMessage
         return GroupMessage::query()
             ->where('group_id', $group->getKey())
             ->with('author')
+            // Whether there are pictures, not how many: the card's stand-in for a message with no
+            // words never counts them (App\Support\ChatPreview).
+            ->withExists('images')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->first();

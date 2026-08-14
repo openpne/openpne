@@ -46,6 +46,7 @@ export function TalkMessageRow({
 }) {
     const t = useT();
     const author = message.author;
+    const hasBody = message.body.trim() !== '';
 
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
@@ -90,10 +91,14 @@ export function TalkMessageRow({
                     </button>
                 )}
             </div>
-            <p className="mt-1 whitespace-pre-wrap break-words">
-                <EntityText text={message.body} mentions={message.mentions} />
-            </p>
-            <ImageGrid images={message.images} variant="boxed" className="mt-2" />
+            {/* A message may be nothing but pictures, and an empty paragraph would leave its height
+                behind. Trimmed rather than compared to '': an upgraded body may be whitespace. */}
+            {hasBody && (
+                <p className="mt-1 whitespace-pre-wrap break-words">
+                    <EntityText text={message.body} mentions={message.mentions} />
+                </p>
+            )}
+            <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : 'mt-1'} />
             <TalkReactionChips
                 chips={reactions.chips}
                 onToggle={reactions.canReact ? reactions.onToggle : undefined}

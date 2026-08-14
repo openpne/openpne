@@ -3,6 +3,7 @@
 namespace Tests\Feature\DirectMessage\Classic;
 
 use App\Models\DirectMessage;
+use App\Models\DirectMessageFile;
 use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 use App\Models\MemberImage;
@@ -61,6 +62,24 @@ class DirectMessageShowParityTest extends TestCase
         $this->actingAs($recipient)->get(route('message.receive.show', ['message' => $message->getKey()]))
             ->assertOk()
             ->assertDontSee('class="photo"', false);
+    }
+
+    /**
+     * A message written as chat may be nothing but pictures, and the mailbox shows it too. The
+     * paragraph is left out rather than drawn empty — its height would read as a body that is there.
+     */
+    public function test_a_picture_only_message_draws_no_empty_paragraph(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => null, 'body' => '']);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $recipient->getKey()]);
+        DirectMessageFile::factory()->create(['direct_message_id' => $message->getKey()]);
+
+        $response = $this->actingAs($recipient)->get(route('message.receive.show', ['message' => $message->getKey()]))->assertOk();
+
+        $response->assertDontSee('<p class="text">', false);
+        // The pictures are still there — this is about the missing words, not a hidden message.
+        $response->assertSee('<ul class="photo">', false);
     }
 
     public function test_the_recipient_photos_are_eager_loaded(): void

@@ -69,9 +69,13 @@
                 </div>
             @endif
 
-            <div class="block">
-                <p class="text"><x-user-text :value="$view->message->body ?? ''" /></p>
-            </div>
+            {{-- A message written as chat may be nothing but pictures, and a legacy row may carry
+                 only a subject; neither has a paragraph to draw. --}}
+            @if (trim((string) $view->message->body) !== '')
+                <div class="block">
+                    <p class="text"><x-user-text :value="$view->message->body" /></p>
+                </div>
+            @endif
 
             @php($id = $view->message->getKey())
             <div class="operation">

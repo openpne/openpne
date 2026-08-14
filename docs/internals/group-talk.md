@@ -271,7 +271,13 @@ anything at all is spelled as a `CASE` rather than left to where the engine coll
 descending sort, which is not a portable answer.
 
 The bodies follow in one lookup by primary key, since the ordering has already named the exact rows.
-A page therefore costs the same whether it holds one room or twenty.
+A page therefore costs the same whether it holds one room or twenty. That lookup also asks whether
+the message has pictures, because a message may have nothing else: the preview
+([`ChatPreview`](../../app/Support/ChatPreview.php)) falls back to a stand-in for it rather than
+letting the row's "author: " trail into nothing. Whether, not how many — the stand-in never counts
+them. The group page's own talk card previews the same way through
+[`LatestGroupMessage`](../../app/Features/GroupTalk/Queries/LatestGroupMessage.php), and the
+conversation list of direct messages is the third caller of the same helper.
 
 The Modern dashboard leads with the same rooms — the first five, and the same row component, so what
 the digest says and what the list says cannot drift. It reads them through `take()` rather than the
@@ -385,6 +391,21 @@ A refused file — one over the cap, one of the wrong type — is a 422 on `imag
 takes the **whole message** down, and the composer keeps the whole draft: body, mention rows and
 every picked file. Nothing is cleared until the message is actually written, so a retry carries what
 the first attempt had.
+
+### A picture is a message
+
+[`StoreGroupMessageRequest`](../../app/Http/Requests/GroupTalk/StoreGroupMessageRequest.php) requires
+words **or** at least one attachment, on either upload wire — a message with neither is the only one
+it refuses. This is that endpoint's authoring contract, not a constraint on `group_messages`: the
+transfer writes rows the form never sees.
+
+The body such a message stores is the empty string. It arrives as null — the global `TrimStrings`
+then `ConvertEmptyStringsToNull` have already made a blank or whitespace-only field one — and
+`prepareForValidation` maps only that null back to a string, so `body === ''` is the single shape "no
+words" takes downstream. A body that is neither null nor a string is left untouched for the `string`
+rule to refuse; coercing it would post a value the member never wrote. An empty body carries no
+mentions either: a range over no text resolves to nothing, so a picture-only message notifies nobody
+however its `mentions` payload was forged.
 
 ### Who may see one
 

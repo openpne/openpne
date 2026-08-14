@@ -7,6 +7,7 @@ use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -59,6 +60,20 @@ class TalkRoomListTest extends TalkTestCase
                 ->where('rooms.data.0.latest.body', 'see you there')
                 ->where('rooms.data.0.latest.authorName', 'Alice')
                 ->has('rooms.meta'));
+    }
+
+    /** A row whose newest message is pictures alone says so, rather than trailing off after "Alice: ". */
+    public function test_a_picture_only_message_previews_as_a_picture(): void
+    {
+        $viewer = Member::factory()->create();
+        $group = $this->joined($viewer);
+
+        $this->actingAs($viewer)
+            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
+            ->assertCreated();
+
+        $this->actingAs($viewer)->get('/groups/mine')
+            ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', __('Image')));
     }
 
     public function test_the_rooms_arrive_in_last_spoken_order(): void
