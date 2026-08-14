@@ -60,7 +60,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -113,10 +113,12 @@ class DiarySerializer
     }
 
     /**
-     * A single attached image (diary or comment): the full-bytes url and a square thumbnail, both
-     * FilePolicy-gated. Tolerates a row whose File is gone (defensive; the join cascades with it).
+     * A single attached image (diary or comment): the full-bytes url plus the thumbnail sources a
+     * surface picks from, all FilePolicy-gated. See docs/internals/images.md for which one a
+     * surface takes and why the intrinsic size travels with them. Tolerates a row whose File is
+     * gone (defensive; the join cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}
      */
     public static function image(DiaryImage|DiaryCommentImage $image): array
     {
@@ -126,6 +128,12 @@ class DiarySerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+            'fitUrl' => $file?->thumbnailUrl(600, 600) ?? '',
+            'fit2xUrl' => $file?->thumbnailUrl(1200, 1200) ?? '',
+            'squareUrl' => $file?->thumbnailUrl(600, 600, square: true) ?? '',
+            'square2xUrl' => $file?->thumbnailUrl(1200, 1200, square: true) ?? '',
+            'width' => $file?->width,
+            'height' => $file?->height,
         ];
     }
 
@@ -133,7 +141,7 @@ class DiarySerializer
      * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
      * permission, computed server-side so the client never re-derives authorization.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(DiaryComment $comment, ?Member $viewer): array
     {

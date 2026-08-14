@@ -42,7 +42,7 @@ class GroupTopicSerializer
     /**
      * The topic show shape: the full body and images plus the author and post time.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function detail(GroupTopic $topic): array
     {
@@ -64,7 +64,7 @@ class GroupTopicSerializer
      * A single comment. `deletable` is the viewer's delete permission (its author, or anyone who may
      * edit the topic), so the client renders the button without re-deriving the rule.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupTopicComment $comment, Member $viewer): array
     {
@@ -111,10 +111,12 @@ class GroupTopicSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated.
-     * Tolerates a row whose File is gone (defensive; the join cascades with it).
+     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
+     * all FilePolicy-gated. See docs/internals/images.md for which one a surface takes and why the
+     * intrinsic size travels with them. Tolerates a row whose File is gone (defensive; the join
+     * cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}
      */
     public static function image(GroupTopicImage|GroupTopicCommentImage $image): array
     {
@@ -124,6 +126,12 @@ class GroupTopicSerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+            'fitUrl' => $file?->thumbnailUrl(600, 600) ?? '',
+            'fit2xUrl' => $file?->thumbnailUrl(1200, 1200) ?? '',
+            'squareUrl' => $file?->thumbnailUrl(600, 600, square: true) ?? '',
+            'square2xUrl' => $file?->thumbnailUrl(1200, 1200, square: true) ?? '',
+            'width' => $file?->width,
+            'height' => $file?->height,
         ];
     }
 

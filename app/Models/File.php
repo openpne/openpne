@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 // single access path to the content regardless of the storage backend
 // (DB-BLOB / local / S3). `id` is a signed INT (see the create_files migration:
 // it must match file_bin.file_id for the upgrade tool's metadata-only FK rewire).
-#[Fillable(['name', 'type', 'original_filename', 'related_entity_type', 'related_entity_id', 'explicit_visibility', 'byte_size'])]
+#[Fillable(['name', 'type', 'original_filename', 'related_entity_type', 'related_entity_id', 'explicit_visibility', 'byte_size', 'width', 'height'])]
 class File extends Model
 {
     /** @use HasFactory<FileFactory> */
@@ -33,6 +33,8 @@ class File extends Model
         return [
             'related_entity_id' => 'integer',
             'byte_size' => 'integer',
+            'width' => 'integer',
+            'height' => 'integer',
         ];
     }
 
@@ -71,11 +73,10 @@ class File extends Model
      * URL of a thumbnail variant, in the OpenPNE 3-compatible /cache/img form. The size
      * must be whitelisted (config openpne.images.allowed_sizes) to resolve.
      *
-     * Where CSS sizes the image (every Modern surface), ask for at least twice the box it
-     * paints into, not the box itself: the whitelist is OpenPNE 3's 1x-display set, so the
-     * box size reads as the obvious argument and leaves every retina client upscaling.
-     * Classic is the exception — its `<img>` carries no dimensions, so the size requested
-     * here *is* the rendered size and changing it moves the layout.
+     * Where CSS sizes the image (every Modern surface), the size asked for here is a source
+     * for a 1x/2x srcset, not the painted box — see docs/internals/images.md for picking it.
+     * Classic is the exception: its `<img>` carries no dimensions, so the size requested here
+     * *is* the rendered size and changing it moves the layout.
      */
     public function thumbnailUrl(int $width, int $height, bool $square = false): string
     {

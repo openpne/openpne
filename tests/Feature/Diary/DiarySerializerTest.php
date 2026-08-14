@@ -115,6 +115,21 @@ class DiarySerializerTest extends TestCase
         );
     }
 
+    public function test_detail_images_gained_the_fit_sources_without_moving_the_thumbnail_list(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $file = File::factory()->create(['type' => 'image/png', 'width' => 1600, 'height' => 900]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => 1]);
+
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail($diary->getKey()));
+
+        $this->assertSame($file->thumbnailUrl(600, 600), $detail['images'][0]['fitUrl']);
+        $this->assertSame(1600, $detail['images'][0]['width']);
+        // thumbnails is derived from the same entries and stays the 120px square list it was.
+        $this->assertSame([$file->thumbnailUrl(120, 120, square: true)], $detail['thumbnails']);
+    }
+
     public function test_detail_thumbnails_are_empty_without_images(): void
     {
         $owner = Member::factory()->create();

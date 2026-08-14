@@ -52,7 +52,7 @@ class GroupEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(GroupEvent $event): array
     {
@@ -77,7 +77,7 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupEventComment $comment, Member $viewer): array
     {
@@ -123,10 +123,12 @@ class GroupEventSerializer
     }
 
     /**
-     * A single attached image (event or comment): the full-bytes url and a square thumbnail, both
-     * FilePolicy-gated. Tolerates a row whose File is gone (defensive; the join cascades with it).
+     * A single attached image (event or comment): the full-bytes url plus the thumbnail sources a
+     * surface picks from, all FilePolicy-gated. See docs/internals/images.md for which one a
+     * surface takes and why the intrinsic size travels with them. Tolerates a row whose File is
+     * gone (defensive; the join cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}
      */
     public static function image(GroupEventImage|GroupEventCommentImage $image): array
     {
@@ -136,6 +138,12 @@ class GroupEventSerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+            'fitUrl' => $file?->thumbnailUrl(600, 600) ?? '',
+            'fit2xUrl' => $file?->thumbnailUrl(1200, 1200) ?? '',
+            'squareUrl' => $file?->thumbnailUrl(600, 600, square: true) ?? '',
+            'square2xUrl' => $file?->thumbnailUrl(1200, 1200, square: true) ?? '',
+            'width' => $file?->width,
+            'height' => $file?->height,
         ];
     }
 

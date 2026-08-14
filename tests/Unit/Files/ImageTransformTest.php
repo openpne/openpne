@@ -31,6 +31,21 @@ class ImageTransformTest extends TestCase
         $this->assertNotNull(ImageTransform::fromGeometry('w240_h320'));
     }
 
+    public function test_parses_the_2x_size_in_both_fit_and_square_form(): void
+    {
+        // The whitelist is per WxH, so listing 1200x1200 has to open the fit and the crop alike.
+        $fit = ImageTransform::fromGeometry('w1200_h1200');
+        $square = ImageTransform::fromGeometry('w1200_h1200_sq');
+
+        $this->assertNotNull($fit);
+        $this->assertSame(1200, $fit->width);
+        $this->assertSame(1200, $fit->height);
+        $this->assertFalse($fit->square);
+
+        $this->assertNotNull($square);
+        $this->assertTrue($square->square);
+    }
+
     public function test_parses_the_original_size(): void
     {
         $t = ImageTransform::fromGeometry('w_h');

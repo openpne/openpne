@@ -17,7 +17,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -60,10 +60,12 @@ class TimelinePostSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated.
-     * Tolerates a row whose File is gone (defensive; the join cascades with it).
+     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
+     * all FilePolicy-gated. See docs/internals/images.md for which one a surface takes and why the
+     * intrinsic size travels with them. Tolerates a row whose File is gone (defensive; the join
+     * cascades with it).
      *
-     * @return array{id: int, url: string, thumbnailUrl: string}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitUrl: string, fit2xUrl: string, squareUrl: string, square2xUrl: string, width: int|null, height: int|null}
      */
     public static function image(TimelinePostImage $image): array
     {
@@ -73,6 +75,12 @@ class TimelinePostSerializer
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+            'fitUrl' => $file?->thumbnailUrl(600, 600) ?? '',
+            'fit2xUrl' => $file?->thumbnailUrl(1200, 1200) ?? '',
+            'squareUrl' => $file?->thumbnailUrl(600, 600, square: true) ?? '',
+            'square2xUrl' => $file?->thumbnailUrl(1200, 1200, square: true) ?? '',
+            'width' => $file?->width,
+            'height' => $file?->height,
         ];
     }
 
