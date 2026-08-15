@@ -23,6 +23,7 @@ use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AiAccount\CreateAiAccountRequest;
+use App\Http\Requests\AiAccount\DeleteAiAccountRequest;
 use App\Models\Group;
 use App\Models\Member;
 use App\Support\Feature;
@@ -128,7 +129,11 @@ class AiAccountController extends Controller
             ->with('status', __('AI account created.'));
     }
 
-    public function destroy(Request $request, Member $member, DeleteAiAccount $delete): RedirectResponse
+    /**
+     * Re-authenticated by DeleteAiAccountRequest, behind the route's ownership gate — which is where
+     * the 404 for someone else's account has to come from, ahead of the password check.
+     */
+    public function destroy(DeleteAiAccountRequest $request, Member $member, DeleteAiAccount $delete): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
 

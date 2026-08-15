@@ -89,10 +89,20 @@
         </x-classic.parts>
     @endif
 
+    {{-- Re-authenticated like account withdrawal: the same WithdrawMember runs, on a second row. --}}
     <x-classic.parts id="member_ai_account_delete" name="form" :title="__('Delete this AI account')">
         <form method="POST" action="{{ route('member.config.ai.destroy', ['member' => $aiAccount->getKey()]) }}">
             @csrf
             <p>{{ __('Deleting is permanent. What it posted stays on the site, shown as by a withdrawn member.') }}</p>
+            <table>
+                <tr>
+                    <th><label for="ai_delete_password">{{ __('Current password') }}</label></th>
+                    <td>
+                        <input type="password" id="ai_delete_password" name="password" autocomplete="current-password">
+                        @error('password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                    </td>
+                </tr>
+            </table>
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>

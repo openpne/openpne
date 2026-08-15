@@ -572,26 +572,31 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/notifications/push', [NotificationSettingsController::class, 'updatePush'])->name('member.config.notifications.push');
 
     // A member's own AI accounts (OpenPNE 4-native; Classic serves the list as ?category=ai). The
-    // owner check is MemberPolicy::manageAiAccount, applied in the controller so a member id naming
-    // someone else's account 404s exactly like one naming nothing.
+    // owner check is MemberPolicy::manageAiAccount, which 404s so a member id naming someone else's
+    // account reads exactly like one naming nothing.
     Route::controller(AiAccountController::class)->group(function () {
         Route::get('/member/config/ai', 'index')->name('member.config.ai');
-        Route::get('/member/config/ai/{member}', 'show')->whereNumber('member')->name('member.config.ai.show');
         // Creating and deleting share one per-member budget, like the two-factor management POSTs.
-        Route::middleware('throttle:ai-manage')->group(function () {
-            Route::post('/member/config/ai', 'store')->name('member.config.ai.store');
-            Route::post('/member/config/ai/{member}/delete', 'destroy')->whereNumber('member')->name('member.config.ai.destroy');
-        });
-        // Group seats, so they carry the group unit's gate wherever they are declared
-        // (FeatureRouteMiddlewarePinTest::DEPENDENCIES). The AI's membership is its own: it survives
-        // the owner leaving the same group, and is given up only from here.
-        Route::middleware(EnsureFeatureEnabled::class.':group')->group(function () {
-            Route::post('/member/config/ai/{member}/groups/{group}/join', 'joinGroup')
-                ->whereNumber(['member', 'group'])->middleware('throttle:group-join')->name('member.config.ai.groups.join');
-            Route::post('/member/config/ai/{member}/groups/{group}/quit', 'quitGroup')
-                ->whereNumber(['member', 'group'])->name('member.config.ai.groups.quit');
-            Route::post('/member/config/ai/{member}/groups/{group}/cancel', 'cancelGroupRequest')
-                ->whereNumber(['member', 'group'])->name('member.config.ai.groups.cancel');
+        Route::post('/member/config/ai', 'store')->middleware('throttle:ai-manage')->name('member.config.ai.store');
+
+        // The ownership gate is route middleware, not only the controller's Gate::authorize, because
+        // it has to outrank DeleteAiAccountRequest: a wrong password against a stranger's account id
+        // must 404 like an unused id, not report a password error that says the account is there.
+        Route::middleware('can:manageAiAccount,member')->group(function () {
+            Route::get('/member/config/ai/{member}', 'show')->whereNumber('member')->name('member.config.ai.show');
+            Route::post('/member/config/ai/{member}/delete', 'destroy')
+                ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.destroy');
+            // Group seats, so they carry the group unit's gate wherever they are declared
+            // (FeatureRouteMiddlewarePinTest::DEPENDENCIES). The AI's membership is its own: it survives
+            // the owner leaving the same group, and is given up only from here.
+            Route::middleware(EnsureFeatureEnabled::class.':group')->group(function () {
+                Route::post('/member/config/ai/{member}/groups/{group}/join', 'joinGroup')
+                    ->whereNumber(['member', 'group'])->middleware('throttle:group-join')->name('member.config.ai.groups.join');
+                Route::post('/member/config/ai/{member}/groups/{group}/quit', 'quitGroup')
+                    ->whereNumber(['member', 'group'])->name('member.config.ai.groups.quit');
+                Route::post('/member/config/ai/{member}/groups/{group}/cancel', 'cancelGroupRequest')
+                    ->whereNumber(['member', 'group'])->name('member.config.ai.groups.cancel');
+            });
         });
     });
 

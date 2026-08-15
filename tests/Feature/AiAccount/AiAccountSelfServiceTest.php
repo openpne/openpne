@@ -100,6 +100,28 @@ class AiAccountSelfServiceTest extends TestCase
         $this->assertNotNull($theirs->fresh());
     }
 
+    public function test_the_delete_password_never_answers_for_an_account_that_is_not_the_viewers(): void
+    {
+        // The ownership gate outranks the password rule, so every password lands on the same 404 —
+        // otherwise "wrong password" against a stranger's id, versus 404 against an unused one, would
+        // say which member ids are AI accounts.
+        $viewer = Member::factory()->create();
+        $theirs = Member::factory()->aiAccount()->create();
+        $unused = (int) Member::max('id') + 1000;
+
+        // Four POSTs, inside the ai-manage budget of five: a 429 would hide what is being asserted.
+        foreach (['password', 'not-the-password'] as $password) {
+            $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/delete", ['password' => $password])
+                ->assertNotFound()
+                ->assertSessionHasNoErrors();
+            $this->actingAs($viewer)->post("/member/config/ai/{$unused}/delete", ['password' => $password])
+                ->assertNotFound()
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertNotNull($theirs->fresh());
+    }
+
     public function test_a_human_member_is_not_reachable_as_an_ai_account(): void
     {
         // An id naming a person — including the viewer's own — must read like an id naming nothing:
@@ -109,7 +131,8 @@ class AiAccountSelfServiceTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/config/ai/{$other->getKey()}")->assertNotFound();
         $this->actingAs($viewer)->get("/member/config/ai/{$viewer->getKey()}")->assertNotFound();
-        $this->actingAs($viewer)->post("/member/config/ai/{$other->getKey()}/delete")->assertNotFound();
+        $this->actingAs($viewer)->post("/member/config/ai/{$other->getKey()}/delete", ['password' => 'password'])
+            ->assertNotFound();
     }
 
     public function test_the_owner_reaches_their_own_account_page(): void
@@ -131,9 +154,25 @@ class AiAccountSelfServiceTest extends TestCase
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
 
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete")
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
             ->assertRedirect(route('member.config.ai'));
 
+        $this->assertNull(Member::find($aiAccount->getKey()));
+    }
+
+    public function test_deleting_re_authenticates_with_the_current_password(): void
+    {
+        // Same re-auth account withdrawal asks for, because the same withdrawal runs: an unlocked
+        // screen must not be enough to spend the account's tokens and group seats.
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+        $url = "/member/config/ai/{$aiAccount->getKey()}/delete";
+
+        $this->actingAs($owner)->post($url)->assertSessionHasErrors('password');
+        $this->actingAs($owner)->post($url, ['password' => 'not-the-password'])->assertSessionHasErrors('password');
+        $this->assertNotNull($aiAccount->fresh());
+
+        $this->actingAs($owner)->post($url, ['password' => 'password'])->assertRedirect(route('member.config.ai'));
         $this->assertNull(Member::find($aiAccount->getKey()));
     }
 
@@ -154,7 +193,8 @@ class AiAccountSelfServiceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('enabled', false)->where('canCreate', false)->has('accounts', 1));
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")->assertOk();
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete")->assertRedirect();
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
+            ->assertRedirect();
         $this->assertNull(Member::find($aiAccount->getKey()));
     }
 
@@ -196,6 +236,27 @@ class AiAccountSelfServiceTest extends TestCase
                 Route::getRoutes()->getByName($name)->gatherMiddleware(),
                 "route [{$name}] must not be throttled",
             );
+        }
+    }
+
+    public function test_every_route_naming_an_account_carries_the_ownership_gate(): void
+    {
+        // As route middleware, so it outranks the delete's FormRequest. Left to the controller alone,
+        // a wrong password would be answered before the ownership check and would say the account is
+        // there; the same reasoning holds for any FormRequest a sibling route grows later.
+        $names = [
+            'member.config.ai.show',
+            'member.config.ai.destroy',
+            'member.config.ai.groups.join',
+            'member.config.ai.groups.quit',
+            'member.config.ai.groups.cancel',
+        ];
+
+        foreach ($names as $name) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertStringContainsString('{member}', $route->uri(), "route [{$name}] no longer names an account");
+            $this->assertContains('can:manageAiAccount,member', $route->gatherMiddleware(),
+                "route [{$name}] lost the ownership gate");
         }
     }
 

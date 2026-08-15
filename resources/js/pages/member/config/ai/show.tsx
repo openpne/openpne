@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Button } from '@/components/ui/button';
+import { Field, FormActions } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -75,6 +76,7 @@ export default function AiAccountShow() {
     const [keyword, setKeyword] = useState(groups?.keyword ?? '');
     const [searching, setSearching] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
+    const deleteForm = useForm({ password: '' });
 
     const post = (url: string, key: string) =>
         router.post(url, {}, { preserveScroll: true, onStart: () => setBusy(key), onFinish: () => setBusy(null) });
@@ -90,7 +92,9 @@ export default function AiAccountShow() {
         });
     };
 
-    const destroy = async () => {
+    const destroy = async (e: FormEvent) => {
+        e.preventDefault();
+
         if (
             await confirm({
                 title: t('Delete :name?', { name: account.name }),
@@ -99,7 +103,9 @@ export default function AiAccountShow() {
                 danger: true,
             })
         ) {
-            router.post(`/member/config/ai/${account.id}/delete`);
+            // Nothing to clear on success — that response leaves this page — so the reset is for the
+            // refusals, which re-render the form with whatever was typed still in it.
+            deleteForm.post(`/member/config/ai/${account.id}/delete`, { onError: () => deleteForm.reset('password') });
         }
     };
 
@@ -242,14 +248,25 @@ export default function AiAccountShow() {
             )}
 
             <Panel className="border-destructive/40" title={t('Delete this AI account')}>
-                <div className="space-y-3">
+                <form onSubmit={destroy} className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {t('Deleting is permanent. What it posted stays on the site, shown as by a withdrawn member.')}
                     </p>
-                    <Button variant="destructive" onClick={destroy}>
-                        {t('Delete')}
-                    </Button>
-                </div>
+                    <Field label={t('Current password')} htmlFor="ai_delete_password" error={deleteForm.errors.password}>
+                        <Input
+                            id="ai_delete_password"
+                            type="password"
+                            autoComplete="current-password"
+                            value={deleteForm.data.password}
+                            onChange={(e) => deleteForm.setData('password', e.target.value)}
+                        />
+                    </Field>
+                    <FormActions>
+                        <Button type="submit" variant="destructive" loading={deleteForm.processing}>
+                            {t('Delete')}
+                        </Button>
+                    </FormActions>
+                </form>
             </Panel>
         </>
     );

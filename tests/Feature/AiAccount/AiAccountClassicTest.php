@@ -102,7 +102,25 @@ class AiAccountClassicTest extends TestCase
             ->assertSee('id="member_ai_account_groups"', false)
             ->assertSee('id="member_ai_account_join"', false)
             ->assertSee('id="member_ai_account_delete"', false)
+            // Classic has no confirm dialog, so the password field is both the re-auth and the step
+            // that keeps a stray click from spending the account.
+            ->assertSee('name="password"', false)
             ->assertSee('Open group');
+    }
+
+    public function test_the_delete_form_re_authenticates(): void
+    {
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+        $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
+
+        // Back to the page the form is on, where @error('password') is waiting for the message.
+        $this->actingAs($owner)->from($page)
+            ->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'not-the-password'])
+            ->assertRedirect($page)
+            ->assertSessionHasErrors('password');
+
+        $this->assertNotNull($aiAccount->fresh());
     }
 
     public function test_the_account_page_is_not_someone_elses_to_open(): void
@@ -128,7 +146,7 @@ class AiAccountClassicTest extends TestCase
             ->assertRedirect($page);
         $this->assertFalse(GroupMembership::isMember($group, $aiAccount));
 
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete")
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
             ->assertRedirect(route('member.config', ['category' => 'ai']));
         $this->assertNull(Member::find($aiAccount->getKey()));
     }

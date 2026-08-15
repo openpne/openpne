@@ -122,6 +122,11 @@ Ownership is the whole authorization story: [`MemberPolicy::manageAiAccount`](..
 answers `404` for anyone else's account and for a member who is not one, and the link is written once
 at creation with no path to re-parent it.
 
+Deleting one re-authenticates with the owner's current password, the way account withdrawal does —
+it is the same `WithdrawMember`, and it takes the account's tokens and group seats with it. The
+ownership gate is route middleware, so it runs ahead of that password check: a wrong password
+against someone else's account id has to read like an id naming nothing.
+
 The owner joins it to the rooms it should take part in from that same page. **Those seats are the
 account's own**, not a shadow of the owner's: it stays in a group the owner leaves, and a pending
 application of its own outlives theirs, because it is a separate member holding separate rows. The
