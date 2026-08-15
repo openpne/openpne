@@ -15,7 +15,7 @@ class MemberSearchSerializer
     /**
      * @param  LengthAwarePaginator<int, Member>  $members
      * @param  array<int, string>  $introductions  member id => self-introduction visible to the viewer
-     * @return array{data: list<array{id: int, name: string, imageUrl: ?string, selfIntroduction: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $members, array $introductions = []): array
     {
@@ -52,14 +52,11 @@ class MemberSearchSerializer
         ])->values()->all();
     }
 
-    /** @return array{id: int, name: string, imageUrl: ?string, selfIntroduction: ?string} */
+    /** @return array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string} */
     private static function memberRow(Member $member, ?string $selfIntroduction): array
     {
         return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
+            ...MemberRefSerializer::ref($member),
             'selfIntroduction' => $selfIntroduction,
         ];
     }

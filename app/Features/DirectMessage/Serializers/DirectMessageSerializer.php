@@ -3,6 +3,7 @@
 namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\DirectMessageListItem;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageFile;
 use App\Models\Member;
@@ -19,7 +20,7 @@ class DirectMessageSerializer
      * A box-list row (DirectMessageListItem): the counterparty (From for the inbox, To otherwise), the
      * subject, the box-appropriate date, and unread (only ever true in the inbox).
      *
-     * @return array{id: int, counterparty: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, subject: string, date: string, unread: bool}
+     * @return array{id: int, counterparty: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, subject: string, date: string, unread: bool}
      */
     public static function row(DirectMessageListItem $item): array
     {
@@ -36,7 +37,7 @@ class DirectMessageSerializer
      * The draft edit-form shape: the editable text, the fixed recipient (null if withdrawn), and the
      * current images (each removable by id). Callers eager-load files.file and draftRecipient.
      *
-     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}
+     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}
      */
     public static function draftForm(DirectMessage $draft): array
     {
@@ -102,20 +103,15 @@ class DirectMessageSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null */
     private static function member(?Member $member): ?array
     {
         return $member === null ? null : self::memberRef($member);
     }
 
-    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null} */
+    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
     public static function memberRef(Member $member): array
     {
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return MemberRefSerializer::ref($member);
     }
 }

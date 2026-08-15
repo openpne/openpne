@@ -121,7 +121,7 @@ test('the diary hub drops the friend tab while friends are off', () => {
     ]);
 });
 
-const owner = { id: 1, name: 'Owner', imageUrl: '/f/1', avatarColor: '#123456' };
+const owner = { id: 1, name: 'Owner', imageUrl: '/f/1', avatarColor: '#123456', isAi: false };
 
 test("the owner's diary archive carries the same tab strip", () => {
     const props = { owner, isOwner: true };
@@ -187,6 +187,7 @@ test("another member's list is scoped to that member", () => {
         name: 'Owner',
         imageUrl: '/f/1',
         avatarColor: '#123456',
+        isAi: false,
     });
 });
 

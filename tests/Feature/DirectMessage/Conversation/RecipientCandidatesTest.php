@@ -201,6 +201,7 @@ class RecipientCandidatesTest extends ConversationTestCase
                 'name' => 'Match Ann',
                 'imageUrl' => $expected,
                 'avatarColor' => '#15803d',
+                'isAi' => false,
             ]]]);
     }
 

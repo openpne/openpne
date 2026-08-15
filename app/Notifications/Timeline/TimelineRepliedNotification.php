@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Timeline;
 
+use App\Features\Member\MemberDisplayName;
 use App\Features\Timeline\TimelineNotificationEligibility;
 use App\Mail\Template\MailTemplate;
 use App\Models\Member;
@@ -60,8 +61,8 @@ class TimelineRepliedNotification extends Notification implements FeatureNotific
     public function toMail(Member $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::TimelinePostingNotified, [
-            'member_name' => $this->replier->name,
-            'author' => $this->replier->name,
+            'member_name' => MemberDisplayName::of($this->replier),
+            'author' => MemberDisplayName::of($this->replier),
             'body' => $this->reply->body,
             'url' => route('timeline.show', ['timelinePost' => $this->threadRootId()]),
         ]);

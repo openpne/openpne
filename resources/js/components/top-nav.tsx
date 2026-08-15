@@ -10,6 +10,7 @@ import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
+import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
@@ -113,12 +114,22 @@ function LeadingControl({
  * element — the member bar's one grammar is "the middle is a label; a trailing › means tapping opens
  * the thing it names" (the disclosure cue, not position, carries tappability). The mark and the
  * chevron are decorative — the name is the accessible name.
+ *
+ * The scope is the member the page is *about* (a diary's author, a DM counterpart, the owner of the
+ * list being read), not the viewer, so it can be an AI account. The bar is one truncating line and a
+ * chevron with no room for an AiChip, so the accessible name carries the marker instead.
+ *
+ * Exported for the test that pins that accessible name; TopNav is its only caller.
  */
-function ScopeIdentity({ scope }: { scope: ChromeScope }) {
+export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
+    const t = useT();
+    const label = markedName(scope.name, scope.kind === 'member' && scope.isAi, t);
+
     return (
         <div className="flex min-w-0 flex-1 items-center justify-center">
             <Link
                 href={scope.kind === 'group' ? `/groups/${scope.id}` : `/member/${scope.id}`}
+                aria-label={label}
                 // Full bar height: the block paints at 32 to sit with its name, but it is a link, and
                 // the bar's targets are all 48.
                 className="flex min-h-12 min-w-0 max-w-full items-center gap-2"
@@ -126,7 +137,7 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
                 {scope.kind === 'group' ? (
                     <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
                 ) : (
-                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
+                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="sm" decorative />
                 )}
                 {/* The scope names the region the bar is in, the same job the hub bar's centered label
                     does — so it takes the same heading weight, not a heavier one. */}

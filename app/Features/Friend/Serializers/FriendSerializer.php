@@ -13,7 +13,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  */
 class FriendSerializer
 {
-    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null} */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
     public static function member(Member $member): array
     {
         return MemberRefSerializer::ref($member);
@@ -21,7 +21,7 @@ class FriendSerializer
 
     /**
      * @param  LengthAwarePaginator<int, Member>  $paginator
-     * @return array{data: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $paginator): array
     {

@@ -16,7 +16,10 @@
         {{-- No profile gadgets configured: the fixed profile box (avatar + values + own-page links).
              OpenPNE 3 always rendered this page from gadgets, so there is no OpenPNE 3 kind or id to
              restore here. --}}
-        <x-classic.parts id="member_profile" :title="$owner->name">
+        <x-classic.parts id="member_profile">
+            <x-slot:heading>
+                <h3>{{ $owner->name }}<x-classic.ai-mark :is-ai="$owner->isAiAccount()" /></h3>
+            </x-slot:heading>
             @php($avatar = $owner->avatar?->file)
             <p><x-classic.image :file="$avatar" :size="120" :alt="$owner->name" /></p>
 

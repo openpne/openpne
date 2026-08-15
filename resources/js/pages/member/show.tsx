@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Mail, UserPlus } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { InitialBadge } from '@/components/initial-badge';
 import { NineTable } from '@/components/nine-table';
 import { Heading } from '@/components/ui/heading';
@@ -22,7 +23,7 @@ interface ProfileField {
 }
 
 interface ProfilePage {
-    owner: { id: number; name: string; avatarUrl: string | null; avatarColor: string | null };
+    owner: { id: number; name: string; avatarUrl: string | null; avatarColor: string | null; isAi: boolean };
     isSelf: boolean;
     age: number | null;
     /** null = own profile or guest viewer. */
@@ -127,7 +128,10 @@ export default function MemberShow() {
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <Heading variant="page">{owner.name}</Heading>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <Heading variant="page">{owner.name}</Heading>
+                            <AiChip isAi={owner.isAi} />
+                        </div>
                         {age !== null && <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age })}</p>}
                     </div>
                     {isSelf && (

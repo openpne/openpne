@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Diary;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Diary;
 use App\Models\Member;
@@ -47,7 +48,7 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
     public function toMail(object $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::DiaryPostedNotified, [
-            'member_name' => $this->author->name,
+            'member_name' => MemberDisplayName::of($this->author),
             'diary_title' => $this->diary->title,
             'url' => route('diary.show', ['diary' => $this->diary->getKey()]),
         ]);

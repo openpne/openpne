@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { CountPill } from '@/components/count-pill';
 import { Timestamp } from '@/components/timestamp';
@@ -20,13 +21,16 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
 
     return (
         <ListRow rowLink className="items-start">
-            <Avatar id={counterpart?.id ?? 0} name={name} src={counterpart?.imageUrl ?? null} color={counterpart?.avatarColor ?? null} decorative />
+            <Avatar id={counterpart?.id ?? 0} name={name} src={counterpart?.imageUrl ?? null} color={counterpart?.avatarColor ?? null} isAi={counterpart?.isAi ?? false} decorative />
             <div className="min-w-0 flex-1">
-                <p className="truncate text-base text-foreground">
-                    <Link href={href} className={stretchedLink}>
-                        {name}
-                    </Link>
-                </p>
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="min-w-0 truncate text-base text-foreground">
+                        <Link href={href} className={stretchedLink}>
+                            {name}
+                        </Link>
+                    </p>
+                    <AiChip isAi={counterpart?.isAi ?? false} />
+                </div>
                 {/* No author prefix: the row's title already names the only other person here, so a
                     1:1 preview needs no attribution. */}
                 <p className="mt-0.5 truncate text-sm text-muted-foreground">{latest.body}</p>

@@ -2,6 +2,7 @@
 
 namespace App\Notifications\GroupTopic;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
 use App\Models\GroupTopic;
@@ -54,7 +55,7 @@ class TopicCommentBroadcastNotification extends Notification implements FeatureN
         return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->group->name,
             'topic_name' => $this->topic->name,
-            'nickname' => $this->commenter->name,
+            'nickname' => MemberDisplayName::of($this->commenter),
             'body' => $this->comment->body,
             'url' => route('group.topics.show', ['topic' => $this->topic->getKey()]),
         ]);

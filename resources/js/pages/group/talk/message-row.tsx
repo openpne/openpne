@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -69,6 +70,7 @@ export function TalkMessageRow({
                     name={author?.name ?? ''}
                     src={author?.imageUrl ?? null}
                     color={author?.avatarColor ?? null}
+                    isAi={author?.isAi ?? false}
                     size="md"
                     decorative
                 />
@@ -79,6 +81,7 @@ export function TalkMessageRow({
                 ) : (
                     <span className="truncate">{t('Withdrawn member')}</span>
                 )}
+                <AiChip isAi={author?.isAi ?? false} />
                 <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
                 {/* Standing on the meta row rather than appearing on hover: a phone has no hover, and
                     a row with no chips yet has nowhere else to offer the first one. */}

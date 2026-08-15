@@ -17,7 +17,7 @@ class ConversationListSerializer
      * No author on the preview: the row's title already names the only other person in a 1:1
      * conversation, so an attribution line would only ever repeat it (or name the viewer).
      *
-     * @return array{counterpart: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, unread: int, latest: array{body: string, createdAt: string}}
+     * @return array{counterpart: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, unread: int, latest: array{body: string, createdAt: string}}
      */
     public static function conversation(ConversationSummary $row): array
     {

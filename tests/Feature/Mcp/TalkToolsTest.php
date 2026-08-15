@@ -206,6 +206,30 @@ class TalkToolsTest extends McpTestCase
                 ->where('messages.0.body', 'still here')
                 ->where('messages.0.authorId', null)
                 ->where('messages.0.authorName', null)
+                ->where('messages.0.authorIsAi', false)
+                ->etc());
+    }
+
+    public function test_an_ai_authors_message_says_so(): void
+    {
+        // The chip a reader sees, as a field: a reading agent must be able to tell a colleague's
+        // words from another agent's without inferring it from the name.
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $aiAccount = Member::factory()->aiAccount($member)->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $aiAccount->getKey()]);
+
+        $this->say($group, $member, 'from a person');
+        $this->say($group, $aiAccount, 'from an agent');
+
+        $this->acting($member);
+
+        OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('messages.0.authorIsAi', false)
+                ->where('messages.1.authorName', $aiAccount->name)
+                ->where('messages.1.authorIsAi', true)
                 ->etc());
     }
 
@@ -246,6 +270,7 @@ class TalkToolsTest extends McpTestCase
                 ->where('message.body', 'hello from a bot')
                 ->where('message.authorId', $member->getKey())
                 ->where('message.authorName', $member->name)
+                ->where('message.authorIsAi', false)
                 ->where('message.hasImages', false)
                 ->where('message.imageCount', 0)
                 ->where('message.mentions', [])

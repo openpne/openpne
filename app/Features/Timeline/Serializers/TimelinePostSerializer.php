@@ -2,6 +2,7 @@
 
 namespace App\Features\Timeline\Serializers;
 
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
@@ -17,7 +18,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -48,12 +49,7 @@ class TimelinePostSerializer
             // a per-row loadCount.
             'replyCount' => $post->replies_count ?? 0,
             'images' => $images,
-            'author' => [
-                'id' => $post->member->getKey(),
-                'name' => $post->member->name,
-                'imageUrl' => $post->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-                'avatarColor' => $post->member->avatar_color?->hex(),
-            ],
+            'author' => MemberRefSerializer::ref($post->member),
             'linkCard' => LinkCardSerializer::card($post),
             'createdAt' => $post->created_at->toIso8601String(),
         ];

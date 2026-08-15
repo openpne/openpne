@@ -14,7 +14,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TalkRoomSerializer
 {
     /**
-     * @return array{id: int, name: string, imageUrl: string|null, unread: int, muted: bool, latest: array{body: string, authorName: string|null, createdAt: string}|null}
+     * @return array{id: int, name: string, imageUrl: string|null, unread: int, muted: bool, latest: array{body: string, authorName: string|null, authorIsAi: bool, createdAt: string}|null}
      */
     public static function room(TalkRoom $room): array
     {
@@ -30,7 +30,11 @@ class TalkRoomSerializer
                 // A message with nothing but pictures says so, rather than leaving the row's
                 // "author: " trailing into nothing. JoinedTalkRooms supplies `images_exists`.
                 'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->images_exists),
+                // The preview names the speaker without a member reference to carry, so the AI
+                // fact travels beside the name rather than inside it — the row draws the same chip
+                // the talk screen does, and a name is never marked twice.
                 'authorName' => $latest->author?->name,
+                'authorIsAi' => (bool) $latest->author?->isAiAccount(),
                 'createdAt' => $latest->created_at->toIso8601String(),
             ],
         ];

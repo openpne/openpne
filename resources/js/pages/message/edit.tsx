@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
@@ -75,10 +76,11 @@ export default function MessageEdit() {
                     {draft.recipient && (
                         <div className="flex items-center gap-2 text-sm">
                             <span className="text-muted-foreground">{t('Recipient')}</span>
-                            <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} color={draft.recipient.avatarColor} size="sm" decorative />
+                            <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} color={draft.recipient.avatarColor} isAi={draft.recipient.isAi} size="sm" decorative />
                             <Link href={`/member/${draft.recipient.id}`} className="text-link hover:underline">
                                 {draft.recipient.name}
                             </Link>
+                            <AiChip isAi={draft.recipient.isAi} />
                         </div>
                     )}
 

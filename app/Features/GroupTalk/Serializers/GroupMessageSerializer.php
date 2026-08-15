@@ -5,6 +5,7 @@ namespace App\Features\GroupTalk\Serializers;
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
@@ -28,7 +29,7 @@ class GroupMessageSerializer
      * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row, as
      *                                                                         MessageReactionAggregates counts it. Passed in rather than read off the model: the rows
      *                                                                         behind a chip are one per reactor, and no page hydrates them.
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions): array
     {
@@ -156,18 +157,9 @@ class GroupMessageSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null */
     private static function author(?Member $member): ?array
     {
-        if ($member === null) {
-            return null;
-        }
-
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return $member === null ? null : MemberRefSerializer::ref($member);
     }
 }

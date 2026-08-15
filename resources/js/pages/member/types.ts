@@ -72,6 +72,7 @@ export interface MemberRow {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
     /** Visible only when the viewer's clearance covers the field's visibility; null otherwise. */
     selfIntroduction: string | null;
 }

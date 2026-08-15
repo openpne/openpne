@@ -2,6 +2,7 @@
 
 namespace App\Features\Block\Serializers;
 
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -12,20 +13,15 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  */
 class BlockSerializer
 {
-    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null} */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
     public static function member(Member $member): array
     {
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return MemberRefSerializer::ref($member);
     }
 
     /**
      * @param  LengthAwarePaginator<int, Member>  $paginator
-     * @return array{data: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $paginator): array
     {

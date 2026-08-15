@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
@@ -40,10 +41,13 @@ export default function FriendList() {
                         <List>
                             {friends.data.map((friend) => (
                                 <ListRow key={friend.id}>
-                                    <Link href={`/member/${friend.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
-                                        <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} color={friend.avatarColor} size="md" decorative />
-                                        <span className="min-w-0 flex-1 truncate">{friend.name}</span>
-                                    </Link>
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                        <Link href={`/member/${friend.id}`} className="flex min-w-0 items-center gap-3 text-foreground hover:underline">
+                                            <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} color={friend.avatarColor} isAi={friend.isAi} size="md" decorative />
+                                            <span className="min-w-0 truncate">{friend.name}</span>
+                                        </Link>
+                                        <AiChip isAi={friend.isAi} />
+                                    </div>
                                     {isOwner && (
                                         <button type="button" onClick={() => unlinkFriend(friend.id, friend.name)} className={cn(dangerActionClass, 'shrink-0 text-sm')}>
                                             {t('Remove %friend%')}

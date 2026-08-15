@@ -2,6 +2,7 @@
 
 namespace App\Notifications\GroupTopic;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
 use App\Models\GroupTopic;
@@ -51,7 +52,7 @@ class TopicPostedNotification extends Notification implements FeatureNotificatio
         return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->group->name,
             'topic_name' => $this->topic->name,
-            'nickname' => $this->author->name,
+            'nickname' => MemberDisplayName::of($this->author),
             // Flatten to plain text: the mail is text/plain, so a Markdown body must not arrive as
             // literal `**bold**` and an op3 body must carry no <op:*> tags.
             'body' => BodyRenderer::plainText($this->topic->body, $this->topic->format),

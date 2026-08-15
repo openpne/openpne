@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Group;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
 use App\Models\Member;
@@ -45,7 +46,7 @@ class GroupJoinedNotification extends Notification implements FeatureNotificatio
     public function toMail(object $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::GroupJoinNotice, [
-            'new_member' => ['name' => $this->newMember->name, 'id' => $this->newMember->getKey()],
+            'new_member' => ['name' => MemberDisplayName::of($this->newMember), 'id' => $this->newMember->getKey()],
             'community' => ['name' => $this->group->name, 'id' => $this->group->getKey()],
         ]);
     }

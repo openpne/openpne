@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
@@ -154,13 +155,16 @@ export default function MemberSearch() {
                                     // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
                                     className={member.selfIntroduction ? 'items-start' : undefined}
                                 >
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="md" decorative />
                                     <div className="min-w-0 flex-1">
-                                        <span className="block truncate text-foreground">
-                                            <Link href={`/member/${member.id}`} className={stretchedLink}>
-                                                {member.name}
-                                            </Link>
-                                        </span>
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                            <span className="min-w-0 truncate text-foreground">
+                                                <Link href={`/member/${member.id}`} className={stretchedLink}>
+                                                    {member.name}
+                                                </Link>
+                                            </span>
+                                            <AiChip isAi={member.isAi} />
+                                        </div>
                                         {member.selfIntroduction && (
                                             <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                 {member.selfIntroduction}

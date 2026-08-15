@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
@@ -15,10 +16,13 @@ interface ManageProps extends PageProps {
 /** Avatar + name linking to the member's profile — the shared leading cell of a pending-request row. */
 function MemberCell({ member }: { member: FriendMember }) {
     return (
-        <Link href={`/member/${member.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
-            <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
-            <span className="min-w-0 flex-1 truncate">{member.name}</span>
-        </Link>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Link href={`/member/${member.id}`} className="flex min-w-0 items-center gap-3 text-foreground hover:underline">
+                <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="md" decorative />
+                <span className="min-w-0 truncate">{member.name}</span>
+            </Link>
+            <AiChip isAi={member.isAi} />
+        </div>
     );
 }
 

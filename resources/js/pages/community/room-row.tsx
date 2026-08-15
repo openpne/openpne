@@ -4,6 +4,7 @@ import { CommunityImage } from '@/components/community-image';
 import { CountPill } from '@/components/count-pill';
 import { Timestamp } from '@/components/timestamp';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
+import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { TalkRoomRow } from './types';
@@ -16,6 +17,9 @@ import type { TalkRoomRow } from './types';
 export function RoomRow({ room }: { room: TalkRoomRow }) {
     const t = useT();
     const latest = room.latest;
+    // The one place the AI marker is text rather than an AiChip: the preview is a single truncated
+    // line, and a pill cannot live inside one.
+    const speaker = latest === null ? '' : markedName(latest.authorName ?? t('Withdrawn member'), latest.authorIsAi, t);
 
     return (
         <ListRow rowLink className="items-start">
@@ -36,7 +40,7 @@ export function RoomRow({ room }: { room: TalkRoomRow }) {
                         t('No messages yet.')
                     ) : (
                         <>
-                            {latest.authorName ?? t('Withdrawn member')}
+                            {speaker}
                             {': '}
                             {latest.body}
                         </>

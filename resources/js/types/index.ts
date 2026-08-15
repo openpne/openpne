@@ -4,6 +4,8 @@ export interface AuthUser {
     email: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    /** Always false — an AI account has no credentials — but the shape is a member reference. */
+    isAi: boolean;
 }
 
 export interface SnsLogo {
@@ -27,6 +29,8 @@ export interface NineTableItem {
     /** Member rows carry the chosen badge color (hex); group rows are always null.
      *  Required (not optional) so a serializer that forgets it fails type-check. */
     avatarColor: string | null;
+    /** Whether the tile is an AI account; always false for a group row. */
+    isAi: boolean;
     href: string;
 }
 

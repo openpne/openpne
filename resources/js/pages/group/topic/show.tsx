@@ -1,3 +1,4 @@
+import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
@@ -70,7 +71,7 @@ export default function GroupTopicShow() {
 
             <Panel bodyClassName="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} size="md" decorative />
+                    <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} isAi={topic.author?.isAi ?? false} size="md" decorative />
                     {topic.author ? (
                         <Link href={`/member/${topic.author.id}`} className="text-link hover:underline">
                             {topic.author.name}
@@ -78,6 +79,7 @@ export default function GroupTopicShow() {
                     ) : (
                         <span>{t('Withdrawn member')}</span>
                     )}
+                    <AiChip isAi={topic.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
                 </div>
 
@@ -127,7 +129,7 @@ export default function GroupTopicShow() {
                         {thread.comments.map((comment) => (
                             <li key={comment.id} className="px-4 py-4 sm:px-5">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="md" decorative />
+                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} isAi={comment.author?.isAi ?? false} size="md" decorative />
                                     {comment.author ? (
                                         <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                             {comment.author.name}
@@ -135,6 +137,7 @@ export default function GroupTopicShow() {
                                     ) : (
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
+                                    <AiChip isAi={comment.author?.isAi ?? false} />
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
                                     <Timestamp at={comment.createdAt} preset="relative" className="shrink-0" />
                                     {comment.deletable && (

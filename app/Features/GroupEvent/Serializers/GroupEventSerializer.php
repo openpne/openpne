@@ -4,6 +4,7 @@ namespace App\Features\GroupEvent\Serializers;
 
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\GroupEventCommentThread;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -32,7 +33,7 @@ class GroupEventSerializer
      * openDate is a date-only Y-m-d string, not an ISO datetime: rendering an ISO midnight with the
      * browser's timezone would shift the date a day west of UTC (Classic renders the stored date).
      *
-     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, updatedAt: string, openDate: string}
+     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, updatedAt: string, openDate: string}
      */
     public static function summary(GroupEvent $event): array
     {
@@ -52,7 +53,7 @@ class GroupEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(GroupEvent $event): array
     {
@@ -77,7 +78,7 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupEventComment $comment, Member $viewer): array
     {
@@ -162,16 +163,11 @@ class GroupEventSerializer
      * A roster member (event participant list). Requires avatar.file to be loaded so a list is not an
      * N+1.
      *
-     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}
+     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}
      */
     public static function participant(Member $member): array
     {
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return MemberRefSerializer::ref($member);
     }
 
     /**
@@ -212,19 +208,10 @@ class GroupEventSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null */
     private static function author(?Member $member): ?array
     {
-        if ($member === null) {
-            return null;
-        }
-
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return $member === null ? null : MemberRefSerializer::ref($member);
     }
 
     /**

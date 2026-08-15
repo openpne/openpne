@@ -1,3 +1,4 @@
+import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Link, router } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
@@ -33,10 +34,13 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
     return (
         <li className="space-y-2 px-4 py-4 text-foreground sm:px-5">
             <div className="flex items-center justify-between gap-3 text-sm">
-                <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
-                    <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="md" decorative />
-                    <span className="truncate">{post.author.name}</span>
-                </Link>
+                <div className="flex min-w-0 items-center gap-2">
+                    <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
+                        <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} isAi={post.author.isAi} size="md" decorative />
+                        <span className="truncate">{post.author.name}</span>
+                    </Link>
+                    <AiChip isAi={post.author.isAi} />
+                </div>
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
                     <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">

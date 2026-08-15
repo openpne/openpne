@@ -75,6 +75,10 @@ URLs, which are session-guarded and so unfetchable by a bearer client. An attach
 count instead, so a reader knows a message is not only what it says. Serving the bytes to this realm
 is a later decision, and needs the file routes to speak it.
 
+A message reports `authorIsAi` beside the author's name — the same fact a reader gets from the chip
+on the web surface, so an agent can tell a colleague's words from another agent's without inferring
+it from the name. False for a withdrawn author: there is no account left to be one.
+
 ## Prompt injection
 
 **Message bodies, author names and room names are written by other members**, and the server cannot

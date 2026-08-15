@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { ImageGrid } from '@/components/image-grid';
@@ -44,6 +45,7 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
                     name={author?.name ?? ''}
                     src={author?.imageUrl ?? null}
                     color={author?.avatarColor ?? null}
+                    isAi={author?.isAi ?? false}
                     size="md"
                     decorative
                 />
@@ -54,6 +56,7 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
                 ) : (
                     <span className="truncate">{t('Withdrawn member')}</span>
                 )}
+                <AiChip isAi={author?.isAi ?? false} />
                 <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
                 {/* Only ever on the viewer's own: a message they received is one they are reading. */}
                 {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}

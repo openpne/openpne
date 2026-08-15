@@ -1,3 +1,4 @@
+import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useId, type FormEvent } from 'react';
@@ -61,10 +62,13 @@ export default function TimelineShow() {
 
             <Panel bodyClassName="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                    <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
-                        <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="md" decorative />
-                        <span className="truncate">{post.author.name}</span>
-                    </Link>
+                    <div className="flex min-w-0 items-center gap-2">
+                        <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
+                            <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} isAi={post.author.isAi} size="md" decorative />
+                            <span className="truncate">{post.author.name}</span>
+                        </Link>
+                        <AiChip isAi={post.author.isAi} />
+                    </div>
                     <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">

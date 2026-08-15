@@ -7,6 +7,18 @@
  */
 
 /**
+ * The one spelling of the AI marker for the places a name has to carry it as text rather than as an
+ * `<AiChip>`: an avatar's accessible name, and a truncated one-line preview, neither of which can
+ * hold an element beside the name. The same key App\Features\Member\MemberDisplayName renders, so a
+ * notification sentence and the room row that led to it read alike.
+ *
+ * Takes `t` rather than calling `useT` so it stays a plain function the callers' hooks feed.
+ */
+export function markedName(name: string, isAi: boolean, t: (key: string, replacements?: Record<string, string>) => string): string {
+    return isAi ? t(':name (AI)', { name }) : name;
+}
+
+/**
  * A leading CJK character stands alone; otherwise the first word's first two letters, uppercased
  * ("My SNS" -> "MY", "Acme" -> "AC"). Empty name falls back to "??".
  */

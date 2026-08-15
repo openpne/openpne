@@ -25,7 +25,7 @@ class MessageReactors
     /** Names per emoji. Past this the dialog has the count and nothing more. */
     public const PER_EMOJI = 100;
 
-    /** @return list<array{emoji: string, count: int, members: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>}> */
+    /** @return list<array{emoji: string, count: int, members: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>}> */
     public function __invoke(GroupMessage $message): array
     {
         $counts = DB::table('reactions')
@@ -51,7 +51,7 @@ class MessageReactors
      * member is null is dropped rather than rendered: the withdrawal that cascades the reaction away
      * can commit between the count and this read.
      *
-     * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>
+     * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>
      */
     private function members(GroupMessage $message, string $emoji): array
     {

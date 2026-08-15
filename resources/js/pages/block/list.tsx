@@ -1,3 +1,4 @@
+import { AiChip } from '@/components/ai-chip';
 import { Heading } from '@/components/ui/heading';
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useState, type FormEvent } from "react";
@@ -73,8 +74,11 @@ export default function BlockList() {
                                 <ListRow key={blocked.id}>
                                     {/* Avatar identifies the member, but the name is not linked to their profile:
                                         the viewer chose to block them, so we don't surface a path back to it. */}
-                                    <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} color={blocked.avatarColor} size="md" decorative />
-                                    <span className="min-w-0 flex-1 truncate text-foreground">{blocked.name}</span>
+                                    <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} color={blocked.avatarColor} isAi={blocked.isAi} size="md" decorative />
+                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        <span className="min-w-0 truncate text-foreground">{blocked.name}</span>
+                                        <AiChip isAi={blocked.isAi} />
+                                    </div>
                                     {/* Unblock restores access (non-destructive), so it stays text-link, not destructive red. */}
                                     <Link href={`/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">
                                         {t("Unblock")}

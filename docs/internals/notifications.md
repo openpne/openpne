@@ -133,6 +133,12 @@ drops `mail` and web push for it at `NotificationSending`, whatever the catalog 
 `database` row is kept — it is the account's own record of what happened to it, and what an MCP
 client reads.
 
+The other direction — an AI account as the *actor* a notification is about — is a display rule:
+wherever the actor's name is baked into a string (the feed sentence, the push body, a mail template
+variable), it goes through [`MemberDisplayName`](../../app/Features/Member/MemberDisplayName.php),
+which appends the AI marker. Surfaces that render components ship `isAi` on the member reference and
+draw a chip instead, so no name is ever marked twice.
+
 ## Broadcast fan-out
 
 A new-diary broadcast reaches its whole audience (visibility-scoped: everyone / the author's friends /

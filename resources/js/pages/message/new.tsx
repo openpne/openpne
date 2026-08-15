@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
@@ -110,12 +111,15 @@ export default function MessageNew() {
                         <List>
                             {candidates.map((candidate) => (
                                 <ListRow key={candidate.id} rowLink chevron>
-                                    <Avatar id={candidate.id} name={candidate.name} src={candidate.imageUrl} color={candidate.avatarColor} decorative />
-                                    <p className="min-w-0 flex-1 truncate text-base text-foreground">
-                                        <Link href={`/messages/${candidate.id}`} className={stretchedLink}>
-                                            {candidate.name}
-                                        </Link>
-                                    </p>
+                                    <Avatar id={candidate.id} name={candidate.name} src={candidate.imageUrl} color={candidate.avatarColor} isAi={candidate.isAi} decorative />
+                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        <p className="min-w-0 truncate text-base text-foreground">
+                                            <Link href={`/messages/${candidate.id}`} className={stretchedLink}>
+                                                {candidate.name}
+                                            </Link>
+                                        </p>
+                                        <AiChip isAi={candidate.isAi} />
+                                    </div>
                                 </ListRow>
                             ))}
                         </List>

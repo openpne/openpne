@@ -20,7 +20,7 @@ class ProfileSerializer
      *
      * @param  'friend'|'sent'|'received'|'none'|null  $friendStatus  null = self or guest viewer
      * @param  Collection<int, ProfileFieldValue>  $fields
-     * @return array{owner: array{id: int, name: string, avatarUrl: ?string, avatarColor: ?string}, isSelf: bool, age: ?int, friendStatus: ?string, bio: ?string, fields: list<array{name: string, caption: string, value: string}>}
+     * @return array{owner: array{id: int, name: string, avatarUrl: ?string, avatarColor: ?string, isAi: bool}, isSelf: bool, age: ?int, friendStatus: ?string, bio: ?string, fields: list<array{name: string, caption: string, value: string}>}
      */
     public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang, ?int $age, ?string $friendStatus = null): array
     {
@@ -34,6 +34,9 @@ class ProfileSerializer
                 // The profile header paints this at 80px, the largest avatar outside the editor.
                 'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(180, 180, square: true),
                 'avatarColor' => $owner->avatar_color?->hex(),
+                // Keyed avatarUrl rather than imageUrl (the header paints a larger crop), so the
+                // shape stays its own rather than a MemberRefSerializer::ref.
+                'isAi' => $owner->isAiAccount(),
             ],
             'isSelf' => $isSelf,
             'age' => $age,
@@ -59,7 +62,7 @@ class ProfileSerializer
      * @param  Collection<int, Diary>  $recentDiaries  images.file eager-loaded by the caller (rich rows)
      * @param  Collection<int, Member>  $friends
      * @param  Collection<int, Group>  $groups
-     * @return array{stats: array{diaries: int, activity: int, friends: int, groups: int}, recentDiaries: list<array>, friends: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>, groups: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>}
+     * @return array{stats: array{diaries: int, activity: int, friends: int, groups: int}, recentDiaries: list<array>, friends: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, href: string}>, groups: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, href: string}>}
      */
     public static function digest(array $stats, Collection $recentDiaries, Collection $friends, Collection $groups): array
     {
@@ -71,14 +74,17 @@ class ProfileSerializer
                 'name' => $friend->name,
                 'imageUrl' => $friend->avatar?->file?->thumbnailUrl(320, 320, square: true),
                 'avatarColor' => $friend->avatar_color?->hex(),
+                'isAi' => $friend->isAiAccount(),
                 'href' => "/member/{$friend->getKey()}",
             ])->all(),
             'groups' => $groups->map(fn (Group $group): array => [
                 'id' => $group->getKey(),
                 'name' => $group->name,
                 'imageUrl' => $group->image?->thumbnailUrl(320, 320, square: true),
-                // Groups carry no chosen badge color; the shared NineTableItem shape keeps the key.
+                // Groups carry neither a chosen badge color nor an AI identity; the shared
+                // NineTableItem shape keeps both keys so one tile type serves both grids.
                 'avatarColor' => null,
+                'isAi' => false,
                 'href' => "/groups/{$group->getKey()}",
             ])->all(),
         ];

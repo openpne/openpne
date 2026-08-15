@@ -214,6 +214,7 @@ class MentionCandidatesTest extends TestCase
                 'name' => 'Match Ann',
                 'imageUrl' => $expected,
                 'avatarColor' => '#15803d',
+                'isAi' => false,
             ]]]);
     }
 

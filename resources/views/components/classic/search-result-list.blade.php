@@ -6,7 +6,8 @@
      the band. A pager brackets the list above and below.
 
      `items` entries: url, name (thumbnail alt), file (a File for <x-classic.image>, null falls back
-     to no_image), rows ([['caption' => …, 'value' => …], …], at least one; values are plain strings).
+     to no_image), rows ([['caption' => …, 'value' => …], …], at least one; values are plain strings),
+     and optionally isAi, which marks the first row's value as an AI account's name.
 
      The diary feed hand-writes its own table instead of calling this: OpenPNE 3 hand-writes
      listSuccess.php too, and its band diverges (no Details link, a trailing tr.operation row). --}}
@@ -24,7 +25,7 @@
                         <a href="{{ $item['url'] }}"><x-classic.image :file="$item['file'] ?? null" :size="76" :alt="$item['name']" /></a><br />
                         <a href="{{ $item['url'] }}">{{ __('Details') }}</a>
                     </td>
-                    <th>{{ $rows[0]['caption'] }}</th><td>{{ $rows[0]['value'] }}</td>
+                    <th>{{ $rows[0]['caption'] }}</th><td>{{ $rows[0]['value'] }}<x-classic.ai-mark :is-ai="$item['isAi'] ?? false" /></td>
                 </tr>
                 @foreach (array_slice($rows, 1) as $row)
                     <tr>
