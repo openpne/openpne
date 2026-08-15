@@ -19,7 +19,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  * session-guarded — so shipping them would be shipping links that always 404.
  *
  * Text is all it carries. Pictures are reported as a count, so a reader knows the message is not
- * only what it says, and the bytes are out of scope until the file routes speak this realm.
+ * only what it says, and their bytes are fetched by naming the message — the `read-talk-message-images`
+ * tool — rather than by following a link.
  */
 class McpTalkSerializer
 {
