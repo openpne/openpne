@@ -77,6 +77,7 @@ class FeatureStateTest extends TestCase
             'groupEvent' => false,
             'groupTalk' => false,
             'friend' => true,
+            'mcp' => true,
         ], Feature::enabledMap());
     }
 

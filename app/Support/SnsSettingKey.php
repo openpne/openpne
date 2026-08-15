@@ -115,6 +115,14 @@ enum SnsSettingKey: string
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
     /**
+     * Whether the MCP endpoint answers (docs/internals/mcp.md). A kill switch, not the boundary:
+     * what keeps a caller out is the bearer token and its abilities, so this is fail-open like every
+     * other unit and turning it off is how an operator takes the endpoint down without revoking
+     * anything.
+     */
+    case FeatureMcpEnabled = 'feature_mcp_enabled';
+
+    /**
      * Whether a URL in a member's body is fetched and shown as a preview card.
      *
      * Off unless an operator turns it on. This is the only setting that makes the site issue
@@ -173,7 +181,8 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureMcpEnabled => SettingGroup::Features,
             self::LinkCardEnabled => SettingGroup::LinkCard,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
@@ -219,7 +228,8 @@ enum SnsSettingKey: string
             // steps, which write a row only for a unit OpenPNE 3 had switched off (see above).
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => null,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureMcpEnabled => null,
             // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
@@ -288,7 +298,8 @@ enum SnsSettingKey: string
             // On, so an absent row runs the feature until an administrator says otherwise.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => true,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureMcpEnabled => true,
             // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
             // both surfaces keep the shipped favicon.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
@@ -316,7 +327,7 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
@@ -332,7 +343,7 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled => $value ? '1' : '0',
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
@@ -365,7 +376,8 @@ enum SnsSettingKey: string
             // strand its content — the opposite trade-off from the security keys above.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => $value !== '0',
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureMcpEnabled => $value !== '0',
             default => $value,
         };
     }
@@ -405,6 +417,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEventEnabled => __('Event'),
             self::FeatureGroupTalkEnabled => __('Talk'),
             self::FeatureFriendEnabled => __('%Friend%'),
+            self::FeatureMcpEnabled => __('MCP server'),
             self::BrandColor => __('Brand color'),
             self::BrandLogoFile => __('Logo'),
             self::BrandFaviconFile => __('Favicon'),
@@ -425,7 +438,7 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy => false,
         };

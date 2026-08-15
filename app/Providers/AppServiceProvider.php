@@ -48,6 +48,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Rules\Password;
 use InvalidArgumentException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -194,6 +195,32 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
         RateLimiter::for('group-join', $this->writeLimiter('group', 'group', 'group_ip'));
         RateLimiter::for('reaction', $this->writeLimiter('reaction', 'reaction', 'reaction_ip'));
+        RateLimiter::for('mcp', $this->tokenLimiter());
+    }
+
+    /**
+     * The MCP endpoint's per-token cap. Keyed by the token rather than by the member: a member may
+     * hold several, and one runaway client must not spend another's budget. This limb only ever runs
+     * once a token has been accepted — the unauthenticated caller is bounded before that, by
+     * App\Http\Middleware\ThrottleMcpByIp, which the priority list cannot reorder behind auth.
+     */
+    private function tokenLimiter(): Closure
+    {
+        return function (Request $request): Limit {
+            $perMinute = max(0, (int) config('openpne.throttle.mcp'));
+            if ($perMinute === 0) {
+                return Limit::none();
+            }
+
+            $user = $request->user();
+            $token = $user instanceof Member ? $user->currentAccessToken() : null;
+
+            // A session user carries a TransientToken with no id of its own; the endpoint admits no
+            // such caller, so falling back to the IP is a backstop rather than a second key space.
+            return Limit::perMinute($perMinute)->by('mcp|'.(
+                $token instanceof PersonalAccessToken ? $token->getKey() : $request->ip()
+            ));
+        };
     }
 
     /**

@@ -56,7 +56,7 @@ export interface TalkNavRooms {
 }
 
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
-export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'groupTopic' | 'groupEvent' | 'groupTalk' | 'friend';
+export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'groupTopic' | 'groupEvent' | 'groupTalk' | 'friend' | 'mcp';
 
 export interface PageProps {
     name: string;

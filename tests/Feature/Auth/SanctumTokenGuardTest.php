@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Auth;
 
 use App\Console\Commands\McpTokenCommand;
+use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -27,14 +28,14 @@ class SanctumTokenGuardTest extends TestCase
 
         Route::middleware('auth:sanctum')->get(self::PROBE, fn (Request $request) => [
             'member' => $request->user()->getKey(),
-            'write' => $request->user()->tokenCan(McpTokenCommand::ABILITY_WRITE),
+            'write' => $request->user()->tokenCan(McpAbilities::WRITE),
         ]);
     }
 
     public function test_a_bearer_token_authenticates_its_member_and_carries_its_abilities(): void
     {
         $member = Member::factory()->create();
-        $token = $member->createToken(McpTokenCommand::TOKEN_NAME, [McpTokenCommand::ABILITY_READ]);
+        $token = $member->createToken(McpTokenCommand::TOKEN_NAME, [McpAbilities::READ]);
 
         $this->getJson(self::PROBE, ['Authorization' => 'Bearer '.$token->plainTextToken])
             ->assertOk()
@@ -72,7 +73,7 @@ class SanctumTokenGuardTest extends TestCase
     public function test_a_deleted_token_stops_authenticating(): void
     {
         $member = Member::factory()->create();
-        $token = $member->createToken(McpTokenCommand::TOKEN_NAME, [McpTokenCommand::ABILITY_READ]);
+        $token = $member->createToken(McpTokenCommand::TOKEN_NAME, [McpAbilities::READ]);
         $member->tokens()->delete();
 
         $this->getJson(self::PROBE, ['Authorization' => 'Bearer '.$token->plainTextToken])

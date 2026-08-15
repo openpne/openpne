@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\GroupTalk;
 
-use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
+use App\Features\GroupTalk\TalkBody;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -48,7 +48,7 @@ class GroupTalkWriteTest extends TalkTestCase
     {
         $group = $this->group();
         $member = $this->memberOf($group);
-        $max = StoreGroupMessageRequest::MAX_BODY;
+        $max = TalkBody::MAX;
 
         $this->actingAs($member)
             ->postJson("/groups/{$group->getKey()}/talk", ['body' => str_repeat('a', $max)])
@@ -69,7 +69,7 @@ class GroupTalkWriteTest extends TalkTestCase
     {
         $group = $this->group();
         $member = $this->memberOf($group);
-        $max = StoreGroupMessageRequest::MAX_BODY;
+        $max = TalkBody::MAX;
 
         // 4 bytes and 2 UTF-16 units each: 5,000 of them are far over either of those limits.
         $emoji = str_repeat('🙂', $max);
@@ -101,7 +101,7 @@ class GroupTalkWriteTest extends TalkTestCase
         $this->assertSame("one\ntwo\nthree", GroupMessage::findOrFail($id)->body);
 
         // Measured after normalization: this is over the cap only if the CRLFs are counted as two.
-        $max = StoreGroupMessageRequest::MAX_BODY;
+        $max = TalkBody::MAX;
         $this->actingAs($member)
             ->postJson("/groups/{$group->getKey()}/talk", ['body' => str_repeat("a\r\n", $max / 2)])
             ->assertCreated();

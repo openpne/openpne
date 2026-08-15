@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\GroupTalk;
 
+use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Notifications\Serializers\NotificationFeedSerializer;
-use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
@@ -86,7 +86,7 @@ class TalkMentionRequestTest extends TalkTestCase
         $this->actingAs($author)
             ->postJson("/groups/{$group->getKey()}/talk", [
                 'body' => 'hello',
-                'mentions' => [['member_id' => 1, 'offset' => StoreGroupMessageRequest::MAX_BODY, 'length' => 4]],
+                'mentions' => [['member_id' => 1, 'offset' => TalkBody::MAX, 'length' => 4]],
             ])
             ->assertStatus(422);
     }

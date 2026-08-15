@@ -4,14 +4,16 @@ An administrator can switch a **feature unit** off site-wide. OpenPNE 3 did this
 plugin (`plugin.is_enabled`) or, for friends, by `sns_config.enable_friend_link`; OpenPNE 4 keeps
 the same semantics in one registry.
 
-The eight units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
-`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `groupTalk`, `friend`. The
-case value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
-already uses, and normally the route-name prefix and the URL segment too. Some units come apart from
-it: `directMessage`'s routes and URLs stay on the OpenPNE 3 `message` word until they are redesigned,
-and `groupTopic` / `groupEvent` / `groupTalk` own `group.topics.*` / `group.events.*` /
-`group.talk.*` — nested inside their parent's prefix, which `owningRouteName()` resolves by longest
-match. They declare their prefixes explicitly instead of deriving them.
+The nine units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
+`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `groupTalk`, `friend`,
+`mcp`. The case value is the feature vocabulary the
+[surface resolver](feature-modules.md#surface-selection) already uses, and normally the route-name
+prefix and the URL segment too. Some units come apart from it: `directMessage`'s routes and URLs stay
+on the OpenPNE 3 `message` word until they are redesigned, and `groupTopic` / `groupEvent` /
+`groupTalk` own `group.topics.*` / `group.events.*` / `group.talk.*` — nested inside their parent's
+prefix, which `owningRouteName()` resolves by longest match. They declare their prefixes explicitly
+instead of deriving them. `mcp` declares none at all: its routes come from the package unnamed, and
+the gate audit claims them by URL segment ([mcp.md](mcp.md)).
 
 **Switching a unit off is a gate, not a data operation.** Diaries, messages, topics, files and
 friendships stay exactly as they were, and switching the unit back on restores the feature intact.
@@ -37,8 +39,8 @@ content. The security keys in the same enum fail *closed*, for the opposite reas
 
 [`FeatureSettings`](../../app/Filament/Pages/FeatureSettings.php) (admin → Settings → Features)
 carries one toggle per unit and, like its sibling settings pages, stores every key of its group on
-save — so the first save materializes all eight rows, including the enabled ones. Only the settings
-cache is cleared; the nav and gadget row caches never embed feature state (see below).
+save — so the first save materializes a row for every unit, including the enabled ones. Only the
+settings cache is cleared; the nav and gadget row caches never embed feature state (see below).
 
 ## Dependencies
 
@@ -56,7 +58,9 @@ routes stay **registered** —
 route exists — so the middleware, not the route table, is the gate. It is attached in
 [`routes/web.php`](../../routes/web.php): to each unit's route group, and individually to the
 feature-owned endpoints that live outside their prefix (`member.config.diary`,
-`notifications.center.friendAccept` / `friendReject`).
+`notifications.center.friendAccept` / `friendReject`). `mcp` carries it in
+[`routes/ai.php`](../../routes/ai.php) instead, on the group wrapping all three of the endpoint's
+methods.
 
 `FeatureRouteMiddlewarePinTest` walks the whole route inventory and fails on a feature-owned route
 that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate.

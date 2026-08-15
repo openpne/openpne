@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\GroupTalk;
 
+use App\Features\GroupTalk\TalkBody;
 use App\Http\Requests\Concerns\MentionRules;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,13 +10,6 @@ use Illuminate\Http\UploadedFile;
 
 class StoreGroupMessageRequest extends FormRequest
 {
-    /**
-     * Code points, not bytes: `max` measures a string with mb_strlen, the same unit the mention
-     * ranges will be recorded in and the one JavaScript's Array.from() agrees with. Well inside the
-     * TEXT column even at four bytes a point.
-     */
-    public const MAX_BODY = 5000;
-
     protected function prepareForValidation(): void
     {
         $body = $this->input('body');
@@ -30,7 +24,7 @@ class StoreGroupMessageRequest extends FormRequest
             // Before the length check, so a CRLF body is not measured a line-break longer than the
             // one the member typed — and so a stored body's newlines match the offsets mentions will
             // carry.
-            $this->merge(['body' => MentionRules::normalizeNewlines($body)]);
+            $this->merge(['body' => TalkBody::normalize($body)]);
         }
         // Anything else is left exactly as it came, for the `string` rule to refuse: coercing it
         // here would let an attachment carry a body of the wrong type past validation.
@@ -43,7 +37,7 @@ class StoreGroupMessageRequest extends FormRequest
             // A picture is a message: the body may be empty when something is attached, whichever
             // wire named it. `required_without_all` is implicit, so it is still asked when `nullable`
             // would otherwise stop the chain.
-            'body' => ['nullable', 'string', 'max:'.self::MAX_BODY, 'required_without_all:images,image'],
+            'body' => ['nullable', 'string', 'max:'.TalkBody::MAX, 'required_without_all:images,image'],
             // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post
             // with attachments. A refusal takes the whole message down, so nothing is half-sent.
             ...PostImageRules::rules(),
@@ -51,7 +45,7 @@ class StoreGroupMessageRequest extends FormRequest
             // across a deploy and keeps sending; ignoring its `image` would 201 the body and
             // silently drop the file. Transitional: remove once no session predates images[].
             'image' => ['prohibits:images', ...PostImageRules::single()],
-            ...MentionRules::rules(self::MAX_BODY),
+            ...MentionRules::rules(TalkBody::MAX),
         ];
     }
 

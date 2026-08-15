@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Mcp\McpAbilities;
 use App\Models\Member;
 use App\Support\SecurityLog;
 use Illuminate\Console\Command;
@@ -19,10 +20,6 @@ class McpTokenCommand extends Command
     /** Stamped on every token this command issues, so --revoke can drop these and leave other tokens alone. */
     public const TOKEN_NAME = 'mcp';
 
-    public const ABILITY_READ = 'mcp:read';
-
-    public const ABILITY_WRITE = 'mcp:write';
-
     protected $signature = 'openpne:mcp:token
         {email : The member email address}
         {--read-only : Issue a token that may read but not write}
@@ -38,8 +35,8 @@ class McpTokenCommand extends Command
     private function issue(): int
     {
         $abilities = $this->option('read-only')
-            ? [self::ABILITY_READ]
-            : [self::ABILITY_READ, self::ABILITY_WRITE];
+            ? [McpAbilities::READ]
+            : [McpAbilities::READ, McpAbilities::WRITE];
 
         /** @var array{token: NewAccessToken, member_id: int, email: string}|null $issued */
         $issued = null;
