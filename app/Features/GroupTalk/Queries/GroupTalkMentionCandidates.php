@@ -3,7 +3,7 @@
 namespace App\Features\GroupTalk\Queries;
 
 use App\Features\Block\BlockLookup;
-use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
+use App\Features\GroupTalk\TalkBody;
 use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,8 +26,8 @@ class GroupTalkMentionCandidates
 {
     public const LIMIT = 8;
 
-    /** A handle is "@" plus the name, and the body caps at MAX_BODY, so a longer name could be picked but never posted. */
-    public const MAX_NAME = StoreGroupMessageRequest::MAX_BODY - 1;
+    /** A handle is "@" plus the name, and the body caps at TalkBody::MAX, so a longer name could be picked but never posted. */
+    public const MAX_NAME = TalkBody::MAX - 1;
 
     /** The LIKE escape character. Not a backslash: MySQL and SQLite read one inside ESCAPE differently. */
     private const ESCAPE = '!';

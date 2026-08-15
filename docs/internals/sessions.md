@@ -11,6 +11,11 @@ the member realm's Classic/Modern presentation.)
 | Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.table` (`sessions`) | `/login` (Fortify) |
 | Admin (`/admin*`, Livewire + Filament system routes) | `admin` | `session.admin_cookie` (`SESSION_ADMIN_COOKIE`) | `session.admin_table` (`admin_sessions`) | `/admin/login` (Filament) |
 
+`/mcp` is a third realm and holds no session at all: it is mounted outside the `web` group, accepts a
+bearer token as its only credential, and answers 401 instead of redirecting a guest
+([mcp.md](mcp.md)). `UseAdminSessionStore` still runs — it is global — and pinning a store nothing
+starts is harmless; a test asserts the response carries no cookie and writes no session row.
+
 The switch is [`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php),
 **global** middleware keyed by request path. It cannot live in the Filament
 panel stack: after the initial page load every panel interaction is a Livewire

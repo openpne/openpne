@@ -29,12 +29,18 @@ class JoinedTalkRooms
 {
     public const PER_PAGE = 20;
 
-    /** @return LengthAwarePaginator<int, TalkRoom> */
-    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE): LengthAwarePaginator
+    /**
+     * $page is null for a caller that has a URL behind it — paginate() then reads `?page=` as it
+     * always did. A caller with no request (the MCP tool) names the page, or every call would answer
+     * the first one.
+     *
+     * @return LengthAwarePaginator<int, TalkRoom>
+     */
+    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator
     {
-        $page = $this->ordered($viewer)->paginate($perPage);
+        $paginator = $this->ordered($viewer)->paginate($perPage, page: $page);
 
-        return $page->setCollection($this->rooms($page->getCollection()));
+        return $paginator->setCollection($this->rooms($paginator->getCollection()));
     }
 
     /**

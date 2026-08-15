@@ -14,6 +14,12 @@ The room is a chrome registry **conversation** screen
 ([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does
 not recede, so the composer is the last thing on the screen at every scroll position.
 
+The screen is not the only wire in. The [MCP endpoint](mcp.md) reads and writes talk as a member,
+through the same Actions and Queries — never a second write path. What the two wires must agree on is
+[`TalkBody`](../../app/Features/GroupTalk/TalkBody.php): the LF newline rule and the 5,000-code-point
+cap. The rest of what the form applies (trimming, the type check) is middleware a browser request
+meets on its way in, so each wire states it where it applies.
+
 ## It shipped switched off (historical)
 
 `groupTalk` is an ordinary feature unit now: absent row means on, and only a stored `'0'` takes it
