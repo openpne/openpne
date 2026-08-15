@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications\Push;
 
+use App\Features\Member\MemberDisplayName;
 use App\Features\Notifications\NotificationKindLabel;
 use App\Features\Notifications\Queries\CountUnreadNotifications;
 use App\Models\Member;
@@ -69,6 +70,6 @@ final class WebPushNudge extends Notification implements ShouldQueue
     /** Null once the actor has withdrawn — NotificationKindLabel fills the same fallback the feed shows. */
     private function actorName(): ?string
     {
-        return $this->actorId === null ? null : Member::find($this->actorId)?->name;
+        return $this->actorId === null ? null : MemberDisplayName::of(Member::find($this->actorId));
     }
 }

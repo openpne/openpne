@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { useAutoGrow } from '@/lib/auto-grow';
@@ -36,6 +37,7 @@ interface Candidate {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 /** Long enough that typing a name is one search, short enough to feel like the list is following. */
@@ -248,8 +250,9 @@ export function MentionTextarea({
                             index === active && 'bg-accent text-accent-foreground',
                         )}
                     >
-                        <Avatar id={candidate.id} name={candidate.name} src={candidate.imageUrl} color={candidate.avatarColor} size="sm" decorative />
+                        <Avatar id={candidate.id} name={candidate.name} src={candidate.imageUrl} color={candidate.avatarColor} isAi={candidate.isAi} size="sm" decorative />
                         <span className="truncate">{candidate.name}</span>
+                        <AiChip isAi={candidate.isAi} />
                     </li>
                 ))}
             </ul>

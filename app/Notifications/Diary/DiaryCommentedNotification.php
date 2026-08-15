@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Diary;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -52,7 +53,7 @@ class DiaryCommentedNotification extends Notification implements FeatureNotifica
     public function toMail(Member $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::DiaryCommentReceived, [
-            'member_name' => $this->commenter->name,
+            'member_name' => MemberDisplayName::of($this->commenter),
             'diary_title' => $this->diary->title,
             'body' => $this->comment->body,
             'url' => route('diary.show', ['diary' => $this->diary->getKey()]),

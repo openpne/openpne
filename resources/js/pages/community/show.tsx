@@ -1,9 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
-import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { CountPill } from '@/components/count-pill';
 import { EntryRow } from '@/components/entry-row';
+import { MemberTile } from '@/components/member-tile';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CivilDate, Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
@@ -238,10 +238,7 @@ export default function CommunityShow() {
                     <ul className="flex flex-wrap gap-4">
                         {members.map((member) => (
                             <li key={member.id} className="w-16">
-                                <Link href={`/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
-                                    <span className="w-full truncate text-center text-xs">{member.name}</span>
-                                </Link>
+                                <MemberTile member={member} />
                             </li>
                         ))}
                     </ul>

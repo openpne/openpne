@@ -12,6 +12,7 @@ export interface MessageMember {
     name: string;
     imageUrl: string | null; // null → Avatar renders the neutral initial badge
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface MessageRow {

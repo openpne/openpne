@@ -7,7 +7,7 @@
             <p class="photo">
                 <x-classic.image :file="$avatar" :size="180" :alt="$subject->name" />
             </p>
-            <p class="text">{{ $subject->name }}</p>
+            <p class="text">{{ $subject->name }}<x-classic.ai-mark :is-ai="$subject->isAiAccount()" /></p>
         </div>
         @if ($subject->is(auth()->user()))
             {{-- OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo.

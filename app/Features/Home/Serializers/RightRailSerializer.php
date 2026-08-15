@@ -21,7 +21,7 @@ class RightRailSerializer
     /**
      * @param  'friends'|'members'  $peopleKind
      * @param  Collection<int, Member>  $people
-     * @return array{people: array{kind: 'friends'|'members', items: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, href: string}>}}
+     * @return array{people: array{kind: 'friends'|'members', items: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, href: string}>}}
      */
     public static function rail(string $peopleKind, Collection $people): array
     {
@@ -33,6 +33,7 @@ class RightRailSerializer
                     'name' => $m->name,
                     'imageUrl' => $m->avatar?->file?->thumbnailUrl(180, 180, square: true),
                     'avatarColor' => $m->avatar_color?->hex(),
+                    'isAi' => $m->isAiAccount(),
                     'href' => "/member/{$m->getKey()}",
                 ])->all(),
             ],

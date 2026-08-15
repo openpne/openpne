@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Serializers;
 
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -20,7 +21,7 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
@@ -46,12 +47,7 @@ class DiarySerializer
                         : null)
                     ->filter()->values()->all()
                 : [],
-            'author' => [
-                'id' => $diary->member->getKey(),
-                'name' => $diary->member->name,
-                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-                'avatarColor' => $diary->member->avatar_color?->hex(),
-            ],
+            'author' => MemberRefSerializer::ref($diary->member),
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
     }
@@ -60,7 +56,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -82,12 +78,7 @@ class DiarySerializer
             // DiaryDetail-extends-DiarySummary TS shape; file-less rows carry an empty url and drop out.
             'thumbnails' => array_values(array_filter(array_column($images, 'thumbnailUrl'))),
             'images' => $images,
-            'author' => [
-                'id' => $diary->member->getKey(),
-                'name' => $diary->member->name,
-                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-                'avatarColor' => $diary->member->avatar_color?->hex(),
-            ],
+            'author' => MemberRefSerializer::ref($diary->member),
             'linkCard' => LinkCardSerializer::card($diary),
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
@@ -152,7 +143,7 @@ class DiarySerializer
      * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
      * permission, computed server-side so the client never re-derives authorization.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(DiaryComment $comment, ?Member $viewer): array
     {
@@ -161,12 +152,7 @@ class DiarySerializer
             'number' => $comment->number,
             'body' => $comment->body,
             'images' => $comment->images->map([self::class, 'image'])->all(),
-            'author' => $comment->member ? [
-                'id' => $comment->member->getKey(),
-                'name' => $comment->member->name,
-                'imageUrl' => $comment->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-                'avatarColor' => $comment->member->avatar_color?->hex(),
-            ] : null,
+            'author' => $comment->member ? MemberRefSerializer::ref($comment->member) : null,
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => $comment->isDeletableBy($viewer),
         ];

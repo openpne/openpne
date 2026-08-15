@@ -1,5 +1,5 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Avatar } from '@/components/avatar';
+import { Head, usePage } from '@inertiajs/react';
+import { MemberTile } from '@/components/member-tile';
 import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -22,10 +22,7 @@ export default function CommunityMembers() {
                 <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
                     {members.data.map((member) => (
                         <li key={member.id}>
-                            <Link href={`/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
-                                <span className="w-full truncate text-center text-sm">{member.name}</span>
-                            </Link>
+                            <MemberTile member={member} nameSize="sm" />
                         </li>
                     ))}
                 </ul>

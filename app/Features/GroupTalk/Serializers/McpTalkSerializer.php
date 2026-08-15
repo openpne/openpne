@@ -24,7 +24,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class McpTalkSerializer
 {
     /**
-     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>}
+     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>}
      */
     public static function message(GroupMessage $message): array
     {
@@ -37,6 +37,9 @@ class McpTalkSerializer
             // than a gap to paper over.
             'authorId' => $message->author?->getKey(),
             'authorName' => $message->author?->name,
+            // A reading agent gets the same answer a reader's eye does off the chip. False for a
+            // withdrawn author: there is no account left to be one.
+            'authorIsAi' => (bool) $message->author?->isAiAccount(),
             'createdAt' => CarbonImmutable::instance($message->created_at)->toIso8601String(),
             'cursor' => (string) GroupTalkCursor::of($message),
             'hasImages' => $images > 0,

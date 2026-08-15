@@ -7,13 +7,14 @@
         "build": "vite build",
         "dev": "vite",
         "type-check": "tsc --noEmit",
-        "test": "node --test --experimental-strip-types 'resources/js/**/*.test.ts' 'tests/js/**/*.test.js'",
-        "lint": "eslint resources/js public/js public/sw.js tests/js vite.config.ts eslint.config.js --max-warnings=0"
+        "test": "node --test --experimental-strip-types 'resources/js/**/*.test.ts' 'tests/js/**/*.test.js' && vitest run",
+        "lint": "eslint resources/js public/js public/sw.js tests/js vite.config.ts vitest.config.ts eslint.config.js --max-warnings=0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@happy-dom/global-registrator": "20.11.2",
         "@tailwindcss/vite": "^4.3.3",
+        "@testing-library/react": "^16.3.2",
         "@types/node": "^26.2.0",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.4",
@@ -29,7 +30,8 @@
         "tailwindcss": "^4.0.0",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "typescript-eslint": "^8.66.0",
-        "vite": "^8.2.1"
+        "vite": "^8.2.1",
+        "vitest": "^4.1.10"
     },
     "dependencies": {
         "@inertiajs/react": "^3.6.1",

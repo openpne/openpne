@@ -83,6 +83,7 @@
             'url' => route('member.profile.show', $member),
             'file' => $member->avatar?->file,
             'name' => $member->name,
+            'isAi' => $member->isAiAccount(),
             'rows' => array_values(array_filter([
                 ['caption' => __('%Nickname%'), 'value' => $member->name],
                 isset($introductions[$member->getKey()])

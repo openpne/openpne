@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ interface Applicant {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 interface PendingProps extends PageProps {
@@ -42,10 +44,13 @@ export default function CommunityPending() {
                         <List>
                             {applicants.data.map((applicant) => (
                                 <ListRow key={applicant.id}>
-                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} color={applicant.avatarColor} size="md" decorative />
-                                    <Link href={`/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
-                                        {applicant.name}
-                                    </Link>
+                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} color={applicant.avatarColor} isAi={applicant.isAi} size="md" decorative />
+                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        <Link href={`/member/${applicant.id}`} className="min-w-0 truncate text-link hover:underline">
+                                            {applicant.name}
+                                        </Link>
+                                        <AiChip isAi={applicant.isAi} />
+                                    </div>
                                     <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
                                         {t('Approve')}
                                     </Button>

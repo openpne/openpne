@@ -140,7 +140,7 @@ export default function MemberConfig() {
                     <GroupItem>
                         <DetailRow
                             title={t('Profile image')}
-                            value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} color={auth.user.avatarColor} size="sm" decorative />}
+                            value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} color={auth.user.avatarColor} isAi={auth.user.isAi} size="sm" decorative />}
                             action={
                                 <ActionLink href="/member/avatar" variant="outline" size="sm">
                                     {t('Change')}

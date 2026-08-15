@@ -11,7 +11,7 @@
         {{-- OpenPNE 3 showSuccess.php heads the box with the author, not the entry title (that sits
              in the dd), and keeps the diary's effective audience beside it in the .public hook. --}}
         <x-slot:heading>
-            <h3>{{ __('%Diary% of :name', ['name' => $diary->member->name]) }}</h3>
+            <h3>{{ __('%Diary% of :name', ['name' => \App\Features\Member\MemberDisplayName::of($diary->member)]) }}</h3>
             <p class="public">({{ __($diary->visibility->label()) }})</p>
         </x-slot:heading>
 

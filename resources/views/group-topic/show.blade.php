@@ -8,7 +8,7 @@
     <x-classic.parts id="communityTopic_show" name="topicDetailBox" :title="$topic->name">
         <p class="topicMeta">
             @if ($topic->member)
-                <a href="{{ route('member.profile.show', $topic->member) }}">{{ $topic->member->name }}</a>
+                <a href="{{ route('member.profile.show', $topic->member) }}">{{ $topic->member->name }}</a><x-classic.ai-mark :is-ai="$topic->member->isAiAccount()" />
             @else
                 {{ __('Withdrawn member') }}
             @endif

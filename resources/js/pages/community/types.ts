@@ -12,6 +12,7 @@ export interface MemberRef {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface CommunitySummary {
@@ -34,6 +35,7 @@ export interface CommunityMemberRow {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
     role: CommunityRoleSlug;
 }
 
@@ -61,7 +63,9 @@ export interface TalkRoomRow {
     imageUrl: string | null;
     unread: number;
     muted: boolean;
-    latest: { body: string; authorName: string | null; createdAt: string } | null; // null → nothing said yet
+    // authorIsAi rides beside the name rather than inside it: the preview has no member reference
+    // to carry, and the row draws the same chip the talk screen does.
+    latest: { body: string; authorName: string | null; authorIsAi: boolean; createdAt: string } | null; // null → nothing said yet
 }
 
 export interface PaginatedTalkRooms {
@@ -74,6 +78,7 @@ export interface TopicAuthor {
     name: string;
     imageUrl: string | null; // null → Avatar renders the neutral initial badge
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface TopicSummary {
@@ -162,6 +167,7 @@ export interface EventParticipant {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface PaginatedEvents {

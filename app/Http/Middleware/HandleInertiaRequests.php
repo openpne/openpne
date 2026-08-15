@@ -40,6 +40,9 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'imageUrl' => $user->avatar?->file?->thumbnailUrl(120, 120, square: true),
                     'avatarColor' => $user->avatar_color?->hex(),
+                    // Always false in practice — an AI account cannot sign in — but the shape is a
+                    // member reference, and one shape means one Avatar call everywhere.
+                    'isAi' => $user->isAiAccount(),
                 ] : null,
             ],
             // Which units the administrator has switched on, dependencies resolved. Presentation only —

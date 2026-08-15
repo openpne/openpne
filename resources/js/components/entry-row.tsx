@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Camera, MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
@@ -26,6 +27,7 @@ type EntryAuthor = {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 };
 
 type EntryCommunity = {
@@ -115,7 +117,7 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
         <CommunityImage name={group.name} src={group.imageUrl} className="size-10" textClassName="text-sm" decorative />
     ) : (
         // id === 0 renders the withdrawn blank badge, which is why the fallback passes author?.id ?? 0.
-        <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="md" decorative />
+        <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} isAi={author?.isAi ?? false} size="md" decorative />
     );
 
     const contentLine = (
@@ -141,6 +143,7 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
         <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm text-foreground">{subjectName}</span>
+                <AiChip isAi={author?.isAi ?? false} />
                 {bylineMeta.length > 0 && (
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                         {bylineMeta.flatMap((item, index) => [
