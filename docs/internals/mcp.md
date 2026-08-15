@@ -61,6 +61,7 @@ its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorElig
 |---|---|---|
 | `list-talk-rooms` | `mcp:read` | The caller's own rooms, most recently talked in first, with their unread count and `unreadMentions`, how many of those name the caller. Paged; the page is an argument, since there is no URL to read one off. |
 | `read-talk-messages` | `mcp:read` | One page of a room, oldest first — the newest page, or the one before/after a cursor the server issued. |
+| `read-talk-message-images` | `mcp:read` | The pictures on one message, as image data: every one of them, or the slot named by `number`. Thumbnails unless `size=original` is asked for. |
 | `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text, plus an optional `reply_to_message_id` that addresses the answered message's author. |
 | `mark-talk-read` | `+ mcp:write` | Moves the caller's read cursor to a message. Forward only. |
 
@@ -113,11 +114,35 @@ forever.
 
 ## What the wire carries
 
-Text. [`McpTalkSerializer`](../../app/Features/GroupTalk/Serializers/McpTalkSerializer.php) is a
-separate shape from the Modern surface's, not a reuse of it: those carry `/file` and `/cache/img`
-URLs, which are session-guarded and so unfetchable by a bearer client. An attachment is reported as a
-count instead, so a reader knows a message is not only what it says. Serving the bytes to this realm
-is a later decision, and needs the file routes to speak it.
+Text, plus picture bytes when a call asks for them.
+[`McpTalkSerializer`](../../app/Features/GroupTalk/Serializers/McpTalkSerializer.php) is a separate
+shape from the Modern surface's, not a reuse of it: those carry `/file` and `/cache/img` URLs, which
+are session-guarded and so unfetchable by a bearer client. An attachment is reported as a count
+instead, so a reader knows a message is not only what it says, and the bytes are fetched by naming
+the message — `read-talk-message-images`, which reads them through
+[`ImageCache`](../../app/Files/ImageCache.php), the generator the web routes already use. Both
+geometries it offers go through `ImageTransform::fromGeometry()`, so the size whitelist that stops a
+URL driving arbitrary thumbnail generation ([images.md](images.md#adding-a-size)) binds this caller
+too.
+
+**Thumbnails are the default**, fitted into a 640px box. A picture costs a client far more context
+than the message it hangs on and 640px is enough to see what one is, so `size=original` is for when
+the detail decides something.
+
+**One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
+byte is read — the only number there is while nothing is in memory yet — and again by the read
+itself, because metadata can disagree with the bytes it describes. What is left of the cap is passed
+down to `ImageCache`, which stops a read one byte past it and refuses the file
+(`ImageBytesOverLimitException`) rather than reading it whole and measuring afterwards, so a row
+understating its file cannot put an unbounded object in memory. Either way the call is refused whole
+rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
+preflight measures originals even when thumbnails were asked for: conservative, not exact.
+
+**A slot holding no picture is refused when `number` names it, and passed over when it does not** —
+the refusal rule above, applied inside a message: being told "that one is empty" would let the slots
+be walked to count what a message carries. Authorization is the message's own, since
+[`FilePolicy`](../../app/Policies/FilePolicy.php) resolves a talk image through the same
+`GroupTalkAccess::canView` the room was resolved through; the tool asks it per file anyway, as a belt.
 
 A message reports `authorIsAi` beside the author's name — the same fact a reader gets from the chip
 on the web surface, so an agent can tell a colleague's words from another agent's without inferring
