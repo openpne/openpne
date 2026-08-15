@@ -1238,6 +1238,7 @@
     "The provided two factor authentication code was invalid.": "2要素認証コードが無効です。",
     "The provided two factor recovery code was invalid.": "2要素認証のリカバリーコードが無効です。",
     "The registration token (used by the app_url_for link).": "登録トークン（app_url_for リンクで使用）。",
+    "The reply body, with the @mention this adds to it, is longer than :max characters.": "返信本文は、付加される @メンションを含めると :max 文字を超えます。",
     "The requester’s name.": "申請者の名前。",
     "The response is not a streamed response.": "レスポンスは、ストリーミング形式ではありません。",
     "The response is not a view.": "レスポンスは、ビューではありません。",

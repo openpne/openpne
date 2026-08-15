@@ -42,6 +42,12 @@ class CreateGroupMessage
      * committing the rollback while the bytes stayed on disk. Slots are numbered in the order the
      * member picked them (1..N), which is the order they are read back in.
      *
+     * $mentionsRequired is for a composer that wrote the handles into $body itself (the MCP reply
+     * tool): dropping one of its rows would leave a handle naming nobody in a message that cannot be
+     * edited, so the whole write rolls back instead and the caller re-composes from what it re-reads.
+     * The picker's path leaves it off — there the handle is the member's own text, and losing the
+     * message over a decoration is the wrong trade.
+     *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions
      * @param  array<int, UploadedFile>  $images
      *
@@ -53,6 +59,7 @@ class CreateGroupMessage
         string $body,
         array $mentions = [],
         array $images = [],
+        bool $mentionsRequired = false,
     ): GroupMessage {
         if (! GroupTalkAccess::canPost($group, $author)) {
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotPost);
@@ -61,7 +68,7 @@ class CreateGroupMessage
         return $this->images->attach(
             'groupMessage',
             $images,
-            persist: function () use ($author, $group, $body, $mentions): GroupMessage {
+            persist: function () use ($author, $group, $body, $mentions, $mentionsRequired): GroupMessage {
                 $message = GroupMessage::create([
                     'group_id' => $group->getKey(),
                     'member_id' => $author->getKey(),
@@ -76,6 +83,13 @@ class CreateGroupMessage
                 // them; createMany returns them in the order it was given, which resolution left
                 // ascending.
                 $resolved = ($this->mentions)($author, $body, $mentions, $group);
+
+                // Thrown from inside the transaction on purpose: the body carrying the handle is
+                // rolled back along with the row that was supposed to explain it.
+                if ($mentionsRequired && count($resolved) !== count($mentions)) {
+                    throw new GroupTalkActionException(GroupTalkActionFailure::MentionDropped);
+                }
+
                 $message->setRelation('mentions', $message->mentions()->createMany($resolved));
 
                 // Writing is reading. In the same transaction as the insert, so the cursor can never

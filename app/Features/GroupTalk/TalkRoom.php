@@ -16,5 +16,7 @@ final class TalkRoom
         public readonly int $unread,
         public readonly bool $muted,
         public readonly ?GroupMessage $latest,
+        /** How many of the unread name the viewer, or null when the read did not ask (JoinedTalkRooms). */
+        public readonly ?int $unreadMentions = null,
     ) {}
 }
