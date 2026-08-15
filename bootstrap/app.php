@@ -17,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -82,6 +83,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // guest-login fallback would otherwise answer 302 where the spec says 404.
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureFeatureEnabled::class);
 
+        // Sanctum ships the ability checks unaliased. `ability` is the any-of one, which for the
+        // single ability routes/ai.php lists is also the all-of one.
+        $middleware->alias(['ability' => CheckForAnyAbility::class]);
+
         // An already-authenticated member on /login or /register goes through the root so the
         // landing stays surface-aware; the framework default would pick the Modern /dashboard.
         $middleware->redirectUsersTo(fn () => route('home'));
@@ -89,7 +94,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // OpenPNE 3 sent a guest to the login form with a notice rather than a bare form. The
         // callback runs only where the framework redirects a guest, so /login itself never flashes
         // it — the same exclusion OpenPNE 3 made for its homepage and login actions.
-        $middleware->redirectGuestsTo(fn (): string => GuestLoginRedirect::target());
+        //
+        // Null for the MCP endpoint, which answers 401 with no body instead: a bearer client has no
+        // login form to be sent to, and returning a target here would also flash a notice into a
+        // session that realm never starts. See docs/internals/mcp.md.
+        $middleware->redirectGuestsTo(
+            fn (Request $request): ?string => $request->is('mcp') ? null : GuestLoginRedirect::target(),
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Give the security log 429 observability (rate-limit tuning depends on it). A

@@ -21,6 +21,7 @@ const allOn: Record<FeatureKey, boolean> = {
     groupEvent: true,
     groupTalk: true,
     friend: true,
+    mcp: true,
 };
 
 const hrefs = (enabled: Record<FeatureKey, boolean>) => visibleNavSections(enabled).map((section) => section.href);

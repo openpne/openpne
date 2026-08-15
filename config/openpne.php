@@ -189,6 +189,11 @@ return [
         // than a post — it writes one small row and notifies nobody.
         'reaction' => (int) env('OPENPNE_THROTTLE_REACTION', 60),
         'reaction_ip' => (int) env('OPENPNE_THROTTLE_REACTION_IP', 120),
+        // The MCP endpoint, in two layers that answer different questions: `mcp` is what one token
+        // may spend and `mcp_ip` is what an unauthenticated caller may try, so the per-IP one runs
+        // ahead of authentication (App\Http\Middleware\ThrottleMcpByIp).
+        'mcp' => (int) env('OPENPNE_THROTTLE_MCP', 60),
+        'mcp_ip' => (int) env('OPENPNE_THROTTLE_MCP_IP', 60),
     ],
 
     /*

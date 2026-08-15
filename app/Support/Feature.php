@@ -14,9 +14,9 @@ use App\Services\SnsSettingService;
  * and switching it back on restores the feature intact (OpenPNE 3 `plugin.is_enabled` parity).
  *
  * The case value is the feature vocabulary the surface resolver already uses (App\Support\SurfaceResolver);
- * it is normally the route-name prefix and the URL segment too. DirectMessage is the one unit where
- * those come apart: its routes and URLs stay on the OpenPNE 3 `message` word until they are
- * redesigned, so it declares its prefixes explicitly below.
+ * it is normally the route-name prefix and the URL segment too. Two units come apart from that:
+ * DirectMessage's routes and URLs stay on the OpenPNE 3 `message` word until they are redesigned, and
+ * Mcp owns no route name at all. Both declare their prefixes explicitly below.
  */
 enum Feature: string
 {
@@ -36,6 +36,9 @@ enum Feature: string
 
     case Friend = 'friend';
 
+    /** The MCP endpoint — not a screen, so it owns no route name and no navigation. */
+    case Mcp = 'mcp';
+
     /** The `sns_settings` key holding this unit's flag. */
     public function settingKey(): SnsSettingKey
     {
@@ -48,6 +51,7 @@ enum Feature: string
             self::GroupEvent => SnsSettingKey::FeatureGroupEventEnabled,
             self::GroupTalk => SnsSettingKey::FeatureGroupTalkEnabled,
             self::Friend => SnsSettingKey::FeatureFriendEnabled,
+            self::Mcp => SnsSettingKey::FeatureMcpEnabled,
         };
     }
 
@@ -112,6 +116,9 @@ enum Feature: string
             self::GroupEvent => ['group.events.'],
             self::GroupTalk => ['group.talk.'],
             self::Friend => ['friend.'],
+            // The MCP endpoint's three routes come from the package unnamed (routes/ai.php), so
+            // there is no name to claim; FeatureRouteMiddlewarePinTest claims them by URL segment.
+            self::Mcp => [],
         };
     }
 
