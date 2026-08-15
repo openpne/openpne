@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Mcp;
 
 use App\Features\GroupTalk\Events\GroupMessagePosted;
+use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
+use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Mcp\McpAbilities;
@@ -19,10 +21,13 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
+use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use App\Support\Feature;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * The four talk tools, called the way an MCP client calls them: the token decides who the caller is,
@@ -436,6 +441,232 @@ class TalkToolsTest extends McpTestCase
         OpenPneServer::tool(ListTalkRoomsTool::class)->assertHasErrors(['not found']);
         OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
             ->assertHasErrors(['not found']);
+    }
+
+    public function test_answering_a_message_addresses_its_author_and_notifies_them(): void
+    {
+        Notification::fake();
+
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'あかり');
+        $question = $this->say($group, $asker, 'what is the weather');
+
+        $this->acting($bot);
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'rain, probably',
+            'reply_to_message_id' => $question->getKey(),
+        ])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('message.body', '@あかり rain, probably')
+                ->where('message.mentions', [$asker->getKey()])
+                ->etc());
+
+        $posted = GroupMessage::query()->orderByDesc('id')->firstOrFail();
+        $mention = DB::table('group_message_mentions')->where('group_message_id', $posted->getKey())->sole();
+
+        $this->assertSame(0, (int) $mention->offset);
+        // The separating space is outside the range, so what it covers is exactly the handle — the
+        // equality ResolveMentions checks, and the only thing that makes the row survive the write.
+        $this->assertSame(1 + mb_strlen($asker->name), (int) $mention->length);
+        $this->assertSame('@'.$asker->name, mb_substr($posted->body, (int) $mention->offset, (int) $mention->length));
+
+        Notification::assertSentTo($asker, GroupTalkMentionedNotification::class);
+    }
+
+    /** The range the server composed is the range the web surface splits the body on. */
+    public function test_the_composed_range_is_the_one_the_web_surface_renders(): void
+    {
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'Bob');
+        $question = $this->say($group, $asker, 'anyone there');
+
+        $this->acting($bot);
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'here',
+            'reply_to_message_id' => $question->getKey(),
+        ])->assertOk();
+
+        $posted = GroupMessage::query()->orderByDesc('id')->with('mentions', 'images', 'author')->firstOrFail();
+        $serialized = GroupMessageSerializer::message($posted, GroupTalkPermissions::for($group, $bot), []);
+
+        $this->assertSame([['memberId' => $asker->getKey(), 'offset' => 0, 'length' => 1 + mb_strlen($asker->name)]], $serialized['mentions']);
+        $this->assertSame(
+            '@'.$asker->name,
+            mb_substr($serialized['body'], $serialized['mentions'][0]['offset'], $serialized['mentions'][0]['length']),
+        );
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function unaddressable(): array
+    {
+        return [
+            'their own message' => ['self'],
+            'a withdrawn author' => ['withdrawn'],
+            'an author who has left the room' => ['left'],
+            'an author they have blocked' => ['blocked'],
+            'an author who has blocked them' => ['blocker'],
+            'a frozen author' => ['frozen'],
+        ];
+    }
+
+    /**
+     * Nobody to address is not a failure to post: the message goes in as written, and the empty
+     * `mentions` is what tells the caller no one was named.
+     */
+    #[DataProvider('unaddressable')]
+    public function test_an_answer_with_nobody_to_address_posts_as_a_plain_message(string $situation): void
+    {
+        Notification::fake();
+
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $situation === 'self' ? $bot : $this->joined($group, 'Bob');
+
+        $question = $situation === 'withdrawn'
+            ? GroupMessage::factory()->withdrawnAuthor()->create(['group_id' => $group->getKey(), 'body' => 'asked'])
+            : $this->say($group, $asker, 'asked');
+
+        match ($situation) {
+            'left' => DB::table('group_members')
+                ->where('group_id', $group->getKey())->where('member_id', $asker->getKey())->delete(),
+            'blocked' => DB::table('member_blocks')->insert(['blocker_id' => $bot->getKey(), 'blocked_id' => $asker->getKey()]),
+            'blocker' => DB::table('member_blocks')->insert(['blocker_id' => $asker->getKey(), 'blocked_id' => $bot->getKey()]),
+            'frozen' => $asker->forceFill(['is_login_rejected' => true])->save(),
+            default => null,
+        };
+
+        $this->acting($bot);
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'answered',
+            'reply_to_message_id' => $question->getKey(),
+        ])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('message.body', 'answered')
+                ->where('message.mentions', [])
+                ->etc());
+
+        $this->assertSame(0, DB::table('group_message_mentions')->count());
+        Notification::assertNothingSent();
+    }
+
+    public function test_answering_a_message_this_room_does_not_hold_is_refused_without_saying_it_exists(): void
+    {
+        $group = $this->group();
+        $elsewhere = $this->group();
+        $bot = $this->memberOf($group);
+        $foreign = $this->say($elsewhere, $this->memberOf($elsewhere), 'elsewhere');
+
+        $this->acting($bot);
+
+        // Another room's message and an id that names nothing at all answer exactly the same.
+        foreach ([$foreign->getKey(), $foreign->getKey() + 9999] as $id) {
+            OpenPneServer::tool(PostTalkMessageTool::class, [
+                'group_id' => $group->getKey(),
+                'body' => 'answered',
+                'reply_to_message_id' => $id,
+            ])->assertHasErrors(['No such talk room']);
+        }
+
+        $this->assertSame(0, GroupMessage::query()->where('group_id', $group->getKey())->count());
+    }
+
+    /**
+     * The cap is measured again after the handle is prefixed, because the handle is the server's
+     * addition and nothing downstream re-checks the body.
+     */
+    public function test_a_reply_the_handle_no_longer_leaves_room_for_is_refused(): void
+    {
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, str_repeat('な', 20));
+        $question = $this->say($group, $asker, 'asked');
+
+        $this->acting($bot);
+        $this->app->setLocale('en');
+
+        $handle = 1 + mb_strlen($asker->name) + 1; // "@name " — the space is prefixed too
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => str_repeat('a', TalkBody::MAX - $handle),
+            'reply_to_message_id' => $question->getKey(),
+        ])->assertOk();
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => str_repeat('a', TalkBody::MAX - $handle + 1),
+            'reply_to_message_id' => $question->getKey(),
+        ])->assertHasErrors(['body']);
+
+        $this->assertSame(TalkBody::MAX, mb_strlen((string) GroupMessage::query()->orderByDesc('id')->value('body')));
+        $this->assertSame(2, GroupMessage::query()->where('group_id', $group->getKey())->count());
+    }
+
+    public function test_the_room_list_says_how_many_of_the_unread_name_the_caller(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+        $bystander = $this->memberOf($group);
+
+        $this->names($this->say($group, $other, 'hey'), $viewer);
+        // Named twice in one line: one message waiting, not two.
+        $twice = $this->say($group, $other, 'hey again');
+        $this->names($twice, $viewer);
+        $this->names($twice, $viewer, offset: 20);
+        $addressedToSomeoneElse = $this->say($group, $other, 'not you');
+        $this->names($addressedToSomeoneElse, $bystander);
+
+        $this->acting($viewer);
+
+        OpenPneServer::tool(ListTalkRoomsTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('rooms.0.unread', 3)
+                ->where('rooms.0.unreadMentions', 2)
+                ->etc());
+
+        OpenPneServer::tool(MarkTalkReadTool::class, [
+            'group_id' => $group->getKey(),
+            'message_id' => $addressedToSomeoneElse->getKey(),
+        ])->assertOk();
+
+        // Read is read: the mention count is the same unread, narrowed, so the cursor clears both.
+        OpenPneServer::tool(ListTalkRoomsTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('rooms.0.unread', 0)
+                ->where('rooms.0.unreadMentions', 0)
+                ->etc());
+    }
+
+    /** A member of the room under a name of their own, since a composed handle is that name. */
+    private function joined(Group $group, string $name): Member
+    {
+        $member = Member::factory()->create(['name' => $name]);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+
+        return $member;
+    }
+
+    /** A mention row naming $member in $message, as the web surface's picker writes one. */
+    private function names(GroupMessage $message, Member $member, int $offset = 0): void
+    {
+        DB::table('group_message_mentions')->insert([
+            'group_message_id' => $message->getKey(),
+            'member_id' => $member->getKey(),
+            'offset' => $offset,
+            'length' => 1 + mb_strlen($member->name),
+        ]);
     }
 
     private function readCursor(Group $group, Member $member): ?int

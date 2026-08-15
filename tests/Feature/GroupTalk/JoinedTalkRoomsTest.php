@@ -3,12 +3,14 @@
 namespace Tests\Feature\GroupTalk;
 
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
+use App\Features\GroupTalk\Queries\NavTalkRooms;
 use App\Features\GroupTalk\TalkRoom;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -118,6 +120,86 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $rooms = app(JoinedTalkRooms::class)($viewer)->items();
 
         $this->assertSame(2, $rooms[0]->unread);
+    }
+
+    /**
+     * The mention count is the same unread, narrowed to the messages that name the viewer — and it
+     * counts messages, so being named twice in one line is one room waiting for an answer.
+     */
+    public function test_the_mention_count_narrows_the_unread_to_what_names_the_viewer(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+        $bystander = $this->memberOf($group);
+
+        $this->names($this->said($group, $other), $viewer);
+        $twice = $this->said($group, $other);
+        $this->names($twice, $viewer);
+        $this->names($twice, $viewer, offset: 20);
+        $this->names($this->said($group, $other), $bystander);
+
+        $room = app(JoinedTalkRooms::class)($viewer, withUnreadMentions: true)->items()[0];
+
+        $this->assertSame(3, $room->unread);
+        $this->assertSame(2, $room->unreadMentions);
+    }
+
+    /** A read that did not ask holds no number at all, rather than a zero it never counted. */
+    public function test_a_room_carries_no_mention_count_unless_the_read_asked_for_one(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $this->names($this->said($group, $this->memberOf($group)), $viewer);
+
+        $this->assertNull(app(JoinedTalkRooms::class)($viewer)->items()[0]->unreadMentions);
+        $this->assertNull(app(JoinedTalkRooms::class)->take($viewer, 5)->first()->unreadMentions);
+    }
+
+    /**
+     * The subselect costs a probe per room, and the nav renders this query on every page — so it has
+     * to be absent unless a caller asked for it, not merely unread.
+     */
+    public function test_the_mention_subselect_is_absent_unless_it_was_asked_for(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->joined($viewer);
+
+        $rooms = app(JoinedTalkRooms::class);
+        $this->assertStringNotContainsString('group_message_mentions', $rooms->ordered($viewer)->toSql());
+        $this->assertStringContainsString('group_message_mentions', $rooms->ordered($viewer, true)->toSql());
+
+        $statements = [];
+        DB::listen(function (QueryExecuted $query) use (&$statements): void {
+            $statements[] = $query->sql;
+        });
+
+        app(NavTalkRooms::class)($viewer);
+
+        $this->assertNotEmpty($statements);
+        foreach ($statements as $sql) {
+            $this->assertStringNotContainsString('group_message_mentions', $sql, 'the nav paid for a count it never draws');
+        }
+    }
+
+    /** A message said just now, so it lands after the viewer's cursor and counts as unread. */
+    private function said(Group $group, Member $author): GroupMessage
+    {
+        return GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+        ]);
+    }
+
+    /** A mention row naming $member in $message, as the composer's picker writes one. */
+    private function names(GroupMessage $message, Member $member, int $offset = 0): void
+    {
+        DB::table('group_message_mentions')->insert([
+            'group_message_id' => $message->getKey(),
+            'member_id' => $member->getKey(),
+            'offset' => $offset,
+            'length' => 1 + mb_strlen($member->name),
+        ]);
     }
 
     /** Mute silences the nav badge, not the room's own number. */

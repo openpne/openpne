@@ -309,9 +309,15 @@ everywhere.
 
 The mechanics are the timeline's, reused rather than re-implemented — the range storage, the resolver
 and the composer state machine are all shared code. [timeline.md](timeline.md#a-mention-is-a-range-not-text)
-is the reference for how a range works, how offsets are counted in code points, and why the picker's
-selection is the only thing that ever becomes a mention. What follows is only what talk does
-differently.
+is the reference for how a range works and how offsets are counted in code points. What follows is
+only what talk does differently.
+
+**A body is never read for `@`.** A mention row is written by whoever names a member deliberately,
+and talk has two such producers: the composer's picker, and the MCP `reply_to_message_id`, where the
+server writes the handle and the range that covers it ([mcp.md](mcp.md#answering-someone)). Both hand
+[`ResolveMentions`](../../app/Features/Timeline/Actions/ResolveMentions.php) ranges over a body they
+composed, and both are checked against the same mentionable set — the MCP side asks it as
+`isMentionable` before writing a handle at all, so it cannot produce a prefix the resolve would drop.
 
 **The room is the mentionable set.** [`GroupTalkMentionCandidates`](../../app/Features/GroupTalk/Queries/GroupTalkMentionCandidates.php)
 offers the group's own members and nobody else: a name from outside could not read the message the
@@ -593,8 +599,9 @@ role once per request and the serializer asks it per row.
    in, is merged.
 7. The unread divider and its jump both come from the render-time snapshot, so nothing that happens
    afterwards — mark-read included — moves either.
-8. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
-   picker may offer and what the write will accept are the same set, by construction.
+8. No body is ever parsed for `@`. Two producers write mention rows and no third may appear: the
+   composer's picker, and the MCP reply, where the server itself builds the prefix and its range.
+   What a producer may name and what the write will accept are the same set, by construction.
 9. A mention pierces mute; a block stops it. Talk history does neither, and neither do its images.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
