@@ -41,14 +41,14 @@ class McpTokenCommand extends Command
             ? [self::ABILITY_READ]
             : [self::ABILITY_READ, self::ABILITY_WRITE];
 
-        /** @var NewAccessToken|null $token */
-        $token = null;
+        /** @var array{token: NewAccessToken, member_id: int, email: string}|null $issued */
+        $issued = null;
 
         // Decide and mint on the row lock: the ban and withdrawal sweeps serialize on the same
         // member row (RejectMemberLogin's UPDATE, WithdrawMember's locked DELETE), so a token can
         // never be created from a stale read after one of them has swept — which would quietly
         // re-open the very hole those sweeps close.
-        $status = DB::transaction(function () use ($abilities, &$token): int {
+        $status = DB::transaction(function () use ($abilities, &$issued): int {
             $member = $this->lockMember();
             if ($member === null) {
                 return self::FAILURE;
@@ -62,19 +62,24 @@ class McpTokenCommand extends Command
                 return self::FAILURE;
             }
 
-            $token = $member->createToken(self::TOKEN_NAME, $abilities);
+            // The scalars are read here, under the lock: resolving the token's tokenable after
+            // commit would be a fresh query that a withdrawal committing in between nulls out.
+            $issued = [
+                'token' => $member->createToken(self::TOKEN_NAME, $abilities),
+                'member_id' => (int) $member->getKey(),
+                'email' => $member->email,
+            ];
 
             return self::SUCCESS;
         });
 
-        if ($status !== self::SUCCESS || $token === null) {
+        if ($status !== self::SUCCESS || $issued === null) {
             return $status;
         }
 
         // Logged and printed only after the commit, so a rolled-back issue is never reported as one.
-        $member = $token->accessToken->tokenable;
         SecurityLog::event('token.issued', [
-            'member_id' => $member->getKey(),
+            'member_id' => $issued['member_id'],
             'name' => self::TOKEN_NAME,
             'abilities' => implode(' ', $abilities),
             'via' => 'cli',
@@ -82,8 +87,8 @@ class McpTokenCommand extends Command
 
         // The only moment the credential is legible: the row keeps a SHA-256 of it, and it is kept
         // out of every log. A lost token is replaced, never recovered.
-        $this->info("Token issued for member [{$member->email}]. Copy it now — it is not shown again.");
-        $this->line($token->plainTextToken);
+        $this->info("Token issued for member [{$issued['email']}]. Copy it now — it is not shown again.");
+        $this->line($issued['token']->plainTextToken);
 
         return self::SUCCESS;
     }
