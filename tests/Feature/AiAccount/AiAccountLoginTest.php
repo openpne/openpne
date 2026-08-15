@@ -8,14 +8,18 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * The third refusal on an AI account's behalf. The first two are structural — no email to look up,
- * no password to verify — and the members constraint keeps them true; this pins the one that still
- * refuses when they are not.
+ * An AI account never holds a login, by any of the three doors into a member row: a password
+ * attempt, a session carrying its id, and a remember-me cookie. The first two doors are structurally
+ * shut (no email to look up, no password to verify) and the members constraint keeps them that way;
+ * these pin the refusals that still stand when the constraint is lifted, and the third door — which
+ * needs no credential at all, only an id.
  */
 class AiAccountLoginTest extends TestCase
 {
@@ -31,13 +35,15 @@ class AiAccountLoginTest extends TestCase
         ]));
     }
 
-    public function test_an_ai_account_is_refused_even_holding_a_valid_password(): void
+    /**
+     * The DB belt refuses the writes these tests need, which is the point: the row a guard exists for
+     * is only reachable with the belt lifted. Lifting it is DDL — transactional on SQLite, where the
+     * test's own transaction rolls it back, but an implicit COMMIT on MySQL that would leave the
+     * constraint off for the rest of that worker's tests. The guards are plain PHP, so the SQLite
+     * lane covers them for both.
+     */
+    private function liftTheCredentialConstraint(): void
     {
-        // The DB belt refuses the write below, which is the point: the row this guard exists for is
-        // only reachable with the belt lifted. Lifting it is DDL — transactional on SQLite, where
-        // the test's own transaction rolls it back, but an implicit COMMIT on MySQL that would leave
-        // the constraint off for the rest of that worker's tests. The guard is plain PHP, so the
-        // SQLite lane covers it for both.
         if (DB::connection()->getDriverName() !== 'sqlite') {
             $this->markTestSkipped('lifting the members constraint is non-transactional DDL outside SQLite');
         }
@@ -46,6 +52,26 @@ class AiAccountLoginTest extends TestCase
             'DROP TRIGGER IF EXISTS %1$s_insert; DROP TRIGGER IF EXISTS %1$s_update;',
             self::TRIGGERS
         ));
+    }
+
+    /** The session key the member guard stores its authenticated id under. */
+    private function sessionKey(): string
+    {
+        return Auth::guard('member')->getName();
+    }
+
+    /** A remember-me cookie as the guard writes it: `id|token|password hash`, under its own name. */
+    private function withRecaller(Member $member, string $token): static
+    {
+        return $this->withCookie(
+            Auth::guard('member')->getRecallerName(),
+            $member->getKey().'|'.$token.'|'.(string) $member->getAuthPassword(),
+        );
+    }
+
+    public function test_an_ai_account_is_refused_even_holding_a_valid_password(): void
+    {
+        $this->liftTheCredentialConstraint();
 
         $aiAccount = Member::factory()->aiAccount()->create();
         $aiAccount->forceFill([
@@ -67,5 +93,78 @@ class AiAccountLoginTest extends TestCase
         $member->forceFill(['password' => Hash::make('a-fresh-strong-password')])->save();
 
         $this->assertTrue($this->attempt('human@example.test', 'a-fresh-strong-password')?->is($member));
+    }
+
+    public function test_a_session_carrying_an_ai_accounts_id_signs_nobody_in(): void
+    {
+        // The door the login form's refusal does not cover: session restore asks the provider for an
+        // id and never looks at a credential, so an id written into a session — by a bug, or by
+        // anything that hands the guard an AI account — would otherwise be a full member session.
+        $aiAccount = Member::factory()->aiAccount()->create();
+
+        $this->withSession([$this->sessionKey() => $aiAccount->getKey()])
+            ->get('/')
+            ->assertRedirect('/login');
+
+        $this->assertGuest('member');
+    }
+
+    public function test_a_session_carrying_an_ordinary_members_id_signs_them_in(): void
+    {
+        // The control: the refusal above is the owner link, not a session key this test got wrong.
+        $member = Member::factory()->create();
+
+        $this->withSession([$this->sessionKey() => $member->getKey()])
+            ->get('/')
+            ->assertOk();
+
+        $this->assertAuthenticatedAs($member, 'member');
+    }
+
+    public function test_a_remember_me_cookie_for_an_ai_account_restores_nobody(): void
+    {
+        // The other credential-free door: a recaller cookie is matched against members.remember_token
+        // alone. The constraint now forbids an AI account from holding one — this is the refusal that
+        // still stands for a row that somehow does.
+        $this->liftTheCredentialConstraint();
+
+        $aiAccount = Member::factory()->aiAccount()->create();
+        $token = Str::random(60);
+        $aiAccount->forceFill(['remember_token' => $token])->save();
+
+        $this->withRecaller($aiAccount, $token)
+            ->get('/')
+            ->assertRedirect('/login');
+
+        $this->assertGuest('member');
+    }
+
+    public function test_a_remember_me_cookie_for_an_ordinary_member_restores_them(): void
+    {
+        // The control: the cookie above is well-formed and under the right name — this one restores.
+        $member = Member::factory()->create();
+        $token = Str::random(60);
+        $member->forceFill(['remember_token' => $token])->save();
+
+        $this->withRecaller($member, $token)
+            ->get('/')
+            ->assertOk();
+
+        $this->assertAuthenticatedAs($member, 'member');
+    }
+
+    public function test_a_credential_lookup_never_produces_an_ai_account(): void
+    {
+        // The provider's third retrieval, the one the password broker uses: an AI account has no
+        // address to reset, and must not acquire one by acquiring an email.
+        $this->liftTheCredentialConstraint();
+
+        $aiAccount = Member::factory()->aiAccount()->create();
+        $aiAccount->forceFill(['email' => 'helper@example.test'])->save();
+
+        $provider = Auth::createUserProvider('members');
+
+        $this->assertNull($provider->retrieveByCredentials(['email' => 'helper@example.test']));
+        $this->assertNull($provider->retrieveById($aiAccount->getKey()));
     }
 }

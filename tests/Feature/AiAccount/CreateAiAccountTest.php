@@ -10,7 +10,7 @@ use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use InvalidArgumentException;
+use Illuminate\Validation\ValidationException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -133,12 +133,32 @@ class CreateAiAccountTest extends TestCase
         $this->assertSame(0, $aiAccount->aiAccounts()->count());
     }
 
-    public function test_a_nameless_account_is_a_programming_error(): void
+    public function test_a_nameless_account_is_refused(): void
     {
         $owner = Member::factory()->create();
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->create($owner, '   ');
+    }
+
+    public function test_a_name_is_held_to_the_length_an_ordinary_members_name_is(): void
+    {
+        // The column is 255 wide and registration says so; the action has to say it too, or a caller
+        // that is not the form truncates (MySQL, non-strict) or aborts at the write. Counted in
+        // characters, as the column is, so a multibyte name is not refused for its byte length.
+        $owner = Member::factory()->create();
+
+        $atTheLimit = $this->create($owner, str_repeat('あ', 255));
+        $this->assertSame(255, mb_strlen((string) $atTheLimit->fresh()->name));
+
+        try {
+            $this->create($owner, str_repeat('あ', 256));
+            $this->fail('expected an over-long name to be refused');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('name', $e->errors());
+        }
+
+        $this->assertSame([$atTheLimit->getKey()], $owner->aiAccounts()->pluck('id')->all());
     }
 
     public function test_the_owner_link_is_not_mass_assignable(): void

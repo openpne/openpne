@@ -7,10 +7,11 @@ namespace App\Features\AiAccount\Actions;
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
+use App\Features\Member\MemberNameRules;
 use App\Models\Member;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Create an AI account owned by $owner: a member row with no email and no password, reachable only
@@ -29,11 +30,10 @@ class CreateAiAccount
     {
         $name = trim($name);
 
-        // Presentation validates length and content (the form owns those rules); an empty name is a
-        // programming error at this boundary, not something to persist as a nameless member.
-        if ($name === '') {
-            throw new InvalidArgumentException('An AI account needs a name.');
-        }
+        // The name is a member's name, held to the same rule an ordinary member's is created under
+        // — here rather than only in whatever form submitted it, so no caller can persist a nameless
+        // or over-long member by skipping the form.
+        Validator::make(['name' => $name], ['name' => MemberNameRules::rules()])->validate();
 
         $aiAccount = DB::transaction(function () use ($owner, $name): Member {
             $locked = Member::whereKey($owner->getKey())->lockForUpdate()->firstOrFail();

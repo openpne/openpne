@@ -47,6 +47,8 @@ class MemberFactory extends Factory
                 'email' => null,
                 'email_verified_at' => null,
                 'password' => null,
+                // The base state seeds one; an AI account holds no credential, remember-me included.
+                'remember_token' => null,
             ];
         });
     }

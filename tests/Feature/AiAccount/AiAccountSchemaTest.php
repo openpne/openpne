@@ -8,6 +8,7 @@ use App\Models\Member;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,30 @@ class AiAccountSchemaTest extends TestCase
             'name' => 'Impostor',
             'password' => 'a-bcrypt-shaped-string',
             'owner_member_id' => $owner->getKey(),
+        ]);
+    }
+
+    public function test_an_owned_row_cannot_be_inserted_with_a_remember_token(): void
+    {
+        // A remember-me token is a credential like the other two: it is the whole of what a recaller
+        // cookie is checked against, so a row holding one holds a way in.
+        $owner = Member::factory()->create();
+
+        $this->expectException(QueryException::class);
+        DB::table('members')->insert([
+            'name' => 'Impostor',
+            'remember_token' => Str::random(60),
+            'owner_member_id' => $owner->getKey(),
+        ]);
+    }
+
+    public function test_an_existing_account_cannot_be_given_a_remember_token(): void
+    {
+        $aiAccount = Member::factory()->aiAccount()->create();
+
+        $this->expectException(QueryException::class);
+        DB::table('members')->where('id', $aiAccount->getKey())->update([
+            'remember_token' => Str::random(60),
         ]);
     }
 

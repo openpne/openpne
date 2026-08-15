@@ -11,8 +11,10 @@ use Illuminate\Support\Facades\Schema;
  * email, so a member without an address stays an ordinary (login-impossible) member and a future
  * address-less human member is not retroactively reclassified. An AI account carries no credential
  * of its own and reaches the site only through a personal access token its owner mints; the
- * constraint below holds that at rest, behind the application's three refusals (no email to look up,
- * no password to verify, and an explicit reject in App\Actions\Fortify\AuthenticateMember).
+ * constraint below holds that at rest — no email, no password and no remember-me token — behind the
+ * application's refusals (an owned row is invisible to App\Auth\MemberUserProvider, so no session
+ * id, remember-me cookie or credential lookup produces one, and App\Actions\Fortify\AuthenticateMember
+ * rejects it a second time).
  *
  * RESTRICT, not CASCADE: removing a member has to run App\Features\Member\Actions\WithdrawMember
  * (group seats, file bytes, tokens, feed rows), and a DB cascade would delete the row while skipping
@@ -59,15 +61,15 @@ return new class extends Migration
      */
     private function addCredentialConstraint(): void
     {
-        $message = 'a member with an owner (an AI account) must have no email and no password';
+        $message = 'a member with an owner (an AI account) must have no email, no password and no remember token';
 
         if ($this->onSqlite()) {
             DB::unprepared(sprintf(
                 'CREATE TRIGGER %1$s_insert BEFORE INSERT ON members
-                 FOR EACH ROW WHEN NEW.owner_member_id IS NOT NULL AND (NEW.email IS NOT NULL OR NEW.password IS NOT NULL)
+                 FOR EACH ROW WHEN NEW.owner_member_id IS NOT NULL AND (NEW.email IS NOT NULL OR NEW.password IS NOT NULL OR NEW.remember_token IS NOT NULL)
                  BEGIN SELECT RAISE(ABORT, \'%2$s\'); END;
                  CREATE TRIGGER %1$s_update BEFORE UPDATE ON members
-                 FOR EACH ROW WHEN NEW.owner_member_id IS NOT NULL AND (NEW.email IS NOT NULL OR NEW.password IS NOT NULL)
+                 FOR EACH ROW WHEN NEW.owner_member_id IS NOT NULL AND (NEW.email IS NOT NULL OR NEW.password IS NOT NULL OR NEW.remember_token IS NOT NULL)
                  BEGIN SELECT RAISE(ABORT, \'%2$s\'); END;',
                 self::CHECK, $message
             ));
@@ -76,7 +78,7 @@ return new class extends Migration
         }
 
         DB::statement(sprintf(
-            'ALTER TABLE `members` ADD CONSTRAINT `%s` CHECK (`owner_member_id` IS NULL OR (`email` IS NULL AND `password` IS NULL))',
+            'ALTER TABLE `members` ADD CONSTRAINT `%s` CHECK (`owner_member_id` IS NULL OR (`email` IS NULL AND `password` IS NULL AND `remember_token` IS NULL))',
             self::CHECK
         ));
     }

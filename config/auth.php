@@ -84,7 +84,10 @@ return [
 
     'providers' => [
         'members' => [
-            'driver' => 'eloquent',
+            // member-eloquent (App\Auth\MemberUserProvider) hides AI accounts — members owned by
+            // another member, with no credential of their own — from every retrieval, so no session
+            // id, remember-me cookie or credential lookup can produce one.
+            'driver' => 'member-eloquent',
             'model' => env('AUTH_MODEL', Member::class),
         ],
 

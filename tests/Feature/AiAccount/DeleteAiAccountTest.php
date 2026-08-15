@@ -46,6 +46,11 @@ class DeleteAiAccountTest extends TestCase
             'type' => 'test',
             'data' => ['kind' => 'test'],
         ]);
+        // Polymorphic like the tokens and the feed, so no cascade reaches it: a surviving row would
+        // push the next holder of this member id's notifications to a stranger's browser.
+        $aiAccount->updatePushSubscription('https://push.example.test/ai', str_repeat('k', 87), str_repeat('a', 22), 'aes128gcm');
+        $bystander = Member::factory()->aiAccount($owner)->create();
+        $bystander->updatePushSubscription('https://push.example.test/bystander', str_repeat('k', 87), str_repeat('a', 22), 'aes128gcm');
         $avatar = MemberImage::factory()->create(['member_id' => $aiAccount->getKey()]);
         $avatarFile = File::findOrFail($avatar->file_id);
 
@@ -57,7 +62,9 @@ class DeleteAiAccountTest extends TestCase
         $this->assertModelMissing($avatarFile);
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $aiAccount->getKey()]);
         $this->assertDatabaseMissing('notifications', ['notifiable_id' => $aiAccount->getKey()]);
-        $this->assertSame(0, $owner->aiAccounts()->count());
+        $this->assertSame(0, $aiAccount->pushSubscriptions()->count());
+        $this->assertSame(1, $bystander->pushSubscriptions()->count(), "another account's device is untouched");
+        $this->assertSame([$bystander->getKey()], $owner->aiAccounts()->pluck('id')->all());
 
         // Both lines: the withdrawal records the row going away, ai_account.deleted records whose it was.
         $this->assertCount(1, $this->securityRecords('member.withdrawn'));
