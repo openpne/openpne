@@ -13,10 +13,70 @@
 @endsection
 
 @section('content')
-    <x-classic.parts id="member_ai_account" name="box" :title="$aiAccount->name">
+    {{-- Identity: what the account is called, what it says about itself, and the picture it wears.
+         Three forms because they are three writes; the image ones carry no password, like the
+         member's own avatar editor. --}}
+    <x-classic.parts id="member_ai_account" name="form" :title="$aiAccount->name">
         <div class="body">
+            <x-classic.image :file="$aiAccount->avatar?->file" :size="120" :alt="__('Profile image')" />
             <p><a href="{{ route('member.profile.show', ['member' => $aiAccount->getKey()]) }}">{{ __('View profile') }}</a></p>
         </div>
+        <form method="POST" action="{{ route('member.config.ai.update', ['member' => $aiAccount->getKey()]) }}">
+            @csrf
+            <table>
+                <tr>
+                    <th><label for="ai_identity_name">{{ __('Name') }}</label></th>
+                    <td>
+                        <input type="text" id="ai_identity_name" name="name" class="input_text" value="{{ old('name', $aiAccount->name) }}">
+                        @error('name')<p class="error" role="alert">{{ $message }}</p>@enderror
+                    </td>
+                </tr>
+                @if ($selfIntroduction)
+                    <tr>
+                        <th><label for="ai_self_introduction">{{ $selfIntroduction['label'] }}</label></th>
+                        <td>
+                            <textarea id="ai_self_introduction" name="self_introduction" class="input_text" rows="5"
+                                      @if ($selfIntroduction['maxLength']) maxlength="{{ $selfIntroduction['maxLength'] }}" @endif
+                            >{{ old('self_introduction', $selfIntroduction['value']) }}</textarea>
+                            @error('self_introduction')<p class="error" role="alert">{{ $message }}</p>@enderror
+                        </td>
+                    </tr>
+                @endif
+            </table>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                </ul>
+            </div>
+        </form>
+        <form method="POST" action="{{ route('member.config.ai.avatar', ['member' => $aiAccount->getKey()]) }}" enctype="multipart/form-data">
+            @csrf
+            <table>
+                <tr>
+                    <th><label for="ai_avatar">{{ __('Profile image') }}</label></th>
+                    <td>
+                        <input type="file" id="ai_avatar" class="input_file" name="image"
+                               accept="image/jpeg,image/png,image/gif,image/webp" required>
+                        @error('image')<p class="error" role="alert">{{ $message }}</p>@enderror
+                    </td>
+                </tr>
+            </table>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><input type="submit" class="input_submit" value="{{ __('Upload') }}"></li>
+                </ul>
+            </div>
+        </form>
+        @if ($aiAccount->avatar?->file)
+            <form method="POST" action="{{ route('member.config.ai.avatar.delete', ['member' => $aiAccount->getKey()]) }}">
+                @csrf
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><input type="submit" class="input_submit" value="{{ __('Remove') }}"></li>
+                    </ul>
+                </div>
+            </form>
+        @endif
     </x-classic.parts>
 
     @if ($groupsOn)

@@ -585,6 +585,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // there.
         Route::middleware('can:manageAiAccount,member')->group(function () {
             Route::get('/member/config/ai/{member}', 'show')->whereNumber('member')->name('member.config.ai.show');
+            // The account's face: its name, its self-introduction, its image. No re-auth — this is
+            // the profile edit a person makes without proving themselves again, not the credential
+            // pair below.
+            Route::post('/member/config/ai/{member}', 'update')
+                ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.update');
+            Route::post('/member/config/ai/{member}/avatar', 'updateAvatar')
+                ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.avatar');
+            Route::post('/member/config/ai/{member}/avatar/delete', 'destroyAvatar')
+                ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.avatar.delete');
             Route::post('/member/config/ai/{member}/delete', 'destroy')
                 ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.destroy');
             // The token pair spends the same budget and carries no `mcp` feature gate on purpose: the

@@ -95,9 +95,17 @@ class AiAccountSelfServiceTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/config/ai/{$theirs->getKey()}")->assertNotFound();
         $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/delete")->assertNotFound();
+        // The identity POSTs answer the same way, and ahead of their own validation: a rename that
+        // came back with a field error would report that the account is there.
+        $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}", ['name' => 'Renamed'])
+            ->assertNotFound()->assertSessionHasNoErrors();
+        $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/avatar")
+            ->assertNotFound()->assertSessionHasNoErrors();
+        $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/avatar/delete")->assertNotFound();
 
         $this->assertTrue($theirs->exists());
         $this->assertNotNull($theirs->fresh());
+        $this->assertSame($theirs->name, $theirs->fresh()->name);
     }
 
     public function test_the_delete_password_never_answers_for_an_account_that_is_not_the_viewers(): void
@@ -220,9 +228,17 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_creating_and_deleting_are_throttled_but_the_renders_are_not(): void
     {
-        // Each POST puts a member row into the site or takes one out; the GETs are left out so a
-        // refresh cannot spend the budget.
-        foreach (['member.config.ai.store', 'member.config.ai.destroy'] as $name) {
+        // Each POST puts a member row into the site, takes one out, or rewrites what one shows the
+        // site; the GETs are left out so a refresh cannot spend the budget.
+        $names = [
+            'member.config.ai.store',
+            'member.config.ai.destroy',
+            'member.config.ai.update',
+            'member.config.ai.avatar',
+            'member.config.ai.avatar.delete',
+        ];
+
+        foreach ($names as $name) {
             $this->assertContains(
                 'throttle:ai-manage',
                 Route::getRoutes()->getByName($name)->gatherMiddleware(),
@@ -246,6 +262,9 @@ class AiAccountSelfServiceTest extends TestCase
         // there; the same reasoning holds for any FormRequest a sibling route grows later.
         $names = [
             'member.config.ai.show',
+            'member.config.ai.update',
+            'member.config.ai.avatar',
+            'member.config.ai.avatar.delete',
             'member.config.ai.destroy',
             'member.config.ai.groups.join',
             'member.config.ai.groups.quit',
