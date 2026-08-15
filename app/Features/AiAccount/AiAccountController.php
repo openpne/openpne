@@ -6,6 +6,8 @@ namespace App\Features\AiAccount;
 
 use App\Features\AiAccount\Actions\CreateAiAccount;
 use App\Features\AiAccount\Actions\DeleteAiAccount;
+use App\Features\AiAccount\Actions\IssueMcpToken;
+use App\Features\AiAccount\Actions\RevokeMcpToken;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
@@ -22,11 +24,14 @@ use App\Features\Member\MemberConfigCategory;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AiAccount\AiTokenRequest;
 use App\Http\Requests\AiAccount\CreateAiAccountRequest;
 use App\Http\Requests\AiAccount\DeleteAiAccountRequest;
+use App\Mcp\McpAbilities;
 use App\Models\Group;
 use App\Models\Member;
 use App\Support\Feature;
+use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
@@ -37,12 +42,16 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * A member's own AI accounts: the list they may create into, and one account's page — its groups
- * and its delete button.
+ * A member's own AI accounts: the list they may create into, and one account's page — its groups,
+ * its access tokens, and its delete button.
  *
  * Only creation asks the site setting. Everything else here answers to ownership alone, so an
  * operator who switches AI accounts off closes the door without stranding what is behind it: the
- * owner can still take an account out of every group and delete it.
+ * owner can still revoke a token, take an account out of every group, and delete it.
+ *
+ * This is the owner half of the token trust boundary the CLI holds the operator half of
+ * (App\Console\Commands\McpTokenCommand): an owner mints only for accounts they own, and only after
+ * proving it is them again (AiTokenRequest).
  */
 class AiAccountController extends Controller
 {
@@ -83,10 +92,12 @@ class AiAccountController extends Controller
             ? $member->groupJoinRequests()->with(['category', 'image'])->withCount('members')->orderByDesc('groups.id')->get()
             : new EloquentCollection;
         $browse = $groupsOn ? $searchGroups($keyword) : null;
+        $tokens = AiAccountSerializer::tokens($member, $request->session());
 
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.ai-account', [
                 'aiAccount' => $member,
+                'tokens' => $tokens,
                 'groupsOn' => $groupsOn,
                 'joined' => $joined,
                 'pending' => $pending,
@@ -95,8 +106,8 @@ class AiAccountController extends Controller
                 'joinedIds' => $joined->modelKeys(),
                 'pendingIds' => $pending->modelKeys(),
             ]),
-            SurfaceResolver::MODERN => function () use ($member, $groupsOn, $joined, $pending, $browse, $keyword) {
-                $props = ['account' => MemberRefSerializer::ref($member)];
+            SurfaceResolver::MODERN => function () use ($member, $tokens, $groupsOn, $joined, $pending, $browse, $keyword) {
+                $props = ['account' => MemberRefSerializer::ref($member), 'tokens' => $tokens];
 
                 if ($groupsOn) {
                     $props['groups'] = [
@@ -144,6 +155,78 @@ class AiAccountController extends Controller
         }
 
         return $this->listRedirect($request)->with('status', __('AI account deleted.'));
+    }
+
+    /**
+     * Mint a token for one of the viewer's own accounts. The plaintext lands in the flash and is
+     * rendered by the redirect target — once, from the session, never from a row: what is stored is
+     * a hash of it, and a lost token is replaced rather than recovered.
+     */
+    public function storeToken(AiTokenRequest $request, Member $member, IssueMcpToken $issue): RedirectResponse
+    {
+        Gate::authorize('manageAiAccount', $member);
+
+        $this->stampReauth($request);
+
+        $back = redirect()->route('member.config.ai.show', ['member' => $member->getKey()]);
+
+        try {
+            $token = $issue($member, $request->boolean('read_only'));
+        } catch (AiAccountActionException $e) {
+            return $back->with('error', $this->messageFor($e->reason));
+        }
+
+        // After the Action's commit, so a rolled-back mint is never recorded as one. `via` is what
+        // separates this line from the CLI's: the same event, a different trust boundary.
+        SecurityLog::event('token.issued', [
+            'member_id' => (int) $member->getKey(),
+            'owner_id' => $this->viewer()->getKey(),
+            'name' => McpAbilities::TOKEN_NAME,
+            'abilities' => implode(' ', $token->accessToken->abilities),
+            'via' => 'owner',
+        ]);
+
+        // Flashed with whose it is, not as a bare string: the session carries one such key, and the
+        // next page rendered from it is not always this account's.
+        return $back->with(AiAccountSerializer::NEW_TOKEN, [
+            'member_id' => (int) $member->getKey(),
+            'token' => $token->plainTextToken,
+        ])->with('status', __('Access token issued.'));
+    }
+
+    /**
+     * Retire one token. An id that is not this account's, or names a token minted for something
+     * else, answers 404 — the same refusal an id naming nothing gets, as everywhere else here.
+     */
+    public function destroyToken(AiTokenRequest $request, Member $member, int $token, RevokeMcpToken $revoke): RedirectResponse
+    {
+        Gate::authorize('manageAiAccount', $member);
+
+        $this->stampReauth($request);
+
+        abort_unless($revoke($member, $token), 404);
+
+        SecurityLog::event('token.revoked', [
+            'member_id' => (int) $member->getKey(),
+            'owner_id' => $this->viewer()->getKey(),
+            'name' => McpAbilities::TOKEN_NAME,
+            'count' => 1,
+            'via' => 'owner',
+        ]);
+
+        return redirect()->route('member.config.ai.show', ['member' => $member->getKey()])
+            ->with('status', __('Access token revoked.'));
+    }
+
+    /**
+     * Open the window when the password was actually asked for, not on every request inside it:
+     * the fifteen minutes run from the proof, rather than sliding forward with each token minted.
+     */
+    private function stampReauth(AiTokenRequest $request): void
+    {
+        if ($request->requiresPassword()) {
+            AiTokenReauth::stamp($request->session());
+        }
     }
 
     public function joinGroup(Request $request, Member $member, Group $group, JoinGroup $join): RedirectResponse
@@ -199,7 +282,8 @@ class AiAccountController extends Controller
             AiAccountActionFailure::Disabled => __('This site is not offering AI accounts right now.'),
             AiAccountActionFailure::OwnerFrozen, AiAccountActionFailure::OwnerIsAiAccount => __('You cannot create an AI account.'),
             AiAccountActionFailure::LimitReached => __('You already have as many AI accounts as this site allows.'),
-            AiAccountActionFailure::NotOwned => __('That is not one of your AI accounts.'),
+            AiAccountActionFailure::NotOwned, AiAccountActionFailure::MemberGone => __('That is not one of your AI accounts.'),
+            AiAccountActionFailure::ActorFrozen => __('This AI account cannot be given a token right now.'),
         };
     }
 

@@ -199,6 +199,19 @@ mints a fresh secret.
 There is no site-wide enforcement setting ("this site requires MFA"): enabling
 two-factor is always the member's own choice.
 
+## AI account access tokens
+
+An owner minting or revoking one of their AI account's MCP tokens
+([mcp.md](mcp.md)) re-authenticates inline with the account password
+(`current_password:member`, [`AiTokenRequest`](../../app/Http/Requests/AiAccount/AiTokenRequest.php)),
+verified once and then carried for 15 minutes by a window of its own
+([`AiTokenReauth`](../../app/Features/AiAccount/AiTokenReauth.php)). The window
+is per flow, never shared: confirming a two-factor set-up must not also open the
+door to minting a credential, which is why `ReauthWindow` is keyed per subclass.
+The raw token is flashed for exactly one render, with the same accepted residual
+as the recovery codes above — a browser may re-show that render from its own
+history state.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in
