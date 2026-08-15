@@ -3,7 +3,9 @@
 namespace App\Features\Member;
 
 use App\Auth\SessionRevocation;
+use App\Features\AiAccount\AiAccountSettings;
 use App\Features\AiAccount\AiAccountTokens;
+use App\Features\AiAccount\Serializers\AiAccountSerializer;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
@@ -47,6 +49,8 @@ class MemberConfigController extends Controller
 {
     use RespondsWithSurface;
 
+    public function __construct(private readonly AiAccountSettings $aiSettings) {}
+
     public function show(Request $request, BirthdayFieldExists $birthdayExists): View|InertiaResponse|RedirectResponse
     {
         // OpenPNE 3 access-block lived at /member/config?category=accessBlock; preserve that URL by
@@ -87,9 +91,20 @@ class MemberConfigController extends Controller
                     $category = null;
                 }
 
+                // AI accounts hide only from a member who has neither the offer nor any account:
+                // the setting is creation-only, so an owner keeps their way in after it is switched off.
+                $aiAvailable = $this->aiSettings->enabled() || $viewer->aiAccounts()->exists();
+                if ($category === MemberConfigCategory::Ai && ! $aiAvailable) {
+                    $category = null;
+                }
+
                 return view('member.config', [
                     'category' => $category,
                     'ageAvailable' => $ageAvailable,
+                    'aiAvailable' => $aiAvailable,
+                    'ai' => $category === MemberConfigCategory::Ai
+                        ? AiAccountSerializer::list($viewer, $this->aiSettings)
+                        : null,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
                     'ageDefault' => AgeVisibility::defaultFor($viewer),
@@ -108,7 +123,7 @@ class MemberConfigController extends Controller
                 ]);
             }, // Modern serves no age section — its setter lives on the profile-edit form.
             SurfaceResolver::MODERN => fn () => Inertia::render('member/config', [
-                'form' => MemberConfigSerializer::form($viewer, $currentSurface),
+                'form' => MemberConfigSerializer::form($viewer, $currentSurface, $this->aiSettings),
             ]),
         ]);
     }

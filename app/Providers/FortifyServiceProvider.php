@@ -141,6 +141,13 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
+        // Creating and deleting AI accounts, keyed by the owning member: each one is a member row
+        // appearing in or vanishing from the site, so the budget belongs to whoever is spending it,
+        // not to the address they are spending it from.
+        RateLimiter::for('ai-manage', function (Request $request) {
+            return Limit::perMinute(5)->by('ai-manage|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
         // The admin-issued two-factor reset submit, keyed PER TOKEN, not per IP: a reset link is one
         // account's password-guess surface, so a distributed attacker must not be able to pool
         // 5/min-per-IP onto a single link. The raw token is hashed into the key so it never lands in the

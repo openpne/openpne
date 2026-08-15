@@ -2,6 +2,7 @@
 
 namespace App\Features\Member\Serializers;
 
+use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
 use App\Models\Member;
 use App\Support\Feature;
@@ -18,7 +19,7 @@ use App\Support\Visibility;
 class MemberConfigSerializer
 {
     /** @return array<string, mixed> */
-    public static function form(Member $member, Surface $currentSurface): array
+    public static function form(Member $member, Surface $currentSurface, AiAccountSettings $aiSettings): array
     {
         $form = [
             'email' => [
@@ -46,6 +47,13 @@ class MemberConfigSerializer
                     DiaryVisibility::options(),
                 ),
             ];
+        }
+
+        // Offered while the site offers AI accounts — and, because the setting is checked at creation
+        // only, to anyone who already owns one: switching it off must not lock an owner out of the
+        // page where they empty and delete what they have.
+        if ($aiSettings->enabled() || $member->aiAccounts()->exists()) {
+            $form['ai'] = ['count' => $member->aiAccounts()->count()];
         }
 
         // The Classic/Modern picker is meaningful only where Classic is served; under modern_only it is

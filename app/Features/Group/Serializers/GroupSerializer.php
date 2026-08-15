@@ -50,6 +50,21 @@ class GroupSerializer
     }
 
     /**
+     * A page of groups a member is choosing between rather than reading about, so each row carries
+     * the join policy: what the button does ("join" or "apply") depends on it.
+     *
+     * @param  LengthAwarePaginator<int, Group>  $paginator
+     * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     */
+    public static function detailPaginator(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'data' => array_map([self::class, 'detail'], $paginator->items()),
+            'meta' => self::meta($paginator),
+        ];
+    }
+
+    /**
      * A confirmed member row: the member identity plus their group role slug. Requires the
      * member (and its avatar.file) to be loaded so serializing a list is not an N+1.
      *

@@ -10,7 +10,7 @@
      `{categoryName}Form` (a custom-CSS seam it derived from the category key); the categories
      OpenPNE 4 added keep their own id, having no OpenPNE 3 id to restore. --}}
 @section('sidemenu')
-    <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" />
+    <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" :ai-available="$aiAvailable" />
 @endsection
 
 @section('content')
@@ -155,6 +155,60 @@
                     </div>
                 </form>
             </x-classic.parts>
+            @break
+
+        @case(MemberConfigCategory::Ai)
+            {{-- The member's own AI accounts: what they have, and the one field it takes to add
+                 another. Each row links to the account's page, which holds its groups and its
+                 delete button. The create form is offered only while the site offers creation —
+                 the list and the links stay whatever the setting says. --}}
+            <x-classic.parts id="member_config_ai" name="box" :title="__('AI accounts')">
+                <div class="body">
+                    <p>{{ __(':used of :limit used', ['used' => $ai['used'], 'limit' => $ai['limit']]) }}</p>
+                    @if (count($ai['accounts']) === 0)
+                        <p>{{ __('You have no AI accounts.') }}</p>
+                    @else
+                        <ul>
+                            @foreach ($ai['accounts'] as $account)
+                                <li>
+                                    <a href="{{ route('member.config.ai.show', ['member' => $account['id']]) }}">{{ $account['name'] }}</a>
+                                    — {{ __('In :count %communities%', ['count' => $account['groupCount']]) }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            </x-classic.parts>
+            @if ($ai['canCreate'])
+                <x-classic.parts id="member_config_ai_create" name="form" :title="__('Create an AI account')">
+                    <form method="POST" action="{{ route('member.config.ai.store') }}">
+                        @csrf
+                        <table>
+                            <tr>
+                                <th><label for="ai_name">{{ __('Name') }}</label></th>
+                                <td>
+                                    <input type="text" id="ai_name" name="name" class="input_text" value="{{ old('name') }}">
+                                    @error('name')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                        </table>
+                        <p>{{ __('It appears on this site as a member marked AI. It cannot sign in — you speak for it.') }}</p>
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Create') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                </x-classic.parts>
+            @elseif (! $ai['enabled'])
+                <x-classic.parts id="member_config_ai_disabled" name="box" :title="__('Create an AI account')">
+                    <div class="body">{{ __('This site is not offering new AI accounts right now. The ones you already have keep working.') }}</div>
+                </x-classic.parts>
+            @else
+                <x-classic.parts id="member_config_ai_limit" name="box" :title="__('Create an AI account')">
+                    <div class="body">{{ __('You already have as many AI accounts as this site allows.') }}</div>
+                </x-classic.parts>
+            @endif
             @break
 
         @case(MemberConfigCategory::Password)
