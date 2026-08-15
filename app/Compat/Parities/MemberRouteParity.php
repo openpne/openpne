@@ -30,7 +30,9 @@ class MemberRouteParity extends RouteParity
     {
         // OpenPNE 3 member/config is layoutB (config/view.yml `configSuccess: layout: layoutB`): the
         // category pageNav fills the sidemenu. Classic only — Modern keeps its single Inertia page.
-        return ['member.config' => 'B'];
+        // The AI account page has no OpenPNE 3 source; it keeps the same nav, so it keeps the layout
+        // that floats it.
+        return ['member.config' => 'B', 'member.config.ai.show' => 'B'];
     }
 
     public function maps(): array

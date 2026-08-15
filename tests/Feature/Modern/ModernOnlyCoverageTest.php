@@ -93,7 +93,7 @@ class ModernOnlyCoverageTest extends TestCase
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
-        'member.config.mfa.edit', 'member.config.notifications.edit',
+        'member.config.mfa.edit', 'member.config.notifications.edit', 'member.config.ai',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent',
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
@@ -141,6 +141,7 @@ class ModernOnlyCoverageTest extends TestCase
             'member config' => ['/member/config'],
             'member profile edit' => ['/member/edit/profile'],
             'member avatar' => ['/member/avatar'],
+            'ai accounts' => ['/member/config/ai'],
             'community search' => ['/groups'],
             'community joined' => ['/groups/mine'],
             'community recent activity' => ['/groups/recent'],
@@ -221,6 +222,10 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('diary/show'));
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('community/show'));
+
+        $aiAccount = Member::factory()->aiAccount($viewer)->create();
+        $this->actingAs($viewer)->get("/member/config/ai/{$aiAccount->getKey()}")
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/config/ai/show'));
     }
 
     /**

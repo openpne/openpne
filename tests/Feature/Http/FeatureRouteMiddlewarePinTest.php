@@ -40,6 +40,11 @@ class FeatureRouteMiddlewarePinTest extends TestCase
      */
     private const DEPENDENCIES = [
         'diary.list_friend' => ['friend'],
+        // An owner giving one of their AI accounts a group seat, from the member-config pages: the
+        // screen is nobody's unit, the seat is the group unit's.
+        'member.config.ai.groups.join' => ['group'],
+        'member.config.ai.groups.quit' => ['group'],
+        'member.config.ai.groups.cancel' => ['group'],
     ];
 
     /**

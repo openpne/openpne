@@ -58,4 +58,34 @@ class MemberPolicyTest extends TestCase
 
         $this->assertTrue((new MemberPolicy)->access(null, $subject)->allowed());
     }
+
+    public function test_only_the_owner_may_manage_an_ai_account(): void
+    {
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+
+        $this->assertTrue(Gate::forUser($owner)->allows('manageAiAccount', $aiAccount));
+        $this->assertTrue(Gate::forUser($owner->fresh())->allows('manageAiAccount', $aiAccount->fresh()));
+        $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('manageAiAccount', $aiAccount));
+    }
+
+    public function test_a_member_who_is_not_an_ai_account_is_never_manageable(): void
+    {
+        // Not even one's own row: this gate answers "is this an AI account of yours", and a person
+        // is not one. Otherwise a member could reach their own account through the AI pages.
+        $member = Member::factory()->create();
+
+        $this->assertFalse(Gate::forUser($member)->allows('manageAiAccount', $member));
+    }
+
+    public function test_a_refusal_to_manage_hides_the_account_with_404(): void
+    {
+        $viewer = Member::factory()->create();
+        $theirs = Member::factory()->aiAccount()->create();
+
+        $response = Gate::forUser($viewer)->inspect('manageAiAccount', $theirs);
+
+        $this->assertTrue($response->denied());
+        $this->assertSame(404, $response->status());
+    }
 }

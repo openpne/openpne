@@ -31,6 +31,8 @@ interface ConfigForm {
     email: { value: string };
     mfa: { enabled: boolean };
     locale: { value: string; options: Option[] };
+    // Absent for a member the site neither offers AI accounts to nor has given one already.
+    ai?: { count: number };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; options: Option[] };
 }
@@ -285,6 +287,22 @@ export default function MemberConfig() {
                     />
                 </GroupItem>
             </SettingsGroup>
+
+            {form.ai && (
+                <SettingsGroup title={t('AI accounts')}>
+                    <GroupItem>
+                        <DetailRow
+                            title={t('AI accounts')}
+                            value={form.ai.count > 0 ? t(':count in use', { count: form.ai.count }) : t('None yet')}
+                            action={
+                                <ActionLink href="/member/config/ai" variant="outline" size="sm">
+                                    {t('Manage')}
+                                </ActionLink>
+                            }
+                        />
+                    </GroupItem>
+                </SettingsGroup>
+            )}
 
             {/* Consequential account changes are rows into dedicated detail pages: the forms are
                 deliberately one level deeper (focused page, visible validation errors, weight
