@@ -8,8 +8,11 @@ use App\Features\Group\GroupMembership;
 use App\Features\Group\JoinPolicy;
 use App\Models\Group;
 use App\Models\Member;
+use App\Models\MemberProfile;
+use App\Models\Profile;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
@@ -146,6 +149,65 @@ class AiAccountClassicTest extends TestCase
         $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/tokens/{$token->getKey()}/delete")
             ->assertRedirect($page);
         $this->assertSame(0, $aiAccount->tokens()->count());
+    }
+
+    public function test_the_identity_box_carries_the_edit_forms_and_saves_them(): void
+    {
+        $field = Profile::factory()->preset('self_introduction')->create(['form_type' => 'textarea', 'is_edit_public_flag' => true]);
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create(['name' => 'Helper']);
+        $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
+
+        $this->actingAs($owner)->get($page)
+            ->assertOk()
+            ->assertSee('id="member_ai_account"', false)
+            ->assertSee('action="'.route('member.config.ai.update', ['member' => $aiAccount->getKey()]).'"', false)
+            ->assertSee('value="Helper"', false)
+            ->assertSee('name="self_introduction"', false)
+            // The upload is its own form, and a file needs the encoding to arrive at all.
+            ->assertSee('action="'.route('member.config.ai.avatar', ['member' => $aiAccount->getKey()]).'"', false)
+            ->assertSee('enctype="multipart/form-data"', false);
+
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}", ['name' => 'Renamed', 'self_introduction' => 'Hello'])
+            ->assertRedirect($page);
+
+        $this->assertSame('Renamed', $aiAccount->fresh()->name);
+        $this->assertSame('Hello', MemberProfile::query()
+            ->where('member_id', $aiAccount->getKey())->where('profile_id', $field->getKey())->value('value'));
+    }
+
+    public function test_a_refused_rename_comes_back_to_the_page_with_its_error(): void
+    {
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create(['name' => 'Helper']);
+        $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
+
+        $this->actingAs($owner)->from($page)->post("/member/config/ai/{$aiAccount->getKey()}", ['name' => ''])
+            ->assertRedirect($page)
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame('Helper', $aiAccount->fresh()->name);
+    }
+
+    public function test_the_classic_forms_upload_and_remove_the_image(): void
+    {
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+        $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
+
+        // Nothing uploaded yet: the remove form is not offered.
+        $this->actingAs($owner)->get($page)
+            ->assertDontSee('action="'.route('member.config.ai.avatar.delete', ['member' => $aiAccount->getKey()]).'"', false);
+
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/avatar", ['image' => UploadedFile::fake()->image('me.png', 10, 10)])
+            ->assertRedirect($page);
+        $this->assertSame(1, $aiAccount->fresh()->avatar()->count());
+
+        $this->actingAs($owner)->get($page)
+            ->assertSee('action="'.route('member.config.ai.avatar.delete', ['member' => $aiAccount->getKey()]).'"', false);
+
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/avatar/delete")->assertRedirect($page);
+        $this->assertSame(0, $aiAccount->fresh()->avatar()->count());
     }
 
     public function test_the_account_page_is_not_someone_elses_to_open(): void

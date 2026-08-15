@@ -9,6 +9,7 @@ use App\Features\AiAccount\AiTokenReauth;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
+use App\Models\Profile;
 use App\Support\Feature;
 use Illuminate\Contracts\Session\Session;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -69,6 +70,29 @@ class AiAccountSerializer
             // is not left guessing why.
             'mcpEnabled' => Feature::Mcp->enabled(),
             'newToken' => self::mintedFor($aiAccount, $session),
+        ];
+    }
+
+    /**
+     * The self-introduction box of the identity panel, on either surface: what the field is called
+     * here (an operator may have renamed it), what this account currently says, and how long the
+     * field lets that be. Null when the install has no such field — the same null that keeps the
+     * POST from writing one, so the box is absent rather than a form with nowhere to save to.
+     *
+     * @return array{label: string, value: string, maxLength: int|null}|null
+     */
+    public static function selfIntroduction(Member $aiAccount, ?Profile $field, string $lang): ?array
+    {
+        if ($field === null) {
+            return null;
+        }
+
+        $max = $field->value_max;
+
+        return [
+            'label' => $field->getCaption($lang),
+            'value' => (string) ($aiAccount->memberProfiles()->where('profile_id', $field->getKey())->value('value') ?? ''),
+            'maxLength' => ($max === null || $max === '') ? null : (int) $max,
         ];
     }
 

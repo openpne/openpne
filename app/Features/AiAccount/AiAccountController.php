@@ -8,6 +8,7 @@ use App\Features\AiAccount\Actions\CreateAiAccount;
 use App\Features\AiAccount\Actions\DeleteAiAccount;
 use App\Features\AiAccount\Actions\IssueMcpToken;
 use App\Features\AiAccount\Actions\RevokeMcpToken;
+use App\Features\AiAccount\Actions\UpdateAiAccountIdentity;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
@@ -20,13 +21,18 @@ use App\Features\Group\JoinPolicy;
 use App\Features\Group\Queries\ListMemberGroups;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Serializers\GroupSerializer;
+use App\Features\Member\Actions\RemoveAvatar;
+use App\Features\Member\Actions\SetAvatar;
 use App\Features\Member\MemberConfigCategory;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\ImageMetadataStripException;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AiAccount\AiTokenRequest;
 use App\Http\Requests\AiAccount\CreateAiAccountRequest;
 use App\Http\Requests\AiAccount\DeleteAiAccountRequest;
+use App\Http\Requests\AiAccount\UpdateAiAccountRequest;
+use App\Http\Requests\Member\AvatarRequest;
 use App\Mcp\McpAbilities;
 use App\Models\Group;
 use App\Models\Member;
@@ -37,13 +43,14 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * A member's own AI accounts: the list they may create into, and one account's page — its groups,
- * its access tokens, and its delete button.
+ * A member's own AI accounts: the list they may create into, and one account's page — its identity,
+ * its groups, its access tokens, and its delete button.
  *
  * Only creation asks the site setting. Everything else here answers to ownership alone, so an
  * operator who switches AI accounts off closes the door without stranding what is behind it: the
@@ -75,8 +82,13 @@ class AiAccountController extends Controller
      * only way to give an account's group seats up, so Classic gets it too rather than being left
      * with a list it cannot act on.
      */
-    public function show(Request $request, Member $member, ListMemberGroups $joinedGroups, SearchGroups $searchGroups): View|InertiaResponse
-    {
+    public function show(
+        Request $request,
+        Member $member,
+        ListMemberGroups $joinedGroups,
+        SearchGroups $searchGroups,
+        SelfIntroductionField $selfIntroductionField,
+    ): View|InertiaResponse {
         Gate::authorize('manageAiAccount', $member);
 
         // Not a cast: `?keyword[]=` hands us an array, and casting one is a fatal, not a search.
@@ -93,10 +105,14 @@ class AiAccountController extends Controller
             : new EloquentCollection;
         $browse = $groupsOn ? $searchGroups($keyword) : null;
         $tokens = AiAccountSerializer::tokens($member, $request->session());
+        // Doctrine I18n lang for the current locale, as everywhere a profile caption is rendered.
+        $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
+        $selfIntroduction = AiAccountSerializer::selfIntroduction($member, $selfIntroductionField(), $lang);
 
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.ai-account', [
                 'aiAccount' => $member,
+                'selfIntroduction' => $selfIntroduction,
                 'tokens' => $tokens,
                 'groupsOn' => $groupsOn,
                 'joined' => $joined,
@@ -106,8 +122,12 @@ class AiAccountController extends Controller
                 'joinedIds' => $joined->modelKeys(),
                 'pendingIds' => $pending->modelKeys(),
             ]),
-            SurfaceResolver::MODERN => function () use ($member, $tokens, $groupsOn, $joined, $pending, $browse, $keyword) {
-                $props = ['account' => MemberRefSerializer::ref($member), 'tokens' => $tokens];
+            SurfaceResolver::MODERN => function () use ($member, $tokens, $selfIntroduction, $groupsOn, $joined, $pending, $browse, $keyword) {
+                $props = [
+                    'account' => MemberRefSerializer::ref($member),
+                    'selfIntroduction' => $selfIntroduction,
+                    'tokens' => $tokens,
+                ];
 
                 if ($groupsOn) {
                     $props['groups'] = [
@@ -136,8 +156,46 @@ class AiAccountController extends Controller
             return $this->listRedirect($request)->with('error', $this->messageFor($e->reason));
         }
 
-        return redirect()->route('member.config.ai.show', ['member' => $aiAccount->getKey()])
-            ->with('status', __('AI account created.'));
+        return $this->accountRedirect($aiAccount)->with('status', __('AI account created.'));
+    }
+
+    /**
+     * Rename the account and rewrite its self-introduction. Unlike the token pair and the delete
+     * below it asks for no password: this is the same edit a person makes to their own name and
+     * bio, and the site setting stays out of it — switched off, an owner may still correct a typo.
+     */
+    public function update(UpdateAiAccountRequest $request, Member $member, UpdateAiAccountIdentity $update): RedirectResponse
+    {
+        Gate::authorize('manageAiAccount', $member);
+
+        $update($member, (string) $request->validated('name'), $request->validated('self_introduction'));
+
+        return $this->accountRedirect($member)->with('status', __('AI account updated.'));
+    }
+
+    /** The account's image, through the same upload the member avatar editor runs. */
+    public function updateAvatar(AvatarRequest $request, Member $member, SetAvatar $action): RedirectResponse
+    {
+        Gate::authorize('manageAiAccount', $member);
+
+        try {
+            $action($member, $request->file('image'));
+        } catch (ImageMetadataStripException) {
+            // SetAvatar uses FileUploader directly (no PostImages), so convert the fail-closed strip
+            // to a validation error on the submitted field ('image', the file picker) here.
+            throw ValidationException::withMessages(['image' => [ImageMetadataStripException::userMessage()]]);
+        }
+
+        return $this->accountRedirect($member)->with('status', __('Profile image updated.'));
+    }
+
+    public function destroyAvatar(Member $member, RemoveAvatar $action): RedirectResponse
+    {
+        Gate::authorize('manageAiAccount', $member);
+
+        $action($member);
+
+        return $this->accountRedirect($member)->with('status', __('Profile image removed.'));
     }
 
     /**
@@ -168,7 +226,7 @@ class AiAccountController extends Controller
 
         $this->stampReauth($request);
 
-        $back = redirect()->route('member.config.ai.show', ['member' => $member->getKey()]);
+        $back = $this->accountRedirect($member);
 
         try {
             $token = $issue($member, $request->boolean('read_only'));
@@ -214,8 +272,7 @@ class AiAccountController extends Controller
             'via' => 'owner',
         ]);
 
-        return redirect()->route('member.config.ai.show', ['member' => $member->getKey()])
-            ->with('status', __('Access token revoked.'));
+        return $this->accountRedirect($member)->with('status', __('Access token revoked.'));
     }
 
     /**
@@ -254,7 +311,7 @@ class AiAccountController extends Controller
     {
         Gate::authorize('manageAiAccount', $member);
 
-        $back = redirect()->route('member.config.ai.show', ['member' => $member->getKey()]);
+        $back = $this->accountRedirect($member);
 
         try {
             $action();
@@ -263,6 +320,12 @@ class AiAccountController extends Controller
         }
 
         return $back->with('status', $status);
+    }
+
+    /** The account's own page, which every POST about one account lands back on. */
+    private function accountRedirect(Member $member): RedirectResponse
+    {
+        return redirect()->route('member.config.ai.show', ['member' => $member->getKey()]);
     }
 
     /**
