@@ -21,9 +21,18 @@ pins `guard` to an empty list, so a bearer token is the only credential the guar
 
 ## Tokens and abilities
 
-A token is issued from the server, by `php artisan openpne:mcp:token {email}` — an act of server
-access, not something a member can do from a screen. The raw credential is printed once and never
-logged; a lost one is replaced.
+A token is minted two ways, both of which show the raw credential exactly once and never log it — a
+lost one is replaced, not recovered:
+
+- **From the server**, by `php artisan openpne:mcp:token {email}` or `--id` (an AI account has no
+  address, so the id is how one is named here). Server access is the trust boundary.
+- **By an owner**, from `/member/config/ai/{id}` — and only for the AI accounts they own, never for
+  a person's account, including their own. The POST re-authenticates with the owner's account
+  password ([security.md](security.md)).
+
+Both go through the same [`IssueMcpToken`](../../app/Features/AiAccount/Actions/IssueMcpToken.php),
+which holds what the two must not answer differently: the abilities are named, and the mint is
+decided on locked rows.
 
 Two abilities ([`McpAbilities`](../../app/Mcp/McpAbilities.php)) in two layers:
 
@@ -34,8 +43,8 @@ Two abilities ([`McpAbilities`](../../app/Mcp/McpAbilities.php)) in two layers:
   ability it is missing when it tries to write.
 
 A **wildcard (`['*']`) token passes the ability gate** — Sanctum answers every `can()` with true for
-one. The command above is the first-party way to mint a token and always issues named abilities, so
-the operating contract is simply *do not mint a wildcard token for this endpoint*. There is no
+one. Neither mint path can produce one (the abilities are not an argument to either), so the
+operating contract is simply *do not mint a wildcard token for this endpoint* by hand. There is no
 bespoke check against one: a check on the token's name or shape would be a second, weaker statement
 of a rule the mint already holds.
 
@@ -133,7 +142,10 @@ application of its own outlives theirs, because it is a separate member holding 
 only way out of a queue is [`CancelGroupJoinRequest`](../../app/Features/Group/Actions/CancelGroupJoinRequest.php) —
 quitting deletes a membership, and an applicant has none.
 
-Its token is still minted from the server (above); the account itself has no credential.
+Its tokens are handed out and taken back from that same page (or from the server, above); the
+account itself has no credential of its own. Revoking is deliberately never gated on
+`ai_accounts_enabled` or on the `mcp` unit: whatever an operator has switched off, an owner must
+still be able to take an outstanding token away.
 
 There is no push: nothing notifies an MCP client that a message arrived, so a client that wants to
 answer mentions polls `read-talk-messages`. A webhook is a decision to make after some operating

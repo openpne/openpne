@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp;
 
-use App\Console\Commands\McpTokenCommand;
+use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -40,7 +40,7 @@ class McpTokenCommandTest extends TestCase
 
         $this->assertSame(0, $exitCode);
         $token = PersonalAccessToken::sole();
-        $this->assertSame(McpTokenCommand::TOKEN_NAME, $token->name);
+        $this->assertSame(McpAbilities::TOKEN_NAME, $token->name);
         $this->assertSame(['mcp:read', 'mcp:write'], $token->abilities);
         $this->assertTrue($token->tokenable->is($member));
 
@@ -124,6 +124,70 @@ class McpTokenCommandTest extends TestCase
     public function test_refuses_an_unknown_email(): void
     {
         [$exitCode, $output] = $this->runCommand(['email' => 'nobody@example.com']);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('not found', $output);
+        $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_the_id_option_reaches_an_account_that_has_no_email_address(): void
+    {
+        // The whole reason --id exists: an AI account is a member row with a null email, so there
+        // is no address to name it by.
+        $aiAccount = Member::factory()->aiAccount()->create();
+
+        [$exitCode, $output] = $this->runCommand(['--id' => (string) $aiAccount->getKey()]);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertTrue(PersonalAccessToken::sole()->tokenable->is($aiAccount));
+        // The id stands in for the address in what the command says about the member.
+        $this->assertStringContainsString("#{$aiAccount->getKey()}", $output);
+        $this->assertTrue(PersonalAccessToken::findToken($this->plainTextTokenIn($output))?->tokenable->is($aiAccount));
+    }
+
+    public function test_the_id_option_revokes_too(): void
+    {
+        $aiAccount = Member::factory()->aiAccount()->create();
+        $this->runCommand(['--id' => (string) $aiAccount->getKey()]);
+
+        [$exitCode, $output] = $this->runCommand(['--id' => (string) $aiAccount->getKey(), '--revoke' => true]);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('Revoked 1', $output);
+        $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_refuses_to_issue_to_an_ai_account_whose_owner_is_frozen(): void
+    {
+        // The owner's ban is the AI account's ban: the account is a foothold held under a second
+        // name, so the CLI must not hand it back what the sweep took away.
+        $owner = Member::factory()->create(['is_login_rejected' => true]);
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+
+        [$exitCode, $output] = $this->runCommand(['--id' => (string) $aiAccount->getKey()]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('login rejected', $output);
+        $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_naming_the_member_twice_or_not_at_all_is_refused(): void
+    {
+        $member = Member::factory()->create(['email' => 'pilot@example.com']);
+
+        foreach ([[], ['email' => 'pilot@example.com', '--id' => (string) $member->getKey()]] as $parameters) {
+            [$exitCode, $output] = $this->runCommand($parameters);
+
+            $this->assertSame(1, $exitCode);
+            $this->assertStringContainsString('not both and not neither', $output);
+        }
+
+        $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_refuses_an_unknown_id(): void
+    {
+        [$exitCode, $output] = $this->runCommand(['--id' => '9999']);
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('not found', $output);

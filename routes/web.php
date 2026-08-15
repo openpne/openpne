@@ -580,12 +580,20 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/member/config/ai', 'store')->middleware('throttle:ai-manage')->name('member.config.ai.store');
 
         // The ownership gate is route middleware, not only the controller's Gate::authorize, because
-        // it has to outrank DeleteAiAccountRequest: a wrong password against a stranger's account id
-        // must 404 like an unused id, not report a password error that says the account is there.
+        // it has to outrank the password-carrying FormRequests: a wrong password against a stranger's
+        // account id must 404 like an unused id, not report a password error that says the account is
+        // there.
         Route::middleware('can:manageAiAccount,member')->group(function () {
             Route::get('/member/config/ai/{member}', 'show')->whereNumber('member')->name('member.config.ai.show');
             Route::post('/member/config/ai/{member}/delete', 'destroy')
                 ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.destroy');
+            // The token pair spends the same budget and carries no `mcp` feature gate on purpose: the
+            // unit is the endpoint's kill switch, and revoking a token has to keep working while it
+            // is off.
+            Route::post('/member/config/ai/{member}/tokens', 'storeToken')
+                ->whereNumber('member')->middleware('throttle:ai-manage')->name('member.config.ai.tokens.store');
+            Route::post('/member/config/ai/{member}/tokens/{token}/delete', 'destroyToken')
+                ->whereNumber(['member', 'token'])->middleware('throttle:ai-manage')->name('member.config.ai.tokens.destroy');
             // Group seats, so they carry the group unit's gate wherever they are declared
             // (FeatureRouteMiddlewarePinTest::DEPENDENCIES). The AI's membership is its own: it survives
             // the owner leaving the same group, and is given up only from here.
