@@ -186,8 +186,12 @@ class AiAccountController extends Controller
             'via' => 'owner',
         ]);
 
-        return $back->with(AiAccountSerializer::NEW_TOKEN, $token->plainTextToken)
-            ->with('status', __('Access token issued.'));
+        // Flashed with whose it is, not as a bare string: the session carries one such key, and the
+        // next page rendered from it is not always this account's.
+        return $back->with(AiAccountSerializer::NEW_TOKEN, [
+            'member_id' => (int) $member->getKey(),
+            'token' => $token->plainTextToken,
+        ])->with('status', __('Access token issued.'));
     }
 
     /**

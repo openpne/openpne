@@ -6,6 +6,7 @@ use App\Features\AiAccount\Actions\IssueMcpToken;
 use App\Features\AiAccount\Actions\RevokeMcpTokens;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
+use App\Features\AiAccount\MemberSelector;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
 use App\Support\SecurityLog;
@@ -35,19 +36,21 @@ class McpTokenCommand extends Command
 
     public function handle(IssueMcpToken $issue, RevokeMcpTokens $revokeAll): int
     {
-        $member = $this->resolveMember();
+        $selector = $this->resolveMember();
 
-        if ($member === null) {
+        if ($selector === null) {
             return self::FAILURE;
         }
 
-        return $this->option('revoke') ? $this->revoke($member, $revokeAll) : $this->issue($member, $issue);
+        return $this->option('revoke') ? $this->revoke($selector, $revokeAll) : $this->issue($selector, $issue);
     }
 
-    private function issue(Member $member, IssueMcpToken $issue): int
+    private function issue(MemberSelector $selector, IssueMcpToken $issue): int
     {
+        $member = $selector->member();
+
         try {
-            $token = $issue($member, (bool) $this->option('read-only'));
+            $token = $issue($selector, (bool) $this->option('read-only'));
         } catch (AiAccountActionException $e) {
             $this->error($this->failureMessage($member, $e->reason));
 
@@ -71,9 +74,16 @@ class McpTokenCommand extends Command
         return self::SUCCESS;
     }
 
-    private function revoke(Member $member, RevokeMcpTokens $revokeAll): int
+    private function revoke(MemberSelector $selector, RevokeMcpTokens $revokeAll): int
     {
-        $deleted = $revokeAll($member);
+        $member = $selector->member();
+        $deleted = $revokeAll($selector);
+
+        if ($deleted === null) {
+            $this->error($this->failureMessage($member, AiAccountActionFailure::MemberGone));
+
+            return self::FAILURE;
+        }
 
         SecurityLog::event('token.revoked', [
             'member_id' => (int) $member->getKey(),
@@ -90,8 +100,12 @@ class McpTokenCommand extends Command
     /**
      * The member named by the email argument or by `--id`, exactly one of which must be given.
      * Both or neither is a typo worth refusing rather than guessing at.
+     *
+     * This lookup only decides what to say about an id that names nobody: what is acted on is decided
+     * by the act, which locks the row and confirms the address there ({@see MemberSelector}), so an
+     * address changing hands between this read and the mint is refused rather than followed.
      */
-    private function resolveMember(): ?Member
+    private function resolveMember(): ?MemberSelector
     {
         $email = trim((string) $this->argument('email'));
         $id = trim((string) $this->option('id'));
@@ -106,9 +120,11 @@ class McpTokenCommand extends Command
 
         if ($member === null) {
             $this->error('Member ['.($email !== '' ? Str::lower($email) : "#{$id}").'] not found.');
+
+            return null;
         }
 
-        return $member;
+        return $email !== '' ? MemberSelector::foundByEmail($member, $email) : MemberSelector::of($member);
     }
 
     /**

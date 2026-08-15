@@ -96,6 +96,24 @@ class AiTokenSelfServiceTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tokens.newToken', null));
     }
 
+    public function test_a_minted_credential_is_shown_only_on_the_account_it_was_minted_for(): void
+    {
+        // The flash is one key for the whole session, and the page read from it need not be the one
+        // the mint redirected to. A token rendered under another account's name would be read as
+        // standing for that account — the wrong identity for whatever the client then does with it.
+        [$owner, $aiAccount] = $this->ownerWithAccount();
+        $other = Member::factory()->aiAccount($owner)->create();
+
+        $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password']);
+        $this->actingAs($owner)->get("/member/config/ai/{$other->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('tokens.newToken', null));
+
+        // Still shown on the page it was minted from, which is the one-shot the panel is built on.
+        $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password']);
+        $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page->whereNot('tokens.newToken', null));
+    }
+
     public function test_a_read_only_token_carries_only_the_read_ability(): void
     {
         [$owner, $aiAccount] = $this->ownerWithAccount();
@@ -174,6 +192,66 @@ class AiTokenSelfServiceTest extends TestCase
         $this->assertSame([$token->getKey()], PersonalAccessToken::pluck('id')->all());
     }
 
+    /**
+     * Ownership is settled before the password is: the route's own policy check answers first, so a
+     * refusal cannot vary with what is behind the id.
+     *
+     * @param  list<TestResponse>  $probes  refusals that must be told apart by nothing at all
+     */
+    private function assertIndistinguishable(array $probes): void
+    {
+        $first = array_shift($probes);
+        // Plain assertSame rather than assertNotFound: a validation redirect carries errors whose
+        // diagnostics would obscure the mismatch this is here to report.
+        $this->assertSame(404, $first->status(), 'the refusal must be a 404');
+        $first->assertSessionHasNoErrors();
+
+        foreach ($probes as $i => $probe) {
+            $this->assertSame($first->status(), $probe->status(), "probe {$i} answered a different status");
+            $this->assertSame($first->getContent(), $probe->getContent(), "probe {$i} answered a different body");
+            $probe->assertSessionHasNoErrors();
+        }
+    }
+
+    public function test_a_refused_mint_reads_the_same_whatever_the_id_names(): void
+    {
+        // An id the viewer may not mint for must not be told apart from one that names nothing: a
+        // password error where the other answers 404 says "this id is an AI account", and a wrong
+        // password says it for any id the sender cares to try.
+        $viewer = Member::factory()->create();
+        [, $theirs] = $this->ownerWithAccount();
+
+        $probes = [];
+        foreach ([[], ['current_password' => 'wrong-password']] as $payload) {
+            foreach ([$theirs->getKey(), 999999] as $id) {
+                $probes[] = $this->actingAs($viewer)->post("/member/config/ai/{$id}/tokens", $payload);
+            }
+        }
+        // A human member's own id is refused the same way: this screen mints for AI accounts only.
+        $probes[] = $this->actingAs($viewer)->post("/member/config/ai/{$viewer->getKey()}/tokens");
+
+        $this->assertIndistinguishable($probes);
+        $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_a_refused_revoke_reads_the_same_whatever_the_id_names(): void
+    {
+        $viewer = Member::factory()->create();
+        [, $theirs] = $this->ownerWithAccount();
+        $token = $theirs->createToken(McpAbilities::TOKEN_NAME, [McpAbilities::READ])->accessToken;
+        $id = $token->getKey();
+
+        $probes = [
+            $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/tokens/{$id}/delete"),
+            $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/tokens/{$id}/delete", ['current_password' => 'wrong-password']),
+            $this->actingAs($viewer)->post("/member/config/ai/999999/tokens/{$id}/delete"),
+            $this->actingAs($viewer)->post("/member/config/ai/{$viewer->getKey()}/tokens/{$id}/delete"),
+        ];
+
+        $this->assertIndistinguishable($probes);
+        $this->assertSame([$id], PersonalAccessToken::pluck('id')->all());
+    }
+
     public function test_an_ai_account_of_a_frozen_owner_is_refused_rather_than_minted_for(): void
     {
         // Barely reachable — a ban ends the owner's sessions — so this is the belt: the mint asks
@@ -197,7 +275,7 @@ class AiTokenSelfServiceTest extends TestCase
         GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $aiAccount->getKey()]);
 
         $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password']);
-        $plainText = (string) session('ai_account.new_token');
+        $plainText = (string) session('ai_account.new_token')['token'];
         $token = PersonalAccessToken::sole();
 
         $call = fn (): TestResponse => $this->postJson('/mcp', [

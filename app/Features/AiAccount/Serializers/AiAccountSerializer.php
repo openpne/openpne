@@ -19,7 +19,10 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class AiAccountSerializer
 {
-    /** Flash key carrying the plaintext credential through the redirect that follows a mint. */
+    /**
+     * Flash key carrying the plaintext credential — and the id of the account it was minted for —
+     * through the redirect that follows a mint. Payload: `{member_id: int, token: string}`.
+     */
     public const NEW_TOKEN = 'ai_account.new_token';
 
     /**
@@ -55,7 +58,6 @@ class AiAccountSerializer
     public static function tokens(Member $aiAccount, Session $session): array
     {
         $tokens = $aiAccount->tokens()->where('name', McpAbilities::TOKEN_NAME)->orderByDesc('id')->get();
-        $newToken = $session->get(self::NEW_TOKEN);
 
         return [
             'tokens' => array_map(self::token(...), $tokens->all()),
@@ -66,8 +68,24 @@ class AiAccountSerializer
             // outlives it being thrown. Reported so a member whose brand-new token is answered 404
             // is not left guessing why.
             'mcpEnabled' => Feature::Mcp->enabled(),
-            'newToken' => is_string($newToken) ? $newToken : null,
+            'newToken' => self::mintedFor($aiAccount, $session),
         ];
+    }
+
+    /**
+     * The credential from the flash, and only where this is the account it was minted for: an owner
+     * who mints for one account and then opens another's page must not be shown the first one's
+     * token as the second one's, which is a credential read as standing for the wrong identity.
+     */
+    private static function mintedFor(Member $aiAccount, Session $session): ?string
+    {
+        $minted = $session->get(self::NEW_TOKEN);
+
+        if (! is_array($minted) || ($minted['member_id'] ?? null) !== (int) $aiAccount->getKey()) {
+            return null;
+        }
+
+        return is_string($minted['token'] ?? null) ? $minted['token'] : null;
     }
 
     /**

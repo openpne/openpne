@@ -9,6 +9,7 @@ use App\Features\AiAccount\Actions\RevokeMcpToken;
 use App\Features\AiAccount\Actions\RevokeMcpTokens;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
+use App\Features\AiAccount\MemberSelector;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -103,6 +104,40 @@ class McpTokenActionsTest extends TestCase
         }
 
         $this->assertSame(0, PersonalAccessToken::count());
+    }
+
+    public function test_an_address_that_stopped_naming_the_member_is_refused_by_both_acts(): void
+    {
+        // The CLI names a member by address, and the act re-asks that under its row lock. Serialized
+        // here: the rename commits between the lookup and the act, which is what the race leaves
+        // behind — and the act must refuse rather than mint for, or revoke from, an id the address
+        // no longer belongs to.
+        $member = Member::factory()->create(['email' => 'pilot@example.com']);
+        $selector = MemberSelector::foundByEmail($member, 'pilot@example.com');
+        ($this->issue())($member);
+        $member->forceFill(['email' => 'renamed@example.com'])->save();
+
+        try {
+            ($this->issue())($selector);
+            $this->fail('a mint must not land on a row the address no longer names');
+        } catch (AiAccountActionException $e) {
+            $this->assertSame(AiAccountActionFailure::MemberGone, $e->reason);
+        }
+
+        $this->assertNull(app(RevokeMcpTokens::class)($selector), 'the revoke must report that it acted on nothing');
+        $this->assertSame(1, PersonalAccessToken::count());
+    }
+
+    public function test_an_address_still_naming_the_member_acts_on_it(): void
+    {
+        // The other half of the pair: nothing moved, so the selector is the plain member path.
+        $member = Member::factory()->create(['email' => 'Pilot@Example.com']);
+        $selector = MemberSelector::foundByEmail($member, '  pilot@EXAMPLE.com ');
+
+        $token = ($this->issue())($selector);
+
+        $this->assertTrue($token->accessToken->tokenable->is($member));
+        $this->assertSame(1, app(RevokeMcpTokens::class)($selector));
     }
 
     public function test_revoking_one_token_reaches_only_that_members_mcp_tokens(): void

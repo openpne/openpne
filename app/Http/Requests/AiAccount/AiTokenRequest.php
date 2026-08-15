@@ -15,6 +15,11 @@ use Illuminate\Validation\Rule;
  * unattended session cannot mint a credential that outlives the sitting. Verified once per sitting
  * rather than per request ({@see AiTokenReauth}), the same shape the two-factor set-up flow uses;
  * whenever the field is present it must be the account password, whatever the window says.
+ *
+ * Ownership is settled before any of this: both token routes carry `can:manageAiAccount,member`, so
+ * an id that is not one of the viewer's own AI accounts is refused before this request is validated.
+ * A password error reaching such an id would answer differently for an account that exists than for
+ * one that does not, which is the whole of what that 404 hides.
  */
 class AiTokenRequest extends FormRequest
 {

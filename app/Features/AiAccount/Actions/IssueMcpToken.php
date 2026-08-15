@@ -6,6 +6,7 @@ namespace App\Features\AiAccount\Actions;
 
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
+use App\Features\AiAccount\MemberSelector;
 use App\Features\AiAccount\TokenActorEligibility;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
@@ -29,13 +30,19 @@ use Laravel\Sanctum\NewAccessToken;
  */
 class IssueMcpToken
 {
-    /** @throws AiAccountActionException */
-    public function __invoke(Member $member, bool $readOnly = false): NewAccessToken
+    /**
+     * A caller that found the member itself passes a {@see MemberSelector}, so how it was named is
+     * re-asked inside this transaction rather than trusted from a lookup that ran before it.
+     *
+     * @throws AiAccountActionException
+     */
+    public function __invoke(Member|MemberSelector $member, bool $readOnly = false): NewAccessToken
     {
+        $selector = $member instanceof Member ? MemberSelector::of($member) : $member;
         $abilities = $readOnly ? [McpAbilities::READ] : [McpAbilities::READ, McpAbilities::WRITE];
 
-        return DB::transaction(function () use ($member, $abilities): NewAccessToken {
-            $actor = $this->lockActor($member);
+        return DB::transaction(function () use ($selector, $abilities): NewAccessToken {
+            $actor = $this->lockActor($selector);
 
             if (! TokenActorEligibility::permits($actor)) {
                 throw new AiAccountActionException(AiAccountActionFailure::ActorFrozen);
@@ -46,17 +53,21 @@ class IssueMcpToken
     }
 
     /**
-     * The member row locked behind its owner's, when it has one.
+     * The member row locked behind its owner's, when it has one, and still the row that was asked
+     * for once locked.
      *
      * `owner_member_id` is immutable, so the caller's snapshot is enough to decide the lock order;
-     * every value that is then judged comes from the locked rows. The owner is attached to the
-     * relation rather than left to lazy-load, so the eligibility predicate reads the row this
-     * transaction locked instead of issuing a fresh unlocked query for it.
+     * every value that is then judged comes from the locked rows — including whether the selector
+     * still names this row, which is how an address that changed hands since the lookup stops the
+     * mint instead of steering it to a stale id. The owner is attached to the relation rather than
+     * left to lazy-load, so the eligibility predicate reads the row this transaction locked instead
+     * of issuing a fresh unlocked query for it.
      *
      * @throws AiAccountActionException
      */
-    private function lockActor(Member $member): Member
+    private function lockActor(MemberSelector $selector): Member
     {
+        $member = $selector->member();
         $owner = null;
 
         if ($member->owner_member_id !== null) {
@@ -69,7 +80,7 @@ class IssueMcpToken
 
         $actor = Member::whereKey($member->getKey())->lockForUpdate()->first();
 
-        if ($actor === null) {
+        if ($actor === null || ! $selector->names($actor)) {
             throw new AiAccountActionException(AiAccountActionFailure::MemberGone);
         }
 
