@@ -79,12 +79,16 @@ class McpEndpointTest extends McpTestCase
             ->assertUnauthorized()
             // The transport spec's challenge, which the package would otherwise attach inside the
             // gate — where a 401 thrown by it never arrives.
-            ->assertHeader('WWW-Authenticate', 'Bearer realm="mcp", error="invalid_token"');
+            ->assertHeader('WWW-Authenticate', 'Bearer realm="mcp", error="invalid_token"')
+            // The framework's JSON refusal, pinned because docs/internals/mcp.md names it.
+            ->assertExactJson(['message' => 'Unauthenticated.']);
 
         // Also for a request that does not ask for JSON: the guest redirect is skipped for this path
-        // (bootstrap/app.php), so a browser pointed at the endpoint gets the same 401 a client does.
+        // (bootstrap/app.php), so a browser pointed at the endpoint gets a bodiless 401 — the null
+        // redirect target renders as noContent — instead of a login form.
         $this->freshRequestState();
-        $this->post('/mcp', $this->envelope('tools/list'))->assertUnauthorized();
+        $response = $this->post('/mcp', $this->envelope('tools/list'))->assertUnauthorized();
+        $this->assertSame('', $response->getContent());
     }
 
     public function test_a_signed_in_member_session_alone_does_not_reach_the_endpoint(): void

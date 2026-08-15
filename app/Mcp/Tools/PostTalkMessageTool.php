@@ -35,9 +35,10 @@ class PostTalkMessageTool extends TalkTool
         }
 
         $body = $request->get('body');
-        // The browser's path gets this from the global TrimStrings and a form request, neither of
-        // which a token request meets. Anything that is not a string is left as it came for the
-        // `string` rule to refuse, rather than coerced into a body nobody wrote.
+        // Normalized here, not left to middleware: the direct tool path (Server::tool, and any
+        // future non-HTTP transport) never meets TrimStrings, so the contract has to live where the
+        // body is read. Anything that is not a string is left as it came for the `string` rule to
+        // refuse, rather than coerced into a body nobody wrote.
         $body = is_string($body) ? trim(TalkBody::normalize($body)) : $body;
 
         /** @var array{group_id: int, body: string} $validated */

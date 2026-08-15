@@ -302,8 +302,8 @@ class TalkToolsTest extends McpTestCase
         // on one, so the assertion can name the field it is about.
         $this->app->setLocale('en');
 
-        // Neither the global TrimStrings nor a form request runs on this realm, so each of these
-        // reaches the tool exactly as written.
+        // The direct tool path meets no HTTP middleware, so each of these reaches the tool exactly
+        // as written — which is why the tool holds the blank-body contract itself.
         foreach (['', '   ', "\n\n", "\r\n", " \t "] as $blank) {
             OpenPneServer::tool(PostTalkMessageTool::class, ['group_id' => $group->getKey(), 'body' => $blank])
                 ->assertHasErrors(['body']);

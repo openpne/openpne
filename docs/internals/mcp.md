@@ -14,8 +14,9 @@ enforced here by construction rather than by a second copy of it.
 
 Member and admin are session realms ([sessions.md](sessions.md)); this one is neither. `/mcp` is
 mounted outside the `web` group, so it has no session, no CSRF token, no Inertia and no guest
-redirect, and a request that presents no bearer token is answered `401` with no body rather than
-being sent to a login form. A signed-in browser session does not reach it either — `config/sanctum.php`
+redirect, and a request that presents no bearer token is answered `401` rather than being sent to a
+login form — the framework's `{"message":"Unauthenticated."}` for a JSON request, an empty body for
+anything else. A signed-in browser session does not reach it either — `config/sanctum.php`
 pins `guard` to an empty list, so a bearer token is the only credential the guard accepts.
 
 ## Tokens and abilities
