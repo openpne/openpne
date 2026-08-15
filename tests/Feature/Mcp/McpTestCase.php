@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp;
 
-use App\Console\Commands\McpTokenCommand;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Mcp\McpAbilities;
 use App\Models\Group;
@@ -58,6 +57,6 @@ abstract class McpTestCase extends TestCase
     /** The plain-text token an MCP client would present. */
     protected function token(Member $member, array $abilities = [McpAbilities::READ, McpAbilities::WRITE]): string
     {
-        return $member->createToken(McpTokenCommand::TOKEN_NAME, $abilities)->plainTextToken;
+        return $member->createToken(McpAbilities::TOKEN_NAME, $abilities)->plainTextToken;
     }
 }

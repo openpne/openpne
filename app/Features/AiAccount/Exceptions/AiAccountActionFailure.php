@@ -20,4 +20,10 @@ enum AiAccountActionFailure: string
 
     /** The named account is not one this member owns. */
     case NotOwned = 'not_owned';
+
+    /** Token mint only: the account, or the owner behind it, is banned. */
+    case ActorFrozen = 'actor_frozen';
+
+    /** The row was withdrawn between the caller reading it and the write locking it. */
+    case MemberGone = 'member_gone';
 }

@@ -123,6 +123,31 @@ class AiAccountClassicTest extends TestCase
         $this->assertNotNull($aiAccount->fresh());
     }
 
+    public function test_the_account_page_carries_the_token_panel_and_mints_from_it(): void
+    {
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+        $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
+
+        $this->actingAs($owner)->get($page)
+            ->assertOk()
+            ->assertSee('id="member_ai_account_tokens"', false)
+            ->assertSee('This AI account has no tokens.');
+
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/tokens", ['current_password' => 'password'])
+            ->assertRedirect($page);
+
+        $token = $aiAccount->tokens()->sole();
+        // The credential is on the page it redirected to, beside the revoke form for that token.
+        $this->actingAs($owner)->get($page)
+            ->assertSee('This token is shown only this once.')
+            ->assertSee(route('member.config.ai.tokens.destroy', ['member' => $aiAccount->getKey(), 'token' => $token->getKey()]));
+
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/tokens/{$token->getKey()}/delete")
+            ->assertRedirect($page);
+        $this->assertSame(0, $aiAccount->tokens()->count());
+    }
+
     public function test_the_account_page_is_not_someone_elses_to_open(): void
     {
         $viewer = Member::factory()->create();
