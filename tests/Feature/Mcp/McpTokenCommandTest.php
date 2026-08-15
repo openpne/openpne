@@ -60,9 +60,11 @@ class McpTokenCommandTest extends TestCase
 
     public function test_the_email_lookup_ignores_case_and_surrounding_space(): void
     {
-        $member = Member::factory()->create(['email' => 'pilot@example.com']);
+        // Mixed-case on the STORED side: the app's own creation paths lowercase, but an upgraded
+        // row is verbatim, and SQLite compares `=` case-sensitively — the lookup must lower both.
+        $member = Member::factory()->create(['email' => 'Pilot@Example.com']);
 
-        [$exitCode] = $this->runCommand(['email' => '  Pilot@Example.com ']);
+        [$exitCode] = $this->runCommand(['email' => '  pilot@EXAMPLE.com ']);
 
         $this->assertSame(0, $exitCode);
         $this->assertTrue(PersonalAccessToken::sole()->tokenable->is($member));
@@ -71,7 +73,9 @@ class McpTokenCommandTest extends TestCase
     public function test_revoke_deletes_only_the_tokens_this_command_issued(): void
     {
         $member = Member::factory()->create(['email' => 'pilot@example.com']);
-        $other = $member->createToken('other')->accessToken;
+        // Explicit narrow ability: omitting it would mint Sanctum's wildcard ['*'] token, which
+        // could pass ability gates and so wouldn't stand for "a PAT of some other purpose".
+        $other = $member->createToken('other', ['reporting'])->accessToken;
         $this->runCommand(['email' => 'pilot@example.com']);
 
         [$exitCode, $output] = $this->runCommand(['email' => 'pilot@example.com', '--revoke' => true]);
