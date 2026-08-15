@@ -85,7 +85,7 @@ class RouteParityLayoutTest extends TestCase
         // matching RouteParity::layouts(); otherwise it renders under the default LayoutC and breaks.
         $this->assertSame([
             'diary/edit', 'diary/list', 'diary/new', 'diary/show', 'group/show',
-            'member/config', 'message/list', 'message/show',
+            'member/ai-account', 'member/config', 'message/list', 'message/show',
         ], $found);
     }
 }

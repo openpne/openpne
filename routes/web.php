@@ -1,6 +1,7 @@
 <?php
 
 use App\Captcha\Captcha;
+use App\Features\AiAccount\AiAccountController;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Compose\EditorPreferenceController;
@@ -569,6 +570,30 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
     // The global push pause switch, its own POST like every other member-config section.
     Route::post('/member/config/notifications/push', [NotificationSettingsController::class, 'updatePush'])->name('member.config.notifications.push');
+
+    // A member's own AI accounts (OpenPNE 4-native; Classic serves the list as ?category=ai). The
+    // owner check is MemberPolicy::manageAiAccount, applied in the controller so a member id naming
+    // someone else's account 404s exactly like one naming nothing.
+    Route::controller(AiAccountController::class)->group(function () {
+        Route::get('/member/config/ai', 'index')->name('member.config.ai');
+        Route::get('/member/config/ai/{member}', 'show')->whereNumber('member')->name('member.config.ai.show');
+        // Creating and deleting share one per-member budget, like the two-factor management POSTs.
+        Route::middleware('throttle:ai-manage')->group(function () {
+            Route::post('/member/config/ai', 'store')->name('member.config.ai.store');
+            Route::post('/member/config/ai/{member}/delete', 'destroy')->whereNumber('member')->name('member.config.ai.destroy');
+        });
+        // Group seats, so they carry the group unit's gate wherever they are declared
+        // (FeatureRouteMiddlewarePinTest::DEPENDENCIES). The AI's membership is its own: it survives
+        // the owner leaving the same group, and is given up only from here.
+        Route::middleware(EnsureFeatureEnabled::class.':group')->group(function () {
+            Route::post('/member/config/ai/{member}/groups/{group}/join', 'joinGroup')
+                ->whereNumber(['member', 'group'])->middleware('throttle:group-join')->name('member.config.ai.groups.join');
+            Route::post('/member/config/ai/{member}/groups/{group}/quit', 'quitGroup')
+                ->whereNumber(['member', 'group'])->name('member.config.ai.groups.quit');
+            Route::post('/member/config/ai/{member}/groups/{group}/cancel', 'cancelGroupRequest')
+                ->whereNumber(['member', 'group'])->name('member.config.ai.groups.cancel');
+        });
+    });
 
     // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
     // Re-auth per flow (enable opens a window that covers confirm; disable/regenerate also demand a

@@ -18,6 +18,8 @@ enum MemberConfigCategory: string
     // The notification catalog opt-ins (the member/configNotification page on OpenPNE 3 sites
     // that carried the notification extension — the compat redirect in routes/web.php).
     case Notification = 'notification';
+    // OpenPNE 4-native AI accounts (no OpenPNE 3 source), like General and Mfa.
+    case Ai = 'ai';
     case Password = 'password';
     // OpenPNE 4-native two-factor authentication (no OpenPNE 3 source), like General.
     case Mfa = 'mfa';
@@ -32,6 +34,7 @@ enum MemberConfigCategory: string
             self::Language => __('Language'),
             self::General => __('General'),
             self::Notification => __('Notifications'),
+            self::Ai => __('AI accounts'),
             self::Password => __('Password'),
             self::Mfa => __('Two-factor authentication'),
             self::Email => __('Email address'),

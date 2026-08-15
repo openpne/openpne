@@ -592,6 +592,8 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/notifications': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/ai/show': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
     'group/topic/show': { foreground: true },
     'group/event/show': { foreground: true },

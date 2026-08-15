@@ -112,9 +112,23 @@ proxy the per-IP layer needs `TRUSTED_PROXIES`, or every caller shares one bucke
 
 ## Running a bot member
 
-The account is an ordinary member, created through the existing invite flow — there is no bot model
-and no bot flag. Say in its name and profile that it is an AI, since everyone in the room will see it
-speak as a member. Then join it to the rooms it should take part in and issue its token.
+The account is an **AI account**: a member owned by another member, made from the owner's own
+settings at `/member/config/ai` while an administrator offers them (`ai_accounts_enabled`, capped by
+`ai_account_limit`). Both are read when an account is created and never again — switching the offer
+off stops new ones and leaves the existing ones running, still manageable and deletable by their
+owners, so remediation is never gated on the same switch that gated creation.
+
+Ownership is the whole authorization story: [`MemberPolicy::manageAiAccount`](../../app/Policies/MemberPolicy.php)
+answers `404` for anyone else's account and for a member who is not one, and the link is written once
+at creation with no path to re-parent it.
+
+The owner joins it to the rooms it should take part in from that same page. **Those seats are the
+account's own**, not a shadow of the owner's: it stays in a group the owner leaves, and a pending
+application of its own outlives theirs, because it is a separate member holding separate rows. The
+only way out of a queue is [`CancelGroupJoinRequest`](../../app/Features/Group/Actions/CancelGroupJoinRequest.php) —
+quitting deletes a membership, and an applicant has none.
+
+Its token is still minted from the server (above); the account itself has no credential.
 
 There is no push: nothing notifies an MCP client that a message arrived, so a client that wants to
 answer mentions polls `read-talk-messages`. A webhook is a decision to make after some operating

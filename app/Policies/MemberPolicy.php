@@ -23,4 +23,19 @@ class MemberPolicy extends BasePolicy
 
         return Response::allow();
     }
+
+    /**
+     * Whether $viewer may administer $target as one of their AI accounts — read its page, empty it
+     * out of groups, delete it. Ownership is the whole test: `owner_member_id` is written once at
+     * creation and never re-parented, so it is the account's permanent answer to "whose is this".
+     *
+     * Denies with 404 rather than 403, like access() above: a member id that names someone else's
+     * AI account must read the same as one that names nothing.
+     */
+    public function manageAiAccount(Member $viewer, Member $target): Response
+    {
+        return $target->isAiAccount() && (int) $target->owner_member_id === (int) $viewer->getKey()
+            ? Response::allow()
+            : Response::denyWithStatus(404);
+    }
 }

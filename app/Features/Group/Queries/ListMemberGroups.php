@@ -35,6 +35,17 @@ class ListMemberGroups
     }
 
     /**
+     * Every group $member has joined, unpaginated — for a management screen that must account for
+     * all of them, where a slice would quietly hide a seat the operator came to give up.
+     *
+     * @return Collection<int, Group>
+     */
+    public function all(Member $member): Collection
+    {
+        return $this->query($member)->get();
+    }
+
+    /**
      * The member's whole joined-group count, for a widget that shows a slice and links to the
      * rest — the take() slice can never stand in for it. One aggregate.
      */
