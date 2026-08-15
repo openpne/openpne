@@ -16,6 +16,7 @@ use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -302,5 +303,35 @@ class Member extends Authenticatable
     public function avatar(): HasOne
     {
         return $this->hasOne(MemberImage::class, 'member_id');
+    }
+
+    /**
+     * The member who owns this one, or null for an ordinary member. Eloquent answers null without a
+     * query when the column is null, so reading it on a human costs nothing.
+     *
+     * @return BelongsTo<Member, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'owner_member_id');
+    }
+
+    /**
+     * The AI accounts this member owns.
+     *
+     * @return HasMany<Member, $this>
+     */
+    public function aiAccounts(): HasMany
+    {
+        return $this->hasMany(self::class, 'owner_member_id');
+    }
+
+    /**
+     * An AI account is exactly a member with an owner. Nothing is inferred from a missing email:
+     * an address-less member is an ordinary member that cannot log in, not an AI account.
+     */
+    public function isAiAccount(): bool
+    {
+        return $this->owner_member_id !== null;
     }
 }

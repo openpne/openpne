@@ -27,11 +27,13 @@ use RuntimeException;
  * content, authored topics/events, and sent/received messages stay so the other parties' views keep
  * rendering (a withdrawn-member placeholder fills the null).
  *
- * Two things the cascade cannot do, handled explicitly here:
+ * Three things the cascade cannot do, handled explicitly here:
  *  - Image File *bytes* of cascade-deleted content (the member's own diaries + their comments, and
  *    timeline posts) — the cascade drops the *_image link rows but never the File bytes. We route
  *    each through its own delete action's purge so the bytes go too.
  *  - Sole-admin groups — flattened roles mean no implicit successor; hand over or dissolve.
+ *  - Owned AI accounts — `members.owner_member_id` is RESTRICT precisely so a cascade cannot take
+ *    them silently; each is withdrawn first, through this same action.
  *
  * There is deliberately NO single wrapping transaction. The cores purge image bytes via the
  * FileObserver, which removes them irreversibly; that must stay outside any transaction that could
@@ -65,6 +67,11 @@ class WithdrawMember
         $name = (string) $member->name;
         $email = (string) $member->email;
         $locale = $member->locale ?? (string) config('app.locale');
+        $wasAiAccount = $member->isAiAccount();
+
+        // Retire the AI accounts this member owns before anything else: they are members too, with
+        // seats and content of their own, and the FK refuses to let this row go while one survives.
+        $this->drainAiAccounts($member);
 
         // Leave every community first (each under its own row lock), handing over sole-admin seats;
         // dissolve the leftover empty ones after their lock commits so their byte purge stays post-commit.
@@ -100,7 +107,7 @@ class WithdrawMember
             'admin_username' => $adminUsername,
         ]);
 
-        MemberWithdrawn::dispatch($memberId, $name, $email, $locale);
+        MemberWithdrawn::dispatch($memberId, $name, $email, $locale, $wasAiAccount);
     }
 
     /**
@@ -115,9 +122,28 @@ class WithdrawMember
     }
 
     /**
-     * Delete the member row only once it holds no memberships, closing the window where a membership
-     * (possibly a sole-admin one from a transfer accepted mid-withdrawal) races in after the drain and
-     * would then be silently FK-cascaded away, stranding a community admin-less.
+     * Withdraw every AI account this member owns, through this same action so each gets the identical
+     * treatment (no second delete path to keep in step). Not routed through DeleteAiAccount: that one
+     * is the owner's deliberate retirement of a single account and logs it as such, where this is the
+     * owner disappearing and taking them along.
+     *
+     * The recursion terminates at depth one — CreateAiAccount refuses to give an AI account an AI
+     * account of its own — so no depth guard is needed. Re-runnable, like drainGroups(): deleteMemberRow()
+     * calls it again if one raced in.
+     */
+    private function drainAiAccounts(Member $member): void
+    {
+        foreach ($member->aiAccounts()->get() as $aiAccount) {
+            $this($aiAccount);
+        }
+    }
+
+    /**
+     * Delete the member row only once it holds no memberships and owns no AI account, closing the
+     * window where either (a sole-admin membership from a transfer accepted mid-withdrawal, an
+     * account created from another device) races in after the drain. A membership would then be
+     * silently FK-cascaded away, stranding a community admin-less; an AI account would instead abort
+     * the delete on the RESTRICT foreign key, which is loud but leaves the withdrawal half-done.
      *
      * While the member row is X-locked, a concurrent group_members INSERT for this member blocks on
      * InnoDB's FK parent-row share lock until we commit — after which that insert fails the FK. A
@@ -150,6 +176,13 @@ class WithdrawMember
                     return false; // raced in before the lock — drain again below
                 }
 
+                // The same re-read for the other restrict: CreateAiAccount takes this very row's
+                // lock first, so an account created after the drain is either already visible here
+                // or blocked until this transaction commits — after which its FK has no parent.
+                if ($locked->aiAccounts()->lockForUpdate()->exists()) {
+                    return false;
+                }
+
                 $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
 
                 return true;
@@ -159,10 +192,11 @@ class WithdrawMember
                 return;
             }
 
+            $this->drainAiAccounts($member);
             $this->drainGroups($member);
         }
 
-        throw new RuntimeException("Member {$id} still held memberships after the withdrawal drain cap.");
+        throw new RuntimeException("Member {$id} still held memberships or AI accounts after the withdrawal drain cap.");
     }
 
     /**

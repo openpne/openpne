@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Auth\SessionRevocation;
+use App\Features\AiAccount\AiAccountTokens;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Notifications\Member\PasswordChangedNotification;
@@ -41,6 +42,11 @@ class ResetMemberPassword implements ResetsUserPasswords
         ])->save();
 
         SessionRevocation::purgeMemberSessions((int) $member->getAuthIdentifier());
+
+        // Same reasoning one step out: an AI account the member owns is a foothold reached with a
+        // token this member minted, and whoever prompted the reset may have minted one. Revoked
+        // here, alongside the sessions, rather than left for the owner to notice.
+        AiAccountTokens::revokeOwnedBy($member);
 
         // A reset answers a possible compromise, so void any pending email change too: otherwise an
         // attacker who requested one before the reset still holds a live confirmation token.

@@ -21,6 +21,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -39,6 +40,20 @@ class WithdrawMemberTest extends TestCase
     private function withdraw(Member $member): void
     {
         app(WithdrawMember::class)($member);
+    }
+
+    /** A member holding the two polymorphic stores no foreign key reaches: their feed and a device. */
+    private function memberWithAFeedAndADevice(string $endpoint): Member
+    {
+        $member = Member::factory()->create();
+        $member->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'test',
+            'data' => ['kind' => 'test'],
+        ]);
+        $member->updatePushSubscription($endpoint, str_repeat('k', 87), str_repeat('a', 22), 'aes128gcm');
+
+        return $member;
     }
 
     public function test_deletes_the_member_and_cascade_owned_rows(): void
@@ -71,6 +86,22 @@ class WithdrawMemberTest extends TestCase
 
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $member->getKey()]);
         $this->assertSame(1, $bystander->tokens()->count());
+    }
+
+    public function test_deletes_the_notification_feed_and_push_subscriptions_the_cascade_cannot_reach(): void
+    {
+        // Polymorphic for the same reason the tokens are, and carrying the same id-reuse hazard: a
+        // surviving subscription would push the next holder of this id's notifications to a
+        // stranger's browser.
+        $member = $this->memberWithAFeedAndADevice('https://push.example.test/withdrawn');
+        $bystander = $this->memberWithAFeedAndADevice('https://push.example.test/bystander');
+
+        $this->withdraw($member);
+
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $member->getKey(), 'notifiable_type' => 'member']);
+        $this->assertSame(0, $member->pushSubscriptions()->count());
+        $this->assertSame(1, $bystander->notifications()->count());
+        $this->assertSame(1, $bystander->pushSubscriptions()->count());
     }
 
     public function test_purges_image_bytes_of_owned_diaries_and_timeline_posts(): void

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\LegacyEloquentUserProvider;
+use App\Auth\MemberUserProvider;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
@@ -128,6 +129,11 @@ class AppServiceProvider extends ServiceProvider
         // password the upgrade wrapped as bcrypt(md5) — can log in; the first login retires the
         // wrapper to a plain bcrypt (see LegacyEloquentUserProvider).
         Auth::provider('legacy-eloquent', fn ($app, array $config): LegacyEloquentUserProvider => new LegacyEloquentUserProvider($app['hash'], $config['model']));
+
+        // The `members` guard and password broker use this so an AI account — a member owned by
+        // another, holding no credential of its own — is not retrievable by session id, remember-me
+        // cookie or credentials (see MemberUserProvider).
+        Auth::provider('member-eloquent', fn ($app, array $config): MemberUserProvider => new MemberUserProvider($app['hash'], $config['model']));
 
         // The single password policy — every path validates via Password::default(), so this is the
         // one place the bounds live. Min 8 and the 72-BYTE cap (bcrypt reads nothing past its 72nd

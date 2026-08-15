@@ -41,6 +41,9 @@ enum SettingGroup
     /** Whether bodies show link preview cards, and therefore whether this site fetches URLs at all. */
     case LinkCard;
 
+    /** Whether members may create AI accounts, and how many each may own. */
+    case Ai;
+
     /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
     case Branding;
 

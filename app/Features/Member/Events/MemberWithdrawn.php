@@ -19,5 +19,7 @@ class MemberWithdrawn implements ShouldDispatchAfterCommit
         public readonly string $name,
         public readonly string $email,
         public readonly string $locale,
+        /** Whether the withdrawn member was an AI account; the operator notice is not about those. */
+        public readonly bool $wasAiAccount,
     ) {}
 }

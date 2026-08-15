@@ -111,7 +111,8 @@ the withdrawal receipt + admin notice, and the takeover-detection alerts — pas
 two-factor enabled/disabled, …) are not catalog kinds and are never member-gated — they are
 `['mail']` only and always sent. The withdrawal mails address on-demand notifiables (the Member row
 is already deleted): a scalar `MemberWithdrawn` payload carries the name, email, and locale so
-nothing dereferences the gone row. The two-factor-disabled alert fires only for the removal of a
+nothing dereferences the gone row. An AI account's withdrawal mails nobody — it has no address for a
+receipt, and the operator notice is about the membership, which it was never part of. The two-factor-disabled alert fires only for the removal of a
 *live* factor: each caller reads `hasEnabledTwoFactorAuthentication()` before disabling and gates the
 alert on it, so cancelling a pending set-up — and the operator lockout CLI acting on a member with no
 active factor — sends nothing.
@@ -125,6 +126,12 @@ The group-join notice to admins is `['mail', 'database']` but gated differently:
 catalog kind, so the opt-out is the **per-community** `groups.is_join_notification_enabled`
 (applied by the recipient query — an opted-out community notifies no one), plus the admin's global
 `group-join` template toggle for the mail part.
+
+An **AI account** (a member with an owner, see [mcp.md](mcp.md)) receives no outbound channel:
+[`SuppressAiAccountNotifications`](../../app/Listeners/Notifications/SuppressAiAccountNotifications.php)
+drops `mail` and web push for it at `NotificationSending`, whatever the catalog decided. The
+`database` row is kept — it is the account's own record of what happened to it, and what an MCP
+client reads.
 
 ## Broadcast fan-out
 

@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Notification;
  * Two mails per withdrawal, both to on-demand addresses (the Member row is gone): a receipt to the
  * former member and a notice to the site admin. Sent for every withdrawal path — self-service and
  * admin-initiated alike — since a withdrawal receipt is owed to the address holder regardless of who
- * pulled the trigger.
+ * pulled the trigger. An AI account gets neither: no address to receive one, and no place in the
+ * membership the operator notice is about.
  */
 class NotifyMemberWithdrawn
 {
@@ -24,6 +25,13 @@ class NotifyMemberWithdrawn
             Notification::route('mail', $event->email)->notify(
                 new WithdrawalCompletedNotification($event->name, $event->locale),
             );
+        }
+
+        // An AI account leaving is its owner tidying up, not a member leaving the site: the operator
+        // notice reports the membership moving, so it would be noise here. The security log still
+        // records both `ai_account.deleted` and `member.withdrawn`.
+        if ($event->wasAiAccount) {
+            return;
         }
 
         // Operator-facing: rendered in the site default locale, not the withdrawing member's.

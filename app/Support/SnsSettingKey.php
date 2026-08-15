@@ -132,6 +132,18 @@ enum SnsSettingKey: string
      */
     case LinkCardEnabled = 'link_card_enabled';
 
+    /**
+     * Whether a member may create an AI account (a member row with an owner).
+     *
+     * A creation gate only, off unless an operator turns it on. Managing, deleting and revoking
+     * tokens for an AI account that already exists stays available with this off, so switching it
+     * off never strands one out of its owner's reach.
+     */
+    case AiAccountsEnabled = 'ai_accounts_enabled';
+
+    /** How many AI accounts one member may own. */
+    case AiAccountLimit = 'ai_account_limit';
+
     /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
     case BrandColor = 'brand_color';
 
@@ -184,6 +196,7 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
             self::FeatureMcpEnabled => SettingGroup::Features,
             self::LinkCardEnabled => SettingGroup::LinkCard,
+            self::AiAccountsEnabled, self::AiAccountLimit => SettingGroup::Ai,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
@@ -230,6 +243,8 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
             self::FeatureMcpEnabled => null,
+            // OpenPNE 4-native: OpenPNE 3 had no AI accounts.
+            self::AiAccountsEnabled, self::AiAccountLimit => null,
             // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
@@ -255,8 +270,10 @@ enum SnsSettingKey: string
             SettingGroup::Diary, SettingGroup::SitePolicy => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
             // Link cards have no OpenPNE 3 ancestor, and enabling outbound requests is a decision for
-            // the operator of this site rather than something inherited from a migrated one.
-            SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard => false,
+            // the operator of this site rather than something inherited from a migrated one. AI
+            // accounts likewise: nothing in an OpenPNE 3 site says whether this one should offer them.
+            SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
+            SettingGroup::Ai => false,
         };
     }
 
@@ -279,6 +296,11 @@ enum SnsSettingKey: string
             self::RegistrationMode => 'invite',
             // Off until an operator decides this deployment should make outbound requests.
             self::LinkCardEnabled => false,
+            // Off until an operator decides members may create AI accounts here.
+            self::AiAccountsEnabled => false,
+            // A cap an operator can raise, not a ceiling the code assumes; three is enough for the
+            // one-assistant-per-tool case without a single member filling the member directory.
+            self::AiAccountLimit => 3,
             self::CaptchaEnabled => true,
             // Off, matching OpenPNE 3's is_allow_web_public_flag_age default — members may not make
             // their age web-public until an admin opts in.
@@ -328,7 +350,11 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
-            self::LinkCardEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            self::LinkCardEnabled,
+            self::AiAccountsEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            // The registry's one integer key. A non-numeric submission lands on 0 (no new accounts),
+            // the safe side of a cap.
+            self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             default => is_string($value) ? trim($value) : (string) $value,
@@ -344,7 +370,9 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
-            self::LinkCardEnabled => $value ? '1' : '0',
+            self::LinkCardEnabled,
+            self::AiAccountsEnabled => $value ? '1' : '0',
+            self::AiAccountLimit => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             default => (string) $value,
@@ -370,7 +398,11 @@ enum SnsSettingKey: string
             // on-by-default install fallback is untouched — unreadable is corruption, not consent.
             self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
             // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
-            self::LinkCardEnabled => $value === '1',
+            self::LinkCardEnabled, self::AiAccountsEnabled => $value === '1',
+            // The one integer key. A stored value that is not a number is corruption rather than a
+            // decision, so it reads as the shipped cap; a negative one clamps to 0 (create nothing)
+            // rather than inverting the comparison it feeds.
+            self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
             // Fail-OPEN, the one place that direction is right: an availability switch, so only an
             // explicit '0' takes a feature down. A malformed value must not black out a module and
             // strand its content — the opposite trade-off from the security keys above.
@@ -390,6 +422,8 @@ enum SnsSettingKey: string
             self::AdminMailAddress => __('Administrator email address'),
             self::SurfaceMode => __('Surface mode'),
             self::LinkCardEnabled => __('Show link previews'),
+            self::AiAccountsEnabled => __('Allow members to create AI accounts'),
+            self::AiAccountLimit => __('AI accounts per member'),
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
@@ -433,6 +467,7 @@ enum SnsSettingKey: string
             self::SnsName, self::AdminMailAddress => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
             self::TimelineAllowWebPublic, self::DiaryAllowWebPublic, self::LinkCardEnabled,
+            self::AiAccountsEnabled, self::AiAccountLimit,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,

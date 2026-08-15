@@ -49,8 +49,18 @@ final class SessionRevocation
         self::purge((string) config('session.admin_table'), $adminId, $exceptSessionId);
     }
 
+    /**
+     * A stored token of null is already the end state: retrieveByToken() requires one to compare
+     * against, so no remember-me cookie can validate against such a row and there is nothing to
+     * invalidate. Skipping it is also what keeps a ban working on an AI account, whose row the
+     * members CHECK forbids any credential — a rotation there would abort the whole freeze.
+     */
     private static function rotateRememberToken(Model&Authenticatable $user): void
     {
+        if ($user->getRememberToken() === null || $user->getRememberToken() === '') {
+            return;
+        }
+
         $user->forceFill(['remember_token' => Str::random(60)])->save();
     }
 

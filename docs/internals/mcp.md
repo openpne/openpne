@@ -40,9 +40,11 @@ bespoke check against one: a check on the token's name or shape would be a secon
 of a rule the mint already holds.
 
 Freezing a member deletes their tokens in the same transaction as the flag
-([`RejectMemberLogin`](../../app/Features/Member/Actions/RejectMemberLogin.php)).
+([`RejectMemberLogin`](../../app/Features/Member/Actions/RejectMemberLogin.php)) — and with them the
+tokens of any AI account they own, that account being a foothold of theirs held under a second name.
 [`EnsureTokenMemberNotFrozen`](../../app/Http/Middleware/EnsureTokenMemberNotFrozen.php) refuses a
-frozen member's token behind that, for a row the sweep did not reach.
+token behind that sweep, for a row it did not reach, asking the same question of the caller and of
+its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorEligibility.php)).
 
 ## Tools
 
