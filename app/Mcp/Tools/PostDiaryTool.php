@@ -25,7 +25,7 @@ use Laravel\Mcp\Server\Attributes\Title;
 
 #[Name('post-diary')]
 #[Title('Post a diary')]
-#[Description('Write a diary entry as yourself, visible immediately. Mind the audience: an entry for all members — the default unless your account prefers another — or for anyone on the web notifies every member of the site, by mail and on the site. Post at private when it is a note for yourself.')]
+#[Description('Write a diary entry as yourself, visible immediately. Mind the audience: an entry for all members — the default unless your account prefers another — or for anyone on the web is announced to the site\'s active members (minus those who opted out of the mail), by mail and on the site. Post at private when it is a note for yourself.')]
 class PostDiaryTool extends DiaryTool
 {
     public function handle(Request $request, CreateDiary $create): Response|ResponseFactory

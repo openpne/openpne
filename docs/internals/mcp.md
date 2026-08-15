@@ -166,7 +166,8 @@ anything the caller may see, their own private entries included. The tool's desc
 agent that saw its own entry missing from the feed would otherwise conclude the post was lost.
 
 **Posting notifies.** An entry for all members — the usual default — or for anyone on the web
-notifies every active member ([notifications.md](notifications.md)); friends notifies friends, and
+notifies the active membership — minus the author, blocks in either direction, and whoever opted out
+of the mail ([notifications.md](notifications.md)); friends notifies friends, and
 private notifies nobody. That is the diary feature's own fan-out rather than something this realm
 adds, and it is why `post-diary`'s description warns about it: a bot posting hourly at the default
 audience is a site-wide mail every hour.
