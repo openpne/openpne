@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp;
 
+use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Events\GroupMessagePosted;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Timeline\Actions\ResolveMentions;
+use App\Files\PostImages;
 use App\Mcp\McpAbilities;
 use App\Mcp\Servers\OpenPneServer;
 use App\Mcp\Tools\ListTalkRoomsTool;
@@ -23,6 +26,7 @@ use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use App\Support\Feature;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -609,6 +613,175 @@ class TalkToolsTest extends McpTestCase
 
         $this->assertSame(TalkBody::MAX, mb_strlen((string) GroupMessage::query()->orderByDesc('id')->value('body')));
         $this->assertSame(2, GroupMessage::query()->where('group_id', $group->getKey())->count());
+    }
+
+    /**
+     * Nothing changed between composing the handle and resolving it, so nothing lands here: the
+     * write goes in on the first attempt, and the room is left holding one message.
+     */
+    public function test_a_block_landing_between_the_handle_and_the_write_posts_the_answer_plain(): void
+    {
+        Notification::fake();
+
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'Bob');
+        $question = $this->say($group, $asker, 'what is the weather');
+
+        $this->raceBeforeTheWrite(fn () => DB::table('member_blocks')->insert([
+            'blocker_id' => $asker->getKey(),
+            'blocked_id' => $bot->getKey(),
+        ]));
+
+        $this->acting($bot);
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'rain, probably',
+            'reply_to_message_id' => $question->getKey(),
+        ])
+            ->assertOk()
+            // The handle the first attempt composed went back with it: what is stored is the text as
+            // the caller wrote it.
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('message.body', 'rain, probably')
+                ->where('message.mentions', [])
+                ->etc());
+
+        $this->assertSame(1, GroupMessage::query()->where('member_id', $bot->getKey())->count());
+        $this->assertSame(0, DB::table('group_message_mentions')->count());
+        Notification::assertNothingSent();
+    }
+
+    /** A rename is the one race worth composing again for: there is still someone to address. */
+    public function test_a_rename_between_the_handle_and_the_write_is_composed_again(): void
+    {
+        Notification::fake();
+
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'Bob');
+        $question = $this->say($group, $asker, 'what is the weather');
+
+        $this->raceBeforeTheWrite(fn () => DB::table('members')
+            ->where('id', $asker->getKey())
+            ->update(['name' => 'Robert']));
+
+        $this->acting($bot);
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'rain, probably',
+            'reply_to_message_id' => $question->getKey(),
+        ])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('message.body', '@Robert rain, probably')
+                ->where('message.mentions', [$asker->getKey()])
+                ->etc());
+
+        $posted = GroupMessage::query()->where('member_id', $bot->getKey())->sole();
+        $mention = DB::table('group_message_mentions')->where('group_message_id', $posted->getKey())->sole();
+
+        $this->assertSame(0, (int) $mention->offset);
+        $this->assertSame(1 + mb_strlen('Robert'), (int) $mention->length);
+        Notification::assertSentTo($asker, GroupTalkMentionedNotification::class);
+    }
+
+    /** What the addressed member sees for it: the answer waiting, counted as one that names them. */
+    public function test_an_answer_reaches_the_addressed_members_unread_mention_count(): void
+    {
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'Bob');
+        $question = $this->say($group, $asker, 'what is the weather');
+
+        $this->acting($bot);
+        $answerId = null;
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'rain, probably',
+            'reply_to_message_id' => $question->getKey(),
+        ])->assertOk()->assertStructuredContent(function ($json) use (&$answerId): void {
+            $answerId = $json->toArray()['message']['id'];
+            $json->etc();
+        });
+
+        $this->acting($asker);
+
+        OpenPneServer::tool(ListTalkRoomsTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json->where('rooms.0.unreadMentions', 1)->etc());
+
+        OpenPneServer::tool(MarkTalkReadTool::class, [
+            'group_id' => $group->getKey(),
+            'message_id' => $answerId,
+        ])->assertOk();
+
+        OpenPneServer::tool(ListTalkRoomsTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('rooms.0.unread', 0)
+                ->where('rooms.0.unreadMentions', 0)
+                ->etc());
+    }
+
+    /** A caller racing every attempt is answered as one with nobody to address: posted, unaddressed. */
+    public function test_a_rename_on_every_attempt_gives_up_and_posts_plain(): void
+    {
+        Notification::fake();
+
+        $group = $this->group();
+        $bot = $this->memberOf($group);
+        $asker = $this->joined($group, 'Bob');
+        $question = $this->say($group, $asker, 'what is the weather');
+
+        $names = ['Robert', 'Bobby'];
+        $this->raceBeforeTheWrite(function () use ($asker, &$names): void {
+            DB::table('members')->where('id', $asker->getKey())->update(['name' => array_shift($names)]);
+        }, times: 2);
+
+        $this->acting($bot);
+
+        OpenPneServer::tool(PostTalkMessageTool::class, [
+            'group_id' => $group->getKey(),
+            'body' => 'rain, probably',
+            'reply_to_message_id' => $question->getKey(),
+        ])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('message.body', 'rain, probably')
+                ->where('message.mentions', [])
+                ->etc());
+
+        $this->assertSame(1, GroupMessage::query()->where('member_id', $bot->getKey())->count());
+        $this->assertSame(0, DB::table('group_message_mentions')->count());
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Move the world in the window the tool cannot hold shut: after it composed the handle and before
+     * the write resolves it. Only the first $times attempts are raced, so the one after them sees the
+     * state the race left behind.
+     */
+    private function raceBeforeTheWrite(Closure $race, int $times = 1): void
+    {
+        $this->app->singleton(CreateGroupMessage::class, fn () => new class(app(PostImages::class), app(ResolveMentions::class), $race, $times) extends CreateGroupMessage
+        {
+            public function __construct(PostImages $images, ResolveMentions $mentions, private readonly Closure $race, private int $times)
+            {
+                parent::__construct($images, $mentions);
+            }
+
+            public function __invoke(Member $author, Group $group, string $body, array $mentions = [], array $images = [], bool $mentionsRequired = false): GroupMessage
+            {
+                if ($this->times-- > 0) {
+                    ($this->race)();
+                }
+
+                return parent::__invoke($author, $group, $body, $mentions, $images, $mentionsRequired);
+            }
+        });
     }
 
     public function test_the_room_list_says_how_many_of_the_unread_name_the_caller(): void

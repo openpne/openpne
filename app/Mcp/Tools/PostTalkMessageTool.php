@@ -6,6 +6,7 @@ namespace App\Mcp\Tools;
 
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
+use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Features\GroupTalk\Serializers\McpTalkSerializer;
 use App\Features\GroupTalk\TalkBody;
 use App\Features\Timeline\Actions\ResolveMentions;
@@ -69,8 +70,7 @@ class PostTalkMessageTool extends TalkTool
             return $this->refused();
         }
 
-        $body = $validated['body'];
-        $mentionRows = [];
+        $replyTo = null;
 
         if (isset($validated['reply_to_message_id'])) {
             // A live row of THIS room, resolved as MarkTalkRead resolves one: another room's message
@@ -83,14 +83,10 @@ class PostTalkMessageTool extends TalkTool
             if ($replyTo === null) {
                 return $this->refused();
             }
-
-            [$body, $mentionRows] = $this->addressing($replyTo, $member, $group, $body, $mentions);
         }
 
         try {
-            // The only mentions here are the ones this tool composed above: no body is ever parsed
-            // for `@` (docs/internals/group-talk.md), and this wire has no picker.
-            $message = $create($member, $group, $body, mentions: $mentionRows);
+            $message = $this->post($create, $mentions, $member, $group, $validated['body'], $replyTo);
         } catch (GroupTalkActionException) {
             // A room the caller may read but not write to. Same answer as a room that is not there.
             return $this->refused();
@@ -103,29 +99,88 @@ class PostTalkMessageTool extends TalkTool
     }
 
     /**
-     * The body with the answered message's author addressed at its head, and the single mention row
-     * that names them — or both left as they were when there is nobody to address.
+     * The posted message, with the answered author addressed at its head when there is one to
+     * address.
+     *
+     * The handle is written optimistically and verified where it is resolved: `mentionsRequired`
+     * makes the write roll back rather than store a body whose handle names nobody, so the check and
+     * the write cannot disagree however long they are apart. Asking `isMentionable` up front instead
+     * would only narrow the window — talk has no edit, so a body that got through it is permanent.
+     * The ordinary answer therefore costs one mentionability query, the one inside the transaction.
+     *
+     * @param  string  $body  already trimmed: trimming after the prefix would eat the separating
+     *                        space and shift every range that follows it
+     *
+     * @throws GroupTalkActionException from the write itself, never for a dropped mention
+     */
+    private function post(
+        CreateGroupMessage $create,
+        ResolveMentions $mentions,
+        Member $member,
+        Group $group,
+        string $body,
+        ?GroupMessage $replyTo,
+    ): GroupMessage {
+        // The only mentions here are the ones this tool composes: no body is ever parsed for `@`
+        // (docs/internals/group-talk.md), and this wire has no picker.
+        $plain = fn (): GroupMessage => $create($member, $group, $body);
+        $addressing = function (Member $author) use ($create, $member, $group, $body): GroupMessage {
+            [$addressed, $rows] = $this->addressed($author, $body);
+
+            return $create($member, $group, $addressed, mentions: $rows, mentionsRequired: true);
+        };
+
+        $author = $replyTo?->author;
+
+        // A withdrawn author leaves nobody to address, and mentioning yourself is what resolution
+        // drops anyway — neither needs to be asked.
+        if ($author === null || $author->is($member)) {
+            return $plain();
+        }
+
+        try {
+            return $addressing($author);
+        } catch (GroupTalkActionException $e) {
+            if ($e->reason !== GroupTalkActionFailure::MentionDropped) {
+                throw $e;
+            }
+        }
+
+        // The handle went stale while it was being written. Read the author again — now that there
+        // is a reason to — and ask the gate: gone, blocked or frozen leaves nobody to address; a
+        // rename leaves a new handle, which the write verifies in turn.
+        $replyTo->unsetRelation('author');
+        $author = $replyTo->author;
+
+        if ($author === null || ! $mentions->isMentionable($member, (int) $author->getKey(), $group)) {
+            return $plain();
+        }
+
+        try {
+            return $addressing($author);
+        } catch (GroupTalkActionException $e) {
+            if ($e->reason !== GroupTalkActionFailure::MentionDropped) {
+                throw $e;
+            }
+        }
+
+        // One retry is where this stops: a caller racing every attempt is answered as one with
+        // nobody to address, which is a message posted rather than a message lost.
+        return $plain();
+    }
+
+    /**
+     * The body with $author addressed at its head, and the single mention row that names them.
      *
      * The handle is the stored name, never the display one: ResolveMentions matches the range
      * against `'@'.$name` character for character, so an "(AI)" suffix would leave the row silently
      * dropped. The separating space sits outside the range, exactly where the composer's picker
      * leaves it.
      *
-     * @param  string  $body  already trimmed: trimming after the prefix would eat the separating
-     *                        space and shift every range that follows it
      * @return array{0: string, 1: list<array{member_id: int, offset: int, length: int}>}
      */
-    private function addressing(GroupMessage $replyTo, Member $member, Group $group, string $body, ResolveMentions $mentions): array
+    private function addressed(Member $author, string $body): array
     {
-        $author = $replyTo->author;
-
-        // A withdrawn author leaves nobody to address. Everyone else goes through the gate the write
-        // will apply anyway — one source, so a handle is never written for a mention that resolution
-        // would drop — and that gate excludes the caller, so answering your own message adds nothing.
-        if ($author === null || ! $mentions->isMentionable($member, (int) $author->getKey(), $group)) {
-            return [$body, []];
-        }
-
         $name = $author->name;
         $addressed = '@'.$name.' '.$body;
 

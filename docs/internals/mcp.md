@@ -87,10 +87,11 @@ Three things it deliberately does not do:
 - **No one is addressed when there is no one to address** — a withdrawn author, the caller's own
   message, a member who has left the room, a block in either direction, a frozen account. The
   message still posts, as written; the posted message's `mentions` is what says whether anyone was
-  named, and no separate signal is invented for it. The gate is
-  [`ResolveMentions::isMentionable`](../../app/Features/Timeline/Actions/ResolveMentions.php), the
-  same query the write resolves against, so a handle is never written for a mention that resolution
-  would then drop.
+  named, and no separate signal is invented for it. The handle is composed optimistically and
+  verified where it is resolved: [`CreateGroupMessage`](../../app/Features/GroupTalk/Actions/CreateGroupMessage.php)
+  rolls the whole write back when the row it was given is dropped, and the tool re-reads the author
+  and posts again — plain, or with the new name. So a body carrying a handle that names nobody is
+  never stored, which is what matters in a surface with no edit.
 - **The handle is the stored name, not the display one.** Resolution matches the range against
   `'@'.$name` character for character, so an AI account's `(AI)` suffix would leave the row silently
   dropped.

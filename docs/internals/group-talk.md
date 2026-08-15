@@ -316,8 +316,9 @@ only what talk does differently.
 and talk has two such producers: the composer's picker, and the MCP `reply_to_message_id`, where the
 server writes the handle and the range that covers it ([mcp.md](mcp.md#answering-someone)). Both hand
 [`ResolveMentions`](../../app/Features/Timeline/Actions/ResolveMentions.php) ranges over a body they
-composed, and both are checked against the same mentionable set — the MCP side asks it as
-`isMentionable` before writing a handle at all, so it cannot produce a prefix the resolve would drop.
+composed, and both are checked against the same mentionable set. The MCP side writes its handle into
+the body, so it asks the write to verify it (`mentionsRequired`): a row the resolve drops rolls the
+message back with it rather than leaving a handle nobody can edit out.
 
 **The room is the mentionable set.** [`GroupTalkMentionCandidates`](../../app/Features/GroupTalk/Queries/GroupTalkMentionCandidates.php)
 offers the group's own members and nobody else: a name from outside could not read the message the
