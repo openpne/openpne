@@ -54,6 +54,15 @@ return [
             'driver' => 'session',
             'provider' => 'admins',
         ],
+
+        // Personal access tokens (config/sanctum.php). Declared here rather than left to Sanctum's
+        // own registration, which defaults the provider to null — and a null provider skips the
+        // check that a presented token belongs to the model this guard authenticates. Naming
+        // `members` keeps that check on as other tokenable models appear.
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'members',
+        ],
     ],
 
     /*

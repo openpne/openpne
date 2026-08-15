@@ -30,5 +30,11 @@ class MemberObserver
         if ($file !== null) {
             DB::afterCommit(fn () => $file->delete()); // deleting the File runs FileObserver, which purges the bytes
         }
+
+        // Personal access tokens are polymorphic too, so no cascade reaches them. Left behind they
+        // would not merely leak rows: `tokenable_id` is resolved at authentication time, so a reused
+        // member id would hand the withdrawn member's token to whoever inherits the id. Deleted
+        // inline (not afterCommit) because a rollback should restore these rows, not outlive them.
+        $member->tokens()->delete();
     }
 }

@@ -23,14 +23,16 @@ class RejectMemberLogin
             throw new RuntimeException('The primary member cannot have login rejected.');
         }
 
-        // One transaction: the flag only blocks the NEXT login, so a frozen member's live sessions
-        // and remember-me cookies must die with it — a ban that set the flag but failed the
-        // revocation would look complete while the member stays signed in.
+        // One transaction: the flag only blocks the NEXT login, so a frozen member's live sessions,
+        // remember-me cookies and personal access tokens must die with it — a ban that set the flag
+        // but failed the revocation would look complete while the member stays signed in.
         DB::transaction(function () use ($member): void {
             // Direct assignment: is_login_rejected is outside the model's mass-assignable set.
             $member->is_login_rejected = true;
             $member->save();
             SessionRevocation::revokeMember($member);
+            // Every token, not just the MCP ones: a ban ends every foothold, whatever minted it.
+            $member->tokens()->delete();
         });
 
         SecurityLog::event('member.banned', [

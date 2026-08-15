@@ -67,6 +67,22 @@ class RejectMemberLoginTest extends TestCase
         $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
+    public function test_deletes_every_personal_access_token(): void
+    {
+        // A ban ends every foothold, and an API token is one the session purge cannot reach — so
+        // all of them go, whatever name they were minted under.
+        $member = Member::factory()->create(['is_login_rejected' => false]);
+        $member->createToken('mcp', ['mcp:read']);
+        $member->createToken('other');
+        $bystander = Member::factory()->create();
+        $bystander->createToken('mcp', ['mcp:read']);
+
+        $this->reject($member);
+
+        $this->assertSame(0, $member->tokens()->count());
+        $this->assertSame(1, $bystander->tokens()->count());
+    }
+
     public function test_logs_the_banned_event_with_the_admin_actor(): void
     {
         $member = Member::factory()->create(['is_login_rejected' => false]);
