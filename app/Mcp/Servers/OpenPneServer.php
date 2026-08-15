@@ -7,6 +7,7 @@ namespace App\Mcp\Servers;
 use App\Mcp\Tools\ListTalkRoomsTool;
 use App\Mcp\Tools\MarkTalkReadTool;
 use App\Mcp\Tools\PostTalkMessageTool;
+use App\Mcp\Tools\ReadTalkMessageImagesTool;
 use App\Mcp\Tools\ReadTalkMessagesTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -28,6 +29,7 @@ class OpenPneServer extends Server
     protected array $tools = [
         ListTalkRoomsTool::class,
         ReadTalkMessagesTool::class,
+        ReadTalkMessageImagesTool::class,
         PostTalkMessageTool::class,
         MarkTalkReadTool::class,
     ];
