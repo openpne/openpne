@@ -58,6 +58,21 @@ class WithdrawMemberTest extends TestCase
         $this->assertSame('self', $context['actor']);
     }
 
+    public function test_deletes_personal_access_tokens_the_cascade_cannot_reach(): void
+    {
+        // `tokenable` is polymorphic, so no foreign key sweeps these. Left behind they would
+        // outlive the member and follow a reused member id onto whoever inherits it.
+        $member = Member::factory()->create();
+        $member->createToken('mcp', ['mcp:read']);
+        $bystander = Member::factory()->create();
+        $bystander->createToken('mcp', ['mcp:read']);
+
+        $this->withdraw($member);
+
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $member->getKey()]);
+        $this->assertSame(1, $bystander->tokens()->count());
+    }
+
     public function test_purges_image_bytes_of_owned_diaries_and_timeline_posts(): void
     {
         $member = Member::factory()->create();

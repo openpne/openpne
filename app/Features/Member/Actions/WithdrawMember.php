@@ -21,7 +21,8 @@ use RuntimeException;
  *
  * Most of the member's rows are removed by the `members` FK cascade (friendships, friend_requests,
  * member_blocks, group_members, group_join_requests, group_event_members,
- * member_profiles, member_preferences) and the avatar File is purged by MemberObserver::deleting().
+ * member_profiles, member_preferences); the avatar File and any personal access tokens, both linked
+ * polymorphically and so outside the cascade, are removed by MemberObserver::deleting().
  * SET-NULL relations are deliberately retained with a null author — the member's comments on others'
  * content, authored topics/events, and sent/received messages stay so the other parties' views keep
  * rendering (a withdrawn-member placeholder fills the null).

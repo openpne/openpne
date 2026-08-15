@@ -24,14 +24,15 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
+#[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'tokens'])]
 class Member extends Authenticatable
 {
     /** @use HasFactory<MemberFactory> */
-    use ClearsPasswordScheme, HasFactory, HasPushSubscriptions, Notifiable;
+    use ClearsPasswordScheme, HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable;
 
     // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
     // load-bearing, not decorative.
