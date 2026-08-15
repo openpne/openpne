@@ -1,5 +1,5 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Avatar } from '@/components/avatar';
+import { Head, usePage } from '@inertiajs/react';
+import { MemberTile } from '@/components/member-tile';
 import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -28,10 +28,7 @@ export default function GroupEventMembers() {
                         <ul className="flex flex-wrap gap-4">
                             {participants.data.map((participant) => (
                                 <li key={participant.id} className="w-16">
-                                    <Link href={`/member/${participant.id}`} className="flex flex-col items-center gap-1">
-                                        <Avatar id={participant.id} name={participant.name} src={participant.imageUrl} color={participant.avatarColor} isAi={participant.isAi} size="lg" decorative />
-                                        <span className="w-full truncate text-center text-xs">{participant.name}</span>
-                                    </Link>
+                                    <MemberTile member={participant} />
                                 </li>
                             ))}
                         </ul>

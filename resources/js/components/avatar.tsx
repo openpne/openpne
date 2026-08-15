@@ -1,3 +1,4 @@
+import { AiCornerMark } from '@/components/ai-corner-mark';
 import { InitialBadge } from '@/components/initial-badge';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
@@ -27,17 +28,6 @@ const textSizeClass: Record<AvatarSize, string> = {
     sm: 'text-xs',
     md: 'text-sm',
     lg: 'text-base',
-};
-
-// The AI corner tag: what says so where the face stands without a name beside it (roster grids,
-// the right rail). Deliberately quiet — it wears the AiChip's muted register, so a row carrying
-// both reads as one statement rather than two. Its own fill and a background-coloured ring keep it
-// legible over an uploaded photo.
-const markerSizeClass: Record<AvatarSize, string> = {
-    xs: 'text-[7px] px-[2px]',
-    sm: 'text-[7px] px-[2px]',
-    md: 'text-[8px] px-[3px]',
-    lg: 'text-[9px] px-[3px]',
 };
 
 type Props = {
@@ -89,12 +79,7 @@ export function Avatar({ id, name, src, color, isAi, size = 'md', decorative = f
         // inline-flex + shrink-0 so the wrapper stands where the bare face used to in a flex row.
         <span className="relative inline-flex shrink-0">
             {face}
-            <span
-                aria-hidden
-                className={`absolute -bottom-0.5 -right-0.5 rounded-sm bg-muted leading-[1.4] text-muted-foreground ring-1 ring-background ${markerSizeClass[size]}`}
-            >
-                {t('AI')}
-            </span>
+            <AiCornerMark isAi={isAi} size={size} />
         </span>
     );
 }
