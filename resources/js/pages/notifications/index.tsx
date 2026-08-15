@@ -19,6 +19,7 @@ interface FeedActor {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 interface FeedItem {
@@ -121,6 +122,7 @@ export default function NotificationsIndex() {
                                         name={item.actor?.name ?? t('Withdrawn member')}
                                         src={item.actor?.imageUrl ?? null}
                                         color={item.actor?.avatarColor ?? null}
+                                        isAi={item.actor?.isAi ?? false}
                                         size="md"
                                         decorative
                                     />

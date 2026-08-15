@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Friend;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Member;
 use App\Notifications\Concerns\GatedByFeature;
@@ -36,7 +37,7 @@ class FriendRequestAcceptedNotification extends Notification implements FeatureN
     public function toMail(Member $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::FriendAccepted, [
-            'member' => ['name' => $this->accepter->name],
+            'member' => ['name' => MemberDisplayName::of($this->accepter)],
         ]);
     }
 

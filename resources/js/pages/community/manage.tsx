@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
@@ -65,10 +66,11 @@ export default function CommunityManage() {
                         return (
                             <ListRow key={member.id} className="flex-wrap">
                                 <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
-                                    <Link href={`/member/${member.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="md" decorative />
+                                    <Link href={`/member/${member.id}`} className="min-w-0 truncate text-link hover:underline">
                                         {member.name}
                                     </Link>
+                                    <AiChip isAi={member.isAi} />
                                 </div>
                                 {/* The badge rides with the buttons so the identity box is name-only —
                                     otherwise a badge eats the name's width on narrow screens. */}

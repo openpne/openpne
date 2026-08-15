@@ -20,6 +20,7 @@ export interface DiaryAuthor {
 export interface DiaryAvatarAuthor extends DiaryAuthor {
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface DiarySummary {

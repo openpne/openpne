@@ -23,7 +23,7 @@ export default function CommunityMembers() {
                     {members.data.map((member) => (
                         <li key={member.id}>
                             <Link href={`/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
+                                <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="lg" decorative />
                                 <span className="w-full truncate text-center text-sm">{member.name}</span>
                             </Link>
                         </li>

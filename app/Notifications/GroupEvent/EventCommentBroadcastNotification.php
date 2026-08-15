@@ -2,6 +2,7 @@
 
 namespace App\Notifications\GroupEvent;
 
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
 use App\Models\GroupEvent;
@@ -54,7 +55,7 @@ class EventCommentBroadcastNotification extends Notification implements FeatureN
         return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->group->name,
             'topic_name' => $this->event->name,
-            'nickname' => $this->commenter->name,
+            'nickname' => MemberDisplayName::of($this->commenter),
             'body' => $this->comment->body,
             'url' => route('group.events.show', ['event' => $this->event->getKey()]),
         ]);

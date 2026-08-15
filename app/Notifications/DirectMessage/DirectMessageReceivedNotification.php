@@ -3,6 +3,7 @@
 namespace App\Notifications\DirectMessage;
 
 use App\Features\Block\BlockLookup;
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\DirectMessage;
 use App\Models\Member;
@@ -79,9 +80,9 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
     public function toMail(Member $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::DirectMessageReceived, [
-            'member' => ['name' => $this->sender->name],
+            'member' => ['name' => MemberDisplayName::of($this->sender)],
             // The extension wording's flat variable names, so an imported body renders as-is.
-            'member_name' => $this->sender->name,
+            'member_name' => MemberDisplayName::of($this->sender),
             'message_subject' => $this->message->subject,
             // A message written as chat may be nothing but pictures, which would leave the mail's
             // body line blank; it says so instead. A legacy subject-only row carries no attachment

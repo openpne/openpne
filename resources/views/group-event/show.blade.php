@@ -11,7 +11,7 @@
                 <th>{{ __('Writer') }}</th>
                 <td>
                     @if ($event->member)
-                        <a href="{{ route('member.profile.show', $event->member) }}">{{ $event->member->name }}</a>
+                        <a href="{{ route('member.profile.show', $event->member) }}">{{ $event->member->name }}</a><x-classic.ai-mark :is-ai="$event->member->isAiAccount()" />
                     @else
                         {{ __('Withdrawn member') }}
                     @endif

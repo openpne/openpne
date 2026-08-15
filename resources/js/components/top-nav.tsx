@@ -126,7 +126,7 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
                 {scope.kind === 'group' ? (
                     <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
                 ) : (
-                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
+                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="sm" decorative />
                 )}
                 {/* The scope names the region the bar is in, the same job the hub bar's centered label
                     does — so it takes the same heading weight, not a heavier one. */}

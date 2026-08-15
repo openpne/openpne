@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Spinner } from '@/components/spinner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -53,10 +54,11 @@ export function TalkReactorsDialog({ url, onClose }: { url: string; onClose: () 
                                 <ul className="mt-1 space-y-1">
                                     {group.members.map((member) => (
                                         <li key={member.id} className="flex items-center gap-2">
-                                            <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="sm" decorative />
+                                            <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="sm" decorative />
                                             <Link href={`/member/${member.id}`} className="truncate text-link hover:underline">
                                                 {member.name}
                                             </Link>
+                                            <AiChip isAi={member.isAi} />
                                         </li>
                                     ))}
                                 </ul>

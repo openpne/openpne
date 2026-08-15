@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Pagination } from '@/components/pagination';
 import { Timestamp } from '@/components/timestamp';
@@ -72,14 +73,18 @@ function DraftRow({ draft }: { draft: MessageRow }) {
                 name={name}
                 src={draft.counterparty?.imageUrl ?? null}
                 color={draft.counterparty?.avatarColor ?? null}
+                isAi={draft.counterparty?.isAi ?? false}
                 decorative
             />
             <div className="min-w-0 flex-1">
-                <p className="truncate text-base text-foreground">
-                    <Link href={`/message/edit/${draft.id}`} className={stretchedLink}>
-                        {name}
-                    </Link>
-                </p>
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="min-w-0 truncate text-base text-foreground">
+                        <Link href={`/message/edit/${draft.id}`} className={stretchedLink}>
+                            {name}
+                        </Link>
+                    </p>
+                    <AiChip isAi={draft.counterparty?.isAi ?? false} />
+                </div>
                 <p className="mt-0.5 truncate text-sm text-muted-foreground">{draft.subject || t('(No subject)')}</p>
             </div>
             <Timestamp at={draft.date} preset="relative" className="shrink-0 text-xs text-muted-foreground" />

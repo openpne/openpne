@@ -9,6 +9,7 @@ export interface TimelinePostAuthor {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 export interface TimelinePostEntry {

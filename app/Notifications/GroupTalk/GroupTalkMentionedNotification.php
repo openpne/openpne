@@ -3,6 +3,7 @@
 namespace App\Notifications\GroupTalk;
 
 use App\Features\GroupTalk\GroupTalkNotificationEligibility;
+use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
 use App\Models\GroupMessage;
@@ -65,7 +66,7 @@ class GroupTalkMentionedNotification extends Notification implements FeatureNoti
     public function toMail(Member $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::GroupTalkMentionNotified, [
-            'member_name' => $this->author->name,
+            'member_name' => MemberDisplayName::of($this->author),
             'community_name' => $this->group()->name,
             'body' => $this->message->body,
             // The conversation, opened on the message that named them: talk has no screen for one

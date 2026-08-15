@@ -55,7 +55,7 @@ export interface ChromeAction {
 /** The entity a page sits inside, drawn as the mobile bar's identity block (image + name → its page). */
 export type ChromeScope =
     | { kind: 'group'; id: number; name: string; imageUrl: string | null }
-    | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null };
+    | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean };
 
 export interface Chrome {
     /**
@@ -297,6 +297,7 @@ interface MemberRef {
     name: string;
     imageUrl: string | null;
     avatarColor: string | null;
+    isAi: boolean;
 }
 
 // A contextual page about another member (their diary archive, friends, groups): crumb back
@@ -313,6 +314,7 @@ const memberScope = (member: MemberRef): ChromeScope => ({
     name: member.name,
     imageUrl: member.imageUrl,
     avatarColor: member.avatarColor,
+    isAi: member.isAi,
 });
 
 // The one place messages are listed, and so the parent every message-scoped screen crumbs back to.

@@ -2,6 +2,7 @@
 
 namespace App\Features\Group\Serializers;
 
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -52,24 +53,19 @@ class GroupSerializer
      * A confirmed member row: the member identity plus their group role slug. Requires the
      * member (and its avatar.file) to be loaded so serializing a list is not an N+1.
      *
-     * @return array{id: int, name: string, imageUrl: string|null, role: string}
+     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, role: string}
      */
     public static function member(GroupMember $membership): array
     {
-        $member = $membership->member;
-
         return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
+            ...MemberRefSerializer::ref($membership->member),
             'role' => $membership->role->slug(),
         ];
     }
 
     /**
      * @param  iterable<GroupMember>  $members
-     * @return list<array{id: int, name: string, imageUrl: string|null, role: string}>
+     * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, role: string}>
      */
     public static function members(iterable $members): array
     {
@@ -109,16 +105,11 @@ class GroupSerializer
      * A pending join applicant: the member identity only (the approval queue shows name + actions).
      * Requires avatar.file to be loaded so a list is not an N+1.
      *
-     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}
+     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}
      */
     public static function applicant(Member $member): array
     {
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return MemberRefSerializer::ref($member);
     }
 
     /**
