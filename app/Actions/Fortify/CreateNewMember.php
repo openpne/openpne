@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Features\Member\MemberNameRules;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
@@ -35,7 +36,7 @@ class CreateNewMember implements CreatesNewUsers
         $profiles = $this->registrationProfiles();
 
         $rules = [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => MemberNameRules::rules(),
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(Member::class)],
             'password' => $this->passwordRules(),
         ];

@@ -36,5 +36,13 @@ class MemberObserver
         // member id would hand the withdrawn member's token to whoever inherits the id. Deleted
         // inline (not afterCommit) because a rollback should restore these rows, not outlive them.
         $member->tokens()->delete();
+
+        // The member's own notification feed and push subscriptions, polymorphic for the same reason
+        // and carrying the same id-reuse hazard — a surviving subscription would push the next
+        // holder of this id's notifications to a stranger's browser. Only rows ADDRESSED to this
+        // member: the ones where they are merely the actor stay, so other members' feeds keep
+        // rendering with the withdrawn-member placeholder.
+        $member->notifications()->delete();
+        $member->pushSubscriptions()->delete();
     }
 }

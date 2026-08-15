@@ -29,7 +29,11 @@ class AuthenticateMember
 
         $password = (string) $request->input('password');
 
-        if (! $member || $member->password === null) {
+        // The third refusal for an AI account, behind the two that make the row unreachable already
+        // (no email to match, no password to verify) and the members CHECK that keeps it that way.
+        // Stated once here so the rule is "an AI account never logs in", not an emergent property of
+        // two null columns — and so a row that somehow carries credentials still cannot.
+        if (! $member || $member->password === null || $member->isAiAccount()) {
             return $this->rejectInConstantTime();
         }
 

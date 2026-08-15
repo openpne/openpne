@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Profile;
 
+use App\Features\Member\MemberNameRules;
 use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
@@ -35,7 +36,7 @@ class UpdateProfileRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $rules = ['name' => ['required', 'string', 'max:255']];
+        $rules = ['name' => MemberNameRules::rules()];
 
         // Submitted only when the Modern form offers the age block (site has a birthday item);
         // the write is additionally gated in the controller, so a crafted value without a

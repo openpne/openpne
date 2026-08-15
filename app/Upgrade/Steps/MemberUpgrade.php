@@ -60,10 +60,11 @@ class MemberUpgrade extends UpgradeStep
         // No OpenPNE 3 source; rely on the schema default (null). password_scheme is set
         // by the runner's post-walk wrap pass, not this step. The two_factor_* columns are
         // opt-in MFA state a member sets up post-migration; avatar_color is likewise an
-        // OP4-native choice.
+        // OP4-native choice, as is owner_member_id — every migrated member is a person, and
+        // an AI account is something a member creates after the move.
         return ['email_verified_at', 'password_scheme', 'remember_token',
             'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
-            'avatar_color'];
+            'avatar_color', 'owner_member_id'];
     }
 
     /** Only activated members are carried; ActiveMember explains what the inactive rows are. */

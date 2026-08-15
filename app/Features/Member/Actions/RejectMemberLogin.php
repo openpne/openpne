@@ -3,6 +3,7 @@
 namespace App\Features\Member\Actions;
 
 use App\Auth\SessionRevocation;
+use App\Features\AiAccount\AiAccountTokens;
 use App\Models\Member;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,13 @@ class RejectMemberLogin
             SessionRevocation::revokeMember($member);
             // Every token, not just the MCP ones: a ban ends every foothold, whatever minted it.
             $member->tokens()->delete();
+
+            // An AI account is a foothold of its owner's, held under a second name, so the sweep has
+            // to reach it too. Only its tokens: an AI account has no session or remember-me cookie
+            // to end, having no way to log in at all. The account itself is left as it is — banning
+            // it as well would need an un-ban to be symmetric, and the tokens are what the ban is
+            // about (re-issuing them is a deliberate act afterwards).
+            AiAccountTokens::revokeOwnedBy($member);
         });
 
         SecurityLog::event('member.banned', [
