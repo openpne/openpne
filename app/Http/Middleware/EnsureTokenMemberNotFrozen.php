@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Features\AiAccount\TokenActorEligibility;
 use App\Models\Member;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
@@ -16,6 +17,11 @@ use Symfony\Component\HttpFoundation\Response;
  * should already be gone. This refuses one that somehow is not — a token minted from a stale read, a
  * row restored from a backup — for the same reason the freeze ends sessions rather than trusting the
  * next login check.
+ *
+ * "Frozen" reaches the owner: banning a member also ends the tokens of the AI accounts they own, so
+ * the caller's own flag is not the whole question. The question is asked through
+ * App\Features\AiAccount\TokenActorEligibility rather than inline, so every path that has to answer
+ * it answers the same.
  */
 class EnsureTokenMemberNotFrozen
 {
@@ -23,7 +29,7 @@ class EnsureTokenMemberNotFrozen
     {
         $member = $request->user();
 
-        if ($member instanceof Member && $member->is_login_rejected) {
+        if ($member instanceof Member && ! TokenActorEligibility::permits($member)) {
             // No redirect target: this realm answers 401 rather than sending a machine to a login form.
             throw new AuthenticationException;
         }

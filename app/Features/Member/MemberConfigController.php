@@ -3,6 +3,7 @@
 namespace App\Features\Member;
 
 use App\Auth\SessionRevocation;
+use App\Features\AiAccount\AiAccountTokens;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
@@ -175,6 +176,11 @@ class MemberConfigController extends Controller
         // deletes DB session rows; that is ResetMemberPassword's compromise-path behavior, not an
         // in-session change's.
         Auth::guard('member')->logoutOtherDevices($newPassword);
+
+        // The other-device sweep, one step out: a token minted for an AI account this member owns is
+        // reached with the old password's authority, so it drops with the other devices rather than
+        // outliving them. Same treatment as the reset path's.
+        AiAccountTokens::revokeOwnedBy($viewer);
 
         // Compensating control for the notify-only email change: a stolen-password attacker could have
         // requested an email change, so a password change must void any pending one — otherwise the

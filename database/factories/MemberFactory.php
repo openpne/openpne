@@ -31,4 +31,23 @@ class MemberFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * An AI account: owned by $owner (one is made when none is given) and credential-less, the only
+     * shape the members table admits for an owned row. The owner is resolved once, so a `count()`
+     * batch shares it.
+     */
+    public function aiAccount(?Member $owner = null): static
+    {
+        return $this->state(function (array $attributes) use (&$owner): array {
+            $owner ??= Member::factory()->create();
+
+            return [
+                'owner_member_id' => $owner->getKey(),
+                'email' => null,
+                'email_verified_at' => null,
+                'password' => null,
+            ];
+        });
+    }
 }

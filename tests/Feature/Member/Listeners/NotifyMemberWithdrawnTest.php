@@ -33,7 +33,7 @@ class NotifyMemberWithdrawnTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
 
         app(NotifyMemberWithdrawn::class)->handle(
-            new MemberWithdrawn(42, 'Gone', 'gone@example.test', 'ja'),
+            new MemberWithdrawn(42, 'Gone', 'gone@example.test', 'ja', wasAiAccount: false),
         );
 
         Notification::assertSentOnDemand(
@@ -54,7 +54,7 @@ class NotifyMemberWithdrawnTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
 
         // A login-impossible member upgraded from OpenPNE 3 has no address (captured as '').
-        app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Gone', '', 'ja'));
+        app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Gone', '', 'ja', wasAiAccount: false));
 
         // Only the admin notice — the empty-address receipt is skipped.
         Notification::assertCount(1);
@@ -62,6 +62,18 @@ class NotifyMemberWithdrawnTest extends TestCase
             WithdrawalAdminNotification::class,
             fn ($notification, array $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === 'ops@example.test',
         );
+    }
+
+    public function test_an_ai_accounts_withdrawal_mails_nobody(): void
+    {
+        Notification::fake();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        // No address to receipt, and the operator notice reports the membership moving — which an
+        // owner retiring their own AI account is not.
+        app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Helper', '', 'ja', wasAiAccount: true));
+
+        Notification::assertNothingSent();
     }
 
     public function test_withdrawing_a_member_without_an_address_yields_an_empty_email_payload(): void

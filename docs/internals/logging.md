@@ -46,6 +46,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `email.change_cancelled` | seam: `EmailChangeLinkController::cancelEmail` | `guard`, `member_id`, `new_email` |
 | `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_username` |
 | `member.banned` / `member.unbanned` | seam: `RejectMemberLogin` / `AllowMemberLogin` (actions) | `member_id`, `admin_username` |
+| `ai_account.created` / `ai_account.deleted` | seam: `CreateAiAccount` / `DeleteAiAccount` (actions) | `member_id`, `owner_id` |
 | `throttle.hit` | `bootstrap/app.php` report hook | `route`, `member_id` |
 
 ## PII / injection contract

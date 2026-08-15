@@ -68,6 +68,48 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame(65535, $key->maxBytes());
     }
 
+    public function test_ai_accounts_are_off_until_an_operator_turns_them_on(): void
+    {
+        $key = SnsSettingKey::AiAccountsEnabled;
+
+        $this->assertSame(SettingGroup::Ai, $key->group());
+        // OpenPNE 3 had no AI accounts, so an upgraded site starts where a fresh one does.
+        $this->assertNull($key->op3SourceName());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertFalse($key->default());
+
+        // Fail closed, like the other opt-in switches: only an explicit '1' opens creation.
+        $this->assertTrue($key->decode('1'));
+        $this->assertFalse($key->decode('0'));
+        $this->assertFalse($key->decode(''));
+        $this->assertFalse($key->decode('x'));
+        $this->assertFalse($key->decode(null));
+        $this->assertSame('1', $key->encode($key->coerce('1')));
+        $this->assertSame('0', $key->encode($key->coerce(false)));
+    }
+
+    public function test_the_ai_account_limit_is_the_registrys_one_integer_key(): void
+    {
+        $key = SnsSettingKey::AiAccountLimit;
+
+        $this->assertSame(SettingGroup::Ai, $key->group());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertSame(3, $key->default());
+
+        // Round-trips as an integer, with whitespace and a numeric string tolerated on the way in.
+        $this->assertSame('5', $key->encode($key->coerce(' 5 ')));
+        $this->assertSame(5, $key->decode('5'));
+        $this->assertSame(0, $key->decode('0'));
+
+        // A stored value that is not a number is corruption rather than a decision, so it reads as
+        // the shipped cap; a negative one clamps to "create nothing" instead of inverting the
+        // comparison it feeds.
+        $this->assertSame(3, $key->decode('x'));
+        $this->assertSame(3, $key->decode(''));
+        $this->assertSame(3, $key->decode(null));
+        $this->assertSame(0, $key->decode('-1'));
+    }
+
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void
     {
         // OpenPNE 3 had no per-site logo/color/favicon, so there is nothing to copy: a fresh and an
