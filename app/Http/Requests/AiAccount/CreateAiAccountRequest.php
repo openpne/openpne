@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\AiAccount;
 
+use App\Features\Member\MemberNameRules;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -21,6 +22,6 @@ class CreateAiAccountRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['name' => ['required', 'string', 'max:255']];
+        return ['name' => MemberNameRules::rules()];
     }
 }

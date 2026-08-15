@@ -13,6 +13,7 @@ import { Field, FormActions } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { List, ListRow, Panel } from '@/components/ui/surface';
+import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import type { MemberRef } from '@/pages/community/types';
@@ -53,8 +54,17 @@ interface Tokens {
     newToken: string | null;
 }
 
+interface SelfIntroduction {
+    /** The field's own caption — an operator may have renamed it, so it is not a fixed string here. */
+    label: string;
+    value: string;
+    maxLength: number | null;
+}
+
 interface AiShowProps extends PageProps {
     account: MemberRef;
+    /** Null while the install has no self-introduction field: there is nowhere to save one. */
+    selfIntroduction: SelfIntroduction | null;
     /** Absent while the %community% unit is switched off — there is nothing to join or leave. */
     groups?: Groups;
     tokens: Tokens;
@@ -114,6 +124,109 @@ function NewToken({ value }: { value: string }) {
             </p>
             <code className="block break-all text-sm select-all">{value}</code>
         </section>
+    );
+}
+
+/**
+ * The account's face: its picture, its name, and what it says about itself. Three writes, so three
+ * posts — the image ones stand apart from the text one because a file upload is its own submit, and
+ * removing the picture is a button rather than a nested form.
+ */
+function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; selfIntroduction: SelfIntroduction | null }) {
+    const t = useT();
+    const identity = useForm({ name: account.name, self_introduction: selfIntroduction?.value ?? '' });
+    const image = useForm<{ image: File | null }>({ image: null });
+    const removeImage = useForm({});
+
+    return (
+        <Panel title={t('Profile')} bodyClassName="space-y-5">
+            <div className="flex items-center gap-3">
+                <Avatar id={account.id} name={account.name} src={account.imageUrl} color={account.avatarColor} isAi={account.isAi} size="lg" decorative />
+                <div className="min-w-0 flex-1">
+                    <p className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-foreground">{account.name}</span>
+                        <AiChip isAi={account.isAi} />
+                    </p>
+                    <p className="text-sm">
+                        <Link href={`/member/${account.id}`} className="text-link hover:underline">
+                            {t('View profile')}
+                        </Link>
+                    </p>
+                </div>
+            </div>
+
+            <form
+                onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                    e.preventDefault();
+                    image.post(`/member/config/ai/${account.id}/avatar`, { preserveScroll: true, onSuccess: () => image.reset() });
+                }}
+                className="space-y-3"
+            >
+                <Field label={t('Profile image')} htmlFor="ai_avatar" error={image.errors.image}>
+                    <input
+                        id="ai_avatar"
+                        type="file"
+                        name="image"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={(e) => image.setData('image', e.target.files?.[0] ?? null)}
+                        required
+                        className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
+                    />
+                </Field>
+                <FormActions>
+                    <Button type="submit" variant="outline" size="sm" loading={image.processing}>
+                        {t('Upload')}
+                    </Button>
+                    {account.imageUrl && (
+                        // A button, not a second form: forms do not nest, and the post is a script's
+                        // anyway.
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            loading={removeImage.processing}
+                            onClick={() => removeImage.post(`/member/config/ai/${account.id}/avatar/delete`, { preserveScroll: true })}
+                        >
+                            {t('Remove')}
+                        </Button>
+                    )}
+                </FormActions>
+            </form>
+
+            <form
+                onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                    e.preventDefault();
+                    identity.post(`/member/config/ai/${account.id}`, { preserveScroll: true });
+                }}
+                className="space-y-4 border-t border-border pt-5"
+            >
+                <Field label={t('Name')} htmlFor="ai_identity_name" error={identity.errors.name}>
+                    <Input
+                        id="ai_identity_name"
+                        type="text"
+                        maxLength={255}
+                        required
+                        value={identity.data.name}
+                        onChange={(e) => identity.setData('name', e.target.value)}
+                    />
+                </Field>
+                {selfIntroduction && (
+                    <Field label={selfIntroduction.label} htmlFor="ai_self_introduction" error={identity.errors.self_introduction}>
+                        <Textarea
+                            id="ai_self_introduction"
+                            maxLength={selfIntroduction.maxLength ?? undefined}
+                            value={identity.data.self_introduction}
+                            onChange={(e) => identity.setData('self_introduction', e.target.value)}
+                        />
+                    </Field>
+                )}
+                <FormActions>
+                    <Button type="submit" loading={identity.processing}>
+                        {t('Save')}
+                    </Button>
+                </FormActions>
+            </form>
+        </Panel>
     );
 }
 
@@ -237,7 +350,7 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
 export default function AiAccountShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { account, groups, tokens } = usePage<AiShowProps>().props;
+    const { account, selfIntroduction, groups, tokens } = usePage<AiShowProps>().props;
     const [keyword, setKeyword] = useState(groups?.keyword ?? '');
     const [searching, setSearching] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
@@ -279,22 +392,7 @@ export default function AiAccountShow() {
             <Head title={account.name} />
             <Heading variant="page">{account.name}</Heading>
 
-            <Panel>
-                <div className="flex items-center gap-3">
-                    <Avatar id={account.id} name={account.name} src={account.imageUrl} color={account.avatarColor} isAi={account.isAi} size="lg" decorative />
-                    <div className="min-w-0 flex-1">
-                        <p className="flex min-w-0 items-center gap-1.5">
-                            <span className="min-w-0 truncate text-foreground">{account.name}</span>
-                            <AiChip isAi={account.isAi} />
-                        </p>
-                        <p className="text-sm">
-                            <Link href={`/member/${account.id}`} className="text-link hover:underline">
-                                {t('View profile')}
-                            </Link>
-                        </p>
-                    </div>
-                </div>
-            </Panel>
+            <IdentityPanel account={account} selfIntroduction={selfIntroduction} />
 
             {groups && (
                 <>
