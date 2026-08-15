@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools;
 
+use App\Files\ImageBytesOverLimitException;
 use App\Files\ImageCache;
 use App\Files\ImageDimensions;
 use App\Files\ImageTransform;
@@ -146,11 +147,25 @@ class ReadTalkMessageImagesTool extends TalkTool
         $read = 0;
 
         foreach ($targets as [$number, $file]) {
-            $bytes = $cache->bytes($file, $transform, (string) $file->imageFormat());
+            // byte_size is metadata, and metadata can disagree with the bytes it describes. What is
+            // left of the cap goes down with the request so a row that understates its file stops the
+            // read there, rather than the file arriving whole and being measured afterwards.
+            try {
+                $bytes = $cache->bytes(
+                    $file,
+                    $transform,
+                    (string) $file->imageFormat(),
+                    maxBytes: self::MAX_BYTES - $read,
+                );
+            } catch (ImageBytesOverLimitException) {
+                return $this->tooLarge();
+            }
+
             $read += strlen($bytes);
 
-            // byte_size is metadata, and metadata can disagree with the bytes it describes. Nothing
-            // partial goes back: an answer trimmed to fit is one the caller cannot tell from a whole one.
+            // Belt on the bound above, and where a cached thumbnail — served without one — is counted.
+            // Nothing partial goes back either way: an answer trimmed to fit is one the caller cannot
+            // tell from a whole one.
             if ($read > self::MAX_BYTES) {
                 return $this->tooLarge();
             }

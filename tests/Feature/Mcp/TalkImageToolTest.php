@@ -21,6 +21,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Mcp\Server\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Tests\Fixtures\CountedByteStream;
+use Tests\Fixtures\CountingFileStorage;
 
 /**
  * read-talk-message-images: the bytes behind the count the other tools report, under the same
@@ -323,37 +325,42 @@ class TalkImageToolTest extends McpTestCase
             ->assertSee($this->wire($this->stored($first)));
     }
 
-    public function test_bytes_that_outgrow_their_recorded_size_are_refused_whole(): void
+    public function test_bytes_that_outgrow_their_recorded_size_are_refused_before_they_are_all_read(): void
     {
         $group = $this->group();
         $member = $this->memberOf($group);
         $message = $this->say($group, $member, 'one honest, one not');
         $honest = $this->attach($message, 1, 800, 400);
 
-        // A row that understates what it stores: the preflight lets it through, and only the running
-        // total of what has actually been read can stop it.
+        // A row that understates what it stores, by several times what a call may answer with: the
+        // preflight lets it through on its recorded size, so only the read itself can stop it.
         $liar = $this->link($message, 2, File::factory()->create([
             'type' => 'image/png',
             'related_entity_type' => 'groupMessage',
             'related_entity_id' => $message->getKey(),
             'byte_size' => 1024,
         ]));
-        $this->write($liar, str_repeat('a', self::CAP + 1));
+        $this->app->instance(
+            FileStorage::class,
+            new CountingFileStorage(app(FileStorage::class), (int) $liar->getKey()),
+        );
 
         $this->acting($member);
 
-        $this->read(['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => 'original'])
-            ->assertHasErrors(['8 MB'])
-            // Nothing partial: the picture that was read before the total ran over does not go back.
-            ->assertDontSee($this->wire($this->stored($honest)));
-    }
+        foreach (['original', 'thumbnail'] as $size) {
+            CountedByteStream::prepare(4 * self::CAP);
 
-    private function write(File $file, string $bytes): void
-    {
-        $stream = fopen('php://temp', 'r+b');
-        fwrite($stream, $bytes);
-        rewind($stream);
-        app(FileStorage::class)->writeStream($file, $stream);
-        fclose($stream);
+            $this->read(['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => $size])
+                ->assertHasErrors(['8 MB'])
+                // Nothing partial: the picture read before the liar was reached does not go back either.
+                ->assertDontSee($this->wire($this->stored($honest)));
+
+            // And the bytes it could not have answered with were never taken off the storage.
+            $this->assertLessThanOrEqual(
+                self::CAP + CountedByteStream::SLACK,
+                CountedByteStream::consumed(),
+                "The whole file was read before the {$size} answer was judged too large.",
+            );
+        }
     }
 }

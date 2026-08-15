@@ -130,10 +130,13 @@ than the message it hangs on and 640px is enough to see what one is, so `size=or
 the detail decides something.
 
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
-byte is read — the only number there is while nothing is in memory yet — and again against what was
-actually read, because metadata can disagree with the bytes it describes. Either way the call is
-refused whole rather than trimmed, a partial answer being one the caller cannot tell from a complete
-one. The preflight measures originals even when thumbnails were asked for: conservative, not exact.
+byte is read — the only number there is while nothing is in memory yet — and again by the read
+itself, because metadata can disagree with the bytes it describes. What is left of the cap is passed
+down to `ImageCache`, which stops a read one byte past it and refuses the file
+(`ImageBytesOverLimitException`) rather than reading it whole and measuring afterwards, so a row
+understating its file cannot put an unbounded object in memory. Either way the call is refused whole
+rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
+preflight measures originals even when thumbnails were asked for: conservative, not exact.
 
 **A slot holding no picture is refused when `number` names it, and passed over when it does not** —
 the refusal rule above, applied inside a message: being told "that one is empty" would let the slots
