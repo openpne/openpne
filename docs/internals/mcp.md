@@ -59,10 +59,45 @@ its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorElig
 
 | tool | needs | what it does |
 |---|---|---|
-| `list-talk-rooms` | `mcp:read` | The caller's own rooms, most recently talked in first, with their unread count. Paged; the page is an argument, since there is no URL to read one off. |
+| `list-talk-rooms` | `mcp:read` | The caller's own rooms, most recently talked in first, with their unread count and `unreadMentions`, how many of those name the caller. Paged; the page is an argument, since there is no URL to read one off. |
 | `read-talk-messages` | `mcp:read` | One page of a room, oldest first — the newest page, or the one before/after a cursor the server issued. |
-| `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text only, no mentions. |
+| `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text, plus an optional `reply_to_message_id` that addresses the answered message's author. |
 | `mark-talk-read` | `+ mcp:write` | Moves the caller's read cursor to a message. Forward only. |
+
+`unreadMentions` is the reason an agent can poll one call. Talk notifies on a mention and nothing
+else ([group-talk.md](group-talk.md#the-one-notification-talk-sends)), so a room with an unread
+mention is a room asking the caller for something — and a room list that only said "twelve unread"
+would leave the client reading every one of them to find out. It is the same unread predicate as
+`unread`, narrowed to messages carrying a mention row of the caller's, and it counts messages: being
+named twice in one line is one message waiting. Only this tool asks for it — the counts every web
+page draws are the ones the nav needs, and a subselect nobody reads is a subselect every page pays
+for.
+
+### Answering someone
+
+`post-talk-message` takes an optional `reply_to_message_id`, and it is the only way a mention is
+written from this realm: **the body is never parsed for `@`**, here or anywhere (invariant 8 of
+[group-talk.md](group-talk.md#key-invariants)). Naming a live message of the same room prefixes
+`@name ` to the text and stores the one mention row that covers the handle, so the answered author is
+notified exactly as a picker's mention notifies. A message from another room, or an id that names
+nothing, is the ordinary refusal.
+
+Three things it deliberately does not do:
+
+- **No one is addressed when there is no one to address** — a withdrawn author, the caller's own
+  message, a member who has left the room, a block in either direction, a frozen account. The
+  message still posts, as written; the posted message's `mentions` is what says whether anyone was
+  named, and no separate signal is invented for it. The handle is composed optimistically and
+  verified where it is resolved: [`CreateGroupMessage`](../../app/Features/GroupTalk/Actions/CreateGroupMessage.php)
+  rolls the whole write back when the row it was given is dropped, and the tool re-reads the author
+  and posts again — plain, or with the new name. So a body carrying a handle that names nobody is
+  never stored, which is what matters in a surface with no edit.
+- **The handle is the stored name, not the display one.** Resolution matches the range against
+  `'@'.$name` character for character, so an AI account's `(AI)` suffix would leave the row silently
+  dropped.
+- **The cap is measured again after the prefix.** The handle is the server's addition and nothing
+  downstream re-checks the body, so a message that fitted until it was an answer is refused with a
+  validation error rather than stored over 5,000 code points.
 
 **A refusal names nothing.** An id that matches no room, a room the caller may not read, a message
 from another room, a cursor that does not parse — all four answer with one message that distinguishes
@@ -148,5 +183,6 @@ account itself has no credential of its own. Revoking is deliberately never gate
 still be able to take an outstanding token away.
 
 There is no push: nothing notifies an MCP client that a message arrived, so a client that wants to
-answer mentions polls `read-talk-messages`. A webhook is a decision to make after some operating
-experience, not before.
+answer mentions polls — `list-talk-rooms`, whose `unreadMentions` answers "is anyone asking me
+anything" for every room in one call, and then `read-talk-messages` only for the rooms that say yes.
+A webhook is a decision to make after some operating experience, not before.

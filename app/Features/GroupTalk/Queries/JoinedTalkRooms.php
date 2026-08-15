@@ -36,11 +36,11 @@ class JoinedTalkRooms
      *
      * @return LengthAwarePaginator<int, TalkRoom>
      */
-    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator
+    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null, bool $withUnreadMentions = false): LengthAwarePaginator
     {
-        $paginator = $this->ordered($viewer)->paginate($perPage, page: $page);
+        $paginator = $this->ordered($viewer, $withUnreadMentions)->paginate($perPage, page: $page);
 
-        return $paginator->setCollection($this->rooms($paginator->getCollection()));
+        return $paginator->setCollection($this->rooms($paginator->getCollection(), $withUnreadMentions));
     }
 
     /**
@@ -58,9 +58,13 @@ class JoinedTalkRooms
      * The viewer's rooms in room order, before any page is cut — shared with the nav's lighter slice
      * (NavTalkRooms), which takes the same rows and stops there.
      *
+     * $withUnreadMentions buys a third correlated subselect and is off for everything the nav
+     * renders: this query runs on every page, and "how many of those are addressed to me" is a
+     * question only a caller with no screen to look at asks (the MCP room list).
+     *
      * @return EloquentBuilder<Group>
      */
-    public function ordered(Member $viewer): EloquentBuilder
+    public function ordered(Member $viewer, bool $withUnreadMentions = false): EloquentBuilder
     {
         $viewerId = (int) $viewer->getKey();
 
@@ -79,6 +83,9 @@ class JoinedTalkRooms
                     $viewerId,
                 ),
             ])
+            ->when($withUnreadMentions, fn (EloquentBuilder $query) => $query->addSelect([
+                'unread_mention_count' => $this->unreadMentions($viewerId),
+            ]))
             ->with('image')
             // Rooms that have been talked in lead. Spelled as a CASE rather than left to where the
             // engine collates NULL in a descending sort, which is not a portable answer.
@@ -105,10 +112,35 @@ class JoinedTalkRooms
     }
 
     /**
+     * The subset of the unread that names the viewer — the same unread predicate, narrowed to
+     * messages carrying a mention row of theirs.
+     *
+     * A semi-join rather than a join: it counts *messages*, so being named twice in one line is one
+     * unread message, the unit `unread_talk_count` already answers in. Written outwards from
+     * `group_messages` because that direction is indexed on both engines — `group_message_id` leads
+     * the mentions table's unique index, and on SQLite that is the only index there, a foreign key
+     * getting none of its own. MySQL, which does index the key, flattens the EXISTS and may drive
+     * from the viewer's own mention rows instead; either direction is an index lookup.
+     */
+    private function unreadMentions(int $viewerId): Builder
+    {
+        return UnreadTalkScope::correlate(
+            DB::table('group_messages')
+                ->selectRaw('count(*)')
+                ->whereExists(fn (Builder $named) => $named
+                    ->from('group_message_mentions')
+                    ->whereColumn('group_message_mentions.group_message_id', 'group_messages.id')
+                    ->where('group_message_mentions.member_id', $viewerId)),
+            'group_members',
+            $viewerId,
+        );
+    }
+
+    /**
      * @param  Collection<int, Group>  $groups
      * @return Collection<int, TalkRoom>
      */
-    private function rooms(Collection $groups): Collection
+    private function rooms(Collection $groups, bool $withUnreadMentions = false): Collection
     {
         // The bodies for this page in one statement: the ordering already named the exact rows, so
         // this is a lookup by primary key rather than a "newest message" query per room.
@@ -125,6 +157,7 @@ class JoinedTalkRooms
             unread: (int) $group->unread_talk_count,
             muted: (bool) $group->is_talk_muted,
             latest: $messages->get($group->latest_message_id),
+            unreadMentions: $withUnreadMentions ? (int) $group->unread_mention_count : null,
         ));
     }
 }

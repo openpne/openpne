@@ -72,7 +72,11 @@ class McpTalkSerializer
     }
 
     /**
-     * @return array{groupId: int, name: string, unread: int, muted: bool, lastMessageAt: string|null}
+     * `unreadMentions` is how many of `unread` name the caller — the number a polling agent reads to
+     * decide whether a room wants an answer, without paging the messages to find out. Null only for
+     * a read that did not ask for it; the tool always does.
+     *
+     * @return array{groupId: int, name: string, unread: int, unreadMentions: int|null, muted: bool, lastMessageAt: string|null}
      */
     public static function room(TalkRoom $room): array
     {
@@ -80,6 +84,7 @@ class McpTalkSerializer
             'groupId' => (int) $room->group->getKey(),
             'name' => $room->group->name,
             'unread' => $room->unread,
+            'unreadMentions' => $room->unreadMentions,
             'muted' => $room->muted,
             'lastMessageAt' => $room->latest === null
                 ? null

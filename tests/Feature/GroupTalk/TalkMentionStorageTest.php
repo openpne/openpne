@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\GroupTalk;
 
+use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
+use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
@@ -221,6 +224,37 @@ class TalkMentionStorageTest extends TalkTestCase
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
             ->assertInertia(fn ($page) => $page->where('page.messages.0.mentions', []));
+    }
+
+    /**
+     * The other half of the two-layer contract: a caller that wrote the handle into the body itself
+     * cannot afford a silent drop, because the handle would stay in a message nobody can edit. So it
+     * asks for the message to go with the row.
+     */
+    public function test_a_required_mention_that_drops_takes_the_whole_message_with_it(): void
+    {
+        [$group, $author, $target] = $this->conversation();
+        $target->forceFill(['is_login_rejected' => true])->save();
+
+        $rows = [['member_id' => $target->getKey(), 'offset' => 3, 'length' => 4]];
+
+        try {
+            app(CreateGroupMessage::class)($author, $group, 'hi @Bob welcome', $rows, mentionsRequired: true);
+            $this->fail('the write should have refused a mention it could not resolve');
+        } catch (GroupTalkActionException $e) {
+            $this->assertSame(GroupTalkActionFailure::MentionDropped, $e->reason);
+        }
+
+        // Rolled back, not merely refused before the insert.
+        $this->assertDatabaseCount('group_messages', 0);
+        $this->assertDatabaseCount('group_message_mentions', 0);
+
+        // The picker's path is untouched: the handle there is the member's own text, so the row goes
+        // and the message stays.
+        $message = app(CreateGroupMessage::class)($author, $group, 'hi @Bob welcome', $rows);
+
+        $this->assertDatabaseHas('group_messages', ['id' => $message->getKey(), 'body' => 'hi @Bob welcome']);
+        $this->assertDatabaseCount('group_message_mentions', 0);
     }
 
     /** Offsets are code points, so an astral emoji before the handle must not shift the range. */

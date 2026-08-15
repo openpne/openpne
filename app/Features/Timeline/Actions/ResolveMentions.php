@@ -61,6 +61,19 @@ class ResolveMentions
     }
 
     /**
+     * Whether $author may mention this one member — the same gate resolution applies, asked before
+     * there is a body to resolve. A composer that writes the handle itself (the MCP reply tool) has
+     * to know the answer to decide whether to write it at all, and asking the query rather than
+     * restating its conditions is what keeps the pre-check and the write from disagreeing.
+     *
+     * False for $author themselves, since nobody mentions themselves.
+     */
+    public function isMentionable(Member $author, int $targetId, ?Group $group = null): bool
+    {
+        return isset($this->mentionableNames($author, [$targetId], $group)[$targetId]);
+    }
+
+    /**
      * The distinct members a resolved set names, which is the audience the mention notification
      * addresses — one member mentioned twice in a body is still one recipient.
      *
