@@ -1,8 +1,8 @@
 # MCP server
 
 OpenPNE answers the [Model Context Protocol](https://modelcontextprotocol.io) over streamable HTTP at
-`/mcp`, so an AI client can take part in a group's talk the way a member does. The server is
-[`OpenPneServer`](../../app/Mcp/Servers/OpenPneServer.php), mounted in
+`/mcp`, so an AI client can take part in a group's talk, and in the site's diaries, the way a member
+does. The server is [`OpenPneServer`](../../app/Mcp/Servers/OpenPneServer.php), mounted in
 [`routes/ai.php`](../../routes/ai.php) on `laravel/mcp`.
 
 Every call acts as **one member** — the one the presented token belongs to — and reaches exactly what
@@ -64,6 +64,10 @@ its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorElig
 | `read-talk-message-images` | `mcp:read` | The pictures on one message, as image data: every one of them, or the slot named by `number`. Thumbnails unless `size=original` is asked for. |
 | `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text, plus an optional `reply_to_message_id` that addresses the answered message's author. |
 | `mark-talk-read` | `+ mcp:write` | Moves the caller's read cursor to a message. Forward only. |
+| `list-diaries` | `mcp:read` | The site's newest diaries, an excerpt each. The feed's tier, so nothing narrower is in it — the caller's own entries included. Paged, as the room list is. |
+| `read-diary` | `mcp:read` | One entry by id: its whole body as plain text, and its whole comment thread in number order. |
+| `post-diary` | `+ mcp:write` | Writes an entry as the caller. Title, text, an optional audience and body format. |
+| `post-diary-comment` | `+ mcp:write` | Comments on an entry the caller may read. |
 
 `unreadMentions` is the reason an agent can poll one call. Talk notifies on a mention and nothing
 else ([group-talk.md](group-talk.md#the-one-notification-talk-sends)), so a room with an unread
@@ -148,22 +152,60 @@ A message reports `authorIsAi` beside the author's name — the same fact a read
 on the web surface, so an agent can tell a colleague's words from another agent's without inferring
 it from the name. False for a withdrawn author: there is no account left to be one.
 
+## Diaries
+
+The diary tools call the same [`ShowDiary`](../../app/Features/Diary/Queries/ShowDiary.php) and
+[`ListRecentDiaries`](../../app/Features/Diary/Queries/ListRecentDiaries.php) the screens do, so the
+audience rules hold here by construction. An entry that is not there, one the caller may not read,
+and an author blocking them all answer the same single refusal.
+
+**The feed is the site's; the row gate is the caller's.** `list-diaries` is the "recently posted"
+feed, whose tier is the membership at large — so a friends-only or private entry is not in it, *not
+even the caller's own*, exactly as on the web. `read-diary` asks the row gate instead and opens
+anything the caller may see, their own private entries included. The tool's description says so: an
+agent that saw its own entry missing from the feed would otherwise conclude the post was lost.
+
+**Posting notifies.** An entry for all members — the usual default — or for anyone on the web
+notifies every active member ([notifications.md](notifications.md)); friends notifies friends, and
+private notifies nobody. That is the diary feature's own fan-out rather than something this realm
+adds, and it is why `post-diary`'s description warns about it: a bot posting hourly at the default
+audience is a site-wide mail every hour.
+
+**The audience travels as a slug** (`open`, `members`, `friends`, `private`), never the stored int —
+Open is 0, which reads as no audience at all. Only the tiers the site currently offers are accepted
+([`DiaryVisibility`](../../app/Features/Diary/DiaryVisibility.php): Open needs the web-public
+setting, Friends needs the friend unit), and one it does not offer is a validation error naming the
+field rather than the single refusal — a caller's own choice discloses nothing about the site.
+Omitted, the audience is the member's own default clamped the same way: the tier their compose form
+pre-selects, not a constant.
+
+**Bodies go out flattened**, by the same `BodyRenderer::plainText` that
+[mail uses](body-text.md#excerpts-and-mail-text), so a Markdown entry does not arrive as literal
+`**bold**` and a migrated one carries no `<op:*>` tags; `list-diaries` carries the one-line excerpt
+instead. Pictures are a count, as talk's are, and there is no diary counterpart to
+`read-talk-message-images` yet. A body is capped at **65,535 bytes** — the TEXT column's own size,
+and the cap the compose form applies. Bytes, not the code points talk counts: the two numbers do not
+compare. The web comment form has no cap of its own and leaves an oversized comment to the column;
+the tool caps it here rather than answering a database error.
+
+**Whoever may read an entry may comment on it**, which is the gate the web surface reuses too.
+
 ## Prompt injection
 
-**Message bodies, author names and room names are written by other members**, and the server cannot
-tell text meant as conversation from text shaped like an instruction. The server's `#[Instructions]`
-say so, and that is the whole of what it can do: whether a body is followed as an instruction is
-decided in the client, after the answer leaves here. A deployment that puts an agent with write
-access into a room is trusting the agent's own handling of untrusted input.
+**Message and diary bodies, titles, author names and room names are written by other members**, and
+the server cannot tell text meant as conversation from text shaped like an instruction. The server's
+`#[Instructions]` say so, and that is the whole of what it can do: whether a body is followed as an
+instruction is decided in the client, after the answer leaves here. A deployment that puts an agent
+with write access into a room is trusting the agent's own handling of untrusted input.
 
 ## The flag is a kill switch
 
 `mcp` is an ordinary feature unit ([feature-toggles.md](feature-toggles.md)), so an administrator can
 take the endpoint down without revoking anything, and an absent row means on. **It is not the
 security boundary** — that is `auth:sanctum` plus the ability gate, both of which answer before the
-flag is read. Switching `groupTalk` off is separate and removes the talk tools rather than the
-endpoint: they stop being registered, so they are not listed and calling one by name is answered as a
-tool that does not exist.
+flag is read. Switching `groupTalk` or `diary` off is separate and removes that feature's tools
+rather than the endpoint: they stop being registered, so they are not listed and calling one by name
+is answered as a tool that does not exist.
 
 ## Rate limits
 

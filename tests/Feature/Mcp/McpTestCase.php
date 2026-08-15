@@ -15,9 +15,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Shared setup for the MCP suites. Both units are on by default; they are set explicitly so a suite
- * reads as independent of whatever an install default happens to be, and so switching one off inside
- * a test is visibly the exception.
+ * Shared setup for the MCP suites: the endpoint's own unit, and the units its tools reach into. All
+ * are on by default; they are set explicitly so a suite reads as independent of whatever an install
+ * default happens to be, and so switching one off inside a test is visibly the exception.
  */
 abstract class McpTestCase extends TestCase
 {
@@ -29,6 +29,7 @@ abstract class McpTestCase extends TestCase
 
         $this->setSnsSetting(SnsSettingKey::FeatureMcpEnabled, true);
         $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, true);
+        $this->setSnsSetting(SnsSettingKey::FeatureDiaryEnabled, true);
     }
 
     protected function group(TopicReadAccess $read = TopicReadAccess::Everyone): Group
