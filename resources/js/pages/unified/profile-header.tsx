@@ -63,8 +63,10 @@ export function ProfileHeader({
 
     return (
         <section className={HOME_CARD}>
-            {profile.avatarUrl ? (
-                <div className="relative">
+            {/* The dome and the name it stores live over whichever cover renders, so the two covers
+                stay covers and the identity geometry is written once. */}
+            <div className="relative">
+                {profile.avatarUrl ? (
                     <img
                         src={profile.avatarUrl}
                         srcSet={profile.avatarUrlLarge ? `${profile.avatarUrl} 640w, ${profile.avatarUrlLarge} 1200w` : undefined}
@@ -74,37 +76,41 @@ export function ProfileHeader({
                         // travels in the box (aspect + max-height) and object-cover does the cutting.
                         className="aspect-[4/3] max-h-[21.25rem] w-full object-cover sm:max-h-72"
                     />
-                    {/* Wider than the card so the ellipse's ends leave the frame instead of meeting it;
-                        the card clips them. -bottom-px closes the seam a fractional height can open. */}
-                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
-                </div>
-            ) : (
-                // No picture still gets a cover: a wash of the identity's color (chosen, or derived
-                // from the name) under the same arch, with the initial standing where the face would
-                // — the page reads designed rather than missing something.
-                <div className="relative">
+                ) : (
+                    // No picture still gets a cover: a wash of the identity's color (chosen, or
+                    // derived from the name), the initial standing in the area the dome leaves
+                    // visible — the page reads designed rather than missing something.
                     <div
                         aria-hidden
-                        className="flex aspect-[4/3] max-h-[13rem] w-full items-center justify-center sm:max-h-52"
+                        className="flex aspect-[4/3] max-h-[16rem] w-full items-center justify-center pb-24 sm:max-h-60"
                         style={coverGradientStyle(profile.avatarColor ?? derivedIdentityColor(profile.name))}
                     >
                         <InitialBadge
                             aria-hidden
                             name={profile.name}
-                            className="size-24 rounded-full bg-scrim-foreground/25 text-4xl text-scrim-foreground"
+                            className="size-20 rounded-full bg-scrim-foreground/25 text-3xl text-scrim-foreground"
                         />
                     </div>
-                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
-                </div>
-            )}
-
-            <div className="px-4 pt-2 pb-4 text-center sm:px-5">
-                <div className="flex min-w-0 items-center justify-center gap-2">
-                    <Heading as={as} variant="page" className="text-2xl">
+                )}
+                {/* The design's bowl, measured off the mock (590x369): apex ≈ 39% of the cover's
+                    height, meeting the card's edges ≈ 19% up — a half-ellipse a little wider than
+                    the card (≈114%), so the picture ends where the curve crosses the edge and the
+                    skirt below is white the full width. -bottom-px closes the seam a fractional
+                    height can open. */}
+                {/* rounded-t-full would clamp to quarter-circles with a flat middle (the radii scale by the
+                    SMALLEST side ratio); the explicit 50%/100% pair keeps the whole top one ellipse. */}
+                <span aria-hidden className="absolute inset-x-[-7%] -bottom-px block h-26 rounded-t-[50%_100%] bg-card" />
+                {/* The name is stored inside the curve — its row sits between the dome's apex and
+                    the photo's side bottoms, so the picture still shows either side of it. */}
+                <div className="absolute inset-x-[16%] bottom-14 flex min-w-0 items-center justify-center gap-2">
+                    <Heading as={as} variant="page" className="min-w-0 truncate text-2xl">
                         {profile.name}
                     </Heading>
                     <AiChip isAi={profile.isAi} />
                 </div>
+            </div>
+
+            <div className="px-4 pt-1 pb-4 text-center sm:px-5">
 
                 {profile.age !== null && profile.age !== undefined && (
                     <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age: profile.age })}</p>
