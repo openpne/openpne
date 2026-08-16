@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\Diary\Serializers;
 
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Mcp\Tools\ReadDiaryImagesTool;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Support\BodyRenderer;
@@ -64,9 +65,11 @@ class McpDiarySerializer
 
     /**
      * A comment carries no format column — OpenPNE 3 has none either — so its body is already the
-     * plain text it is stored as. `number` is the per-diary sequence a reader cites.
+     * plain text it is stored as. `number` is the per-diary sequence a reader cites; its pictures
+     * are counted here as the entry's are, and read by naming the comment
+     * ({@see ReadDiaryImagesTool}).
      *
-     * @return array{id: int, number: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool|null, createdAt: string}
+     * @return array{id: int, number: int, body: string, imageCount: int, authorId: int|null, authorName: string|null, authorIsAi: bool|null, createdAt: string}
      */
     public static function comment(DiaryComment $comment): array
     {
@@ -76,6 +79,7 @@ class McpDiarySerializer
             'id' => (int) $comment->getKey(),
             'number' => (int) $comment->number,
             'body' => $comment->body,
+            'imageCount' => (int) ($comment->images_count ?? $comment->loadCount('images')->images_count),
             // Null for a withdrawn author (the FK sets it null), which is a fact about the row rather
             // than a gap to paper over — including `authorIsAi`, since there is no account left to be one.
             'authorId' => $author?->getKey(),
