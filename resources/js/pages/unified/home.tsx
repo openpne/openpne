@@ -1,14 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, ChevronRight, SquarePen } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { Heading } from '@/components/ui/heading';
+import { Activity, ChevronRight, SquarePen, UserCircle2, Users } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import type { DiarySummary } from '../diary/types';
 import { ActionTiles } from './action-tiles';
 import { DiaryCards } from './diary-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
-import { HomeSection } from './home-section';
+import { HomeSection, SubSection } from './home-section';
 import { PeopleRow } from './people-row';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
@@ -19,21 +17,6 @@ interface UnifiedHomeProps extends PageProps {
     friends: NineTableItem[];
     recentPhotos: HomePhoto[];
     recentDiaries: DiarySummary[];
-}
-
-/** A titled block inside a section — the two halves of "recent". */
-function SubSection({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
-    return (
-        <section>
-            <div className="mb-2 flex items-center gap-2">
-                <Heading as="h3" variant="minor" className="min-w-0 flex-1 truncate">
-                    {title}
-                </Heading>
-                {right}
-            </div>
-            {children}
-        </section>
-    );
 }
 
 /**
@@ -58,18 +41,19 @@ export default function UnifiedHome() {
             <Head title={t('Home')} />
             <h1 className="sr-only">{t('Home')}</h1>
 
-            <ProfileHeader profile={profile} />
+            <ProfileHeader profile={profile} selfLink />
 
             {/* Every section below arrives empty once its unit is off; the checks keep a heading and
-                its deep link from outliving the rows. */}
+                its deep link from outliving the rows. The accent icon is each section's own nav icon,
+                so a heading and the entry it leads to carry the same mark. */}
             {groups.length > 0 && (
-                <HomeSection title={t('My %communities%')} viewAll={{ label: t('View all'), href: '/groups/mine' }}>
+                <HomeSection title={t('My %communities%')} icon={Users} viewAll={{ label: t('View all'), href: '/groups/mine' }}>
                     <GroupGrid groups={groups} />
                 </HomeSection>
             )}
 
             {friends.length > 0 && (
-                <HomeSection title={t('People around you')} viewAll={{ label: t('View all'), href: '/friend/list' }}>
+                <HomeSection title={t('People around you')} icon={UserCircle2} viewAll={{ label: t('View all'), href: '/friend/list' }}>
                     <PeopleRow people={friends} />
                 </HomeSection>
             )}

@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils';
 export const HOME_CARD = 'overflow-hidden rounded-[1.25rem] bg-card text-card-foreground shadow-card';
 
 /**
- * A section of the unified home, in the mock's grammar: the heading is bold and inside the card with
- * no band or hairline under it, an optional accent icon marks the busiest sections, and the way out
- * is a muted "view all ›" on the heading line.
+ * A section of the unified layout, in the mock's grammar: the heading is bold and inside the card with
+ * no band or hairline under it, an optional accent icon marks the section, and the way out is a muted
+ * "view all ›" on the heading line.
  */
 export function HomeSection({
     title,
@@ -47,6 +47,21 @@ export function HomeSection({
                 )}
             </div>
             <div className={cn('px-4 pt-3 pb-4 sm:px-5', bodyClassName)}>{children}</div>
+        </section>
+    );
+}
+
+/** A titled block inside a section — the two halves of "recent". */
+export function SubSection({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
+    return (
+        <section>
+            <div className="mb-2 flex items-center gap-2">
+                <Heading as="h3" variant="minor" className="min-w-0 flex-1 truncate">
+                    {title}
+                </Heading>
+                {right}
+            </div>
+            {children}
         </section>
     );
 }

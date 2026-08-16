@@ -595,6 +595,9 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
+    // The experimental member page behind SnsSettingKey::ModernUnifiedHome: the same screen as the
+    // profile it replaces, so the same chrome.
+    'unified/member': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     // A sheet like the draft form, though it submits nothing: choosing who to write to is one screen
     // with one job, and it is left by picking a name or by closing it.
@@ -635,6 +638,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'notifications/index',
     'friend/requests',
     'member/show',
+    'unified/member',
     'block/add',
     'block/list',
     'block/remove',

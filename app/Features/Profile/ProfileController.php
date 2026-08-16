@@ -6,6 +6,7 @@ use App\Features\Block\BlockLookup;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Group\Queries\ListMemberGroups;
+use App\Features\Home\HomeLayout;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
@@ -14,6 +15,7 @@ use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Features\Profile\Serializers\ProfileSerializer;
+use App\Features\Profile\Serializers\UnifiedMemberSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
@@ -78,6 +80,17 @@ class ProfileController extends Controller
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => function () use ($member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
+                // The unified layout experiment (HomeLayout) swaps the page for a signed-in member,
+                // reading the same owner rows at the same clearance. Branching first is what keeps
+                // the digest below from being gathered for a page that would not show it. A guest
+                // keeps the shipped profile: the unified sections are the auth-only ones the digest
+                // is already withheld for.
+                if ($viewer !== null && HomeLayout::unifiedEnabled()) {
+                    return Inertia::render('unified/member', UnifiedMemberSerializer::page(
+                        $viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus,
+                    ));
+                }
+
                 // Digest = auth-only: its previews and stats link to routes behind the auth group, and
                 // a guest never sees another member's friends/groups. Classic/guest pay +0 queries
                 // (this closure runs only for a Modern render). images.file feeds the rich diary rows.

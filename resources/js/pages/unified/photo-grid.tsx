@@ -18,7 +18,7 @@ const LEAD_SIZES = '(min-width: 40rem) 18.75rem, 46vw';
 const TILE_SIZES = '(min-width: 40rem) 12rem, 31vw';
 
 /**
- * The viewer's latest pictures, newest first. A tile opens the content the picture was posted with
+ * One member's latest pictures, newest first. A tile opens the content the picture was posted with
  * rather than the picture alone: there is no gallery here, only a shorter way back into what it
  * illustrates.
  *

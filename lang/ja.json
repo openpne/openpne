@@ -193,7 +193,7 @@
     "Amber": "アンバー",
     "An admin transfer to this member is already pending.": "このメンバーへの管理者交代は既に依頼中です。",
     "An event can have at most :max images.": "イベントの画像は最大:max枚です。",
-    "An experimental home built around the member profile. Turning it off puts the previous home back straight away.": "メンバーのプロフィールを中心にした実験的なホームです。オフにすると、すぐに元のホームに戻ります。",
+    "An experimental home and member page built around the member profile. Turning it off puts the previous pages back straight away.": "メンバーのプロフィールを中心にした実験的なホームとメンバーページです。オフにすると、すぐに元の画面に戻ります。",
     "An hour ago": "1時間前",
     "An internal path starting with / (e.g. /member/search) or an http(s):// URL. In member/%community% items, :id is replaced with the member or %community% id.": "/ で始まる内部パス(例: /member/search)、または http(s):// の URL。メンバー/%community%のナビでは :id がメンバー ID または %community% ID に置き換わります。",
     "An invitation has been sent to :email.": ":email に招待を送信しました。",

@@ -131,7 +131,7 @@ class HomeLayoutSettings extends Page
             ->schema([
                 Toggle::make(SnsSettingKey::ModernUnifiedHome->value)
                     ->label(SnsSettingKey::ModernUnifiedHome->label())
-                    ->helperText(__('An experimental home built around the member profile. Turning it off puts the previous home back straight away.')),
+                    ->helperText(__('An experimental home and member page built around the member profile. Turning it off puts the previous pages back straight away.')),
             ]);
     }
 }

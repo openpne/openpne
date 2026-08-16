@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { InitialBadge } from '@/components/initial-badge';
 import { Heading } from '@/components/ui/heading';
@@ -16,21 +17,37 @@ export interface UnifiedProfile {
     isAi: boolean;
     /** Self-introduction, promoted into the header; null when unset. */
     bio: string | null;
+    /** Only where the page is about somebody else, and only inside their age gate. */
+    age?: number | null;
 }
 
 /** The content column is `max-w-2xl`; below that the cover runs the full width of the screen. */
 const COVER_SIZES = '(min-width: 42rem) 42rem, 100vw';
 
 /**
- * Who the page is about — the viewer themselves. The page's own h1 is the sr-only "Home", so the
- * name is an h2 however large it is painted.
+ * Who the page is about.
  *
  * The member's picture is the cover rather than a face beside the name: a home someone opens dozens
- * of times a day should look like theirs before a word of it is read. The arc is what keeps it a
- * header and not a banner — the card rises back over the photo's foot, so the name sits on the card
- * rather than on the picture, and no text ever has to survive whatever was uploaded behind it.
+ * of times a day should look like theirs before a word of it is read, and a page about another member
+ * is about them before it is read either. The arc is what keeps it a header and not a banner — the
+ * card rises back over the photo's foot, so the name sits on the card rather than on the picture, and
+ * no text ever has to survive whatever was uploaded behind it.
+ *
+ * `selfLink` is the home's way through to the profile; a page that already is the profile passes
+ * `actions` instead — what the viewer can do about this member, where the link would have been — and
+ * `as="h1"`, since there the name is what the page is called rather than a block inside it.
  */
-export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
+export function ProfileHeader({
+    profile,
+    as = 'h2',
+    selfLink,
+    actions,
+}: {
+    profile: UnifiedProfile;
+    as?: 'h1' | 'h2';
+    selfLink?: boolean;
+    actions?: ReactNode;
+}) {
     const t = useT();
 
     return (
@@ -60,11 +77,15 @@ export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
 
             <div className="px-4 pt-2 pb-4 text-center sm:px-5">
                 <div className="flex min-w-0 items-center justify-center gap-2">
-                    <Heading as="h2" variant="page">
+                    <Heading as={as} variant="page">
                         {profile.name}
                     </Heading>
                     <AiChip isAi={profile.isAi} />
                 </div>
+
+                {profile.age !== null && profile.age !== undefined && (
+                    <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age: profile.age })}</p>
+                )}
 
                 {profile.bio && (
                     <p className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">
@@ -72,9 +93,13 @@ export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
                     </p>
                 )}
 
-                <Link href={`/member/${profile.id}`} className="mt-3 inline-block text-sm text-link hover:underline">
-                    {t('View my profile')}
-                </Link>
+                {selfLink && (
+                    <Link href={`/member/${profile.id}`} className="mt-3 inline-block text-sm text-link hover:underline">
+                        {t('View my profile')}
+                    </Link>
+                )}
+
+                {actions}
             </div>
         </section>
     );

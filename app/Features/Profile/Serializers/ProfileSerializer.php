@@ -24,8 +24,6 @@ class ProfileSerializer
      */
     public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang, ?int $age, ?string $friendStatus = null): array
     {
-        $bioName = self::bioFieldName();
-
         return [
             'owner' => [
                 'id' => $owner->getKey(),
@@ -41,14 +39,27 @@ class ProfileSerializer
             'age' => $age,
             'friendStatus' => $friendStatus,
             'bio' => self::bio($fields, $lang),
-            'fields' => $fields
-                ->reject(fn (ProfileFieldValue $field): bool => $field->profile->name === $bioName)
-                ->map(fn (ProfileFieldValue $field): array => [
-                    'name' => $field->profile->name,
-                    'caption' => $field->profile->getCaption($lang),
-                    'value' => $field->display($lang),
-                ])->values()->all(),
+            'fields' => self::fieldRows($fields, $lang),
         ];
+    }
+
+    /**
+     * The structured field rows, minus the self-introduction (that one is promoted to `bio`).
+     *
+     * @param  Collection<int, ProfileFieldValue>  $fields
+     * @return list<array{name: string, caption: string, value: string}>
+     */
+    public static function fieldRows(Collection $fields, string $lang): array
+    {
+        $bioName = self::bioFieldName();
+
+        return $fields
+            ->reject(fn (ProfileFieldValue $field): bool => $field->profile->name === $bioName)
+            ->map(fn (ProfileFieldValue $field): array => [
+                'name' => $field->profile->name,
+                'caption' => $field->profile->getCaption($lang),
+                'value' => $field->display($lang),
+            ])->values()->all();
     }
 
     /**
