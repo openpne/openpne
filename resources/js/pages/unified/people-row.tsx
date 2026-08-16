@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { AiCornerMark } from '@/components/ai-corner-mark';
 import { InitialBadge } from '@/components/initial-badge';
+import { derivedIdentityColor } from './identity-visual';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -38,15 +39,15 @@ export function PeopleRow({ people, named }: { people: NineTableItem[]; named?: 
                                 named ? 'w-16 rounded-lg' : 'rounded-full',
                             )}
                         >
-                            <span className="relative block size-16">
+                            <span className="relative block size-18">
                                 {person.imageUrl ? (
-                                    <img src={person.imageUrl} alt="" loading="lazy" className="size-16 rounded-full object-cover" />
+                                    <img src={person.imageUrl} alt="" loading="lazy" className="size-18 rounded-full object-cover" />
                                 ) : (
                                     <InitialBadge
                                         aria-hidden
                                         name={person.name}
-                                        color={person.avatarColor}
-                                        className="size-16 rounded-full text-lg"
+                                        color={person.avatarColor ?? derivedIdentityColor(person.name)}
+                                        className="size-18 rounded-full text-lg"
                                     />
                                 )}
                                 <AiCornerMark isAi={person.isAi} size="lg" />

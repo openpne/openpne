@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, ChevronRight, SquarePen, UserCircle2, Users } from 'lucide-react';
+import { Activity, ChevronRight, SquarePen } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import type { DiarySummary } from '../diary/types';
@@ -41,19 +41,19 @@ export default function UnifiedHome() {
             <Head title={t('Home')} />
             <h1 className="sr-only">{t('Home')}</h1>
 
-            <ProfileHeader profile={profile} selfLink />
+            <ProfileHeader profile={profile} />
 
             {/* Every section below arrives empty once its unit is off; the checks keep a heading and
                 its deep link from outliving the rows. The accent icon is each section's own nav icon,
                 so a heading and the entry it leads to carry the same mark. */}
             {groups.length > 0 && (
-                <HomeSection title={t('My %communities%')} icon={Users} viewAll={{ label: t('View all'), href: '/groups/mine' }}>
+                <HomeSection title={t('%Communities% you belong to')} viewAll={{ label: t('View all'), href: '/groups/mine' }}>
                     <GroupGrid groups={groups} />
                 </HomeSection>
             )}
 
             {friends.length > 0 && (
-                <HomeSection title={t('People around you')} icon={UserCircle2} viewAll={{ label: t('View all'), href: '/friend/list' }}>
+                <HomeSection title={t('People around you')} viewAll={{ label: t('View all'), href: '/friend/list' }}>
                     <PeopleRow people={friends} />
                 </HomeSection>
             )}
@@ -67,7 +67,7 @@ export default function UnifiedHome() {
                     )}
                     {diaries && (
                         <SubSection
-                            title={t('My recent %diaries%')}
+                            title={t('Recent %diaries%')}
                             right={
                                 <Link
                                     href={`/diary/listMember/${user.id}`}
@@ -84,7 +84,7 @@ export default function UnifiedHome() {
                 </HomeSection>
             )}
 
-            <HomeSection title={t('Menu')} icon={SquarePen}>
+            <HomeSection title={t('Actions')} icon={SquarePen}>
                 <ActionTiles memberId={user.id} />
             </HomeSection>
         </>
