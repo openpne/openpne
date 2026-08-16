@@ -173,9 +173,10 @@ enum SnsSettingKey: string
     case PrivacyPolicy = 'privacy_policy';
 
     /**
-     * Whether the Modern home renders the unified layout instead of the digest dashboard. An
-     * experiment: same route and the same read-only sources, a different page component, so turning
-     * it off restores the previous home with no deploy (docs/internals/feature-modules.md).
+     * Whether Modern renders the unified layout: the home instead of the digest dashboard, and a
+     * member page instead of the digest profile. An experiment: same routes and the same read-only
+     * sources, different page components, so turning it off restores the previous pages with no
+     * deploy (docs/internals/feature-modules.md).
      */
     case ModernUnifiedHome = 'modern_unified_home';
 
