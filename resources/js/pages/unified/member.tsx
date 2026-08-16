@@ -67,7 +67,7 @@ export default function UnifiedMember() {
                 its deep link from outliving the rows. */}
             {groups.length > 0 && (
                 <HomeSection
-                    title={t('Joined %communities%')}
+                    title={t('%Communities% you belong to')}
                     icon={Users}
                     viewAll={{ label: t('View all'), href: `/groups/mine?id=${profile.id}` }}
                 >

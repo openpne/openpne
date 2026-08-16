@@ -120,7 +120,7 @@ function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
 
     return (
         <>
-            <ZoneTab section={MEMBER_SEARCH_SECTION} />
+            <ZoneTab section={MEMBER_SEARCH_SECTION} shortLabel="Search" />
             <li className="flex min-w-0 flex-1 items-stretch">
                 <Link
                     href={place.href}
@@ -141,10 +141,11 @@ function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
 }
 
 /**
- * A flanking zone: the icon over its name. Named rather than icon-only, unlike the five-tab row —
- * with three zones there is room for the words, and the one in the middle is words already.
+ * A flanking zone, the mock's way: the icon beside its name on one line, and a dot rather than a
+ * printed number when something waits (the count stays in the link's accessible name). `shortLabel`
+ * is the design's own word where the nav row's is longer.
  */
-function ZoneTab({ section, count = 0 }: { section: NavSection; count?: number }) {
+function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; count?: number; shortLabel?: string }) {
     const t = useT();
     const { icon: Icon, label, badge } = section;
 
@@ -152,16 +153,14 @@ function ZoneTab({ section, count = 0 }: { section: NavSection; count?: number }
         <li className="flex w-24 shrink-0 items-stretch">
             <Link
                 href={section.href}
-                // The visible name is the accessible one until there is a number beside it, which the
-                // pill does not announce — then the link says the count in words instead.
                 aria-label={badge && count > 0 ? t(badge.label.key, { count }) : undefined}
-                className="flex size-full min-h-11 flex-col items-center justify-center gap-1 px-1 text-muted-foreground transition hover:text-foreground"
+                className="flex size-full min-h-11 items-center justify-center gap-1.5 px-1 text-muted-foreground transition hover:text-foreground"
             >
                 <span className="relative inline-flex">
                     <Icon className="size-5" aria-hidden />
-                    <CountPill count={count} className="absolute -top-2 -right-2.5" />
+                    {count > 0 && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                 </span>
-                <span className="max-w-full truncate text-[10px] leading-none">{t(label.key, label.replacements)}</span>
+                <span className="max-w-full truncate text-sm">{shortLabel ? t(shortLabel) : t(label.key, label.replacements)}</span>
             </Link>
         </li>
     );

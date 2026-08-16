@@ -85,7 +85,7 @@ test('the unified bar names the group a member is inside, from anywhere in it', 
     expect(placeLink().getAttribute('href')).toBe('/groups/7');
     // Not the page being read, so it is a way out rather than a "you are here".
     expect(placeLink().getAttribute('aria-current')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Search members' }).getAttribute('href')).toBe('/member/search');
+    expect(screen.getByRole('link', { name: 'Search' }).getAttribute('href')).toBe('/member/search');
     expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications');
 });
 

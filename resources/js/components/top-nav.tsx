@@ -37,7 +37,7 @@ const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1
  *  slides it away while the reader scrolls down (AppShell owns the signal). `seam` is the bottom
  *  hairline: it divides the bar from the page it floats over, so a surface that is meant to read as
  *  one piece (the compose sheet) keeps it off until content actually scrolls under the bar. */
-function TopBar({ hidden, seam = true, children }: { hidden?: boolean; seam?: boolean; children: ReactNode }) {
+function TopBar({ hidden, seam = true, persistent = false, children }: { hidden?: boolean; seam?: boolean; persistent?: boolean; children: ReactNode }) {
     const ref = useRef<HTMLElement>(null);
 
     // `inert` closes the bar to new focus, but whatever already held it keeps it (and its key
@@ -54,7 +54,9 @@ function TopBar({ hidden, seam = true, children }: { hidden?: boolean; seam?: bo
             ref={ref}
             inert={hidden || undefined}
             className={cn(
-                'sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
+                'sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur transition-transform duration-200 motion-reduce:transition-none',
+                // The unified bar is the header at every width; the shipped bars are phone furniture.
+                !persistent && 'lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
                 hidden && '-translate-y-full',
             )}
@@ -175,8 +177,12 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
     return (
         // No seam: in the design this bar follows, the top of the page and the bar are one surface —
         // the first card below is what marks where the page begins.
-        <TopBar hidden={hidden} seam={false}>
-            <NavDrawer />
+        <TopBar hidden={hidden} seam={false} persistent>
+            {/* The drawer is phone furniture: at desk width the sidebar holds the same nav, and the
+                design's desk header carries no hamburger beside it. */}
+            <span className="lg:hidden">
+                <NavDrawer />
+            </span>
             {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
                 with the same name is a landmark list a reader cannot tell apart. Each tab names
                 itself and says whether it is the page being read. */}
