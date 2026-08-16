@@ -31,6 +31,11 @@ export interface TalkRowReactions {
  * A withdrawn author keeps their place with the established label — the message stays, the person is
  * gone.
  *
+ * `grouped` drops the author header: a quick follow-up in the same run (lib/chat/message-grouping)
+ * reads as more of the same turn, the way Discord folds one. The per-message controls stay — a phone
+ * has no hover to reveal them with — and the attribution stays too, spoken rather than drawn, so a
+ * screen reader hears every row whole.
+ *
  * `highlighted` is the deep link's landing: the row a `?m=` link opened on, held for a moment so the
  * reader can see which message named them.
  */
@@ -38,23 +43,48 @@ export function TalkMessageRow({
     message,
     onDelete,
     highlighted = false,
+    grouped = false,
+    rule = false,
     reactions,
 }: {
     message: TalkMessage;
     onDelete: (id: number) => void;
     highlighted?: boolean;
+    grouped?: boolean;
+    /** Draw the hairline above this row — the list rules between turns, not inside them. */
+    rule?: boolean;
     reactions: TalkRowReactions;
 }) {
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
 
+    const content = (
+        <>
+            {/* A message may be nothing but pictures, and an empty paragraph would leave its height
+                behind. Trimmed rather than compared to '': an upgraded body may be whitespace. */}
+            {hasBody && (
+                <p className={cn('whitespace-pre-wrap break-words', !grouped && 'mt-1')}>
+                    <EntityText text={message.body} mentions={message.mentions} />
+                </p>
+            )}
+            <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
+            <TalkReactionChips
+                chips={reactions.chips}
+                onToggle={reactions.canReact ? reactions.onToggle : undefined}
+                onShowReactors={reactions.onShowReactors}
+            />
+        </>
+    );
+
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
         <li
             data-talk-message-id={message.id}
             className={cn(
-                'px-4 py-3 sm:px-5',
+                'px-4 sm:px-5',
+                grouped ? 'pb-3' : 'py-3',
+                rule && 'border-t border-border',
                 // The transition is not conditional on the flag: what fades is the highlight being
                 // taken away, and a transition arriving with the class would have nothing to animate
                 // from. The row mounts already highlighted, so the emphasis itself is instant.
@@ -64,49 +94,62 @@ export function TalkMessageRow({
                 highlighted && 'bg-selected/10',
             )}
         >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Avatar
-                    id={author?.id ?? 0}
-                    name={author?.name ?? ''}
-                    src={author?.imageUrl ?? null}
-                    color={author?.avatarColor ?? null}
-                    isAi={author?.isAi ?? false}
-                    size="md"
-                    decorative
-                />
-                {author ? (
-                    <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
-                        {author.name}
-                    </Link>
-                ) : (
-                    <span className="truncate">{t('Withdrawn member')}</span>
-                )}
-                <AiChip isAi={author?.isAi ?? false} />
-                <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
-                {/* Standing on the meta row rather than appearing on hover: a phone has no hover, and
-                    a row with no chips yet has nowhere else to offer the first one. */}
-                {reactions.canReact && (
-                    <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
-                )}
-                {message.canDelete && (
-                    <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
-                        {t('Delete')}
-                    </button>
-                )}
-            </div>
-            {/* A message may be nothing but pictures, and an empty paragraph would leave its height
-                behind. Trimmed rather than compared to '': an upgraded body may be whitespace. */}
-            {hasBody && (
-                <p className="mt-1 whitespace-pre-wrap break-words">
-                    <EntityText text={message.body} mentions={message.mentions} />
-                </p>
+            {grouped ? (
+                <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                        <span className="sr-only">
+                            {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="relative" />
+                        </span>
+                        {content}
+                    </div>
+                    {(reactions.canReact || message.canDelete) && (
+                        <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                            {reactions.canReact && (
+                                <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
+                            )}
+                            {message.canDelete && (
+                                <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
+                                    {t('Delete')}
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Avatar
+                            id={author?.id ?? 0}
+                            name={author?.name ?? ''}
+                            src={author?.imageUrl ?? null}
+                            color={author?.avatarColor ?? null}
+                            isAi={author?.isAi ?? false}
+                            size="md"
+                            decorative
+                        />
+                        {author ? (
+                            <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
+                                {author.name}
+                            </Link>
+                        ) : (
+                            <span className="truncate">{t('Withdrawn member')}</span>
+                        )}
+                        <AiChip isAi={author?.isAi ?? false} />
+                        <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
+                        {/* Standing on the meta row rather than appearing on hover: a phone has no hover, and
+                            a row with no chips yet has nowhere else to offer the first one. */}
+                        {reactions.canReact && (
+                            <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
+                        )}
+                        {message.canDelete && (
+                            <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
+                                {t('Delete')}
+                            </button>
+                        )}
+                    </div>
+                    {content}
+                </>
             )}
-            <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : 'mt-1'} />
-            <TalkReactionChips
-                chips={reactions.chips}
-                onToggle={reactions.canReact ? reactions.onToggle : undefined}
-                onShowReactors={reactions.onShowReactors}
-            />
         </li>
     );
 }
