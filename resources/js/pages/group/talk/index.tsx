@@ -3,8 +3,9 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { List, Panel } from '@/components/ui/surface';
+import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
+import { continuesRun } from '@/lib/chat/message-grouping';
 import { dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -313,8 +314,12 @@ export default function GroupTalkIndex() {
                 {messages.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
-                    <List>
-                        {messages.map((message) => (
+                    // Not the shared List: its divide-y would rule between a run's grouped rows. The
+                    // border is per-row instead — on every row that starts something (a header row
+                    // after another row), never on a grouped continuation, and not after the unread
+                    // separator, which is already a line.
+                    <ul>
+                        {messages.map((message, index) => (
                             <Fragment key={message.id}>
                                 {message.id === dividerId && (
                                     // The separator is inside the row rather than being it: a list
@@ -335,6 +340,10 @@ export default function GroupTalkIndex() {
                                     message={message}
                                     onDelete={remove}
                                     highlighted={message.id === highlightId}
+                                    // The unread separator breaks a run: what follows it is where the
+                                    // reader resumes, and it must say again who is speaking.
+                                    grouped={message.id !== dividerId && continuesRun(messages[index - 1], message)}
+                                    rule={index > 0 && message.id !== dividerId && !continuesRun(messages[index - 1], message)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
@@ -345,7 +354,7 @@ export default function GroupTalkIndex() {
                                 />
                             </Fragment>
                         ))}
-                    </List>
+                    </ul>
                 )}
 
                 {!atLatest && (
