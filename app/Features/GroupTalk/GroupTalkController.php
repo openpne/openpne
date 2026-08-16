@@ -11,6 +11,7 @@ use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Queries\MessageReactionAggregates;
+use App\Features\GroupTalk\Queries\TalkAbsenceDigest;
 use App\Features\GroupTalk\Queries\TalkUnreadSnapshot;
 use App\Features\GroupTalk\Queries\TouchedGroupMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
@@ -39,7 +40,7 @@ use Inertia\Response as InertiaResponse;
  */
 class GroupTalkController extends Controller
 {
-    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions): InertiaResponse
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -51,8 +52,9 @@ class GroupTalkController extends Controller
         // sit below the watermark the client starts polling from and never be asked for again.
         $reactionsVersion = TalkReactionVersion::of($group);
         $page = $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor));
+        $snapshot = $unread($group, $viewer);
 
-        return Inertia::render('group/talk/index', [
+        $props = [
             'group' => GroupSerializer::summary($group),
             'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages)),
             'anchor' => $anchor === null ? null : ['messageId' => $anchor->getKey()],
@@ -63,7 +65,7 @@ class GroupTalkController extends Controller
             // Where the unread boundary stood at render time, and nothing later moves it: the page's
             // "from here" divider has to keep naming the line the reader opened on, while the shared
             // `unread` badge prop next to it goes on tracking the live count.
-            'talkUnreadSnapshot' => GroupMessageSerializer::unreadSnapshot($unread($group, $viewer)),
+            'talkUnreadSnapshot' => GroupMessageSerializer::unreadSnapshot($snapshot),
             'reactionsVersion' => $reactionsVersion,
             // The vocabulary travels with the page rather than being duplicated in the bundle, so
             // App\Features\Reactions\ReactionVocabulary is the one place it is written down and one
@@ -71,7 +73,17 @@ class GroupTalkController extends Controller
             // open across a deploy still offers what it was rendered with; the add rule reads the
             // class, refuses a retired emoji with 422, and the client's optimistic chip reverts.
             'reactionVocabulary' => ReactionVocabulary::all(),
-        ]);
+        ];
+
+        // Only a backlog worth a catch-up card gets one, and the key is absent rather than null
+        // below that: the digest costs queries, so "no digest" has to be a decision this side of the
+        // wire rather than a shape the client is handed and told to ignore.
+        $absence = $digest($group, $viewer, $snapshot);
+        if ($absence !== null) {
+            $props['unreadDigest'] = $absence;
+        }
+
+        return Inertia::render('group/talk/index', $props);
     }
 
     /**
@@ -214,15 +226,16 @@ class GroupTalkController extends Controller
     }
 
     /**
-     * "I have read as far as this message." Fire-and-forget from the reader's side: it carries no
-     * body back, and the shell's own refresh is what moves the badge.
+     * "I have read as far as this message", or — with no id — "I have read the lot", the digest's
+     * catch-up. Fire-and-forget from the reader's side: it carries no body back, and the shell's own
+     * refresh is what moves the badge.
      */
     public function read(MarkTalkReadRequest $request, Group $group, MarkTalkRead $action): Response
     {
         abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
 
         try {
-            $action($this->viewer(), $group, (int) $request->validated('messageId'));
+            $action($this->viewer(), $group, $request->messageId());
         } catch (GroupTalkActionException) {
             // A message deleted between rendering and this call is an ordinary race, and so is a
             // non-member trying to hold a cursor; neither is worth a distinct answer.

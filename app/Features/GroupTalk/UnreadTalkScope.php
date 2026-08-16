@@ -2,12 +2,14 @@
 
 namespace App\Features\GroupTalk;
 
+use App\Models\GroupMessage;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 
 /**
- * What counts as unread in a group's talk, in one place because two queries ask it — the per-group
- * counts on the group list and the nav's "how many groups have something new" — and they must never
- * answer differently.
+ * What counts as unread in a group's talk, in one place because several queries ask it — the
+ * per-group counts on the group list, the nav's "how many groups have something new", and the
+ * absence digest's sample — and they must never answer differently.
  *
  * A message is unread for a member when it is newer than their cursor and somebody else wrote it.
  * The visible set is the same one the talk page shows (docs/internals/group-talk.md): every live
@@ -39,6 +41,28 @@ final class UnreadTalkScope
             // UNKNOWN for a withdrawn author's row, so it would silently drop exactly the messages
             // the talk page still shows under the "Withdrawn member" label.
             ->where(fn (Builder $others) => $others
+                ->whereNull('group_messages.member_id')
+                ->orWhere('group_messages.member_id', '!=', $viewerId));
+    }
+
+    /**
+     * The same two predicates against a boundary already in hand, for a caller reading the unread
+     * rows themselves rather than counting them through a membership row. Same class so the sample
+     * and the count cannot drift apart: a digest built from a wider or narrower set than the number
+     * printed on it would be describing a different backlog.
+     *
+     * @param  EloquentBuilder<GroupMessage>  $messages
+     * @return EloquentBuilder<GroupMessage>
+     */
+    public static function since(EloquentBuilder $messages, GroupTalkCursor $boundary, int $viewerId): EloquentBuilder
+    {
+        return $messages
+            ->where(fn (EloquentBuilder $after) => $after
+                ->where('group_messages.created_at', '>', $boundary->at)
+                ->orWhere(fn (EloquentBuilder $tie) => $tie
+                    ->where('group_messages.created_at', '=', $boundary->at)
+                    ->where('group_messages.id', '>', $boundary->id)))
+            ->where(fn (EloquentBuilder $others) => $others
                 ->whereNull('group_messages.member_id')
                 ->orWhere('group_messages.member_id', '!=', $viewerId));
     }

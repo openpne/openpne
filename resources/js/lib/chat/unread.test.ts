@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dividerBeforeId, firstUnreadBoundary, readThroughBoundary } from './unread.ts';
+import { digestPlacement, dividerBeforeId, firstUnreadBoundary, readThroughBoundary } from './unread.ts';
 import type { ChatStreamRow, ChatUnreadBoundary } from './types.ts';
 
 const message = (id: number, createdAt: string): ChatStreamRow => ({
@@ -126,4 +126,34 @@ test('a first-unread boundary at the head of an exhausted list still takes a lin
 
 test('a conversation with nothing waiting has no boundary at all', () => {
     assert.equal(dividerBeforeId(conversation, firstUnreadBoundary(null), false), null);
+});
+
+// --- where a catch-up digest is drawn ---
+
+test('the digest goes to the separator when the line is on the page', () => {
+    assert.equal(digestPlacement(true, 2, false, false), 'divider');
+});
+
+test('the digest takes the place of the banner when the boundary is above the page', () => {
+    assert.equal(digestPlacement(true, null, true, false), 'banner');
+});
+
+/** The card is drawn once or not at all: a divider id outranks a backlog that cannot both exist. */
+test('a boundary that is on the page never also draws the banner card', () => {
+    assert.equal(digestPlacement(true, 2, true, false), 'divider');
+});
+
+test('a backlog too small for a digest draws no card in either place', () => {
+    assert.equal(digestPlacement(false, 2, false, false), null);
+    assert.equal(digestPlacement(false, null, true, false), null);
+});
+
+/** Spending the catch-up withdraws the card from wherever it stood — nothing re-reads the snapshot. */
+test('a spent catch-up leaves no card in either place', () => {
+    assert.equal(digestPlacement(true, 2, false, true), null);
+    assert.equal(digestPlacement(true, null, true, true), null);
+});
+
+test('nothing waiting is neither placement', () => {
+    assert.equal(digestPlacement(true, null, false, false), null);
 });

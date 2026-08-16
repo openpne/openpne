@@ -176,6 +176,13 @@ rules, each answering a way of getting it wrong:
 - two tabs, or a retry, report out of order → the update carries the comparison in its `WHERE`
   (`stored < resolved`, expanded), so it can only move forward and replaying is free.
 
+The same endpoint with **no id** means "read through the latest" — the catch-up on the absence digest
+below. The server reads the group's own newest tuple inside that operation rather than taking one the
+client fetched: a client-fetched latest leaves a window in which a message can land and be marked read
+having been on nobody's screen. The monotonic rule is unchanged, so a request whose "latest" is
+already behind the cursor is a no-op. A `messageId` that is present but unusable is still a 422 —
+falling through to marking everything read is exactly what an unusable id must not do.
+
 The client reports while it is visible and at the foot of the **live** window: reading back through
 history is not reading what has arrived below, and the foot of a history window is not the foot of
 the conversation at all. Opening a room therefore clears its badge, backlog and all — the badge
@@ -213,6 +220,29 @@ The boundary is not always on screen. When the first loaded row is itself unread
 remain, the true line is further back than the page reaches, and drawing one at the top would mark
 where pagination stopped rather than where reading did. That is the state the "N unread" banner
 offers to fix.
+
+### The absence digest
+
+Past [`TalkAbsenceDigest::THRESHOLD`](../../app/Features/GroupTalk/Queries/TalkAbsenceDigest.php) the
+page also ships `unreadDigest`, and the boundary's affordance becomes a card: what was missed, and one
+tap to spend it. Below the threshold the key is **absent** rather than null, and no digest query runs.
+
+The count is the snapshot's own, never a recount — the card and the divider beside it name one
+backlog. Everything after it comes from a bounded sample: the first `SAMPLE` unread messages from the
+boundary, read through `UnreadTalkScope` so the sample and the count cannot describe different sets.
+So the faces are who has been talking **at the boundary**, busiest first, rather than a ranking over
+the whole backlog — and a picture on the message after the sample is not the card's to show. Each
+candidate picture passes both gates the group page's picture strip runs, the parent-ownership check
+and `FilePolicy`, and a refusal leaves no trace in the payload.
+
+Muting does not hide it: mute silences the nav badge and the notifications, and opening a room still
+says what was missed.
+
+One card is drawn, at the separator or in the banner's place, with the same payload and the same
+catch-up either way; which of the two is
+[`digestPlacement()`](../../resources/js/lib/chat/unread.ts). Spending the catch-up withdraws the card
+and leaves the banner's jump behind it — nothing re-reads the snapshot mid-visit, for the reason the
+divider does not.
 
 ### `?context=` — the page a position sits in
 
@@ -598,8 +628,8 @@ role once per request and the serializer asks it per row.
 6. The list on screen is one contiguous stretch. A window change replaces it and moves the
    generation on; only a page that follows what is held, and was asked for by the list it is landing
    in, is merged.
-7. The unread divider and its jump both come from the render-time snapshot, so nothing that happens
-   afterwards — mark-read included — moves either.
+7. The unread divider, its jump and the absence digest all come from the render-time snapshot, so
+   nothing that happens afterwards — mark-read included — moves any of them.
 8. No body is ever parsed for `@`. Two producers write mention rows and no third may appear: the
    composer's picker, and the MCP reply, where the server itself builds the prefix and its range.
    What a producer may name and what the write will accept are the same set, by construction.
