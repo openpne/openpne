@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 export interface HomePhoto {
     /** Which kind of content the picture is attached to — what the tile's link announces. */
-    source: 'diary' | 'timeline';
+    source: 'diary' | 'timeline' | 'talk' | 'topic' | 'event';
     href: string;
     image: GridImage;
 }
@@ -30,6 +30,15 @@ const TILE_SIZES = '(min-width: 40rem) 12rem, 31vw';
 export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
     const t = useT();
 
+    // The picture is decorative, so the link needs a name of its own: what it opens.
+    const linkName: Record<HomePhoto['source'], string> = {
+        diary: t('View this %diary%'),
+        timeline: t('View this %post_activity%'),
+        talk: t('View this message'),
+        topic: t('View this %topic%'),
+        event: t('View this event'),
+    };
+
     return (
         <ul className="grid grid-cols-6 gap-1.5">
             {photos.map(({ source, href, image }, index) => {
@@ -39,8 +48,7 @@ export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
                     <li key={`${source}-${image.id}`} className={lead ? 'col-span-3' : 'col-span-2'}>
                         <Link
                             href={href}
-                            // The picture is decorative, so the link needs a name of its own.
-                            aria-label={source === 'diary' ? t('View this %diary%') : t('View this %post_activity%')}
+                            aria-label={linkName[source]}
                             className={cn(
                                 'block overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 lead ? 'aspect-[4/3]' : 'aspect-square',

@@ -5,6 +5,8 @@ export interface HomeGroup {
     name: string;
     imageUrl: string | null;
     href: string;
+    /** One fact about the group under its name, where the grid is a set to choose between. */
+    caption?: string;
 }
 
 /**
@@ -36,7 +38,14 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                             aria-hidden
                             className="absolute inset-x-0 bottom-0 block h-2/3 bg-[linear-gradient(to_top,oklch(0_0_0/0.72),transparent)]"
                         />
-                        <span className="absolute inset-x-0 bottom-0 line-clamp-2 px-2 py-1.5 text-xs text-scrim-foreground">{group.name}</span>
+                        <span className="absolute inset-x-0 bottom-0 block px-2 py-1.5 text-xs text-scrim-foreground">
+                            {/* The name gives up its second line to a caption rather than growing the
+                                block past the scrim it has to stay legible against. */}
+                            <span className={group.caption ? 'block truncate' : 'line-clamp-2'}>{group.name}</span>
+                            {/* Quieter than the name: the caption settles a choice between cards
+                                rather than naming one. */}
+                            {group.caption && <span className="block truncate opacity-80">{group.caption}</span>}
+                        </span>
                     </Link>
                 </li>
             ))}

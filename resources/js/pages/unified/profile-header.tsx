@@ -5,6 +5,7 @@ import { InitialBadge } from '@/components/initial-badge';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { HOME_CARD } from './home-section';
 
 export interface UnifiedProfile {
@@ -36,17 +37,26 @@ const COVER_SIZES = '(min-width: 42rem) 42rem, 100vw';
  * `selfLink` is the home's way through to the profile; a page that already is the profile passes
  * `actions` instead — what the viewer can do about this member, where the link would have been — and
  * `as="h1"`, since there the name is what the page is called rather than a block inside it.
+ *
+ * `meta` is the line of facts about the subject that belongs with its name (a group's category and
+ * size), and `clampBio` decides whether the self-introduction is a two-line lead-in or the whole
+ * text: a member's page has their profile below to read the rest of them in, a group's page has
+ * nothing else that says what the group is for.
  */
 export function ProfileHeader({
     profile,
     as = 'h2',
     selfLink,
     actions,
+    meta,
+    clampBio = true,
 }: {
     profile: UnifiedProfile;
     as?: 'h1' | 'h2';
     selfLink?: boolean;
     actions?: ReactNode;
+    meta?: ReactNode;
+    clampBio?: boolean;
 }) {
     const t = useT();
 
@@ -87,8 +97,10 @@ export function ProfileHeader({
                     <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age: profile.age })}</p>
                 )}
 
+                {meta}
+
                 {profile.bio && (
-                    <p className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">
+                    <p className={cn('mt-1 break-words text-sm text-muted-foreground', clampBio ? 'line-clamp-2' : 'whitespace-pre-wrap')}>
                         <UserText text={profile.bio} />
                     </p>
                 )}

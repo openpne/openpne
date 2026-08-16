@@ -31,16 +31,13 @@ final class UnifiedSections
      * carries the content it came from so it opens there — a picture on these pages is a way back into
      * what it was posted with, not a gallery entry of its own.
      *
-     * Ordered by parent (created_at, then id, then source) before the pictures inside one are laid
-     * out in the order their author arranged them, so the cap always cuts the same tiles.
-     *
      * @param  Collection<int, Diary>  $diaries  images.file eager-loaded by the caller
      * @param  Collection<int, TimelinePost>  $posts
      * @return list<array{source: 'diary'|'timeline', href: string, image: array}>
      */
     public static function photos(Collection $diaries, Collection $posts): array
     {
-        $parents = [
+        return self::photosFromParents([
             ...$diaries->map(fn (Diary $diary): array => [
                 'source' => 'diary',
                 'at' => $diary->created_at,
@@ -55,10 +52,25 @@ final class UnifiedSections
                 'href' => "/timeline/{$post->getKey()}",
                 'images' => $post->images->map([TimelinePostSerializer::class, 'image'])->all(),
             ]),
-        ];
+        ]);
+    }
 
-        // Ids come from two tables, so they order the two sources apart rather than against each
-        // other; the source name settles the remaining tie.
+    /**
+     * The grid's order and cap, over content of any kind: each parent is the thing a tile opens,
+     * carrying the pictures posted with it. Ordered by parent (created_at, then id, then source)
+     * before the pictures inside one are laid out in the order their author arranged them, so the cap
+     * always cuts the same tiles. Ids come from as many tables as there are sources, so they order a
+     * source apart from itself rather than against another; the source name settles the rest.
+     *
+     * `images` is walked lazily and only as far as the cap reaches, so a caller whose shaping costs
+     * something per picture — a per-file authorization check — pays it for the tiles that are shown
+     * and not for the ones the cap cuts. A picture the caller omits leaves no trace of itself.
+     *
+     * @param  list<array{source: string, at: \DateTimeInterface, id: int, href: string, images: iterable<array>}>  $parents
+     * @return list<array{source: string, href: string, image: array}>
+     */
+    public static function photosFromParents(array $parents): array
+    {
         usort($parents, fn (array $a, array $b): int => $b['at'] <=> $a['at']
             ?: $b['id'] <=> $a['id']
             ?: $a['source'] <=> $b['source']);
@@ -95,20 +107,22 @@ final class UnifiedSections
     }
 
     /**
-     * The faces row — the digest's friend shape, which is what the shared tile idioms consume.
+     * The faces row — the digest's friend shape, which is what the shared tile idioms consume. Named
+     * for what it draws rather than for the relationship: the same row shows a member's friends on
+     * one page and a group's members on another, and the tiles must not tell them apart.
      *
-     * @param  Collection<int, Member>  $friends  `avatar.file` eager-loaded by ListFriends
+     * @param  Collection<int, Member>  $people  `avatar.file` eager-loaded by the caller's query
      * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, href: string}>
      */
-    public static function friends(Collection $friends): array
+    public static function people(Collection $people): array
     {
-        return $friends->map(fn (Member $friend): array => [
-            'id' => $friend->getKey(),
-            'name' => $friend->name,
-            'imageUrl' => $friend->avatar?->file?->thumbnailUrl(320, 320, square: true),
-            'avatarColor' => $friend->avatar_color?->hex(),
-            'isAi' => $friend->isAiAccount(),
-            'href' => "/member/{$friend->getKey()}",
+        return $people->map(fn (Member $person): array => [
+            'id' => $person->getKey(),
+            'name' => $person->name,
+            'imageUrl' => $person->avatar?->file?->thumbnailUrl(320, 320, square: true),
+            'avatarColor' => $person->avatar_color?->hex(),
+            'isAi' => $person->isAiAccount(),
+            'href' => "/member/{$person->getKey()}",
         ])->values()->all();
     }
 }

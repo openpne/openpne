@@ -64,7 +64,7 @@ final class UnifiedMemberSerializer
             'groups' => UnifiedSections::groups(Feature::Group->enabled()
                 ? (new ListMemberGroups)->take($owner, self::GROUPS)
                 : collect()),
-            'friends' => UnifiedSections::friends(Feature::Friend->enabled()
+            'friends' => UnifiedSections::people(Feature::Friend->enabled()
                 ? (new ListFriends)->take($viewer, $owner, self::FRIENDS)
                 : collect()),
             'recentPhotos' => UnifiedSections::photos($diaries, Feature::Timeline->enabled()

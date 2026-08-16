@@ -19,12 +19,15 @@ export const HOME_CARD = 'overflow-hidden rounded-[1.25rem] bg-card text-card-fo
 export function HomeSection({
     title,
     icon: Icon,
+    right,
     viewAll,
     children,
     bodyClassName,
 }: {
     title: string;
     icon?: LucideIcon;
+    /** Attention the heading itself carries — an unread pill, not a control. */
+    right?: ReactNode;
     viewAll?: { label: string; href: string };
     children: ReactNode;
     bodyClassName?: string;
@@ -36,6 +39,7 @@ export function HomeSection({
                 <Heading as="h2" variant="section" className="min-w-0 flex-1 truncate">
                     {title}
                 </Heading>
+                {right}
                 {viewAll && (
                     <Link
                         href={viewAll.href}
