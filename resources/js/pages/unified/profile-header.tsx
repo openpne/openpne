@@ -97,7 +97,9 @@ export function ProfileHeader({
                     the card (≈114%), so the picture ends where the curve crosses the edge and the
                     skirt below is white the full width. -bottom-px closes the seam a fractional
                     height can open. */}
-                <span aria-hidden className="absolute inset-x-[-7%] -bottom-px block h-26 rounded-t-full bg-card" />
+                {/* rounded-t-full would clamp to quarter-circles with a flat middle (the radii scale by the
+                    SMALLEST side ratio); the explicit 50%/100% pair keeps the whole top one ellipse. */}
+                <span aria-hidden className="absolute inset-x-[-7%] -bottom-px block h-26 rounded-t-[50%_100%] bg-card" />
                 {/* The name is stored inside the curve — its row sits between the dome's apex and
                     the photo's side bottoms, so the picture still shows either side of it. */}
                 <div className="absolute inset-x-[16%] bottom-14 flex min-w-0 items-center justify-center gap-2">
