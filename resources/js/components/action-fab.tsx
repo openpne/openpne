@@ -15,8 +15,10 @@ export function ActionFab({ chrome, extended }: { chrome: Chrome; extended: bool
     const { props } = usePage<PageProps>();
 
     // The frame's gate verbatim: the heading-row button and this are one action at two widths, and a
-    // guest (a web-public profile is reachable signed out) gets neither.
-    if (!chrome.action || !props.auth.user) {
+    // guest (a web-public profile is reachable signed out) gets neither. The unified experiment
+    // drops it entirely — the design it follows has no floating action, and its rule is looks over
+    // reach: writing is a menu-tile trip away, not a thumb away.
+    if (!chrome.action || !props.auth.user || props.unifiedLayout) {
         return null;
     }
 

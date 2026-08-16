@@ -3,14 +3,18 @@ import { test } from 'node:test';
 import {
     bottomNavSections,
     chromeRecedes,
+    divePlace,
     hasBottomNav,
     isHomeComponent,
+    isSectionActive,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
     TALK_ROOMS_HREF,
+    unifiedTabs,
     visibleNavSections,
 } from './member-chrome.ts';
+import type { DivePlace } from './member-chrome.ts';
 import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
@@ -390,6 +394,82 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.deepEqual(hub.title, MESSAGES_LABEL);
     assert.equal(hub.action?.href, '/messages/new');
     assert.equal(hub.tabs, undefined);
+});
+
+test('the unified bar offers home and the groups, and the groups tab goes with its unit', () => {
+    assert.deepEqual(unifiedTabs(allOn).map((tab) => tab.href), ['/dashboard', '/groups/mine']);
+    assert.deepEqual(unifiedTabs({ ...allOn, group: false }).map((tab) => tab.href), ['/dashboard']);
+    // Nav entries, not a parallel list: the drawer's label and the tab's are the same object.
+    assert.deepEqual(unifiedTabs(allOn)[1], NAV_SECTIONS.find((section) => section.href === '/groups/mine'));
+});
+
+test('the unified tabs light up on the paths their sections own', () => {
+    const current = (path: string) => unifiedTabs(allOn).filter((tab) => isSectionActive(tab, path)).map((tab) => tab.href);
+
+    // Home stands for one screen; the groups tab answers for every group space.
+    assert.deepEqual(current('/dashboard'), ['/dashboard']);
+    assert.deepEqual(current('/dashboard/anything'), []);
+    for (const path of ['/groups', '/groups/mine', '/groups/7', '/topics/3', '/events/1']) {
+        assert.deepEqual(current(path), ['/groups/mine'], path);
+    }
+    // Neither tab claims a screen that is in neither place.
+    assert.deepEqual(current('/diary/list'), []);
+});
+
+const CYCLISTS_PLACE: DivePlace = { label: 'Cyclists', href: '/groups/7' };
+const OWNER_PLACE: DivePlace = { label: 'Owner', href: '/member/1' };
+const HOME_PLACE: DivePlace = { label: { key: 'Home', replacements: undefined }, href: '/dashboard' };
+
+/**
+ * Where the unified bottom bar says the member is standing, per screen. Enumerated rather than
+ * sampled: the middle zone is a claim about the reader's position and the way back up out of it, so
+ * a screen resolving to the wrong place would carry them out of the space they are in. The group and
+ * profile tops are the ones scope cannot answer for — they *are* the place, so nothing scopes them.
+ */
+const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place: DivePlace }[] = [
+    { component: 'community/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'unified/group', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'member/show', props: { profile: { owner } }, place: OWNER_PLACE },
+    { component: 'unified/member', props: { profile: owner }, place: OWNER_PLACE },
+    // Scoped to the group: everything under a group top.
+    { component: 'group/talk/index', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'group/topic/index', props: { group: cyclists, canPost: false }, place: CYCLISTS_PLACE },
+    { component: 'group/topic/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'group/event/index', props: { group: cyclists, canPost: false }, place: CYCLISTS_PLACE },
+    { component: 'group/event/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'group/event/members', props: { group: cyclists, event: { id: 3, name: 'Ride' } }, place: CYCLISTS_PLACE },
+    { component: 'community/members', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'community/manage', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    { component: 'community/pending', props: { group: cyclists }, place: CYCLISTS_PLACE },
+    // Scoped to a member: a page about somebody else.
+    { component: 'diary/show', props: { diary: { author: owner } }, place: OWNER_PLACE },
+    { component: 'diary/list', props: { owner, isOwner: false }, place: OWNER_PLACE },
+    { component: 'timeline/member', props: { owner, isOwner: false }, place: OWNER_PLACE },
+    { component: 'message/conversation/index', props: { counterpart: owner }, place: OWNER_PLACE },
+    // Nowhere in particular: a hub, an errand, the viewer's own lists — and the withdrawn bucket,
+    // whose counterpart has no page left to stand on.
+    { component: 'dashboard', props: {}, place: HOME_PLACE },
+    { component: 'unified/home', props: {}, place: HOME_PLACE },
+    { component: 'diary/feed', props: { variant: 'recent' }, place: HOME_PLACE },
+    { component: 'community/search', props: {}, place: HOME_PLACE },
+    { component: 'message/conversations/index', props: {}, place: HOME_PLACE },
+    { component: 'timeline/member', props: { owner, isOwner: true }, place: HOME_PLACE },
+    { component: 'member/search', props: {}, place: HOME_PLACE },
+    { component: 'member/config', props: {}, place: HOME_PLACE },
+    { component: 'notifications/index', props: {}, place: HOME_PLACE },
+    { component: 'message/conversation/index', props: { counterpart: null }, place: HOME_PLACE },
+];
+
+test('the bar names the place the member is in, and the way back to its top', () => {
+    for (const { component, props, place } of DIVE_FIXTURES) {
+        const page = { enabledFeatures: allOn, ...props };
+
+        assert.deepEqual(divePlace(component, page, resolveChrome(component, page)), place, component);
+    }
+});
+
+test('a page nobody classified is nowhere in particular rather than a broken link', () => {
+    assert.deepEqual(divePlace('some/new/page', { enabledFeatures: allOn }, chrome('some/new/page', {})), HOME_PLACE);
 });
 
 test('the retired mailbox screens are gone from the registry', () => {

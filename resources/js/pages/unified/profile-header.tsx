@@ -87,7 +87,7 @@ export function ProfileHeader({
 
             <div className="px-4 pt-2 pb-4 text-center sm:px-5">
                 <div className="flex min-w-0 items-center justify-center gap-2">
-                    <Heading as={as} variant="page">
+                    <Heading as={as} variant="page" className="text-2xl">
                         {profile.name}
                     </Heading>
                     <AiChip isAi={profile.isAi} />

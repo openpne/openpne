@@ -71,10 +71,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    // Signed-in only: the guest bar stays brand + sign-in (no section title), so
-                    // folding here would leave a guest hub — the web-public diary feed — with no
-                    // visible heading anywhere.
-                    fold={chrome.mode === 'section' && props.auth.user !== null}
+                    // Only where the mobile bar actually carries the title. A guest's bar is brand +
+                    // sign-in and the unified layout's is the tab pair, so folding for either would
+                    // leave that hub with no visible heading anywhere.
+                    fold={chrome.mode === 'section' && props.auth.user !== null && !props.unifiedLayout}
                     action={
                         action && (
                             <ActionLink href={action.href}>

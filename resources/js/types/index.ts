@@ -71,6 +71,8 @@ export interface PageProps {
     /** Dependencies already resolved server-side. Hiding here is presentation only — a switched-off
      *  unit's rows never reach the payload. */
     enabledFeatures: Record<FeatureKey, boolean>;
+    /** Whether the mobile chrome is the unified layout's. False for a guest whatever the site says. */
+    unifiedLayout: boolean;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
     /** Null for a guest and while `groupTalk` is off — the sidebar draws no room list either way. */
