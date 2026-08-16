@@ -7,7 +7,6 @@ import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { CommunityImage } from '@/components/community-image';
-import { CountPill } from '@/components/count-pill';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
@@ -24,7 +23,7 @@ import {
 } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
-import type { AuthUser, PageProps } from '@/types';
+import type { PageProps } from '@/types';
 
 /** The 6px above and below a 36px bar action, claimed as tap target: every control in the bar
  *  answers across its full 48px height, whatever it paints — an action that filled the bar instead

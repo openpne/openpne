@@ -19,8 +19,9 @@ import type { PageProps } from '@/types';
 export const BAR_CONTROL =
     '-ml-1 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';
 
-/** Mobile hamburger that opens a slide-in nav sheet. The account menu stays in the top bar, so the
- *  sheet holds only the brand (home) and nav — no nested menu inside the dialog. */
+/** Mobile hamburger that opens a slide-in nav sheet: brand (home) + nav, and under the unified
+ *  layout the account rows too — its bars carry no account menu, so the drawer is where profile and
+ *  sign-out live ({@link UnifiedAccountRows}). */
 export function NavDrawer() {
     const t = useT();
     const [open, setOpen] = useState(false);
