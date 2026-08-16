@@ -24,8 +24,7 @@ class ProfileSerializer
      */
     public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang, ?int $age, ?string $friendStatus = null): array
     {
-        $bioName = app(PresetProfileService::class)->nameForKey('self_introduction')['name'];
-        $bioField = $fields->first(fn (ProfileFieldValue $field): bool => $field->profile->name === $bioName);
+        $bioName = self::bioFieldName();
 
         return [
             'owner' => [
@@ -41,7 +40,7 @@ class ProfileSerializer
             'isSelf' => $isSelf,
             'age' => $age,
             'friendStatus' => $friendStatus,
-            'bio' => $bioField?->display($lang),
+            'bio' => self::bio($fields, $lang),
             'fields' => $fields
                 ->reject(fn (ProfileFieldValue $field): bool => $field->profile->name === $bioName)
                 ->map(fn (ProfileFieldValue $field): array => [
@@ -50,6 +49,25 @@ class ProfileSerializer
                     'value' => $field->display($lang),
                 ])->values()->all(),
         ];
+    }
+
+    /**
+     * The self-introduction as a header bio, or null when the field is absent, empty, or outside the
+     * viewer's clearance. Reads a ShowProfile result, so the visibility filtering already happened.
+     *
+     * @param  Collection<int, ProfileFieldValue>  $fields
+     */
+    public static function bio(Collection $fields, string $lang): ?string
+    {
+        $name = self::bioFieldName();
+
+        return $fields->first(fn (ProfileFieldValue $field): bool => $field->profile->name === $name)?->display($lang);
+    }
+
+    /** The `profiles.name` the self-introduction is stored under. */
+    private static function bioFieldName(): string
+    {
+        return app(PresetProfileService::class)->nameForKey('self_introduction')['name'];
     }
 
     /**

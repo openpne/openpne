@@ -110,6 +110,26 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame(0, $key->decode('-1'));
     }
 
+    public function test_the_unified_home_is_off_until_an_operator_opts_in(): void
+    {
+        $key = SnsSettingKey::ModernUnifiedHome;
+
+        $this->assertSame(SettingGroup::HomeLayout, $key->group());
+        // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over.
+        $this->assertNull($key->op3SourceName());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertFalse($key->default());
+
+        // Only an explicit '1' switches the experiment on; anything else lands on the shipped home.
+        $this->assertTrue($key->decode('1'));
+        $this->assertFalse($key->decode('0'));
+        $this->assertFalse($key->decode(''));
+        $this->assertFalse($key->decode('2'));
+        $this->assertFalse($key->decode(null));
+        $this->assertSame('1', $key->encode($key->coerce('1')));
+        $this->assertSame('0', $key->encode($key->coerce(false)));
+    }
+
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void
     {
         // OpenPNE 3 had no per-site logo/color/favicon, so there is nothing to copy: a fresh and an

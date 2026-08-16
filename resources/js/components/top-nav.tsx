@@ -12,7 +12,7 @@ import { headingVariants } from '@/components/ui/heading';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
-import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
+import { type Chrome, type ChromeLabel, type ChromeScope, isHomeComponent } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -196,10 +196,10 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // Everything that is neither the dashboard nor a hub is a detail or form page. The dashboard is
-    // named rather than derived: it shares the detail pages' chrome mode (its h1 is in the page), but
-    // it is the brand's home, and there is nothing above it to go back to.
-    if (String(component) !== 'dashboard' && chrome.mode !== 'section') {
+    // Everything that is neither home nor a hub is a detail or form page. Home is named rather than
+    // derived: it shares the detail pages' chrome mode (its h1 is in the page), but it is the brand's
+    // home, and there is nothing above it to go back to.
+    if (!isHomeComponent(String(component)) && chrome.mode !== 'section') {
         const target = backTarget(inAppHistory, chrome.context);
 
         // A compose sheet spends the bar on leaving and finishing: close, then the page's own

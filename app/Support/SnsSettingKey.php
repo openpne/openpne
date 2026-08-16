@@ -173,6 +173,13 @@ enum SnsSettingKey: string
     case PrivacyPolicy = 'privacy_policy';
 
     /**
+     * Whether the Modern home renders the unified layout instead of the digest dashboard. An
+     * experiment: same route and the same read-only sources, a different page component, so turning
+     * it off restores the previous home with no deploy (docs/internals/feature-modules.md).
+     */
+    case ModernUnifiedHome = 'modern_unified_home';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -200,6 +207,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
+            self::ModernUnifiedHome => SettingGroup::HomeLayout,
         };
     }
 
@@ -253,6 +261,8 @@ enum SnsSettingKey: string
             // The policy bodies keep the OpenPNE 3 sns_config name verbatim; only their markup is
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
+            // OpenPNE 4-native: OpenPNE 3 had no Modern surface to lay out.
+            self::ModernUnifiedHome => null,
         };
     }
 
@@ -273,7 +283,8 @@ enum SnsSettingKey: string
             // the operator of this site rather than something inherited from a migrated one. AI
             // accounts likewise: nothing in an OpenPNE 3 site says whether this one should offer them.
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
-            SettingGroup::Ai => false,
+            // The home layout is a choice about this site's Modern surface, which OpenPNE 3 had none of.
+            SettingGroup::Ai, SettingGroup::HomeLayout => false,
         };
     }
 
@@ -330,6 +341,8 @@ enum SnsSettingKey: string
             // Unwritten until an administrator writes them; the pages stay reachable and say so
             // (OpenPNE 3 shipped an "under construction" default in the same spot).
             self::UserAgreement, self::PrivacyPolicy => '',
+            // Off until an operator opts into the experiment; the digest dashboard is the shipped home.
+            self::ModernUnifiedHome => false,
         };
     }
 
@@ -351,7 +364,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled,
-            self::AiAccountsEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            self::AiAccountsEnabled, self::ModernUnifiedHome => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             // The registry's one integer key. A non-numeric submission lands on 0 (no new accounts),
             // the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
@@ -371,7 +384,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled,
-            self::AiAccountsEnabled => $value ? '1' : '0',
+            self::AiAccountsEnabled, self::ModernUnifiedHome => $value ? '1' : '0',
             self::AiAccountLimit => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
@@ -397,8 +410,10 @@ enum SnsSettingKey: string
             // CaptchaEnabled). This is about a STORED value: an absent row returned above, so diary's
             // on-by-default install fallback is untouched — unreadable is corruption, not consent.
             self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
-            // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
-            self::LinkCardEnabled, self::AiAccountsEnabled => $value === '1',
+            // Fail closed, like the other opt-in switches: only an explicit '1' turns it on. For the
+            // home layout that lands on the shipped home, which is the side an unreadable value
+            // should fall to while the unified one is an experiment.
+            self::LinkCardEnabled, self::AiAccountsEnabled, self::ModernUnifiedHome => $value === '1',
             // The one integer key. A stored value that is not a number is corruption rather than a
             // decision, so it reads as the shipped cap; a negative one clamps to 0 (create nothing)
             // rather than inverting the comparison it feeds.
@@ -458,6 +473,7 @@ enum SnsSettingKey: string
             self::LoginMessage => __('Login screen message'),
             self::UserAgreement => __('Terms of service'),
             self::PrivacyPolicy => __('Privacy policy'),
+            self::ModernUnifiedHome => __('Use the unified home layout (experimental)'),
         };
     }
 
@@ -475,7 +491,8 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
-            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy => false,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy,
+            self::ModernUnifiedHome => false,
         };
     }
 

@@ -52,4 +52,7 @@ enum SettingGroup
 
     /** The terms of service / privacy policy bodies, edited on the site policy page. */
     case SitePolicy;
+
+    /** Which home the Modern surface renders, edited on the home layout page. */
+    case HomeLayout;
 }
