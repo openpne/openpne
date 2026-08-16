@@ -20,10 +20,18 @@ use Illuminate\Support\Collection;
  */
 class ListRecentDiaries
 {
-    /** @return LengthAwarePaginator<int, Diary> */
-    public function __invoke(?Member $viewer, int $perPage = 20): LengthAwarePaginator
+    public const PER_PAGE = 20;
+
+    /**
+     * $page is null for a caller that has a URL behind it — paginate() then reads `?page=` as it
+     * always did. A caller with no request (the MCP tool) names the page, or every call would answer
+     * the first one.
+     *
+     * @return LengthAwarePaginator<int, Diary>
+     */
+    public function __invoke(?Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator
     {
-        return $this->query($viewer)->paginate($perPage);
+        return $this->query($viewer)->paginate($perPage, page: $page);
     }
 
     /**
