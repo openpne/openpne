@@ -462,6 +462,48 @@ class UnifiedGroupTest extends TestCase
             ->assertDontSee($refused->name);
     }
 
+    public function test_a_join_row_pointing_at_a_file_owned_elsewhere_leaves_no_trace(): void
+    {
+        // FilePolicy authorizes against the owner the FILE declares, not the join row that pointed
+        // here — so a row whose file belongs elsewhere could pass the Gate on the other owner's
+        // terms. The strip must also demand that the file's declared owner IS this parent.
+        $group = Group::factory()->create();
+        $author = Member::factory()->create();
+        $this->join($group, $author);
+        $message = $this->message($group, '2026-08-16 10:00:00', $author);
+        $allowed = $this->picture($message, number: 1);
+
+        // A file owned by another group's message the viewer may read: Gate would say yes.
+        $other = Group::factory()->create();
+        $this->join($other, $author);
+        $foreign = $this->picture($this->message($other, '2026-08-16 09:00:00', $author));
+        GroupMessageImage::factory()->create([
+            'group_message_id' => $message->getKey(), 'file_id' => $foreign->getKey(), 'number' => 2,
+        ]);
+
+        // A file owned by a different kind of entity entirely.
+        $diaryOwned = File::factory()->create(['related_entity_type' => 'diary', 'related_entity_id' => $message->getKey()]);
+        GroupMessageImage::factory()->create([
+            'group_message_id' => $message->getKey(), 'file_id' => $diaryOwned->getKey(), 'number' => 3,
+        ]);
+
+        // A file whose declared owner row is gone.
+        $dangling = File::factory()->create(['related_entity_type' => 'groupMessage', 'related_entity_id' => 999999]);
+        GroupMessageImage::factory()->create([
+            'group_message_id' => $message->getKey(), 'file_id' => $dangling->getKey(), 'number' => 4,
+        ]);
+
+        $this->unifiedOn();
+
+        // The foreign file's URL appears once for its own parent (in the other group), never here.
+        $this->actingAs($author)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('recentPhotos', 1))
+            ->assertSee($allowed->name)
+            ->assertDontSee($foreign->name)
+            ->assertDontSee($diaryOwned->name)
+            ->assertDontSee($dangling->name);
+    }
+
     public function test_a_switched_off_unit_drops_its_pictures_and_its_query(): void
     {
         $group = Group::factory()->create();

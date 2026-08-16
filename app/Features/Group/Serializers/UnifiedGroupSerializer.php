@@ -17,6 +17,7 @@ use App\Models\Member;
 use Generator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -144,7 +145,7 @@ final class UnifiedGroupSerializer
                     // The talk screen's own deep link, so the tile lands on the message rather than
                     // at the foot of the conversation.
                     'href' => "/groups/{$groupId}/talk?m={$message->getKey()}",
-                    'images' => self::readableImages($viewer, $message->images, GroupMessageSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $message, $message->images, GroupMessageSerializer::image(...)),
                 ];
             }
         }
@@ -156,7 +157,7 @@ final class UnifiedGroupSerializer
                     'at' => $topic->created_at,
                     'id' => $topic->getKey(),
                     'href' => "/topics/{$topic->getKey()}",
-                    'images' => self::readableImages($viewer, $topic->images, GroupTopicSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $topic, $topic->images, GroupTopicSerializer::image(...)),
                 ];
             }
         }
@@ -168,7 +169,7 @@ final class UnifiedGroupSerializer
                     'at' => $event->created_at,
                     'id' => $event->getKey(),
                     'href' => "/events/{$event->getKey()}",
-                    'images' => self::readableImages($viewer, $event->images, GroupEventSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $event, $event->images, GroupEventSerializer::image(...)),
                 ];
             }
         }
@@ -210,10 +211,26 @@ final class UnifiedGroupSerializer
      * @param  callable(mixed): array  $shape
      * @return Generator<int, array>
      */
-    private static function readableImages(Member $viewer, Collection $images, callable $shape): Generator
+    private static function readableImages(Member $viewer, Model $parent, Collection $images, callable $shape): Generator
     {
         foreach ($images as $image) {
-            if ($image->file !== null && Gate::forUser($viewer)->allows('view', $image->file)) {
+            $file = $image->file;
+
+            // The join row names a file, but only the file names its owner — FilePolicy authorizes
+            // against the owner the FILE declares, not the row that pointed here. A row whose
+            // file belongs elsewhere (another group's message, a diary, a deleted parent) may
+            // still pass the Gate on its own owner's terms, so it must be refused as not-this-
+            // parent's picture, and leave no trace. instanceof absorbs the legacy morph aliases
+            // (`communityTopic` and kin resolve to the same class).
+            if ($file === null || $file->related_entity_id !== $parent->getKey()) {
+                continue;
+            }
+            $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
+            if ($ownerClass === null || ! $parent instanceof $ownerClass) {
+                continue;
+            }
+
+            if (Gate::forUser($viewer)->allows('view', $file)) {
                 yield $shape($image);
             }
         }
