@@ -187,6 +187,16 @@ test('the unified member page is the same screen as the profile it replaces', ()
     assert.ok(!isHomeComponent('unified/member'));
 });
 
+test('the unified group page is the same screen as the group top it replaces', () => {
+    // Same route, same chrome: the experiment switch must not change what the frame draws.
+    assert.deepEqual(chrome('unified/group', {}), chrome('community/show', {}));
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/group'));
+    // A page about the group itself, so it takes the back control rather than the brand row and
+    // scopes to nothing above it.
+    assert.ok(!isHomeComponent('unified/group'));
+    assert.equal(chrome('unified/group', {}).scope, undefined);
+});
+
 test('a community-scoped page is scoped to the group', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 

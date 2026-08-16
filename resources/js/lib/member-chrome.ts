@@ -610,6 +610,9 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/show': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
+    // The experimental group page behind SnsSettingKey::ModernUnifiedHome: the same screen as the
+    // group top it replaces, so the same chrome.
+    'unified/group': { foreground: true },
     'group/topic/show': { foreground: true },
     'group/event/show': { foreground: true },
     'diary/show': { foreground: true },
@@ -631,6 +634,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'community/search',
     'community/recent',
     'community/show',
+    'unified/group',
     'timeline/index',
     'message/conversations/index',
     'member/search',

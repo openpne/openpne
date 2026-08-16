@@ -18,6 +18,7 @@ use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Queries\ShowGroup;
 use App\Features\Group\Serializers\GroupSerializer;
+use App\Features\Group\Serializers\UnifiedGroupSerializer;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
@@ -31,6 +32,7 @@ use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Home\HomeLayout;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -86,6 +88,12 @@ class GroupController extends Controller
         // null — and its query never runs.
         $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
         $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
+        // Read here rather than in a branch: all three layouts — Classic, the shipped Modern page and
+        // the unified one — show these same rows, and none of them may ask for them a second time.
+        $topics = $showTopics ? $recentTopics($found) : null;
+        $canPostTopic = GroupTopicAccess::canPostTopic($found, $viewer);
+        $events = $showEvents ? $recentEvents($found) : null;
+        $canPostEvent = GroupEventAccess::canPostEvent($found, $viewer);
         // Talk asks its own two questions rather than borrowing the board's null seam: it reads the
         // same access column but is a separate unit, so a site running talk with the board switched
         // off must still get its entrance.
@@ -100,7 +108,7 @@ class GroupController extends Controller
         $talkUnreadCount = $canViewTalk ? ($talkUnread($viewer)[$found->getKey()]['count'] ?? 0) : 0;
 
         return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents, $canViewTalk) {
+            SurfaceResolver::CLASSIC => function () use ($found, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk) {
                 $this->markLocalNavGroup($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -117,43 +125,75 @@ class GroupController extends Controller
                     'isTransferNominee' => $isTransferNominee,
                     'adminMember' => $staff->firstWhere('role', GroupRole::Admin)?->member,
                     'subAdminMembers' => $staff->where('role', GroupRole::SubAdmin)->pluck('member'),
-                    'recentTopics' => $showTopics ? $recentTopics($found) : null,
-                    'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
-                    'recentEvents' => $showEvents ? $recentEvents($found) : null,
-                    'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
+                    'recentTopics' => $topics,
+                    'canPostTopic' => $canPostTopic,
+                    'recentEvents' => $events,
+                    'canPostEvent' => $canPostEvent,
                     // Classic gets a link box where the community timeline used to render; the talk
                     // screen itself is Modern for every member, so a link is the whole surface here.
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/show', [
-                'group' => GroupSerializer::detail($found),
-                'viewerRole' => $role?->slug(),
-                'isPending' => $isPending,
-                'isTransferNominee' => $isTransferNominee,
-                'canManage' => $role?->canManage() ?? false,
-                'canJoin' => $role === null && ! $isPending,
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
+                $canManage = $role?->canManage() ?? false;
+                $canJoin = $role === null && ! $isPending;
                 // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.
-                'canLeave' => $role !== null && $role !== GroupRole::Admin,
-                'members' => GroupSerializer::members($sidebarMembers),
-                // The recent-topics / recent-events boxes link into their boards; null when the viewer
-                // may not read them (events share the topic read gate), so the card is hidden.
-                'recentTopics' => $showTopics ? GroupTopicSerializer::summaries($recentTopics($found)) : null,
-                'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
-                'recentEvents' => $showEvents ? GroupEventSerializer::summaries($recentEvents($found)) : null,
-                'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
-                'canViewTalk' => $canViewTalk,
+                $canLeave = $role !== null && $role !== GroupRole::Admin;
                 // The talk card: one line of the newest message, so the group page says what is
                 // being talked about rather than only that talk exists.
-                'talkPreview' => $talkPreview === null ? null : [
+                $preview = $talkPreview === null ? null : [
                     // The room list's own line, so the card and the list read the same — including
                     // the stand-in a message with nothing but pictures leads with.
                     'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->images_exists),
                     'authorName' => $talkPreview->author?->name,
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
-                ],
-                'talkUnread' => $talkUnreadCount,
-            ]),
+                ];
+
+                // The experiment swaps the layout, not the route or the sources (HomeLayout): every
+                // value above is already decided, and the unified page adds only its own sections.
+                // Both render calls stay string literals — ChromeContextCoverageTest reads them to
+                // check every routed component is classified.
+                if (HomeLayout::unifiedEnabled()) {
+                    return Inertia::render('unified/group', UnifiedGroupSerializer::page(
+                        viewer: $viewer,
+                        group: $found,
+                        role: $role,
+                        isPending: $isPending,
+                        isTransferNominee: $isTransferNominee,
+                        canManage: $canManage,
+                        canJoin: $canJoin,
+                        canLeave: $canLeave,
+                        members: $sidebarMembers,
+                        recentTopics: $topics,
+                        canPostTopic: $canPostTopic,
+                        recentEvents: $events,
+                        canPostEvent: $canPostEvent,
+                        canViewTalk: $canViewTalk,
+                        talkPreview: $preview,
+                        talkUnread: $talkUnreadCount,
+                    ));
+                }
+
+                return Inertia::render('community/show', [
+                    'group' => GroupSerializer::detail($found),
+                    'viewerRole' => $role?->slug(),
+                    'isPending' => $isPending,
+                    'isTransferNominee' => $isTransferNominee,
+                    'canManage' => $canManage,
+                    'canJoin' => $canJoin,
+                    'canLeave' => $canLeave,
+                    'members' => GroupSerializer::members($sidebarMembers),
+                    // The recent-topics / recent-events boxes link into their boards; null when the
+                    // viewer may not read them (events share the topic read gate), so the card is hidden.
+                    'recentTopics' => $topics === null ? null : GroupTopicSerializer::summaries($topics),
+                    'canPostTopic' => $canPostTopic,
+                    'recentEvents' => $events === null ? null : GroupEventSerializer::summaries($events),
+                    'canPostEvent' => $canPostEvent,
+                    'canViewTalk' => $canViewTalk,
+                    'talkPreview' => $preview,
+                    'talkUnread' => $talkUnreadCount,
+                ]);
+            },
         ]);
     }
 
