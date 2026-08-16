@@ -7,6 +7,7 @@ import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { HOME_CARD } from './home-section';
+import { coverGradientStyle, derivedIdentityColor } from './identity-visual';
 
 export interface UnifiedProfile {
     id: number;
@@ -75,13 +76,25 @@ export function ProfileHeader({
                     />
                     {/* Wider than the card so the ellipse's ends leave the frame instead of meeting it;
                         the card clips them. -bottom-px closes the seam a fractional height can open. */}
-                    <span aria-hidden className="absolute inset-x-[-10%] -bottom-px block h-10 rounded-t-[50%] bg-card" />
+                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
                 </div>
             ) : (
-                // No cover without a picture: a placeholder band would be a photo-shaped hole. The
-                // badge stands in the header's own space instead.
-                <div className="mt-6 flex justify-center">
-                    <InitialBadge aria-hidden name={profile.name} color={profile.avatarColor} className="size-24 rounded-full text-3xl" />
+                // No picture still gets a cover: a wash of the identity's color (chosen, or derived
+                // from the name) under the same arch, with the initial standing where the face would
+                // — the page reads designed rather than missing something.
+                <div className="relative">
+                    <div
+                        aria-hidden
+                        className="flex aspect-[4/3] max-h-[13rem] w-full items-center justify-center sm:max-h-52"
+                        style={coverGradientStyle(profile.avatarColor ?? derivedIdentityColor(profile.name))}
+                    >
+                        <InitialBadge
+                            aria-hidden
+                            name={profile.name}
+                            className="size-24 rounded-full bg-scrim-foreground/25 text-4xl text-scrim-foreground"
+                        />
+                    </div>
+                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
                 </div>
             )}
 

@@ -56,7 +56,11 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         <ComposeSheetProvider exit={exit}>
             <div
                 className={cn(
-                    'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3rem+env(safe-area-inset-top))] lg:[--modern-top-offset:0px] xl:max-w-7xl',
+                    'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3rem+env(safe-area-inset-top))] xl:max-w-7xl',
+                    // The unified bar stands at every width (the design's header is one surface on
+                    // phone and desk alike), so its height stays reserved; the shipped chrome has no
+                    // desktop top bar and zeroes it.
+                    !unified && 'lg:[--modern-top-offset:0px]',
                     bottomNav
                         ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
                           // inside its height, the bottom bar's sits above the row, and both vars mean
@@ -91,7 +95,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     <TopNav chrome={chrome} hidden={hidden} />
                     {children}
                 </div>
-                <RightRail />
+                {/* The design has no right rail: one content column beside the nav. */}
+                {!unified && <RightRail />}
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
