@@ -122,7 +122,8 @@ ellipsis): plain/op3 strip decoration tags (`BodyText::excerpt`), markdown flatt
 rendered HTML. `BodyRenderer::plainText` is the full-length flatten for text/plain mail:
 newlines survive, markdown links keep their targets as `label (url)`, and autolinked URLs are
 not duplicated. Notifications that embed a formatted body (topic/event posted) must use it —
-raw markdown source must not reach a mail body.
+raw markdown source must not reach a mail body — as must the MCP diary tools
+([mcp.md](mcp.md#diaries)).
 
 ## Key invariants
 
