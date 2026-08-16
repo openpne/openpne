@@ -2,9 +2,9 @@ import { Link } from '@inertiajs/react';
 import { AiChip } from '@/components/ai-chip';
 import { InitialBadge } from '@/components/initial-badge';
 import { Heading } from '@/components/ui/heading';
-import { Panel } from '@/components/ui/surface';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
+import { HOME_CARD } from './home-section';
 
 export interface UnifiedProfile {
     id: number;
@@ -34,7 +34,7 @@ export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
     const t = useT();
 
     return (
-        <Panel flush>
+        <section className={HOME_CARD}>
             {profile.avatarUrl ? (
                 <div className="relative">
                     <img
@@ -76,6 +76,6 @@ export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
                     {t('View my profile')}
                 </Link>
             </div>
-        </Panel>
+        </section>
     );
 }

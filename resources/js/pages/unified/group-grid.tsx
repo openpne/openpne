@@ -24,7 +24,7 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                 <li key={group.id}>
                     <Link
                         href={group.href}
-                        className="relative block aspect-[3/2] overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="relative block aspect-[3/2] overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         {group.imageUrl ? (
                             // Decorative: the name below is the link's own text.
@@ -36,7 +36,7 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                             aria-hidden
                             className="absolute inset-x-0 bottom-0 block h-2/3 bg-[linear-gradient(to_top,oklch(0_0_0/0.72),transparent)]"
                         />
-                        <span className="absolute inset-x-0 bottom-0 line-clamp-2 px-1.5 py-1 text-xs text-scrim-foreground">{group.name}</span>
+                        <span className="absolute inset-x-0 bottom-0 line-clamp-2 px-2 py-1.5 text-xs text-scrim-foreground">{group.name}</span>
                     </Link>
                 </li>
             ))}

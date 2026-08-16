@@ -51,10 +51,10 @@ export function ActionTiles({ memberId }: { memberId: number }) {
                     <li key={href}>
                         <Link
                             href={href}
-                            className="flex min-h-16 items-center gap-3 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-muted/40"
+                            className="flex min-h-16 items-center gap-3 rounded-xl border border-border px-3.5 py-3 transition-colors hover:bg-muted/40"
                         >
                             <span className="relative shrink-0">
-                                <Icon className="size-5 text-muted-foreground" strokeWidth={2} aria-hidden />
+                                <Icon className="size-5 text-foreground" strokeWidth={2} aria-hidden />
                                 {/* The tile is one link named by its label, so the pill has to say what
                                     its number counts — the wording the nav entry already uses. */}
                                 {badge && <CountPill count={count} label={t(badge.label.key, { count })} className="absolute -top-2 -right-3" />}

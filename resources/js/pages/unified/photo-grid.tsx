@@ -31,7 +31,7 @@ export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
     const t = useT();
 
     return (
-        <ul className="grid grid-cols-6 gap-1">
+        <ul className="grid grid-cols-6 gap-1.5">
             {photos.map(({ source, href, image }, index) => {
                 const lead = index < LEAD;
 
@@ -42,7 +42,7 @@ export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
                             // The picture is decorative, so the link needs a name of its own.
                             aria-label={source === 'diary' ? t('View this %diary%') : t('View this %post_activity%')}
                             className={cn(
-                                'block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                'block overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 lead ? 'aspect-[4/3]' : 'aspect-square',
                             )}
                         >

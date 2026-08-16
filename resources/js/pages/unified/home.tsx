@@ -1,14 +1,14 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react';
+import { Activity, ChevronRight, SquarePen } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Heading } from '@/components/ui/heading';
-import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import type { DiarySummary } from '../diary/types';
 import { ActionTiles } from './action-tiles';
 import { DiaryCards } from './diary-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
+import { HomeSection } from './home-section';
 import { PeopleRow } from './people-row';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
@@ -21,22 +21,12 @@ interface UnifiedHomeProps extends PageProps {
     recentDiaries: DiarySummary[];
 }
 
-/** The way out of a section into the whole of it. The chevron is the affordance; the words are the promise. */
-function SectionLink({ href, children }: { href: string; children: ReactNode }) {
-    return (
-        <Link href={href} className="flex shrink-0 items-center gap-0.5 text-xs text-link hover:underline">
-            {children}
-            <ChevronRight className="size-3.5" aria-hidden />
-        </Link>
-    );
-}
-
 /** A titled block inside a section — the two halves of "recent". */
 function SubSection({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
     return (
         <section>
             <div className="mb-2 flex items-center gap-2">
-                <Heading as="h3" variant="label" className="min-w-0 flex-1 truncate">
+                <Heading as="h3" variant="minor" className="min-w-0 flex-1 truncate">
                     {title}
                 </Heading>
                 {right}
@@ -73,19 +63,19 @@ export default function UnifiedHome() {
             {/* Every section below arrives empty once its unit is off; the checks keep a heading and
                 its deep link from outliving the rows. */}
             {groups.length > 0 && (
-                <Panel title={t('My %communities%')} right={<SectionLink href="/groups/mine">{t('View all')}</SectionLink>}>
+                <HomeSection title={t('My %communities%')} viewAll={{ label: t('View all'), href: '/groups/mine' }}>
                     <GroupGrid groups={groups} />
-                </Panel>
+                </HomeSection>
             )}
 
             {friends.length > 0 && (
-                <Panel title={t('People around you')} right={<SectionLink href="/friend/list">{t('View all')}</SectionLink>}>
+                <HomeSection title={t('People around you')} viewAll={{ label: t('View all'), href: '/friend/list' }}>
                     <PeopleRow people={friends} />
-                </Panel>
+                </HomeSection>
             )}
 
             {(photos || diaries) && (
-                <Panel title={t('Recent moments')} bodyClassName="space-y-5">
+                <HomeSection title={t('Recent moments')} icon={Activity} bodyClassName="space-y-5">
                     {photos && (
                         <SubSection title={t('Recent photos')}>
                             <PhotoGrid photos={recentPhotos} />
@@ -94,17 +84,25 @@ export default function UnifiedHome() {
                     {diaries && (
                         <SubSection
                             title={t('My recent %diaries%')}
-                            right={<SectionLink href={`/diary/listMember/${user.id}`}>{t('More')}</SectionLink>}
+                            right={
+                                <Link
+                                    href={`/diary/listMember/${user.id}`}
+                                    className="flex shrink-0 items-center gap-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                >
+                                    {t('More')}
+                                    <ChevronRight className="size-4" aria-hidden />
+                                </Link>
+                            }
                         >
                             <DiaryCards diaries={recentDiaries} />
                         </SubSection>
                     )}
-                </Panel>
+                </HomeSection>
             )}
 
-            <Panel title={t('Menu')}>
+            <HomeSection title={t('Menu')} icon={SquarePen}>
                 <ActionTiles memberId={user.id} />
-            </Panel>
+            </HomeSection>
         </>
     );
 }
