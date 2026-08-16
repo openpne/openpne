@@ -1,96 +1,81 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { AiChip } from '@/components/ai-chip';
 import { InitialBadge } from '@/components/initial-badge';
 import { Heading } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
-import type { FeatureKey, PageProps } from '@/types';
-import type { ProfileStats } from '../member/profile-blank';
 
 export interface UnifiedProfile {
     id: number;
     name: string;
+    /** The two `srcset` rungs of the cover crop; both null when the member set no picture. */
     avatarUrl: string | null;
+    avatarUrlLarge: string | null;
     avatarColor: string | null;
     isAi: boolean;
     /** Self-introduction, promoted into the header; null when unset. */
     bio: string | null;
-    stats: ProfileStats;
 }
 
-// Static class names so Tailwind emits them; the row shrinks as units are switched off.
-const STATS_COLUMNS = ['', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4'];
-
-/** Tappable count + label per section: one link each so the accessible name reads "12 Friends". */
-function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) {
-    const t = useT();
-    const features = usePage<PageProps>().props.enabledFeatures;
-    // The viewer is always the owner here, so friends and groups go to the plain hubs rather than to
-    // the ?id= lens another member's page needs.
-    const items: { key: string; feature: FeatureKey; label: string; count: number; href: string }[] = [
-        { key: 'diaries', feature: 'diary', label: t('%Diaries%'), count: stats.diaries, href: `/diary/listMember/${ownerId}` },
-        { key: 'activity', feature: 'timeline', label: t('%Activity%'), count: stats.activity, href: `/member/${ownerId}/timeline` },
-        { key: 'friends', feature: 'friend', label: t('%Friends%'), count: stats.friends, href: '/friend/list' },
-        { key: 'groups', feature: 'group', label: t('%Communities%'), count: stats.groups, href: '/groups/mine' },
-    ];
-    const shown = items.filter((item) => features[item.feature]);
-
-    if (shown.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className={cn('grid gap-2', STATS_COLUMNS[shown.length])}>
-            {shown.map((item) => (
-                <Link key={item.key} href={item.href} className="min-w-0 rounded-lg px-2 py-1.5 text-center transition-colors hover:bg-muted/40">
-                    <span className="block text-lg text-foreground">{item.count}</span>
-                    {/* Long sns-term labels (e.g. "Communities") must wrap, not overflow the narrow cell. */}
-                    <span className="block break-words text-xs text-muted-foreground">{item.label}</span>
-                </Link>
-            ))}
-        </div>
-    );
-}
+/** The content column is `max-w-2xl`; below that the cover runs the full width of the screen. */
+const COVER_SIZES = '(min-width: 42rem) 42rem, 100vw';
 
 /**
  * Who the page is about — the viewer themselves. The page's own h1 is the sr-only "Home", so the
  * name is an h2 however large it is painted.
+ *
+ * The member's picture is the cover rather than a face beside the name: a home someone opens dozens
+ * of times a day should look like theirs before a word of it is read. The arc is what keeps it a
+ * header and not a banner — the card rises back over the photo's foot, so the name sits on the card
+ * rather than on the picture, and no text ever has to survive whatever was uploaded behind it.
  */
 export function ProfileHeader({ profile }: { profile: UnifiedProfile }) {
     const t = useT();
 
     return (
-        <Panel bodyClassName="space-y-4">
-            <div className="flex items-center gap-4">
-                {/* The face is the point of this layout (the member/show 80px idiom, not the 48px
-                    Avatar cap); the AI signal is the chip beside the name. */}
-                {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt="" className="size-20 shrink-0 rounded-full object-cover" />
-                ) : (
-                    <InitialBadge aria-hidden name={profile.name} color={profile.avatarColor} className="size-20 shrink-0 rounded-full text-2xl" />
-                )}
-                <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                        <Heading as="h2" variant="page">
-                            {profile.name}
-                        </Heading>
-                        <AiChip isAi={profile.isAi} />
-                    </div>
+        <Panel flush>
+            {profile.avatarUrl ? (
+                <div className="relative">
+                    <img
+                        src={profile.avatarUrl}
+                        srcSet={profile.avatarUrlLarge ? `${profile.avatarUrl} 640w, ${profile.avatarUrlLarge} 1200w` : undefined}
+                        sizes={COVER_SIZES}
+                        alt=""
+                        // A square crop laid out landscape: the shape is this page's, so the height cap
+                        // travels in the box (aspect + max-height) and object-cover does the cutting.
+                        className="aspect-[4/3] max-h-[21.25rem] w-full object-cover sm:max-h-72"
+                    />
+                    {/* Wider than the card so the ellipse's ends leave the frame instead of meeting it;
+                        the card clips them. -bottom-px closes the seam a fractional height can open. */}
+                    <span aria-hidden className="absolute inset-x-[-10%] -bottom-px block h-10 rounded-t-[50%] bg-card" />
                 </div>
-                <Link href={`/member/${profile.id}`} className="shrink-0 text-sm text-link hover:underline">
-                    {t('View my profile')}
-                </Link>
-            </div>
-
-            {profile.bio && (
-                <div className="whitespace-pre-wrap break-words text-sm text-foreground">
-                    <UserText text={profile.bio} />
+            ) : (
+                // No cover without a picture: a placeholder band would be a photo-shaped hole. The
+                // badge stands in the header's own space instead.
+                <div className="mt-6 flex justify-center">
+                    <InitialBadge aria-hidden name={profile.name} color={profile.avatarColor} className="size-24 rounded-full text-3xl" />
                 </div>
             )}
 
-            <StatsRow ownerId={profile.id} stats={profile.stats} />
+            <div className="px-4 pt-2 pb-4 text-center sm:px-5">
+                <div className="flex min-w-0 items-center justify-center gap-2">
+                    <Heading as="h2" variant="page">
+                        {profile.name}
+                    </Heading>
+                    <AiChip isAi={profile.isAi} />
+                </div>
+
+                {profile.bio && (
+                    <p className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">
+                        <UserText text={profile.bio} />
+                    </p>
+                )}
+
+                <Link href={`/member/${profile.id}`} className="mt-3 inline-block text-sm text-link hover:underline">
+                    {t('View my profile')}
+                </Link>
+            </div>
         </Panel>
     );
 }

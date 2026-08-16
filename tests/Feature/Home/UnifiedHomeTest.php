@@ -5,6 +5,8 @@ namespace Tests\Feature\Home;
 use App\Features\Home\HomeLayout;
 use App\Models\Diary;
 use App\Models\DiaryImage;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
@@ -32,6 +34,15 @@ class UnifiedHomeTest extends TestCase
     {
         $this->setSnsSetting(SnsSettingKey::ModernUnifiedHome, true);
         $this->freshRequestState();
+    }
+
+    /** The bidirectional mirror `friendships` is read through, both rows. */
+    private function makeFriends(Member $a, Member $b): void
+    {
+        DB::table('friendships')->insert([
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+        ]);
     }
 
     /** A diary of the viewer's, posted at $at, with $images pictures attached. */
@@ -80,7 +91,8 @@ class UnifiedHomeTest extends TestCase
                     $page->has($prop);
                 }
 
-                return $page->missing('profile')->missing('recentPhotos')->missing('recentDiaries');
+                return $page->missing('profile')->missing('recentPhotos')->missing('recentDiaries')
+                    ->missing('groups')->missing('friends');
             });
     }
 
@@ -95,11 +107,16 @@ class UnifiedHomeTest extends TestCase
                 $page->component('unified/home')
                     ->has('recentPhotos')
                     ->has('recentDiaries')
+                    ->has('groups')
+                    ->has('friends')
                     ->where('profile.id', $viewer->getKey())
                     ->where('profile.name', $viewer->name)
                     ->where('profile.avatarUrl', null)
+                    ->where('profile.avatarUrlLarge', null)
                     ->where('profile.isAi', false)
-                    ->has('profile.stats');
+                    // The counts the header used to carry are gone with the row that showed them, so
+                    // the four queries behind them stop running too.
+                    ->missing('profile.stats');
 
                 // Their absence is the contract, not an oversight: the counts those sections carried
                 // are on the action tiles' badges instead.
@@ -154,9 +171,76 @@ class UnifiedHomeTest extends TestCase
                 ->where('recentPhotos.0.href', "/timeline/{$post->getKey()}")
                 ->where('recentPhotos.1.source', 'diary')
                 ->where('recentPhotos.1.href', "/diary/{$diary->getKey()}")
-                ->where('profile.stats.diaries', 1)
-                ->where('profile.stats.activity', 1)
             );
+    }
+
+    public function test_the_groups_and_people_are_the_viewers_own(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        // A group the viewer has not joined, and a member they are not friends with: neither belongs
+        // on a page that is entirely about them.
+        Group::factory()->create();
+        Member::factory()->create();
+
+        $this->unifiedOn();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->has('groups', 1)
+                ->where('groups.0.id', $group->getKey())
+                ->where('groups.0.name', $group->name)
+                ->where('groups.0.href', "/groups/{$group->getKey()}")
+                ->has('friends', 1)
+                ->where('friends.0.id', $friend->getKey())
+                ->where('friends.0.name', $friend->name)
+                ->where('friends.0.isAi', false)
+                ->where('friends.0.href', "/member/{$friend->getKey()}")
+            );
+    }
+
+    public function test_the_group_unit_off_empties_its_section_without_reading_it(): void
+    {
+        $viewer = Member::factory()->create();
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
+        $this->unifiedOn();
+
+        DB::enableQueryLog();
+        $this->actingAs($viewer)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('groups', []));
+        $groupQueries = array_filter(
+            DB::getQueryLog(),
+            fn (array $q): bool => str_contains($q['query'], 'groups') || str_contains($q['query'], 'group_members'),
+        );
+        DB::disableQueryLog();
+
+        $this->assertSame([], $groupQueries, 'a switched-off unit still read its table');
+    }
+
+    public function test_the_friend_unit_off_empties_its_section_without_reading_it(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+
+        $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);
+        $this->unifiedOn();
+
+        DB::enableQueryLog();
+        $this->actingAs($viewer)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('friends', []));
+        $friendQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'friendships'));
+        DB::disableQueryLog();
+
+        $this->assertSame([], $friendQueries, 'a switched-off unit still read its table');
     }
 
     public function test_the_diary_unit_off_empties_its_half_without_reading_it(): void
@@ -175,7 +259,6 @@ class UnifiedHomeTest extends TestCase
                 ->has('recentPhotos', 1)
                 ->where('recentPhotos.0.source', 'timeline')
                 ->where('recentPhotos.0.href', "/timeline/{$post->getKey()}")
-                ->where('profile.stats.diaries', 0)
             );
         $diaryQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'diaries'));
         DB::disableQueryLog();
@@ -198,7 +281,6 @@ class UnifiedHomeTest extends TestCase
                 ->has('recentPhotos', 1)
                 ->where('recentPhotos.0.source', 'diary')
                 ->where('recentPhotos.0.href', "/diary/{$diary->getKey()}")
-                ->where('profile.stats.activity', 0)
             );
         $postQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'timeline_posts'));
         DB::disableQueryLog();
@@ -228,7 +310,7 @@ class UnifiedHomeTest extends TestCase
             );
     }
 
-    public function test_the_grid_caps_at_nine_without_disturbing_the_order(): void
+    public function test_the_grid_caps_at_eight_without_disturbing_the_order(): void
     {
         $viewer = Member::factory()->create();
         // Four pictures on the newest post, then eight older ones with a picture each: twelve in all,
@@ -243,13 +325,13 @@ class UnifiedHomeTest extends TestCase
         $expected = [
             // The rich parent's own pictures keep the order their author arranged them in.
             ...array_fill(0, 4, "/diary/{$rich->getKey()}"),
-            ...array_map(fn (int $minute): string => "/timeline/{$posts[$minute]->getKey()}", [8, 7, 6, 5, 4]),
+            ...array_map(fn (int $minute): string => "/timeline/{$posts[$minute]->getKey()}", [8, 7, 6, 5]),
         ];
 
         $this->actingAs($viewer)
             ->get('/dashboard')
             ->assertInertia(function ($page) use ($expected) {
-                $page->has('recentPhotos', 9);
+                $page->has('recentPhotos', 8);
                 foreach ($expected as $i => $href) {
                     $page->where("recentPhotos.{$i}.href", $href);
                 }
