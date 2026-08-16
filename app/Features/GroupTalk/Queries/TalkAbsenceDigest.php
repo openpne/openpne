@@ -8,6 +8,7 @@ use App\Features\GroupTalk\UnreadTalkScope;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Group;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\Member;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -41,6 +42,15 @@ class TalkAbsenceDigest
 
     /** Pictures on the card. */
     public const THUMBNAILS = 3;
+
+    /**
+     * Attachment rows read as thumbnail candidates. The sample bounds the parents, but a parent does
+     * not bound its attachments (a migrated message may carry any number), so the pictures get a cap
+     * of their own — with headroom past {@see THUMBNAILS} so a refused candidate can be refilled. If
+     * every candidate is refused, the card shows fewer than three: bounded by contract, not refilled
+     * from an unbounded read.
+     */
+    public const THUMBNAIL_CANDIDATES = 12;
 
     /**
      * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot  the boundary the page rendered with
@@ -78,9 +88,10 @@ class TalkAbsenceDigest
         return UnreadTalkScope::since(
             GroupMessage::query()
                 ->where('group_id', $group->getKey())
-                // The card draws a face per author and a thumbnail per picture; without these the
-                // sample would cost a query per row it summarizes.
-                ->with(['author.avatar.file', 'images.file']),
+                // The card draws a face per author; without this the sample would cost a query per
+                // row it summarizes. Pictures are NOT loaded here — a parent does not bound its
+                // attachment count, so they get their own capped read in thumbnails().
+                ->with('author.avatar.file'),
             $boundary,
             (int) $viewer->getKey(),
         )
@@ -139,39 +150,55 @@ class TalkAbsenceDigest
      * is no longer there, is skipped in silence: no placeholder, no gap, nothing in the payload
      * saying a picture was left out.
      *
-     * Stops at the cap rather than shaping everything and slicing, so the policy runs for the
-     * pictures the card shows — and never for a parent outside the sample.
+     * The read is bounded on its own terms: the first {@see THUMBNAIL_CANDIDATES} attachment rows of
+     * the sampled messages, in (message id, slot) order — for talk, posting order — with the file
+     * eager-loaded once. The gates then run over those candidates only, so neither the row count nor
+     * the policy calls can grow with how many pictures a message carries.
      *
      * @param  Collection<int, GroupMessage>  $sample
      * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>
      */
     private function thumbnails(Member $viewer, Collection $sample): array
     {
+        if ($sample->isEmpty()) {
+            return [];
+        }
+
+        $parents = $sample->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
+
+        $candidates = GroupMessageImage::query()
+            ->whereIn('group_message_id', $parents->keys())
+            ->with('file')
+            ->orderBy('group_message_id')
+            ->orderBy('number')
+            ->limit(self::THUMBNAIL_CANDIDATES)
+            ->get();
+
         $shown = [];
 
-        foreach ($sample as $message) {
-            foreach ($message->images as $image) {
-                $file = $image->file;
+        foreach ($candidates as $image) {
+            /** @var GroupMessage $message */
+            $message = $parents[(int) $image->group_message_id];
+            $file = $image->file;
 
-                if ($file === null || (int) $file->related_entity_id !== (int) $message->getKey()) {
-                    continue;
-                }
+            if ($file === null || (int) $file->related_entity_id !== (int) $message->getKey()) {
+                continue;
+            }
 
-                // instanceof rather than a string match, so the legacy morph aliases resolve too.
-                $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
-                if ($ownerClass === null || ! $message instanceof $ownerClass) {
-                    continue;
-                }
+            // instanceof rather than a string match, so the legacy morph aliases resolve too.
+            $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
+            if ($ownerClass === null || ! $message instanceof $ownerClass) {
+                continue;
+            }
 
-                if (! Gate::forUser($viewer)->allows('view', $file)) {
-                    continue;
-                }
+            if (! Gate::forUser($viewer)->allows('view', $file)) {
+                continue;
+            }
 
-                $shown[] = GroupMessageSerializer::image($image);
+            $shown[] = GroupMessageSerializer::image($image);
 
-                if (count($shown) === self::THUMBNAILS) {
-                    return $shown;
-                }
+            if (count($shown) === self::THUMBNAILS) {
+                return $shown;
             }
         }
 

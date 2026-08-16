@@ -390,6 +390,46 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame([], $this->digestOf($viewer, $group)['thumbnails']);
     }
 
+    public function test_a_message_hoarding_attachments_cannot_widen_the_read(): void
+    {
+        // The sample bounds parents, not attachments: one migrated message may carry any number of
+        // pictures, and the strip's read has to stay capped whatever that number is — even when
+        // every early candidate is refused, the refill stops at the candidate cap.
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $messages = $this->say($group, $this->memberOf($group), TalkAbsenceDigest::THRESHOLD);
+        $this->rewindCursors($group);
+
+        // More rows than the candidate cap on one message, all owned elsewhere (refused)…
+        $foreign = $messages[1];
+        foreach (range(1, TalkAbsenceDigest::THUMBNAIL_CANDIDATES + 3) as $number) {
+            $this->attach($messages[0], $number, owner: $foreign);
+        }
+        // …and a readable picture on a later message, beyond the candidate window.
+        $readable = $this->attach($messages[2], 1);
+
+        DB::enableQueryLog();
+        $digest = $this->digestOf($viewer, $group);
+        $reads = array_values(array_filter(
+            DB::getQueryLog(),
+            fn (array $q): bool => str_contains($q['query'], 'group_message_images') && ! str_contains($q['query'], 'exists'),
+        ));
+        DB::disableQueryLog();
+
+        // Two picture reads on the page: the message list's own eager-load (pre-existing, bounded by
+        // the visible page) and the digest's candidate query. The digest's is the capped one; the
+        // refused pile fills its window, so nothing is refilled from past it — fewer pictures, never
+        // a wider read.
+        $this->assertCount(2, $reads);
+        $capped = array_values(array_filter(
+            $reads,
+            fn (array $q): bool => str_contains($q['query'], 'limit '.TalkAbsenceDigest::THUMBNAIL_CANDIDATES),
+        ));
+        $this->assertCount(1, $capped);
+        $this->assertSame([], $digest['thumbnails']);
+        $this->assertStringNotContainsString($readable->name, json_encode($digest));
+    }
+
     // --- the boundaries the digest does NOT follow ---
 
     /**
