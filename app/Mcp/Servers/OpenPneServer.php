@@ -10,6 +10,7 @@ use App\Mcp\Tools\MarkTalkReadTool;
 use App\Mcp\Tools\PostDiaryCommentTool;
 use App\Mcp\Tools\PostDiaryTool;
 use App\Mcp\Tools\PostTalkMessageTool;
+use App\Mcp\Tools\ReadDiaryImagesTool;
 use App\Mcp\Tools\ReadDiaryTool;
 use App\Mcp\Tools\ReadTalkMessageImagesTool;
 use App\Mcp\Tools\ReadTalkMessagesTool;
@@ -39,6 +40,7 @@ class OpenPneServer extends Server
         MarkTalkReadTool::class,
         ListDiariesTool::class,
         ReadDiaryTool::class,
+        ReadDiaryImagesTool::class,
         PostDiaryTool::class,
         PostDiaryCommentTool::class,
     ];

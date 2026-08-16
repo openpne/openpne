@@ -33,7 +33,7 @@ class ReadDiaryTool extends DiaryTool
 
         // The whole thread, oldest first, as the web surface reads one: a diary's comments are the
         // conversation on it, and a page of them would leave a reader asking for the rest.
-        $comments = $diary->comments()->with('member')->orderBy('number')->get();
+        $comments = $diary->comments()->with('member')->withCount('images')->orderBy('number')->get();
 
         return Response::structured(['diary' => McpDiarySerializer::detail($diary, $comments)]);
     }

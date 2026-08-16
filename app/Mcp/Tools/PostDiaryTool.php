@@ -9,6 +9,7 @@ use App\Features\Diary\Data\DiaryFormData;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Diary\Serializers\McpDiarySerializer;
 use App\Mcp\McpAbilities;
+use App\Mcp\Tools\Concerns\DecodesImageUploads;
 use App\Rules\MaxBytes;
 use App\Support\BodyFormat;
 use App\Support\Visibility;
@@ -28,6 +29,8 @@ use Laravel\Mcp\Server\Attributes\Title;
 #[Description('Write a diary entry as yourself, visible immediately. Mind the audience: an entry for all members — the default unless your account prefers another — or for anyone on the web is announced to the site\'s active members (minus those who opted out of the mail), by mail and on the site. Post at private when it is a note for yourself.')]
 class PostDiaryTool extends DiaryTool
 {
+    use DecodesImageUploads;
+
     public function handle(Request $request, CreateDiary $create): Response|ResponseFactory
     {
         $member = $this->member($request);
@@ -75,16 +78,20 @@ class PostDiaryTool extends DiaryTool
             ? $offered[$validated['visibility']]
             : DiaryVisibility::defaultFor($member);
 
-        $diary = $create($member, new DiaryFormData(
+        $data = new DiaryFormData(
             title: $validated['title'],
             body: $validated['body'],
             visibility: $visibility,
             format: isset($validated['format']) ? BodyFormat::from($validated['format']) : null,
-        ));
+        );
 
-        $diary->setRelation('member', $member);
+        return $this->withImageUploads($request, function (array $images) use ($create, $member, $data): Response|ResponseFactory {
+            $diary = $create($member, $data, $images);
 
-        return Response::structured(['diary' => McpDiarySerializer::summary($diary)]);
+            $diary->setRelation('member', $member);
+
+            return Response::structured(['diary' => McpDiarySerializer::summary($diary)]);
+        });
     }
 
     /**
@@ -100,6 +107,7 @@ class PostDiaryTool extends DiaryTool
                 ->description('Who may read it. Omitted, your account\'s own default is used (all members unless you have set another). open: anyone on the web. members: everyone signed in. friends: your friends. private: only you. Which of these are offered is the site\'s decision, and an audience it does not offer is refused.'),
             'format' => $schema->string()->enum([BodyFormat::Plain->value, BodyFormat::Markdown->value])->default(BodyFormat::Plain->value)
                 ->description('How the text is read: plain leaves it as typed, markdown renders it.'),
+            'images' => $this->imagesSchema($schema),
         ];
     }
 
