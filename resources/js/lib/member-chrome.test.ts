@@ -172,10 +172,12 @@ test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });
 
-test('the unified home is the same screen as the dashboard it replaces', () => {
-    // Same route, same chrome: the experiment switch must not change what the frame draws.
-    assert.deepEqual(chrome('unified/home', {}), chrome('dashboard', {}));
-    assert.equal(resolveChrome('unified/home', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
+test('the unified home is the dashboard screen without its floating action', () => {
+    // Same route, same frame — minus the action: the design draws no floating button on home, so
+    // writing starts from the diary tile's list, where the FAB stands.
+    const { action, ...dashboard } = chrome('dashboard', {});
+    assert.ok(action);
+    assert.deepEqual(chrome('unified/home', {}), dashboard);
     assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/home'));
     // Both take the mobile brand bar, not a back control — home has nothing above it.
     assert.ok(isHomeComponent('dashboard'));
