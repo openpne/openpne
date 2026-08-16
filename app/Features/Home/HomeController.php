@@ -10,6 +10,7 @@ use App\Features\Group\Queries\PendingJoinRequestCounts;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\Home\Queries\JoinedGroupActivity;
 use App\Features\Home\Serializers\HomeSerializer;
+use App\Features\Home\Serializers\UnifiedHomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
@@ -78,6 +79,13 @@ class HomeController extends Controller
     ): Response {
         /** @var Member $viewer */
         $viewer = $request->user();
+
+        // The experiment swaps the page, not the route or the data sources (HomeLayout). Both render
+        // calls stay string literals: ChromeContextCoverageTest reads them to check every routed
+        // component is classified.
+        if (HomeLayout::unifiedEnabled()) {
+            return Inertia::render('unified/home', UnifiedHomeSerializer::page($viewer));
+        }
 
         // Each digest belongs to a unit, so a switched-off one contributes an empty section and runs
         // no query — hiding it on the client would still ship the rows. JoinedGroupActivity

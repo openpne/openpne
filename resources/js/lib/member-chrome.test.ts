@@ -4,6 +4,7 @@ import {
     bottomNavSections,
     chromeRecedes,
     hasBottomNav,
+    isHomeComponent,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
@@ -165,6 +166,17 @@ test('the dashboard carries the diary action without becoming a hub', () => {
 
 test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
+});
+
+test('the unified home is the same screen as the dashboard it replaces', () => {
+    // Same route, same chrome: the experiment switch must not change what the frame draws.
+    assert.deepEqual(chrome('unified/home', {}), chrome('dashboard', {}));
+    assert.equal(resolveChrome('unified/home', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/home'));
+    // Both take the mobile brand bar, not a back control — home has nothing above it.
+    assert.ok(isHomeComponent('dashboard'));
+    assert.ok(isHomeComponent('unified/home'));
+    assert.ok(!isHomeComponent('diary/feed'));
 });
 
 test('a community-scoped page is scoped to the group', () => {
