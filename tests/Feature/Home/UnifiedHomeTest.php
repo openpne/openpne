@@ -128,6 +128,36 @@ class UnifiedHomeTest extends TestCase
             });
     }
 
+    /**
+     * The switch reaches the shell as well as the page: the mobile bars read one shared prop rather
+     * than asking the setting again per bar. Turning it on adds that key to every member response —
+     * what it must not change is what the chrome renders while it is false.
+     */
+    public function test_the_shell_learns_the_layout_from_a_shared_prop(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('unifiedLayout', false));
+
+        $this->unifiedOn();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('unifiedLayout', true));
+    }
+
+    public function test_a_guest_is_never_given_the_unified_chrome(): void
+    {
+        // The layout is a member's way around their own pages, and a signed-out visitor reaches none
+        // of them — so the site setting does not answer for a guest.
+        config()->set('openpne.surface_mode', 'modern_only');
+        $this->unifiedOn();
+
+        $this->get('/login')->assertInertia(fn ($page) => $page->where('unifiedLayout', false));
+    }
+
     public function test_the_accessor_reads_only_an_explicit_one(): void
     {
         // No row at all: the shipped home, without an operator having said anything.

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Features\Friend\Queries\RandomFriends;
 use App\Features\GroupTalk\Queries\NavTalkRooms;
+use App\Features\Home\HomeLayout;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
@@ -55,6 +56,10 @@ class HandleInertiaRequests extends Middleware
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
+            // Which chrome the Modern shell draws (docs/internals/feature-modules.md). A guest is
+            // false whatever the site setting says: the layout is a member's way around their own
+            // pages, and a signed-out visitor sees none of them.
+            'unifiedLayout' => $user !== null && HomeLayout::unifiedEnabled(),
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,

@@ -85,7 +85,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
-                {bottomNav && <BottomNav hidden={hidden} />}
+                {bottomNav && <BottomNav chrome={chrome} hidden={hidden} />}
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
                     draws under, so page content does not run beneath the clock once the bar slides off. */}
                 <div

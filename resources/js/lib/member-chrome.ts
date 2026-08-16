@@ -152,24 +152,43 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
     privacy: t('Privacy policy'),
 };
 
+// Neither board has a section of its own, so this one answers for them too and for the
+// container unit alone.
+// The badge counts groups with something new in their talk, not messages — see
+// CountGroupsWithUnreadTalk. It rides the container unit's entry because talk has no section of
+// its own, the way this entry already answers for both boards. The href is the joined list
+// rather than the browse tab: the badge sends a member here to find out which group is waiting,
+// and only the joined rows carry that.
+const GROUPS_SECTION: NavSection = {
+    href: '/groups/mine',
+    match: ['/groups', '/topics', '/events'],
+    icon: Users,
+    label: COMMUNITIES,
+    badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
+    feature: 'group',
+};
+
+/** Named because the unified chrome draws its bell from it: one entry, one phrase for the count. */
+export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
+    href: '/notifications',
+    match: ['/notifications'],
+    icon: Bell,
+    label: NOTIFICATIONS,
+    badge: { count: 'notifications', label: t(':count unread notifications') },
+};
+
+/** Named for the same reason: the unified bottom bar's search zone is this entry. */
+export const MEMBER_SEARCH_SECTION: NavSection = {
+    href: '/member/search',
+    match: ['/member/search'],
+    icon: Search,
+    label: MEMBER_SEARCH,
+};
+
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
-    // Neither board has a section of its own, so this one answers for them too and for the
-    // container unit alone.
-    // The badge counts groups with something new in their talk, not messages — see
-    // CountGroupsWithUnreadTalk. It rides the container unit's entry because talk has no section of
-    // its own, the way this entry already answers for both boards. The href is the joined list
-    // rather than the browse tab: the badge sends a member here to find out which group is waiting,
-    // and only the joined rows carry that.
-    {
-        href: '/groups/mine',
-        match: ['/groups', '/topics', '/events'],
-        icon: Users,
-        label: COMMUNITIES,
-        badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
-        feature: 'group',
-    },
+    GROUPS_SECTION,
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
@@ -190,16 +209,15 @@ export const NAV_SECTIONS: NavSection[] = [
         badge: { count: 'unreadMessages', label: t(':count conversations with new messages') },
         feature: 'directMessage',
     },
-    {
-        href: '/notifications',
-        match: ['/notifications'],
-        icon: Bell,
-        label: NOTIFICATIONS,
-        badge: { count: 'notifications', label: t(':count unread notifications') },
-    },
-    { href: '/member/search', match: ['/member/search'], icon: Search, label: MEMBER_SEARCH },
+    NOTIFICATIONS_SECTION,
+    MEMBER_SEARCH_SECTION,
     { href: '/member/config', match: ['/member/config'], icon: Settings, label: SETTINGS },
 ];
+
+/** Whether a path (query and hash already stripped) is inside a section — see NavSection.exact. */
+export function isSectionActive(section: NavSection, path: string): boolean {
+    return section.exact ? section.match.includes(path) : section.match.some((prefix) => path.startsWith(prefix));
+}
 
 /**
  * The entry the desktop room list nests under. Talk has no section of its own, so the rooms hang
@@ -240,6 +258,15 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSect
             (section) => section !== undefined,
         ),
     ];
+}
+
+/**
+ * The unified layout's top-bar tab pair: the two places it moves a member between. Nav entries, so
+ * which paths light a tab up is the nav's own answer (Home its exact path, the group tab every group
+ * space) and the group tab goes with its unit the way the drawer's entry does.
+ */
+export function unifiedTabs(enabled: Record<FeatureKey, boolean>): NavSection[] {
+    return enabled.group ? [HOME_SECTION, GROUPS_SECTION] : [HOME_SECTION];
 }
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
@@ -660,4 +687,57 @@ export function resolveChrome(
 ): Chrome {
     const base: Chrome = { mode: 'embedded', width: 'standard', gap: '4' };
     return { ...base, ...STATIC_CHROME[component], ...HUB_CHROME[component]?.(props), ...override };
+}
+
+/** Where the member is, and the way back to its top. A name is member text, so it is a plain string. */
+export interface DivePlace {
+    label: ChromeLabel | string;
+    href: string;
+}
+
+/** The `{id, name}` every place-bearing prop and every scope share. */
+interface PlaceRef {
+    id: number;
+    name: string;
+}
+
+const groupPlace = (group: PlaceRef): DivePlace => ({ label: group.name, href: `/groups/${group.id}` });
+
+const memberPlace = (member: PlaceRef): DivePlace => ({ label: member.name, href: `/member/${member.id}` });
+
+/** Not inside anything. */
+const HOME_PLACE: DivePlace = { label: HOME_SECTION.label, href: HOME_SECTION.href };
+
+/**
+ * The pages that *are* a place, so no scope points at it — a group top and a profile are the top
+ * everything under them scopes back to. Read from their own props for that reason: scope alone would
+ * put a member standing on a group's front page nowhere.
+ */
+const DIVE_PLACES: Record<string, (props: Record<string, unknown>) => DivePlace> = {
+    'community/show': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
+    'unified/group': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
+    'member/show': (props) => memberPlace((props as unknown as { profile: { owner: PlaceRef } }).profile.owner),
+    'unified/member': (props) => memberPlace((props as unknown as { profile: PlaceRef }).profile),
+};
+
+/**
+ * Where the member has dived to, for the unified bottom bar's middle zone: the group or the person
+ * whose space they are in, and the way back up to its top. A hub, a form, the search and the
+ * notification list are not places to be inside — from those the answer is home.
+ */
+export function divePlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace {
+    const own = DIVE_PLACES[component];
+    if (own) {
+        return own(props);
+    }
+
+    const { scope } = chrome;
+    if (scope?.kind === 'group') {
+        return groupPlace(scope);
+    }
+    if (scope?.kind === 'member') {
+        return memberPlace(scope);
+    }
+
+    return HOME_PLACE;
 }
