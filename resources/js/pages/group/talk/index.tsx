@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
-import { dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
+import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
+import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
+import { requestUnreadRefresh } from '@/lib/unread-refresh';
 import type { CommunitySummary } from '@/pages/community/types';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
 import type { PageProps } from '@/types';
@@ -17,7 +19,8 @@ import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
 import { TalkMuteToggle } from './mute-toggle';
 import { TalkReactorsDialog } from './reactors-dialog';
-import type { TalkPage, TalkUnreadSnapshot } from './types';
+import { TalkUnreadDigestCard } from './unread-digest';
+import type { TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
 interface TalkProps extends PageProps {
     group: CommunitySummary;
@@ -28,6 +31,8 @@ interface TalkProps extends PageProps {
     isMember: boolean;
     isMuted: boolean;
     talkUnreadSnapshot: TalkUnreadSnapshot | null;
+    /** Absent — not null — unless the backlog is large enough to be worth a catch-up card. */
+    unreadDigest?: TalkUnreadDigest;
     /** Where the poll starts reading reaction changes from — see the second watermark in use-chat-stream.ts. */
     reactionsVersion: number;
     /** What this site offers, shipped by the page so nothing in the bundle holds a second copy. */
@@ -60,7 +65,7 @@ const appendMentions =
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot, reactionsVersion, reactionVocabulary } =
+    const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot, unreadDigest, reactionsVersion, reactionVocabulary } =
         usePage<TalkProps>().props;
     // Memoized because the stream's poll and reads hang off their identity: rebuilt every render, the
     // interval would be torn down and started again each time the page re-rendered.
@@ -100,6 +105,14 @@ export default function GroupTalkIndex() {
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && talkUnreadSnapshot !== null && talkUnreadSnapshot.count > 0 ? talkUnreadSnapshot : null;
+
+    // The catch-up, and whether it has been taken. Both live here rather than in the card because the
+    // card is drawn in either of two places and it is one offer from both — and because spending it
+    // is what withdraws it: the digest is a render-time snapshot like the divider, so nothing
+    // re-reads it mid-visit to notice the backlog is gone.
+    const [caughtUp, setCaughtUp] = useState(false);
+    const [catchingUp, setCatchingUp] = useState(false);
+    const digestAt = digestPlacement(unreadDigest !== undefined, dividerId, backlog !== null, caughtUp);
 
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
@@ -257,6 +270,36 @@ export default function GroupTalkIndex() {
         setAtBottom(true);
     };
 
+    // The catch-up: no message id, which is this endpoint's "read through the latest" — and the
+    // latest is resolved server-side at the moment the cursor moves, so a message landing mid-request
+    // stays unread (App\Features\GroupTalk\Actions\MarkTalkRead). The badge is not patched from here;
+    // the shell owns it and is only asked to re-read. The card is withdrawn on the answer rather than
+    // on the click, so a refusal leaves the offer standing instead of hiding a backlog still waiting.
+    const markAllRead = async () => {
+        if (catchingUp) {
+            return;
+        }
+
+        setCatchingUp(true);
+        try {
+            const response = await fetch(`/groups/${group.id}/talk/read`, {
+                method: 'POST',
+                headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({}),
+            });
+
+            if (response.ok) {
+                setCaughtUp(true);
+                requestUnreadRefresh();
+            }
+        } catch {
+            // A network reject leaves the card as it stands: the reader can simply tap again.
+        } finally {
+            setCatchingUp(false);
+        }
+    };
+
     const remove = async (id: number) => {
         if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true })) {
             void stream.remove(id);
@@ -295,10 +338,22 @@ export default function GroupTalkIndex() {
                 // this offers is a page or more above them — a band at the top of the list would be
                 // out of sight exactly when it is needed.
                 <div className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 flex justify-center">
-                    <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
-                        <ArrowUp className="size-4" aria-hidden />
-                        {t('Jump to :count unread messages', { count: backlog.count })}
-                    </Button>
+                    {digestAt === 'banner' && unreadDigest !== undefined ? (
+                        // The card stands in for the banner and carries its jump, so catching up and
+                        // going to look are still the same two choices they were.
+                        <TalkUnreadDigestCard
+                            digest={unreadDigest}
+                            onMarkAllRead={markAllRead}
+                            marking={catchingUp}
+                            onJump={() => jumpToContext(backlog.cursor)}
+                            className="w-full max-w-sm shadow-md"
+                        />
+                    ) : (
+                        <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
+                            <ArrowUp className="size-4" aria-hidden />
+                            {t('Jump to :count unread messages', { count: backlog.count })}
+                        </Button>
+                    )}
                 </div>
             )}
 
@@ -334,6 +389,19 @@ export default function GroupTalkIndex() {
                                             </span>
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />
                                         </div>
+                                        {digestAt === 'divider' && unreadDigest !== undefined && (
+                                            // Under the line, at the head of what was missed. No jump
+                                            // here: the reader is already standing on the boundary.
+                                            <TalkUnreadDigestCard
+                                                digest={unreadDigest}
+                                                onMarkAllRead={markAllRead}
+                                                marking={catchingUp}
+                                                // Tinted, because here the card lies on the panel's
+                                                // own surface: at bg-card it would be a box drawn on
+                                                // its own colour, with only a hairline to find it by.
+                                                className="mt-2 bg-muted/40"
+                                            />
+                                        )}
                                     </li>
                                 )}
                                 <TalkMessageRow

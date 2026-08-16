@@ -65,3 +65,30 @@ export function readThroughBoundary(snapshot: ChatUnreadSnapshot | null): ChatUn
 export function firstUnreadBoundary(snapshot: ChatFirstUnreadSnapshot | null): ChatUnreadBoundary | null {
     return snapshot === null ? null : { kind: 'firstUnread', ...snapshot.firstUnread };
 }
+
+/** Which boundary affordance carries a catch-up digest, or none. */
+export type DigestPlacement = 'divider' | 'banner' | null;
+
+/**
+ * Where the digest goes on this render.
+ *
+ * The two placements are the boundary's two states, and a single expression is what makes them
+ * exclusive: a divider id means the line is on the page, and the banner exists exactly when a
+ * backlog has no line to draw. Deciding them separately would let a boundary that is neither draw no
+ * card at all, or one in between draw two.
+ *
+ * `spent` is the catch-up having been taken. The digest is a render-time snapshot like the divider
+ * beside it — nothing re-reads it mid-visit — so the card is withdrawn by the page that spent it
+ * rather than by a number changing underneath.
+ */
+export function digestPlacement(hasDigest: boolean, dividerId: number | null, hasBacklog: boolean, spent: boolean): DigestPlacement {
+    if (!hasDigest || spent) {
+        return null;
+    }
+
+    if (dividerId !== null) {
+        return 'divider';
+    }
+
+    return hasBacklog ? 'banner' : null;
+}

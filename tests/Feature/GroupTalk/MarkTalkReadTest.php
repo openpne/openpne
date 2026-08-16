@@ -127,18 +127,118 @@ class MarkTalkReadTest extends TalkTestCase
             ->assertNotFound();
     }
 
-    public function test_a_missing_or_malformed_id_is_a_validation_error(): void
+    /** An id that is present but unusable must not fall through to "mark everything read". */
+    public function test_a_malformed_id_is_a_validation_error(): void
     {
         $group = $this->group();
         $member = $this->memberOf($group);
-
-        $this->actingAs($member)
-            ->postJson("/groups/{$group->getKey()}/talk/read", [])
-            ->assertJsonValidationErrorFor('messageId');
+        GroupMessage::factory()->create(['group_id' => $group->getKey()]);
 
         $this->actingAs($member)
             ->postJson("/groups/{$group->getKey()}/talk/read", ['messageId' => 'nope'])
             ->assertJsonValidationErrorFor('messageId');
+
+        $this->assertSame(0, (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
+    }
+
+    // --- no id: read through the latest (the absence digest's catch-up) ---
+
+    public function test_marking_all_read_advances_to_the_groups_own_latest(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $messages = GroupMessage::factory()->count(3)->create(['group_id' => $group->getKey()]);
+
+        $this->actingAs($member)
+            ->postJson("/groups/{$group->getKey()}/talk/read", [])
+            ->assertNoContent();
+
+        $this->assertSame((int) $messages[2]->getKey(), (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
+    }
+
+    /**
+     * "Latest" is resolved at the moment the cursor moves, not by the client beforehand — which is
+     * why the client sends no tuple at all. A message written after the tap has been on nobody's
+     * screen and stays waiting.
+     */
+    public function test_a_message_written_after_the_catch_up_stays_unread(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        GroupMessage::factory()->count(3)->create(['group_id' => $group->getKey()]);
+
+        $this->actingAs($member)->postJson("/groups/{$group->getKey()}/talk/read", [])->assertNoContent();
+
+        $arrivedSince = GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+
+        $this->freshRequestState();
+        $this->actingAs($member)->getJson('/unread-counts')->assertJsonPath('unread.groupTalks', 1);
+        $this->assertNotSame(
+            (int) $arrivedSince->getKey(),
+            (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id,
+        );
+    }
+
+    /** A second tap on a card that has not gone away yet settles rather than racing. */
+    public function test_marking_all_read_twice_settles_on_the_same_position(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $messages = GroupMessage::factory()->count(3)->create(['group_id' => $group->getKey()]);
+        $url = "/groups/{$group->getKey()}/talk/read";
+
+        $this->actingAs($member)->postJson($url, [])->assertNoContent();
+        $this->actingAs($member)->postJson($url, [])->assertNoContent();
+
+        $this->assertSame((int) $messages[2]->getKey(), (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
+    }
+
+    /**
+     * Forward only, like every other advance. A request whose read of "latest" is behind the cursor —
+     * one that lost a race, or one whose newest message has since been deleted — cannot pull it back
+     * over messages already marked read.
+     */
+    public function test_a_catch_up_that_reads_an_older_latest_cannot_regress_the_cursor(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $messages = GroupMessage::factory()->count(3)->create(['group_id' => $group->getKey()]);
+        $url = "/groups/{$group->getKey()}/talk/read";
+
+        $this->actingAs($member)->postJson($url, [])->assertNoContent();
+        $newest = (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id;
+        // The group's latest is now an older message than the one the cursor stands on.
+        $messages[2]->delete();
+
+        $this->actingAs($member)->postJson($url, [])->assertNoContent();
+
+        $this->assertSame($newest, (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
+    }
+
+    /** The same refusal the named-id path gives: no membership row, no cursor to spend. */
+    public function test_a_non_member_reader_cannot_mark_everything_read(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+        $outsider = Member::factory()->create();
+
+        $this->actingAs($outsider)->get("/groups/{$group->getKey()}/talk")->assertOk();
+        $this->actingAs($outsider)
+            ->postJson("/groups/{$group->getKey()}/talk/read", [])
+            ->assertNotFound();
+    }
+
+    /** Leaving the group takes the cursor with it, so the catch-up has nothing left to move. */
+    public function test_a_membership_lost_since_the_page_rendered_is_refused(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $member = $this->memberOf($group);
+        GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+        DB::table('group_members')->where('group_id', $group->getKey())->where('member_id', $member->getKey())->delete();
+
+        $this->actingAs($member)
+            ->postJson("/groups/{$group->getKey()}/talk/read", [])
+            ->assertNotFound();
     }
 
     /** Writing is reading — and it happens with the insert, not on the next page load. */
