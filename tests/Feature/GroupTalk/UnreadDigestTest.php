@@ -308,16 +308,27 @@ class UnreadDigestTest extends TalkTestCase
     {
         $group = $this->group();
         $viewer = $this->memberOf($group);
-        $messages = $this->say($group, $this->memberOf($group), 12);
+        $author = $this->memberOf($group);
+        $messages = $this->say($group, $author, 12);
+        // Ids do not follow the clock in a migrated room: this row is created last (highest id) but
+        // timed earliest, and the strip must lead with it — the stream's (created_at, id) order,
+        // not the table's.
+        $backdated = GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'body' => 'backdated',
+            'created_at' => $this->start->copy()->subMinutes(30),
+            'updated_at' => $this->start->copy()->subMinutes(30),
+        ]);
         $this->rewindCursors($group);
         $wanted = [
+            $this->attach($backdated, 1),
             $this->attach($messages[0], 1),
             $this->attach($messages[0], 2),
-            $this->attach($messages[3], 1),
         ];
         // Past the cap: read only if the three above were not taken first.
+        $this->attach($messages[3], 1);
         $this->attach($messages[5], 1);
-        $this->attach($messages[9], 1);
 
         $digest = $this->digestOf($viewer, $group);
 

@@ -151,7 +151,7 @@ class TalkAbsenceDigest
      * saying a picture was left out.
      *
      * The read is bounded on its own terms: the first {@see THUMBNAIL_CANDIDATES} attachment rows of
-     * the sampled messages, in (message id, slot) order — for talk, posting order — with the file
+     * the sampled messages, in the stream's own (created_at, id, slot) order, with the file
      * eager-loaded once. The gates then run over those candidates only, so neither the row count nor
      * the policy calls can grow with how many pictures a message carries.
      *
@@ -166,12 +166,18 @@ class TalkAbsenceDigest
 
         $parents = $sample->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
 
+        // Ordered by the parent's (created_at, id) — talk's total order (UnreadTalkScope), which a
+        // migrated room's ids do not necessarily follow — so "the first pictures of the sample"
+        // means the same thing here as it does in the stream. The join is bounded by the sampled ids.
         $candidates = GroupMessageImage::query()
-            ->whereIn('group_message_id', $parents->keys())
+            ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
+            ->whereIn('group_message_images.group_message_id', $parents->keys())
             ->with('file')
-            ->orderBy('group_message_id')
-            ->orderBy('number')
+            ->orderBy('group_messages.created_at')
+            ->orderBy('group_messages.id')
+            ->orderBy('group_message_images.number')
             ->limit(self::THUMBNAIL_CANDIDATES)
+            ->select('group_message_images.*')
             ->get();
 
         $shown = [];
