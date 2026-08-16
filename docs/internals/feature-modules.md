@@ -115,6 +115,14 @@ choice (4) is writable — the member config page sets it — so a member can op
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
+The Modern home carries a second, much narrower switch: `modern_unified_home`
+([`SnsSettingKey`](../../app/Support/SnsSettingKey.php), off unless an operator turns
+it on, read through [`HomeLayout`](../../app/Features/Home/HomeLayout.php)). With it on,
+`/dashboard` renders the `unified/home` page instead of `dashboard` — the same route
+and the same viewer-scoped queries, projected read-only into a different layout, so it
+adds no capability of its own. Nothing is stored differently either way, which is what
+makes switching back a decision rather than a deploy.
+
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern
 covers a feature; only `native` vs not-`native` is a code-level branch in the

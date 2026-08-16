@@ -216,6 +216,15 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], exact: true, icon: House, label: t('Home') };
 
 /**
+ * The components the home route renders — the digest dashboard or, behind SnsSettingKey::
+ * ModernUnifiedHome, the unified layout. The brand's own screen either way: the mobile bar shows the
+ * brand row rather than a back control, since there is nothing above home to go back to.
+ */
+export function isHomeComponent(component: string): boolean {
+    return component === 'dashboard' || component === 'unified/home';
+}
+
+/**
  * The phone bottom bar's tabs after Home, in bar order. A deliberately fixed list — one change
  * point for the composition — rather than something an administrator picks; per-site composition is
  * a later question, and a unit switched off still drops its tab through visibleNavSections.
@@ -341,6 +350,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
     // FAB — the diary shortcut the diary-forward home is the place for.
     'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
+    // The experimental home behind SnsSettingKey::ModernUnifiedHome: the same screen, so the same
+    // chrome as the dashboard it replaces.
+    'unified/home': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
     // One component serves both policy pages, so which one the server rendered picks the heading.
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
@@ -611,6 +623,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
+    'unified/home',
     'diary/feed',
     'community/search',
     'community/recent',
