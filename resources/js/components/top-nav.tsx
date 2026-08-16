@@ -166,7 +166,7 @@ export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
  * Only the top level. A detail, a form, a sheet and a room keep their own bar, which says where the
  * reader is — a tab pair claiming they are at the top level would be saying something false.
  */
-function UnifiedBar({ user, hidden }: { user: AuthUser; hidden?: boolean }) {
+function UnifiedBar({ hidden }: { hidden?: boolean }) {
     const t = useT();
     const { url, props } = usePage<PageProps>();
     // Query and hash off first: the Home tab matches its whole path (NavSection.exact).
@@ -174,7 +174,9 @@ function UnifiedBar({ user, hidden }: { user: AuthUser; hidden?: boolean }) {
     const notifications = props.unread?.notifications ?? 0;
 
     return (
-        <TopBar hidden={hidden}>
+        // No seam: in the design this bar follows, the top of the page and the bar are one surface —
+        // the first card below is what marks where the page begins.
+        <TopBar hidden={hidden} seam={false}>
             <NavDrawer />
             {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
                 with the same name is a landmark list a reader cannot tell apart. Each tab names
@@ -210,8 +212,9 @@ function UnifiedBar({ user, hidden }: { user: AuthUser; hidden?: boolean }) {
                     );
                 })}
             </div>
-            {/* The count is announced in words or not at all — the pill beside a glyph has no name of
-                its own, so the link takes the number into its own. */}
+            {/* The count is announced in words or not at all — the mock's grammar is a dot, not a
+                number: something is waiting, and how much is the notification screen's answer. The
+                link's name still carries the count for a reader who cannot see the dot. */}
             <Link
                 href={NOTIFICATIONS_SECTION.href}
                 aria-label={
@@ -219,14 +222,11 @@ function UnifiedBar({ user, hidden }: { user: AuthUser; hidden?: boolean }) {
                         ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications })
                         : t(NOTIFICATIONS_SECTION.label.key)
                 }
-                // The bar's icon-control shape without its edge pull: the bell sits between the tabs
-                // and the account menu, not against the bar's edge.
-                className={cn(BAR_CONTROL, 'relative ml-0')}
+                className={cn(BAR_CONTROL, 'relative')}
             >
                 <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
-                <CountPill count={notifications} className="absolute top-1.5 right-1.5" />
+                {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
             </Link>
-            <AvatarMenu user={user} compact />
         </TopBar>
     );
 }
@@ -282,7 +282,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // Home and the hubs are one bar in the unified layout; everything below them is untouched.
     const topLevel = isHomeComponent(String(component)) || chrome.mode === 'section';
     if (props.unifiedLayout && topLevel) {
-        return <UnifiedBar user={auth.user} hidden={hidden} />;
+        return <UnifiedBar hidden={hidden} />;
     }
 
     // Everything that is neither home nor a hub is a detail or form page. Home is named rather than

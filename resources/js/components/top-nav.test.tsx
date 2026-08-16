@@ -169,3 +169,20 @@ test("a guest's bar is the same with the switch on", () => {
     expect(screen.getByText('Test SNS')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
 });
+
+/**
+ * The design's bar ends at the bell: no account control (the drawer took it in), and the bell wears
+ * a dot rather than a printed number — how many is the link's name and the notification screen's
+ * answer, not the bar's.
+ */
+test('the unified bar carries no account menu and prints no count', () => {
+    const chrome = arrive('unified/home', '/dashboard', {
+        unifiedLayout: true,
+        unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
+    });
+
+    const { container } = render(<TopNav chrome={chrome} />);
+
+    expect(screen.queryByRole('button', { name: 'Account menu' })).toBeNull();
+    expect(container.textContent).not.toContain('3');
+});
