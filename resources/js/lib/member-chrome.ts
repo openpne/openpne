@@ -377,9 +377,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
     // FAB — the diary shortcut the diary-forward home is the place for.
     'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
-    // The experimental home behind SnsSettingKey::ModernUnifiedHome: the same screen, so the same
-    // chrome as the dashboard it replaces.
-    'unified/home': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
+    // The experimental home behind SnsSettingKey::ModernUnifiedHome: the dashboard's screen minus
+    // its action — the design draws no floating button on home, so writing starts from the diary
+    // tile's list, where the FAB stands. Home is the one screen that gives the FAB up: everywhere
+    // else the registry action floats as usual, since a phone has no other write affordance.
+    'unified/home': () => ({}),
     // One component serves both policy pages, so which one the server rendered picks the heading.
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
