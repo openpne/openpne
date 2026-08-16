@@ -406,3 +406,10 @@ html body[data-scroll-locked] {
 .ProseMirror .held-selection {
     background: color-mix(in oklab, var(--color-selected) 30%, transparent);
 }
+
+/* The unified experiment's ground (AppShell toggles `unified` on <html> beside `dark`): the design
+   it follows sits on a neutral near-white, not the site's warm paper. Light only — dark keeps its
+   own ground. */
+html.unified:not(.dark) {
+    --background: oklch(0.973 0.002 260);
+}

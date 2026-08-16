@@ -12,7 +12,15 @@ import { headingVariants } from '@/components/ui/heading';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
-import { type Chrome, type ChromeLabel, type ChromeScope, isHomeComponent } from '@/lib/member-chrome';
+import {
+    type Chrome,
+    type ChromeLabel,
+    type ChromeScope,
+    isHomeComponent,
+    isSectionActive,
+    NOTIFICATIONS_SECTION,
+    unifiedTabs,
+} from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -149,6 +157,80 @@ export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
 }
 
 /**
+ * The unified layout's mobile bar (docs/internals/feature-modules.md), standing where the brand bar
+ * and the hub bar used to: the drawer, the two places the layout moves between, what is waiting, and
+ * the account. The top level stops being several screens to arrive at — a member switches between
+ * their own space and their groups without going back home first.
+ *
+ * Only the top level. A detail, a form, a sheet and a room keep their own bar, which says where the
+ * reader is — a tab pair claiming they are at the top level would be saying something false.
+ */
+function UnifiedBar({ hidden }: { hidden?: boolean }) {
+    const t = useT();
+    const { url, props } = usePage<PageProps>();
+    // Query and hash off first: the Home tab matches its whole path (NavSection.exact).
+    const path = url.replace(/[?#].*$/, '');
+    const notifications = props.unread?.notifications ?? 0;
+
+    return (
+        // No seam: in the design this bar follows, the top of the page and the bar are one surface —
+        // the first card below is what marks where the page begins.
+        <TopBar hidden={hidden} seam={false}>
+            <NavDrawer />
+            {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
+                with the same name is a landmark list a reader cannot tell apart. Each tab names
+                itself and says whether it is the page being read. */}
+            <div className="flex min-w-0 flex-1 items-stretch justify-center">
+                {unifiedTabs(props.enabledFeatures).map((section) => {
+                    const active = isSectionActive(section, path);
+
+                    return (
+                        <Link
+                            key={section.href}
+                            href={section.href}
+                            aria-current={active ? 'page' : undefined}
+                            className="group relative flex min-h-12 min-w-0 items-center px-3"
+                        >
+                            {/* The bar's own label rank, since a tab names the place it leads to the
+                                way the hub bar's centered label named the one it stood on. */}
+                            <span
+                                className={cn(
+                                    headingVariants({ variant: 'bar' }),
+                                    'truncate transition',
+                                    !active && 'font-normal text-muted-foreground group-hover:text-foreground',
+                                )}
+                            >
+                                {t(section.label.key, section.label.replacements)}
+                            </span>
+                            {/* A dot rather than an underline: at this height an underline would land
+                                on the bar's own hairline and read as part of it. */}
+                            {active && (
+                                <span aria-hidden className="absolute inset-x-0 bottom-1.5 mx-auto size-1.5 rounded-full bg-primary" />
+                            )}
+                        </Link>
+                    );
+                })}
+            </div>
+            {/* The count is announced in words or not at all — the mock's grammar is a dot, not a
+                number: something is waiting, and how much is the notification screen's answer. The
+                link's name still carries the count for a reader who cannot see the dot. */}
+            <Link
+                href={NOTIFICATIONS_SECTION.href}
+                aria-label={
+                    notifications > 0
+                        ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications })
+                        : t(NOTIFICATIONS_SECTION.label.key)
+                }
+                className={cn(BAR_CONTROL, 'relative')}
+            >
+                <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
+                {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
+            </Link>
+        </TopBar>
+    );
+}
+
+/**
  * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard,
  * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
  * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
@@ -196,10 +278,16 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
+    // Home and the hubs are one bar in the unified layout; everything below them is untouched.
+    const topLevel = isHomeComponent(String(component)) || chrome.mode === 'section';
+    if (props.unifiedLayout && topLevel) {
+        return <UnifiedBar hidden={hidden} />;
+    }
+
     // Everything that is neither home nor a hub is a detail or form page. Home is named rather than
     // derived: it shares the detail pages' chrome mode (its h1 is in the page), but it is the brand's
     // home, and there is nothing above it to go back to.
-    if (!isHomeComponent(String(component)) && chrome.mode !== 'section') {
+    if (!topLevel) {
         const target = backTarget(inAppHistory, chrome.context);
 
         // A compose sheet spends the bar on leaving and finishing: close, then the page's own

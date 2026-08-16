@@ -127,7 +127,11 @@ page shows something the page it replaces did not (the group page's picture stri
 rows come from a source the viewer already reads, and each file is asked again through
 `FilePolicy`: a parent's read gate is not a permission on the bytes hanging off it.
 Nothing is stored differently either way, which is what makes switching back a decision
-rather than a deploy.
+rather than a deploy. The switch also reaches the shell: a signed-in member's Inertia
+payload carries `unifiedLayout`, which the mobile top and bottom bars draw the unified
+chrome from (a guest gets `false` whatever the setting says). It is one key added to
+every member response, not a change of behavior — false renders exactly the chrome the
+switch-off path always rendered.
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern

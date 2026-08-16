@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useLayoutEffect } from 'react';
 import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
@@ -41,6 +41,16 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // not nav they can bring back.
     const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
+
+    // The experiment's ground color rides the <html> class the way dark mode does: the body paints
+    // --background, so a wrapper here could not recolor what lies behind the shell. Cleared on
+    // unmount so an admin or auth screen visited next keeps the shipped paper.
+    const unified = props.unifiedLayout === true;
+    useLayoutEffect(() => {
+        document.documentElement.classList.toggle('unified', unified);
+
+        return () => document.documentElement.classList.remove('unified');
+    }, [unified]);
 
     return (
         <ComposeSheetProvider exit={exit}>
@@ -85,7 +95,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
-                {bottomNav && <BottomNav hidden={hidden} />}
+                {bottomNav && <BottomNav chrome={chrome} hidden={hidden} />}
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
                     draws under, so page content does not run beneath the clock once the bar slides off. */}
                 <div

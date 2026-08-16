@@ -271,7 +271,10 @@ class DiaryImageToolsTest extends McpTestCase
         $first = $this->attachToComment($comment, 800, 400);
         $second = $this->attachToComment($comment, 400, 800);
 
-        $this->assertSame([3, 4], $comment->images()->pluck('id')->all(), 'the fixture must not number rows 1..N');
+        // Not exact ids: MySQL's auto-increment does not rewind on the per-test rollback, so what
+        // they are depends on which tests shared the process (the CI shard composition). The decoy's
+        // two rows always precede these, which is all the guard needs.
+        $this->assertGreaterThan(2, min($comment->images()->pluck('id')->all()), 'the fixture must not number rows 1..N');
 
         $this->acting(Member::factory()->create());
 
