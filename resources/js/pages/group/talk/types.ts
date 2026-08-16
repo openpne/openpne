@@ -27,3 +27,19 @@ export type TalkPage = ChatPage<TalkMessage>;
 
 /** Where the unread boundary stood when the page was rendered — see the divider note in index.tsx. */
 export type TalkUnreadSnapshot = ChatUnreadSnapshot;
+
+/**
+ * What the reader missed while they were away, as the catch-up card states it. Shipped only for a
+ * backlog past the server's threshold, so the prop is absent rather than empty on an ordinary visit
+ * (App\Features\GroupTalk\Queries\TalkAbsenceDigest).
+ */
+export interface TalkUnreadDigest {
+    /** The snapshot's own count — the same number the divider and the jump stand for. */
+    count: number;
+    /** Where the backlog starts: the instant the reader had last caught up to. */
+    since: string;
+    /** Who did the talking, busiest first. A bounded sample of the backlog, never its full roster. */
+    participants: MemberRef[];
+    /** A glimpse of what was posted, oldest first. Empty when nothing readable was attached. */
+    thumbnails: GridImage[];
+}
