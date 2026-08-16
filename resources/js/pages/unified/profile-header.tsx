@@ -76,7 +76,7 @@ export function ProfileHeader({
                     />
                     {/* Wider than the card so the ellipse's ends leave the frame instead of meeting it;
                         the card clips them. -bottom-px closes the seam a fractional height can open. */}
-                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
+                    <span aria-hidden className="absolute inset-x-[-12%] -bottom-px block h-24 rounded-t-[50%] bg-card" />
                 </div>
             ) : (
                 // No picture still gets a cover: a wash of the identity's color (chosen, or derived
@@ -85,7 +85,7 @@ export function ProfileHeader({
                 <div className="relative">
                     <div
                         aria-hidden
-                        className="flex aspect-[4/3] max-h-[13rem] w-full items-center justify-center sm:max-h-52"
+                        className="flex aspect-[4/3] max-h-[13rem] w-full items-center justify-center pb-24 sm:max-h-52"
                         style={coverGradientStyle(profile.avatarColor ?? derivedIdentityColor(profile.name))}
                     >
                         <InitialBadge
@@ -94,11 +94,14 @@ export function ProfileHeader({
                             className="size-24 rounded-full bg-scrim-foreground/25 text-4xl text-scrim-foreground"
                         />
                     </div>
-                    <span aria-hidden className="absolute inset-x-[-16%] -bottom-px block h-14 rounded-t-[50%] bg-card" />
+                    <span aria-hidden className="absolute inset-x-[-12%] -bottom-px block h-24 rounded-t-[50%] bg-card" />
                 </div>
             )}
 
-            <div className="px-4 pt-2 pb-4 text-center sm:px-5">
+            {/* Inside the dome: the name sits in the bowl the arch carves out of the photo, the way
+                the design stores it there, not on the flat below. Later sibling, so it paints over
+                the arch without a stacking context. */}
+            <div className="relative -mt-14 px-4 pb-4 text-center sm:px-5">
                 <div className="flex min-w-0 items-center justify-center gap-2">
                     <Heading as={as} variant="page" className="text-2xl">
                         {profile.name}
