@@ -118,11 +118,16 @@ name; the follow-up GET resolves the surface the same way as any other request.
 The Modern surface carries a second, much narrower switch: `modern_unified_home`
 ([`SnsSettingKey`](../../app/Support/SnsSettingKey.php), off unless an operator turns
 it on, read through [`HomeLayout`](../../app/Features/Home/HomeLayout.php)). With it on,
-`/dashboard` renders the `unified/home` page instead of `dashboard`, and a signed-in
+`/dashboard` renders the `unified/home` page instead of `dashboard`, a signed-in
 member's `/member/{id}` renders `unified/member` instead of `member/show` (a guest keeps
-the shipped profile) — the same routes and the same viewer-scoped queries, projected
-read-only into a different layout, so it adds no capability of its own. Nothing is stored
-differently either way, which is what makes switching back a decision rather than a deploy.
+the shipped profile), and `/groups/{group}` renders `unified/group` instead of
+`community/show` — the same routes and the same viewer-scoped queries, projected
+read-only into a different layout, so it adds no capability of its own. Where a unified
+page shows something the page it replaces did not (the group page's picture strip), the
+rows come from a source the viewer already reads, and each file is asked again through
+`FilePolicy`: a parent's read gate is not a permission on the bytes hanging off it.
+Nothing is stored differently either way, which is what makes switching back a decision
+rather than a deploy.
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern
