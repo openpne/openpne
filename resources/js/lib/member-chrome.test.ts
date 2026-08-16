@@ -179,6 +179,14 @@ test('the unified home is the same screen as the dashboard it replaces', () => {
     assert.ok(!isHomeComponent('diary/feed'));
 });
 
+test('the unified member page is the same screen as the profile it replaces', () => {
+    // Same route, same chrome: the experiment switch must not change what the frame draws.
+    assert.deepEqual(chrome('unified/member', {}), chrome('member/show', {}));
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/member'));
+    // A page about somebody else, so its mobile bar takes the back control rather than the brand row.
+    assert.ok(!isHomeComponent('unified/member'));
+});
+
 test('a community-scoped page is scoped to the group', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 
