@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { continuesRun } from './message-grouping.ts';
+import { continuesRun, foldsInto } from './message-grouping.ts';
 
 const at = (iso: string, authorId: number | null) => ({
     author: authorId === null ? null : { id: authorId },
@@ -31,4 +31,19 @@ test('the first message of a page has no run to continue', () => {
 
 test('a clock that runs backwards breaks the run', () => {
     assert.ok(!continuesRun(at('2026-08-16T10:05:00+09:00', 1), at('2026-08-16T10:00:00+09:00', 1)));
+});
+
+test('the unread separator restarts a run, and the rows after it fold below the line', () => {
+    // One author, three quick messages, the line above the second: [m1] — line — [m2] [m3].
+    const m1 = { id: 1, ...at('2026-08-16T10:00:00+09:00', 7) };
+    const m2 = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7) };
+    const m3 = { id: 3, ...at('2026-08-16T10:02:00+09:00', 7) };
+
+    // m2 would continue the run — the separator above it is what forces its header back.
+    assert.ok(continuesRun(m1, m2));
+    assert.ok(!foldsInto(m1, m2, 2));
+    // m3 folds under m2: both sit below the line, so no fold crosses it.
+    assert.ok(foldsInto(m2, m3, 2));
+    // Without a line in the list, m2 folds as normal.
+    assert.ok(foldsInto(m1, m2, null));
 });

@@ -5,7 +5,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
-import { continuesRun } from '@/lib/chat/message-grouping';
+import { foldsInto } from '@/lib/chat/message-grouping';
 import { dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -340,10 +340,9 @@ export default function GroupTalkIndex() {
                                     message={message}
                                     onDelete={remove}
                                     highlighted={message.id === highlightId}
-                                    // The unread separator breaks a run: what follows it is where the
-                                    // reader resumes, and it must say again who is speaking.
-                                    grouped={message.id !== dividerId && continuesRun(messages[index - 1], message)}
-                                    rule={index > 0 && message.id !== dividerId && !continuesRun(messages[index - 1], message)}
+                                    grouped={foldsInto(messages[index - 1], message, dividerId)}
+                                    // No rule right under the separator: the line is already a rule.
+                                    rule={index > 0 && message.id !== dividerId && !foldsInto(messages[index - 1], message, dividerId)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
