@@ -31,8 +31,8 @@ class UnifiedHomeSerializer
     /** Group cards: two full rows of three. */
     private const GROUPS = 6;
 
-    /** Faces in the people row. */
-    private const FRIENDS = 10;
+    /** Faces in the people grid: the seat map's two rows, four and five. */
+    private const FRIENDS = 9;
 
     /**
      * @return array{profile: array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: string|null, isAi: bool, bio: string|null}, groups: list<array{id: int, name: string, imageUrl: string|null, href: string}>, friends: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, href: string}>, recentPhotos: list<array{source: 'diary'|'timeline', href: string, image: array}>, recentDiaries: list<array>}
@@ -53,7 +53,7 @@ class UnifiedHomeSerializer
                 ? (new ListMemberGroups)->take($viewer, self::GROUPS)
                 : collect()),
             'friends' => UnifiedSections::people(Feature::Friend->enabled()
-                ? (new ListFriends)->take($viewer, $viewer, self::FRIENDS)
+                ? (new ListFriends)->takeNewest($viewer, $viewer, self::FRIENDS)
                 : collect()),
             'recentPhotos' => UnifiedSections::photos($diaries, Feature::Timeline->enabled()
                 ? (new MemberTimeline)->take($viewer, $viewer, UnifiedSections::PHOTOS)

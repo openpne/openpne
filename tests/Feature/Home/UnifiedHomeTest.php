@@ -36,12 +36,14 @@ class UnifiedHomeTest extends TestCase
         $this->freshRequestState();
     }
 
-    /** The bidirectional mirror `friendships` is read through, both rows. */
-    private function makeFriends(Member $a, Member $b): void
+    /** The bidirectional mirror `friendships` is read through, both rows. `$at` defaults to useCurrent. */
+    private function makeFriends(Member $a, Member $b, ?string $at = null): void
     {
+        $when = $at === null ? [] : ['created_at' => $at];
+
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), ...$when],
         ]);
     }
 
@@ -232,6 +234,33 @@ class UnifiedHomeTest extends TestCase
                 ->where('friends.0.isAi', false)
                 ->where('friends.0.href', "/member/{$friend->getKey()}")
             );
+    }
+
+    /**
+     * The faces are a decoration, but the order is a rule a member can read off the screen: the newest
+     * friendships first, as many as the seat map seats. A tenth would hang a row of one under the
+     * formation, and an unordered slice would make "who is around" mean whatever the table returned.
+     */
+    public function test_the_faces_are_the_nine_newest_friendships(): void
+    {
+        $viewer = Member::factory()->create();
+        // Friendship dates scattered across the order the members were created, so the expected row is
+        // neither the members ascending nor descending: only reading the friendship's own timestamp
+        // produces it, and an unordered slice (which the table returns by ascending id) fails.
+        $friends = [];
+
+        foreach ([5, 11, 3, 8, 1, 9, 6, 2, 10, 4, 7] as $day) {
+            $friend = Member::factory()->create();
+            $this->makeFriends($viewer, $friend, sprintf('2026-08-%02d 10:00:00', $day));
+            $friends[] = $friend;
+        }
+
+        $this->unifiedOn();
+        $expected = array_map(fn (int $made): int => $friends[$made]->getKey(), [1, 8, 5, 3, 10, 6, 0, 9, 2]);
+
+        $page = $this->actingAs($viewer)->get('/dashboard')->viewData('page');
+
+        $this->assertSame($expected, array_column($page['props']['friends'], 'id'));
     }
 
     public function test_the_group_unit_off_empties_its_section_without_reading_it(): void

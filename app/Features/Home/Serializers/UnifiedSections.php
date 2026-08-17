@@ -107,8 +107,8 @@ final class UnifiedSections
     }
 
     /**
-     * The faces row — the digest's friend shape, which is what the shared tile idioms consume. Named
-     * for what it draws rather than for the relationship: the same row shows a member's friends on
+     * The faces grid — the digest's friend shape, which is what the shared tile idioms consume. Named
+     * for what it draws rather than for the relationship: the same grid shows a member's friends on
      * one page and a group's members on another, and the tiles must not tell them apart.
      *
      * @param  Collection<int, Member>  $people  `avatar.file` eager-loaded by the caller's query
