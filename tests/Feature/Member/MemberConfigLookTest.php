@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Member;
 
+use App\Features\Member\MemberConfigController;
 use App\Models\Member;
 use App\Support\Look;
 use App\Support\LookResolver;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 /**
@@ -171,6 +174,31 @@ class MemberConfigLookTest extends TestCase
             ->assertRedirect('/member/config');
 
         $this->assertSame('unified', $this->storedLook($member));
+    }
+
+    public function test_the_confirm_gate_refuses_an_intent_that_survives_to_the_controller(): void
+    {
+        // The shared-prop pass sweeps a stale intent before the controller runs, so no HTTP request
+        // can reach updateLook()'s own 403 belt — it exists for the set narrowing between the two
+        // (a true TOCTOU). Exercised directly, middleware bypassed, so removing the belt goes red.
+        $member = Member::factory()->create();
+        $this->setSnsSetting(SnsSettingKey::SelectableLooks, []);
+        $this->freshRequestState();
+        $this->actingAs($member);
+
+        $request = Request::create('/member/config/look', 'POST');
+        $request->setLaravelSession(app('session.store'));
+        $request->session()->put(LookResolver::PREVIEW_SESSION_KEY, ['look' => 'unified', 'pin' => true]);
+        $request->setUserResolver(static fn () => $member);
+
+        try {
+            app(MemberConfigController::class)->updateLook($request);
+            $this->fail('The stale intent was applied instead of being refused.');
+        } catch (HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+
+        $this->assertNull($this->storedLook($member));
     }
 
     public function test_confirming_a_look_the_site_stopped_offering_writes_nothing(): void
