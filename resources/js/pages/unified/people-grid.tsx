@@ -30,8 +30,10 @@ export function seatRows(count: number): SeatRow[] {
     if (count === 0) {
         return [];
     }
+    // Spread over the seats the count fills, so neither four nor five leaves a seat's worth of hole at
+    // the end of the only row there is.
     if (count <= 5) {
-        return [{ seats: 5, filled: count }];
+        return [{ seats: count <= 4 ? 4 : 5, filled: count }];
     }
 
     const rows: SeatRow[] = [];
@@ -55,10 +57,12 @@ export function seatRows(count: number): SeatRow[] {
  * as a maximum over the seat, not as a size, so a viewport too narrow to seat five 48px faces shrinks
  * them instead of letting the row spill out of its card.
  *
- * One list over one grid of twenty columns, which four and five both divide (a seat is five columns
- * wide in a row of four, four in a row of five): the rows are a visual arrangement, and a list per row
- * would have a screen reader announce a formation the design draws for the eye. The top row is always
- * full, so what breaks a row is the spans rather than the count.
+ * One list over one grid of forty columns: the rows are a visual arrangement, and a list per row would
+ * have a screen reader announce a formation the design draws for the eye. A seat is eight columns in a
+ * row of five, and nine starting two columns in for a row of four — which is where the stagger comes
+ * from, since the four-seat row is both wider-pitched and held off the edges. Forty columns is what
+ * lets that inset be a whole number of them. The top row is always full, so what breaks a row is the
+ * spans rather than the count.
  *
  * The seat, not the face, is the link: a circle would hand back the corners of its own target.
  */
@@ -67,16 +71,19 @@ export function PeopleGrid({ people }: { people: NineTableItem[] }) {
     let seated = 0;
 
     return (
-        <ul className="grid grid-cols-20 gap-y-4 sm:gap-y-6">
+        <ul className="grid grid-cols-40 gap-y-4 sm:gap-y-6">
             {seatRows(people.length).flatMap(({ seats, filled }) => {
                 const inRow = people.slice(seated, seated + filled);
                 seated += filled;
 
-                return inRow.map((person) => {
+                return inRow.map((person, seat) => {
                     const label = markedName(person.name, person.isAi, t);
 
                     return (
-                        <li key={person.id} className={seats === 4 ? 'col-span-5' : 'col-span-4'}>
+                        <li
+                            key={person.id}
+                            className={seats === 4 ? `col-span-9${seat === 0 ? ' col-start-3' : ''}` : 'col-span-8'}
+                        >
                             <Link
                                 href={person.href}
                                 // aria-label because no name is drawn: the face is the whole tile, and

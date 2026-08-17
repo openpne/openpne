@@ -36,7 +36,9 @@ test('a full grid is the four-then-five formation the design asks for', () => {
  */
 test('a short count fills the seat map from the top row down', () => {
     expect(seatRows(0)).toEqual([]);
-    expect(seatRows(1)).toEqual([{ seats: 5, filled: 1 }]);
+    expect(seatRows(1)).toEqual([{ seats: 4, filled: 1 }]);
+    // Four spread over four seats, not over five with one left empty.
+    expect(seatRows(4)).toEqual([{ seats: 4, filled: 4 }]);
     expect(seatRows(5)).toEqual([{ seats: 5, filled: 5 }]);
     expect(seatRows(6)).toEqual([
         { seats: 4, filled: 4 },
@@ -58,21 +60,23 @@ test('a count past the second row keeps alternating', () => {
 });
 
 /**
- * The seats of a row are spans over one twenty-column grid, so a row of four and a row of five sit at
- * different pitches — which is the stagger — while the faces stay one list.
+ * The seats of a row are spans over one forty-column grid, so a row of four sits at a wider pitch than
+ * a row of five and starts two columns in — the two together are the stagger — while the faces stay one
+ * list. Four nines from column three end at column 38, which is what wraps the fifth seat to a row of
+ * its own.
  */
-test('a row of four seats faces wider than a row of five', () => {
+test('a row of four seats faces wider than a row of five, and held off the edge', () => {
     const { container } = render(<PeopleGrid people={people(6)} />);
     const seats = [...container.querySelectorAll('li')].map((li) => li.className);
 
     expect(container.querySelectorAll('ul')).toHaveLength(1);
-    expect(seats).toEqual(['col-span-5', 'col-span-5', 'col-span-5', 'col-span-5', 'col-span-4', 'col-span-4']);
+    expect(seats).toEqual(['col-span-9 col-start-3', 'col-span-9', 'col-span-9', 'col-span-9', 'col-span-8', 'col-span-8']);
 });
 
-test('a count that fits one row is spread at the five-seat pitch', () => {
+test('a count that fits one row is spread over the seats it fills', () => {
     const { container } = render(<PeopleGrid people={people(3)} />);
 
-    expect([...container.querySelectorAll('li')].map((li) => li.className)).toEqual(['col-span-4', 'col-span-4', 'col-span-4']);
+    expect([...container.querySelectorAll('li')].map((li) => li.className)).toEqual(['col-span-9 col-start-3', 'col-span-9', 'col-span-9']);
 });
 
 test('every face is seated exactly once, in order', () => {

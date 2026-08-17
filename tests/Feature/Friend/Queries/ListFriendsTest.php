@@ -80,11 +80,41 @@ class ListFriendsTest extends TestCase
         $this->assertSame(1, $page->total());
     }
 
-    private function makeFriends(Member $a, Member $b): void
+    /**
+     * Friendships made in the same request share a timestamp (`created_at` defaults to useCurrent), so
+     * the tie-break is what the decorative row's "same set on every visit" actually rests on.
+     */
+    public function test_take_newest_breaks_a_tie_on_the_friend_id(): void
     {
+        [$owner, $early, $late] = Member::factory()->count(3)->create()->all();
+        $this->makeFriends($owner, $early, '2026-08-01 10:00:00');
+        $this->makeFriends($owner, $late, '2026-08-01 10:00:00');
+
+        $friends = (new ListFriends)->takeNewest($owner, $owner, 2);
+
+        $this->assertSame([$late->getKey(), $early->getKey()], $friends->modelKeys());
+    }
+
+    public function test_take_newest_returns_empty_when_owner_has_blocked_viewer(): void
+    {
+        [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
+        $this->makeFriends($alice, $carol);
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $alice->getKey(),
+            'blocked_id' => $bob->getKey(),
+        ]);
+
+        $this->assertSame([], (new ListFriends)->takeNewest($bob, $alice, 9)->modelKeys());
+    }
+
+    /** `$at` defaults to useCurrent, which is what production writes. */
+    private function makeFriends(Member $a, Member $b, ?string $at = null): void
+    {
+        $when = $at === null ? [] : ['created_at' => $at];
+
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), ...$when],
         ]);
     }
 }
