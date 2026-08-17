@@ -32,9 +32,15 @@ class ListFriends
     }
 
     /**
-     * The $limit newest friendships, newest first — for a decorative row of faces, where the order has
-     * to be a rule a member can read off the screen rather than whatever order the table hands back.
-     * The id breaks a tie so the slice is the same set on every visit.
+     * The $limit newest friendships, newest first — for a decorative row of faces, where a new friend
+     * arriving at the front is a rule its own member can read off the screen, rather than the order the
+     * table happens to hand back. It is the row's own order and not the friend list's: the paged roster
+     * behind it is unordered, as it has always been.
+     *
+     * Both keys are the pivot's, so the sort finishes on `friendships` and the join runs for the $limit
+     * rows that survive it. Ordering by `members.id` instead selects the same rows in the same order —
+     * the join is on that column — but sorts after the join, which costs a row lookup per friendship the
+     * member has.
      *
      * Separate from take() rather than an order on it: the gadget and the profile grid print rows as
      * the table returns them, and an ORDER BY reaching them would change screens that are shipped.
@@ -45,7 +51,7 @@ class ListFriends
     {
         return $this->query($viewer, $owner)
             ->orderByPivot('created_at', 'desc')
-            ->orderByDesc('members.id')
+            ->orderByPivot('friend_id', 'desc')
             ->limit($limit)
             ->get();
     }

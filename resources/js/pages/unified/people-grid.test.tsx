@@ -23,45 +23,56 @@ const people = (count: number): NineTableItem[] =>
     Array.from({ length: count }, (_, index) => person({ id: index + 1, name: `Member ${index + 1}`, href: `/member/${index + 1}` }));
 
 test('a full grid is the four-then-five formation the design asks for', () => {
-    expect(seatRows(9)).toEqual([4, 5]);
+    expect(seatRows(9)).toEqual([
+        { seats: 4, filled: 4 },
+        { seats: 5, filled: 5 },
+    ]);
 });
 
 /**
- * The counts below nine are what a small group or a new member actually has, and the four-seat top row
- * is held even then: rows that split evenly (three and three for six) would line the columns up and
- * lose the stagger the formation is for.
+ * The counts below nine are what a small group or a new member actually has. Six and up keep the
+ * four-seat top row — rows that split evenly (three and three) would line the columns up and lose the
+ * stagger — but five and under are one row, since a second row of one has nothing to stagger against.
  */
 test('a short count fills the seat map from the top row down', () => {
     expect(seatRows(0)).toEqual([]);
-    expect(seatRows(1)).toEqual([1]);
-    expect(seatRows(4)).toEqual([4]);
-    expect(seatRows(5)).toEqual([4, 1]);
-    expect(seatRows(6)).toEqual([4, 2]);
-    expect(seatRows(8)).toEqual([4, 4]);
+    expect(seatRows(1)).toEqual([{ seats: 5, filled: 1 }]);
+    expect(seatRows(5)).toEqual([{ seats: 5, filled: 5 }]);
+    expect(seatRows(6)).toEqual([
+        { seats: 4, filled: 4 },
+        { seats: 5, filled: 2 },
+    ]);
+    expect(seatRows(8)).toEqual([
+        { seats: 4, filled: 4 },
+        { seats: 5, filled: 4 },
+    ]);
 });
 
 /** Nothing caps the component: a caller that asks for more gets more rows, in the same rhythm. */
 test('a count past the second row keeps alternating', () => {
-    expect(seatRows(10)).toEqual([4, 5, 1]);
-    expect(seatRows(18)).toEqual([4, 5, 4, 5]);
+    expect(seatRows(10)).toEqual([
+        { seats: 4, filled: 4 },
+        { seats: 5, filled: 5 },
+        { seats: 4, filled: 1 },
+    ]);
 });
 
-test('the rows are drawn with the seats of their rank, not of their contents', () => {
+/**
+ * The seats of a row are spans over one twenty-column grid, so a row of four and a row of five sit at
+ * different pitches — which is the stagger — while the faces stay one list.
+ */
+test('a row of four seats faces wider than a row of five', () => {
     const { container } = render(<PeopleGrid people={people(6)} />);
-    const rows = container.querySelectorAll('ul');
+    const seats = [...container.querySelectorAll('li')].map((li) => li.className);
 
-    expect(rows).toHaveLength(2);
-    // The second row holds two faces but is still a five-seat row, which is what leaves it ragged.
-    expect(rows[0]?.className).toContain('grid-cols-4');
-    expect(rows[1]?.className).toContain('grid-cols-5');
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(seats).toEqual(['col-span-5', 'col-span-5', 'col-span-5', 'col-span-5', 'col-span-4', 'col-span-4']);
 });
 
-/** The narrower spread of the four-seat row is what puts one row's faces between the other's. */
-test('the four-seat row is spread narrower than the five', () => {
-    const { container } = render(<PeopleGrid people={people(9)} />);
+test('a count that fits one row is spread at the five-seat pitch', () => {
+    const { container } = render(<PeopleGrid people={people(3)} />);
 
-    expect(container.querySelectorAll('ul')[0]?.className).toContain('mx-[4%]');
-    expect(container.querySelectorAll('ul')[1]?.className).not.toContain('mx-[');
+    expect([...container.querySelectorAll('li')].map((li) => li.className)).toEqual(['col-span-4', 'col-span-4', 'col-span-4']);
 });
 
 test('every face is seated exactly once, in order', () => {

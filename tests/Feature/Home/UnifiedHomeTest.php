@@ -244,25 +244,23 @@ class UnifiedHomeTest extends TestCase
     public function test_the_faces_are_the_nine_newest_friendships(): void
     {
         $viewer = Member::factory()->create();
-        // Friendships made in the reverse of the order the members were created, so the row can only
-        // come out right by reading the friendship's own timestamp.
-        $newest = [];
+        // Friendship dates scattered across the order the members were created, so the expected row is
+        // neither the members ascending nor descending: only reading the friendship's own timestamp
+        // produces it, and an unordered slice (which the table returns by ascending id) fails.
+        $friends = [];
 
-        foreach (range(1, 11) as $number) {
+        foreach ([5, 11, 3, 8, 1, 9, 6, 2, 10, 4, 7] as $day) {
             $friend = Member::factory()->create();
-            $this->makeFriends($viewer, $friend, sprintf('2026-08-%02d 10:00:00', 12 - $number));
-            $newest[] = $friend;
+            $this->makeFriends($viewer, $friend, sprintf('2026-08-%02d 10:00:00', $day));
+            $friends[] = $friend;
         }
 
         $this->unifiedOn();
+        $expected = array_map(fn (int $made): int => $friends[$made]->getKey(), [1, 8, 5, 3, 10, 6, 0, 9, 2]);
 
-        $this->actingAs($viewer)
-            ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page
-                ->has('friends', 9)
-                ->where('friends.0.id', $newest[0]->getKey())
-                ->where('friends.8.id', $newest[8]->getKey())
-            );
+        $page = $this->actingAs($viewer)->get('/dashboard')->viewData('page');
+
+        $this->assertSame($expected, array_column($page['props']['friends'], 'id'));
     }
 
     public function test_the_group_unit_off_empties_its_section_without_reading_it(): void
