@@ -32,6 +32,13 @@ final class LookResolver
             return Look::Standard;
         }
 
+        // With fewer than two looks on offer nothing below could resolve to anything but the
+        // default (preview and choice are both filtered through the same set), so a site that has
+        // not opted in skips the preference read — and its cost — entirely.
+        if (count(self::selectable()) < 2) {
+            return self::siteDefault();
+        }
+
         // A preview outranks the durable choice: it is what the member asked to see right now, and
         // it lasts until they confirm, cancel, cross to Classic, or sign out.
         $preview = self::preview($request);
@@ -58,8 +65,20 @@ final class LookResolver
     public static function preview(Request $request): ?Look
     {
         $intent = self::previewIntent($request);
+        if ($intent === null) {
+            return null;
+        }
 
-        return $intent !== null && in_array($intent['look'], self::selectable(), true) ? $intent['look'] : null;
+        if (! in_array($intent['look'], self::selectable(), true)) {
+            // Dropped, not merely ignored: a session entry that outlived its look would wake the
+            // preview bar back up if the administrator ever re-offers it, with no action from the
+            // member. Once unrenderable, the trial is over.
+            $request->session()->forget(self::PREVIEW_SESSION_KEY);
+
+            return null;
+        }
+
+        return $intent['look'];
     }
 
     /**

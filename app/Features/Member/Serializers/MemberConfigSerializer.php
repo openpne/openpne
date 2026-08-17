@@ -88,8 +88,12 @@ class MemberConfigSerializer
                 ),
                 // The stored choice, not the resolved look: the first card is "follow the site
                 // default", and an undecided member must land there rather than on whatever they
-                // are currently being shown.
-                'current' => $member->preferredLook()?->value,
+                // are currently being shown. Filtered through the same set as the resolver — a
+                // stored look the site no longer offers preselects "follow" (what is rendered),
+                // not a card that is not there.
+                'current' => (($stored = $member->preferredLook()) !== null && in_array($stored, $selectable, true))
+                    ? $stored->value
+                    : null,
                 'default' => ['value' => $default->value, 'label' => $default->label()],
             ];
         }

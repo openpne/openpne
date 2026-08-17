@@ -913,6 +913,7 @@
     "Preset fields define their structure from preset_profile config and cannot be changed here.": "プリセット項目の構造は preset_profile 設定で定義され、ここでは変更できません。",
     "Preview": "プレビュー",
     "Preview unavailable.": "プレビューを表示できませんでした",
+    "Previewing the site default (currently :look)": "サイトの標準をプレビュー中(いま: :look)",
     "Previewing: :look": "プレビュー中: :look",
     "Previous": "前へ",
     "Previous %Diary%": "前の%diary%",

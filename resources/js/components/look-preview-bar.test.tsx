@@ -53,6 +53,16 @@ test('the confirm POST carries no choice, so it cannot disagree with the bar', (
     expect(inertia.post).toHaveBeenCalledWith('/member/config/look');
 });
 
+test('following the site default is named as such, not as the look it happens to render', () => {
+    // The two intents confirm to opposite writes, so the bar must say which one is on the table.
+    arrive({ look: 'standard', pin: false, label: 'Standard' });
+
+    render(<LookPreviewBar />);
+
+    expect(screen.getByText('Previewing the site default (currently Standard)')).toBeTruthy();
+    expect(screen.queryByText('Previewing: Standard')).toBeNull();
+});
+
 test('nothing is drawn while no look is being tried on', () => {
     arrive(null);
 

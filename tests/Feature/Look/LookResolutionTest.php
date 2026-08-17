@@ -97,6 +97,18 @@ class LookResolutionTest extends TestCase
             );
     }
 
+    public function test_a_stale_preview_session_is_dropped_rather_than_left_to_wake_up_again(): void
+    {
+        // Ignoring the entry but keeping it would revive the bar — with no action from the
+        // member — the day the administrator re-offers the look. Once unrenderable, it is gone.
+        $viewer = Member::factory()->create();
+        $this->setSnsSetting(SnsSettingKey::SelectableLooks, []);
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)->withSession($this->previewing(Look::Unified))->get('/dashboard')
+            ->assertSessionMissing(LookResolver::PREVIEW_SESSION_KEY);
+    }
+
     public function test_a_stored_choice_the_site_stopped_offering_is_ignored(): void
     {
         // The safety belt for a row the admin cleanup has not reached (a look dropped from the

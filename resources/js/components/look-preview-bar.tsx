@@ -27,7 +27,13 @@ export function LookPreviewBar() {
             aria-label={t('Layout preview')}
             className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-muted px-3 py-2 sm:px-4"
         >
-            <p className="text-sm text-foreground">{t('Previewing: :look', { look: t(lookPreview.label) })}</p>
+            {/* The two intents confirm to opposite writes (pin the look / go back to following the
+                site), so the bar says which one is on the table, not just what is being rendered. */}
+            <p className="text-sm text-foreground">
+                {lookPreview.pin
+                    ? t('Previewing: :look', { look: t(lookPreview.label) })
+                    : t('Previewing the site default (currently :look)', { look: t(lookPreview.label) })}
+            </p>
             {/* Default size, not sm: both are decisions taken on a phone, so they keep the 44px target. */}
             <div className="flex items-center gap-2">
                 <Button onClick={() => router.post('/member/config/look')}>{t('Use this layout')}</Button>

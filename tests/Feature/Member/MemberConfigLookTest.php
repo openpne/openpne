@@ -173,14 +173,18 @@ class MemberConfigLookTest extends TestCase
         $this->assertSame('unified', $this->storedLook($member));
     }
 
-    public function test_confirming_a_look_the_site_stopped_offering_is_refused(): void
+    public function test_confirming_a_look_the_site_stopped_offering_writes_nothing(): void
     {
-        // The set can narrow while a preview is warm; the confirm re-checks rather than trusting it.
+        // The set can narrow while a preview is warm. The stale session is dropped by the shared-prop
+        // pass before the controller runs (self-heal in LookResolver::preview()), so the confirm
+        // finds no intent and applies nothing; updateLook()'s own 403 gate stays as the last belt
+        // for an intent that somehow survives to it.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->withSession($this->previewing(Look::Unified))
             ->post('/member/config/look')
-            ->assertForbidden();
+            ->assertRedirect('/member/config')
+            ->assertSessionMissing(LookResolver::PREVIEW_SESSION_KEY);
 
         $this->assertNull($this->storedLook($member));
     }
