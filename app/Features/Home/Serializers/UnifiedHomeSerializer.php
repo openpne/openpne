@@ -13,7 +13,7 @@ use App\Models\Member;
 use App\Support\Feature;
 
 /**
- * The unified Modern home (SnsSettingKey::ModernUnifiedHome): the viewer's own profile, the groups and
+ * The unified Modern home (Look::Unified): the viewer's own profile, the groups and
  * people they belong among, their latest content, and the sections they can act in — the last of which
  * the client builds from the chrome registry, so nothing about it travels here.
  *

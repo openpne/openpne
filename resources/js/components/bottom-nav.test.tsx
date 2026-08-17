@@ -35,7 +35,7 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
         props: {
             auth: { user },
             enabledFeatures: allOn,
-            unifiedLayout: false,
+            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },
@@ -75,7 +75,7 @@ test('the shipped bar is five section tabs and names no place', () => {
  */
 test('the unified bar names the group a member is inside, from anywhere in it', () => {
     const chrome = arrive('group/talk/index', '/groups/7/talk', {
-        unifiedLayout: true,
+        look: 'unified',
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
@@ -91,7 +91,7 @@ test('the unified bar names the group a member is inside, from anywhere in it', 
 
 test("the group's own top is where the middle zone already stands", () => {
     const chrome = arrive('unified/group', '/groups/7', {
-        unifiedLayout: true,
+        look: 'unified',
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
@@ -101,7 +101,7 @@ test("the group's own top is where the middle zone already stands", () => {
 });
 
 test('a screen that is nowhere in particular falls back to home', () => {
-    const chrome = arrive('notifications/index', '/notifications', { unifiedLayout: true });
+    const chrome = arrive('notifications/index', '/notifications', { look: 'unified' });
 
     render(<BottomNav chrome={chrome} />);
 
@@ -111,7 +111,7 @@ test('a screen that is nowhere in particular falls back to home', () => {
 
 test('the unified bar says how many notifications are waiting, in words', () => {
     const chrome = arrive('unified/home', '/dashboard', {
-        unifiedLayout: true,
+        look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 2, groupTalks: 0 },
     });
 
@@ -121,7 +121,7 @@ test('the unified bar says how many notifications are waiting, in words', () => 
 });
 
 test('a guest gets no bar at all, whatever the layout', () => {
-    const chrome = arrive('member/show', '/member/9', { unifiedLayout: true, auth: { user: null } });
+    const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
 
     const { container } = render(<BottomNav chrome={chrome} />);
 

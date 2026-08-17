@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Features\Friend\Queries\RandomFriends;
 use App\Features\GroupTalk\Queries\NavTalkRooms;
-use App\Features\Home\HomeLayout;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
@@ -13,6 +12,7 @@ use App\Notifications\Push\WebPushConfig;
 use App\Services\TermService;
 use App\Support\BrandColor;
 use App\Support\Feature;
+use App\Support\LookResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
@@ -56,10 +56,10 @@ class HandleInertiaRequests extends Middleware
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
-            // Which chrome the Modern shell draws (docs/internals/feature-modules.md). A guest is
-            // false whatever the site setting says: the layout is a member's way around their own
-            // pages, and a signed-out visitor sees none of them.
-            'unifiedLayout' => $user !== null && HomeLayout::unifiedEnabled(),
+            // Which look the Modern shell draws (docs/internals/looks.md), resolved once here rather
+            // than asked again per bar. Always a look id, never null — a guest's is `standard`
+            // whatever the site setting says (LookResolver).
+            'look' => LookResolver::resolve($request)->value,
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,

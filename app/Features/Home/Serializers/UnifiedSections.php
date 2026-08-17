@@ -11,7 +11,7 @@ use App\Models\TimelinePost;
 use Illuminate\Support\Collection;
 
 /**
- * The projections the unified layout's pages share (SnsSettingKey::ModernUnifiedHome): the picture
+ * The projections the unified layout's pages share (Look::Unified): the picture
  * mosaic, the group cover cards, and the row of faces. The same React components read all three, so
  * the shape is a contract between the pages rather than a detail of either — the home draws them
  * about the viewer, the member page about whoever it is about, and the two must not drift.
