@@ -36,12 +36,14 @@ class UnifiedHomeTest extends TestCase
         $this->freshRequestState();
     }
 
-    /** The bidirectional mirror `friendships` is read through, both rows. */
-    private function makeFriends(Member $a, Member $b): void
+    /** The bidirectional mirror `friendships` is read through, both rows. `$at` defaults to useCurrent. */
+    private function makeFriends(Member $a, Member $b, ?string $at = null): void
     {
+        $when = $at === null ? [] : ['created_at' => $at];
+
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), ...$when],
         ]);
     }
 
@@ -231,6 +233,35 @@ class UnifiedHomeTest extends TestCase
                 ->where('friends.0.name', $friend->name)
                 ->where('friends.0.isAi', false)
                 ->where('friends.0.href', "/member/{$friend->getKey()}")
+            );
+    }
+
+    /**
+     * The faces are a decoration, but the order is a rule a member can read off the screen: the newest
+     * friendships first, as many as the seat map seats. A tenth would hang a row of one under the
+     * formation, and an unordered slice would make "who is around" mean whatever the table returned.
+     */
+    public function test_the_faces_are_the_nine_newest_friendships(): void
+    {
+        $viewer = Member::factory()->create();
+        // Friendships made in the reverse of the order the members were created, so the row can only
+        // come out right by reading the friendship's own timestamp.
+        $newest = [];
+
+        foreach (range(1, 11) as $number) {
+            $friend = Member::factory()->create();
+            $this->makeFriends($viewer, $friend, sprintf('2026-08-%02d 10:00:00', 12 - $number));
+            $newest[] = $friend;
+        }
+
+        $this->unifiedOn();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->has('friends', 9)
+                ->where('friends.0.id', $newest[0]->getKey())
+                ->where('friends.8.id', $newest[8]->getKey())
             );
     }
 

@@ -7,7 +7,7 @@ import { ActionTiles } from './action-tiles';
 import { DiaryCards } from './diary-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
 import { HomeSection, SubSection } from './home-section';
-import { PeopleRow } from './people-row';
+import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
 
@@ -54,7 +54,7 @@ export default function UnifiedHome() {
 
             {friends.length > 0 && (
                 <HomeSection title={t('People around you')} viewAll={{ label: t('View all'), href: '/friend/list' }}>
-                    <PeopleRow people={friends} />
+                    <PeopleGrid people={friends} />
                 </HomeSection>
             )}
 

@@ -31,8 +31,8 @@ final class UnifiedMemberSerializer
     /** Group cards: two full rows of three. */
     private const GROUPS = 6;
 
-    /** Faces in the people row. */
-    private const FRIENDS = 10;
+    /** Faces in the people grid: the seat map's two rows, four and five. */
+    private const FRIENDS = 9;
 
     /**
      * @param  Collection<int, ProfileFieldValue>  $fields  already resolved at the viewer's clearance
@@ -65,7 +65,7 @@ final class UnifiedMemberSerializer
                 ? (new ListMemberGroups)->take($owner, self::GROUPS)
                 : collect()),
             'friends' => UnifiedSections::people(Feature::Friend->enabled()
-                ? (new ListFriends)->take($viewer, $owner, self::FRIENDS)
+                ? (new ListFriends)->takeNewest($viewer, $owner, self::FRIENDS)
                 : collect()),
             'recentPhotos' => UnifiedSections::photos($diaries, Feature::Timeline->enabled()
                 ? (new MemberTimeline)->take($viewer, $owner, UnifiedSections::PHOTOS)

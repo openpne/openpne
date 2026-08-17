@@ -8,7 +8,7 @@ import { DiaryCards } from './diary-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
 import { HomeSection, SubSection } from './home-section';
 import { MemberActions, type MemberActionsProfile } from './member-actions';
-import { PeopleRow } from './people-row';
+import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
 
@@ -81,9 +81,7 @@ export default function UnifiedMember() {
                     icon={UserCircle2}
                     viewAll={{ label: t('View all'), href: `/friend/list?id=${profile.id}` }}
                 >
-                    {/* Named here, unlike the home's row: these are somebody else's people, so the
-                        faces are ones the reader may not know yet. */}
-                    <PeopleRow people={friends} named />
+                    <PeopleGrid people={friends} />
                 </HomeSection>
             )}
 

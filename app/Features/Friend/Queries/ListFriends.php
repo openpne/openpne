@@ -32,6 +32,25 @@ class ListFriends
     }
 
     /**
+     * The $limit newest friendships, newest first — for a decorative row of faces, where the order has
+     * to be a rule a member can read off the screen rather than whatever order the table hands back.
+     * The id breaks a tie so the slice is the same set on every visit.
+     *
+     * Separate from take() rather than an order on it: the gadget and the profile grid print rows as
+     * the table returns them, and an ORDER BY reaching them would change screens that are shipped.
+     *
+     * @return Collection<int, Member>
+     */
+    public function takeNewest(Member $viewer, Member $owner, int $limit): Collection
+    {
+        return $this->query($viewer, $owner)
+            ->orderByPivot('created_at', 'desc')
+            ->orderByDesc('members.id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * The owner's whole friend count, for a widget that shows a slice and links to the rest — the
      * take() slice can never stand in for it. One aggregate, so the same block rule applies as to
      * the list itself.

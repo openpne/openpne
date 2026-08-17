@@ -11,7 +11,7 @@ import type { CommunityRoleSlug, EventSummary, TopicSummary } from '../community
 import { BoardCards } from './board-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
 import { HOME_CARD, HomeSection, SubSection } from './home-section';
-import { PeopleRow } from './people-row';
+import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
 
@@ -182,8 +182,7 @@ export default function UnifiedGroup() {
 
             {members.length > 0 && (
                 <HomeSection title={t('Members')} icon={UserCircle2} viewAll={{ label: t('View all'), href: memberListHref }}>
-                    {/* Named, like the member page's row: these are faces a visitor may not know yet. */}
-                    <PeopleRow people={members} named />
+                    <PeopleGrid people={members} />
                 </HomeSection>
             )}
 
