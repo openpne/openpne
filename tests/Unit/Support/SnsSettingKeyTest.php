@@ -136,6 +136,43 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame('standard', $key->encode($key->coerce('nonesuch')));
     }
 
+    public function test_the_selectable_looks_are_a_list_stored_as_csv(): void
+    {
+        $key = SnsSettingKey::SelectableLooks;
+
+        $this->assertSame(SettingGroup::Look, $key->group());
+        $this->assertNull($key->op3SourceName());
+        // Nothing on offer until an operator ticks something; the site runs on its default alone.
+        $this->assertSame([], $key->default());
+        $this->assertSame([], $key->decode(null));
+        $this->assertSame([], $key->decode(''));
+
+        // The checkbox list posts an array of ids; it round-trips through the stored CSV.
+        $this->assertSame('standard,unified', $key->encode($key->coerce(['standard', 'unified'])));
+        $this->assertSame([Look::Standard, Look::Unified], $key->decode('standard,unified'));
+
+        // Order is the registry's, not the submission's, and a duplicate collapses — one set, one
+        // stored representation.
+        $this->assertSame('standard,unified', $key->encode($key->coerce([Look::Unified, 'standard', 'unified'])));
+
+        // An id no registered look answers to drops out rather than taking the row down with it.
+        $this->assertSame([Look::Unified], $key->decode('nonesuch,unified'));
+        $this->assertSame('unified', $key->encode($key->coerce(['unified', 'nonesuch'])));
+    }
+
+    public function test_the_selectable_looks_codec_survives_an_actual_array(): void
+    {
+        // Both arms are explicit for this key because the default ones do `(string) $value`, which
+        // fatals on an array — the admin save posts one, so a missing arm would be a 500.
+        $key = SnsSettingKey::SelectableLooks;
+
+        $this->assertSame([], $key->coerce([]));
+        $this->assertSame('', $key->encode([]));
+        $this->assertSame('standard', $key->encode([Look::Standard]));
+        // A crafted post can nest an array where an id belongs; it drops instead of fatalling.
+        $this->assertSame([], $key->coerce([['unified']]));
+    }
+
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void
     {
         // OpenPNE 3 had no per-site logo/color/favicon, so there is nothing to copy: a fresh and an

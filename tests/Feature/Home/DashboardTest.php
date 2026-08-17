@@ -240,9 +240,11 @@ class DashboardTest extends TestCase
 
         // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
         // eager-loads its avatars, counts, and images, so adding rows must not add queries. Kept tight
-        // (steady state 34) so dropping any single eager load trips it instead of hiding under a loose
-        // ceiling — the events feeder's community.image turns one batched fetch into four per-community
-        // lazy loads, and either of the talk digest's two (image, author) turns one into five.
+        // (steady state 34 — the look resolver reads `member_preferences` only once a site offers a
+        // second look, which this fixture does not) so dropping any single eager load trips it
+        // instead of hiding under a loose ceiling — the events feeder's community.image turns one
+        // batched fetch into four per-community lazy loads, and either of the talk digest's two
+        // (image, author) turns one into five.
         $this->assertLessThan(35, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 

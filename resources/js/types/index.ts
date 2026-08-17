@@ -61,6 +61,15 @@ export interface TalkNavRooms {
     hasMore: boolean;
 }
 
+/** The look a member is trying on, from the member-realm session (App\Support\LookResolver). */
+export interface LookPreview {
+    look: LookId;
+    /** True = a look of their own; false = "follow the site default", previewing whatever that is. */
+    pin: boolean;
+    /** Translation key, like every look label on the wire. */
+    label: string;
+}
+
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
 export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'groupTopic' | 'groupEvent' | 'groupTalk' | 'friend' | 'mcp';
 
@@ -75,6 +84,8 @@ export interface PageProps {
     enabledFeatures: Record<FeatureKey, boolean>;
     /** Which look this page renders in (App\Support\Look). `standard` for a guest whatever the site says. */
     look: LookId;
+    /** The look being tried on, or null when none is — which is what the preview bar hides on. */
+    lookPreview: LookPreview | null;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
     /** Null for a guest and while `groupTalk` is off — the sidebar draws no room list either way. */

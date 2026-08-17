@@ -15,6 +15,7 @@ use InvalidArgumentException;
  * Most preferences are on the App\Support\Visibility scale (feature-scoped visibility defaults),
  * but the codec is value-type aware per case: PreferredSurface stores an App\Support\Surface and is
  * tri-state (an absent row means "no member choice", deferring to the SurfaceResolver fallback),
+ * PreferredLook is the same shape for App\Support\Look (deferring to LookResolver's site default),
  * and ComposeEditor stores an App\Support\ComposeEditor with a concrete default (Rich).
  * Identity-bearing / hot-path member attributes (locale, screen name) live as typed `members`
  * columns instead, not here.
@@ -30,6 +31,9 @@ enum PreferenceKey: string
     /** The member's durable Classic/Modern surface choice; absent = follow the install's default surface. */
     case PreferredSurface = 'preferred_surface';
 
+    /** The member's durable App\Support\Look choice; absent = follow the site's default look. */
+    case PreferredLook = 'preferred_look';
+
     /** Which input method the Modern compose forms open with (App\Support\ComposeEditor); default Rich. */
     case ComposeEditor = 'compose_editor';
 
@@ -43,6 +47,7 @@ enum PreferenceKey: string
             self::DiaryDefaultVisibility => 'diary_public_flag',
             self::AgeVisibility => 'age_public_flag',
             self::PreferredSurface => null,
+            self::PreferredLook => null,
             self::ComposeEditor => null,
             self::PushDelivery => null,
         };
@@ -65,13 +70,14 @@ enum PreferenceKey: string
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
      * null — "no member choice, defer to SurfaceResolver's mode default".
      */
-    public function default(): Visibility|Surface|ComposeEditor|PushDelivery|null
+    public function default(): Visibility|Surface|Look|ComposeEditor|PushDelivery|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility => Visibility::Members,
             // Fail-closed, matching OpenPNE 3 Member::getAge() (PUBLIC_FLAG_PRIVATE fallback).
             self::AgeVisibility => Visibility::Private,
             self::PreferredSurface => null,
+            self::PreferredLook => null,
             self::ComposeEditor => ComposeEditor::Rich,
             // Subscribing a device is the consent; this key only pauses it afterwards.
             self::PushDelivery => PushDelivery::Enabled,
@@ -79,11 +85,14 @@ enum PreferenceKey: string
     }
 
     /** Decode the stored string `value` to the typed value; an absent/invalid value is the default. */
-    public function decode(?string $value): Visibility|Surface|ComposeEditor|PushDelivery|null
+    public function decode(?string $value): Visibility|Surface|Look|ComposeEditor|PushDelivery|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility, self::AgeVisibility => $this->decodeVisibility($value),
             self::PreferredSurface => $value === null ? null : Surface::tryFrom($value),
+            // Tri-state like the surface: a corrupt row reads as "no choice", so resolution falls
+            // through to the site default rather than pinning a look nobody picked.
+            self::PreferredLook => $value === null ? null : Look::tryFrom($value),
             // Fail-closed to the default: a corrupt row reads as Rich, never null (this key is not tri-state).
             self::ComposeEditor => $value === null ? ComposeEditor::Rich : (ComposeEditor::tryFrom($value) ?? ComposeEditor::Rich),
             self::PushDelivery => $value === null ? PushDelivery::Enabled : (PushDelivery::tryFrom($value) ?? PushDelivery::Enabled),
@@ -91,7 +100,7 @@ enum PreferenceKey: string
     }
 
     /** Encode a typed value to the stored string `value`. */
-    public function encode(Visibility|Surface|ComposeEditor|PushDelivery $value): string
+    public function encode(Visibility|Surface|Look|ComposeEditor|PushDelivery $value): string
     {
         return (string) $value->value;
     }

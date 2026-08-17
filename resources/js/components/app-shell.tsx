@@ -5,6 +5,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { LeftNav } from '@/components/left-nav';
+import { LookPreviewBar } from '@/components/look-preview-bar';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
@@ -92,6 +93,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                         compose && (exiting ? 'max-lg:motion-safe:animate-modern-sheet-out' : 'max-lg:motion-safe:animate-modern-sheet'),
                     )}
                 >
+                    {/* Above the bars and in normal flow: a member judging a look must be able to
+                        keep or drop it from wherever they wandered to, without the offer covering
+                        the page furniture they are judging. */}
+                    <LookPreviewBar />
                     <TopNav chrome={chrome} hidden={hidden} />
                     {children}
                 </div>
