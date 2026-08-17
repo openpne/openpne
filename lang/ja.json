@@ -1231,7 +1231,6 @@
     "The inviter’s name (member or admin invitations).": "招待者の名前（メンバー／管理者招待）。",
     "The joining member’s ID.": "参加するメンバーの ID。",
     "The joining member’s name.": "参加するメンバーの名前。",
-    "The layout the Modern surface renders.": "モダンの会員画面に使うレイアウトです。",
     "The link that cancels the pending change.": "保留中の変更を取り消すリンク。",
     "The login form, shown to logged-out visitors.": "ログインフォーム（未ログインの訪問者に表示）。",
     "The member can log in again": "このメンバーは再びログインできます",

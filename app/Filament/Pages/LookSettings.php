@@ -136,7 +136,6 @@ class LookSettings extends Page
             ->schema([
                 Radio::make(SnsSettingKey::DefaultLook->value)
                     ->label(SnsSettingKey::DefaultLook->label())
-                    ->helperText(__('The layout the Modern surface renders.'))
                     ->options($this->byLook(static fn (Look $look): string => __($look->label()), $looks))
                     ->descriptions($this->byLook(static fn (Look $look): string => __($look->description()), $looks))
                     ->required(),
