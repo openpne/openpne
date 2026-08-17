@@ -20,7 +20,7 @@ interface UnifiedHomeProps extends PageProps {
 }
 
 /**
- * The unified home (SnsSettingKey::ModernUnifiedHome), read vertically: who you are, who you are here
+ * The unified home (Look::Unified), read vertically: who you are, who you are here
  * with, what you have posted lately, where you can go. The digest dashboard's sections are
  * deliberately absent — the attention counts they carried are on the action tiles' badges.
  */

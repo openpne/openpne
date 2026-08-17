@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Home;
 
-use App\Features\Home\HomeLayout;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\Group;
@@ -11,6 +10,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use App\Services\SnsSettingService;
+use App\Support\Look;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,20 +19,19 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The experiment switch (SnsSettingKey::ModernUnifiedHome) pins BOTH sides: with it off the previous
- * home is byte-for-byte what it was, and with it on the new page carries only what the same
- * viewer-scoped queries already return.
+ * The look pins BOTH sides: under `standard` the previous home is byte-for-byte what it was, and
+ * under `unified` the new page carries only what the same viewer-scoped queries already return.
  */
 class UnifiedHomeTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Every prop the digest dashboard ships — the payload the switch must leave alone while off. */
+    /** Every prop the digest dashboard ships — the payload the look must leave alone while standard. */
     private const DASHBOARD_PROPS = ['announcements', 'talkRooms', 'diaries', 'timeline', 'groupActivity', 'myDiaries'];
 
     private function unifiedOn(): void
     {
-        $this->setSnsSetting(SnsSettingKey::ModernUnifiedHome, true);
+        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
         $this->freshRequestState();
     }
 
@@ -131,57 +130,61 @@ class UnifiedHomeTest extends TestCase
     }
 
     /**
-     * The switch reaches the shell as well as the page: the mobile bars read one shared prop rather
-     * than asking the setting again per bar. Turning it on adds that key to every member response —
-     * what it must not change is what the chrome renders while it is false.
+     * The look reaches the shell as well as the page: the mobile bars read one shared prop rather
+     * than resolving it again per bar. Switching the site adds no key to the response — what it must
+     * not change is what the chrome renders while the look is standard.
      */
-    public function test_the_shell_learns_the_layout_from_a_shared_prop(): void
+    public function test_the_shell_learns_the_look_from_a_shared_prop(): void
     {
         $viewer = Member::factory()->create();
 
         $this->actingAs($viewer)
             ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('unifiedLayout', false));
+            ->assertInertia(fn ($page) => $page->where('look', 'standard'));
 
         $this->unifiedOn();
 
         $this->actingAs($viewer)
             ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('unifiedLayout', true));
+            ->assertInertia(fn ($page) => $page->where('look', 'unified'));
     }
 
     public function test_a_guest_is_never_given_the_unified_chrome(): void
     {
-        // The layout is a member's way around their own pages, and a signed-out visitor reaches none
-        // of them — so the site setting does not answer for a guest.
+        // A look is a member's way around their own pages, and a signed-out visitor reaches none
+        // of them — so the site default does not answer for a guest.
         config()->set('openpne.surface_mode', 'modern_only');
         $this->unifiedOn();
 
-        $this->get('/login')->assertInertia(fn ($page) => $page->where('unifiedLayout', false));
+        $this->get('/login')->assertInertia(fn ($page) => $page->where('look', 'standard'));
     }
 
-    public function test_the_accessor_reads_only_an_explicit_one(): void
+    public function test_a_stored_value_no_look_answers_to_reads_as_standard(): void
     {
         // No row at all: the shipped home, without an operator having said anything.
-        $this->assertFalse(HomeLayout::unifiedEnabled());
+        $this->assertSame(Look::Standard, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
 
-        foreach (['0', '', '2'] as $stored) {
+        foreach (['0', '', '2', 'Unified'] as $stored) {
             DB::table('sns_settings')->updateOrInsert(
-                ['key' => SnsSettingKey::ModernUnifiedHome->value],
+                ['key' => SnsSettingKey::DefaultLook->value],
                 ['value' => $stored],
             );
             app(SnsSettingService::class)->clearCache();
 
-            $this->assertFalse(HomeLayout::unifiedEnabled(), "stored value '{$stored}' turned the experiment on");
+            $this->assertSame(
+                Look::Standard,
+                app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook),
+                "stored value '{$stored}' resolved to something other than the shipped layout",
+            );
         }
 
         DB::table('sns_settings')->updateOrInsert(
-            ['key' => SnsSettingKey::ModernUnifiedHome->value],
-            ['value' => '1'],
+            ['key' => SnsSettingKey::DefaultLook->value],
+            ['value' => 'unified'],
         );
         app(SnsSettingService::class)->clearCache();
 
-        $this->assertTrue(HomeLayout::unifiedEnabled());
+        $this->assertSame(Look::Unified, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
     }
 
     public function test_the_viewers_own_private_content_is_on_their_own_home(): void

@@ -115,23 +115,13 @@ choice (4) is writable — the member config page sets it — so a member can op
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
-The Modern surface carries a second, much narrower switch: `modern_unified_home`
-([`SnsSettingKey`](../../app/Support/SnsSettingKey.php), off unless an operator turns
-it on, read through [`HomeLayout`](../../app/Features/Home/HomeLayout.php)). With it on,
-`/dashboard` renders the `unified/home` page instead of `dashboard`, a signed-in
-member's `/member/{id}` renders `unified/member` instead of `member/show` (a guest keeps
-the shipped profile), and `/groups/{group}` renders `unified/group` instead of
-`community/show` — the same routes and the same viewer-scoped queries, projected
-read-only into a different layout, so it adds no capability of its own. Where a unified
-page shows something the page it replaces did not (the group page's picture strip), the
-rows come from a source the viewer already reads, and each file is asked again through
-`FilePolicy`: a parent's read gate is not a permission on the bytes hanging off it.
-Nothing is stored differently either way, which is what makes switching back a decision
-rather than a deploy. The switch also reaches the shell: a signed-in member's Inertia
-payload carries `unifiedLayout`, which the mobile top and bottom bars draw the unified
-chrome from (a guest gets `false` whatever the setting says). It is one key added to
-every member response, not a change of behavior — false renders exactly the chrome the
-switch-off path always rendered.
+Within Modern, a second and much narrower mechanism picks the **look**: a named set of
+deviations from the standard layout ([`App\Support\Look`](../../app/Support/Look.php),
+resolved per request by [`LookResolver`](../../app/Support/LookResolver.php) and shared as
+the `look` prop). A look swaps page components and shell chrome, never routes or sources,
+and a screen it says nothing about renders standard. The site default is
+`SnsSettingKey::DefaultLook`; `standard` renders the pre-look output unchanged. See
+[looks.md](looks.md).
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern

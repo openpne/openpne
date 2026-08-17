@@ -34,7 +34,7 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
         props: {
             auth: { user },
             enabledFeatures: allOn,
-            unifiedLayout: false,
+            look: 'standard',
             unread: null,
             flash: { status: null, error: null },
             ...props,
@@ -57,7 +57,7 @@ test('a hub folds its heading under the bar that carries the title', () => {
 });
 
 test('a hub keeps its heading under the unified bar, which carries tabs instead', () => {
-    expect(hubHeadingRow({ unifiedLayout: true })?.className).not.toContain('sr-only');
+    expect(hubHeadingRow({ look: 'unified' })?.className).not.toContain('sr-only');
 });
 
 test('a hub keeps its heading for a guest, whose bar carries no title either', () => {

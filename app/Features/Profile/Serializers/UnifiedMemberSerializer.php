@@ -14,7 +14,7 @@ use App\Support\Feature;
 use Illuminate\Support\Collection;
 
 /**
- * The unified member page (SnsSettingKey::ModernUnifiedHome): the same grammar as the unified home,
+ * The unified member page (Look::Unified): the same grammar as the unified home,
  * about somebody else. Viewer and owner are separate parameters here — that is the whole difference
  * from its home sibling, and why every source below is a query that takes both and resolves the
  * owner's rows at the viewer's clearance rather than at the owner's.

@@ -17,6 +17,7 @@ use App\Models\Group;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\Feature;
+use App\Support\LookResolver;
 use App\Support\SurfaceResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -80,10 +81,10 @@ class HomeController extends Controller
         /** @var Member $viewer */
         $viewer = $request->user();
 
-        // The experiment swaps the page, not the route or the data sources (HomeLayout). Both render
-        // calls stay string literals: ChromeContextCoverageTest reads them to check every routed
-        // component is classified.
-        if (HomeLayout::unifiedEnabled()) {
+        // The look swaps the page, not the route or the data sources. Both render calls stay string
+        // literals: ChromeContextCoverageTest reads them to check every routed component is
+        // classified.
+        if (LookResolver::resolve($request)->usesUnifiedPages()) {
             return Inertia::render('unified/home', UnifiedHomeSerializer::page($viewer));
         }
 

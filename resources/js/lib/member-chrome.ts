@@ -121,6 +121,44 @@ export function chromeRecedes(chrome: Chrome): boolean {
     return !chrome.form && !chrome.conversation;
 }
 
+/** What one look deviates from standard in. Every field is answered, so a partial row is a type error. */
+interface LookSpec {
+    /** Which grammar the bars draw: page-class top bar + section tabs, or the persistent unified pair. */
+    chrome: 'standard' | 'unified';
+    /** Which ground the shell paints behind the page. */
+    ground: 'standard' | 'unified';
+    /** Whether the xl+ third column stands beside the page. */
+    rightRail: boolean;
+}
+
+/**
+ * The looks a member surface renders in — the client half of App\Support\Look, held in step with it
+ * by LookRegistryParityTest. A look is a set of deviations from standard: a screen a look says
+ * nothing about renders standard, which is what keeps a look from being a second copy of the UI
+ * (docs/internals/looks.md).
+ */
+export const LOOKS = {
+    standard: { chrome: 'standard', ground: 'standard', rightRail: true },
+    unified: { chrome: 'unified', ground: 'unified', rightRail: false },
+} as const satisfies Record<string, LookSpec>;
+
+export type LookId = keyof typeof LOOKS;
+
+/** Whether the bars are the unified pair (a persistent header, and a dive row in place of the tabs). */
+export function unifiedChrome(look: LookId): boolean {
+    return LOOKS[look].chrome === 'unified';
+}
+
+/** Whether the shell paints the unified ground behind the page. */
+export function unifiedGround(look: LookId): boolean {
+    return LOOKS[look].ground === 'unified';
+}
+
+/** Whether this look seats the right rail. */
+export function lookRightRail(look: LookId): boolean {
+    return LOOKS[look].rightRail;
+}
+
 export interface NavSection {
     href: string;
     /** URL prefixes marking this section active — several when a section spans more than one space. */
@@ -234,9 +272,9 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], exact: true, icon: House, label: t('Home') };
 
 /**
- * The components the home route renders — the digest dashboard or, behind SnsSettingKey::
- * ModernUnifiedHome, the unified layout. The brand's own screen either way: the mobile bar shows the
- * brand row rather than a back control, since there is nothing above home to go back to.
+ * The components the home route renders — the digest dashboard, or the unified look's home. The
+ * brand's own screen either way: the mobile bar shows the brand row rather than a back control,
+ * since there is nothing above home to go back to.
  */
 export function isHomeComponent(component: string): boolean {
     return component === 'dashboard' || component === 'unified/home';
@@ -377,7 +415,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
     // FAB — the diary shortcut the diary-forward home is the place for.
     'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
-    // The experimental home behind SnsSettingKey::ModernUnifiedHome: the dashboard's screen minus
+    // The unified look's home: the dashboard's screen minus
     // its action — the design draws no floating button on home, so writing starts from the diary
     // tile's list, where the FAB stands. Home is the one screen that gives the FAB up: everywhere
     // else the registry action floats as usual, since a phone has no other write affordance.
@@ -624,8 +662,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    // The experimental member page behind SnsSettingKey::ModernUnifiedHome: the same screen as the
-    // profile it replaces, so the same chrome.
+    // The unified look's member page: the same screen as the profile it replaces, so the same chrome.
     'unified/member': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     // A sheet like the draft form, though it submits nothing: choosing who to write to is one screen
@@ -639,8 +676,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/show': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
-    // The experimental group page behind SnsSettingKey::ModernUnifiedHome: the same screen as the
-    // group top it replaces, so the same chrome.
+    // The unified look's group page: the same screen as the group top it replaces, so the same chrome.
     'unified/group': { foreground: true },
     'group/topic/show': { foreground: true },
     'group/event/show': { foreground: true },

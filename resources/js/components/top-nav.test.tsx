@@ -73,7 +73,7 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
             snsLogo: { color: '#336699', url: null },
             auth: { user },
             enabledFeatures: allOn,
-            unifiedLayout: false,
+            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },
@@ -92,7 +92,7 @@ test('the shipped home keeps the brand bar', () => {
 });
 
 test('the unified layout puts the two places in the bar instead of the brand', () => {
-    const chrome = arrive('unified/home', '/dashboard', { unifiedLayout: true });
+    const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
 
     render(<TopNav chrome={chrome} />);
 
@@ -106,7 +106,7 @@ test('the unified layout puts the two places in the bar instead of the brand', (
 });
 
 test('a hub in the unified layout takes the same bar, with the group tab current', () => {
-    const chrome = arrive('community/list', '/groups/mine', { unifiedLayout: true, owner: user, isOwner: true });
+    const chrome = arrive('community/list', '/groups/mine', { look: 'unified', owner: user, isOwner: true });
 
     render(<TopNav chrome={chrome} />);
 
@@ -115,7 +115,7 @@ test('a hub in the unified layout takes the same bar, with the group tab current
 });
 
 test('the group tab goes with its unit', () => {
-    const chrome = arrive('unified/home', '/dashboard', { unifiedLayout: true, enabledFeatures: { ...allOn, group: false } });
+    const chrome = arrive('unified/home', '/dashboard', { look: 'unified', enabledFeatures: { ...allOn, group: false } });
 
     render(<TopNav chrome={chrome} />);
 
@@ -125,7 +125,7 @@ test('the group tab goes with its unit', () => {
 
 test('the bell says how many are waiting, in words', () => {
     const chrome = arrive('unified/home', '/dashboard', {
-        unifiedLayout: true,
+        look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
@@ -136,7 +136,7 @@ test('the bell says how many are waiting, in words', () => {
 });
 
 test('the bell is named plainly while nothing is waiting', () => {
-    const chrome = arrive('unified/home', '/dashboard', { unifiedLayout: true });
+    const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
 
     render(<TopNav chrome={chrome} />);
 
@@ -149,7 +149,7 @@ test('the bell is named plainly while nothing is waiting', () => {
  */
 test('a page below the top level keeps its own bar with the switch on', () => {
     const chrome = arrive('group/topic/show', '/topics/3', {
-        unifiedLayout: true,
+        look: 'unified',
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
@@ -162,7 +162,7 @@ test('a page below the top level keeps its own bar with the switch on', () => {
 test("a guest's bar is the same with the switch on", () => {
     // The switch never reaches a guest (HandleInertiaRequests), and the bar does not read it either:
     // a signed-out visitor has no member nav to carry.
-    const chrome = arrive('member/show', '/member/9', { unifiedLayout: true, auth: { user: null } });
+    const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
 
     render(<TopNav chrome={chrome} />);
 
@@ -177,7 +177,7 @@ test("a guest's bar is the same with the switch on", () => {
  */
 test('the unified bar carries no account menu and prints no count', () => {
     const chrome = arrive('unified/home', '/dashboard', {
-        unifiedLayout: true,
+        look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 

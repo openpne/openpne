@@ -7,10 +7,14 @@ import {
     hasBottomNav,
     isHomeComponent,
     isSectionActive,
+    LOOKS,
+    lookRightRail,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
     TALK_ROOMS_HREF,
+    unifiedChrome,
+    unifiedGround,
     unifiedTabs,
     visibleNavSections,
 } from './member-chrome.ts';
@@ -396,6 +400,28 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.deepEqual(hub.title, MESSAGES_LABEL);
     assert.equal(hub.action?.href, '/messages/new');
     assert.equal(hub.tabs, undefined);
+});
+
+test('standard is the look that deviates in nothing', () => {
+    assert.equal(unifiedChrome('standard'), false);
+    assert.equal(unifiedGround('standard'), false);
+    assert.equal(lookRightRail('standard'), true);
+});
+
+test('unified deviates on all three of the shell answers', () => {
+    assert.equal(unifiedChrome('unified'), true);
+    assert.equal(unifiedGround('unified'), true);
+    assert.equal(lookRightRail('unified'), false);
+});
+
+// The shell reads one field per question, so a look that answered only some of them would leave the
+// rest reading `undefined` — falsy, and silently standard-ish rather than standard.
+test('every look answers every question the shell asks', () => {
+    const fields = Object.keys(LOOKS.standard).sort();
+
+    for (const [id, spec] of Object.entries(LOOKS)) {
+        assert.deepEqual(Object.keys(spec).sort(), fields, id);
+    }
 });
 
 test('the unified bar offers home and the groups, and the groups tab goes with its unit', () => {

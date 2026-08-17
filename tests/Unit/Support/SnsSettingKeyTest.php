@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use PHPUnit\Framework\TestCase;
@@ -110,24 +111,29 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame(0, $key->decode('-1'));
     }
 
-    public function test_the_unified_home_is_off_until_an_operator_opts_in(): void
+    public function test_the_default_look_is_standard_until_an_operator_opts_in(): void
     {
-        $key = SnsSettingKey::ModernUnifiedHome;
+        $key = SnsSettingKey::DefaultLook;
 
-        $this->assertSame(SettingGroup::HomeLayout, $key->group());
+        $this->assertSame(SettingGroup::Look, $key->group());
         // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over.
         $this->assertNull($key->op3SourceName());
         $this->assertFalse($key->isMigratedFromOp3());
-        $this->assertFalse($key->default());
+        $this->assertSame(Look::Standard, $key->default());
 
-        // Only an explicit '1' switches the experiment on; anything else lands on the shipped home.
-        $this->assertTrue($key->decode('1'));
-        $this->assertFalse($key->decode('0'));
-        $this->assertFalse($key->decode(''));
-        $this->assertFalse($key->decode('2'));
-        $this->assertFalse($key->decode(null));
-        $this->assertSame('1', $key->encode($key->coerce('1')));
-        $this->assertSame('0', $key->encode($key->coerce(false)));
+        // Round-trips as the typed enum, from either the enum itself or the posted id.
+        $this->assertSame('unified', $key->encode($key->coerce(Look::Unified)));
+        $this->assertSame('unified', $key->encode($key->coerce(' unified ')));
+        $this->assertSame(Look::Unified, $key->decode('unified'));
+        $this->assertSame(Look::Standard, $key->decode('standard'));
+
+        // A value no registered look answers to is corruption, not a decision: it reads as the
+        // layout the site shipped with rather than as an experiment.
+        $this->assertSame(Look::Standard, $key->decode(''));
+        $this->assertSame(Look::Standard, $key->decode('Unified'));
+        $this->assertSame(Look::Standard, $key->decode('nonesuch'));
+        $this->assertSame(Look::Standard, $key->decode(null));
+        $this->assertSame('standard', $key->encode($key->coerce('nonesuch')));
     }
 
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void

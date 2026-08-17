@@ -43,7 +43,7 @@ interface UnifiedGroupProps extends PageProps {
 }
 
 /**
- * The unified group page (SnsSettingKey::ModernUnifiedHome): the unified layout's grammar turned on a
+ * The unified group page (Look::Unified): the unified layout's grammar turned on a
  * group — what it is, how to be in it, what is being said in it, and who else is around. Read
  * vertically, like the home and the member page, so the three read as one surface.
  *

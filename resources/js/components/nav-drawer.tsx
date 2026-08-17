@@ -6,6 +6,7 @@ import { Dialog, DialogTitle, DialogTrigger, SheetContent } from '@/components/u
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
+import { unifiedChrome } from '@/lib/member-chrome';
 import type { PageProps } from '@/types';
 
 /**
@@ -52,7 +53,7 @@ export function NavDrawer() {
 }
 
 /**
- * Profile and sign-out at the drawer's foot, only under the unified layout: its bars carry no
+ * Profile and sign-out at the drawer's foot, only under the unified chrome: its bars carry no
  * account menu (the design they follow has none), so what the avatar menu held has to live
  * somewhere, and the drawer is the one surface of the experiment that is ours to arrange.
  */
@@ -61,7 +62,7 @@ function UnifiedAccountRows({ onNavigate }: { onNavigate: () => void }) {
     const { props } = usePage<PageProps>();
     const user = props.auth.user;
 
-    if (!props.unifiedLayout || !user) {
+    if (!unifiedChrome(props.look) || !user) {
         return null;
     }
 

@@ -10,6 +10,7 @@ import {
     MEMBER_SEARCH_SECTION,
     type NavSection,
     NOTIFICATIONS_SECTION,
+    unifiedChrome,
 } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
                 measure — and `--modern-bottom-offset` is it plus the hairline above and the
                 safe-area inset below. A tab fills the row, so the row is the tap target. */}
             <ul className="flex h-12 items-stretch">
-                {props.unifiedLayout ? <DiveRow chrome={chrome} path={path} /> : <SectionTabs path={path} />}
+                {unifiedChrome(props.look) ? <DiveRow chrome={chrome} path={path} /> : <SectionTabs path={path} />}
             </ul>
         </nav>
     );
