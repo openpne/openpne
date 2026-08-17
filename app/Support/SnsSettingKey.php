@@ -180,6 +180,13 @@ enum SnsSettingKey: string
     case DefaultLook = 'default_look';
 
     /**
+     * Which App\Support\Look values a member may pick for themselves, as a CSV of look ids — the
+     * registry's one list-valued key. The effective set is this ∪ the default look, derived in one
+     * place (LookResolver::selectable()); an empty set leaves the site on the default alone.
+     */
+    case SelectableLooks = 'selectable_looks';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -207,7 +214,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
-            self::DefaultLook => SettingGroup::Look,
+            self::DefaultLook, self::SelectableLooks => SettingGroup::Look,
         };
     }
 
@@ -262,7 +269,7 @@ enum SnsSettingKey: string
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
             // OpenPNE 4-native: OpenPNE 3 had no Modern surface to lay out.
-            self::DefaultLook => null,
+            self::DefaultLook, self::SelectableLooks => null,
         };
     }
 
@@ -344,6 +351,9 @@ enum SnsSettingKey: string
             // The layout the site has always shipped; the unified one is an experiment an operator
             // opts into.
             self::DefaultLook => Look::Standard,
+            // Nothing on offer until an operator ticks a look: the site runs on its default alone,
+            // and the member config page shows no layout section.
+            self::SelectableLooks => [],
         };
     }
 
@@ -372,6 +382,9 @@ enum SnsSettingKey: string
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
+            // The one key whose value is a list: an explicit arm because the default one casts to
+            // string, which an array cannot be.
+            self::SelectableLooks => self::lookSet($value),
             default => is_string($value) ? trim($value) : (string) $value,
         };
     }
@@ -391,6 +404,8 @@ enum SnsSettingKey: string
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
+            // Same reason as coerce()'s arm: the list is stored as CSV, and (string) on an array fatals.
+            self::SelectableLooks => implode(',', array_column(self::lookSet($value), 'value')),
             default => (string) $value,
         };
     }
@@ -408,6 +423,9 @@ enum SnsSettingKey: string
             // Same for the look: a value no registered look answers to is corruption, and lands on
             // the layout the site shipped with rather than on an experiment.
             self::DefaultLook => Look::tryFrom($value) ?? $this->default(),
+            // Stored CSV → typed looks; an id no registered look answers to drops out of the set
+            // rather than taking the whole row down with it.
+            self::SelectableLooks => self::lookSet($value),
             // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
             // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
             self::CaptchaEnabled => $value !== '0',
@@ -478,6 +496,7 @@ enum SnsSettingKey: string
             self::UserAgreement => __('Terms of service'),
             self::PrivacyPolicy => __('Privacy policy'),
             self::DefaultLook => __('Default UI layout'),
+            self::SelectableLooks => __('Selectable UI layouts'),
         };
     }
 
@@ -495,7 +514,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
-            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy => false,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks => false,
         };
     }
 
@@ -543,5 +562,26 @@ enum SnsSettingKey: string
         }
 
         return null;
+    }
+
+    /**
+     * Normalize a look set — an array of Look|id (a checkbox post) or a CSV string (a stored row) —
+     * to typed looks. Unknown ids drop, duplicates collapse, and the result is in registry order, so
+     * one set has exactly one representation however it arrived.
+     *
+     * @return list<Look>
+     */
+    private static function lookSet(mixed $value): array
+    {
+        $chosen = [];
+        foreach (is_array($value) ? $value : explode(',', (string) $value) as $id) {
+            // A crafted post can nest an array where an id belongs; casting that would fatal.
+            $look = $id instanceof Look ? $id : (is_scalar($id) ? Look::tryFrom(trim((string) $id)) : null);
+            if ($look !== null) {
+                $chosen[$look->value] = true;
+            }
+        }
+
+        return array_values(array_filter(Look::cases(), static fn (Look $look): bool => isset($chosen[$look->value])));
     }
 }

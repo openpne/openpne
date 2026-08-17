@@ -16,6 +16,7 @@ use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Member\PreviewLookRequest;
 use App\Http\Requests\Member\RequestEmailChangeRequest;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
@@ -25,6 +26,7 @@ use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
+use App\Support\LookResolver;
 use App\Support\PreferenceKey;
 use App\Support\SecurityLog;
 use App\Support\Surface;
@@ -274,6 +276,10 @@ class MemberConfigController extends Controller
             $request->session()->flash('status', __('Settings updated.'));
         }
 
+        // Classic draws no preview bar, so a member crossing to it would have no way to confirm or
+        // cancel what they were trying on. The look is Modern-only; leaving Modern ends the trial.
+        $request->session()->forget(LookResolver::PREVIEW_SESSION_KEY);
+
         // Land on the config page through a full page load (Inertia::location below): the
         // just-written preference resolves the chosen surface there, and the full load re-renders
         // the whole shell — an XHR redirect would keep the Modern SPA alive on a Classic choice.
@@ -281,6 +287,67 @@ class MemberConfigController extends Controller
             ? route('member.config')
             : route('member.config', ['category' => MemberConfigCategory::General->value]);
 
+        return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+    }
+
+    /**
+     * Try a look on. The choice lives in the session, not in `member_preferences`, until the member
+     * confirms it from the preview bar — a look changes the whole shell, so it is shown before it is
+     * saved rather than described in a radio label.
+     */
+    public function previewLook(PreviewLookRequest $request): Response
+    {
+        $look = $request->look();
+
+        $request->session()->put(LookResolver::PREVIEW_SESSION_KEY, [
+            // "Follow the site default" previews the default as it stands; `pin` is what tells the
+            // confirm POST which of the two the member actually chose.
+            'look' => ($look ?? LookResolver::siteDefault())->value,
+            'pin' => $look !== null,
+        ]);
+
+        return $this->fullLoad($request, route('dashboard'));
+    }
+
+    /**
+     * Keep what is being previewed. Parameter-free by design: the intent comes from the session the
+     * bar is rendered from, so what gets saved cannot differ from what the member is looking at.
+     */
+    public function updateLook(Request $request): Response
+    {
+        $intent = LookResolver::previewIntent($request);
+        if ($intent === null) {
+            return $this->fullLoad($request, route('member.config'));
+        }
+
+        if ($intent['pin']) {
+            // The set can narrow while a preview is warm; the same gate as starting one.
+            abort_unless(in_array($intent['look'], LookResolver::selectable(), true), 403);
+            $this->viewer()->setPreferredLook($intent['look']);
+        } else {
+            $this->viewer()->resetPreferredLook();
+        }
+
+        $request->session()->forget(LookResolver::PREVIEW_SESSION_KEY);
+        $request->session()->flash('status', __('Settings updated.'));
+
+        return $this->fullLoad($request, route('member.config'));
+    }
+
+    /** Stop previewing, keeping whatever the member had before. */
+    public function stopLookPreview(Request $request): Response
+    {
+        $request->session()->forget(LookResolver::PREVIEW_SESSION_KEY);
+
+        return $this->fullLoad($request, url()->previous() ?: route('member.config'));
+    }
+
+    /**
+     * Land on $target through a full page load. Every look POST changes what the whole shell renders,
+     * and an XHR redirect would leave the running SPA drawing the previous one.
+     */
+    private function fullLoad(Request $request, string $target): Response
+    {
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }
 

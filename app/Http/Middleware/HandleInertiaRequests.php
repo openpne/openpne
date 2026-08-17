@@ -60,6 +60,10 @@ class HandleInertiaRequests extends Middleware
             // than asked again per bar. Always a look id, never null — a guest's is `standard`
             // whatever the site setting says (LookResolver).
             'look' => LookResolver::resolve($request)->value,
+            // The look being tried on, for the bar that offers to keep or drop it; null when nothing
+            // is (still) being previewed, which is what the bar hides on. Member chrome like the
+            // counts below — a guest's request may carry a stale session, and gets no bar from it.
+            'lookPreview' => $user ? $this->lookPreview($request) : null,
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
@@ -94,6 +98,28 @@ class HandleInertiaRequests extends Middleware
             // offset (docs/internals/runtime.md).
             'timezone' => config('app.timezone'),
             'terms' => $this->termsForClient($locale),
+        ];
+    }
+
+    /**
+     * The active preview as the bar renders it. `label` is a translation key, like every other look
+     * label on the wire — the client translates in the reader's locale.
+     *
+     * @return array{look: string, pin: bool, label: string}|null
+     */
+    private function lookPreview(Request $request): ?array
+    {
+        $look = LookResolver::preview($request);
+        if ($look === null) {
+            return null;
+        }
+
+        return [
+            'look' => $look->value,
+            // False = the member is previewing "follow the site default", so confirming clears their
+            // choice instead of pinning this look.
+            'pin' => LookResolver::previewIntent($request)['pin'] ?? false,
+            'label' => $look->label(),
         ];
     }
 
