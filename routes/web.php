@@ -551,6 +551,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->middleware(EnsureFeatureEnabled::class.':diary')->name('member.config.diary');
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
+    // The look is tried on before it is kept (docs/internals/looks.md): the preview POST parks the
+    // choice in the session, and only the parameter-free confirm below writes the preference.
+    Route::post('/member/config/look/preview', [MemberConfigController::class, 'previewLook'])->name('member.config.look.preview');
+    Route::post('/member/config/look/preview/stop', [MemberConfigController::class, 'stopLookPreview'])->name('member.config.look.preview.stop');
+    Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
     Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
     Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])

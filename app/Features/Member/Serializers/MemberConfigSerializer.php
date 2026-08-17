@@ -6,6 +6,8 @@ use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
 use App\Models\Member;
 use App\Support\Feature;
+use App\Support\Look;
+use App\Support\LookResolver;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
@@ -13,7 +15,8 @@ use App\Support\Visibility;
 /**
  * Modern (Inertia) props for the member config page. Mirrors the Classic Blade sections: diary
  * default audience, language, and the binary Classic/Modern surface choice (preselected to the
- * member's current surface). Visibility/Surface labels and surface descriptions are translation
+ * member's current surface), plus the look picker, which has no Classic twin — a look only changes
+ * how Modern renders. Visibility/Surface labels and surface descriptions are translation
  * keys (run through t() on the client); locale labels are autonyms rendered verbatim.
  */
 class MemberConfigSerializer
@@ -66,6 +69,28 @@ class MemberConfigSerializer
                     ['value' => Surface::Classic->value, 'label' => Surface::Classic->label(), 'description' => Surface::Classic->description()],
                     ['value' => Surface::Modern->value, 'label' => Surface::Modern->label(), 'description' => Surface::Modern->description()],
                 ],
+            ];
+        }
+
+        // Offered only where there is a choice to make: with one selectable look the picker would be
+        // a single card the member cannot move off. The client hides the section when the key is absent.
+        $selectable = LookResolver::selectable();
+        if (count($selectable) >= 2) {
+            $default = LookResolver::siteDefault();
+            $form['look'] = [
+                'options' => array_map(
+                    static fn (Look $look): array => [
+                        'value' => $look->value,
+                        'label' => $look->label(),
+                        'description' => $look->description(),
+                    ],
+                    $selectable,
+                ),
+                // The stored choice, not the resolved look: the first card is "follow the site
+                // default", and an undecided member must land there rather than on whatever they
+                // are currently being shown.
+                'current' => $member->preferredLook()?->value,
+                'default' => ['value' => $default->value, 'label' => $default->label()],
             ];
         }
 

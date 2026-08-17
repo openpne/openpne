@@ -8,6 +8,7 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\AvatarColor;
 use App\Support\ComposeEditor;
+use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
 use App\Support\Surface;
@@ -217,6 +218,31 @@ class Member extends Authenticatable
     }
 
     /**
+     * The member's durable look choice, or null when unset (an absent row means "no choice — defer
+     * to the site default"). Separate from preference() so the Look value type stays type-safe at
+     * the call site. A row naming a look the site no longer offers is ignored on read (LookResolver)
+     * and deleted when the administrator narrows the set.
+     */
+    public function preferredLook(): ?Look
+    {
+        $value = PreferenceKey::PreferredLook->decode($this->storedPreference(PreferenceKey::PreferredLook));
+        assert($value === null || $value instanceof Look);
+
+        return $value;
+    }
+
+    public function setPreferredLook(Look $look): void
+    {
+        $this->writePreference(PreferenceKey::PreferredLook, $look);
+    }
+
+    /** Drop the look choice so resolution falls back to the site default. */
+    public function resetPreferredLook(): void
+    {
+        $this->resetPreference(PreferenceKey::PreferredLook);
+    }
+
+    /**
      * The member's compose-editor choice, or the registry default (Rich) when unset. Separate from
      * preference() so the ComposeEditor value type stays type-safe at the call site.
      */
@@ -256,7 +282,7 @@ class Member extends Authenticatable
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface|ComposeEditor|PushDelivery $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],

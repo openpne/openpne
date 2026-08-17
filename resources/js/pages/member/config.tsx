@@ -13,6 +13,9 @@ import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
+/** The layout choice that means "no look of my own" (App\Http\Requests\Member\PreviewLookRequest). */
+const FOLLOW_DEFAULT = 'default';
+
 const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
@@ -35,6 +38,9 @@ interface ConfigForm {
     ai?: { count: number };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; options: Option[] };
+    // Absent while the site offers fewer than two looks — there would be nothing to choose between.
+    // `current` is the stored choice (null = following the site default), not the look being rendered.
+    look?: { options: Option[]; current: string | null; default: { value: string; label: string } };
 }
 
 interface ConfigProps extends PageProps {
@@ -102,11 +108,14 @@ export default function MemberConfig() {
     const diary = useForm({ diary_default_visibility: form.diary?.value ?? '' });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
+    // The saved state is the form's baseline, so `isDirty` is exactly "differs from what is saved".
+    const look = useForm({ choice: form.look?.current ?? FOLLOW_DEFAULT });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closures below.
     const diaryField = form.diary;
     const surfaceField = form.surface;
+    const lookField = form.look;
 
     // Preference radios apply on selection (no per-section save button); SavedIndicator is the
     // per-control feedback that replaces the page flash, which the server omits for these on Modern.
@@ -266,6 +275,51 @@ export default function MemberConfig() {
                                         disabled={surface.data.preferred_surface === surfaceField.value}
                                     >
                                         {t('Switch')}
+                                    </Button>
+                                </FormActions>
+                            </FormSection>
+                        </form>
+                    </GroupItem>
+                )}
+
+                {lookField && (
+                    <GroupItem>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                look.post('/member/config/look/preview');
+                            }}
+                        >
+                            <FormSection title={t('Layout')} headingLevel="h3">
+                                <RadioCardGroup legend={t('Layout')} error={look.errors.choice}>
+                                    {/* Following the site default leads, and is where an undecided
+                                        member starts — naming the current default so the choice is
+                                        not between a look and an abstraction. */}
+                                    <RadioCard
+                                        name="choice"
+                                        value={FOLLOW_DEFAULT}
+                                        checked={look.data.choice === FOLLOW_DEFAULT}
+                                        onChange={(e) => look.setData('choice', e.target.value)}
+                                        label={t('Match the site default (currently :look)', { look: t(lookField.default.label) })}
+                                    />
+                                    {lookField.options.map((opt) => (
+                                        <RadioCard
+                                            key={opt.value}
+                                            name="choice"
+                                            value={opt.value}
+                                            checked={look.data.choice === opt.value}
+                                            onChange={(e) => look.setData('choice', e.target.value)}
+                                            label={t(opt.label)}
+                                            description={opt.description ? t(opt.description) : undefined}
+                                        />
+                                    ))}
+                                </RadioCardGroup>
+                                <FormActions>
+                                    {/* Trying it on is the only thing this section does: what a look
+                                        looks like is the whole decision, so it is kept from the
+                                        preview bar rather than saved from here. */}
+                                    <Button type="submit" loading={look.processing} disabled={!look.isDirty}>
+                                        {t('Try it')}
                                     </Button>
                                 </FormActions>
                             </FormSection>

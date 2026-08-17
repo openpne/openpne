@@ -6,10 +6,13 @@ namespace App\Filament\Pages;
 
 use App\Services\SnsSettingService;
 use App\Support\Look;
+use App\Support\LookResolver;
+use App\Support\PreferenceKey;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -24,8 +27,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick the look the Modern surface renders (App\Support\Look). `sns_settings` is authoritative; the
- * value is stored verbatim on save and resolves to `standard` while no row exists.
+ * Pick the look the Modern surface renders (App\Support\Look) and which looks members may pick for
+ * themselves. `sns_settings` is authoritative; the value is stored verbatim on save and resolves to
+ * `standard` while no row exists.
  *
  * @property-read Schema $form
  */
@@ -93,24 +97,51 @@ class LookSettings extends Page
     public function save(): void
     {
         $data = $this->form->getState();
+        $released = 0;
 
-        DB::transaction(function () use ($data): void {
+        DB::transaction(function () use ($data, &$released): void {
             foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
                 );
             }
+
+            $released = $this->releaseMembersOutside($data);
         });
 
         app(SnsSettingService::class)->clearCache();
 
-        Notification::make()
-            ->success()
-            ->title(__('Saved'))
-            ->send();
+        $saved = Notification::make()->success()->title(__('Saved'));
+        if ($released > 0) {
+            // Narrowing the set moves members off their choice, so the save reports how many rather
+            // than leaving it to be discovered.
+            $saved->body(__('Cleared the layout choice of :count members', ['count' => $released]));
+        }
+        $saved->send();
 
         $this->form->fill($this->currentValues());
+    }
+
+    /**
+     * Drop every member choice this save leaves unoffered, returning them to the site default.
+     * Derived from the POSTED values — the set the save is establishing, which is not readable from
+     * the settings service yet — and run inside the same transaction, so no request can resolve
+     * against the new set while a stale row survives.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function releaseMembersOutside(array $data): int
+    {
+        $selectable = LookResolver::selectableAmong(
+            SnsSettingKey::SelectableLooks->coerce($data[SnsSettingKey::SelectableLooks->value] ?? []),
+            SnsSettingKey::DefaultLook->coerce($data[SnsSettingKey::DefaultLook->value] ?? SnsSettingKey::DefaultLook->default()),
+        );
+
+        return DB::table('member_preferences')
+            ->where('key', PreferenceKey::PreferredLook->value)
+            ->whereNotIn('value', array_column($selectable, 'value'))
+            ->delete();
     }
 
     /**
@@ -120,9 +151,13 @@ class LookSettings extends Page
     {
         $values = [];
         foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
-            // The service hands back the typed enum; the radio holds and posts the stored id.
+            // The service hands back typed looks; the controls hold and post the stored ids.
             $value = app(SnsSettingService::class)->get($key);
-            $values[$key->value] = $value instanceof Look ? $value->value : $value;
+            $values[$key->value] = match (true) {
+                $value instanceof Look => $value->value,
+                is_array($value) => array_column($value, 'value'),
+                default => $value,
+            };
         }
 
         return $values;
@@ -139,6 +174,12 @@ class LookSettings extends Page
                     ->options($this->byLook(static fn (Look $look): string => __($look->label()), $looks))
                     ->descriptions($this->byLook(static fn (Look $look): string => __($look->description()), $looks))
                     ->required(),
+                // Filament validates each ticked value against these option keys (a per-item `in`
+                // rule), so the accepted ids and the offered ones are the same list by construction.
+                CheckboxList::make(SnsSettingKey::SelectableLooks->value)
+                    ->label(SnsSettingKey::SelectableLooks->label())
+                    ->options($this->byLook(static fn (Look $look): string => __($look->label()), $looks))
+                    ->helperText(__('The site default can always be selected. Removing a layout returns the members who chose it to the site default.')),
             ]);
     }
 
