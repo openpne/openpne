@@ -5,7 +5,7 @@ import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { ActionLink } from '@/components/ui/action-link';
-import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
+import { type Chrome, type ChromeLabel, unifiedChrome } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -72,9 +72,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 <PageHeading
                     title={label(chrome.title)}
                     // Only where the mobile bar actually carries the title. A guest's bar is brand +
-                    // sign-in and the unified layout's is the tab pair, so folding for either would
+                    // sign-in and the unified chrome's is the tab pair, so folding for either would
                     // leave that hub with no visible heading anywhere.
-                    fold={chrome.mode === 'section' && props.auth.user !== null && !props.unifiedLayout}
+                    fold={chrome.mode === 'section' && props.auth.user !== null && !unifiedChrome(props.look)}
                     action={
                         action && (
                             <ActionLink href={action.href}>

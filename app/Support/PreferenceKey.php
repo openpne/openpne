@@ -27,7 +27,7 @@ enum PreferenceKey: string
     /** Who may see the age derived from the birthday profile field (independent of that field). */
     case AgeVisibility = 'age_visibility';
 
-    /** The member's durable Classic/Modern surface choice; absent = follow the tenant/session default. */
+    /** The member's durable Classic/Modern surface choice; absent = follow the install's default surface. */
     case PreferredSurface = 'preferred_surface';
 
     /** Which input method the Modern compose forms open with (App\Support\ComposeEditor); default Rich. */
@@ -63,7 +63,7 @@ enum PreferenceKey: string
     /**
      * Value used when the member has no stored row (an absent row means "follow this default").
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
-     * null — "no member choice, defer to SurfaceResolver's session override / mode default".
+     * null — "no member choice, defer to SurfaceResolver's mode default".
      */
     public function default(): Visibility|Surface|ComposeEditor|PushDelivery|null
     {

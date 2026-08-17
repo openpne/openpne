@@ -5,8 +5,8 @@ namespace App\Support;
 /**
  * The two rendering surfaces a feature route can serve: the OpenPNE 3-faithful, server-rendered
  * Classic UI and the React/Inertia Modern UI. SurfaceResolver decides which one a request gets; a
- * member can pin a durable choice (PreferenceKey::PreferredSurface), absent which the session
- * toggle and the mode's default surface apply. The string values match SurfaceResolver's CLASSIC/MODERN.
+ * member can pin a durable choice (PreferenceKey::PreferredSurface), absent which the mode's default
+ * surface applies. The string values match SurfaceResolver's CLASSIC/MODERN.
  */
 enum Surface: string
 {

@@ -27,7 +27,7 @@ interface UnifiedMemberProps extends PageProps {
 }
 
 /**
- * The unified member page (SnsSettingKey::ModernUnifiedHome): the unified home's grammar turned on
+ * The unified member page (Look::Unified): the unified home's grammar turned on
  * somebody else — who they are, who they are here with, what they have posted lately. Read
  * vertically, like the home, so a member moving between the two reads one surface rather than two.
  *

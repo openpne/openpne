@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
-import { type Chrome, chromeRecedes, hasBottomNav } from '@/lib/member-chrome';
+import { type Chrome, chromeRecedes, hasBottomNav, lookRightRail, unifiedChrome, unifiedGround } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -42,15 +42,15 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
 
-    // The experiment's ground color rides the <html> class the way dark mode does: the body paints
+    // The look's ground color rides the <html> class the way dark mode does: the body paints
     // --background, so a wrapper here could not recolor what lies behind the shell. Cleared on
     // unmount so an admin or auth screen visited next keeps the shipped paper.
-    const unified = props.unifiedLayout === true;
+    const ground = unifiedGround(props.look);
     useLayoutEffect(() => {
-        document.documentElement.classList.toggle('unified', unified);
+        document.documentElement.classList.toggle('unified', ground);
 
         return () => document.documentElement.classList.remove('unified');
-    }, [unified]);
+    }, [ground]);
 
     return (
         <ComposeSheetProvider exit={exit}>
@@ -60,7 +60,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     // The unified bar stands at every width (the design's header is one surface on
                     // phone and desk alike), so its height stays reserved; the shipped chrome has no
                     // desktop top bar and zeroes it.
-                    !unified && 'lg:[--modern-top-offset:0px]',
+                    !unifiedChrome(props.look) && 'lg:[--modern-top-offset:0px]',
                     bottomNav
                         ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
                           // inside its height, the bottom bar's sits above the row, and both vars mean
@@ -95,8 +95,9 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     <TopNav chrome={chrome} hidden={hidden} />
                     {children}
                 </div>
-                {/* The design has no right rail: one content column beside the nav. */}
-                {!unified && <RightRail />}
+                {/* A look can drop the third column — the unified design has none: one content
+                    column beside the nav. */}
+                {lookRightRail(props.look) && <RightRail />}
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />

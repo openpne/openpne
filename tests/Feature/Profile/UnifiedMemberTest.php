@@ -10,6 +10,7 @@ use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
+use App\Support\Look;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,10 +20,10 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The experiment switch (SnsSettingKey::ModernUnifiedHome) on a page about somebody else. It pins
- * both sides — off, the digest profile is what it was; on, the new page carries only what the same
- * viewer-scoped queries already return — and, because viewer and owner are now different members,
- * the clearance matrix the home slice had no way to exercise.
+ * The look on a page about somebody else. It pins both sides — standard, the digest profile is what
+ * it was; unified, the new page carries only what the same viewer-scoped queries already return —
+ * and, because viewer and owner are now different members, the clearance matrix the home slice had
+ * no way to exercise.
  */
 class UnifiedMemberTest extends TestCase
 {
@@ -37,7 +38,7 @@ class UnifiedMemberTest extends TestCase
 
     private function unifiedOn(): void
     {
-        $this->setSnsSetting(SnsSettingKey::ModernUnifiedHome, true);
+        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
         $this->freshRequestState();
     }
 

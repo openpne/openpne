@@ -32,7 +32,6 @@ use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
-use App\Features\Home\HomeLayout;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -42,6 +41,7 @@ use App\Models\GroupCategory;
 use App\Models\Member;
 use App\Support\ChatPreview;
 use App\Support\Feature;
+use App\Support\LookResolver;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -134,7 +134,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
                 // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.
@@ -149,11 +149,11 @@ class GroupController extends Controller
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ];
 
-                // The experiment swaps the layout, not the route or the sources (HomeLayout): every
-                // value above is already decided, and the unified page adds only its own sections.
-                // Both render calls stay string literals — ChromeContextCoverageTest reads them to
-                // check every routed component is classified.
-                if (HomeLayout::unifiedEnabled()) {
+                // The look swaps the page, not the route or the sources: every value above is
+                // already decided, and the unified page adds only its own sections. Both render
+                // calls stay string literals — ChromeContextCoverageTest reads them to check every
+                // routed component is classified.
+                if (LookResolver::resolve($request)->usesUnifiedPages()) {
                     return Inertia::render('unified/group', UnifiedGroupSerializer::page(
                         viewer: $viewer,
                         group: $found,

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Services\SnsSettingService;
+use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -23,12 +24,12 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick which home the Modern surface renders. `sns_settings` is authoritative; the value is stored
- * verbatim on save and resolves to the shipped dashboard while no row exists.
+ * Pick the look the Modern surface renders (App\Support\Look). `sns_settings` is authoritative; the
+ * value is stored verbatim on save and resolves to `standard` while no row exists.
  *
  * @property-read Schema $form
  */
-class HomeLayoutSettings extends Page
+class LookSettings extends Page
 {
     protected static ?int $navigationSort = 16;
 
@@ -39,7 +40,7 @@ class HomeLayoutSettings extends Page
 
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
-        return Heroicon::OutlinedHome;
+        return Heroicon::OutlinedRectangleGroup;
     }
 
     public static function getNavigationGroup(): ?string
@@ -49,12 +50,12 @@ class HomeLayoutSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Home layout settings');
+        return __('UI layout settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Home layout settings');
+        return __('UI layout settings');
     }
 
     public function mount(): void
@@ -94,7 +95,7 @@ class HomeLayoutSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (SnsSettingKey::inGroup(SettingGroup::HomeLayout) as $key) {
+            foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
@@ -118,8 +119,10 @@ class HomeLayoutSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (SnsSettingKey::inGroup(SettingGroup::HomeLayout) as $key) {
-            $values[$key->value] = app(SnsSettingService::class)->get($key);
+        foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
+            // The service hands back the typed enum; the radio holds and posts the stored id.
+            $value = app(SnsSettingService::class)->get($key);
+            $values[$key->value] = $value instanceof Look ? $value->value : $value;
         }
 
         return $values;
@@ -127,11 +130,29 @@ class HomeLayoutSettings extends Page
 
     private function buildSection(): Section
     {
+        $looks = Look::cases();
+
         return Section::make()
             ->schema([
-                Toggle::make(SnsSettingKey::ModernUnifiedHome->value)
-                    ->label(SnsSettingKey::ModernUnifiedHome->label())
-                    ->helperText(__('An experimental home and member page built around the member profile. Turning it off puts the previous pages back straight away.')),
+                Radio::make(SnsSettingKey::DefaultLook->value)
+                    ->label(SnsSettingKey::DefaultLook->label())
+                    ->helperText(__('The layout the Modern surface renders.'))
+                    ->options($this->byLook(static fn (Look $look): string => $look->label(), $looks))
+                    ->descriptions($this->byLook(static fn (Look $look): string => $look->description(), $looks))
+                    ->required(),
             ]);
+    }
+
+    /**
+     * @param  callable(Look): string  $text
+     * @param  list<Look>  $looks
+     * @return array<string, string>
+     */
+    private function byLook(callable $text, array $looks): array
+    {
+        return array_combine(
+            array_column($looks, 'value'),
+            array_map($text, $looks),
+        );
     }
 }

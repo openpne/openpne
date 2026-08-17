@@ -22,7 +22,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * The unified group page (SnsSettingKey::ModernUnifiedHome): the same grammar as the unified home and
+ * The unified group page (Look::Unified): the same grammar as the unified home and
  * member page, about a group — who it is, who is in it, what has been happening in it.
  *
  * Everything the shipped group page can do arrives here already decided: the controller resolves the

@@ -14,6 +14,7 @@ use App\Models\GroupMessageImage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicImage;
 use App\Models\Member;
+use App\Support\Look;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -22,10 +23,10 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The experiment switch (SnsSettingKey::ModernUnifiedHome) on the group top. It pins both sides — off,
- * the shipped page is what it was; on, the new page carries every entrance the old one offered under
- * the same conditions — and the two things the layout adds: the groups filed beside this one, which
- * must read the same to everybody, and the picture strip, whose every file is asked again.
+ * The look on the group top. It pins both sides — standard, the shipped page is what it was;
+ * unified, the new page carries every entrance the old one offered under the same conditions — and
+ * the two things the layout adds: the groups filed beside this one, which must read the same to
+ * everybody, and the picture strip, whose every file is asked again.
  */
 class UnifiedGroupTest extends TestCase
 {
@@ -40,7 +41,7 @@ class UnifiedGroupTest extends TestCase
 
     private function unifiedOn(): void
     {
-        $this->setSnsSetting(SnsSettingKey::ModernUnifiedHome, true);
+        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
         $this->freshRequestState();
     }
 
