@@ -28,21 +28,21 @@ enum Look: string
         };
     }
 
-    /** Human-readable label, translated in the reader's locale. */
+    /** Label as a translation key, like Surface: the consumer translates in the reader's locale. */
     public function label(): string
     {
         return match ($this) {
-            self::Standard => __('Standard'),
-            self::Unified => __('Unified (experimental)'),
+            self::Standard => 'Standard',
+            self::Unified => 'Unified (experimental)',
         };
     }
 
-    /** One-line description for the look picker, translated in the reader's locale. */
+    /** One-line description for the look picker, as a translation key like Surface. */
     public function description(): string
     {
         return match ($this) {
-            self::Standard => __('The Modern layout as it has always been.'),
-            self::Unified => __('The experimental layout that renders home, profiles and %communities% in one shared shape.'),
+            self::Standard => 'The Modern layout as it has always been.',
+            self::Unified => 'The experimental layout that renders home, profiles and %communities% in one shared shape.',
         };
     }
 }

@@ -40,7 +40,7 @@ class LookSettings extends Page
 
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
-        return Heroicon::OutlinedRectangleGroup;
+        return Heroicon::OutlinedViewColumns;
     }
 
     public static function getNavigationGroup(): ?string
@@ -137,8 +137,8 @@ class LookSettings extends Page
                 Radio::make(SnsSettingKey::DefaultLook->value)
                     ->label(SnsSettingKey::DefaultLook->label())
                     ->helperText(__('The layout the Modern surface renders.'))
-                    ->options($this->byLook(static fn (Look $look): string => $look->label(), $looks))
-                    ->descriptions($this->byLook(static fn (Look $look): string => $look->description(), $looks))
+                    ->options($this->byLook(static fn (Look $look): string => __($look->label()), $looks))
+                    ->descriptions($this->byLook(static fn (Look $look): string => __($look->description()), $looks))
                     ->required(),
             ]);
     }

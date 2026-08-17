@@ -59,8 +59,10 @@ rather than a deploy:
   replaces did not, the rows come from a source the viewer already reads and each file is
   asked again through `FilePolicy` — a parent's read gate is not a permission on the bytes
   hanging off it.
-- **Nothing is stored differently.** `standard` renders the pre-look output unchanged, so
-  switching back restores the previous pages with no data to undo.
+- **Nothing is stored differently.** `standard` renders the pre-look pages and chrome
+  unchanged — the shared `look` prop replacing the retired `unifiedLayout` boolean is the
+  one wire-format difference — so switching back restores the previous pages with no data
+  to undo.
 
 ## Migration note
 
