@@ -9,7 +9,7 @@ import { LookPreviewBar } from '@/components/look-preview-bar';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
-import { type Chrome, chromeRecedes, hasBottomNav, lookRightRail, unifiedChrome, unifiedGround } from '@/lib/member-chrome';
+import { type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -42,11 +42,12 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // not nav they can bring back.
     const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
+    const look = lookSpec(props.look);
 
     // The look's ground color rides the <html> class the way dark mode does: the body paints
     // --background, so a wrapper here could not recolor what lies behind the shell. Cleared on
     // unmount so an admin or auth screen visited next keeps the shipped paper.
-    const ground = unifiedGround(props.look);
+    const ground = look.ground === 'unified';
     useLayoutEffect(() => {
         document.documentElement.classList.toggle('unified', ground);
 
@@ -61,7 +62,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     // The unified bar stands at every width (the design's header is one surface on
                     // phone and desk alike), so its height stays reserved; the shipped chrome has no
                     // desktop top bar and zeroes it.
-                    !unifiedChrome(props.look) && 'lg:[--modern-top-offset:0px]',
+                    !look.desktopTopBar && 'lg:[--modern-top-offset:0px]',
                     bottomNav
                         ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
                           // inside its height, the bottom bar's sits above the row, and both vars mean
@@ -102,7 +103,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 </div>
                 {/* A look can drop the third column — the unified design has none: one content
                     column beside the nav. */}
-                {lookRightRail(props.look) && <RightRail />}
+                {look.rightRail && <RightRail />}
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
