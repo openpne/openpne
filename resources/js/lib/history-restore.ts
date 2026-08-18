@@ -93,6 +93,14 @@ export function installHistoryRestore(): void {
     }
     installed = true;
 
+    // A back/forward arrival that misses the bfcache is a restore too — Inertia swaps its stored
+    // page state over the re-requested document — and no popstate announces it, so the landing is
+    // recorded here for the page about to mount over it.
+    const arrival = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (arrival?.type === 'back_forward') {
+        tracker.handlePopstate(window.location.href);
+    }
+
     // `popstate` fires after the address has already moved, so this is where the restore landed.
     window.addEventListener('popstate', () => tracker.handlePopstate(window.location.href));
 }
