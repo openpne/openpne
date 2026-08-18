@@ -122,7 +122,7 @@ test.each([
     expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.desktopOffset);
     // Rail-less looks shrink the frame to sidebar + content so the pair centers as one block —
     // the retired rail's width must not survive as a dead band beside the page.
-    expect(shell.className.match(/(?:[a-z]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
+    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
 });
 
 test('the desktop line is the site color, and only desktop draws it', () => {
