@@ -33,8 +33,12 @@ class CreateGroupMessage
      *
      * $body arrives normalized and bounded by the form request (LF newlines, at most 5,000 code
      * points), and $mentions is the picker's raw selection, not yet checked against that body.
-     * in_reply_to_id is never written: it exists to receive what migrated content pointed at, and
-     * talk has no reply UI to produce one.
+     *
+     * $inReplyTo is the message this one answers, and resolving it is the caller's job — it is the
+     * caller that knows which group the request named. The same-group half of that is re-asserted
+     * here because this is the single write chokepoint, and a reference out of the room would render
+     * as a deleted parent forever. There is no foreign key behind the column: a reference to a
+     * message that has since been deleted is a state the screen draws, so nothing may erase it.
      *
      * PostImages::attach owns the transaction and everything else runs inside its persist callback.
      * It must be the OUTERMOST layer: its compensation deletes the bytes it stored when the
@@ -60,19 +64,25 @@ class CreateGroupMessage
         array $mentions = [],
         array $images = [],
         bool $mentionsRequired = false,
+        ?GroupMessage $inReplyTo = null,
     ): GroupMessage {
         if (! GroupTalkAccess::canPost($group, $author)) {
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotPost);
         }
 
+        if ($inReplyTo !== null && (int) $inReplyTo->group_id !== (int) $group->getKey()) {
+            throw new GroupTalkActionException(GroupTalkActionFailure::UnknownMessage);
+        }
+
         return $this->images->attach(
             'groupMessage',
             $images,
-            persist: function () use ($author, $group, $body, $mentions, $mentionsRequired): GroupMessage {
+            persist: function () use ($author, $group, $body, $mentions, $mentionsRequired, $inReplyTo): GroupMessage {
                 $message = GroupMessage::create([
                     'group_id' => $group->getKey(),
                     'member_id' => $author->getKey(),
                     'body' => $body,
+                    'in_reply_to_id' => $inReplyTo?->getKey(),
                 ]);
 
                 // Resolved inside the transaction: resolution share-locks the members it matches, so

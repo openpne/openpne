@@ -10,6 +10,7 @@ use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
 use App\Models\Member;
+use App\Support\ChatPreview;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 
@@ -29,9 +30,12 @@ class GroupMessageSerializer
      * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row, as
      *                                                                         MessageReactionAggregates counts it. Passed in rather than read off the model: the rows
      *                                                                         behind a chip are one per reactor, and no page hydrates them.
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
+     * @param  array<int, GroupMessage>  $parents  the answered messages of the whole page, as
+     *                                             ReplyReferences read them. Required rather than defaulted: a caller that
+     *                                             forgot it would draw every reply as one whose parent was deleted
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
      */
-    public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions): array
+    public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
         return [
             'id' => $message->getKey(),
@@ -42,8 +46,44 @@ class GroupMessageSerializer
             'mentions' => self::mentions($message),
             'images' => $message->images->map([self::class, 'image'])->values()->all(),
             'reactions' => $reactions,
+            'inReplyTo' => self::inReplyTo($message, $parents),
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
+        ];
+    }
+
+    /**
+     * The message this one answers: null when it answers nothing, `{deleted: true}` when the id names
+     * a row that is not there. Only one level travels — a parent that is itself a reply describes its
+     * own text here, never its own parent.
+     *
+     * Everything shown is read off the parent now rather than copied at write time, so an answer
+     * cannot go on quoting something that was retracted. `excerpt` is the same line every list in the
+     * app previews a message by ({@see ChatPreview}) — a payload bound, with the visible truncation
+     * left to the client's clip.
+     *
+     * @param  array<int, GroupMessage>  $parents
+     * @return array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null
+     */
+    private static function inReplyTo(GroupMessage $message, array $parents): ?array
+    {
+        if ($message->in_reply_to_id === null) {
+            return null;
+        }
+
+        $parent = $parents[(int) $message->in_reply_to_id] ?? null;
+
+        if ($parent === null) {
+            return ['deleted' => true];
+        }
+
+        return [
+            'deleted' => false,
+            'id' => $parent->getKey(),
+            'cursor' => (string) GroupTalkCursor::of($parent),
+            'author' => self::author($parent->author),
+            'excerpt' => ChatPreview::lineOrImages([$parent->body], $parent->images->isNotEmpty()),
+            'thumbnailUrl' => $parent->images->first()?->file?->thumbnailUrl(120, 120, square: true),
         ];
     }
 
@@ -75,13 +115,14 @@ class GroupMessageSerializer
      *
      * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  chip rows by message id;
      *                                                                                     a message nobody reacted to has no key
+     * @param  array<int, GroupMessage>  $parents  the answered messages, by id
      * @return array{messages: list<array>, hasOlder: bool, hasNewer: bool}
      */
-    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions, array $reactions): array
+    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
         return [
             'messages' => $page->messages
-                ->map(fn (GroupMessage $message): array => self::message($message, $permissions, $reactions[$message->getKey()] ?? []))
+                ->map(fn (GroupMessage $message): array => self::message($message, $permissions, $reactions[$message->getKey()] ?? [], $parents))
                 ->values()
                 ->all(),
             'hasOlder' => $page->hasOlder,
