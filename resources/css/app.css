@@ -117,6 +117,22 @@
     }
 }
 
+/* The message sheet's rise, at the drawer's easing. Entry only: the page unmounts the sheet the
+   moment it closes — the message it belongs to may have just been deleted — so a closed state is
+   never rendered and an exit animation would never run. */
+@theme {
+    --animate-sheet-from-bottom: sheet-from-bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+
+    @keyframes sheet-from-bottom {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+}
+
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */

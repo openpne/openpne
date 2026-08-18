@@ -69,6 +69,51 @@ export function TalkReactionChips({
     );
 }
 
+const PICKER_BUTTON =
+    'inline-flex items-center justify-center rounded-full text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+/**
+ * The whole vocabulary as buttons, each one already knowing whether it is held: the picker's contents
+ * wherever the picker is offered — the popover a cursor opens, the sheet a press does. One source
+ * because the two are the same set of choices, and a set that drifted between them would be two
+ * different answers to the same question.
+ *
+ * The buttons come loose rather than in a box: what encloses them is the surface's own business, and
+ * a popover sized to four columns and a full-width sheet do not lay them out the same way.
+ */
+export function TalkReactionPickerGrid({
+    chips,
+    vocabulary,
+    onPick,
+    buttonClassName = 'size-10',
+}: {
+    chips: ChatReactionChip[];
+    vocabulary: string[];
+    onPick: (emoji: string, mine: boolean) => void;
+    /** The tap target: a cursor's popover can afford 40px, a thumb's sheet wants the 44 floor. */
+    buttonClassName?: string;
+}) {
+    return (
+        <>
+            {vocabulary.map((emoji) => {
+                const mine = chips.some((chip) => chip.emoji === emoji && chip.mine);
+
+                return (
+                    <button
+                        key={emoji}
+                        type="button"
+                        aria-pressed={mine}
+                        onClick={() => onPick(emoji, mine)}
+                        className={cn(PICKER_BUTTON, buttonClassName, mine && 'bg-selected/10 ring-1 ring-selected')}
+                    >
+                        {emoji}
+                    </button>
+                );
+            })}
+        </>
+    );
+}
+
 export function TalkReactionAdd({
     chips,
     vocabulary,
@@ -101,27 +146,14 @@ export function TalkReactionAdd({
                 instead would run off the left edge of a phone from an anchor already at the right
                 one, and a set this list does not choose could be any length. */}
             <PopoverContent side="top" align="end" aria-label={t('Reactions')} className="flex w-max max-w-[13.5rem] flex-wrap gap-1">
-                {vocabulary.map((emoji) => {
-                    const mine = chips.some((chip) => chip.emoji === emoji && chip.mine);
-
-                    return (
-                        <button
-                            key={emoji}
-                            type="button"
-                            aria-pressed={mine}
-                            onClick={() => {
-                                setOpen(false);
-                                onPick(emoji, mine);
-                            }}
-                            className={cn(
-                                'inline-flex size-10 items-center justify-center rounded-full text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                mine && 'bg-selected/10 ring-1 ring-selected',
-                            )}
-                        >
-                            {emoji}
-                        </button>
-                    );
-                })}
+                <TalkReactionPickerGrid
+                    chips={chips}
+                    vocabulary={vocabulary}
+                    onPick={(emoji, mine) => {
+                        setOpen(false);
+                        onPick(emoji, mine);
+                    }}
+                />
             </PopoverContent>
         </Popover>
     );
