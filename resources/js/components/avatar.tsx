@@ -12,12 +12,13 @@ import { useT } from '@/lib/i18n';
  * counterparty, member / message box / notification rows — where the avatar is the primary
  * identification cue. `sm` (32px) is for app chrome and dense pickers (own avatar, scope identity,
  * mention candidates, compose recipient chips, a multi-recipient list, settings rows), where it is
- * not the reason the row exists. `lg` (48px) is for roster grids.
+ * not the reason the row exists. `lg` (48px) is for roster grids. `xs` (24px) is for a face inside a
+ * pill of furniture (the desktop place bar), where the pill's own height is what sets the face.
  */
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
 
 const sizeClass: Record<AvatarSize, string> = {
-    xs: 'size-7',
+    xs: 'size-6',
     sm: 'size-8',
     md: 'size-10',
     lg: 'size-12',

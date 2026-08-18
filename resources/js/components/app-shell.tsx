@@ -80,6 +80,16 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         look.topBar === 'breadcrumb'
             ? '[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))]'
             : '[--modern-top-offset:calc(3rem+env(safe-area-inset-top))]';
+    // The unified bar stands at every width (the design's header is one surface on phone and desk
+    // alike), so its height stays reserved. Where no desktop bar stands, the var still answers for
+    // whatever a sticky page header has to clear, and under a color-line look that is the line: the
+    // one full-width element the desktop chrome has. Written as one exclusive choice rather than two
+    // competing declarations, since both would be `lg:` rules of equal weight.
+    const desktopTopOffset = look.desktopTopBar
+        ? undefined
+        : look.colorLine
+          ? 'lg:[--modern-top-offset:4px]'
+          : 'lg:[--modern-top-offset:0px]';
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
@@ -87,10 +97,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 className={cn(
                     'mx-auto flex min-h-dvh max-w-6xl xl:max-w-7xl',
                     topOffset,
-                    // The unified bar stands at every width (the design's header is one surface on
-                    // phone and desk alike), so its height stays reserved; the shipped chrome has no
-                    // desktop top bar and zeroes it.
-                    !look.desktopTopBar && 'lg:[--modern-top-offset:0px]',
+                    desktopTopOffset,
                     bottomOffset,
                     'lg:[--modern-bottom-offset:0px]',
                 )}
@@ -130,6 +137,18 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
                 {(bottomNav || conversationBar) && <BottomNav chrome={chrome} hidden={hidden || engaged} />}
+                {/* No header stands at desk width under a headerless look, so the site's own color is
+                    what says which site this is above the sidebar's brand — and it is the only
+                    full-width element the desktop chrome has. The phone's copy lives inside the
+                    breadcrumb bar, whose height counts it. */}
+                {look.colorLine && (
+                    <div
+                        aria-hidden
+                        data-testid="site-color-line"
+                        className="fixed inset-x-0 top-0 z-30 hidden h-1 lg:block"
+                        style={{ backgroundColor: props.snsLogo.color }}
+                    />
+                )}
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
                     draws under, so page content does not run beneath the clock once the bar slides off. */}
                 <div
