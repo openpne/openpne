@@ -95,6 +95,10 @@ class MemberConfigLookTest extends TestCase
                 ->where('lookChoice.options.1.description', 'The experimental layout that renders home, profiles and %communities% in one shared shape.')
                 ->where('lookChoice.current', 'unified')
                 ->where('lookChoice.default', ['value' => 'standard', 'label' => 'Standard'])
+                // The shared prop stays the plain look id beside the page's own block. A page prop
+                // named `look` would win the Inertia merge and hand the shell an object where it
+                // reads an id — the whole shell went blank that way once.
+                ->where('look', 'unified')
             );
     }
 

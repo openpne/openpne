@@ -40,7 +40,7 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
         cells: {
             standard: 'Varies by screen: a title on a list, back plus the name on a detail page.',
             unified: 'At the top level, Home / %communities% tabs and a notification bell. Deeper screens are as Standard.',
-            tabbed: 'One grammar everywhere: the site mark, where you are (a breadcrumb), and the menu, under a line in the site color. No bell, no back button.',
+            tabbed: 'One grammar everywhere: the site mark, where you are (a breadcrumb; the site name on home and on a member or %community% top), and the menu, under a line in the site color. No bell, no back button.',
         },
     },
     {
@@ -79,7 +79,7 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
         dimension: 'On a desktop',
         cells: {
             standard: 'Sidebar plus a right column (%friends% and such).',
-            unified: 'Full-width header tabs plus the sidebar. No right column.',
+            unified: 'Home / %communities% tabs beside the sidebar. No right column.',
             tabbed: 'No header: the site-color line over the sidebar, and a place bar on deeper screens.',
         },
     },
