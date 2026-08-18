@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { IDLE, pressReducer, type PressState } from './use-long-press.ts';
 
-const down = (over: Partial<{ pointerType: string; x: number; y: number; pointers: number }> = {}) =>
-    pressReducer(IDLE, { type: 'down', pointerType: 'touch', x: 100, y: 100, pointers: 1, ...over }).state;
+const down = (over: Partial<{ pointerType: string; x: number; y: number; primary: boolean }> = {}) =>
+    pressReducer(IDLE, { type: 'down', pointerType: 'touch', x: 100, y: 100, primary: true, ...over }).state;
 
 const pending: PressState = down();
 
@@ -16,7 +16,7 @@ test('a cursor never presses, whatever the machine says about its pointer', () =
 });
 
 test('a second finger is a pinch, not a press', () => {
-    assert.equal(down({ pointers: 2 }).phase, 'idle');
+    assert.equal(down({ primary: false }).phase, 'idle');
 });
 
 test('lifting the finger is a tap: it ends the press without firing', () => {
@@ -37,7 +37,7 @@ test('the press survives a shaky finger and gives up past the slop', () => {
 });
 
 test('travel is measured from where the finger landed, not from the origin', () => {
-    const far = pressReducer(IDLE, { type: 'down', pointerType: 'touch', x: 400, y: 400, pointers: 1 }).state;
+    const far = pressReducer(IDLE, { type: 'down', pointerType: 'touch', x: 400, y: 400, primary: true }).state;
 
     assert.equal(pressReducer(far, { type: 'move', x: 404, y: 402 }).state.phase, 'pending');
 });

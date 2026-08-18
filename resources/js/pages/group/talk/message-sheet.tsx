@@ -10,6 +10,17 @@ const SHEET_ITEM =
     'flex min-h-12 w-full items-center gap-3 rounded-field px-3 text-left text-base transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /**
+ * Whether this body can be offered for copying — and so whether it alone earns the row a press. One
+ * answer for the sheet's item and the row's gate: split, the gate can open a sheet with nothing in it.
+ * Feature-detected rather than assumed: the clipboard is a secure-context API, and a site served over
+ * plain http — a self-hosted one on a local network — has no `navigator.clipboard` at all. Absent,
+ * the item is not offered, because an offer that silently does nothing is worse than none.
+ */
+export function canCopyText(body: string): boolean {
+    return body.trim() !== '' && typeof navigator.clipboard?.writeText === 'function';
+}
+
+/**
  * Everything one message offers, where there is no cursor to reveal it with: the sheet a long press
  * on the row opens. The same choices the row's own controls carry, plus the one the press took away —
  * a finger cannot select text on a row that suppresses the selection lens, so copying it is offered
@@ -39,10 +50,7 @@ export function TalkMessageSheet({
     onClose: () => void;
 }) {
     const t = useT();
-    // Feature-detected rather than assumed: the clipboard is a secure-context API, and a site served
-    // over plain http — a self-hosted one on a local network — has no `navigator.clipboard` at all.
-    // Absent, the item is not offered, because an offer that silently does nothing is worse than none.
-    const canCopy = message.body.trim() !== '' && typeof navigator.clipboard?.writeText === 'function';
+    const canCopy = canCopyText(message.body);
 
     return (
         <Dialog open onOpenChange={(next) => !next && onClose()}>
@@ -50,7 +58,9 @@ export function TalkMessageSheet({
                 {/* The sheet is named for the reader who cannot see it; what is drawn is the grabber,
                     which says the same thing to everyone else and says nothing worth announcing. */}
                 <DialogTitle className="sr-only">{t('Message actions')}</DialogTitle>
-                <span aria-hidden className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-border" />
+                {/* mb-6 walks the first row clear of the close control's corner — the picker row has
+                    its own pr-10 for that, but a sheet that opens with a full-width item does not. */}
+                <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
 
                 {canReact && (
                     // Held off the right edge: the sheet's close control stands over the corner this

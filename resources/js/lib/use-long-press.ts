@@ -29,7 +29,7 @@ export interface PressState {
 export const IDLE: PressState = { phase: 'idle', x: 0, y: 0 };
 
 export type PressEvent =
-    | { type: 'down'; pointerType: string; x: number; y: number; pointers: number }
+    | { type: 'down'; pointerType: string; x: number; y: number; primary: boolean }
     | { type: 'move'; x: number; y: number }
     | { type: 'up' }
     | { type: 'cancel' }
@@ -50,11 +50,14 @@ export interface PressResult {
  * while the mouse held over the same row does nothing.
  *
  * A second finger is a pinch or a two-handed scroll, neither of which is a press on one message.
+ * Whether a finger is second is the browser's `isPrimary`, which is answered for the whole document —
+ * counting downs per element instead undercounts an up delivered elsewhere (a mouse has no implicit
+ * capture), and a counter that drifts up once leaves that element deaf to every later press.
  */
 export function pressReducer(state: PressState, event: PressEvent): PressResult {
     switch (event.type) {
         case 'down':
-            if (event.pointerType === 'mouse' || event.pointers > 1) {
+            if (event.pointerType === 'mouse' || !event.primary) {
                 return { state: IDLE, fire: false };
             }
 
@@ -91,8 +94,6 @@ export function useLongPress(onLongPress: () => void, { enabled = true }: { enab
     const press = useRef<PressState>(IDLE);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const firedAt = useRef(0);
-    /** Fingers currently down, so the second one is recognised as a second one. */
-    const pointers = useRef(0);
 
     useEffect(
         () => () => {
@@ -130,21 +131,14 @@ export function useLongPress(onLongPress: () => void, { enabled = true }: { enab
 
     return {
         onPointerDown: (e) => {
-            pointers.current += 1;
-            advance({ type: 'down', pointerType: e.pointerType, x: e.clientX, y: e.clientY, pointers: pointers.current });
+            advance({ type: 'down', pointerType: e.pointerType, x: e.clientX, y: e.clientY, primary: e.isPrimary });
             if (press.current.phase === 'pending') {
                 timer.current = setTimeout(() => advance({ type: 'timer' }), LONG_PRESS_MS);
             }
         },
         onPointerMove: (e) => advance({ type: 'move', x: e.clientX, y: e.clientY }),
-        onPointerUp: () => {
-            pointers.current = Math.max(0, pointers.current - 1);
-            advance({ type: 'up' });
-        },
-        onPointerCancel: () => {
-            pointers.current = Math.max(0, pointers.current - 1);
-            advance({ type: 'cancel' });
-        },
+        onPointerUp: () => advance({ type: 'up' }),
+        onPointerCancel: () => advance({ type: 'cancel' }),
         // Only while this element owns a press: a right-click anywhere keeps the browser's own menu,
         // which is the desktop lane's business and not this one's.
         onContextMenu: (e) => {

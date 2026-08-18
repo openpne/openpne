@@ -9,6 +9,7 @@ import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
+import { canCopyText } from './message-sheet';
 import { TalkReactionAdd, TalkReactionChips } from './reaction-bar';
 import type { TalkMessage } from './types';
 
@@ -85,7 +86,7 @@ export function TalkMessageRow({
     const author = message.author;
     const hasBody = message.body.trim() !== '';
     const press = useLongPress(onOpenActions, {
-        enabled: reactions.canReact || message.canDelete || hasBody || reactions.chips.length > 0,
+        enabled: reactions.canReact || message.canDelete || canCopyText(message.body) || reactions.chips.length > 0,
     });
 
     const content = (
@@ -126,6 +127,7 @@ export function TalkMessageRow({
                 'group px-4 sm:px-5',
                 // Only where the press is the way in: the lens and the image menu a held finger raises
                 // would land on top of the sheet, and a cursor's text selection is nobody's to take.
+                // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 grouped ? 'pb-3' : 'py-3',
                 rule && 'border-t border-border',
