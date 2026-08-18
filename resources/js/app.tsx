@@ -10,6 +10,7 @@ import { SyncLocaleWithServer } from '@/components/sync-locale';
 import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
 import { installHistoryRestore } from '@/lib/history-restore';
+import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
@@ -47,6 +48,9 @@ void createInertiaApp({
         // Before the app mounts likewise: a page that revalidates on a restore has to find the
         // record already there when it arrives.
         installHistoryRestore();
+        // Every page restored from history is re-read from the server — see the module for why
+        // this is the default rather than something each page opts into.
+        installRevalidateOnRestore(router);
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
         // surfaces as the raw English key — matching the "key === English
         // text" omission policy. ja-as-fallback would silently render Japanese
