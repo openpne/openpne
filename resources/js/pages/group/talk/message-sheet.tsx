@@ -62,14 +62,15 @@ export function TalkMessageSheet({
                 {/* The sheet is named for the reader who cannot see it; what is drawn is the grabber,
                     which says the same thing to everyone else and says nothing worth announcing. */}
                 <DialogTitle className="sr-only">{t('Message actions')}</DialogTitle>
-                {/* mb-6 walks the first row clear of the close control's corner — the picker row has
-                    its own pr-10 for that, but a sheet that opens with a full-width item does not. */}
+                {/* mb-6 walks whatever opens the sheet clear of the close control's corner, so no
+                    first row has to hold a gap of its own for it. */}
                 <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
 
                 {canReact && (
-                    // Held off the right edge: the sheet's close control stands over the corner this
-                    // row would otherwise reach into.
-                    <div className="flex flex-wrap gap-1 pr-10 pb-2">
+                    // Four to a row, each spread in a column of its own: wrapping left the last row
+                    // short and the block padded unevenly against the sheet's two edges, and a set
+                    // meant to be scanned should not change shape with its own length.
+                    <div className="grid grid-cols-4 justify-items-center gap-y-2 pb-2">
                         <TalkReactionPickerGrid
                             chips={chips}
                             vocabulary={vocabulary}
@@ -79,7 +80,7 @@ export function TalkMessageSheet({
                             // one language — the fill alone is a shade too close to the sheet's. A
                             // held one keeps its own colours — written after these, they replace
                             // rather than sit under.
-                            buttonClassName="size-11 border-input bg-muted"
+                            buttonClassName="size-12 text-2xl border-input bg-muted"
                             onPick={(emoji, mine) => {
                                 onToggle(emoji, mine);
                                 onClose();

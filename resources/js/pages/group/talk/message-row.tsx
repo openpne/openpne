@@ -10,7 +10,7 @@ import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { canCopyText } from './message-sheet';
-import { ICON_BUTTON, TalkReactionAdd, TalkReactionChips } from './reaction-bar';
+import { ICON_BUTTON, QUICK_REACTIONS, TalkReactionAdd, TalkReactionChips, TalkReactionPickerGrid } from './reaction-bar';
 import type { TalkMessage } from './types';
 
 /**
@@ -50,9 +50,13 @@ export interface TalkRowReactions {
  * otherwise drop it into the flow and shove the row taller on every Tab. It ties that rule's
  * specificity and wins on emission order alone, so it is the one order-dependent piece here: if it
  * ever loses, the bar goes back to standing in the flow, wider — a look, not a lockout.
+ *
+ * `-top-1` leans the bar out the row's top rather than its foot: `isolate` keeps its z within the
+ * row, rows behind paint first and rows after paint over — so what the bar overhangs must be the
+ * row already painted, or a one-line follow-up's next sibling draws its hairline through it.
  */
 const ROW_ACTIONS =
-    'absolute right-2 top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
+    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
 
 /**
  * One utterance. Shaped like a board comment rather than a two-sided bubble stream: the same row a
@@ -117,7 +121,22 @@ export function TalkMessageRow({
 
     const actions = (reactions.canReact || message.canDelete) && (
         <div className={ROW_ACTIONS}>
-            {reactions.canReact && <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+            {reactions.canReact && (
+                <>
+                    {/* The head of the vocabulary stands in the bar itself, drawn by the picker's own
+                        component: a reaction is then one click rather than a click into a popover, and
+                        an emoji says "yours" the same way whichever of the two places it was pressed
+                        in. The picker still offers the whole set, these three included — taking them
+                        out of it would move an emoji's place depending on what is already held. */}
+                    <TalkReactionPickerGrid
+                        chips={reactions.chips}
+                        vocabulary={reactions.vocabulary.slice(0, QUICK_REACTIONS)}
+                        onPick={reactions.onToggle}
+                        buttonClassName="size-8 text-base"
+                    />
+                    <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
+                </>
+            )}
             {message.canDelete && (
                 // A glyph shaped like its neighbour, so the bar reads as one set of controls; the
                 // name says what a glyph cannot, and what it is for turns red only under the hand —
@@ -140,22 +159,37 @@ export function TalkMessageRow({
             data-talk-message-id={message.id}
             {...press}
             className={cn(
-                'group relative px-4 sm:px-5',
+                // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
+                // sit under the words and over whatever the row itself paints, not under the list.
+                'group relative isolate px-4 sm:px-5',
                 // Only where the press is the way in: the lens and the image menu a held finger raises
                 // would land on top of the sheet, and a cursor's text selection is nobody's to take.
                 // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 grouped ? 'pb-3' : 'py-3',
                 rule && 'border-t border-border',
-                // The transition is not conditional on the flag: what fades is the highlight being
-                // taken away, and a transition arriving with the class would have nothing to animate
-                // from. The row mounts already highlighted, so the emphasis itself is instant.
-                'transition-colors duration-1000 motion-reduce:transition-none',
-                // 10%: enough tint to pick the row out, light enough to leave the author link's own
-                // contrast over AA (it is 4.48:1 at 15%).
-                highlighted && 'bg-selected/10',
+                // Under the pointer the row says which one it is, quickly enough to track the hand.
+                // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
+                'transition-colors duration-100 hover:bg-muted',
             )}
         >
+            {/* The deep link's landing, as a layer rather than the row's own background: the row now
+                tints under the pointer, and a highlight sharing that background would drag the
+                pointer's tint into a second-long fade of its own.
+
+                The transition is not conditional on the flag: what fades is the highlight being taken
+                away, and a transition arriving with the class would have nothing to animate from. The
+                row mounts already highlighted, so the emphasis itself is instant.
+
+                10%: enough tint to pick the row out, light enough to leave the author link's own
+                contrast over AA (it is 4.48:1 at 15%). */}
+            <span
+                aria-hidden
+                className={cn(
+                    'pointer-events-none absolute inset-0 -z-10 bg-selected/10 transition-opacity duration-1000 motion-reduce:transition-none',
+                    highlighted ? 'opacity-100' : 'opacity-0',
+                )}
+            />
             {grouped ? (
                 <>
                     <span className="sr-only">
