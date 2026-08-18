@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Frontend;
 
+use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -19,11 +22,16 @@ use Tests\TestCase;
  */
 class SharedPropCollisionGuardTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_no_literal_page_prop_shadows_a_shared_prop(): void
     {
         $shared = $this->sharedPropNames();
-        $this->assertNotEmpty($shared, 'The middleware scrape found no shared props — the pattern went stale.');
+        $this->assertNotEmpty($shared, 'share() answered no props — the guard has gone stale.');
         $this->assertContains('look', $shared);
+        // From parent::share(), which a source scrape of the middleware would never see: a page
+        // prop named `errors` would swallow Inertia's validation bag the same silent way.
+        $this->assertContains('errors', $shared);
 
         $offences = [];
         foreach (File::allFiles(app_path()) as $file) {
@@ -43,14 +51,19 @@ class SharedPropCollisionGuardTest extends TestCase
         $this->assertSame([], $offences, implode("\n", $offences));
     }
 
-    /** @return list<string> */
+    /**
+     * Asked of the middleware at runtime rather than scraped from its source, so however share()
+     * is reshaped — indentation, extraction into helpers, keys inherited from the parent — the
+     * list is what a page actually receives.
+     *
+     * @return list<string>
+     */
     private function sharedPropNames(): array
     {
-        $middleware = File::get(app_path('Http/Middleware/HandleInertiaRequests.php'));
-        // The share() return array's own entries sit at 12 spaces; nested payload keys sit deeper.
-        preg_match_all("/^ {12}'(\\w+)' =>/m", $middleware, $matches);
+        $request = Request::create('/dashboard');
+        $request->setLaravelSession(app('session.store'));
 
-        return array_values(array_unique($matches[1]));
+        return array_keys((new HandleInertiaRequests)->share($request));
     }
 
     /**
