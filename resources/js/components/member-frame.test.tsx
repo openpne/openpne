@@ -9,7 +9,7 @@ import type { AuthUser, FeatureKey } from '@/types';
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
-const inertia = vi.hoisted(() => ({ page: {} as { props: Record<string, unknown> } }));
+const inertia = vi.hoisted(() => ({ page: {} as { component: string; props: Record<string, unknown> } }));
 
 vi.mock('@inertiajs/react', () => ({
     usePage: () => inertia.page,
@@ -28,9 +28,12 @@ const allOn = Object.fromEntries(
 
 const user: AuthUser = { id: 1, name: 'Viewer', email: 'viewer@example.com', imageUrl: null, avatarColor: null, isAi: false };
 
-/** A hub, framed for the given viewer and layout. Returns the heading row the fold acts on. */
-function hubHeadingRow(props: Record<string, unknown>): Element | null {
+const cyclists = { id: 7, name: 'Cyclists', imageUrl: '/img/cyclists.png' };
+
+/** Land on a screen the way the layout does: the frame reads the page its chrome was resolved from. */
+function arrive(component: string, props: Record<string, unknown> = {}) {
     inertia.page = {
+        component,
         props: {
             auth: { user },
             enabledFeatures: allOn,
@@ -40,12 +43,20 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
             ...props,
         },
     };
-    const chrome = resolveChrome('notifications/index', inertia.page.props);
 
-    render(<MemberFrame chrome={chrome}>{null}</MemberFrame>);
+    render(<MemberFrame chrome={resolveChrome(component, inertia.page.props)}>{null}</MemberFrame>);
+}
+
+/** A hub, framed for the given viewer and layout. Returns the heading row the fold acts on. */
+function hubHeadingRow(props: Record<string, unknown>): Element | null {
+    arrive('notifications/index', props);
 
     return screen.getByRole('heading', { name: 'Notifications' }).parentElement;
 }
+
+const trail = () => screen.queryByRole('navigation', { name: 'Breadcrumb' });
+
+const placeBar = () => screen.queryByTestId('place-bar');
 
 /**
  * The fold is a claim that the mobile bar is showing the title instead. Three bars stand over a hub
@@ -62,4 +73,44 @@ test('a hub keeps its heading under the unified bar, which carries tabs instead'
 
 test('a hub keeps its heading for a guest, whose bar carries no title either', () => {
     expect(hubHeadingRow({ auth: { user: null } })?.className).not.toContain('sr-only');
+});
+
+/**
+ * Where a look answers "where am I" with the place bar, that is the whole answer: the trail it
+ * replaces must not stand beside it, or the desk shows the same claim twice in two vocabularies.
+ */
+test('the place bar stands in place of the trail, not beside it', () => {
+    arrive('group/talk/index', { look: 'tabbed', group: cyclists });
+
+    const pill = placeBar()?.querySelector('a');
+    expect(pill?.getAttribute('href')).toBe('/groups/7');
+    expect(pill?.textContent).toBe('Cyclists');
+    // The face the phone header cannot carry: there the brand mark is the bar's one image.
+    expect(pill?.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
+    expect(trail()).toBeNull();
+});
+
+test.each(['standard', 'unified'] as const)('%s keeps the crumb trail it has always drawn', (look) => {
+    arrive('group/talk/index', { look, group: cyclists });
+
+    expect(trail()?.className).toContain('hidden lg:flex');
+    expect(trail()?.textContent).toBe('Cyclists');
+    expect(placeBar()).toBeNull();
+});
+
+test('a form says where it is without offering a way out of it', () => {
+    // The rule the phone header states at its own crumb, kept at desk width: a pressable-looking
+    // crumb beside unsaved input is what neither bar may paint.
+    arrive('community/edit', { look: 'tabbed', group: cyclists });
+
+    expect(placeBar()?.textContent).toBe('Cyclists');
+    expect(placeBar()?.querySelector('a')).toBeNull();
+});
+
+test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no place bar stands over it', (component) => {
+    // The sidebar's brand and its active row already answer for these; a bar repeating them would be
+    // furniture with nothing to say.
+    arrive(component, { look: 'tabbed' });
+
+    expect(placeBar()).toBeNull();
 });

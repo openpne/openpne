@@ -102,17 +102,36 @@ const header = () => document.querySelector('header');
  * never catch a consumer reading the wrong one. What the shell actually renders per look can.
  */
 test.each([
-    ['standard', { ground: false, rail: true, desktopTopBar: false }],
-    ['unified', { ground: true, rail: false, desktopTopBar: true }],
-    ['tabbed', { ground: true, rail: false, desktopTopBar: false }],
-] as const)('%s wires ground, rail and desktop offset from its own fields', (look, expected) => {
+    // Null = no desktop override at all: the unified bar stands at every width, so the phone's
+    // reserved height is the desktop's too. The two that drop it differ by what is left above the
+    // page — nothing, or the site-color line.
+    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]' }],
+    ['unified', { ground: true, rail: false, line: false, desktopOffset: null }],
+    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]' }],
+] as const)('%s wires ground, rail, the color line and the desktop offset from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
     const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
 
     expect(document.documentElement.classList.contains('unified')).toBe(expected.ground);
     expect(screen.queryByTestId('right-rail') !== null).toBe(expected.rail);
+    const line = screen.queryByTestId('site-color-line');
+    expect(line !== null).toBe(expected.line);
     const shell = container.firstElementChild as HTMLElement;
-    expect(shell.className.includes('lg:[--modern-top-offset:0px]')).toBe(!expected.desktopTopBar);
+    // The whole declaration, not merely its presence: an offset that stopped clearing the line would
+    // otherwise pass as long as some `lg:` value was there.
+    expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.desktopOffset);
+});
+
+test('the desktop line is the site color, and only desktop draws it', () => {
+    const chrome = arrive('dashboard', '/dashboard', { look: 'tabbed' });
+    render(<AppShell chrome={chrome}>page</AppShell>);
+    const line = screen.getByTestId('site-color-line');
+
+    // Inline, because the color is per-site data — no palette class can carry it.
+    expect(line.style.backgroundColor).toBe('#336699');
+    // The phone's copy is the breadcrumb bar's own foot, which is why this one is hidden below lg.
+    expect(line.className).toContain('hidden');
+    expect(line.className).toContain('lg:block');
 });
 
 /**

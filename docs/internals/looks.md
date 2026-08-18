@@ -35,8 +35,11 @@ The looks today:
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
   the site name on home, `[mark] › section` on a hub, `[mark] › place` deeper, with the
   site color as a 4px line under the row. Under the page, four labelled tabs (Home,
-  groups, diaries, notifications) in a 58px row. The desktop place bar `placeBar` promises
-  lands with the next pass.
+  groups, diaries, notifications) in a 58px row. At desk width it is headerless: the same
+  color line, now the only full-width element the chrome has, over the standard sidebar,
+  and on a screen deep enough to be inside somewhere a sticky place bar at the head of the
+  content column — the same crumb in the same pill, carrying the place's face — in place of
+  the crumb trail rather than beside it.
 
 Two decisions inside `tabbed` are deliberate rather than pending:
 
