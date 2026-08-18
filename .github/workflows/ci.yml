@@ -136,11 +136,15 @@ jobs:
           MYSQL_DATABASE: openpne_test
         ports:
           - 3306:3306
+        # tmpfs datadir: fsync/doublewrite become memory writes, cutting DDL-heavy per-process
+        # migrate time. `services:` cannot override the image command, so mysqld durability flags
+        # are not an option here.
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+          --tmpfs /var/lib/mysql:rw
     env:
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
