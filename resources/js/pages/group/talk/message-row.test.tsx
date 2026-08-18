@@ -53,5 +53,5 @@ test.each([false, true])('a row (grouped: %s) offers reacting and deleting by na
     );
 
     expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete message' })).toBeTruthy();
 });

@@ -114,11 +114,11 @@ test('deleting is offered only to someone who may', () => {
     clipboard(null);
     open();
 
-    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete message' })).toBeNull();
 
     cleanup();
     const spies = open({ canDelete: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete message' }));
 
     // The sheet leaves first: the question the page asks next is a modal of its own.
     expect(spies.onClose).toHaveBeenCalled();
