@@ -72,7 +72,8 @@ export function TalkMessageSheet({
                 // whole by its title, drawing nothing (the content has no ring of its own).
                 onOpenAutoFocus={(event) => {
                     event.preventDefault();
-                    contentRef.current?.focus();
+                    // preventScroll, as the default this stands in for would have passed it.
+                    contentRef.current?.focus({ preventScroll: true });
                 }}
             >
                 {/* The sheet is named for the reader who cannot see it; what is drawn is the grabber,
