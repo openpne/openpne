@@ -43,6 +43,17 @@ export function DialogContent({
 }
 
 /**
+ * What each edge costs the base sheet, which is written for a full-height side drawer: the bottom one
+ * gives up `inset-y-0` for a top it does not set, and takes a cap of its own so a long sheet scrolls
+ * inside itself rather than growing over the conversation it was opened from.
+ */
+const SHEET_SIDE = {
+    left: 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
+    right: 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right',
+    bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] motion-safe:data-[state=open]:animate-sheet-from-bottom',
+};
+
+/**
  * `side` is the screen edge the sheet hugs. A drawer opens from the side its trigger stands on — the
  * one thing every site in the 2026-08 menu survey agreed about — so a bar that moves its hamburger
  * moves the sheet with it. The close control belongs to the trigger's side too.
@@ -51,6 +62,11 @@ export function DialogContent({
  * while the closed animation runs), padded to the breadcrumb bar's gutters so what the drawer and
  * the bar both draw — the brand, the menu control — lands in the same place open or shut. Its close
  * control is the trigger's twin: same box, same spot, the word "close" where "menu" stood.
+ *
+ * The bottom sheet answers a touch, not a trigger: it rises from the edge the thumb rests on and is
+ * capped short of the screen so what it was opened from stays in view above it. It restates the top
+ * padding because it has no top edge to inset from — the base's status-bar inset would otherwise
+ * stand as dead space under the sheet's own rounded top.
  */
 export function SheetContent({
     className,
@@ -58,7 +74,7 @@ export function SheetContent({
     closeLabel = 'Close',
     side = 'left',
     ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom' }) {
     return (
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -67,9 +83,7 @@ export function SheetContent({
                     // Edge-to-edge by construction (inset-y-0), so it pads for all three insets it can
                     // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
                     'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
-                    side === 'right'
-                        ? 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right'
-                        : 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
+                    SHEET_SIDE[side],
                     className,
                 )}
                 {...props}
@@ -87,9 +101,14 @@ export function SheetContent({
                 )}
                 {children}
                 {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
-                {side === 'left' && (
+                {side !== 'right' && (
                     <DialogPrimitive.Close
-                        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] rounded-full p-1 text-muted-foreground transition hover:bg-accent"
+                        className={cn(
+                            'absolute right-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent',
+                            // A sheet standing on the foot of the screen has no status bar over its top
+                            // corner, so its close sits at the plain gutter.
+                            side === 'bottom' ? 'top-3' : 'top-[calc(0.75rem+env(safe-area-inset-top))]',
+                        )}
                         aria-label={closeLabel}
                     >
                         <X className="size-5" />
