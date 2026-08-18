@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Copy, Trash2, Users } from 'lucide-react';
+import { Copy, Reply, Trash2, Users } from 'lucide-react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
@@ -39,8 +39,10 @@ export function TalkMessageSheet({
     chips,
     vocabulary,
     canReact,
+    canReply,
     onToggle,
     onShowReactors,
+    onReply,
     onDelete,
     onClose,
 }: {
@@ -49,8 +51,11 @@ export function TalkMessageSheet({
     chips: ChatReactionChip[];
     vocabulary: string[];
     canReact: boolean;
+    /** Whether the viewer may post, and so answer this message. */
+    canReply: boolean;
     onToggle: (emoji: string, mine: boolean) => void;
     onShowReactors: () => void;
+    onReply: () => void;
     onDelete: () => void;
     onClose: () => void;
 }) {
@@ -106,8 +111,24 @@ export function TalkMessageSheet({
                     </div>
                 )}
 
-                {(chips.length > 0 || canCopy) && (
+                {(canReply || chips.length > 0 || canCopy) && (
                     <div className={SHEET_GROUP}>
+                        {canReply && (
+                            <button
+                                type="button"
+                                className={SHEET_ITEM}
+                                onClick={() => {
+                                    // The sheet leaves first; staging the reply focuses the composer,
+                                    // which the sheet standing over the foot of the screen would cover.
+                                    onClose();
+                                    onReply();
+                                }}
+                            >
+                                <Reply className="size-5 shrink-0" aria-hidden />
+                                {t('Reply')}
+                            </button>
+                        )}
+
                         {chips.length > 0 && (
                             <button
                                 type="button"
