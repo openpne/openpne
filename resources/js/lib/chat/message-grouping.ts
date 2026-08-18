@@ -2,12 +2,17 @@
 export interface GroupableMessage {
     author: { id: number } | null;
     createdAt: string;
+    /**
+     * Present when this row answers another message. A reply opens a new turn even inside a run: the
+     * header must return to draw the reference above it. Talk carries it; a direct message omits it.
+     */
+    inReplyTo?: { deleted: boolean } | null;
 }
 
 /**
- * Discord's window: a run of messages by one author within seven minutes reads as one turn of
- * speaking, so the repeats drop their header. Beyond it the header returns even mid-run — a reply
- * after a silence is a new turn, not more of the last one.
+ * A run of messages by one author within seven minutes reads as one turn of speaking, so the repeats
+ * drop their header. Beyond it the header returns even mid-run — a reply after a silence is a new
+ * turn, not more of the last one.
  */
 const WINDOW_MS = 7 * 60 * 1000;
 
@@ -17,6 +22,12 @@ const WINDOW_MS = 7 * 60 * 1000;
  * could say otherwise.
  */
 export function continuesRun(previous: GroupableMessage | undefined, message: GroupableMessage): boolean {
+    // A reply opens a new turn: its own header carries the reference, so it never folds under the row
+    // before it even when the same author spoke seconds earlier.
+    if (message.inReplyTo != null) {
+        return false;
+    }
+
     if (previous?.author == null || message.author == null || previous.author.id !== message.author.id) {
         return false;
     }

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Reply, Trash2 } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
@@ -11,7 +11,49 @@ import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { canCopyText } from './message-sheet';
 import { ICON_BUTTON, QUICK_REACTIONS, TalkReactionAdd, TalkReactionChips, TalkReactionPickerGrid } from './reaction-bar';
-import type { TalkMessage } from './types';
+import type { TalkMessage, TalkReplyReference } from './types';
+
+/**
+ * The reference a reply draws above its own header: who it answers and a glimpse of what they said,
+ * muted so it reads as context rather than the message. The excerpt is bounded server-side (the
+ * server's ChatPreview); the visible cut is this line's `truncate`.
+ *
+ * The live variant is one button over the whole line — the jump target is the reference, not a word
+ * of it. A parent that was deleted between render and click keeps the same line, italic and inert:
+ * there is nowhere to jump to.
+ *
+ * The button carries no `aria-label`: one would override the name computed from the contents and
+ * leave every reply header reading as the same "go to" button, dropping exactly the who-and-what the
+ * reference exists to say. So the action is an sr-only prefix instead, and the name is built from the
+ * prefix, the author and the excerpt — the picture stays alt-less, a glimpse the excerpt already
+ * names.
+ */
+function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJump: (parent: { id: number; cursor: string }) => void }) {
+    const t = useT();
+
+    if (reference.deleted) {
+        return (
+            <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground italic">
+                <Reply className="size-3.5 shrink-0" aria-hidden />
+                <span>{t('Deleted message')}</span>
+            </div>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={() => onJump({ id: reference.id, cursor: reference.cursor })}
+            className="mb-1 flex w-full items-center gap-1.5 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+            <span className="sr-only">{t('Go to the replied message')}: </span>
+            <Reply className="size-3.5 shrink-0" aria-hidden />
+            <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
+            {reference.thumbnailUrl !== null && <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />}
+            <span className="min-w-0 truncate">{reference.excerpt}</span>
+        </button>
+    );
+}
 
 /**
  * The row's half of the reactions: what to draw, and what a tap means. The chips are the message's
@@ -72,16 +114,20 @@ const ROW_ACTIONS =
  *
  * `onOpenActions` is the touch lane's way in — the whole row, gutters included, is the press target
  * (see ROW_ACTIONS for the other one). It is offered only where there is something to offer: a row
- * with no reaction to make, nothing to delete, no body to copy and no chips to look behind has an
- * empty sheet, so it gets no press at all and keeps the browser's own long-press behaviour.
+ * with no reaction to make, no reply to start, nothing to delete, no body to copy and no chips to
+ * look behind has an empty sheet, so it gets no press at all and keeps the browser's own long-press
+ * behaviour.
  *
- * `highlighted` is the deep link's landing: the row a `?m=` link opened on, held for a moment so the
- * reader can see which message named them.
+ * `highlighted` is the deep link's landing: the row a `?m=` link opened on — and now also the parent
+ * a reply header jumped to — held for a moment so the reader can see which message named them.
  */
 export function TalkMessageRow({
     message,
     onDelete,
     onOpenActions,
+    onReply,
+    onJumpToReply,
+    canReply,
     highlighted = false,
     grouped = false,
     rule = false,
@@ -90,6 +136,12 @@ export function TalkMessageRow({
     message: TalkMessage;
     onDelete: (id: number) => void;
     onOpenActions: () => void;
+    /** Stage this message as the one a new post answers. */
+    onReply: () => void;
+    /** Go to the message this one answers — scrolled to if on screen, fetched into view if not. */
+    onJumpToReply: (parent: { id: number; cursor: string }) => void;
+    /** Whether the viewer may post, and so start a reply. Not the message's own fact like canDelete. */
+    canReply: boolean;
     highlighted?: boolean;
     grouped?: boolean;
     /** Draw the hairline above this row — the list rules between turns, not inside them. */
@@ -100,7 +152,7 @@ export function TalkMessageRow({
     const author = message.author;
     const hasBody = message.body.trim() !== '';
     const press = useLongPress(onOpenActions, {
-        enabled: reactions.canReact || message.canDelete || canCopyText(message.body) || reactions.chips.length > 0,
+        enabled: reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || reactions.chips.length > 0,
     });
 
     const content = (
@@ -121,7 +173,7 @@ export function TalkMessageRow({
         </>
     );
 
-    const actions = (reactions.canReact || message.canDelete) && (
+    const actions = (reactions.canReact || canReply || message.canDelete) && (
         <div className={ROW_ACTIONS}>
             {reactions.canReact && (
                 <>
@@ -145,6 +197,11 @@ export function TalkMessageRow({
                     </div>
                     <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
                 </>
+            )}
+            {canReply && (
+                <button type="button" aria-label={t('Reply')} onClick={onReply} className={ICON_BUTTON}>
+                    <Reply className="size-4" aria-hidden />
+                </button>
             )}
             {message.canDelete && (
                 // A glyph shaped like its neighbour, so the bar reads as one set of controls; the
@@ -186,9 +243,11 @@ export function TalkMessageRow({
                 tints under the pointer, and a highlight sharing that background would drag the
                 pointer's tint into a second-long fade of its own.
 
-                The transition is not conditional on the flag: what fades is the highlight being taken
-                away, and a transition arriving with the class would have nothing to animate from. The
-                row mounts already highlighted, so the emphasis itself is instant.
+                Only the removal fades: the emphasis itself is instant, whichever way it arrives — a
+                deep link's landing mounts already highlighted, and an on-screen jump flips the flag
+                on a row already painted, which `duration-0` on the lit arm keeps from fading in over
+                the second the reader is looking for the row. The unlit arm carries the fade, so
+                taking the highlight away still eases out.
 
                 8%: enough tint to pick the row out, light enough that the author link holds AA even
                 on the worst composite — this tint over the hover tint, where 10% read 4.39:1 and 8%
@@ -196,10 +255,13 @@ export function TalkMessageRow({
             <span
                 aria-hidden
                 className={cn(
-                    'pointer-events-none absolute inset-0 -z-10 bg-selected/8 transition-opacity duration-1000 motion-reduce:transition-none',
-                    highlighted ? 'opacity-100' : 'opacity-0',
+                    'pointer-events-none absolute inset-0 -z-10 bg-selected/8 transition-opacity motion-reduce:transition-none',
+                    highlighted ? 'opacity-100 duration-0' : 'opacity-0 duration-1000',
                 )}
             />
+            {/* Above the author header, and why a reply never groups (lib/chat/message-grouping): the
+                reference needs the header under it to say who is answering. */}
+            {message.inReplyTo !== null && <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />}
             {grouped ? (
                 <>
                     <span className="sr-only">

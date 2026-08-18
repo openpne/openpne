@@ -20,6 +20,7 @@ const message = (over: Partial<TalkMessage> = {}): TalkMessage => ({
     mentions: [],
     images: [],
     reactions: [],
+    inReplyTo: null,
     createdAt: '2026-08-16T10:00:00+09:00',
     isOwn: false,
     canDelete: false,
@@ -31,10 +32,11 @@ function clipboard(writeText: ((text: string) => Promise<void>) | null) {
     Object.defineProperty(navigator, 'clipboard', { value: writeText === null ? undefined : { writeText }, configurable: true });
 }
 
-function open({ chips = [], canReact = true, ...over }: { chips?: ChatReactionChip[]; canReact?: boolean } & Partial<TalkMessage> = {}) {
+function open({ chips = [], canReact = true, canReply = true, ...over }: { chips?: ChatReactionChip[]; canReact?: boolean; canReply?: boolean } & Partial<TalkMessage> = {}) {
     const spies = {
         onToggle: vi.fn(),
         onShowReactors: vi.fn(),
+        onReply: vi.fn(),
         onDelete: vi.fn(),
         onClose: vi.fn(),
     };
@@ -45,8 +47,10 @@ function open({ chips = [], canReact = true, ...over }: { chips?: ChatReactionCh
             chips={chips}
             vocabulary={VOCABULARY}
             canReact={canReact}
+            canReply={canReply}
             onToggle={spies.onToggle}
             onShowReactors={spies.onShowReactors}
+            onReply={spies.onReply}
             onDelete={spies.onDelete}
             onClose={spies.onClose}
         />,
@@ -60,6 +64,24 @@ test('the sheet is named for a reader who cannot see what it is', () => {
     open();
 
     expect(screen.getByRole('dialog', { name: 'Message actions' })).toBeTruthy();
+});
+
+test('the sheet offers a reply, and taking it closes the sheet then stages it', () => {
+    clipboard(null);
+    const spies = open();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+
+    // Closed before staged: the composer the reply focuses sits where the sheet stood.
+    expect(spies.onClose).toHaveBeenCalled();
+    expect(spies.onReply).toHaveBeenCalled();
+});
+
+test('a reader who may not post is offered no reply', () => {
+    clipboard(null);
+    open({ canReply: false });
+
+    expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull();
 });
 
 test('the whole vocabulary is offered, and the ones already held say so', () => {

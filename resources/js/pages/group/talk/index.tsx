@@ -21,7 +21,7 @@ import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
 import { TalkReactorsDialog } from './reactors-dialog';
 import { TalkUnreadDigestCard } from './unread-digest';
-import type { TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
+import type { TalkMessage, TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
 interface TalkProps extends PageProps {
     group: CommunitySummary;
@@ -124,6 +124,10 @@ export default function GroupTalkIndex() {
     const landing = useRef(anchor?.messageId ?? null);
     const [highlightId, setHighlightId] = useState(landing.current);
 
+    // The message a new post answers: a row or the action sheet stages it, the composer shows it, and
+    // the send consumes its id and clears it. Null when the next post answers nothing.
+    const [replyTo, setReplyTo] = useState<TalkMessage | null>(null);
+
     // Whether the reader is at the newest message. A conversation that scrolls itself while someone
     // is reading back through it has taken the page away from them.
     const pinned = useRef(true);
@@ -131,8 +135,9 @@ export default function GroupTalkIndex() {
     const heldRow = useRef<{ id: number; top: number } | null>(null);
     // A move the reader asked for, and the list it was asked from. It is spent on the render that
     // carries its own answer — the generation moves only when a window change lands, so a poll or a
-    // merge arriving in between cannot spend it and leave the jump un-made.
-    const goTo = useRef<{ target: 'divider' | 'bottom'; from: number } | null>(null);
+    // merge arriving in between cannot spend it and leave the jump un-made. `anchor` also names the
+    // row to center and pick out once its stretch lands — a reply header's jump to an off-screen parent.
+    const goTo = useRef<{ target: 'divider' | 'bottom'; from: number } | { target: 'anchor'; anchorId: number; from: number } | null>(null);
     // The newest message the pin last answered. The pin follows new content, not new array
     // identity: merges rebuild the list for reasons that move nothing (a re-read row), and a
     // scrollTo re-issued then shoves the sticky composer around under iOS's keyboard pan.
@@ -193,6 +198,12 @@ export default function GroupTalkIndex() {
             // anchor nor the pin gets to answer for this render.
             if (asked.target === 'bottom') {
                 window.scrollTo({ top: document.documentElement.scrollHeight });
+            } else if (asked.target === 'anchor') {
+                // The stretch landed around the parent's position. Center and pick it out — set from
+                // here, so the row carries the emphasis on its first paint like a deep link's landing.
+                // A parent deleted between render and click leaves no row and the highlight finds none.
+                messageElement(asked.anchorId)?.scrollIntoView({ block: 'center' });
+                setHighlightId(asked.anchorId);
             } else {
                 // Mid-viewport, so the last of what was already read stays visible above the line —
                 // landing on the boundary with nothing above it reads as the start of the group.
@@ -232,9 +243,13 @@ export default function GroupTalkIndex() {
 
     // The move is claimed before the read, since the state it lands on may be committed before this
     // handler resumes; a read that brings nothing back gives it up again rather than leaving a jump
-    // armed for whatever changes the list next.
-    const jumpToContext = (cursor: string) => {
-        const asked = { target: 'divider' as const, from: generation };
+    // armed for whatever changes the list next. With `anchorId` the landing centers and highlights
+    // that row (a reply header's off-screen parent) instead of the unread divider (the banner's jump).
+    const jumpToContext = (cursor: string, anchorId?: number) => {
+        const asked =
+            anchorId === undefined
+                ? { target: 'divider' as const, from: generation }
+                : { target: 'anchor' as const, anchorId, from: generation };
         goTo.current = asked;
         void stream.openContext(cursor).then((moved) => {
             // Only give up the move if it is still the one this click made.
@@ -242,6 +257,22 @@ export default function GroupTalkIndex() {
                 goTo.current = null;
             }
         });
+    };
+
+    // A reply header's jump to the message it answers. On screen it is a scroll and a transient
+    // highlight, the same emphasis a deep link's landing draws; off screen it is a context read that
+    // brings the parent's stretch into view, then the same highlight once it lands (jumpToContext).
+    const jumpToReply = (parent: { id: number; cursor: string }) => {
+        const element = messageElement(parent.id);
+        if (element !== null) {
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            element.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+            setHighlightId(parent.id);
+
+            return;
+        }
+
+        jumpToContext(parent.cursor, parent.id);
     };
 
     // From the live window this is a scroll; from a history window the newest messages are not even
@@ -270,7 +301,19 @@ export default function GroupTalkIndex() {
     // handler is resumed to say so.
     const send = async (body: string, mentions: MentionPayloadRow[], images: File[]) => {
         pinned.current = true;
-        await streamSend(body, images, appendMentions(mentions));
+        const parent = replyTo;
+        await streamSend(body, images, (form) => {
+            appendMentions(mentions)(form);
+            // Only when answering something — a present-but-empty reply_to_message_id 422s by design.
+            if (parent !== null) {
+                form.append('reply_to_message_id', String(parent.id));
+            }
+        });
+        // Reached only when the write lands: a refusal throws out of streamSend with the draft — and
+        // its staged reply — left standing for the member to resend or take back. Cleared only if it
+        // is still the reply just sent: a member who staged a new one while this was in flight keeps
+        // it, the last intent winning as it does for a jump.
+        setReplyTo((current) => (current === parent ? null : current));
         setAtBottom(true);
     };
 
@@ -419,6 +462,9 @@ export default function GroupTalkIndex() {
                                     message={message}
                                     onDelete={remove}
                                     onOpenActions={() => setSheetFor(message.id)}
+                                    onReply={() => setReplyTo(message)}
+                                    onJumpToReply={jumpToReply}
+                                    canReply={canPost}
                                     highlighted={message.id === highlightId}
                                     grouped={foldsInto(messages[index - 1], message, dividerId)}
                                     // No rule right under the separator: the line is already a rule.
@@ -467,15 +513,17 @@ export default function GroupTalkIndex() {
                     chips={chipsWithPending(sheetMessage.reactions ?? [], pendingReactions, sheetMessage.id)}
                     vocabulary={reactionVocabulary}
                     canReact={canPost}
+                    canReply={canPost}
                     onToggle={(emoji, mine) => toggleReaction(sheetMessage.id, emoji, mine)}
                     onShowReactors={() => setReactorsFor(sheetMessage.id)}
+                    onReply={() => setReplyTo(sheetMessage)}
                     onDelete={() => void remove(sheetMessage.id)}
                     onClose={closeSheet}
                 />
             )}
 
             {canPost ? (
-                <TalkComposer groupId={group.id} groupName={group.name} onSend={send} />
+                <TalkComposer groupId={group.id} groupName={group.name} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
             ) : (
                 // The frame gives its bottom padding up to the composer standing on the screen's foot,
                 // and the shell leaves it the home-indicator strip; with no composer to stand there,
