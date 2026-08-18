@@ -54,11 +54,12 @@ Two decisions inside `tabbed` are deliberate rather than pending:
   shipped detail bar states at its scope gate. A pressable-looking crumb that navigates
   away from half-typed input is the thing being avoided, and painting one that does not
   navigate would lie instead.
-- **A conversation recedes both bands together.** The header and the bottom bar answer to
-  one scroll listener, so reading back through a long room takes all the chrome and one
-  scroll up returns it. `bottomBarInConversation` is what keeps the bar standing while the
-  room is *read*; focusing the composer takes it away over the same 200ms the composer
-  takes to descend, and the bar stays mounted through that so it slides rather than blinks.
+- **A conversation holds its chrome still.** Dogfooding reversed the recede that first
+  shipped here: the composer pins the screen's foot, so a bar hiding on scroll frees no
+  space — a loss with no gain — and the header is what names the room, which matters most
+  mid-scroll. `bottomBarInConversation` is what keeps the bar standing while the room is
+  *read*; only focusing the composer takes it away, over the same 200ms the composer takes
+  to descend, and the bar stays mounted through that so it slides rather than blinks.
 
 ## Resolution
 
