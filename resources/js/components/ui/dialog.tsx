@@ -45,8 +45,12 @@ export function DialogContent({
 /**
  * `side` is the screen edge the sheet hugs. A drawer opens from the side its trigger stands on — the
  * one thing every site in the 2026-08 menu survey agreed about — so a bar that moves its hamburger
- * moves the sheet with it. The close control does not move: it belongs to the trigger's side too,
- * and for the right sheet `right-3` already is that side.
+ * moves the sheet with it. The close control belongs to the trigger's side too.
+ *
+ * The right sheet is the tabbed look's: full-bleed, sliding from its edge (Radix holds it mounted
+ * while the closed animation runs), padded to the breadcrumb bar's gutters so what the drawer and
+ * the bar both draw — the brand, the menu control — lands in the same place open or shut. Its close
+ * control is the trigger's twin: same box, same spot, the word "close" where "menu" stood.
  */
 export function SheetContent({
     className,
@@ -63,19 +67,34 @@ export function SheetContent({
                     // Edge-to-edge by construction (inset-y-0), so it pads for all three insets it can
                     // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
                     'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
-                    side === 'right' ? 'right-0 pr-[calc(1rem+env(safe-area-inset-right))]' : 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
+                    side === 'right'
+                        ? 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right'
+                        : 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
                     className,
                 )}
                 {...props}
             >
+                {/* First in the DOM as well as top-right on screen: a 48px labelled control that
+                    read after the whole nav would put the tab order at odds with the visual one. */}
+                {side === 'right' && (
+                    // The trigger's geometry, restated: a size-12 box whose right edge sits 0.5rem
+                    // (0.75 gutter − 0.25 overhang) from the screen's, its row starting under the
+                    // 4px line — so opening the drawer swaps the word under the glyph, nothing more.
+                    <DialogPrimitive.Close className="absolute top-[calc(0.25rem+env(safe-area-inset-top))] right-[calc(0.5rem+env(safe-area-inset-right))] inline-flex size-12 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent">
+                        <X className="size-6" aria-hidden />
+                        <span className="text-[11px] leading-none">{closeLabel}</span>
+                    </DialogPrimitive.Close>
+                )}
                 {children}
                 {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
-                <DialogPrimitive.Close
-                    className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] rounded-full p-1 text-muted-foreground transition hover:bg-accent"
-                    aria-label={closeLabel}
-                >
-                    <X className="size-5" />
-                </DialogPrimitive.Close>
+                {side === 'left' && (
+                    <DialogPrimitive.Close
+                        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] rounded-full p-1 text-muted-foreground transition hover:bg-accent"
+                        aria-label={closeLabel}
+                    >
+                        <X className="size-5" />
+                    </DialogPrimitive.Close>
+                )}
             </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
     );

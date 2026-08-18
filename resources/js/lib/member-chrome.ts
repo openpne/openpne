@@ -819,7 +819,13 @@ const HOME_PLACE: DivePlace = { label: HOME_SECTION.label, href: HOME_SECTION.hr
  * everything under them scopes back to. Read from their own props for that reason: scope alone would
  * put a member standing on a group's front page nowhere.
  */
-const DIVE_PLACES: Record<string, (props: Record<string, unknown>) => DivePlace> = {
+/** The pages that ARE a place — home's siblings in the three-page symmetry. */
+const PLACE_TOPS = ['community/show', 'unified/group', 'member/show', 'unified/member'] as const;
+
+// Typed off PLACE_TOPS on purpose: today every dive target is a place top and the breadcrumb header
+// leans on that (isPlaceTop). A dive target that is NOT one would need this bond taken apart first,
+// or it would silently strip that screen's crumb.
+const DIVE_PLACES: Record<(typeof PLACE_TOPS)[number], (props: Record<string, unknown>) => DivePlace> = {
     'community/show': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
     'unified/group': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
     'member/show': (props) => memberPlace((props as unknown as { profile: { owner: PlaceRef } }).profile.owner),
@@ -837,9 +843,8 @@ export function divePlace(component: string, props: Record<string, unknown>, chr
 
 /** The place a screen is standing in, or nothing where it is not inside one. */
 function ownPlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace | null {
-    const own = DIVE_PLACES[component];
-    if (own) {
-        return own(props);
+    if (isPlaceTop(component)) {
+        return DIVE_PLACES[component as (typeof PLACE_TOPS)[number]](props);
     }
 
     const { scope } = chrome;
@@ -862,20 +867,33 @@ export interface BreadcrumbCrumb {
 }
 
 /**
+ * Whether this screen IS one of the three pages (home's siblings: a member's, a group's). They speak
+ * the home grammar in the breadcrumb header — mark and site name, no crumb — because the three-page
+ * symmetry extends to the header, and because the place's own hero names it directly below.
+ */
+export function isPlaceTop(component: string): boolean {
+    return (PLACE_TOPS as readonly string[]).includes(component);
+}
+
+/**
  * The breadcrumb header's second crumb: where the reader is, under the site the mark names.
  *
  * Deliberately not divePlace: that one answers HOME_PLACE from anywhere that is not a place, which
  * is a dive-zone reading ("the way back up is home"). A breadcrumb is a claim about where the reader
  * *is*, and "you are at home" on the email settings page would be false. Three tiers: the place the
- * screen is inside, else the last crumb of its trail, else nothing — the mark alone.
+ * screen is *inside* (its scope), else the last crumb of its trail, else nothing.
+ *
+ * A page that IS the place answers nothing here — isPlaceTop carries those, and the header speaks
+ * the home grammar on them rather than naming the place twice above its own hero.
  *
  * A form's crumb is static text. The bar must never carry a link beside unsaved input (top-nav's
- * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the place
+ * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the scope
  * tier is pressable by construction, so a form takes its trail instead.
  */
-export function breadcrumbCrumb(component: string, props: Record<string, unknown>, chrome: Chrome): BreadcrumbCrumb | null {
+export function breadcrumbCrumb(chrome: Chrome): BreadcrumbCrumb | null {
     if (chrome.form !== true) {
-        const place = ownPlace(component, props, chrome);
+        const { scope } = chrome;
+        const place = scope?.kind === 'group' ? groupPlace(scope) : scope?.kind === 'member' ? memberPlace(scope) : null;
         if (place) {
             return { ...place, link: true };
         }

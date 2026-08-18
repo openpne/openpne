@@ -92,6 +92,31 @@
     }
 }
 
+/* The nav drawer's slide, from the edge its trigger stands on. Radix keeps the sheet mounted while
+   the closed animation runs, so both directions are visible; the overlay only fades. */
+@theme {
+    --animate-sheet-from-right: sheet-from-right 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    --animate-sheet-to-right: sheet-to-right 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+
+    @keyframes sheet-from-right {
+        from {
+            transform: translateX(100%);
+        }
+        to {
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes sheet-to-right {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(100%);
+        }
+    }
+}
+
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */
