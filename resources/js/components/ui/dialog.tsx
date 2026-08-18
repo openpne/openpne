@@ -42,20 +42,28 @@ export function DialogContent({
     );
 }
 
+/**
+ * `side` is the screen edge the sheet hugs. A drawer opens from the side its trigger stands on — the
+ * one thing every site in the 2026-08 menu survey agreed about — so a bar that moves its hamburger
+ * moves the sheet with it. The close control does not move: it belongs to the trigger's side too,
+ * and for the right sheet `right-3` already is that side.
+ */
 export function SheetContent({
     className,
     children,
     closeLabel = 'Close',
+    side = 'left',
     ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' }) {
     return (
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
             <DialogPrimitive.Content
                 className={cn(
-                    // Edge-to-edge by construction (inset-y-0, left-0), so it pads for all three insets
-                    // it can meet: status bar, home indicator, and the landscape cutout on its left.
-                    'fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] shadow-xl outline-none',
+                    // Edge-to-edge by construction (inset-y-0), so it pads for all three insets it can
+                    // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
+                    'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
+                    side === 'right' ? 'right-0 pr-[calc(1rem+env(safe-area-inset-right))]' : 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
                     className,
                 )}
                 {...props}

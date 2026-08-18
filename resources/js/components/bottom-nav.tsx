@@ -11,6 +11,7 @@ import {
     MEMBER_SEARCH_SECTION,
     type NavSection,
     NOTIFICATIONS_SECTION,
+    tabbedNavSections,
 } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
 
     // Exact pathname match (strip query/hash) for the tabs that ask for one; see NavSection.exact.
     const path = url.replace(/[?#].*$/, '');
+    const { bottomBar } = lookSpec(props.look);
 
     return (
         <nav
@@ -57,9 +59,16 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
         >
             {/* This row is the top bar's height — the two bands a phone always carries are one
                 measure — and `--modern-bottom-offset` is it plus the hairline above and the
-                safe-area inset below. A tab fills the row, so the row is the tap target. */}
-            <ul className="flex h-12 items-stretch">
-                {lookSpec(props.look).bottomBar === 'dive' ? <DiveRow chrome={chrome} path={path} /> : <SectionTabs path={path} />}
+                safe-area inset below. A tab fills the row, so the row is the tap target. A label
+                under each icon is the one row that needs more than that height. */}
+            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-12')}>
+                {bottomBar === 'dive' ? (
+                    <DiveRow chrome={chrome} path={path} />
+                ) : bottomBar === 'labeled' ? (
+                    <LabeledTabs path={path} />
+                ) : (
+                    <SectionTabs path={path} />
+                )}
             </ul>
         </nav>
     );
@@ -99,6 +108,54 @@ function SectionTabs({ path }: { path: string }) {
                                 <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
                                 <CountPill count={count} className="absolute -top-2 -right-2.5" />
                             </span>
+                        </Link>
+                    </li>
+                );
+            })}
+        </>
+    );
+}
+
+/**
+ * The tabbed look's row: four sections, each icon over its own full word. The words are why there
+ * are four rather than five — messages steps out, its count being ambient state the drawer entry
+ * already carries — and why the row is taller than the others.
+ *
+ * One badge, and it is a dot: notifications is the only queue here, a queue empties by being read,
+ * and how many is the notification screen's answer rather than the bar's. The counts that stay put
+ * whatever the reader does (rooms with new talk, pending requests) are state, not a summons, and
+ * they keep their pills in the drawer.
+ */
+function LabeledTabs({ path }: { path: string }) {
+    const t = useT();
+    const { props } = usePage<PageProps>();
+    const notifications = props.unread?.notifications ?? 0;
+
+    return (
+        <>
+            {tabbedNavSections(props.enabledFeatures).map((section) => {
+                const { href, icon: Icon, label } = section;
+                const active = isSectionActive(section, path);
+                const dotted = href === NOTIFICATIONS_SECTION.href && notifications > 0;
+
+                return (
+                    <li key={href} className="flex-1">
+                        <Link
+                            href={href}
+                            aria-current={active ? 'page' : undefined}
+                            // The visible word is the name; the dot's count joins it rather than
+                            // replacing it, since the word is still on screen beside the number.
+                            aria-label={dotted ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications }) : undefined}
+                            className={cn(
+                                'flex size-full flex-col items-center justify-center gap-1 transition',
+                                active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            <span className="relative inline-flex">
+                                <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
+                                {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
+                            </span>
+                            <span className="max-w-full truncate text-[11px] leading-none">{t(label.key, label.replacements)}</span>
                         </Link>
                     </li>
                 );

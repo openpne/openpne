@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     bottomNavSections,
+    breadcrumbCrumb,
     chromeRecedes,
     divePlace,
     hasBottomNav,
@@ -12,6 +13,7 @@ import {
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
+    tabbedNavSections,
     TALK_ROOMS_HREF,
     unifiedTabs,
     visibleNavSections,
@@ -99,6 +101,24 @@ test('Home and notifications survive every unit being off', () => {
     const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
     assert.deepEqual(bottomHrefs(allOff), ['/dashboard', '/notifications']);
+});
+
+const tabbedHrefs = (enabled: Record<FeatureKey, boolean>) => tabbedNavSections(enabled).map((section) => section.href);
+
+test('the tabbed row is four tabs, and messages is not one of them', () => {
+    // A word under each icon is what costs the fifth tab. Messages is the one dropped: its count is
+    // ambient state rather than a queue, so the drawer entry that already carries it is enough.
+    assert.deepEqual(tabbedHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications']);
+});
+
+test('a tabbed tab goes with its unit, through the same filter the five-tab row uses', () => {
+    assert.deepEqual(tabbedHrefs({ ...allOn, group: false }), ['/dashboard', '/diary/list', '/notifications']);
+    assert.deepEqual(tabbedHrefs({ ...allOn, diary: false }), ['/dashboard', '/groups/mine', '/notifications']);
+    // Switching messages off changes nothing here, the row never having carried it.
+    assert.deepEqual(tabbedHrefs({ ...allOn, directMessage: false }), tabbedHrefs(allOn));
+
+    const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
+    assert.deepEqual(tabbedHrefs(allOff), ['/dashboard', '/notifications']);
 });
 
 test('the Home tab matches its own path only', () => {
@@ -435,6 +455,28 @@ test('unified deviates exactly where it claims', () => {
     });
 });
 
+test('tabbed deviates exactly where it claims', () => {
+    assert.deepEqual(lookSpec('tabbed'), {
+        // Its own four: one breadcrumb grammar for every screen class, labelled tabs under the page,
+        // a bar that stays standing while a room is read, and the site color line.
+        topBar: 'breadcrumb',
+        bottomBar: 'labeled',
+        bottomBarInConversation: true,
+        colorLine: true,
+        // Landing next, with the desktop pass.
+        placeBar: true,
+        // Shared with unified: its ground, the account rows the bars have no room for, no third
+        // column, and a hub heading that stays in the page (the bar's copy of it is not the h1).
+        ground: 'unified',
+        rightRail: false,
+        accountInDrawer: true,
+        foldsHubHeading: false,
+        // Where it does not deviate: standard's answer, stated rather than inherited. The breadcrumb
+        // is phone furniture; at lg+ the sidebar is where the reader's bearings come from.
+        desktopTopBar: false,
+    });
+});
+
 // The shell reads one field per question, so a look that answered only some of them would leave the
 // rest reading `undefined` — falsy, and silently standard-ish rather than standard.
 test('every look answers every question the shell asks', () => {
@@ -519,6 +561,55 @@ test('the bar names the place the member is in, and the way back to its top', ()
 
 test('a page nobody classified is nowhere in particular rather than a broken link', () => {
     assert.deepEqual(divePlace('some/new/page', { enabledFeatures: allOn }, chrome('some/new/page', {})), HOME_PLACE);
+});
+
+const crumb = (component: string, props: Record<string, unknown>) => {
+    const page = { enabledFeatures: allOn, ...props };
+
+    return breadcrumbCrumb(component, page, resolveChrome(component, page));
+};
+
+test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
+    // The page that *is* the place answers from its own props; everything under one from its scope.
+    assert.deepEqual(crumb('unified/group', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
+    assert.deepEqual(crumb('member/show', { profile: { owner } }), { label: 'Owner', href: '/member/1', link: true });
+    assert.deepEqual(crumb('group/talk/index', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
+    assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
+});
+
+test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {
+    // The difference from divePlace, and the reason this is not that: from a screen that is inside
+    // nothing, divePlace answers home — the way back up. A breadcrumb says where the reader *is*,
+    // and "you are at home" on the tag lens or the email form would be false.
+    assert.deepEqual(crumb('timeline/tag', { tag: 'ride' }), {
+        label: { key: '%Activity%', replacements: undefined },
+        href: '/timeline',
+        link: true,
+    });
+    assert.deepEqual(divePlace('timeline/tag', { enabledFeatures: allOn, tag: 'ride' }, chrome('timeline/tag', { tag: 'ride' })), HOME_PLACE);
+});
+
+test("a form's crumb is static text, whatever it would otherwise have been", () => {
+    // The bar must never carry a link beside unsaved input — the rule the detail bar's scope gate
+    // spells, kept rather than reversed by the look that draws the trail as a pressable pill. The
+    // group edit form is the sharp case: the same word as a place, and still not a way out of it.
+    assert.deepEqual(crumb('member/config/email', {}), {
+        label: { key: 'Settings', replacements: undefined },
+        href: '/member/config',
+        link: false,
+    });
+    assert.deepEqual(crumb('community/edit', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: false });
+
+    for (const [component, props] of Object.entries(FORM_SCREENS)) {
+        assert.equal(crumb(component, props)?.link ?? false, false, component);
+    }
+});
+
+test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
+    // Home included: the mark expands to the site name there rather than pointing at a second thing.
+    assert.equal(crumb('dashboard', {}), null);
+    assert.equal(crumb('unified/home', {}), null);
+    assert.equal(crumb('block/list', {}), null);
 });
 
 test('the retired mailbox screens are gone from the registry', () => {

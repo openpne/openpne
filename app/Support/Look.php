@@ -19,12 +19,21 @@ enum Look: string
     /** The experiment that renders home, member pages and group tops in one shared shape. */
     case Unified = 'unified';
 
-    /** Whether the three swapped routes render the unified page components instead of the shipped ones. */
+    /** The experiment that moves finding your way into a breadcrumb header and labelled bottom tabs. */
+    case Tabbed = 'tabbed';
+
+    /**
+     * Whether the three swapped routes render the unified page components instead of the shipped ones.
+     *
+     * A bool rather than a page-format id: every look that deviates from standard so far renders the
+     * same unified page components, differing only in the chrome around them. A third page format is
+     * what would turn this into an enum.
+     */
     public function usesUnifiedPages(): bool
     {
         return match ($this) {
             self::Standard => false,
-            self::Unified => true,
+            self::Unified, self::Tabbed => true,
         };
     }
 
@@ -34,6 +43,7 @@ enum Look: string
         return match ($this) {
             self::Standard => 'Standard',
             self::Unified => 'Unified (experimental)',
+            self::Tabbed => 'Tabbed (experimental)',
         };
     }
 
@@ -43,6 +53,7 @@ enum Look: string
         return match ($this) {
             self::Standard => 'The Modern layout as it has always been.',
             self::Unified => 'The experimental layout that renders home, profiles and %communities% in one shared shape.',
+            self::Tabbed => 'The experimental layout with bottom tabs and the site mark up top for finding your way.',
         };
     }
 }
