@@ -310,8 +310,10 @@ export default function GroupTalkIndex() {
             }
         });
         // Reached only when the write lands: a refusal throws out of streamSend with the draft — and
-        // its staged reply — left standing for the member to resend or take back.
-        setReplyTo(null);
+        // its staged reply — left standing for the member to resend or take back. Cleared only if it
+        // is still the reply just sent: a member who staged a new one while this was in flight keeps
+        // it, the last intent winning as it does for a jump.
+        setReplyTo((current) => (current === parent ? null : current));
         setAtBottom(true);
     };
 

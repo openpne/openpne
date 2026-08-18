@@ -97,8 +97,12 @@ test('a reply draws its reference above the row: the parent author, the excerpt,
     expect(screen.getByText('Mei')).toBeTruthy();
     expect(screen.getByText('the plan we discussed')).toBeTruthy();
 
-    // The whole line is one button; activating it goes to the referenced message by id and cursor.
-    const jump = screen.getByRole('button', { name: 'Go to the replied message' });
+    // The whole line is one button, and its accessible name carries the who-and-what — not a bare
+    // "go to" label an aria-label would flatten every reference to. Activating it goes to the
+    // referenced message by id and cursor.
+    const jump = screen.getByRole('button', {
+        name: (name: string) => name.includes('Go to the replied message') && name.includes('Mei') && name.includes('the plan we discussed'),
+    });
     fireEvent.click(jump);
     expect(onJumpToReply.mock.calls).toEqual([[{ id: 3, cursor: 'c3' }]]);
 });
@@ -106,8 +110,9 @@ test('a reply draws its reference above the row: the parent author, the excerpt,
 test('a reply to a withdrawn author names them with the established label', () => {
     renderRow({ inReplyTo: { ...liveReply, author: null } });
 
-    expect(screen.getByRole('button', { name: 'Go to the replied message' })).toBeTruthy();
-    // The row's own author (Rin) is present, so the label can only come from the reference.
+    // The label is in the button's accessible name, and the row's own author (Rin) is present, so it
+    // can only come from the reference.
+    expect(screen.getByRole('button', { name: (name: string) => name.includes('Withdrawn member') })).toBeTruthy();
     expect(screen.getByText('Withdrawn member')).toBeTruthy();
 });
 

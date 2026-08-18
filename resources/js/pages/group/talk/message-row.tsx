@@ -21,6 +21,12 @@ import type { TalkMessage, TalkReplyReference } from './types';
  * The live variant is one button over the whole line — the jump target is the reference, not a word
  * of it. A parent that was deleted between render and click keeps the same line, italic and inert:
  * there is nowhere to jump to.
+ *
+ * The button carries no `aria-label`: one would override the name computed from the contents and
+ * leave every reply header reading as the same "go to" button, dropping exactly the who-and-what the
+ * reference exists to say. So the action is an sr-only prefix instead, and the name is built from the
+ * prefix, the author and the excerpt — the picture stays alt-less, a glimpse the excerpt already
+ * names.
  */
 function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJump: (parent: { id: number; cursor: string }) => void }) {
     const t = useT();
@@ -38,12 +44,11 @@ function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJ
         <button
             type="button"
             onClick={() => onJump({ id: reference.id, cursor: reference.cursor })}
-            aria-label={t('Go to the replied message')}
             className="mb-1 flex w-full items-center gap-1.5 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
+            <span className="sr-only">{t('Go to the replied message')}: </span>
             <Reply className="size-3.5 shrink-0" aria-hidden />
             <span className="shrink-0 font-medium">{reference.author?.name ?? t('Withdrawn member')}</span>
-            {/* Alt-less: the name and excerpt beside it are what the reference says; the picture is a glimpse. */}
             {reference.thumbnailUrl !== null && <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />}
             <span className="min-w-0 truncate">{reference.excerpt}</span>
         </button>
@@ -238,9 +243,11 @@ export function TalkMessageRow({
                 tints under the pointer, and a highlight sharing that background would drag the
                 pointer's tint into a second-long fade of its own.
 
-                The transition is not conditional on the flag: what fades is the highlight being taken
-                away, and a transition arriving with the class would have nothing to animate from. The
-                row mounts already highlighted, so the emphasis itself is instant.
+                Only the removal fades: the emphasis itself is instant, whichever way it arrives — a
+                deep link's landing mounts already highlighted, and an on-screen jump flips the flag
+                on a row already painted, which `duration-0` on the lit arm keeps from fading in over
+                the second the reader is looking for the row. The unlit arm carries the fade, so
+                taking the highlight away still eases out.
 
                 8%: enough tint to pick the row out, light enough that the author link holds AA even
                 on the worst composite — this tint over the hover tint, where 10% read 4.39:1 and 8%
@@ -248,8 +255,8 @@ export function TalkMessageRow({
             <span
                 aria-hidden
                 className={cn(
-                    'pointer-events-none absolute inset-0 -z-10 bg-selected/8 transition-opacity duration-1000 motion-reduce:transition-none',
-                    highlighted ? 'opacity-100' : 'opacity-0',
+                    'pointer-events-none absolute inset-0 -z-10 bg-selected/8 transition-opacity motion-reduce:transition-none',
+                    highlighted ? 'opacity-100 duration-0' : 'opacity-0 duration-1000',
                 )}
             />
             {/* Above the author header, and why a reply never groups (lib/chat/message-grouping): the
