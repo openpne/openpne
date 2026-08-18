@@ -171,6 +171,86 @@ test("a guest's bar is the same with the switch on", () => {
 });
 
 /**
+ * The tabbed look speaks one grammar on every screen class: the site mark, then where you are. Home
+ * is the root spelled out — mark plus name, nothing after it — and the bar carries no bell, no
+ * account control and no tab pair, the four labelled tabs below having taken the moving about.
+ */
+test('the tabbed home is the site mark and its name, and nothing else', () => {
+    const chrome = arrive('unified/home', '/dashboard', {
+        look: 'tabbed',
+        unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
+    });
+
+    render(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.queryByRole('link', { name: 'Notifications' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '3 unread notifications' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Account menu' })).toBeNull();
+    // The way to the rest of the nav, and it says so in words.
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
+});
+
+test('a tabbed hub is the mark and the section it stands on', () => {
+    const chrome = arrive('community/list', '/groups/mine', { look: 'tabbed', owner: user, isOwner: true });
+
+    const { container } = render(<TopNav chrome={chrome} />);
+
+    // The mark alone, so it is named rather than left to a site name that is not beside it.
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.queryByText('Test SNS')).toBeNull();
+    expect(container.textContent).toContain('%Communities%');
+    // The section title is a label, not a way to somewhere: the hub is the page being read.
+    expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
+});
+
+test('a tabbed deep page carries the place it is inside, as something to press', () => {
+    const chrome = arrive('group/topic/show', '/topics/3', {
+        look: 'tabbed',
+        group: { id: 7, name: 'Cyclists', imageUrl: null },
+    });
+
+    render(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
+    // No back control: swipe, the browser and the mark are the ways out under this look.
+    expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+});
+
+test('a tabbed form names where it sits without offering a way out of itself', () => {
+    const chrome = arrive('member/config/email', '/member/config/email', { look: 'tabbed' });
+
+    const { container } = render(<TopNav chrome={chrome} />);
+
+    expect(container.textContent).toContain('Settings');
+    // The invariant the pill must not reverse: no link stands beside an unsaved form.
+    expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
+});
+
+test('a tabbed page that is nowhere leaves the mark standing alone', () => {
+    const chrome = arrive('block/list', '/block/list', { look: 'tabbed' });
+
+    const { container } = render(<TopNav chrome={chrome} />);
+
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
+    expect(container.textContent).not.toContain('›');
+});
+
+/** A sheet is a mode rather than a screen class, and it is left by its own ✕. */
+test('a tabbed compose screen keeps the sheet header', () => {
+    const chrome = arrive('diary/new', '/diary/new', { look: 'tabbed' });
+
+    render(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Close' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+});
+
+/**
  * The design's bar ends at the bell: no account control (the drawer took it in), and the bell wears
  * a dot rather than a printed number — how many is the link's name and the notification screen's
  * answer, not the bar's.

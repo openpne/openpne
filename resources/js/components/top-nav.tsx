@@ -13,6 +13,7 @@ import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import {
+    breadcrumbCrumb,
     type Chrome,
     type ChromeLabel,
     type ChromeScope,
@@ -38,7 +39,21 @@ const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1
  *  slides it away while the reader scrolls down (AppShell owns the signal). `seam` is the bottom
  *  hairline: it divides the bar from the page it floats over, so a surface that is meant to read as
  *  one piece (the compose sheet) keeps it off until content actually scrolls under the bar. */
-function TopBar({ hidden, seam = true, persistent = false, children }: { hidden?: boolean; seam?: boolean; persistent?: boolean; children: ReactNode }) {
+function TopBar({
+    hidden,
+    seam = true,
+    persistent = false,
+    line,
+    children,
+}: {
+    hidden?: boolean;
+    seam?: boolean;
+    persistent?: boolean;
+    /** Site color for the 4px line under the row. It is part of the bar — the height var counts it,
+     *  and it slides away with the bar rather than hanging under one that has gone. */
+    line?: string;
+    children: ReactNode;
+}) {
     const ref = useRef<HTMLElement>(null);
 
     // `inert` closes the bar to new focus, but whatever already held it keeps it (and its key
@@ -59,10 +74,13 @@ function TopBar({ hidden, seam = true, persistent = false, children }: { hidden?
                 // The unified bar is the header at every width; the shipped bars are phone furniture.
                 !persistent && 'lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
+                // The line is the bar's foot, so the row centers in what is left above it.
+                line !== undefined && 'pb-1',
                 hidden && '-translate-y-full',
             )}
         >
             {children}
+            {line !== undefined && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1" style={{ backgroundColor: line }} />}
         </header>
     );
 }
@@ -238,6 +256,70 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
 }
 
 /**
+ * The tabbed look's phone header: one grammar for every screen class — the site mark, then where the
+ * reader is. "[mark] › here" answers all three layers of the question at once (which site, which
+ * place, and the way back up out of it), which is why it replaces the per-class bars rather than
+ * joining them. The mark is the way home and the only image the bar carries: a second one beside a
+ * truncating name was measured and dropped.
+ *
+ * A compose sheet is the exception, and it is a mode rather than a class: it keeps its own ✕ header.
+ */
+function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
+    const t = useT();
+    const { component, props } = usePage<PageProps>();
+    const label = (l: ChromeLabel) => t(l.key, l.replacements);
+    const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
+    // A hub names itself; everything else names the place it is in.
+    const hubTitle = chrome.mode === 'section' ? chrome.title : undefined;
+    const crumb = hubTitle ? null : breadcrumbCrumb(String(component), props, chrome);
+    const home = isHomeComponent(String(component));
+
+    return (
+        <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
+            {/* Left-aligned, not centered: a trail reads from its root, and the root is the way home. */}
+            {/* Named "Home" only where the mark stands alone — where the site name is beside it, that
+                name is what a reader sees, and a label over it would announce something else. */}
+            <Link
+                href="/dashboard"
+                aria-label={home ? undefined : t('Home')}
+                // Carrying the name, it is the element that gives way, so an unbounded site name
+                // truncates instead of running under the menu. Carrying only the mark, it holds its
+                // size and the crumb beside it is what shortens.
+                className={cn('flex min-h-12 items-center gap-2', home ? 'min-w-0' : 'shrink-0')}
+            >
+                <BrandMark size="sm" />
+                {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
+                {home && <BrandName className="truncate" />}
+            </Link>
+            {(hubTitle || crumb) && (
+                <span aria-hidden className="shrink-0 text-muted-foreground">
+                    ›
+                </span>
+            )}
+            {/* A hub's own h1 stays in the page under this look, so the bar's copy of it is a second
+                announcement of the same words — hidden, like the shipped hub bar's. */}
+            {hubTitle && (
+                <span aria-hidden className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate')}>
+                    {label(hubTitle)}
+                </span>
+            )}
+            {crumb &&
+                (crumb.link ? (
+                    // Pressable, so it is painted as pressable: the pill is the affordance the bare
+                    // trailing › failed to be. Text only — the bar's one image is the mark.
+                    <Link href={crumb.href} className="flex min-h-11 min-w-0 items-center rounded-full bg-accent px-3">
+                        <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{text(crumb.label)}</span>
+                    </Link>
+                ) : (
+                    // A form's crumb goes nowhere, so it must not look as though it does.
+                    <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
+                ))}
+            <NavDrawer labeled />
+        </TopBar>
+    );
+}
+
+/**
  * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard,
  * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
  * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
@@ -283,6 +365,12 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 </Link>
             </TopBar>
         );
+    }
+
+    // One bar for every screen class, the compose sheet excepted (it is a mode, and its ✕ is how a
+    // mode is left). Ahead of the class split below, which this look does not make.
+    if (lookSpec(props.look).topBar === 'breadcrumb' && !chrome.compose) {
+        return <BreadcrumbBar chrome={chrome} hidden={hidden} />;
     }
 
     // Home and the hubs are one bar under the unified chrome; everything below them is untouched.

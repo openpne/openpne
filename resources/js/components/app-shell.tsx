@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { type ReactNode, useLayoutEffect } from 'react';
+import { type ReactNode, useLayoutEffect, useState } from 'react';
 import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
@@ -36,13 +36,22 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = props.auth.user !== null;
     const compose = Boolean(chrome.compose);
-    const bottomNav = member && hasBottomNav(chrome);
+    const look = lookSpec(props.look);
+    const [composerEngaged, setComposerEngaged] = useState(false);
+    // A look can leave the bar standing in a conversation while the room is being read, and take it
+    // away the moment someone starts writing — the composer is the foot of the screen from then on,
+    // as it is under every other look. The bar stays mounted across that change so it slides rather
+    // than blinks; what goes at once is the space it reserves, and that length is what the composer's
+    // own padding transition rides down.
+    const conversationBar = member && look.bottomBarInConversation && Boolean(chrome.conversation);
+    const engaged = conversationBar && composerEngaged;
+    const bottomNav = member && (hasBottomNav(chrome) || (conversationBar && !engaged));
     // One listener for the whole chrome, so the bars and the action cannot fall out of step. A form
     // and a conversation keep their chrome (see the flags), and a guest's bar carries their way in,
-    // not nav they can bring back.
-    const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
+    // not nav they can bring back. Where a conversation does keep a bar, it recedes with the header
+    // on the same listener: one room, one movement.
+    const hidden = useScrollDirection({ enabled: member && (chromeRecedes(chrome) || conversationBar) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
-    const look = lookSpec(props.look);
 
     // The look's ground color rides the <html> class the way dark mode does: the body paints
     // --background, so a wrapper here could not recolor what lies behind the shell. Cleared on
@@ -54,23 +63,36 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         return () => document.documentElement.classList.remove('unified');
     }, [ground]);
 
+    // The bar's height, as the page has to know it. The extra pixel is the bottom bar's top hairline:
+    // the top bar draws its own inside its height, the bottom bar's sits above the row, and both vars
+    // mean the same thing — how much of the screen the bar takes. With no bar the var is the
+    // home-indicator strip alone: a sheet ends above it, and a conversation's composer paints it as
+    // the last of its own height. Written as whole class names, one per case, because a var built by
+    // interpolation is a class Tailwind never sees.
+    const bottomOffset = !bottomNav
+        ? '[--modern-bottom-offset:env(safe-area-inset-bottom)]'
+        : look.bottomBar === 'labeled'
+          ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
+          : '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))]';
+    // The site-color line under the breadcrumb row belongs to that bar, so a page's sticky header
+    // offsets by it too.
+    const topOffset =
+        look.topBar === 'breadcrumb'
+            ? '[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))]'
+            : '[--modern-top-offset:calc(3rem+env(safe-area-inset-top))]';
+
     return (
-        <ComposeSheetProvider exit={exit}>
+        <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
             <div
                 className={cn(
-                    'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3rem+env(safe-area-inset-top))] xl:max-w-7xl',
+                    'mx-auto flex min-h-dvh max-w-6xl xl:max-w-7xl',
+                    topOffset,
                     // The unified bar stands at every width (the design's header is one surface on
                     // phone and desk alike), so its height stays reserved; the shipped chrome has no
                     // desktop top bar and zeroes it.
                     !look.desktopTopBar && 'lg:[--modern-top-offset:0px]',
-                    bottomNav
-                        ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
-                          // inside its height, the bottom bar's sits above the row, and both vars mean
-                          // the same thing — how much of the screen the bar takes. With no bar the var
-                          // is the home-indicator strip alone: a sheet ends above it, and a
-                          // conversation's composer paints it as the last of its own height.
-                          '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))] lg:[--modern-bottom-offset:0px]'
-                        : '[--modern-bottom-offset:env(safe-area-inset-bottom)] lg:[--modern-bottom-offset:0px]',
+                    bottomOffset,
+                    'lg:[--modern-bottom-offset:0px]',
                 )}
             >
                 <LeftNav />
@@ -107,7 +129,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
-                {bottomNav && <BottomNav chrome={chrome} hidden={hidden} />}
+                {(bottomNav || conversationBar) && <BottomNav chrome={chrome} hidden={hidden || engaged} />}
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
                     draws under, so page content does not run beneath the clock once the bar slides off. */}
                 <div

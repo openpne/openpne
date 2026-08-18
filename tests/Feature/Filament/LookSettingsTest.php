@@ -99,6 +99,21 @@ class LookSettingsTest extends TestCase
         $this->assertSame([Look::Standard, Look::Unified], app(SnsSettingService::class)->get(SnsSettingKey::SelectableLooks));
     }
 
+    public function test_a_look_added_to_the_registry_is_offered_and_accepted(): void
+    {
+        // Both controls read Look::cases(), and Filament validates each ticked value against the
+        // options it offered — so registering a look is the whole of publishing it, with no list
+        // here to keep in step. Tabbed is the one that would notice if that stopped being true.
+        Livewire::test(LookSettings::class)
+            ->set('data.'.SnsSettingKey::DefaultLook->value, 'tabbed')
+            ->set('data.'.SnsSettingKey::SelectableLooks->value, ['tabbed'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(Look::Tabbed, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
+        $this->assertSame([Look::Tabbed], app(SnsSettingService::class)->get(SnsSettingKey::SelectableLooks));
+    }
+
     public function test_an_id_no_look_answers_to_is_rejected(): void
     {
         Livewire::test(LookSettings::class)
