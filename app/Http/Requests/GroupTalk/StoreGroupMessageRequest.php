@@ -45,6 +45,10 @@ class StoreGroupMessageRequest extends FormRequest
             // across a deploy and keeps sending; ignoring its `image` would 201 the body and
             // silently drop the file. Transitional: remove once no session predates images[].
             'image' => ['prohibits:images', ...PostImageRules::single()],
+            // Only when the composer actually sent it: `sometimes` treats a key holding null as an
+            // argument to check, and ConvertEmptyStringsToNull turns an empty field into exactly
+            // that. Which message it names is resolved by the controller, against this group.
+            'reply_to_message_id' => ['sometimes', 'integer', 'min:1'],
             ...MentionRules::rules(TalkBody::MAX),
         ];
     }
@@ -89,5 +93,13 @@ class StoreGroupMessageRequest extends FormRequest
     public function mentions(): array
     {
         return MentionRules::normalize($this->validated()['mentions'] ?? []);
+    }
+
+    /** The message being answered, as the composer named it; null when this answers nothing. */
+    public function replyToMessageId(): ?int
+    {
+        $id = $this->validated()['reply_to_message_id'] ?? null;
+
+        return $id === null ? null : (int) $id;
     }
 }

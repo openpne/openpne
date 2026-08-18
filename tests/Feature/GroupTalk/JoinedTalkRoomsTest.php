@@ -145,6 +145,67 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame(2, $room->unreadMentions);
     }
 
+    /**
+     * Being answered is being addressed, so one count covers both — and it is still a count of
+     * messages: a line that names the viewer *and* answers them is one message waiting.
+     */
+    public function test_the_addressed_count_holds_replies_to_the_viewer_and_counts_a_message_once(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+
+        $mine = $this->said($group, $viewer);
+        $this->answering($group, $other, $mine);
+        $both = $this->answering($group, $other, $mine);
+        $this->names($both, $viewer);
+        $this->names($this->said($group, $other), $viewer);
+        $this->said($group, $other);
+
+        $room = app(JoinedTalkRooms::class)($viewer, withUnreadMentions: true)->items()[0];
+
+        $this->assertSame(4, $room->unread);
+        $this->assertSame(3, $room->unreadMentions);
+    }
+
+    /**
+     * The reference is only an id — no foreign key holds it to a live row of this room — so the parent
+     * is matched on its group as well as its id, and a message answering someone else is not the
+     * viewer's to be told about.
+     */
+    public function test_an_answer_to_anyone_but_the_viewer_here_is_not_addressed_to_them(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+
+        $this->answering($group, $other, $this->said($group, $other));
+
+        $elsewhere = $this->group();
+        GroupMember::factory()->create(['group_id' => $elsewhere->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->answering($group, $other, $this->said($elsewhere, $viewer));
+
+        $retracted = $this->said($group, $viewer);
+        $this->answering($group, $other, $retracted);
+        $retracted->delete();
+
+        $rooms = collect(app(JoinedTalkRooms::class)($viewer, withUnreadMentions: true)->items())
+            ->keyBy(fn (TalkRoom $room): int => $room->group->getKey());
+
+        $this->assertSame(4, $rooms[$group->getKey()]->unread);
+        $this->assertSame(0, $rooms[$group->getKey()]->unreadMentions);
+    }
+
+    /** One message in the room answering another. */
+    private function answering(Group $group, Member $author, GroupMessage $parent): GroupMessage
+    {
+        return GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'in_reply_to_id' => $parent->getKey(),
+        ]);
+    }
+
     /** A read that did not ask holds no number at all, rather than a zero it never counted. */
     public function test_a_room_carries_no_mention_count_unless_the_read_asked_for_one(): void
     {

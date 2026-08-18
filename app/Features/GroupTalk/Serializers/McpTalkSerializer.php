@@ -25,9 +25,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class McpTalkSerializer
 {
     /**
-     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>}
+     * @param  array<int, GroupMessage>  $parents  the answered messages of this read, as ReplyReferences
+     *                                             read them
+     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>, inReplyTo: array{id: int, authorId: int|null}|null}
      */
-    public static function message(GroupMessage $message): array
+    public static function message(GroupMessage $message, array $parents): array
     {
         $images = $message->images->count();
 
@@ -49,7 +51,31 @@ class McpTalkSerializer
                 ->map(fn (GroupMessageMention $mention): int => (int) $mention->member_id)
                 ->values()
                 ->all(),
+            'inReplyTo' => self::inReplyTo($message, $parents),
         ];
+    }
+
+    /**
+     * What this message answers. Carried as a shape rather than a bare id because "is this addressed
+     * to me" is a question an agent answers from the message payload alone, as it already does from
+     * `mentions`.
+     *
+     * `authorId` is who the answer is owed to, so it is null when there is nobody behind the parent —
+     * it was deleted, or its author has withdrawn. The two are deliberately not distinguished: a
+     * caller asks this to decide whom to answer, and in both cases the answer is nobody.
+     *
+     * @param  array<int, GroupMessage>  $parents
+     * @return array{id: int, authorId: int|null}|null
+     */
+    private static function inReplyTo(GroupMessage $message, array $parents): ?array
+    {
+        if ($message->in_reply_to_id === null) {
+            return null;
+        }
+
+        $author = ($parents[(int) $message->in_reply_to_id] ?? null)?->member_id;
+
+        return ['id' => (int) $message->in_reply_to_id, 'authorId' => $author === null ? null : (int) $author];
     }
 
     /**
@@ -57,11 +83,12 @@ class McpTalkSerializer
      * a caller asks the next page from, lifted out of the rows so a client never has to know which end
      * of the list to read them off.
      *
+     * @param  array<int, GroupMessage>  $parents
      * @return array{messages: list<array<string, mixed>>, hasOlder: bool, hasNewer: bool, previousCursor: string|null, nextCursor: string|null}
      */
-    public static function page(GroupTalkPage $page): array
+    public static function page(GroupTalkPage $page, array $parents): array
     {
-        $messages = $page->messages->map([self::class, 'message'])->values()->all();
+        $messages = $page->messages->map(fn (GroupMessage $message): array => self::message($message, $parents))->values()->all();
 
         return [
             'messages' => $messages,
@@ -73,9 +100,10 @@ class McpTalkSerializer
     }
 
     /**
-     * `unreadMentions` is how many of `unread` name the caller — the number a polling agent reads to
-     * decide whether a room wants an answer, without paging the messages to find out. Null only for
-     * a read that did not ask for it; the tool always does.
+     * `unreadMentions` is how many of `unread` are addressed to the caller — named in, or an answer
+     * to something they said — the number a polling agent reads to decide whether a room wants an
+     * answer, without paging the messages to find out. Null only for a read that did not ask for it;
+     * the tool always does.
      *
      * @return array{groupId: int, name: string, unread: int, unreadMentions: int|null, muted: bool, lastMessageAt: string|null}
      */

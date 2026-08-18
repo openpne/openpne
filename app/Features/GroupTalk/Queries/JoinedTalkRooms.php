@@ -59,8 +59,8 @@ class JoinedTalkRooms
      * (NavTalkRooms), which takes the same rows and stops there.
      *
      * $withUnreadMentions buys a third correlated subselect and is off for everything the nav
-     * renders: this query runs on every page, and "how many of those are addressed to me" is a
-     * question only a caller with no screen to look at asks (the MCP room list).
+     * renders: this query runs on every page, and "how many of those are addressed to me" — named or
+     * answered — is a question only a caller with no screen to look at asks (the MCP room list).
      *
      * @return EloquentBuilder<Group>
      */
@@ -112,25 +112,37 @@ class JoinedTalkRooms
     }
 
     /**
-     * The subset of the unread that names the viewer — the same unread predicate, narrowed to
-     * messages carrying a mention row of theirs.
+     * The subset of the unread that is addressed to the viewer — the same unread predicate, narrowed
+     * to messages that either carry a mention row of theirs or answer something they said. Being
+     * replied to is being spoken to, though only the mention notifies: a reply is what this number
+     * exists to surface to a caller who has no screen to look at.
      *
-     * A semi-join rather than a join: it counts *messages*, so being named twice in one line is one
-     * unread message, the unit `unread_talk_count` already answers in. Written outwards from
-     * `group_messages` because that direction is indexed on both engines — `group_message_id` leads
-     * the mentions table's unique index, and on SQLite that is the only index there, a foreign key
-     * getting none of its own. MySQL, which does index the key, flattens the EXISTS and may drive
-     * from the viewer's own mention rows instead; either direction is an index lookup.
+     * A semi-join rather than a join, and one OR rather than two counts: it counts *messages*, so a
+     * line that names the viewer twice — or both names them and answers them — is one unread message,
+     * the unit `unread_talk_count` already answers in. Both arms are written outwards from
+     * `group_messages` because that direction is indexed on both engines: `group_message_id` leads
+     * the mentions table's unique index, which on SQLite is the only index there — a foreign key gets
+     * none of its own — and the reply arm seeks a primary key. MySQL, which does index its keys, may
+     * flatten either EXISTS and drive the other way; every direction is an index lookup.
      */
     private function unreadMentions(int $viewerId): Builder
     {
         return UnreadTalkScope::correlate(
             DB::table('group_messages')
                 ->selectRaw('count(*)')
-                ->whereExists(fn (Builder $named) => $named
-                    ->from('group_message_mentions')
-                    ->whereColumn('group_message_mentions.group_message_id', 'group_messages.id')
-                    ->where('group_message_mentions.member_id', $viewerId)),
+                ->where(fn (Builder $addressed) => $addressed
+                    ->whereExists(fn (Builder $named) => $named
+                        ->from('group_message_mentions')
+                        ->whereColumn('group_message_mentions.group_message_id', 'group_messages.id')
+                        ->where('group_message_mentions.member_id', $viewerId))
+                    // The parent is matched on its group as well as its id: `in_reply_to_id` carries
+                    // no foreign key, so a row that is gone leaves the id behind and only a live
+                    // message of this room may answer for it.
+                    ->orWhereExists(fn (Builder $answered) => $answered
+                        ->from('group_messages as parents')
+                        ->whereColumn('parents.id', 'group_messages.in_reply_to_id')
+                        ->whereColumn('parents.group_id', 'group_messages.group_id')
+                        ->where('parents.member_id', $viewerId))),
             'group_members',
             $viewerId,
         );

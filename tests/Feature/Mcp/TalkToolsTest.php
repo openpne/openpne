@@ -8,6 +8,7 @@ use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Events\GroupMessagePosted;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
+use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
@@ -467,9 +468,13 @@ class TalkToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('message.body', '@あかり rain, probably')
                 ->where('message.mentions', [$asker->getKey()])
+                // Two different questions: which message this answers, and who was spoken to. The
+                // reference is what the room draws; the mention is what notifies.
+                ->where('message.inReplyTo', ['id' => $question->getKey(), 'authorId' => $asker->getKey()])
                 ->etc());
 
         $posted = GroupMessage::query()->orderByDesc('id')->firstOrFail();
+        $this->assertSame($question->getKey(), (int) $posted->in_reply_to_id);
         $mention = DB::table('group_message_mentions')->where('group_message_id', $posted->getKey())->sole();
 
         $this->assertSame(0, (int) $mention->offset);
@@ -497,7 +502,12 @@ class TalkToolsTest extends McpTestCase
         ])->assertOk();
 
         $posted = GroupMessage::query()->orderByDesc('id')->with('mentions', 'images', 'author')->firstOrFail();
-        $serialized = GroupMessageSerializer::message($posted, GroupTalkPermissions::for($group, $bot), []);
+        $serialized = GroupMessageSerializer::message(
+            $posted,
+            GroupTalkPermissions::for($group, $bot),
+            [],
+            app(ReplyReferences::class)->of($group, $posted),
+        );
 
         $this->assertSame([['memberId' => $asker->getKey(), 'offset' => 0, 'length' => 1 + mb_strlen($asker->name)]], $serialized['mentions']);
         $this->assertSame(
@@ -521,7 +531,8 @@ class TalkToolsTest extends McpTestCase
 
     /**
      * Nobody to address is not a failure to post: the message goes in as written, and the empty
-     * `mentions` is what tells the caller no one was named.
+     * `mentions` is what tells the caller no one was named. The reference is written all the same —
+     * what this answers does not depend on whether anyone could be spoken to.
      */
     #[DataProvider('unaddressable')]
     public function test_an_answer_with_nobody_to_address_posts_as_a_plain_message(string $situation): void
@@ -556,10 +567,81 @@ class TalkToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('message.body', 'answered')
                 ->where('message.mentions', [])
+                ->where('message.inReplyTo.id', $question->getKey())
                 ->etc());
 
+        $this->assertSame(
+            $question->getKey(),
+            (int) GroupMessage::query()->where('body', 'answered')->sole()->in_reply_to_id,
+        );
         $this->assertSame(0, DB::table('group_message_mentions')->count());
         Notification::assertNothingSent();
+    }
+
+    /**
+     * What a reading agent decides "is this for me" from. `authorId` is who the answer is owed to, so
+     * a parent nobody is behind — deleted, or its author withdrawn — reports null rather than two
+     * states that would lead to the same decision.
+     */
+    public function test_a_read_says_what_each_message_answers(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $asker = $this->memberOf($group);
+
+        $question = $this->say($group, $asker, 'what is the weather');
+        $this->answering($group, $member, 'rain, probably', $question);
+
+        $withdrawn = GroupMessage::factory()->withdrawnAuthor()->create(['group_id' => $group->getKey(), 'body' => 'asked']);
+        $this->answering($group, $member, 'answering nobody', $withdrawn);
+
+        $retracted = $this->say($group, $asker, 'retracted');
+        $this->answering($group, $member, 'answering a ghost', $retracted);
+        $retractedId = $retracted->getKey();
+        $retracted->delete();
+
+        $this->acting($member);
+
+        OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('messages.0.inReplyTo', null)
+                ->where('messages.1.inReplyTo', ['id' => $question->getKey(), 'authorId' => $asker->getKey()])
+                ->where('messages.3.inReplyTo', ['id' => $withdrawn->getKey(), 'authorId' => null])
+                ->where('messages.4.inReplyTo', ['id' => $retractedId, 'authorId' => null])
+                ->etc());
+    }
+
+    /** Being answered is being spoken to, so the room says it is waiting on the caller. */
+    public function test_the_room_list_counts_an_answer_to_something_the_caller_said(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $other = $this->memberOf($group);
+
+        $mine = $this->say($group, $viewer, 'what is the weather');
+        $this->answering($group, $other, 'rain, probably', $mine);
+        $this->say($group, $other, 'unrelated chatter');
+
+        $this->acting($viewer);
+
+        OpenPneServer::tool(ListTalkRoomsTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('rooms.0.unread', 2)
+                ->where('rooms.0.unreadMentions', 1)
+                ->etc());
+    }
+
+    /** One message in the room answering another, as the composer and the reply tool both write one. */
+    private function answering(Group $group, Member $author, string $body, GroupMessage $parent): GroupMessage
+    {
+        return GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'body' => $body,
+            'in_reply_to_id' => $parent->getKey(),
+        ]);
     }
 
     public function test_answering_a_message_this_room_does_not_hold_is_refused_without_saying_it_exists(): void
@@ -773,13 +855,13 @@ class TalkToolsTest extends McpTestCase
                 parent::__construct($images, $mentions);
             }
 
-            public function __invoke(Member $author, Group $group, string $body, array $mentions = [], array $images = [], bool $mentionsRequired = false): GroupMessage
+            public function __invoke(Member $author, Group $group, string $body, array $mentions = [], array $images = [], bool $mentionsRequired = false, ?GroupMessage $inReplyTo = null): GroupMessage
             {
                 if ($this->times-- > 0) {
                     ($this->race)();
                 }
 
-                return parent::__invoke($author, $group, $body, $mentions, $images, $mentionsRequired);
+                return parent::__invoke($author, $group, $body, $mentions, $images, $mentionsRequired, $inReplyTo);
             }
         });
     }

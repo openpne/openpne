@@ -41,7 +41,7 @@ would silently change nothing for the sites that matter — the ones with no row
 
 | table | what it holds |
 |---|---|
-| `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable), `body`, timestamps |
+| `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable, **no FK** — see [Replies](#replies)), `body`, timestamps |
 | `group_message_images` | join rows to `files`, numbered slots, shaped exactly like `timeline_post_images` — see [Images](#images) |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
@@ -57,11 +57,10 @@ timeline posts) goes with its author, content that belongs to a place stays in t
 `group_message_mentions` row is the opposite — `cascadeOnDelete`, so deleting the member takes the
 mention away and the range renders as the plain text it already is.
 
-**`in_reply_to_id` is lineage, never a feature.** Talk has no reply UI and the composer never writes
-it; it exists so a migrated OpenPNE 3 activity reply or OpenPNE 4 timeline reply can record what it
-pointed at. Its on-delete is `nullOnDelete`, deliberately unlike `timeline_posts`' cascade: deleting
-a message must not take unrelated messages with it, because lineage records where something came
-from, not whose life it shares.
+**`in_reply_to_id` is the reply reference** — see [Replies](#replies). It carries **no foreign key**,
+which is the one structural thing to know about it here: an id pointing at a message that has been
+deleted stays, and reads as such. Every writer therefore checks what the engine no longer does — a
+live message of the same group — and deleting a message never touches the messages answering it.
 
 ## Ordering is the `(created_at, id)` tuple
 
@@ -413,6 +412,50 @@ Two asymmetries are deliberate:
 An author who withdraws before delivery takes the queued notification with them
 (`deleteWhenMissingModels`): "Withdrawn member mentioned you" is a notification nobody can act on.
 
+## Replies
+
+A message may answer another one in the same room. The reference is drawn as a header above the
+reply, one tap from the message it names — a reference, not a thread: the conversation stays
+linear, and a reply is an ordinary message for ordering, unread, the room list and the poll.
+
+**A reference, not a snapshot.** Nothing about the parent is stored on the reply. The header's
+author, excerpt and thumbnail are read off the parent row every time it is serialized, so a header
+cannot go on describing a message that is no longer there. The excerpt is
+[`ChatPreview`](../../app/Support/ChatPreview.php) — the same line every conversation list previews a
+message by, a payload bound with the visible truncation left to the client's clip.
+
+**A deleted parent is a state, not a hole.** The column carries no foreign key, deliberately:
+`nullOnDelete` would erase the reference and leave an answer indistinguishable from a message that
+answered nothing. So the id dangles and the wire says `{deleted: true}` where a live parent would
+have said `{deleted: false, …}`. Unlike the [reactions](#reactions) rows that also live without a
+foreign key, nothing collects it — dangling is the meaning.
+
+**The lookup is bound to the group.** [`ReplyReferences`](../../app/Features/GroupTalk/Queries/ReplyReferences.php)
+reads the parents of a whole page in one query, `where group_id = …`, so an id from another
+conversation comes back missing and renders as deleted. Structural scoping rather than a defensive
+branch, and the reason no `belongsTo` eager load may stand in for it: an unscoped one would answer
+with the foreign row.
+
+**Writers validate, and the race is accepted.** `reply_to_message_id` is resolved to a live message
+of this group — a 422 when it is not, so the composer keeps the draft and says why — and the
+same-group half is re-asserted at the single write chokepoint
+([`CreateGroupMessage`](../../app/Features/GroupTalk/Actions/CreateGroupMessage.php)). Nothing is
+locked between the check and the insert: a parent deleted in that window leaves a dangling reference,
+which is the state deleting it produces anyway.
+
+**One level.** A reply describes its own parent and never that parent's parent. The header carries
+the parent's cursor, so following it opens the page that message sits in
+([`around()`](#context--the-page-a-position-sits-in)), exactly as the unread jump does.
+
+**Nothing notifies**, for the reason a [reaction](#reactions) does not: the room's unread badge is
+what says something happened here, and anyone who needs to be sure of reaching a person @mentions
+them. The one count that a reply reaches is `unreadMentions` on the MCP room list — unread messages
+that name the caller **or** answer something they said, the poll that decides whether a room is
+waiting on an agent with no screen to look at ([mcp.md](mcp.md#tools)).
+
+[`post-talk-message`](mcp.md#answering-someone) writes the same column, and addresses the answered
+author on top of it: the reference is what the room draws, the @mention is what notifies.
+
 ## Images
 
 Up to three images per message, numbered `1..N` in the order the sender picked them. The composer
@@ -620,7 +663,9 @@ role once per request and the serializer asks it per row.
 1. A message has no audience column; the group is the audience. Any read path that needs to narrow
    further is answering a different question and should say so.
 2. `(created_at, id)` is the order, everywhere — reads, cursors, and the unread cursor that follows.
-3. The composer never writes `in_reply_to_id`.
+3. `in_reply_to_id` is written only after its target has been checked to be a live message of the
+   same group, and no foreign key backs it. So a dangling id means one thing — the answered message
+   was deleted — and nothing else may produce one.
 4. Every path that creates a membership row snapshots the cursor; the DB defaults are a backstop for
    the ones that cannot, never the initialization.
 5. The cursor only ever moves forward, and the guard is in the `WHERE` clause rather than in a
@@ -666,3 +711,7 @@ role once per request and the serializer asks it per row.
     message under it — the one order, shared with the message's purge and the group's teardown.
 23. Nothing about a chip row grows with the room: the counts are aggregated in SQL rather than
     hydrated, and the reactor list ships an exact count with at most a hundred names.
+24. A reply is an ordinary message. It orders, counts as unread and leads a room like any other, and
+    the reference it carries adds no notification of its own.
+25. The parent lookup is bound to the group, so an id from another conversation reads as deleted, and
+    only one level is ever serialized.
