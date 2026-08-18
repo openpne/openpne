@@ -72,7 +72,8 @@ export interface ScrollDirectionOptions extends Partial<ScrollThresholds> {
 /** Which way the reader is going, for chrome that recedes while they read. */
 export function useScrollDirection({
     threshold = 8,
-    // The mobile bar's own height (3rem) — see ScrollThresholds.minDownY.
+    // The shortest mobile bar's height (3rem); a taller bar (the labelled tabs' 58px) starts
+    // hiding those few px early, harmlessly — see ScrollThresholds.minDownY.
     minDownY = 48,
     enabled = true,
 }: ScrollDirectionOptions = {}): ScrollDirection {

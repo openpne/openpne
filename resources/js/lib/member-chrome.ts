@@ -157,8 +157,10 @@ interface LookSpec {
  * (docs/internals/looks.md).
  *
  * Fields whose value vectors coincide (rightRail and foldsHubHeading; colorLine, placeBar and
- * bottomBarInConversation) cannot be told apart by tests over these rows — which field a consumer
- * reads is guarded by that consumer's render tests instead.
+ * bottomBarInConversation) are indistinguishable to every test — registry values and consumer
+ * renders alike — until some look splits the vectors, at which point the consumers' render tests
+ * catch a crossed read at once. Inside a coinciding group, the only guard is the discipline of
+ * reading the field whose name answers the question being asked.
  *
  * A question becomes a field when a consumer OUTSIDE the bar component itself branches on it; how
  * one bar arranges its own insides stays inside that bar. Each row is complete by type, so a look
