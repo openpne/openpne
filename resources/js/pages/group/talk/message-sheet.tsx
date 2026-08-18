@@ -6,8 +6,12 @@ import { cn } from '@/lib/utils';
 import { TalkReactionPickerGrid } from './reaction-bar';
 import type { TalkMessage } from './types';
 
+/** The ring is inset because the frame below clips: drawn outside, a full-width item's own would be cut away. */
 const SHEET_ITEM =
-    'flex min-h-12 w-full items-center gap-3 rounded-field px-3 text-left text-base transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    'flex min-h-12 w-full items-center gap-3 px-3 text-left text-base transition hover:bg-accent focus-visible:outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ring';
+
+/** The frame the items stand in: a bounded panel reads as pressable where a bare row on the sheet does not. */
+const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-card divide-y divide-border';
 
 /**
  * Whether this body can be offered for copying — and so whether it alone earns the row a press. One
@@ -69,7 +73,13 @@ export function TalkMessageSheet({
                         <TalkReactionPickerGrid
                             chips={chips}
                             vocabulary={vocabulary}
-                            buttonClassName="size-11"
+                            // Each emoji on a tile of its own: on a sheet a thumb reaches for, a
+                            // character floating on the background does not read as something to
+                            // press. The border is the chip row's own, so what is pressable speaks
+                            // one language — the fill alone is a shade too close to the sheet's. A
+                            // held one still keeps its own tint — the tint is written after this,
+                            // so it replaces rather than sits under.
+                            buttonClassName="size-11 border border-input bg-muted"
                             onPick={(emoji, mine) => {
                                 onToggle(emoji, mine);
                                 onClose();
@@ -78,40 +88,45 @@ export function TalkMessageSheet({
                     </div>
                 )}
 
-                {chips.length > 0 && (
-                    <button
-                        type="button"
-                        className={SHEET_ITEM}
-                        onClick={() => {
-                            onClose();
-                            onShowReactors();
-                        }}
-                    >
-                        <Users className="size-5 shrink-0" aria-hidden />
-                        {t('See who reacted')}
-                    </button>
-                )}
+                {(chips.length > 0 || canCopy) && (
+                    <div className={SHEET_GROUP}>
+                        {chips.length > 0 && (
+                            <button
+                                type="button"
+                                className={SHEET_ITEM}
+                                onClick={() => {
+                                    onClose();
+                                    onShowReactors();
+                                }}
+                            >
+                                <Users className="size-5 shrink-0" aria-hidden />
+                                {t('See who reacted')}
+                            </button>
+                        )}
 
-                {canCopy && (
-                    <button
-                        type="button"
-                        className={SHEET_ITEM}
-                        onClick={() => {
-                            // A refusal — the permission denied, the document not focused — leaves the
-                            // message where it is. There is nothing to say about it that the reader
-                            // cannot see for themselves when they go to paste.
-                            void navigator.clipboard.writeText(message.body).catch(() => {});
-                            onClose();
-                        }}
-                    >
-                        <Copy className="size-5 shrink-0" aria-hidden />
-                        {t('Copy text')}
-                    </button>
+                        {canCopy && (
+                            <button
+                                type="button"
+                                className={SHEET_ITEM}
+                                onClick={() => {
+                                    // A refusal — the permission denied, the document not focused — leaves
+                                    // the message where it is. There is nothing to say about it that the
+                                    // reader cannot see for themselves when they go to paste.
+                                    void navigator.clipboard.writeText(message.body).catch(() => {});
+                                    onClose();
+                                }}
+                            >
+                                <Copy className="size-5 shrink-0" aria-hidden />
+                                {t('Copy text')}
+                            </button>
+                        )}
+                    </div>
                 )}
 
                 {message.canDelete && (
-                    // Ruled off from the rest: the only choice here that cannot be taken back.
-                    <div className="mt-1 border-t border-border pt-1">
+                    // A frame of its own: the only choice here that cannot be taken back does not stand
+                    // among the ones that can.
+                    <div className={cn(SHEET_GROUP, 'mt-1')}>
                         <button
                             type="button"
                             className={cn(SHEET_ITEM, 'text-destructive')}
@@ -124,7 +139,8 @@ export function TalkMessageSheet({
                             }}
                         >
                             <Trash2 className="size-5 shrink-0" aria-hidden />
-                            {t('Delete')}
+                            {/* The sheet names no message, so the action must say what it acts on. */}
+                            {t('Delete message')}
                         </button>
                     </div>
                 )}

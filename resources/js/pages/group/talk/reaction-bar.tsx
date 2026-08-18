@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * The emoji on one message, in two places: the chips under what was said, and the button that adds
- * one on the meta row above it. Split because they answer different questions — the chips are part
- * of the message, the way to react to it is one of the things you can do with it.
+ * one among the row's own controls. Split because they answer different questions — the chips are
+ * part of the message, the way to react to it is one of the things you can do with it.
  *
  * A tap on a chip is that emoji's own toggle: holding it takes it back, not holding it adds it. Both
  * are drawn from the chip's `mine`, so what the control does is what the row already shows.
