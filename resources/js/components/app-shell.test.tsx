@@ -105,9 +105,9 @@ test.each([
     // Null = no desktop override at all: the unified bar stands at every width, so the phone's
     // reserved height is the desktop's too. The two that drop it differ by what is left above the
     // page — nothing, or the site-color line.
-    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]' }],
-    ['unified', { ground: true, rail: false, line: false, desktopOffset: null }],
-    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]' }],
+    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', width: 'max-w-6xl xl:max-w-7xl' }],
+    ['unified', { ground: true, rail: false, line: false, desktopOffset: null, width: 'max-w-6xl lg:max-w-[58rem]' }],
+    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', width: 'max-w-6xl lg:max-w-[58rem]' }],
 ] as const)('%s wires ground, rail, the color line and the desktop offset from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
     const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
@@ -120,6 +120,9 @@ test.each([
     // The whole declaration, not merely its presence: an offset that stopped clearing the line would
     // otherwise pass as long as some `lg:` value was there.
     expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.desktopOffset);
+    // Rail-less looks shrink the frame to sidebar + content so the pair centers as one block —
+    // the retired rail's width must not survive as a dead band beside the page.
+    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
 });
 
 test('the desktop line is the site color, and only desktop draws it', () => {

@@ -95,7 +95,11 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
             <div
                 className={cn(
-                    'mx-auto flex min-h-dvh max-w-6xl xl:max-w-7xl',
+                    'mx-auto flex min-h-dvh',
+                    // With the third column retired the frame shrinks to what actually stands —
+                    // the sidebar (16rem) plus the content column (42rem) — so the pair centers as
+                    // one block instead of the rail's width going stale beside the page.
+                    look.rightRail ? 'max-w-6xl xl:max-w-7xl' : 'max-w-6xl lg:max-w-[58rem]',
                     topOffset,
                     desktopTopOffset,
                     bottomOffset,
