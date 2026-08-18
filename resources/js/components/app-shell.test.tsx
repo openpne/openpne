@@ -27,7 +27,6 @@ vi.mock('@inertiajs/react', () => ({
 vi.mock('@/components/left-nav', () => ({ LeftNav: () => null }));
 // A marker rather than null: whether the shell seats the rail at all is one of the wiring answers.
 vi.mock('@/components/right-rail', () => ({ RightRail: () => <div data-testid="right-rail" /> }));
-vi.mock('@/components/look-preview-bar', () => ({ LookPreviewBar: () => null }));
 vi.mock('@/components/unread-sync', () => ({ UnreadSync: () => null }));
 vi.mock('@/components/confirm-dialog', () => ({ ConfirmDialogHost: () => null }));
 vi.mock('@/components/action-fab', () => ({ ActionFab: () => null }));
@@ -52,7 +51,6 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
             auth: { user },
             enabledFeatures: allOn,
             look: 'standard',
-            lookPreview: null,
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },

@@ -67,40 +67,36 @@ and [`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.ph
 the id as the `look` prop so no consumer resolves it a second time. The chain:
 
 1. **Guest clamp** — no member on the request, `standard`. A look is a member's way around
-   their own pages, and a signed-out visitor reaches none of them. It is first, not merely
-   present: a signed-out request can still carry the previous member's preview session, and
-   the pages a guest does reach (a web-public profile) have no viewer for a look's
-   serializer to render against.
-2. **Session preview** — what the member is trying on right now (below), while the site
-   still offers it.
-3. **Member choice** — `PreferenceKey::PreferredLook`, while the site still offers it; a
+   their own pages, and a signed-out visitor reaches none of them; the pages a guest does
+   reach (a web-public profile) have no viewer for a look's serializer to render against.
+2. **Member choice** — `PreferenceKey::PreferredLook`, while the site still offers it; a
    row outside the selectable set is ignored rather than honoured.
-4. **Site default** — `SnsSettingKey::DefaultLook` in `sns_settings`, edited on the
+3. **Site default** — `SnsSettingKey::DefaultLook` in `sns_settings`, edited on the
    *UI layout settings* admin page. A stored value no registered look answers to decodes
    to `standard`.
 
-The preview outranking the durable choice is the inverse of the session tier in
-[`SetLocale`](../../app/Http/Middleware/SetLocale.php), where the durable value wins: a
-preview exists precisely to be temporary, and it is cleared on confirm, on cancel, on a
-surface switch, and with the rest of the session on logout.
-
-Layer 3 reads `member_preferences` once per Inertia navigation; the relation is
+Layer 2 reads `member_preferences` once per Inertia navigation; the relation is
 instance-cached, so a request that also reads another preference shares the query.
 
-### Trying a look on
+### Choosing a look
 
-A look changes the whole shell, so a member is shown one before they keep it, rather than
-being asked to pick from descriptions. `POST /member/config/look/preview` parks the choice
-in the member-realm session under `look_preview` — `['look' => <id>, 'pin' => <bool>]`,
-`pin` false meaning "follow the site default", previewing whatever that currently is — and
-answers with a full page load, because what changes is the shell the SPA is running inside.
-Every Modern page then carries the preview bar (the `lookPreview` prop), which is the only
-way out of that state:
+The picker is a member-config detail page, `GET /member/config/look`
+(`member.config.look.edit`), that *describes* the looks: a table comparing them dimension
+by dimension, then one card per selectable look, then an explicit save. The settings hub
+keeps a row naming the current choice and linking here, the same shape as email and
+password.
 
-- `POST /member/config/look` keeps it. **Parameter-free**: the intent comes from the same
-  session the bar was rendered from, so what gets saved cannot disagree with what is on
-  screen. `pin` true writes the preference; false clears it, back to following the default.
-- `POST /member/config/look/preview/stop` drops it.
+A live try-on was built and retired. It rendered the chosen look with a bar offering to
+keep or drop it, on the reasoning that a look is best judged by being seen — but seeing a
+look without knowing what to look at communicated nothing, so the differences are spelled
+out instead. The session tier that carried it is gone from the resolver.
+
+`POST /member/config/look` (`choice`: a look id, or the literal `default`) writes the
+preference or clears it, back to following the site's, and answers with a full page load
+back to the picker — the whole shell re-drawing in the chosen look is the confirmation.
+`UpdateLookRequest::authorize()` refuses an id outside the selectable set (403) rather than
+relying on the picker's absence, and the GET redirects to the settings page while fewer
+than two looks are selectable.
 
 ### Which looks a member may pick
 

@@ -551,20 +551,19 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->middleware(EnsureFeatureEnabled::class.':diary')->name('member.config.diary');
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
-    // The look is tried on before it is kept (docs/internals/looks.md): the preview POST parks the
-    // choice in the session, and only the parameter-free confirm below writes the preference.
-    Route::post('/member/config/look/preview', [MemberConfigController::class, 'previewLook'])->name('member.config.look.preview');
-    Route::post('/member/config/look/preview/stop', [MemberConfigController::class, 'stopLookPreview'])->name('member.config.look.preview.stop');
+    // The layout choice (docs/internals/looks.md); its picker is the GET detail page below.
     Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
     Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
     Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])
         ->middleware('throttle:email-change')->name('member.config.email');
 
-    // Modern-only detail pages for the consequential account changes (email/password/withdrawal).
+    // Modern-only detail pages for the consequential account changes (email/password/withdrawal)
+    // and for the layout picker, which needs the room to describe what each look changes.
     // The settings page keeps a compact row per item; the forms live here, so a validation error
     // lands back on a short page where it is visible. Classic keeps its ?category= pages. Like
     // /community/recent these have no Classic twin, so no surface default / `.modern.` name.
+    Route::get('/member/config/look', [MemberConfigController::class, 'editLook'])->name('member.config.look.edit');
     Route::get('/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
     Route::get('/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
