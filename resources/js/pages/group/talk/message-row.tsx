@@ -7,6 +7,7 @@ import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
+import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { TalkReactionAdd, TalkReactionChips } from './reaction-bar';
 import type { TalkMessage } from './types';
@@ -26,15 +27,38 @@ export interface TalkRowReactions {
 }
 
 /**
+ * The row's controls, and the two lanes they are reached by.
+ *
+ * Where a cursor can point they are drawn on the row and revealed by hovering it or by focus reaching
+ * into it — a row at rest is what was said, not what can be done about it. Where there is no cursor
+ * they are `sr-only` rather than hidden: a long press opens the sheet, and a screen reader on a touch
+ * screen cannot hold one, so these buttons are that reader's only way to what the sheet offers.
+ *
+ * The `pointer-events` half is what keeps an invisible Delete from answering a finger on a hybrid
+ * machine — a laptop with a touch screen answers `pointer: fine`, so the controls stay drawn there,
+ * and `opacity: 0` alone does not stop a tap. The three revealing states beat the default by selector
+ * specificity (0,2,0 against 0,1,0), not by source order: Tailwind emits `pointer-fine` after them.
+ * Simplifying the reveal to a bare `pointer-events-auto` would tie the specificity, hand the cascade
+ * back to source order, and leave the controls dead to every click. Nothing in the coarse lane writes
+ * `pointer-events` at all, so a touch screen reader's activation path is untouched.
+ */
+const ROW_ACTIONS =
+    'flex shrink-0 items-center gap-2 text-sm text-muted-foreground opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only';
+
+/**
  * One utterance. Shaped like a board comment rather than a two-sided bubble stream: the same row a
  * reader already knows from topics and events, so a conversation and a thread are read the same way.
  * A withdrawn author keeps their place with the established label — the message stays, the person is
  * gone.
  *
  * `grouped` drops the author header: a quick follow-up in the same run (lib/chat/message-grouping)
- * reads as more of the same turn, the way Discord folds one. The per-message controls stay — a phone
- * has no hover to reveal them with — and the attribution stays too, spoken rather than drawn, so a
- * screen reader hears every row whole.
+ * reads as more of the same turn. The attribution stays, spoken rather than drawn, so a screen reader
+ * hears every row whole.
+ *
+ * `onOpenActions` is the touch lane's way in — the whole row, gutters included, is the press target
+ * (see ROW_ACTIONS for the other one). It is offered only where there is something to offer: a row
+ * with no reaction to make, nothing to delete, no body to copy and no chips to look behind has an
+ * empty sheet, so it gets no press at all and keeps the browser's own long-press behaviour.
  *
  * `highlighted` is the deep link's landing: the row a `?m=` link opened on, held for a moment so the
  * reader can see which message named them.
@@ -42,6 +66,7 @@ export interface TalkRowReactions {
 export function TalkMessageRow({
     message,
     onDelete,
+    onOpenActions,
     highlighted = false,
     grouped = false,
     rule = false,
@@ -49,6 +74,7 @@ export function TalkMessageRow({
 }: {
     message: TalkMessage;
     onDelete: (id: number) => void;
+    onOpenActions: () => void;
     highlighted?: boolean;
     grouped?: boolean;
     /** Draw the hairline above this row — the list rules between turns, not inside them. */
@@ -58,6 +84,9 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
+    const press = useLongPress(onOpenActions, {
+        enabled: reactions.canReact || message.canDelete || hasBody || reactions.chips.length > 0,
+    });
 
     const content = (
         <>
@@ -77,12 +106,27 @@ export function TalkMessageRow({
         </>
     );
 
+    const actions = (reactions.canReact || message.canDelete) && (
+        <div className={ROW_ACTIONS}>
+            {reactions.canReact && <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+            {message.canDelete && (
+                <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
+                    {t('Delete')}
+                </button>
+            )}
+        </div>
+    );
+
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
         <li
             data-talk-message-id={message.id}
+            {...press}
             className={cn(
-                'px-4 sm:px-5',
+                'group px-4 sm:px-5',
+                // Only where the press is the way in: the lens and the image menu a held finger raises
+                // would land on top of the sheet, and a cursor's text selection is nobody's to take.
+                'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 grouped ? 'pb-3' : 'py-3',
                 rule && 'border-t border-border',
                 // The transition is not conditional on the flag: what fades is the highlight being
@@ -102,18 +146,7 @@ export function TalkMessageRow({
                         </span>
                         {content}
                     </div>
-                    {(reactions.canReact || message.canDelete) && (
-                        <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-                            {reactions.canReact && (
-                                <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
-                            )}
-                            {message.canDelete && (
-                                <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
-                                    {t('Delete')}
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    {actions}
                 </div>
             ) : (
                 <>
@@ -136,16 +169,7 @@ export function TalkMessageRow({
                         )}
                         <AiChip isAi={author?.isAi ?? false} />
                         <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
-                        {/* Standing on the meta row rather than appearing on hover: a phone has no hover, and
-                            a row with no chips yet has nowhere else to offer the first one. */}
-                        {reactions.canReact && (
-                            <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
-                        )}
-                        {message.canDelete && (
-                            <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
-                                {t('Delete')}
-                            </button>
-                        )}
+                        {actions}
                     </div>
                     {content}
                 </>

@@ -17,6 +17,7 @@ import type { MentionPayloadRow } from '@/lib/mention-draft';
 import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
+import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
 import { TalkReactorsDialog } from './reactors-dialog';
 import { TalkUnreadDigestCard } from './unread-digest';
@@ -314,6 +315,13 @@ export default function GroupTalkIndex() {
     // a fresh read every poll tick.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
 
+    // The message a press opened the action sheet on, held as an id and resolved against the stream:
+    // one deleted under the reader — by its author elsewhere, by the poll — takes its sheet with it
+    // rather than leaving actions standing over a message that is gone.
+    const [sheetFor, setSheetFor] = useState<number | null>(null);
+    const closeSheet = useCallback(() => setSheetFor(null), []);
+    const sheetMessage = sheetFor === null ? undefined : messages.find((message) => message.id === sheetFor);
+
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
         if (isPending(pendingReactions, messageId, emoji)) {
             return;
@@ -407,6 +415,7 @@ export default function GroupTalkIndex() {
                                 <TalkMessageRow
                                     message={message}
                                     onDelete={remove}
+                                    onOpenActions={() => setSheetFor(message.id)}
                                     highlighted={message.id === highlightId}
                                     grouped={foldsInto(messages[index - 1], message, dividerId)}
                                     // No rule right under the separator: the line is already a rule.
@@ -447,6 +456,19 @@ export default function GroupTalkIndex() {
 
             {reactorsFor !== null && (
                 <TalkReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
+            )}
+
+            {sheetMessage !== undefined && (
+                <TalkMessageSheet
+                    message={sheetMessage}
+                    chips={chipsWithPending(sheetMessage.reactions ?? [], pendingReactions, sheetMessage.id)}
+                    vocabulary={reactionVocabulary}
+                    canReact={canPost}
+                    onToggle={(emoji, mine) => toggleReaction(sheetMessage.id, emoji, mine)}
+                    onShowReactors={() => setReactorsFor(sheetMessage.id)}
+                    onDelete={() => void remove(sheetMessage.id)}
+                    onClose={closeSheet}
+                />
             )}
 
             {canPost ? (
