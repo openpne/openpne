@@ -77,9 +77,9 @@ export function TalkMessageSheet({
                             // character floating on the background does not read as something to
                             // press. The border is the chip row's own, so what is pressable speaks
                             // one language — the fill alone is a shade too close to the sheet's. A
-                            // held one still keeps its own tint — the tint is written after this,
-                            // so it replaces rather than sits under.
-                            buttonClassName="size-11 border border-input bg-muted"
+                            // held one keeps its own colours — written after these, they replace
+                            // rather than sit under.
+                            buttonClassName="size-11 border-input bg-muted"
                             onPick={(emoji, mine) => {
                                 onToggle(emoji, mine);
                                 onClose();

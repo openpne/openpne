@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
 import type { ChatReactionChip } from '@/lib/chat/types';
@@ -10,7 +10,7 @@ import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { canCopyText } from './message-sheet';
-import { TalkReactionAdd, TalkReactionChips } from './reaction-bar';
+import { ICON_BUTTON, TalkReactionAdd, TalkReactionChips } from './reaction-bar';
 import type { TalkMessage } from './types';
 
 /**
@@ -44,9 +44,15 @@ export interface TalkRowReactions {
  * Simplifying the reveal to a bare `pointer-events-auto` would tie the specificity, hand the cascade
  * back to source order, and leave the controls dead to every click. Nothing in the coarse lane writes
  * `pointer-events` at all, so a touch screen reader's activation path is untouched.
+ *
+ * One class wins differently: the trailing `pointer-coarse:focus-within:absolute` re-floats the bar
+ * when a hardware keyboard tabs into the coarse lane — `not-sr-only`'s `position: static` would
+ * otherwise drop it into the flow and shove the row taller on every Tab. It ties that rule's
+ * specificity and wins on emission order alone, so it is the one order-dependent piece here: if it
+ * ever loses, the bar goes back to standing in the flow, wider — a look, not a lockout.
  */
 const ROW_ACTIONS =
-    'absolute right-2 top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only';
+    'absolute right-2 top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
 
 /**
  * One utterance. Shaped like a board comment rather than a two-sided bubble stream: the same row a
@@ -113,8 +119,16 @@ export function TalkMessageRow({
         <div className={ROW_ACTIONS}>
             {reactions.canReact && <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
             {message.canDelete && (
-                <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>
-                    {t('Delete')}
+                // A glyph shaped like its neighbour, so the bar reads as one set of controls; the
+                // name says what a glyph cannot, and what it is for turns red only under the hand —
+                // on a touch screen this button is a screen reader's only delete, heard once per row.
+                <button
+                    type="button"
+                    aria-label={t('Delete message')}
+                    onClick={() => onDelete(message.id)}
+                    className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}
+                >
+                    <Trash2 className="size-4" aria-hidden />
                 </button>
             )}
         </div>

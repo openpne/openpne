@@ -21,7 +21,7 @@ const CHIP_MINE = 'border-selected bg-selected/10 text-foreground';
 
 const CHIP_THEIRS = 'border-input text-muted-foreground';
 
-const ICON_BUTTON =
+export const ICON_BUTTON =
     'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export function TalkReactionChips({
@@ -69,8 +69,10 @@ export function TalkReactionChips({
     );
 }
 
+// The transparent border is the held state's canvas: mine recolours it the way a held chip does,
+// so "this one is yours" is said the same way wherever an emoji can be pressed.
 const PICKER_BUTTON =
-    'inline-flex items-center justify-center rounded-full text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    'inline-flex items-center justify-center rounded-full border border-transparent text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /**
  * The whole vocabulary as buttons, each one already knowing whether it is held: the picker's contents
@@ -104,7 +106,7 @@ export function TalkReactionPickerGrid({
                         type="button"
                         aria-pressed={mine}
                         onClick={() => onPick(emoji, mine)}
-                        className={cn(PICKER_BUTTON, buttonClassName, mine && 'bg-selected/10 ring-1 ring-selected')}
+                        className={cn(PICKER_BUTTON, buttonClassName, mine && 'border-selected bg-selected/10')}
                     >
                         {emoji}
                     </button>
