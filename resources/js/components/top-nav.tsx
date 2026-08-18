@@ -279,7 +279,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // three-page symmetry extends to the bar, and the place's own hero names it directly below.
     const brand = isHomeComponent(String(component)) || isPlaceTop(String(component));
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
-    const crumb = brand || hubTitle ? null : breadcrumbCrumb(String(component), props, chrome);
+    const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome);
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>

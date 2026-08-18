@@ -567,7 +567,7 @@ test('a page nobody classified is nowhere in particular rather than a broken lin
 const crumb = (component: string, props: Record<string, unknown>) => {
     const page = { enabledFeatures: allOn, ...props };
 
-    return breadcrumbCrumb(component, page, resolveChrome(component, page));
+    return breadcrumbCrumb(resolveChrome(component, page));
 };
 
 test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {

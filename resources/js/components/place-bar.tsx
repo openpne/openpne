@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
@@ -6,7 +6,6 @@ import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
 import { cn } from '@/lib/utils';
-import type { PageProps } from '@/types';
 
 /** One shape for both faces of the crumb, so the bar reads the same wherever the reader lands. */
 const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
@@ -26,8 +25,7 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const t = useT();
-    const { component, props } = usePage<PageProps>();
-    const crumb = breadcrumbCrumb(String(component), props, chrome);
+    const crumb = breadcrumbCrumb(chrome);
 
     if (!crumb) {
         return null;

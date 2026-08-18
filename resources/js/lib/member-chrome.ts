@@ -819,7 +819,13 @@ const HOME_PLACE: DivePlace = { label: HOME_SECTION.label, href: HOME_SECTION.hr
  * everything under them scopes back to. Read from their own props for that reason: scope alone would
  * put a member standing on a group's front page nowhere.
  */
-const DIVE_PLACES: Record<string, (props: Record<string, unknown>) => DivePlace> = {
+/** The pages that ARE a place — home's siblings in the three-page symmetry. */
+const PLACE_TOPS = ['community/show', 'unified/group', 'member/show', 'unified/member'] as const;
+
+// Typed off PLACE_TOPS on purpose: today every dive target is a place top and the breadcrumb header
+// leans on that (isPlaceTop). A dive target that is NOT one would need this bond taken apart first,
+// or it would silently strip that screen's crumb.
+const DIVE_PLACES: Record<(typeof PLACE_TOPS)[number], (props: Record<string, unknown>) => DivePlace> = {
     'community/show': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
     'unified/group': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
     'member/show': (props) => memberPlace((props as unknown as { profile: { owner: PlaceRef } }).profile.owner),
@@ -837,9 +843,8 @@ export function divePlace(component: string, props: Record<string, unknown>, chr
 
 /** The place a screen is standing in, or nothing where it is not inside one. */
 function ownPlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace | null {
-    const own = DIVE_PLACES[component];
-    if (own) {
-        return own(props);
+    if (isPlaceTop(component)) {
+        return DIVE_PLACES[component as (typeof PLACE_TOPS)[number]](props);
     }
 
     const { scope } = chrome;
@@ -867,7 +872,7 @@ export interface BreadcrumbCrumb {
  * symmetry extends to the header, and because the place's own hero names it directly below.
  */
 export function isPlaceTop(component: string): boolean {
-    return component in DIVE_PLACES;
+    return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
 /**
@@ -885,7 +890,7 @@ export function isPlaceTop(component: string): boolean {
  * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the scope
  * tier is pressable by construction, so a form takes its trail instead.
  */
-export function breadcrumbCrumb(component: string, _props: Record<string, unknown>, chrome: Chrome): BreadcrumbCrumb | null {
+export function breadcrumbCrumb(chrome: Chrome): BreadcrumbCrumb | null {
     if (chrome.form !== true) {
         const { scope } = chrome;
         const place = scope?.kind === 'group' ? groupPlace(scope) : scope?.kind === 'member' ? memberPlace(scope) : null;
