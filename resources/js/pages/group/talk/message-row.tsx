@@ -53,7 +53,9 @@ export interface TalkRowReactions {
  *
  * `-top-1` leans the bar out the row's top rather than its foot: `isolate` keeps its z within the
  * row, rows behind paint first and rows after paint over — so what the bar overhangs must be the
- * row already painted, or a one-line follow-up's next sibling draws its hairline through it.
+ * row already painted, or a one-line follow-up's next sibling draws its hairline through it. On the
+ * list's first row with no older history, the card's own clip shaves those 4px off the bar's top —
+ * known and accepted over teaching the first row a different geometry.
  */
 const ROW_ACTIONS =
     'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
@@ -127,13 +129,20 @@ export function TalkMessageRow({
                         component: a reaction is then one click rather than a click into a popover, and
                         an emoji says "yours" the same way whichever of the two places it was pressed
                         in. The picker still offers the whole set, these three included — taking them
-                        out of it would move an emoji's place depending on what is already held. */}
-                    <TalkReactionPickerGrid
-                        chips={reactions.chips}
-                        vocabulary={reactions.vocabulary.slice(0, QUICK_REACTIONS)}
-                        onPick={reactions.onToggle}
-                        buttonClassName="size-8 text-base"
-                    />
+                        out of it would move an emoji's place depending on what is already held.
+
+                        Gone entirely on coarse pointers, not just invisible: there they add nothing
+                        the sheet does not offer, while a screen reader would hear each one beside the
+                        same emoji's chip — two same-named toggles per row with no way to tell which
+                        is which. */}
+                    <div className="flex items-center gap-1 pointer-coarse:hidden">
+                        <TalkReactionPickerGrid
+                            chips={reactions.chips}
+                            vocabulary={reactions.vocabulary.slice(0, QUICK_REACTIONS)}
+                            onPick={reactions.onToggle}
+                            buttonClassName="size-8 text-base"
+                        />
+                    </div>
                     <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
                 </>
             )}
@@ -181,12 +190,13 @@ export function TalkMessageRow({
                 away, and a transition arriving with the class would have nothing to animate from. The
                 row mounts already highlighted, so the emphasis itself is instant.
 
-                10%: enough tint to pick the row out, light enough to leave the author link's own
-                contrast over AA (it is 4.48:1 at 15%). */}
+                8%: enough tint to pick the row out, light enough that the author link holds AA even
+                on the worst composite — this tint over the hover tint, where 10% read 4.39:1 and 8%
+                reads 4.52:1. The link is measured against both layers, not the card alone. */}
             <span
                 aria-hidden
                 className={cn(
-                    'pointer-events-none absolute inset-0 -z-10 bg-selected/10 transition-opacity duration-1000 motion-reduce:transition-none',
+                    'pointer-events-none absolute inset-0 -z-10 bg-selected/8 transition-opacity duration-1000 motion-reduce:transition-none',
                     highlighted ? 'opacity-100' : 'opacity-0',
                 )}
             />
