@@ -862,20 +862,33 @@ export interface BreadcrumbCrumb {
 }
 
 /**
+ * Whether this screen IS one of the three pages (home's siblings: a member's, a group's). They speak
+ * the home grammar in the breadcrumb header — mark and site name, no crumb — because the three-page
+ * symmetry extends to the header, and because the place's own hero names it directly below.
+ */
+export function isPlaceTop(component: string): boolean {
+    return component in DIVE_PLACES;
+}
+
+/**
  * The breadcrumb header's second crumb: where the reader is, under the site the mark names.
  *
  * Deliberately not divePlace: that one answers HOME_PLACE from anywhere that is not a place, which
  * is a dive-zone reading ("the way back up is home"). A breadcrumb is a claim about where the reader
  * *is*, and "you are at home" on the email settings page would be false. Three tiers: the place the
- * screen is inside, else the last crumb of its trail, else nothing — the mark alone.
+ * screen is *inside* (its scope), else the last crumb of its trail, else nothing.
+ *
+ * A page that IS the place answers nothing here — isPlaceTop carries those, and the header speaks
+ * the home grammar on them rather than naming the place twice above its own hero.
  *
  * A form's crumb is static text. The bar must never carry a link beside unsaved input (top-nav's
- * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the place
+ * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the scope
  * tier is pressable by construction, so a form takes its trail instead.
  */
-export function breadcrumbCrumb(component: string, props: Record<string, unknown>, chrome: Chrome): BreadcrumbCrumb | null {
+export function breadcrumbCrumb(component: string, _props: Record<string, unknown>, chrome: Chrome): BreadcrumbCrumb | null {
     if (chrome.form !== true) {
-        const place = ownPlace(component, props, chrome);
+        const { scope } = chrome;
+        const place = scope?.kind === 'group' ? groupPlace(scope) : scope?.kind === 'member' ? memberPlace(scope) : null;
         if (place) {
             return { ...place, link: true };
         }

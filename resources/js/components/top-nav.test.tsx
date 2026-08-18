@@ -220,6 +220,22 @@ test('a tabbed deep page carries the place it is inside, as something to press',
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
 });
 
+test('a tabbed place top speaks the home grammar — no crumb over its own hero', () => {
+    // The three-page symmetry extends to the header: home, a member's page and a group's share one
+    // bar, and the place's hero names it directly below where a pill would have repeated it.
+    const chrome = arrive('unified/group', '/groups/7', {
+        look: 'tabbed',
+        group: { id: 7, name: 'Cyclists', imageUrl: null },
+    });
+
+    render(<TopNav chrome={chrome} />);
+
+    expect(screen.getByText('Test SNS')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
+    // The brand link reads by the visible site name, not a doubled "Home" label.
+    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
+});
+
 test('a tabbed form names where it sits without offering a way out of itself', () => {
     const chrome = arrive('member/config/email', '/member/config/email', { look: 'tabbed' });
 

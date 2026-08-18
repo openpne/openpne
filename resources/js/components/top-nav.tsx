@@ -18,6 +18,7 @@ import {
     type ChromeLabel,
     type ChromeScope,
     isHomeComponent,
+    isPlaceTop,
     isSectionActive,
     lookSpec,
     NOTIFICATIONS_SECTION,
@@ -273,10 +274,12 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
     const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
-    // A hub names itself; everything else names the place it is in.
-    const hubTitle = chrome.mode === 'section' ? chrome.title : undefined;
-    const crumb = hubTitle ? null : breadcrumbCrumb(String(component), props, chrome);
-    const home = isHomeComponent(String(component));
+    // A hub names itself; everything else names the place it is in — except the three pages that
+    // ARE a place (home, a member's, a group's), which share one header: mark and site name. The
+    // three-page symmetry extends to the bar, and the place's own hero names it directly below.
+    const brand = isHomeComponent(String(component)) || isPlaceTop(String(component));
+    const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
+    const crumb = brand || hubTitle ? null : breadcrumbCrumb(String(component), props, chrome);
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
@@ -285,15 +288,15 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 name is what a reader sees, and a label over it would announce something else. */}
             <Link
                 href="/dashboard"
-                aria-label={home ? undefined : t('Home')}
+                aria-label={brand ? undefined : t('Home')}
                 // Carrying the name, it is the element that gives way, so an unbounded site name
                 // truncates instead of running under the menu. Carrying only the mark, it holds its
                 // size and the crumb beside it is what shortens.
-                className={cn('flex min-h-12 items-center gap-2', home ? 'min-w-0' : 'shrink-0')}
+                className={cn('flex min-h-12 items-center gap-2', brand ? 'min-w-0' : 'shrink-0')}
             >
                 <BrandMark size="sm" />
                 {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
-                {home && <BrandName className="truncate" />}
+                {brand && <BrandName className="truncate" />}
             </Link>
             {(hubTitle || crumb) && (
                 <span aria-hidden className="shrink-0 text-muted-foreground">

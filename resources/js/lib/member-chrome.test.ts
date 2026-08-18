@@ -7,6 +7,7 @@ import {
     divePlace,
     hasBottomNav,
     isHomeComponent,
+    isPlaceTop,
     isSectionActive,
     LOOKS,
     lookSpec,
@@ -570,11 +571,24 @@ const crumb = (component: string, props: Record<string, unknown>) => {
 };
 
 test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
-    // The page that *is* the place answers from its own props; everything under one from its scope.
-    assert.deepEqual(crumb('unified/group', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
-    assert.deepEqual(crumb('member/show', { profile: { owner } }), { label: 'Owner', href: '/member/1', link: true });
     assert.deepEqual(crumb('group/talk/index', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
     assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
+});
+
+test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
+    // The three-page symmetry extends to the header, and the place's own hero names it directly
+    // below: naming it twice in 60px was the duplication the owner asked out of.
+    for (const [component, props] of [
+        ['unified/group', { group: cyclists }],
+        ['community/show', { group: cyclists }],
+        ['unified/member', { profile: owner }],
+        ['member/show', { profile: { owner } }],
+    ] as const) {
+        assert.equal(isPlaceTop(component), true);
+        assert.equal(crumb(component, props), null);
+    }
+    assert.equal(isPlaceTop('group/talk/index'), false);
+    assert.equal(isPlaceTop('dashboard'), false);
 });
 
 test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {

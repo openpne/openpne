@@ -74,9 +74,9 @@ export function SheetContent({
                 )}
                 {...props}
             >
-                {children}
-                {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
-                {side === 'right' ? (
+                {/* First in the DOM as well as top-right on screen: a 48px labelled control that
+                    read after the whole nav would put the tab order at odds with the visual one. */}
+                {side === 'right' && (
                     // The trigger's geometry, restated: a size-12 box whose right edge sits 0.5rem
                     // (0.75 gutter − 0.25 overhang) from the screen's, its row starting under the
                     // 4px line — so opening the drawer swaps the word under the glyph, nothing more.
@@ -84,7 +84,10 @@ export function SheetContent({
                         <X className="size-6" aria-hidden />
                         <span className="text-[11px] leading-none">{closeLabel}</span>
                     </DialogPrimitive.Close>
-                ) : (
+                )}
+                {children}
+                {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
+                {side === 'left' && (
                     <DialogPrimitive.Close
                         className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] rounded-full p-1 text-muted-foreground transition hover:bg-accent"
                         aria-label={closeLabel}

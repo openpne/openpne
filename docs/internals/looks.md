@@ -33,9 +33,15 @@ The looks today:
   rail is dropped.
 - **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
-  the site name on home, `[mark] › section` on a hub, `[mark] › place` deeper, with the
+  the site name on the three pages that ARE a place (home, a member's, a group's — the
+  three-page symmetry extends to the header, and each place's own hero names it directly
+  below), `[mark] › section` on a hub, `[mark] › place` on screens *inside* one, with the
   site color as a 4px line atop the row. Under the page, four labelled tabs (Home,
-  groups, diaries, notifications) in a 58px row. At desk width it is headerless: the same
+  groups, diaries, notifications) in a 58px row. The menu drawer is the header's mirror:
+  full-bleed from the trigger's edge with the slide visible, the color line and the brand
+  holding their exact positions across open and shut, and the close control the trigger's
+  labelled twin — the same box in the same seat, "close" where "menu" stood, first in the
+  DOM as it is first on screen. At desk width it is headerless: the same
   color line, now the only full-width element the chrome has, over the standard sidebar,
   and on a screen deep enough to be inside somewhere a sticky place bar at the head of the
   content column — the same crumb in the same pill, carrying the place's face — in place of
