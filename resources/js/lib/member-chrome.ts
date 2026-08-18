@@ -121,14 +121,32 @@ export function chromeRecedes(chrome: Chrome): boolean {
     return !chrome.form && !chrome.conversation;
 }
 
-/** What one look deviates from standard in. Every field is answered, so a partial row is a type error. */
+/** One field per question the shell asks a look. Every field is answered, so a partial row is a type error. */
 interface LookSpec {
-    /** Which grammar the bars draw: page-class top bar + section tabs, or the persistent unified pair. */
-    chrome: 'standard' | 'unified';
-    /** Which ground the shell paints behind the page. */
+    /** Which top-bar grammar the phone header speaks. 'byScreen' = the per-screen-class bars
+     *  (back+scope detail bar, hub title bar, brand bar); 'unified' = the persistent tab pair on
+     *  the TOP LEVEL ONLY — deep pages keep the byScreen bars. A future value may claim every
+     *  class; the value encodes the dispatch policy, not just a skin. */
+    topBar: 'byScreen' | 'unified';
+    /** Whether a top bar stands at lg+ (reserves --modern-top-offset on desktop). */
+    desktopTopBar: boolean;
+    /** Which row the phone bottom bar draws. 'icons' = icon-only section tabs; 'dive' = the
+     *  search | place | notifications zones. */
+    bottomBar: 'icons' | 'dive';
+    /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
+    bottomBarInConversation: boolean;
+    /** Which ground the shell paints behind the page (html class). */
     ground: 'standard' | 'unified';
     /** Whether the xl+ third column stands beside the page. */
     rightRail: boolean;
+    /** Whether the drawer carries Profile + Sign out rows (bars with no AvatarMenu need them). */
+    accountInDrawer: boolean;
+    /** Whether a hub's h1 folds away on phones because the mobile bar carries the title. */
+    foldsHubHeading: boolean;
+    /** Whether the 4px site-color line is drawn. */
+    colorLine: boolean;
+    /** Whether deep pages carry the desktop sticky place bar. */
+    placeBar: boolean;
 }
 
 /**
@@ -136,27 +154,45 @@ interface LookSpec {
  * by LookRegistryParityTest. A look is a set of deviations from standard: a screen a look says
  * nothing about renders standard, which is what keeps a look from being a second copy of the UI
  * (docs/internals/looks.md).
+ *
+ * A question becomes a field when a consumer OUTSIDE the bar component itself branches on it; how
+ * one bar arranges its own insides stays inside that bar. Each row is complete by type, so a look
+ * added here answers as itself at every branch point instead of reading standard-ish wherever it
+ * happened not to speak.
  */
 export const LOOKS = {
-    standard: { chrome: 'standard', ground: 'standard', rightRail: true },
-    unified: { chrome: 'unified', ground: 'unified', rightRail: false },
+    standard: {
+        topBar: 'byScreen',
+        desktopTopBar: false,
+        bottomBar: 'icons',
+        bottomBarInConversation: false,
+        ground: 'standard',
+        rightRail: true,
+        accountInDrawer: false,
+        foldsHubHeading: true,
+        colorLine: false,
+        placeBar: false,
+    },
+    unified: {
+        topBar: 'unified',
+        desktopTopBar: true,
+        bottomBar: 'dive',
+        bottomBarInConversation: false,
+        ground: 'unified',
+        rightRail: false,
+        accountInDrawer: true,
+        foldsHubHeading: false,
+        colorLine: false,
+        placeBar: false,
+    },
 } as const satisfies Record<string, LookSpec>;
 
 export type LookId = keyof typeof LOOKS;
 
-/** Whether the bars are the unified pair (a persistent header, and a dive row in place of the tabs). */
-export function unifiedChrome(look: LookId): boolean {
-    return LOOKS[look].chrome === 'unified';
-}
-
-/** Whether the shell paints the unified ground behind the page. */
-export function unifiedGround(look: LookId): boolean {
-    return LOOKS[look].ground === 'unified';
-}
-
-/** Whether this look seats the right rail. */
-export function lookRightRail(look: LookId): boolean {
-    return LOOKS[look].rightRail;
+/** The row a look answers from. One accessor, so a consumer reads the field it means rather than a
+ *  boolean that happens to be true of one other look. */
+export function lookSpec(look: LookId): LookSpec {
+    return LOOKS[look];
 }
 
 export interface NavSection {

@@ -8,13 +8,11 @@ import {
     isHomeComponent,
     isSectionActive,
     LOOKS,
-    lookRightRail,
+    lookSpec,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
     TALK_ROOMS_HREF,
-    unifiedChrome,
-    unifiedGround,
     unifiedTabs,
     visibleNavSections,
 } from './member-chrome.ts';
@@ -402,16 +400,39 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.equal(hub.tabs, undefined);
 });
 
+// The whole row, not the fields the test author remembered: a value changed by accident is the same
+// edit as a value changed on purpose, and only an exhaustive assert tells them apart.
 test('standard is the look that deviates in nothing', () => {
-    assert.equal(unifiedChrome('standard'), false);
-    assert.equal(unifiedGround('standard'), false);
-    assert.equal(lookRightRail('standard'), true);
+    assert.deepEqual(lookSpec('standard'), {
+        topBar: 'byScreen',
+        desktopTopBar: false,
+        bottomBar: 'icons',
+        bottomBarInConversation: false,
+        ground: 'standard',
+        rightRail: true,
+        accountInDrawer: false,
+        foldsHubHeading: true,
+        colorLine: false,
+        placeBar: false,
+    });
 });
 
-test('unified deviates on all three of the shell answers', () => {
-    assert.equal(unifiedChrome('unified'), true);
-    assert.equal(unifiedGround('unified'), true);
-    assert.equal(lookRightRail('unified'), false);
+test('unified deviates exactly where it claims', () => {
+    assert.deepEqual(lookSpec('unified'), {
+        // The persistent tab pair, its own ground, no third column — and no avatar menu in the
+        // bars, so the drawer carries the account rows and the hub h1 stays (the bar has no title).
+        topBar: 'unified',
+        desktopTopBar: true,
+        bottomBar: 'dive',
+        ground: 'unified',
+        rightRail: false,
+        accountInDrawer: true,
+        foldsHubHeading: false,
+        // Where it does not deviate: standard's answer, stated rather than inherited.
+        bottomBarInConversation: false,
+        colorLine: false,
+        placeBar: false,
+    });
 });
 
 // The shell reads one field per question, so a look that answered only some of them would leave the

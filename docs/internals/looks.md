@@ -14,7 +14,7 @@ A look is declared twice, once per side of the wire:
 | Side | Where | Answers |
 |---|---|---|
 | Server | [`App\Support\Look`](../../app/Support/Look.php) | which page components the swapped routes render (`usesUnifiedPages()`), plus the look's label and description |
-| Client | `LOOKS` in [`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts) | which chrome the bars draw, which ground the shell paints, whether the right rail stands |
+| Client | `LOOKS` in [`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts) | one field per question the shell asks a look about the chrome around the page — its docblock states when a question earns a field |
 
 `LookRegistryParityTest` asserts the two key sets are equal, because drift is silent and
 asymmetric: a look present only on the server ships unified pages under standard chrome, a

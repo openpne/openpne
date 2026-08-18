@@ -6,7 +6,7 @@ import { Dialog, DialogTitle, DialogTrigger, SheetContent } from '@/components/u
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
-import { unifiedChrome } from '@/lib/member-chrome';
+import { lookSpec } from '@/lib/member-chrome';
 import type { PageProps } from '@/types';
 
 /**
@@ -62,7 +62,7 @@ function UnifiedAccountRows({ onNavigate }: { onNavigate: () => void }) {
     const { props } = usePage<PageProps>();
     const user = props.auth.user;
 
-    if (!unifiedChrome(props.look) || !user) {
+    if (!lookSpec(props.look).accountInDrawer || !user) {
         return null;
     }
 

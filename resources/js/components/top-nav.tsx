@@ -18,8 +18,8 @@ import {
     type ChromeScope,
     isHomeComponent,
     isSectionActive,
+    lookSpec,
     NOTIFICATIONS_SECTION,
-    unifiedChrome,
     unifiedTabs,
 } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
@@ -287,7 +287,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
 
     // Home and the hubs are one bar under the unified chrome; everything below them is untouched.
     const topLevel = isHomeComponent(String(component)) || chrome.mode === 'section';
-    if (unifiedChrome(props.look) && topLevel) {
+    if (lookSpec(props.look).topBar === 'unified' && topLevel) {
         return <UnifiedBar hidden={hidden} />;
     }
 
