@@ -177,8 +177,11 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         // A conversation restored from history opens on the messages it was left with, and this
         // list is seeded once at mount from that stored page — the app-wide reload that answers a
         // restore refreshes props this hook does not re-read. So the restore is also this hook's
-        // own signal to ask now rather than at the interval's leisure; the poll's window guard
-        // still applies, so an anchored (`?m=`) restore stays the untouched slice it landed on.
+        // own signal to ask now rather than at the interval's leisure. The record covers the
+        // restores that remount the page — a popstate, a back/forward document arrival — while a
+        // bfcache return remounts nothing and is answered by the visibility listener above. The
+        // poll's window guard still applies, so an anchored (`?m=`) restore stays the untouched
+        // slice it landed on.
         if (consumeHistoryRestore()) {
             poll();
         }
