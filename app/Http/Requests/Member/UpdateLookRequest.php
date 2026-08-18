@@ -8,10 +8,10 @@ use App\Support\LookResolver;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Starting a look preview from the member config page. The choice is either a look id or the
- * literal "default" (follow the site's), which is why it is not a plain Rule::enum.
+ * Keeping a look chosen on the layout page. The choice is either a look id or the literal
+ * "default" (follow the site's), which is why it is not a plain Rule::enum.
  */
-class PreviewLookRequest extends FormRequest
+class UpdateLookRequest extends FormRequest
 {
     /** The choice that means "no look of my own — show me whatever the site default is". */
     public const FOLLOW_DEFAULT = 'default';
@@ -29,7 +29,7 @@ class PreviewLookRequest extends FormRequest
             return true;
         }
 
-        // A hard gate rather than a hidden control: the section is absent while the site offers one
+        // A hard gate rather than a hidden control: the picker is absent while the site offers one
         // look, so a crafted post must not park a member on a layout they were never offered.
         $look = Look::tryFrom($choice);
 

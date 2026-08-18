@@ -15,8 +15,8 @@ use App\Support\Visibility;
 /**
  * Modern (Inertia) props for the member config page. Mirrors the Classic Blade sections: diary
  * default audience, language, and the binary Classic/Modern surface choice (preselected to the
- * member's current surface), plus the look picker, which has no Classic twin — a look only changes
- * how Modern renders. Visibility/Surface labels and surface descriptions are translation
+ * member's current surface), plus a row into the layout picker, which has no Classic twin — a look
+ * only changes how Modern renders. Visibility/Surface/Look labels and descriptions are translation
  * keys (run through t() on the client); locale labels are autonyms rendered verbatim.
  */
 class MemberConfigSerializer
@@ -73,31 +73,56 @@ class MemberConfigSerializer
         }
 
         // Offered only where there is a choice to make: with one selectable look the picker would be
-        // a single card the member cannot move off. The client hides the section when the key is absent.
+        // a single card the member cannot move off. The client hides the row when the key is absent.
         $selectable = LookResolver::selectable();
         if (count($selectable) >= 2) {
-            $default = LookResolver::siteDefault();
             $form['look'] = [
-                'options' => array_map(
-                    static fn (Look $look): array => [
-                        'value' => $look->value,
-                        'label' => $look->label(),
-                        'description' => $look->description(),
-                    ],
-                    $selectable,
-                ),
-                // The stored choice, not the resolved look: the first card is "follow the site
-                // default", and an undecided member must land there rather than on whatever they
-                // are currently being shown. Filtered through the same set as the resolver — a
-                // stored look the site no longer offers preselects "follow" (what is rendered),
-                // not a card that is not there.
-                'current' => (($stored = $member->preferredLook()) !== null && in_array($stored, $selectable, true))
-                    ? $stored->value
-                    : null,
-                'default' => ['value' => $default->value, 'label' => $default->label()],
+                // Labels only — the row states the current choice and links out; the picker page
+                // carries the options and what separates them.
+                'current' => self::chosenLook($member, $selectable)?->label(),
+                'default' => LookResolver::siteDefault()->label(),
             ];
         }
 
         return $form;
+    }
+
+    /**
+     * The layout picker's own props: what may be chosen, and what is chosen now.
+     *
+     * @return array<string, mixed>
+     */
+    public static function lookForm(Member $member): array
+    {
+        $selectable = LookResolver::selectable();
+        $default = LookResolver::siteDefault();
+
+        return [
+            'options' => array_map(
+                static fn (Look $look): array => [
+                    'value' => $look->value,
+                    'label' => $look->label(),
+                    'description' => $look->description(),
+                ],
+                $selectable,
+            ),
+            'current' => self::chosenLook($member, $selectable)?->value,
+            'default' => ['value' => $default->value, 'label' => $default->label()],
+        ];
+    }
+
+    /**
+     * The stored choice, not the resolved look: "follow the site default" is a choice of its own,
+     * and an undecided member must read as following rather than as having picked whatever they are
+     * currently shown. Filtered through the same set as the resolver, so a stored look the site no
+     * longer offers reads as following too — not as a card that is not there.
+     *
+     * @param  list<Look>  $selectable
+     */
+    private static function chosenLook(Member $member, array $selectable): ?Look
+    {
+        $stored = $member->preferredLook();
+
+        return $stored !== null && in_array($stored, $selectable, true) ? $stored : null;
     }
 }
