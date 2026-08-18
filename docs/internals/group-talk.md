@@ -84,7 +84,8 @@ permission.
 The page is capped at `GroupTalkMessages::PER_PAGE` in both directions and is not client-controlled.
 Live updates are a **poll** — a visible tab asks for anything after its newest message every ~8s.
 SSE or WebSockets would mean a resident process, which the single-site hosting contract does not
-have.
+have. A conversation restored from history polls immediately instead of waiting out the first
+tick: it reopens on messages as old as the visit that left it.
 
 The client keeps the same order. A send and a poll are in flight together by design and complete in
 whatever order the network gives them, so
