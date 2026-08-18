@@ -3,6 +3,7 @@
 namespace Tests\Feature\GroupTalk;
 
 use App\Features\GroupTalk\Actions\DeleteGroupMessage;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Reactions\ReactionVocabulary;
 use App\Models\File;
 use App\Models\Group;
@@ -105,6 +106,31 @@ class TalkReplyTest extends TalkTestCase
         }
 
         $this->assertDatabaseMissing('group_messages', ['body' => 'answered']);
+    }
+
+    /**
+     * The reply id is resolved against the group, so a non-member reaching that resolve would learn a
+     * message's existence from the 422 an unknown id draws, told apart from the 404 a live one draws.
+     * Posting is gated first: every id is one 404, whatever it names. The teeth — remove the gate in
+     * store() and the two answers split, which is the oracle this closes.
+     */
+    public function test_a_non_member_cannot_probe_message_existence_through_the_reply_id(): void
+    {
+        $group = $this->group(TopicReadAccess::MembersOnly);
+        $member = $this->memberOf($group);
+        $live = $this->say($group, $member, 'members only');
+
+        $outsider = Member::factory()->create();
+
+        // A live message of the group, and an id that is not one, answer a non-member identically.
+        $this->actingAs($outsider)
+            ->postJson("/groups/{$group->getKey()}/talk", ['body' => 'let me in', 'reply_to_message_id' => $live->getKey()])
+            ->assertNotFound();
+        $this->actingAs($outsider)
+            ->postJson("/groups/{$group->getKey()}/talk", ['body' => 'let me in', 'reply_to_message_id' => $live->getKey() + 9999])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('group_messages', ['body' => 'let me in']);
     }
 
     /**

@@ -209,6 +209,11 @@ class GroupTalkController extends Controller
     public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action, ReplyReferences $replies): JsonResponse
     {
         $viewer = $this->viewer();
+        // Before the reply id is resolved, not after: resolving it is scoped to this group and 422s an
+        // id that is not a live message of it, so a non-member reaching the resolve would read that 422
+        // apart from the 404 a live id draws — an existence oracle over a group they may not post to.
+        // Gating first collapses both to 404, and a member (canPost) may already read every message.
+        abort_unless(GroupTalkAccess::canPost($group, $viewer), 404);
         $inReplyTo = $this->replyTo($group, $request->replyToMessageId());
 
         try {
