@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Copy, Trash2, Users } from 'lucide-react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import type { ChatReactionChip } from '@/lib/chat/types';
@@ -55,10 +56,25 @@ export function TalkMessageSheet({
 }) {
     const t = useT();
     const canCopy = canCopyText(message.body);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     return (
         <Dialog open onOpenChange={(next) => !next && onClose()}>
-            <SheetContent side="bottom" closeLabel={t('Close')} aria-describedby={undefined}>
+            <SheetContent
+                ref={contentRef}
+                tabIndex={-1}
+                side="bottom"
+                closeLabel={t('Close')}
+                aria-describedby={undefined}
+                // The trap's default first stop is the first emoji, reached while the opening press
+                // is still on the glass — and a focus ring drawn there reads as "you hold this one"
+                // on a tile nobody pressed. The sheet itself takes the focus instead: announced
+                // whole by its title, drawing nothing (the content has no ring of its own).
+                onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    contentRef.current?.focus();
+                }}
+            >
                 {/* The sheet is named for the reader who cannot see it; what is drawn is the grabber,
                     which says the same thing to everyone else and says nothing worth announcing. */}
                 <DialogTitle className="sr-only">{t('Message actions')}</DialogTitle>
