@@ -47,9 +47,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     const bottomNav = member && (hasBottomNav(chrome) || (conversationBar && !engaged));
     // One listener for the whole chrome, so the bars and the action cannot fall out of step. A form
     // and a conversation keep their chrome (see the flags), and a guest's bar carries their way in,
-    // not nav they can bring back. Where a conversation does keep a bar, it recedes with the header
-    // on the same listener: one room, one movement.
-    const hidden = useScrollDirection({ enabled: member && (chromeRecedes(chrome) || conversationBar) }) === 'down';
+    // not nav they can bring back. A conversation that keeps a bar holds it still too: the composer
+    // pins the screen's foot, so hiding the bar on scroll frees nothing — a loss with no gain — and
+    // the header is what names the room. Only writing takes the bar away (engaged, below).
+    const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
 
     // The look's ground color rides the <html> class the way dark mode does: the body paints
