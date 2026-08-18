@@ -736,6 +736,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     // A sheet like the draft form, though it submits nothing: choosing who to write to is one screen
     // with one job, and it is left by picking a name or by closing it.
     'message/new': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
+    'member/config/look': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
