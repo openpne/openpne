@@ -11,6 +11,7 @@ use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Queries\MessageReactionAggregates;
+use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Queries\TalkAbsenceDigest;
 use App\Features\GroupTalk\Queries\TalkUnreadSnapshot;
 use App\Features\GroupTalk\Queries\TouchedGroupMessages;
@@ -26,6 +27,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -40,7 +42,7 @@ use Inertia\Response as InertiaResponse;
  */
 class GroupTalkController extends Controller
 {
-    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest): InertiaResponse
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -56,7 +58,7 @@ class GroupTalkController extends Controller
 
         $props = [
             'group' => GroupSerializer::summary($group),
-            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages)),
+            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages), $replies($group, $page->messages)),
             'anchor' => $anchor === null ? null : ['messageId' => $anchor->getKey()],
             'canPost' => $permissions->canPost,
             // Only a member holds a cursor or a mute, so only a member is offered either.
@@ -111,7 +113,7 @@ class GroupTalkController extends Controller
      * does not parse is simply no cursor — pagination is a position, not a permission, and the gate
      * above already decided the audience.
      */
-    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions): JsonResponse
+    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions, ReplyReferences $replies): JsonResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -133,10 +135,10 @@ class GroupTalkController extends Controller
         };
 
         $permissions = GroupTalkPermissions::for($group, $viewer);
-        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages));
+        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages), $replies($group, $page->messages));
 
         if ($reactionsAfter !== null) {
-            $payload += $this->touched($touched($group, $reactionsAfter), $permissions, $snapshot ?? 0, $reactions);
+            $payload += $this->touched($touched($group, $reactionsAfter), $group, $permissions, $snapshot ?? 0, $reactions, $replies);
         }
 
         return response()->json($payload);
@@ -168,15 +170,18 @@ class GroupTalkController extends Controller
      * @param  Collection<int, GroupMessage>  $rows  one over the cap, as the query returns them
      * @return array{touched: list<array>, reactionsVersion: int}
      */
-    private function touched(Collection $rows, GroupTalkPermissions $permissions, int $snapshot, MessageReactionAggregates $reactions): array
+    private function touched(Collection $rows, Group $group, GroupTalkPermissions $permissions, int $snapshot, MessageReactionAggregates $reactions, ReplyReferences $replies): array
     {
         $capped = $rows->count() > GroupTalkMessages::PER_PAGE;
         $rows = $rows->take(GroupTalkMessages::PER_PAGE);
         // The rows the page did not carry, counted in the same one query the page's chips came from.
         $chips = $reactions($permissions->member, $rows);
+        // A touched row replaces the client's whole row, so it has to arrive as complete as a page's:
+        // one without its reference would take the reply header off screen the moment someone reacted.
+        $parents = $replies($group, $rows);
 
         return [
-            'touched' => $rows->map(fn (GroupMessage $message): array => GroupMessageSerializer::message($message, $permissions, $chips[$message->getKey()] ?? []))->values()->all(),
+            'touched' => $rows->map(fn (GroupMessage $message): array => GroupMessageSerializer::message($message, $permissions, $chips[$message->getKey()] ?? [], $parents))->values()->all(),
             'reactionsVersion' => $capped ? (int) $rows->last()->reactions_version : $snapshot,
         ];
     }
@@ -201,12 +206,13 @@ class GroupTalkController extends Controller
     }
 
     /** Returns the message it wrote, so the composer appends it rather than re-reading the page. */
-    public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action): JsonResponse
+    public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action, ReplyReferences $replies): JsonResponse
     {
         $viewer = $this->viewer();
+        $inReplyTo = $this->replyTo($group, $request->replyToMessageId());
 
         try {
-            $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->pickedImages());
+            $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->pickedImages(), inReplyTo: $inReplyTo);
         } catch (GroupTalkActionException) {
             abort(404);
         }
@@ -219,10 +225,37 @@ class GroupTalkController extends Controller
 
         return response()->json(
             // A message a moment old has no reactions by construction; say so rather than pay a
-            // query to be told.
-            GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer), []),
+            // query to be told. The reference it may carry is read the way a page reads one, so the
+            // row the composer appends is shaped exactly like the one a reload would bring back.
+            GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer), [], $replies->of($group, $message)),
             201,
         );
+    }
+
+    /**
+     * The message a composer is answering: a live row of *this* group, as `anchor()` and the MCP tool
+     * resolve one. An id that resolves to nothing is a 422 rather than a silently plain message — the
+     * client keeps the draft and says what happened.
+     *
+     * Nothing is locked between here and the insert. A parent deleted in that window leaves a
+     * reference to a row that is gone, which is the state deleting it produces anyway and which the
+     * screen draws as such.
+     */
+    private function replyTo(Group $group, ?int $id): ?GroupMessage
+    {
+        if ($id === null) {
+            return null;
+        }
+
+        $message = GroupMessage::query()->where('group_id', $group->getKey())->whereKey($id)->first();
+
+        if ($message === null) {
+            throw ValidationException::withMessages([
+                'reply_to_message_id' => __('The message you are replying to has been deleted.'),
+            ]);
+        }
+
+        return $message;
     }
 
     /**

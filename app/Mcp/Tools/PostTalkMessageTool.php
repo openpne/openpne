@@ -27,7 +27,7 @@ use Laravel\Mcp\Server\Attributes\Title;
 
 #[Name('post-talk-message')]
 #[Title('Post a talk message')]
-#[Description('Say something in a group talk room you belong to. The message is posted as you, is visible to the room immediately, and cannot be edited afterwards. Answering a message by its id addresses its author, who is then notified.')]
+#[Description('Say something in a group talk room you belong to. The message is posted as you, is visible to the room immediately, and cannot be edited afterwards. Answering a message by its id records the answer against it — the room sees which message you replied to — and addresses its author, who is then notified.')]
 class PostTalkMessageTool extends TalkTool
 {
     public function handle(Request $request, CreateGroupMessage $create, ResolveMentions $mentions): Response|ResponseFactory
@@ -95,7 +95,10 @@ class PostTalkMessageTool extends TalkTool
         $message->setRelation('author', $member);
         $message->loadMissing('images');
 
-        return Response::structured(['message' => McpTalkSerializer::message($message)]);
+        // The answered row is already in hand, and it is the one the reference names.
+        $parents = $replyTo === null ? [] : [(int) $replyTo->getKey() => $replyTo];
+
+        return Response::structured(['message' => McpTalkSerializer::message($message, $parents)]);
     }
 
     /**
@@ -123,11 +126,13 @@ class PostTalkMessageTool extends TalkTool
     ): GroupMessage {
         // The only mentions here are the ones this tool composes: no body is ever parsed for `@`
         // (docs/internals/group-talk.md), and this wire has no picker.
-        $plain = fn (): GroupMessage => $create($member, $group, $body);
-        $addressing = function (Member $author) use ($create, $member, $group, $body): GroupMessage {
+        // Both branches write the reference: what this answers and who it speaks to are different
+        // questions, and only the second of them can end up with no answer.
+        $plain = fn (): GroupMessage => $create($member, $group, $body, inReplyTo: $replyTo);
+        $addressing = function (Member $author) use ($create, $member, $group, $body, $replyTo): GroupMessage {
             [$addressed, $rows] = $this->addressed($author, $body);
 
-            return $create($member, $group, $addressed, mentions: $rows, mentionsRequired: true);
+            return $create($member, $group, $addressed, mentions: $rows, mentionsRequired: true, inReplyTo: $replyTo);
         };
 
         $author = $replyTo?->author;
@@ -210,7 +215,7 @@ class PostTalkMessageTool extends TalkTool
             'body' => $schema->string()->required()->max(TalkBody::MAX)
                 ->description('The message text, at most '.TalkBody::MAX.' characters. Plain text: writing "@name" into it addresses nobody, since only reply_to_message_id does that.'),
             'reply_to_message_id' => $schema->integer()->min(1)
-                ->description('A message in the same room to answer, as read-talk-messages reports it in id. Its author is addressed at the head of your text and notified. No one is addressed when the message is your own or its author has withdrawn or left the room; the mentions of the posted message say who was.'),
+                ->description('A message in the same room to answer, as read-talk-messages reports it in id. Your message is recorded as a reply to it, which the room reads on screen and which read-talk-messages reports in inReplyTo. Its author is also addressed at the head of your text and notified. No one is addressed when the message is your own or its author has withdrawn or left the room; the mentions of the posted message say who was.'),
         ];
     }
 }

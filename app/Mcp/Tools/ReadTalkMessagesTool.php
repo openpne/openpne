@@ -6,6 +6,7 @@ namespace App\Mcp\Tools;
 
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
+use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Serializers\McpTalkSerializer;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -25,7 +26,7 @@ class ReadTalkMessagesTool extends TalkTool
 {
     private const MODES = ['latest', 'before', 'after'];
 
-    public function handle(Request $request, GroupTalkMessages $messages): Response|ResponseFactory
+    public function handle(Request $request, GroupTalkMessages $messages, ReplyReferences $replies): Response|ResponseFactory
     {
         $validated = $request->validate([
             'group_id' => ['required', 'integer', 'min:1'],
@@ -54,7 +55,9 @@ class ReadTalkMessagesTool extends TalkTool
             default => $messages->latest($group),
         };
 
-        return Response::structured(McpTalkSerializer::page($page));
+        // No relations asked for: this wire reports the answered author as an id, which is a column of
+        // the parent row.
+        return Response::structured(McpTalkSerializer::page($page, $replies($group, $page->messages, with: [])));
     }
 
     /**
