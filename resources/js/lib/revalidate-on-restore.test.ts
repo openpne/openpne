@@ -63,6 +63,18 @@ test('a bfcache return reloads directly: no navigate follows it', () => {
     assert.equal(reloads(), 1);
 });
 
+test('a bfcache return absorbs a popstate that announced the same return', () => {
+    const { revalidator, reloads } = harness();
+
+    revalidator.handlePopstate(true);
+    revalidator.handlePageshow(true);
+    assert.equal(reloads(), 1);
+
+    // The navigate that popstate promised never comes; the next real one completes no restore.
+    revalidator.handleNavigate();
+    assert.equal(reloads(), 1);
+});
+
 test('an ordinary pageshow reloads nothing', () => {
     const { revalidator, reloads } = harness();
 

@@ -17,7 +17,8 @@
  * The popstate half counts restores and reloads on the `navigate` Inertia fires once the restored
  * props are swapped in — ordered after that write rather than racing it, one per restore however
  * fast the member backs through them. A counted restore whose navigate never arrives (a browser
- * firing popstate on load) is spent by the next ordinary navigation as one redundant reload.
+ * firing popstate on load) is absorbed by the bfcache pageshow when both announce the same return,
+ * and otherwise spent on the next ordinary navigation as one redundant reload.
  */
 import { createRestoreQueue } from './history-restore.ts';
 
@@ -57,8 +58,12 @@ export function createRestoreRevalidator(reload: () => void): RestoreRevalidator
             }
         },
         handlePageshow(persisted) {
-            // No navigate follows a bfcache restore — the document never left — so reload directly.
             if (persisted) {
+                // No navigate follows a bfcache restore — the document never left — so reload
+                // directly. A browser that also fired popstate for this same return has counted a
+                // restore no navigate will complete; absorb it so it is not spent on an ordinary
+                // navigation later.
+                restores.handleNavigate();
                 reload();
             }
         },
