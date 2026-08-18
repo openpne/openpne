@@ -99,9 +99,12 @@ export default function GroupTalkIndex() {
     useMarkRead(`/groups/${group.id}/talk/read`, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
 
     // The line the visit opened on. Both this and the banner below come off the render-time snapshot
-    // and nothing else — which is what makes them survive the mark-read that fires seconds later.
-    // The snapshot's cursor is the boundary as a position, so the jump still lands on it long after
-    // the stored one has moved to the foot of the conversation.
+    // and nothing else — mark-read never writes props, which is what makes them survive the one that
+    // fires seconds later. The snapshot's cursor is the boundary as a position, so the jump still
+    // lands on it long after the stored one has moved to the foot of the conversation. The one
+    // writer that does reach the snapshot is the reload after a history restore
+    // (lib/revalidate-on-restore.ts), deliberately: a restore is a fresh arrival, and the line
+    // belongs where a fresh visit would draw it.
     const dividerId = dividerBeforeId(messages, readThroughBoundary(talkUnreadSnapshot), stream.hasOlder);
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.

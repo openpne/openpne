@@ -8,9 +8,9 @@
  * carries the URL it landed on, so only the page it is about can spend it: a record nobody asks
  * about expires by never matching again, without needing a second event to clear it.
  *
- * A consumer that is already mounted — the shell, which owns props no single page does — cannot use
- * that record: it has to act *after* the restore has written its own stale props, which the record
- * says nothing about. {@link createRestoreQueue} is that shape of the same fact.
+ * A consumer that outlives pages — the app-wide revalidation (revalidate-on-restore.ts) — cannot
+ * use that record: it has to act *after* the restore has written its own stale props, which the
+ * record says nothing about. {@link createRestoreQueue} is that shape of the same fact.
  */
 
 export interface RestoreTracker {

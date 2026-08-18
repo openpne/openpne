@@ -26,11 +26,10 @@ document covers the delivery model around it.
    feed marks nothing — only opening a row or the explicit mark-all does. **Returning to the feed
    re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
    popstate, the whole document from the back/forward cache — which is the state before the row the
-   member just opened was marked read. Modern revalidates from
-   [`history-restore.ts`](../../resources/js/lib/history-restore.ts), Classic reloads from
-   [`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js); only this
-   screen carries either, since a screen that cannot go stale behind the member's own back has no
-   reason to pay for it. Modern reports the
+   member just opened was marked read. Modern re-reads every restored page, this one included
+   ([`revalidate-on-restore.ts`](../../resources/js/lib/revalidate-on-restore.ts)); on Classic —
+   full documents, where revalidating means a whole re-request — only this screen reloads
+   ([`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js)). Modern reports the
    unread-row count (via `UnreadCounts`, alongside the layer-1 numbers) in the nav badge and the
    phone bottom bar's notifications tab. Both read the shared `unread` prop, so they cannot
    disagree.
@@ -55,9 +54,7 @@ document covers the delivery model around it.
 ### Liveness
 
 The shared `unread` counts would otherwise only move on a navigation. An open Modern tab refreshes
-them every 60s while it is visible — and immediately on returning to it, and on a page restored from
-history, where the counts come back as they were before the member read anything and a badge would
-otherwise climb back over what they have already read — from
+them every 60s while it is visible — and immediately on returning to it — from
 [`GET /unread-counts`](../../app/Features/Home/UnreadCountsController.php), which runs the count
 queries and the sidebar's room list ([group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list))
 and nothing else, then pushes both into the shared props client-side
