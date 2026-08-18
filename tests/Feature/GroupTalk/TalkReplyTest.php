@@ -134,9 +134,15 @@ class TalkReplyTest extends TalkTestCase
     }
 
     /**
-     * The teeth of the foreign-key drop. `nullOnDelete` would clear the column here, and the answer
-     * would read as one that never answered anything — the state this feature has to tell apart from
-     * a parent that is gone.
+     * A deleted parent reads as deleted, never as a message that answered nothing — the two states the
+     * dropped foreign key exists to tell apart, since `nullOnDelete` would clear the column and
+     * collapse them.
+     *
+     * The FK-drop regression is guarded on the MySQL lane, not this one. RefreshDatabase rebuilds the
+     * `:memory:` schema without the self-referential key whatever the drop migration does, so on SQLite
+     * the reference survives a deletion even with the migration reverted — here this reads as a feature
+     * test on both engines. InnoDB keeps the self-FK, so there reverting the migration restores the
+     * SET NULL and this goes red.
      */
     public function test_deleting_the_answered_message_leaves_the_reference_behind_and_it_reads_as_deleted(): void
     {
@@ -157,7 +163,12 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.0.inReplyTo', ['deleted' => true]);
     }
 
-    /** Nothing else may produce a dangling reference, and the schema is what holds that. */
+    /**
+     * Nothing else may produce a dangling reference, and the schema is what holds that — the index the
+     * conversation reads by has to survive the same rebuild. The index-survival check has teeth on both
+     * engines; the no-FK check only where a self-FK is present to remove, which on the test lane is the
+     * MySQL shard (RefreshDatabase's `:memory:` rebuild has already dropped it on SQLite).
+     */
     public function test_the_column_carries_no_foreign_key_and_the_conversation_index_survived_the_rebuild(): void
     {
         $keys = collect(Schema::getForeignKeys('group_messages'))->pluck('columns');
@@ -201,6 +212,24 @@ class TalkReplyTest extends TalkTestCase
         $this->page($viewer, $group)
             ->assertJsonPath('messages.2.inReplyTo.excerpt', 'one two three')
             ->assertJsonPath('messages.3.inReplyTo.excerpt', '0');
+    }
+
+    /**
+     * The excerpt is bounded, not only flattened: a wall of text cannot grow the header. The bound is
+     * ChatPreview's, shared with every other list — pinned here so a change to it is noticed on the
+     * reply header too.
+     */
+    public function test_a_long_body_is_bounded_to_the_shared_preview_length(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $wall = $this->say($group, $viewer, str_repeat('x', 400));
+        $this->say($group, $viewer, 'answering', inReplyTo: $wall);
+
+        $excerpt = $this->page($viewer, $group)->json('messages.1.inReplyTo.excerpt');
+
+        $this->assertSame(140, mb_strlen($excerpt));
+        $this->assertSame(str_repeat('x', 140), $excerpt);
     }
 
     public function test_a_picture_only_parent_reads_as_a_picture_and_carries_its_thumbnail(): void
