@@ -1,7 +1,5 @@
-import { usePage } from '@inertiajs/react';
 import { ImagePlus, SendHorizontal } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
-import { Avatar } from '@/components/avatar';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { ACCEPT, shrink } from '@/components/images-field';
@@ -11,7 +9,6 @@ import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
-import type { PageProps } from '@/types';
 
 /** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {
@@ -44,12 +41,7 @@ export function TalkComposer({
     onSend: (body: string, mentions: MentionPayloadRow[], images: File[]) => Promise<void>;
 }) {
     const t = useT();
-    const { auth, look } = usePage<PageProps>().props;
     const form = useComposerEngaged();
-    // Named rather than derived from a LookSpec field: this is a page's own furniture, not one of the
-    // questions the shell asks a look about the chrome around it. The tabbed look puts a face on the
-    // surfaces someone speaks from — whose voice this is, beside where it is going.
-    const self = look === 'tabbed' ? auth.user : null;
     const [body, setBody] = useState('');
     const [mentions, setMentions] = useState<DraftMention[]>([]);
     const [images, setImages] = useState<File[]>([]);
@@ -203,12 +195,6 @@ export function TalkComposer({
                 </div>
             )}
             <div className="flex items-end gap-2">
-                {self && (
-                    // Lifted onto the line the controls beside it stand on: the face is 32, they are 44.
-                    <span className="mb-1.5 shrink-0">
-                        <Avatar id={self.id} name={self.name} src={self.imageUrl} color={self.avatarColor} isAi={self.isAi} size="sm" decorative />
-                    </span>
-                )}
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
                 <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
                 <Button

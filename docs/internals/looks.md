@@ -34,7 +34,7 @@ The looks today:
 - **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
   the site name on home, `[mark] › section` on a hub, `[mark] › place` deeper, with the
-  site color as a 4px line under the row. Under the page, four labelled tabs (Home,
+  site color as a 4px line atop the row. Under the page, four labelled tabs (Home,
   groups, diaries, notifications) in a 58px row. At desk width it is headerless: the same
   color line, now the only full-width element the chrome has, over the standard sidebar,
   and on a screen deep enough to be inside somewhere a sticky place bar at the head of the

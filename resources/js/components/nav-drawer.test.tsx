@@ -73,6 +73,13 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
     const sheet = screen.getByRole('dialog');
     expect(sheet.className).toContain('right-0');
     expect(sheet.className).not.toContain('left-0');
-    // The survey invariant is "the ✕ sits on the trigger's side", not a mirror of the left sheet.
-    expect(screen.getByRole('button', { name: 'Close' }).className).toContain('right-3');
+    // Full-bleed, sliding in from the trigger's edge — the action is meant to be seen.
+    expect(sheet.className).toContain('w-full');
+    expect(sheet.className).toContain('animate-sheet-from-right');
+    // The close control is the trigger's twin: same box, same spot, the word visible under the
+    // glyph (the survey invariant is "the ✕ sits on the trigger's side" — and here, in its seat).
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close.className).toContain('size-12');
+    expect(close.className).toContain('right-[calc(0.5rem+env(safe-area-inset-right))]');
+    expect(close.textContent).toContain('Close');
 });

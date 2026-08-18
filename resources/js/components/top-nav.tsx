@@ -49,7 +49,7 @@ function TopBar({
     hidden?: boolean;
     seam?: boolean;
     persistent?: boolean;
-    /** Site color for the 4px line under the row. It is part of the bar — the height var counts it,
+    /** Site color for the 4px line atop the row. It is part of the bar — the height var counts it,
      *  and it slides away with the bar rather than hanging under one that has gone. */
     line?: string;
     children: ReactNode;
@@ -74,13 +74,17 @@ function TopBar({
                 // The unified bar is the header at every width; the shipped bars are phone furniture.
                 !persistent && 'lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
-                // The line is the bar's foot, so the row centers in what is left above it.
-                line !== undefined && 'pb-1',
+                // The line is the bar's crown — the same top edge the desktop line holds — so the
+                // row centers in what is left below it. The padding restates the status-bar inset
+                // because it replaces the base padding rather than adding to it.
+                line !== undefined && 'pt-[calc(0.25rem+env(safe-area-inset-top))]',
                 hidden && '-translate-y-full',
             )}
         >
             {children}
-            {line !== undefined && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1" style={{ backgroundColor: line }} />}
+            {line !== undefined && (
+                <span aria-hidden className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-1" style={{ backgroundColor: line }} />
+            )}
         </header>
     );
 }
