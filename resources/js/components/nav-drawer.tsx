@@ -34,6 +34,7 @@ const BAR_CONTROL_LABELED =
  *  the sheet follows it to the right, because a drawer opens from its trigger's side. */
 export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
     const t = useT();
+    const { props } = usePage<PageProps>();
     const [open, setOpen] = useState(false);
 
     return (
@@ -50,15 +51,32 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                     <Menu className="size-6" />
                 </DialogTrigger>
             )}
-            <SheetContent side={labeled ? 'right' : 'left'} closeLabel={t('Close')}>
+            <SheetContent
+                side={labeled ? 'right' : 'left'}
+                closeLabel={t('Close')}
+                // The full-bleed drawer keeps the bar's top rhythm: 4px of line, then the row.
+                className={labeled ? 'pt-[calc(0.25rem+env(safe-area-inset-top))]' : undefined}
+            >
+                {labeled && (
+                    // The bar's line continues across the drawer: opening it swaps the page under
+                    // the site's colors, not the site.
+                    <span aria-hidden className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-1" style={{ backgroundColor: props.snsLogo.color }} />
+                )}
                 <DialogTitle asChild>
                     <Link
                         href="/dashboard"
                         onClick={() => setOpen(false)}
-                        className="mb-2 flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
+                        className={
+                            labeled
+                                ? // The breadcrumb bar's brand geometry, restated — same gutter, same
+                                  // row — so the mark and the name hold still while the drawer opens
+                                  // and closes under them.
+                                  'mb-2 flex min-h-12 shrink-0 items-center gap-2'
+                                : 'mb-2 flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent'
+                        }
                     >
                         <BrandMark size="sm" />
-                        <BrandName size="lg" className="truncate" />
+                        <BrandName size={labeled ? undefined : 'lg'} className="truncate" />
                     </Link>
                 </DialogTitle>
                 <nav className="flex-1 overflow-y-auto">

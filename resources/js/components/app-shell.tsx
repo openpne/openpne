@@ -74,7 +74,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         : look.bottomBar === 'labeled'
           ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
           : '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))]';
-    // The site-color line under the breadcrumb row belongs to that bar, so a page's sticky header
+    // The site-color line atop the breadcrumb bar belongs to that bar, so a page's sticky header
     // offsets by it too.
     const topOffset =
         look.topBar === 'breadcrumb'
