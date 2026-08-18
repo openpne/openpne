@@ -88,13 +88,13 @@ class MemberConfigLookTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('member/config/look')
-                ->where('look.options.0.value', 'standard')
-                ->where('look.options.0.label', 'Standard')
-                ->where('look.options.1.value', 'unified')
+                ->where('lookChoice.options.0.value', 'standard')
+                ->where('lookChoice.options.0.label', 'Standard')
+                ->where('lookChoice.options.1.value', 'unified')
                 // Labels and descriptions travel as translation keys, like every other look label.
-                ->where('look.options.1.description', 'The experimental layout that renders home, profiles and %communities% in one shared shape.')
-                ->where('look.current', 'unified')
-                ->where('look.default', ['value' => 'standard', 'label' => 'Standard'])
+                ->where('lookChoice.options.1.description', 'The experimental layout that renders home, profiles and %communities% in one shared shape.')
+                ->where('lookChoice.current', 'unified')
+                ->where('lookChoice.default', ['value' => 'standard', 'label' => 'Standard'])
             );
     }
 
@@ -109,7 +109,7 @@ class MemberConfigLookTest extends TestCase
 
         $this->actingAs($member)->get('/member/config/look')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('look.current', null));
+            ->assertInertia(fn ($page) => $page->where('lookChoice.current', null));
     }
 
     public function test_the_picker_sends_a_member_back_while_the_site_offers_one_look(): void

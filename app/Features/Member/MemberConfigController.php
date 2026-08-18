@@ -300,7 +300,7 @@ class MemberConfigController extends Controller
         }
 
         return Inertia::render('member/config/look', [
-            'look' => MemberConfigSerializer::lookForm($this->viewer()),
+            'lookChoice' => MemberConfigSerializer::lookForm($this->viewer()),
         ]);
     }
 

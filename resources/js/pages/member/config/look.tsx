@@ -92,7 +92,9 @@ interface Option {
 }
 
 interface Props {
-    look: {
+    // Named to stand beside the shared `look` (the active look id), which it must not shadow —
+    // page props win the merge, and an object where the shell expects an id is a blank page.
+    lookChoice: {
         options: Option[];
         /** The stored choice, null while the member follows the site default. */
         current: LookId | null;
@@ -100,10 +102,10 @@ interface Props {
     };
 }
 
-export default function ConfigLook({ look }: Props) {
+export default function ConfigLook({ lookChoice }: Props) {
     const t = useT();
     // The saved state is the form's baseline, so `isDirty` is exactly "differs from what is saved".
-    const form = useForm({ choice: look.current ?? FOLLOW_DEFAULT });
+    const form = useForm({ choice: lookChoice.current ?? FOLLOW_DEFAULT });
 
     return (
         <SettingsSubpage title={t('Layout')}>
@@ -121,14 +123,16 @@ export default function ConfigLook({ look }: Props) {
                     tabIndex={0}
                     className="overflow-x-auto rounded-field border border-border"
                 >
-                    <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+                    {/* 36rem: three look columns and the dimension stub fit the content column at
+                        lg without the scroll a phone still gets. */}
+                    <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
                         <caption className="sr-only">{t('How the layouts differ')}</caption>
                         <thead>
                             <tr className="border-b border-border bg-muted">
                                 <th scope="col" className="px-3 py-2 align-bottom text-muted-foreground">
                                     {t('What changes')}
                                 </th>
-                                {look.options.map((opt) => (
+                                {lookChoice.options.map((opt) => (
                                     <th key={opt.value} scope="col" className="px-3 py-2 align-bottom text-foreground">
                                         {t(opt.label)}
                                     </th>
@@ -141,7 +145,7 @@ export default function ConfigLook({ look }: Props) {
                                     <th scope="row" className="px-3 py-2 align-top text-muted-foreground">
                                         {t(row.dimension)}
                                     </th>
-                                    {look.options.map((opt) => (
+                                    {lookChoice.options.map((opt) => (
                                         <td key={opt.value} className="px-3 py-2 align-top text-foreground">
                                             {t(row.cells[opt.value])}
                                         </td>
@@ -168,9 +172,9 @@ export default function ConfigLook({ look }: Props) {
                                 value={FOLLOW_DEFAULT}
                                 checked={form.data.choice === FOLLOW_DEFAULT}
                                 onChange={(e) => form.setData('choice', e.target.value)}
-                                label={t('Match the site default (currently :look)', { look: t(look.default.label) })}
+                                label={t('Match the site default (currently :look)', { look: t(lookChoice.default.label) })}
                             />
-                            {look.options.map((opt) => (
+                            {lookChoice.options.map((opt) => (
                                 <RadioCard
                                     key={opt.value}
                                     name="choice"
