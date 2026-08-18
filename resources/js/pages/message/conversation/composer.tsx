@@ -1,5 +1,8 @@
+import { usePage } from '@inertiajs/react';
 import { ImagePlus, SendHorizontal } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
+import { Avatar } from '@/components/avatar';
+import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { ACCEPT, shrink } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
@@ -8,6 +11,7 @@ import { useAutoGrow } from '@/lib/auto-grow';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import type { PageProps } from '@/types';
 
 /** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {
@@ -32,6 +36,10 @@ function imageErrorIn(errors: Record<string, string>): string {
  */
 export function ConversationComposer({ counterpartName, onSend }: { counterpartName: string; onSend: (body: string, images: File[]) => Promise<void> }) {
     const t = useT();
+    const { auth, look } = usePage<PageProps>().props;
+    const form = useComposerEngaged();
+    // See the talk composer: the tabbed look puts the speaker's face on the surface they speak from.
+    const self = look === 'tabbed' ? auth.user : null;
     const [body, setBody] = useState('');
     const [images, setImages] = useState<File[]>([]);
     const [previews, setPreviews] = useState<string[]>([]);
@@ -134,11 +142,16 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
 
     return (
         <form
+            ref={form}
             onSubmit={submit}
             // Flush with the screen's foot, with the home-indicator strip taken as the last of its own
             // padding rather than left below it: stuck at that strip's height instead, the bar would
             // have the conversation scrolling through the band under it.
-            className="sticky bottom-0 z-10 -mx-3 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] sm:-mx-4 sm:px-4"
+            //
+            // The transition is for the look whose bottom bar stands here while the room is read and
+            // leaves when someone writes: the var jumps, but the length it computes to is what
+            // animates, matching the bar's own 200ms. Inert elsewhere — no other look moves it.
+            className="sticky bottom-0 z-10 -mx-3 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:-mx-4 sm:px-4"
         >
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">
@@ -179,6 +192,12 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                 </div>
             )}
             <div className="flex items-end gap-2">
+                {self && (
+                    // Lifted onto the line the controls beside it stand on: the face is 32, they are 44.
+                    <span className="mb-1.5 shrink-0">
+                        <Avatar id={self.id} name={self.name} src={self.imageUrl} color={self.avatarColor} isAi={self.isAi} size="sm" decorative />
+                    </span>
+                )}
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
                 <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
                 <Button

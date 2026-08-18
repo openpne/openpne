@@ -1,5 +1,16 @@
 import { usePage } from '@inertiajs/react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type AnimationEvent, type ReactNode } from 'react';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type AnimationEvent,
+    type ReactNode,
+    type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -25,6 +36,8 @@ interface Sheet {
     element: HTMLElement | null;
     attach: (element: HTMLElement | null) => void;
     exit: ComposeExit;
+    /** Reports that a conversation's composer holds focus — see {@link useComposerEngaged}. */
+    setComposerEngaged: (engaged: boolean) => void;
 }
 
 const ComposeSheetContext = createContext<Sheet | null>(null);
@@ -153,13 +166,28 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
     return { exiting: state.exiting && state.url === url, exit, onAnimationEnd };
 }
 
-/** Holds the sheet for the shell, so the header (producer) and the page (consumer) share one. */
-export function ComposeSheetProvider({ exit, children }: { exit: ComposeExit; children: ReactNode }) {
+/**
+ * Holds the sheet for the shell, so the header (producer) and the page (consumer) share one. The
+ * engagement setter comes from the shell for the same reason `exit` does: what it moves — the bottom
+ * bar and the space reserved for it — is the shell's, and the shell cannot read its own context.
+ */
+export function ComposeSheetProvider({
+    exit,
+    onComposerEngaged,
+    children,
+}: {
+    exit: ComposeExit;
+    onComposerEngaged: (engaged: boolean) => void;
+    children: ReactNode;
+}) {
     // State, not a ref: the portal has to render again once the slot element exists, and it is set
     // from a ref callback rather than read off the document, so nothing touches the DOM at render.
     const [element, setElement] = useState<HTMLElement | null>(null);
     const attach = useCallback((node: HTMLElement | null) => setElement(node), []);
-    const sheet = useMemo(() => ({ element, attach, exit }), [element, attach, exit]);
+    const sheet = useMemo(
+        () => ({ element, attach, exit, setComposerEngaged: onComposerEngaged }),
+        [element, attach, exit, onComposerEngaged],
+    );
 
     return <ComposeSheetContext value={sheet}>{children}</ComposeSheetContext>;
 }
@@ -176,6 +204,49 @@ export function useComposeSlotRef(): (element: HTMLElement | null) => void {
 /** How the sheet's close control leaves: play the exit, then navigate. */
 export function useComposeExit(): ComposeExit {
     return useContext(ComposeSheetContext)?.exit ?? immediate;
+}
+
+/**
+ * Tells the shell whether someone is writing in this conversation, for the look that keeps its
+ * bottom bar standing while the room is being read: put the returned ref on the composer's form.
+ *
+ * Focus is watched at the form, not at the field. Tapping send or attach moves focus within the same
+ * form, and a field-level blur would take that for leaving — the bar would flap out and back on
+ * every accessory tap. `relatedTarget` inside the form is therefore still engaged. These are
+ * listeners beside whatever the field already does (MentionTextarea keeps its own onBlur), not a
+ * replacement for it.
+ *
+ * Unmounting clears the flag: leaving the room takes its composer along, and a bar left hidden for
+ * the page after would have nothing to bring it back.
+ */
+export function useComposerEngaged(): RefObject<HTMLFormElement | null> {
+    const form = useRef<HTMLFormElement>(null);
+    const setEngaged = useContext(ComposeSheetContext)?.setComposerEngaged;
+
+    useEffect(() => {
+        const element = form.current;
+        if (element === null || setEngaged === undefined) {
+            return;
+        }
+
+        const engage = () => setEngaged(true);
+        const release = (event: FocusEvent) => {
+            if (!(event.relatedTarget instanceof Node) || !element.contains(event.relatedTarget)) {
+                setEngaged(false);
+            }
+        };
+
+        element.addEventListener('focusin', engage);
+        element.addEventListener('focusout', release);
+
+        return () => {
+            element.removeEventListener('focusin', engage);
+            element.removeEventListener('focusout', release);
+            setEngaged(false);
+        };
+    }, [setEngaged]);
+
+    return form;
 }
 
 /** Renders the page's compose actions in the sheet header; nothing at all where there is no sheet. */

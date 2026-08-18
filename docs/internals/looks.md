@@ -31,6 +31,25 @@ The looks today:
   `/groups/{group}` renders `unified/group` instead of `community/show`; the bars become
   the persistent header plus dive row, the shell paints the unified ground, and the right
   rail is dropped.
+- **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
+  screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
+  the site name on home, `[mark] › section` on a hub, `[mark] › place` deeper, with the
+  site color as a 4px line under the row. Under the page, four labelled tabs (Home,
+  groups, diaries, notifications) in a 58px row. The desktop place bar `placeBar` promises
+  lands with the next pass.
+
+Two decisions inside `tabbed` are deliberate rather than pending:
+
+- **A form carries no way back.** Swipe, the browser and the site mark are the exits; the
+  crumb beside an unsaved form is static text, not a pill, which is the same rule the
+  shipped detail bar states at its scope gate. A pressable-looking crumb that navigates
+  away from half-typed input is the thing being avoided, and painting one that does not
+  navigate would lie instead.
+- **A conversation recedes both bands together.** The header and the bottom bar answer to
+  one scroll listener, so reading back through a long room takes all the chrome and one
+  scroll up returns it. `bottomBarInConversation` is what keeps the bar standing while the
+  room is *read*; focusing the composer takes it away over the same 200ms the composer
+  takes to descend, and the bar stays mounted through that so it slides rather than blinks.
 
 ## Resolution
 

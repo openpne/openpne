@@ -120,6 +120,45 @@ test('the unified bar says how many notifications are waiting, in words', () => 
     expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
 });
 
+/**
+ * The tabbed row goes back to sections, four of them, each icon over its own word. Messages steps
+ * out: a word under every icon is what costs the fifth tab, and the DM count is ambient state the
+ * drawer entry already carries rather than a queue this row has to answer for.
+ */
+test('the tabbed bar is four labelled tabs, and messages is not one of them', () => {
+    const chrome = arrive('unified/home', '/dashboard', { look: 'tabbed' });
+
+    render(<BottomNav chrome={chrome} />);
+
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+        '/dashboard',
+        '/groups/mine',
+        '/diary/list',
+        '/notifications',
+    ]);
+    // The word is on screen, not only in the accessible name the icon-only row had to lean on.
+    expect(screen.getByRole('link', { name: 'Home' }).textContent).toBe('Home');
+    expect(document.querySelector('[data-dive-place]')).toBeNull();
+});
+
+test('the tabbed row marks the notification tab alone, and with a dot rather than a number', () => {
+    const chrome = arrive('unified/home', '/dashboard', {
+        look: 'tabbed',
+        unread: { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 },
+    });
+
+    const { container } = render(<BottomNav chrome={chrome} />);
+
+    // The one queue here empties by being read, so it says how many in words and prints nothing.
+    expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
+    expect(container.textContent).not.toMatch(/\d/);
+    // The counts that stay put whatever the reader does are state, not a summons: they keep their
+    // pills in the drawer, and this row leaves the tabs carrying them plainly named.
+    expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();
+    expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: '%Diaries%' })).toBeTruthy();
+});
+
 test('a guest gets no bar at all, whatever the layout', () => {
     const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
 

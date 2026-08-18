@@ -20,19 +20,37 @@ import type { PageProps } from '@/types';
 export const BAR_CONTROL =
     '-ml-1 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';
 
+/**
+ * The same box, stacked, at the bar's other end: the glyph over the word for it. A written "Menu"
+ * is what carries the pattern to readers who have not learned the three lines — the reason the
+ * tabbed look spends the room, since it is the look drawn for them.
+ */
+const BAR_CONTROL_LABELED =
+    'ml-auto -mr-1 inline-flex size-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent';
+
 /** Mobile hamburger that opens a slide-in nav sheet: brand (home) + nav, and under the unified
  *  layout the account rows too — its bars carry no account menu, so the drawer is where profile and
- *  sign-out live ({@link UnifiedAccountRows}). */
-export function NavDrawer() {
+ *  sign-out live ({@link UnifiedAccountRows}). `labeled` is the breadcrumb bar's trailing variant;
+ *  the sheet follows it to the right, because a drawer opens from its trigger's side. */
+export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
     const t = useT();
     const [open, setOpen] = useState(false);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger aria-label={t('Menu')} className={BAR_CONTROL}>
-                <Menu className="size-6" />
-            </DialogTrigger>
-            <SheetContent closeLabel={t('Close')}>
+            {labeled ? (
+                // No aria-label: the word under the glyph is the name, and one spelled above it would
+                // replace what the reader can see.
+                <DialogTrigger className={BAR_CONTROL_LABELED}>
+                    <Menu className="size-6" aria-hidden />
+                    <span className="text-[11px] leading-none">{t('Menu')}</span>
+                </DialogTrigger>
+            ) : (
+                <DialogTrigger aria-label={t('Menu')} className={BAR_CONTROL}>
+                    <Menu className="size-6" />
+                </DialogTrigger>
+            )}
+            <SheetContent side={labeled ? 'right' : 'left'} closeLabel={t('Close')}>
                 <DialogTitle asChild>
                     <Link
                         href="/dashboard"

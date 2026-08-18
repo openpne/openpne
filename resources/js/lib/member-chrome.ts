@@ -125,14 +125,15 @@ export function chromeRecedes(chrome: Chrome): boolean {
 interface LookSpec {
     /** Which top-bar grammar the phone header speaks. 'byScreen' = the per-screen-class bars
      *  (back+scope detail bar, hub title bar, brand bar); 'unified' = the persistent tab pair on
-     *  the TOP LEVEL ONLY — deep pages keep the byScreen bars. A future value may claim every
-     *  class; the value encodes the dispatch policy, not just a skin. */
-    topBar: 'byScreen' | 'unified';
+     *  the TOP LEVEL ONLY — deep pages keep the byScreen bars; 'breadcrumb' claims EVERY screen
+     *  class, a compose sheet excepted because that is a mode rather than a class. The value
+     *  encodes the dispatch policy, not just a skin. */
+    topBar: 'byScreen' | 'unified' | 'breadcrumb';
     /** Whether a top bar stands at lg+ (reserves --modern-top-offset on desktop). */
     desktopTopBar: boolean;
     /** Which row the phone bottom bar draws. 'icons' = icon-only section tabs; 'dive' = the
-     *  search | place | notifications zones. */
-    bottomBar: 'icons' | 'dive';
+     *  search | place | notifications zones; 'labeled' = each tab's icon over its full label. */
+    bottomBar: 'icons' | 'dive' | 'labeled';
     /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
     bottomBarInConversation: boolean;
     /** Which ground the shell paints behind the page (html class). */
@@ -154,6 +155,10 @@ interface LookSpec {
  * by LookRegistryParityTest. A look is a set of deviations from standard: a screen a look says
  * nothing about renders standard, which is what keeps a look from being a second copy of the UI
  * (docs/internals/looks.md).
+ *
+ * Fields whose value vectors coincide (rightRail and foldsHubHeading; colorLine, placeBar and
+ * bottomBarInConversation) cannot be told apart by tests over these rows — which field a consumer
+ * reads is guarded by that consumer's render tests instead.
  *
  * A question becomes a field when a consumer OUTSIDE the bar component itself branches on it; how
  * one bar arranges its own insides stays inside that bar. Each row is complete by type, so a look
@@ -184,6 +189,18 @@ export const LOOKS = {
         foldsHubHeading: false,
         colorLine: false,
         placeBar: false,
+    },
+    tabbed: {
+        topBar: 'breadcrumb',
+        desktopTopBar: false,
+        bottomBar: 'labeled',
+        bottomBarInConversation: true,
+        ground: 'unified',
+        rightRail: false,
+        accountInDrawer: true,
+        foldsHubHeading: false,
+        colorLine: true,
+        placeBar: true,
     },
 } as const satisfies Record<string, LookSpec>;
 
@@ -323,15 +340,28 @@ export function isHomeComponent(component: string): boolean {
  */
 const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications', '/messages'];
 
-export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
+/**
+ * The tabbed look's row, one tab shorter: a label under each icon needs the width, and four is what
+ * a phone seats without truncating the longest of them. Messages is the one dropped — its count is
+ * ambient state rather than a queue, so it stays on the drawer entry that already carries it.
+ */
+const TABBED_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
+
+const navRow = (hrefs: string[], enabled: Record<FeatureKey, boolean>): NavSection[] => {
     const visible = visibleNavSections(enabled);
 
     return [
         HOME_SECTION,
-        ...BOTTOM_NAV_HREFS.map((href) => visible.find((section) => section.href === href)).filter(
-            (section) => section !== undefined,
-        ),
+        ...hrefs.map((href) => visible.find((section) => section.href === href)).filter((section) => section !== undefined),
     ];
+};
+
+export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
+    return navRow(BOTTOM_NAV_HREFS, enabled);
+}
+
+export function tabbedNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
+    return navRow(TABBED_NAV_HREFS, enabled);
 }
 
 /**
@@ -800,6 +830,11 @@ const DIVE_PLACES: Record<string, (props: Record<string, unknown>) => DivePlace>
  * notification list are not places to be inside — from those the answer is home.
  */
 export function divePlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace {
+    return ownPlace(component, props, chrome) ?? HOME_PLACE;
+}
+
+/** The place a screen is standing in, or nothing where it is not inside one. */
+function ownPlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace | null {
     const own = DIVE_PLACES[component];
     if (own) {
         return own(props);
@@ -813,5 +848,38 @@ export function divePlace(component: string, props: Record<string, unknown>, chr
         return memberPlace(scope);
     }
 
-    return HOME_PLACE;
+    return null;
+}
+
+/** What follows the site mark in the breadcrumb header, or nothing where the mark stands alone. */
+export interface BreadcrumbCrumb {
+    label: ChromeLabel | string;
+    href: string;
+    /** Whether the crumb is pressable. A crumb that is not must not be painted as one. */
+    link: boolean;
+}
+
+/**
+ * The breadcrumb header's second crumb: where the reader is, under the site the mark names.
+ *
+ * Deliberately not divePlace: that one answers HOME_PLACE from anywhere that is not a place, which
+ * is a dive-zone reading ("the way back up is home"). A breadcrumb is a claim about where the reader
+ * *is*, and "you are at home" on the email settings page would be false. Three tiers: the place the
+ * screen is inside, else the last crumb of its trail, else nothing — the mark alone.
+ *
+ * A form's crumb is static text. The bar must never carry a link beside unsaved input (top-nav's
+ * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the place
+ * tier is pressable by construction, so a form takes its trail instead.
+ */
+export function breadcrumbCrumb(component: string, props: Record<string, unknown>, chrome: Chrome): BreadcrumbCrumb | null {
+    if (chrome.form !== true) {
+        const place = ownPlace(component, props, chrome);
+        if (place) {
+            return { ...place, link: true };
+        }
+    }
+
+    const last = chrome.context?.[chrome.context.length - 1];
+
+    return last ? { label: last.label, href: last.href, link: chrome.form !== true } : null;
 }
