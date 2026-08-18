@@ -41,7 +41,8 @@ export function TalkReactionChips({
     }
 
     return (
-        <div className="mt-2 flex flex-wrap items-center gap-1">
+        // The attribute is the seam a verification script holds the chips by, the way the row's id names the row.
+        <div data-talk-reactions className="mt-2 flex flex-wrap items-center gap-1">
             {chips.map((chip) =>
                 onToggle === undefined ? (
                     <span key={chip.emoji} className={cn(CHIP_BASE, chip.mine ? CHIP_MINE : CHIP_THEIRS)}>
@@ -74,6 +75,11 @@ export function TalkReactionChips({
 const PICKER_BUTTON =
     'inline-flex items-center justify-center rounded-full border border-transparent text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
+// How much of the vocabulary a row carries in the open: its head, so reacting at all is one click and
+// the rest of the set stays behind the picker. Three is what fits before the bar crowds the row it
+// floats over.
+export const QUICK_REACTIONS = 3;
+
 /**
  * The whole vocabulary as buttons, each one already knowing whether it is held: the picker's contents
  * wherever the picker is offered — the popover a cursor opens, the sheet a press does. One source
@@ -92,7 +98,7 @@ export function TalkReactionPickerGrid({
     chips: ChatReactionChip[];
     vocabulary: string[];
     onPick: (emoji: string, mine: boolean) => void;
-    /** The tap target: a cursor's popover can afford 40px, a thumb's sheet wants the 44 floor. */
+    /** The tap target: a cursor's bar and popover work at 32–40px, a thumb's sheet wants past the 44 floor. */
     buttonClassName?: string;
 }) {
     return (

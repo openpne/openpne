@@ -52,6 +52,8 @@ test.each([false, true])('a row (grouped: %s) offers reacting and deleting by na
         </ul>,
     );
 
+    // The head of the vocabulary is in the row itself, not only behind the picker the button opens.
+    expect(screen.getByRole('button', { name: '👍' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Delete message' })).toBeTruthy();
 });
