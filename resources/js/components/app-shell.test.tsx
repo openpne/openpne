@@ -193,11 +193,11 @@ test('an accessory tap inside the composer is not leaving it', () => {
  * One listener for the whole chrome, so a room's two bands cannot fall out of step: reading down a
  * long backlog takes both away, and one scroll up brings both back.
  */
-test('a tabbed conversation recedes header and bar together', async () => {
+test('a tabbed conversation holds its chrome still through a scroll', async () => {
+    // Dogfooding reversed the recede here: the composer pins the screen's foot, so hiding the bar
+    // frees nothing, and the header is what names the room. Only writing takes the bar away.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
     room('tabbed');
-
-    expect(header()?.className).not.toContain('-translate-y-full');
 
     await act(async () => {
         (window as { scrollY: number }).scrollY = 400;
@@ -205,8 +205,8 @@ test('a tabbed conversation recedes header and bar together', async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    expect(header()?.className).toContain('-translate-y-full');
-    expect(bar()?.className).toContain('translate-y-full');
+    expect(header()?.className).not.toContain('-translate-y-full');
+    expect(bar()?.className).not.toContain('translate-y-full');
 });
 
 test('a conversation under the shipped look holds its chrome still', async () => {
