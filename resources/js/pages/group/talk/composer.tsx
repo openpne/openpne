@@ -199,7 +199,7 @@ export function TalkComposer({
                 // staged, not sent, and stays through a refusal until the member takes it back or resends.
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 py-1.5 pr-1.5 pl-3 text-sm">
                     <Reply className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="shrink-0 font-medium">{t('Replying to :name', { name: replyName })}</span>
+                    <span className="shrink-0">{t('Replying to :name', { name: replyName })}</span>
                     {replyLine !== '' && <span className="min-w-0 truncate text-muted-foreground">{replyLine}</span>}
                     <button
                         type="button"

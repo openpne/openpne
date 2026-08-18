@@ -48,7 +48,7 @@ function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJ
         >
             <span className="sr-only">{t('Go to the replied message')}: </span>
             <Reply className="size-3.5 shrink-0" aria-hidden />
-            <span className="shrink-0 font-medium">{reference.author?.name ?? t('Withdrawn member')}</span>
+            <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
             {reference.thumbnailUrl !== null && <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />}
             <span className="min-w-0 truncate">{reference.excerpt}</span>
         </button>
