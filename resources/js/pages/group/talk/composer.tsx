@@ -1,4 +1,4 @@
-import { ImagePlus, SendHorizontal } from 'lucide-react';
+import { ImagePlus, Reply, SendHorizontal, X } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
@@ -9,6 +9,7 @@ import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
+import type { TalkMessage } from './types';
 
 /** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {
@@ -16,6 +17,13 @@ function imageErrorIn(errors: Record<string, string>): string {
         .filter(([key, message]) => message && (key === 'images' || key.startsWith('images.')))
         .map(([, message]) => message)
         .join(' ');
+}
+
+/** The one-line glimpse of the message being answered: its trimmed text, or that it was a picture. */
+function replyPreview(message: TalkMessage, imageLabel: string): string {
+    const body = message.body.trim();
+
+    return body !== '' ? body : message.images.length > 0 ? imageLabel : '';
 }
 
 /**
@@ -27,17 +35,25 @@ function imageErrorIn(errors: Record<string, string>): string {
  * above the input row only while something is picked, so the idle shape never changes.
  *
  * The draft survives a refusal — nothing is cleared until the message is actually written, and the
- * mention drafts and the picked files are kept with the body, so a retry after a rate limit or a
- * rejected file still carries everything the composer had instead of silently posting the handles as
- * plain text or dropping the attachments.
+ * mention drafts, the picked files and any staged reply are kept with the body, so a retry after a
+ * rate limit or a rejected file still carries everything the composer had instead of silently
+ * posting the handles as plain text, dropping the attachments, or answering nobody.
+ *
+ * `replyTo` is the message a new post answers; the page owns it (rows and the sheet stage it, the
+ * send consumes its id). The composer only shows it and offers to take it back — clearing on a
+ * successful send is the page's, since the reply id rides that send.
  */
 export function TalkComposer({
     groupId,
     groupName,
+    replyTo,
+    onCancelReply,
     onSend,
 }: {
     groupId: number;
     groupName: string;
+    replyTo: TalkMessage | null;
+    onCancelReply: () => void;
     onSend: (body: string, mentions: MentionPayloadRow[], images: File[]) => Promise<void>;
 }) {
     const t = useT();
@@ -73,6 +89,17 @@ export function TalkComposer({
 
         return () => urls.forEach((url) => URL.revokeObjectURL(url));
     }, [images]);
+
+    // Starting or switching a reply puts the caret in the box ready to write it. The textarea keeps
+    // no ref of its own (MentionTextarea holds it private), so the composer's form is the handle that
+    // reaches it; preventScroll is unneeded — the composer is sticky at the foot of the screen.
+    useEffect(() => {
+        if (replyTo === null) {
+            return;
+        }
+
+        form.current?.querySelector('textarea')?.focus();
+    }, [replyTo, form]);
 
     const attach = async (event: ChangeEvent<HTMLInputElement>) => {
         const picked = Array.from(event.target.files ?? []);
@@ -132,8 +159,9 @@ export function TalkComposer({
         } catch (failure) {
             const errors = failure instanceof SendFailed ? failure.errors : {};
             setFieldErrors(errors);
-            // The attachments render their own message; anything else surfaces here.
-            setError(errors.body ?? (imageErrorIn(errors) === '' ? t('Could not send. Try again.') : null));
+            // The attachments render their own message; anything else — a refused reply id included —
+            // surfaces here, and the staging stays for the member to resend or take back.
+            setError(errors.body ?? errors.reply_to_message_id ?? (imageErrorIn(errors) === '' ? t('Could not send. Try again.') : null));
         } finally {
             setSending(false);
         }
@@ -142,6 +170,11 @@ export function TalkComposer({
     const imageError = imageErrorIn(fieldErrors);
     // The server's verdict first: it explains why the message was refused, which a cap note does not.
     const attachmentNote = imageError || capNote;
+
+    // Who and what a staged reply answers, derived client-side from the chosen message — a withdrawn
+    // author keeps the established label, a picture-only message names itself.
+    const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('Withdrawn member'));
+    const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'));
 
     return (
         <form
@@ -160,6 +193,23 @@ export function TalkComposer({
                 <p role="alert" className="pb-2 text-sm text-destructive">
                     {error}
                 </p>
+            )}
+            {replyTo !== null && (
+                // Its own bordered row above the input, next to where the image strip sits: a reply is
+                // staged, not sent, and stays through a refusal until the member takes it back or resends.
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 py-1.5 pr-1.5 pl-3 text-sm">
+                    <Reply className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="shrink-0">{t('Replying to :name', { name: replyName })}</span>
+                    {replyLine !== '' && <span className="min-w-0 truncate text-muted-foreground">{replyLine}</span>}
+                    <button
+                        type="button"
+                        onClick={onCancelReply}
+                        aria-label={t('Cancel reply')}
+                        className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <X className="size-4" aria-hidden />
+                    </button>
+                </div>
             )}
             {(images.length > 0 || attachmentNote !== null) && (
                 <div className="pb-2">
