@@ -134,15 +134,10 @@ class TalkReplyTest extends TalkTestCase
     }
 
     /**
-     * A deleted parent reads as deleted, never as a message that answered nothing — the two states the
-     * dropped foreign key exists to tell apart, since `nullOnDelete` would clear the column and
-     * collapse them.
-     *
-     * The FK-drop regression is guarded on the MySQL lane, not this one. RefreshDatabase rebuilds the
-     * `:memory:` schema without the self-referential key whatever the drop migration does, so on SQLite
-     * the reference survives a deletion even with the migration reverted — here this reads as a feature
-     * test on both engines. InnoDB keeps the self-FK, so there reverting the migration restores the
-     * SET NULL and this goes red.
+     * The teeth of the foreign-key drop. `nullOnDelete` would clear the column here, and the answer
+     * would read as one that never answered anything — the state this feature has to tell apart from
+     * a parent that is gone. Reverting the drop migration restores the self-FK on both engines, and
+     * the SET NULL it brings back turns this red.
      */
     public function test_deleting_the_answered_message_leaves_the_reference_behind_and_it_reads_as_deleted(): void
     {
@@ -163,12 +158,7 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.0.inReplyTo', ['deleted' => true]);
     }
 
-    /**
-     * Nothing else may produce a dangling reference, and the schema is what holds that — the index the
-     * conversation reads by has to survive the same rebuild. The index-survival check has teeth on both
-     * engines; the no-FK check only where a self-FK is present to remove, which on the test lane is the
-     * MySQL shard (RefreshDatabase's `:memory:` rebuild has already dropped it on SQLite).
-     */
+    /** Nothing else may produce a dangling reference, and the schema is what holds that. */
     public function test_the_column_carries_no_foreign_key_and_the_conversation_index_survived_the_rebuild(): void
     {
         $keys = collect(Schema::getForeignKeys('group_messages'))->pluck('columns');
