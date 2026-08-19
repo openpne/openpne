@@ -248,7 +248,12 @@ The list is therefore drawn **one item per calendar day** (`lib/chat/day-groups.
 heading and that day's rows: a sticky element stops at the edge of its containing block, so a heading
 inside its own day is pushed out by the next day's. Flat siblings would all stop at the same offset and
 pile up there, the newer painting over the older and a narrower label leaving the wider one behind it
-showing at both ends. The panel is `overflow="clip"` for the same feature — `hidden` would establish a
+showing at both ends.
+
+The invariant is that **no two headings share an offset**, not that only one is ever on screen: while
+the next day pushes the last one out, both are visible for the height of one heading. That window has a
+property worth knowing rather than fixing — the label at the very top during it is the day being
+*left*, so for that moment the answer to "which day am I reading" is one behind. The panel is `overflow="clip"` for the same feature — `hidden` would establish a
 scroll container and pin the headings to a box that never scrolls, while `clip` keeps the card's
 corners without creating one.
 
