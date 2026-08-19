@@ -260,9 +260,14 @@ corners without creating one.
 The heading floats over the conversation rather than sitting in a band of its own. It overlaps a row
 while it is pinned — in a full-width column there is nowhere it would not — so what has to hold is that
 it reads as being *above* that row rather than as another word in it. That is a question of contrast,
-not of position: measured at 390px, a chip 3.5% darker than the card read as part of the author's line,
-and the same chip carrying the elevation this app gives its other floating controls read as a chip over
-it. Moving it to one side does not help; there it lands on the avatar instead.
+not of position: measured at 390px, a chip 3.5 points of lightness darker than the card read as part of
+the author's line, and the same chip with a border and a shadow read as a chip over it. Moving it to one
+side does not help; there it lands on the avatar instead.
+
+**Nothing in the heading takes pointer events.** It lies over the rows, so taking the hover that would
+show a `title` means taking the tap from whatever is under it — measured at 390px, a link, covered at
+every sample point across the chip. The day stays reachable without it: `dateTime` carries it for
+machines, and each row's own stamp offers the full date as its title.
 
 Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
 the row says again who is speaking, since a header is what the thing above it separates the reader

@@ -37,8 +37,6 @@ export function useDateFormat(): {
     siteDay: (iso: string) => string | null;
     /** What a conversation's date heading says over the rows of that day. */
     dayHeading: (iso: string, now?: Date) => string;
-    /** The whole day the heading may be abbreviating, for its hover title. */
-    dayHeadingTitle: (iso: string) => string;
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
@@ -57,14 +55,6 @@ export function useDateFormat(): {
         relativeDeadline: (iso, now) => relativeDeadline(iso, context.timeZone, now),
         siteDay: (iso) => siteDay(iso, context.timeZone),
         dayHeading: (iso, now) => dayHeadingLabel(iso, context, t, now),
-        // Through the civil-date formatter rather than a shape of its own: the heading names a day, and
-        // this is that same day written out in full — the year included, since a title exists to say
-        // what the visible text left out.
-        dayHeadingTitle: (iso) => {
-            const day = siteDay(iso, context.timeZone);
-
-            return day === null ? '' : formatCivilDate(day, context, true);
-        },
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
