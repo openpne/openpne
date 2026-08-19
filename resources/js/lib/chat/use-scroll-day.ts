@@ -90,12 +90,16 @@ export function useScrollDay(
 
             // It stands in for a heading that is not on the screen, so a heading on the screen is the
             // whole of the answer: no second copy of a date the reader can already see, and none of
-            // the "is it under me" arithmetic that has been wrong three times. Below the line that is
-            // also what makes it safe — a heading has to cross the entire reading area to stop being
-            // visible, which no single frame can do. Above the line there is no such runway: the gap
-            // from out-of-sight to under-the-indicator is a heading's own height, and one frame at
-            // wheel speed is 260px of it. That side gets the frame's own travel instead of a number,
-            // because a number would be this machine's wheel and nothing about anyone else's.
+            // the "is it under me" arithmetic that has been wrong three times.
+            //
+            // The two sides are not the same rule, and the asymmetry is geometric rather than
+            // empirical. Below, a heading stops being visible at `h.top === innerHeight` while the
+            // indicator sits at `top`, so the runway is the reading area — hundreds of pixels no
+            // single frame can cross. Above, a heading stops being visible at `h.bottom === top`,
+            // which is the indicator's own upper edge: the moment it leaves the test is the moment it
+            // starts overlapping, and the runway is exactly zero. So that side takes the distance the
+            // page moved in the frame this is already behind by, rather than a number — a number
+            // would be this machine's wheel and nothing about anyone else's.
             const onScreen = headings.some((h) => h.bottom > top - reach && h.top < window.innerHeight);
             show(!off.current && !foot.current() && !onScreen ? 'up' : 'aside');
             setIndex(at);
