@@ -11,12 +11,22 @@ type Props = {
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
  *
- * The card stays inset from the screen edges at every width. Running it edge to edge does buy width,
- * but it also takes away the strip of page background either side — which is what makes a card read as
- * a surface lying on the page rather than as the page itself. Tested on device, that flattened every
- * screen into one field of card color divided by lines. The width comes from tighter padding instead.
- * That judgment is about screens the reader browses, which is why `sheet` is a scoped exception: the
- * compose sheet below lg is a single screen with a single job, and there the frame is the divider.
+ * The card stays inset from the screen edges. Running it edge to edge does buy width, but it also
+ * takes away the strip of page background either side — which is what makes a card read as a surface
+ * lying on the page rather than as the page itself. Tested on device, that flattened every screen into
+ * one field of card color divided by lines. The width comes from tighter padding instead.
+ *
+ * That judgment is about screens the reader browses, and `sheet` drops the chrome below lg for the two
+ * screens it does not describe. Each is one surface with one job, and each has something other than
+ * the frame to divide by — which is the half of this rule that is easy to drop:
+ *
+ * - the compose sheet, where the fields keep their own boxes;
+ * - a conversation (group talk, a direct message), where the composer's own `border-t` draws the line
+ *   the frame used to. That border is what keeps the list and the composer from reading as the one
+ *   field this rule was written against — taking it away is what would break the exception, not
+ *   anything about the card.
+ *
+ * A third would need both halves, not just the first.
  */
 export function Card({
     children,

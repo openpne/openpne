@@ -449,16 +449,20 @@ export default function GroupTalkIndex() {
                 </div>
             )}
 
-                // Below lg the conversation is the page, not a card on it. It is the one screen the
-                // card's own rule already makes room for — a single surface with a single job — and
-                // the sticky composer under it has always run to these edges, so a card here left the
-                // two disagreeing on the same screen. Bleeding it back recovers the 26px that the
-                // page margin and the frame were taking out of every line, and drops the second inset
-                // that no mobile chat client draws: Mattermost, Element and Signal all give the list
-                // one horizontal margin and no frame at all.
-                //
-                // The margins are the composer's own, so the two edges are stated once each. At lg the
-                // card returns and the list takes its inset back.
+                {/* Below lg the conversation is the page, not a card on it. The card's own rule
+                    (components/card.tsx) says a card stays inset because the strip of page either
+                    side is what makes it read as a surface lying on the page — and that running it
+                    edge to edge flattened every screen into one field. Neither holds here: this
+                    screen carries one surface, and where it meets the composer the composer's own
+                    `border-t` draws the boundary the frame used to. That line is what this depends
+                    on — take it away and the two do become one field, which is the thing the card's
+                    rule was written against.
+
+                    What it buys is the second inset that no mobile chat client draws: Mattermost,
+                    Element and Signal each give the list one horizontal margin and no frame at all.
+                    The margins are the composer's own, so the two edges are stated once each; `lg:mx-0`
+                    stops there rather than following the composer past it (the composer overhangs the
+                    card at lg — an older disagreement, not one to copy). */}
             <Panel flush sheet className="-mx-3 sm:-mx-4 lg:mx-0">
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
