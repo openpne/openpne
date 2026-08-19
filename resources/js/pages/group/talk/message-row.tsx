@@ -355,7 +355,31 @@ export function TalkMessageRow({
                     </div>
                 )}
                 <div className="col-start-1 row-start-2">
-                    {!grouped && (
+                    {grouped ? (
+                        // What the gutter is for on a row that folded its header away. A follow-up
+                        // says nothing about when it was said, and the run it belongs to is only
+                        // seven minutes wide (lib/chat/message-grouping) — so the answer is worth
+                        // little enough not to earn a line on every row, and enough to be reachable.
+                        // Under the cursor, as Slack and Discord both put it, in the space the face
+                        // would have taken.
+                        //
+                        // `hover:` is a hover-capable query, so this is a cursor's affordance alone:
+                        // a touch screen never reveals it, and there is nothing there to reveal.
+                        // That is the same choice those two make, and for the same reason — the run's
+                        // opening row carries a visible time a few lines up.
+                        //
+                        // `aria-hidden`, because a screen reader is told rather than shown: a folded
+                        // row speaks its author and its time (below). `leading-6` matches the body's
+                        // line so the stamp sits on the first line of what it dates, and
+                        // `tabular-nums` keeps a run's times in a column — the same reason
+                        // docs/internals/datetime.md pads the hour.
+                        <span
+                            aria-hidden
+                            className="block text-right text-xs leading-6 text-muted-foreground tabular-nums opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 motion-reduce:transition-none"
+                        >
+                            <Timestamp at={message.createdAt} preset="clockTime" />
+                        </span>
+                    ) : (
                         <Avatar
                             id={author?.id ?? 0}
                             name={author?.name ?? ''}
