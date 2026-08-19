@@ -257,9 +257,12 @@ property worth knowing rather than fixing — the label at the very top during i
 scroll container and pin the headings to a box that never scrolls, while `clip` keeps the card's
 corners without creating one.
 
-The heading is an opaque band the width of the list rather than a floating pill, because a row here
-runs the full column: a pill over the middle of one lands on the author's name, which is what it did at
-390px before it was measured.
+The heading floats over the conversation rather than sitting in a band of its own. It overlaps a row
+while it is pinned — in a full-width column there is nowhere it would not — so what has to hold is that
+it reads as being *above* that row rather than as another word in it. That is a question of contrast,
+not of position: measured at 390px, a chip 3.5% darker than the card read as part of the author's line,
+and the same chip carrying the elevation this app gives its other floating controls read as a chip over
+it. Moving it to one side does not help; there it lands on the avatar instead.
 
 Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
 the row says again who is speaking, since a header is what the thing above it separates the reader
