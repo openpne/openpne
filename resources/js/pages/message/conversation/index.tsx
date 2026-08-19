@@ -284,7 +284,21 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-            <Panel flush className={composer === null ? 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]' : undefined}>
+                // Below lg the conversation is the page, not a card on it. It is the one screen the
+                // card's own rule already makes room for — a single surface with a single job — and
+                // the sticky composer under it has always run to these edges, so a card here left the
+                // two disagreeing on the same screen. Bleeding it back recovers the 26px that the
+                // page margin and the frame were taking out of every line, and drops the second inset
+                // that no mobile chat client draws: Mattermost, Element and Signal all give the list
+                // one horizontal margin and no frame at all.
+                //
+                // The margins are the composer's own, so the two edges are stated once each. At lg the
+                // card returns and the list takes its inset back.
+            <Panel
+                flush
+                sheet
+                className={cn('-mx-3 sm:-mx-4 lg:mx-0', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
+            >
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
