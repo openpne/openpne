@@ -7,6 +7,10 @@ import type { ChatStreamRow } from './types';
  * A position, because the row it names can leave: a message deleted while the reader is scrolled up
  * would take the mark with it, and a count derived from "is the marked row still in the list" would
  * drop to zero without anything having been read.
+ *
+ * It is a *read-through* position — the last row the reader stood at, not the first they have not
+ * seen — which is what makes the comparison below exclusive. A mark of the other kind would have to
+ * count its own row.
  */
 export interface ChatSeenMark {
     at: string;
@@ -23,7 +27,10 @@ export interface ChatSeenMark {
  *
  * Null is a reader whose position is not known: a visit that landed mid-conversation on a `?m=`
  * link and never reached the foot has read nothing this page can name, and a count would be a claim
- * about them rather than an observation.
+ * about them rather than an observation. Reachable because such a visit opens in a history window
+ * (`hasNewer`, lib/chat/stream-state) and the mark only advances at the foot of the live one — were
+ * anchored visits ever to open live, the mark would be set on arrival and this branch would go
+ * quiet without saying so.
  */
 export function arrivalsAfter(messages: readonly ChatStreamRow[], seen: ChatSeenMark | null): number {
     if (seen === null) {

@@ -149,6 +149,13 @@ export default function GroupTalkIndex() {
     // the mark, so nothing counts as having arrived past it.
     const arrivals = arrivalsAfter(messages, seen);
 
+    // What the pill says. English needs the singular said differently, and this is the place in the
+    // app where a count of one is the *common* case — a conversation usually gets one message at a
+    // time. `useT` exposes only the string form (lib/i18n), so the choice belongs to the caller; the
+    // shape is the one use-date-format already uses for "a minute ago".
+    const latestLabel =
+        arrivals === 0 ? t('Jump to latest') : arrivals === 1 ? t('1 new message') : t(':count new messages', { count: arrivals });
+
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
     // highlight is state because it expires.
@@ -559,7 +566,7 @@ export default function GroupTalkIndex() {
                             happened. A separate word from the banner's "unread" above, because they
                             are separate claims — that one is the server's cursor, this one is what
                             has landed since the reader was last at the foot. */}
-                        {arrivals > 0 ? t(':count new messages', { count: arrivals }) : t('Jump to latest')}
+                        {latestLabel}
                     </Button>
                 </div>
             )}

@@ -95,6 +95,13 @@ export default function MessageConversation() {
     const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
     const arrivals = arrivalsAfter(messages, seen);
 
+    // What the pill says. English needs the singular said differently, and this is the place in the
+    // app where a count of one is the *common* case — a conversation usually gets one message at a
+    // time. `useT` exposes only the string form (lib/i18n), so the choice belongs to the caller; the
+    // shape is the one use-date-format already uses for "a minute ago".
+    const latestLabel =
+        arrivals === 0 ? t('Jump to latest') : arrivals === 1 ? t('1 new message') : t(':count new messages', { count: arrivals });
+
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
     // highlight is state because it expires.
@@ -356,7 +363,7 @@ export default function MessageConversation() {
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
                         {/* What is down there, when the page knows — see the talk page. */}
-                        {arrivals > 0 ? t(':count new messages', { count: arrivals }) : t('Jump to latest')}
+                        {latestLabel}
                     </Button>
                 </div>
             )}

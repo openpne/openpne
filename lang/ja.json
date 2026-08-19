@@ -58,6 +58,7 @@
     "(and :count more errors)": "(その他、:countエラーあり)",
     "(empty)": "(空)",
     "(No subject)": "(件名なし)",
+    "1 new message": "新着 1 件",
     ":age years old": ":age歳",
     ":community %activity%": ":community の%activity%",
     ":count %communities% with new messages": ":count件の%communities%に新着メッセージ",
