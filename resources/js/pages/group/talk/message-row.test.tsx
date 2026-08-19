@@ -150,3 +150,35 @@ test('the row carries the time alone, beside the author rather than at the far e
     // Nothing pushes it away from the name it belongs to.
     expect(stamp?.className).not.toContain('ml-auto');
 });
+
+test('a folded row keeps its time in the gutter, spoken as well as drawn', () => {
+    const { container } = render(
+        <ul>
+            <TalkMessageRow
+                message={message}
+                onDelete={vi.fn()}
+                onOpenActions={vi.fn()}
+                onReply={vi.fn()}
+                onJumpToReply={vi.fn()}
+                canReply={true}
+                grouped
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+            />
+        </ul>,
+    );
+
+    // Two stamps, in two lanes. The gutter's is what a cursor reveals; whether it is *visible* is the
+    // hover rule, which this test never loads (tools/ux-review drives that in a browser).
+    const gutter = container.querySelector('[data-talk-message-id] > div > div:first-child time');
+    expect(gutter?.textContent).toBe('10:00');
+    // Hidden from the reader who is told instead: the sr-only attribution carries author and time,
+    // and announcing the gutter as well would say the time twice on every folded row.
+    expect(gutter?.closest('[aria-hidden]')).not.toBeNull();
+    expect(container.querySelector('.sr-only')?.textContent).toContain('10:00');
+});
+
+test('a row that draws its author draws no gutter time: it already shows one beside the name', () => {
+    const { container } = renderRow();
+
+    expect(container.querySelector('[data-talk-message-id] > div > div:first-child time')).toBeNull();
+});
