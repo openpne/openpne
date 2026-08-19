@@ -30,9 +30,12 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  * page's own ground, and a seam drawn only once something has scrolled under (the phone header's
  * `useScrolled`). Every desktop client this bar answers to draws its place as a surface too.
  *
- * Opaque, where that header is translucent, because this one is exactly as wide as the card beneath
- * it: the card's side borders fall on this bar's own edges to the pixel, so any transparency prints
- * them down its sides and the bar grows a left and right border it never asked for.
+ * Opaque, where that header is translucent, and carrying the card's own side borders, because this bar
+ * is exactly as wide as the card beneath it. Covering that column's edge for the height of the bar and
+ * no further is what looks wrong — the line down the side of the page changes character across the
+ * bar, which reads as the bar having grown borders of its own. Taking the same edge makes it one line.
+ * (The column starts on a half pixel, so the card's border also antialiases a shade onto the pixel
+ * outside it; that is there with or without this bar and is not what the bar can fix.)
  *
  * The remove the pill keeps from the top is padding rather than offset, which is the other half of
  * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
@@ -74,7 +77,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         <div
             data-testid="place-bar"
             className={cn(
-                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-b bg-background pt-2 pb-1 lg:flex',
+                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-x border-b border-x-border bg-background pt-2 pb-1 lg:flex',
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >
