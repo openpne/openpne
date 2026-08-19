@@ -289,6 +289,12 @@ export default function MessageConversation() {
                     composer's own so each edge is stated once; `lg:mx-0` stops there rather than
                     following the composer past the card, which is an older disagreement (not one to
                     copy). */}
+            {/* `mb-0` and the composer-less `max-lg:mb-[…]` carry the same specificity, so which one
+                a narrow screen gets is decided by emission order — Tailwind writes variants after the
+                base, and the conditional wins. That is the one order-dependent thing here: swap
+                `max-lg:` for a variant Tailwind emits earlier and this list quietly ends flush against
+                the foot of the screen again. (An `!` on `mb-0` would decide it by force, and did,
+                which is what silenced this rule until it was measured.) */}
             <Panel
                 flush
                 bleed
