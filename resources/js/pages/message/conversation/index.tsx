@@ -71,10 +71,6 @@ export default function MessageConversation() {
     useMarkRead(`${path}/read`, messages[messages.length - 1]?.id, atBottom && atLatest);
     const [seen, setSeen] = useState<ChatSeenMark | null>(null);
 
-    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
-    const scrollDayLine = useRef<HTMLDivElement>(null);
-    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine);
-    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // Where the reader has actually stood — see the talk page, whose rule this follows.
     useEffect(() => {
@@ -101,6 +97,10 @@ export default function MessageConversation() {
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
     const arrivals = arrivalsAfter(messages, seen);
+    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
+    const scrollDayLine = useRef<HTMLDivElement>(null);
+    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine, backlog !== null, () => atFoot() && atLatest);
+    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // What the pill says. English needs the singular said differently, and this is the place in the
     // app where a count of one is the *common* case — a conversation usually gets one message at a
@@ -286,8 +286,7 @@ export default function MessageConversation() {
                 once per message, in the state this exists to keep clear. The gate reads as sense
                 besides: at the foot there is no question of which day, and the last heading is usually
                 still on screen. */}
-            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && scrollDay.standingIn && backlog === null && !(atBottom && atLatest)}
-                stepAside={!scrollDay.standingIn} />
+<ChatScrollDay ref={scrollDayLine} at={scrollDayAt} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary

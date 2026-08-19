@@ -25,18 +25,7 @@ import type { PageProps } from '@/types';
  * be told it again from a floating box whose whole behaviour is tied to a scroll they may not be
  * making.
  */
-export function ChatScrollDay({
-    at,
-    visible,
-    stepAside,
-    ref,
-}: {
-    at: string | null;
-    visible: boolean;
-    /** Whether the reason it is down is something in its way, rather than a reader who has settled. */
-    stepAside: boolean;
-    ref: RefObject<HTMLDivElement | null>;
-}) {
+export function ChatScrollDay({ at, ref }: { at: string | null; ref: RefObject<HTMLDivElement | null> }) {
     const date = useDateFormat();
     // The label is `今日` for as long as today lasts, so it waits on the same clock the headings do.
     useSiteDay(usePage<PageProps>().props.timezone);
@@ -55,7 +44,7 @@ export function ChatScrollDay({
             ref={ref}
             aria-hidden
             className={cn(
-                'pointer-events-none sticky z-20 mb-0 flex h-0 items-start justify-center',
+                'group/day pointer-events-none sticky z-20 mb-0 flex h-0 items-start justify-center',
                 // `items-start`, or the pill is stretched to the box's own zero height and its words
                 // spill out of a four-pixel line — a pill with no pill in it.
                 //
@@ -72,17 +61,20 @@ export function ChatScrollDay({
         >
             {at !== null && (
                 <span
+                    // Driven by the wrapper's state, which the hook writes in the frame it decides —
+                    // not by a prop, which would arrive a render later, and a render later is a frame
+                    // of a date drawn on a heading.
+                    //
                     // The duration rides the state rather than the element, because the two ways this
-                    // goes down are not the same event. Settling is a fade — the reader stopped, and
-                    // nothing is waiting on it. Getting out of the way is not: a heading is arriving
-                    // under it, or the head of the list has come into view, and a hundred and fifty
-                    // milliseconds of politeness is a hundred and fifty milliseconds of a date drawn
-                    // over the load-older strip. Measured before it was split: 1.00 / 0.82 / 0.16,
-                    // every frame of it on top of something.
+                    // goes down are not the same event. Settling is a fade: the reader stopped, and
+                    // nothing is waiting on it. Getting out of the way is not — a hundred and fifty
+                    // milliseconds of politeness there is a hundred and fifty milliseconds of exactly
+                    // the overlap being avoided (measured before the split: 1.00, 0.82, 0.16, every
+                    // frame of it on top of something).
                     className={cn(
                         'rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground shadow-sm',
-                        'transition-opacity motion-reduce:transition-none',
-                        visible ? 'opacity-100 duration-150' : stepAside ? 'opacity-0 duration-0' : 'opacity-0 duration-150',
+                        'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
+                        'group-data-[day=up]/day:opacity-100 group-data-[day=aside]/day:duration-0',
                     )}
                 >
                     {date.dayHeading(at)}
