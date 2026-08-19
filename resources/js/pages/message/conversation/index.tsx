@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
-import { groupByDay } from '@/lib/chat/day-groups';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
 import { useT } from '@/lib/i18n';
@@ -75,8 +74,6 @@ export default function MessageConversation() {
     // snapshot is the reload after a history restore (lib/revalidate-on-restore.ts), deliberately: a
     // restore is a fresh arrival, and the line belongs where a fresh visit would draw it.
     const dividerId = dividerBeforeId(messages, firstUnreadBoundary(unreadSnapshot), stream.hasOlder);
-    // Drawn a day at a time so each heading can stick within its own; see the list.
-    const dayGroups = groupByDay(messages, (iso) => date.siteDay(iso));
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
@@ -263,8 +260,7 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-            {/* `clip`, so the sticky date headings resolve against the page — see the talk list. */}
-            <Panel flush overflow="clip" className={composer === null ? 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]' : undefined}>
+            <Panel flush className={composer === null ? 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]' : undefined}>
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
@@ -276,20 +272,19 @@ export default function MessageConversation() {
                 {messages.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
-                    // A day at a time, so each heading sticks within its own — the same shape the talk
-                    // list takes, and for the same reason (lib/chat/day-groups). The rows keep the
-                    // shared List and its rules; the heading sits outside it, so the day reads the same
-                    // here as it does there rather than being boxed by a rule this list happens to draw.
-                    <ul>
-                        {dayGroups.map((group, groupIndex) => (
-                            <li key={`${group.day}-${groupIndex}`}>
-                                <ChatDayHeading at={group.messages[0]!.createdAt} />
-                                <List className="border-t border-border">
-                                    {group.messages.map((message) => {
-                            const above = separatorsAbove({ opensDay: false, isUnreadBoundary: message.id === dividerId });
+                    <List>
+                        {messages.map((message, index) => {
+                            // The day said once over the rows that share it — see the talk list,
+                            // whose rule this follows. Nothing folds here, so it is the heading alone
+                            // rather than a run to hold open as well.
+                            const previous = messages[index - 1];
+                            const opensDay =
+                                previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
+                            const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
 
                             return (
                             <Fragment key={message.id}>
+                                {above.includes('day') && <ChatDayHeading at={message.createdAt} />}
                                 {above.includes('unread') && (
                                     // The separator is inside the row rather than being it: a list
                                     // may only hold list items, and an <li role="separator"> is the
@@ -308,11 +303,8 @@ export default function MessageConversation() {
                                 <ConversationMessageRow message={message} highlighted={message.id === highlightId} />
                             </Fragment>
                             );
-                                    })}
-                                </List>
-                            </li>
-                        ))}
-                    </ul>
+                        })}
+                    </List>
                 )}
 
                 {!atLatest && (

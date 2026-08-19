@@ -21,12 +21,10 @@ export type ChatSeparator = 'day' | 'unread';
  * conversation — the turn of a calendar day — as the one boundary with no line at all, weaker than
  * the hairline between two speakers of the same afternoon.
  *
- * The two are different shapes because they are different kinds of claim, which is also why only one
- * of them sticks. A date heading says the rows under it were said on that day — true for every reader
- * and true however far the reader scrolls, so it can be pinned and go on answering. The unread line
- * says where *this* reader stopped, a claim so tied to its position that `dividerBeforeId`
- * (lib/chat/unread) withdraws it rather than draw it where the position cannot be shown honestly. Pinned, it would go on
- * claiming "the unread starts here" over rows the reader has long since passed.
+ * The two are different shapes because they are different kinds of claim. A date heading says the rows
+ * under it were said on that day, which is true for every reader. The unread line says where *this*
+ * reader stopped — a claim so tied to its position that `dividerBeforeId` (lib/chat/unread) withdraws
+ * it rather than draw it where the position cannot be shown honestly.
  */
 export function drawsItsOwnRule(separators: readonly ChatSeparator[]): boolean {
     return separators.includes('unread');

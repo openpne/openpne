@@ -53,10 +53,6 @@ because the day is said once for the whole run under the heading. Today and yest
 `2025年12月31日(水)`. An event's civil date always carries its year instead, because planning crosses
 years; the two are different questions about the same-looking value.
 
-The heading also **sticks** while its day is on screen. A day of any length outlives its own heading
-otherwise, and then the rows below say only `09:12` with nothing left to say which day that was. That
-is what keeps "said once" from meaning "said once and then gone" — the same element goes on answering,
-rather than a second copy of the day being added to every row.
 
 `clockTime` rather than `listStamp`, whose today branch renders the same string: a list stamp's shape
 depends on the clock, so a conversation left open across the site's midnight would see every row turn

@@ -13,7 +13,7 @@ vi.mock('@inertiajs/react', () => ({
 
 afterEach(cleanup);
 
-const renderHeading = (at: string) => render(<ChatDayHeading at={at} />);
+const renderHeading = (at: string) => render(<ul>{<ChatDayHeading at={at} />}</ul>);
 
 test('the heading carries the site day as its machine value', () => {
     // 15:05Z is already the next day in Tokyo — the heading follows the site, not the viewer.
@@ -32,14 +32,20 @@ test('the label is the whole of what the separator announces', () => {
     expect(separator.textContent).toBe('Wed, March 4, 2020');
 });
 
-test('the heading takes no pointer events, so it cannot cover a tap', () => {
-    // It lies over the rows. Taking the hover for a `title` would mean taking the tap from whatever is
-    // under it, measured as a link at 390px — and at 1280 the chip is not hit-testable anyway.
-    const { container } = renderHeading('2026-08-10T09:00:00+09:00');
+test('the heading offers the whole day on hover, since the visible text may abbreviate', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-10T03:00:00+00:00'));
 
-    expect(container.firstElementChild?.className).toContain('pointer-events-none');
-    expect(container.querySelector('[style*="pointer-events"]')).toBeNull();
-    expect(container.querySelector('time')?.getAttribute('title')).toBeNull();
+    try {
+        renderHeading('2026-08-10T09:00:00+09:00');
+
+        const stamp = screen.getByRole('separator').querySelector('time');
+        // 'Today' does not say which day it was; the title does, year included.
+        expect(stamp?.textContent).toBe('Today');
+        expect(stamp?.getAttribute('title')).toBe('Mon, August 10, 2026');
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 test('today and yesterday are words, and older days are dates', () => {

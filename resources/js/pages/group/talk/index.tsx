@@ -6,7 +6,6 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
-import { groupByDay } from '@/lib/chat/day-groups';
 import { foldsInto } from '@/lib/chat/message-grouping';
 import { drawsItsOwnRule, separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
@@ -111,8 +110,6 @@ export default function GroupTalkIndex() {
     // (lib/revalidate-on-restore.ts), deliberately: a restore is a fresh arrival, and the line
     // belongs where a fresh visit would draw it.
     const dividerId = dividerBeforeId(messages, readThroughBoundary(talkUnreadSnapshot), stream.hasOlder);
-    // The list is drawn a day at a time so each heading can stick within its own day; see the list.
-    const dayGroups = groupByDay(messages, (iso) => date.siteDay(iso));
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && talkUnreadSnapshot !== null && talkUnreadSnapshot.count > 0 ? talkUnreadSnapshot : null;
@@ -418,10 +415,7 @@ export default function GroupTalkIndex() {
                 </div>
             )}
 
-            {/* `clip` rather than the default `hidden`: the date headings inside stick, and an
-                ancestor that establishes a scroll container would pin them to a box that never
-                scrolls. `clip` keeps the corners and creates no such container (components/card). */}
-            <Panel flush overflow="clip">
+            <Panel flush>
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
@@ -437,23 +431,17 @@ export default function GroupTalkIndex() {
                     // border is per-row instead — on every row that starts something (a header row
                     // after another row), never on a grouped continuation, and not after the unread
                     // separator, which is already a line.
-                    //
-                    // One item per calendar day, each holding its heading and that day's rows: the
-                    // heading sticks, and a sticky element stops at the edge of its containing block,
-                    // so this is what makes the next day push the last one out (lib/chat/day-groups).
-                    // The heading is drawn above the first loaded day too, unlike the unread line: it
-                    // claims only that the rows under it are of that day, which stays true however far
-                    // back the history reaches — and when "load older" prepends more of the same day,
-                    // they join that group and the heading is simply above more rows.
                     <ul>
-                        {dayGroups.map((group, groupIndex) => (
-                            <li key={`${group.day}-${groupIndex}`}>
-                                <ChatDayHeading at={group.messages[0]!.createdAt} />
-                                <ul>
-                                    {group.messages.map((message, index) => {
-                            const previous = group.messages[index - 1];
-                            // Every group opens with its heading, so its first row always restarts.
-                            const above = separatorsAbove({ opensDay: index === 0, isUnreadBoundary: message.id === dividerId });
+                        {messages.map((message, index) => {
+                            // The day is said once over the rows that share it. Drawn above the first
+                            // row too, unlike the unread line: a heading claims only that the rows
+                            // under it are of that day, which stays true however far back the history
+                            // reaches — and when "load older" prepends more of the same day, the row
+                            // that carried it stops matching and the heading moves up with them.
+                            const previous = messages[index - 1];
+                            const opensDay =
+                                previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
+                            const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
                             // Whatever stands above the row holds its run open (message-grouping):
                             // the row says again who is speaking. Whether it also replaces the row's
                             // hairline is a separate question, and only the unread band does.
@@ -461,6 +449,7 @@ export default function GroupTalkIndex() {
 
                             return (
                             <Fragment key={message.id}>
+                                {above.includes('day') && <ChatDayHeading at={message.createdAt} />}
                                 {above.includes('unread') && (
                                     // The separator is inside the row rather than being it: a list
                                     // may only hold list items, and an <li role="separator"> is the
@@ -498,13 +487,12 @@ export default function GroupTalkIndex() {
                                     canReply={canPost}
                                     highlighted={message.id === highlightId}
                                     grouped={foldsInto(previous, message, restartsHere)}
-                                    // No rule under a separator that is already a line. A date
-                                    // heading is a pill rather than a line, so the row under it keeps
-                                    // its own — otherwise the turn of the day would be the one
-                                    // boundary here with nothing drawn across it, weaker than a change
-                                    // of speaker within an afternoon. Every day opens with a heading,
-                                    // the first one included, so no row is left with nothing above it.
-                                    rule={!drawsItsOwnRule(above) && !foldsInto(previous, message, restartsHere)}
+                                    // No rule under a separator that is already a line, and none
+                                    // above the first row. A date heading is a pill rather than a
+                                    // line, so the row under it keeps its own — otherwise the turn of
+                                    // the day would be the one boundary here with nothing drawn
+                                    // across it, weaker than a change of speaker within an afternoon.
+                                    rule={previous !== undefined && !drawsItsOwnRule(above) && !foldsInto(previous, message, restartsHere)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
@@ -515,10 +503,7 @@ export default function GroupTalkIndex() {
                                 />
                             </Fragment>
                             );
-                                    })}
-                                </ul>
-                            </li>
-                        ))}
+                        })}
                     </ul>
                 )}
 

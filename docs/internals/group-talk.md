@@ -236,42 +236,10 @@ because the day is true for every reader while the line is only this reader's pl
 are drawn as different shapes — a band and a ruled line — so that meeting reads as two things rather
 than one confused divider.
 
-**The heading sticks; the unread line does not**, and that follows from the same difference. A heading
-says the rows under it were said on that day: true for every reader and true however far this one
-scrolls, so it can be pinned and go on answering — which is what a long day needs, since its heading
-would otherwise scroll away and leave the rows below saying only a time. The unread line says where
+**The unread line is drawn where the heading is not**, and that follows from the same difference. A
+heading says the rows under it were said on that day: true for every reader. The unread line says where
 *this* reader stopped, a claim so tied to its position that `dividerBeforeId` withdraws it rather than
-draw it where the position cannot be shown honestly. Pinned, it would go on claiming "the unread starts
-here" over rows the reader passed long ago.
-
-The list is therefore drawn **one item per calendar day** (`lib/chat/day-groups.ts`), each holding its
-heading and that day's rows: a sticky element stops at the edge of its containing block, so a heading
-inside its own day is pushed out by the next day's. Flat siblings would all stop at the same offset and
-pile up there, the newer painting over the older and a narrower label leaving the wider one behind it
-showing at both ends.
-
-The invariant is that **no two headings share an offset**, not that only one is ever on screen: while
-the next day pushes the last one out, both are visible for the height of one heading. That window has a
-property worth knowing rather than fixing — the label at the very top during it is the day being
-*left*, so for that moment the answer to "which day am I reading" is one behind. The panel is `overflow="clip"` for the same feature — `hidden` would establish a
-scroll container and pin the headings to a box that never scrolls, while `clip` keeps the card's
-corners without creating one.
-
-The heading floats over the conversation rather than sitting in a band of its own. It overlaps a row
-while it is pinned — in a full-width column there is nowhere it would not — so what has to hold is that
-it reads as being *above* that row rather than as another word in it. That is a question of contrast,
-not of position: measured at 390px, a chip 3.5 points of lightness darker than the card read as part of
-the author's line, and the same chip with a border and a shadow read as a chip over it. Moving it to one
-side does not help; there it lands on the avatar instead.
-
-**Nothing in the heading takes pointer events.** It lies over the rows, so taking the hover that would
-show a `title` means taking the tap from whatever is under it — measured at 390px, a link, covered at
-every sample point across the chip. The day stays reachable without it: `dateTime` carries it for
-machines, and each row's own stamp offers the full date as its title.
-
-Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
-the row says again who is speaking, since a header is what the thing above it separates the reader
-from. It also stands in for the hairline that would otherwise rule above that row.
+draw it where the position cannot be shown honestly.
 
 ### The absence digest
 
