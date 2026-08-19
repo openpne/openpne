@@ -34,24 +34,62 @@ import type { TalkMessage, TalkReplyReference } from './types';
 function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJump: (parent: { id: number; cursor: string }) => void }) {
     const t = useT();
 
+    /**
+     * The elbow: down the gutter and into the top of the face below. Standing in the words' column
+     * with nothing else to say so, the reference reads as the tail of the message above rather than
+     * the head of its own — it is the only thing on the row whose neighbour above is a stranger's
+     * words. It is not the hairline this list gave up: that one separated two rows, this one joins
+     * two parts of the same one, which is why it is drawn thicker than a rule and not across.
+     *
+     * `top-1/2` puts the arm at the middle of one line, and the reference is one line by
+     * construction — the excerpt truncates rather than wraps. Let it wrap and the arm lands at the
+     * middle of the block instead, floating below the line it points at.
+     *
+     * `-bottom-1` spends the margin under the reference so the stroke arrives at the face rather
+     * than stopping four pixels short of it.
+     *
+     * Drawn from the muted text colour rather than the border token, and two pixels rather than one:
+     * the token is calibrated for a hairline nobody is meant to look at, and this is a stroke that
+     * has to be followed. It darkens to the full colour under the cursor — with the words beside it,
+     * since the whole line is one button.
+     */
+    const elbow = (
+        <span aria-hidden className="relative w-10 shrink-0">
+            <span className="absolute top-1/2 -bottom-1 left-1/2 right-0 rounded-tl-md border-t-2 border-l-2 border-muted-foreground/40 transition-colors group-hover/reply:border-muted-foreground motion-reduce:transition-none" />
+        </span>
+    );
+
     if (reference.deleted) {
         return (
-            <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground italic">
-                <span>{t('Deleted message')}</span>
+            <div className="mb-1 flex items-stretch gap-2 text-xs text-muted-foreground">
+                {elbow}
+                <span className="flex items-center italic">{t('Deleted message')}</span>
             </div>
         );
     }
 
     return (
+        // The gutter is inside the button, so the elbow answers to the same hover the words do and
+        // the line beside a reference is part of what opens it — as it is in every client that
+        // draws one.
+        //
+        // `cursor-pointer` because this button is a line of muted text: nothing about it looks
+        // pressable, and the app's chrome'd buttons keep the arrow they are born with (this one is
+        // the exception that says so, not a new rule for buttons).
         <button
             type="button"
             onClick={() => onJump({ id: reference.id, cursor: reference.cursor })}
-            className="mb-1 flex w-full items-center gap-1.5 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group/reply mb-1 flex w-full cursor-pointer items-stretch gap-2 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
         >
             <span className="sr-only">{t('Go to the replied message')}: </span>
-            <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
-            {reference.thumbnailUrl !== null && <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />}
-            <span className="min-w-0 truncate">{reference.excerpt}</span>
+            {elbow}
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
+                {reference.thumbnailUrl !== null && (
+                    <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />
+                )}
+                <span className="min-w-0 truncate">{reference.excerpt}</span>
+            </span>
         </button>
     );
 }
@@ -285,25 +323,11 @@ export function TalkMessageRow({
                 {/* Above the author header, and why a reply never groups (lib/chat/message-grouping):
                     the reference needs the header under it to say who is answering. */}
                 {message.inReplyTo !== null && (
-                    <>
-                        {/* The elbow, in the one cell the gutter leaves empty. Standing in the words'
-                            column with nothing else to say so, the reference reads as the tail of the
-                            message above rather than the head of this one — it is the only thing on
-                            the row whose neighbour above is a stranger's words. The line claims it
-                            for the face below by running into the top of it.
-
-                            Not the hairline this list just gave up: that one separated two rows, and
-                            this one joins two parts of the same one. */}
-                        <div className="relative col-start-1 row-start-1">
-                            <span
-                                aria-hidden
-                                className="absolute top-1/2 bottom-0 left-1/2 right-0 rounded-tl-md border-t border-l border-border"
-                            />
-                        </div>
-                        <div className="col-start-2 row-start-1 min-w-0">
-                            <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />
-                        </div>
-                    </>
+                    // Across both columns: the reference carries its own gutter, because the elbow
+                    // drawn there is part of what a reader presses (see ReplyHeader).
+                    <div className="col-span-2 col-start-1 row-start-1 min-w-0">
+                        <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />
+                    </div>
                 )}
                 <div className="col-start-1 row-start-2">
                     {!grouped && (

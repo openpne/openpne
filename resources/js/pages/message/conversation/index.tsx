@@ -272,9 +272,9 @@ export default function MessageConversation() {
                 {messages.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
-                    // Not the shared List: nothing rules between these rows — see the talk list,
-                    // whose shape this follows.
-                    <ul>
+                    // Not the shared List: nothing rules between these rows, and the list closes its
+                    // own foot — see the talk list, whose shape this follows.
+                    <ul className="pb-3">
                         {messages.map((message, index) => {
                             // The day said once over the rows that share it — see the talk list,
                             // whose rule this follows. Nothing folds here, so it is the heading alone
@@ -295,7 +295,7 @@ export default function MessageConversation() {
                                     // to whichever separator is outermost — see the talk list.
                                     <li
                                         data-conversation-divider=""
-                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-2')}
+                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-0')}
                                     >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />

@@ -431,7 +431,11 @@ export default function GroupTalkIndex() {
                     // Not the shared List: nothing rules between these rows. A turn is told from the
                     // one before it by the space above it (see the row), and the only line left in
                     // the conversation is the unread band, which is a different kind of claim.
-                    <ul>
+                    //
+                    // The list closes the foot itself. A row leaves almost nothing under it because
+                    // the next row's own space is what follows — and the last row has no next row,
+                    // while the foot is where every visit opens.
+                    <ul className="pb-3">
                         {messages.map((message, index) => {
                             // The day is said once over the rows that share it. Drawn above the first
                             // row too, unlike the unread line: a heading claims only that the rows
@@ -460,7 +464,7 @@ export default function GroupTalkIndex() {
                                     // room around it, not two with room between them.
                                     <li
                                         data-talk-divider=""
-                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-2')}
+                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-0')}
                                     >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />
