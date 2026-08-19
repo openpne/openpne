@@ -120,9 +120,11 @@ export interface TalkRowReactions {
  * was clicked, so a reader who follows a link or opens a picture in the body takes the pointer away
  * and leaves the bar behind — revealed over a row nobody is on, until something else is clicked. The
  * browser withholds `:focus-visible` from a mouse click for exactly this reason, and Tab still brings
- * the bar out where it is the only way to reach it. Where there is no cursor they are `sr-only` rather than hidden: a long press opens the
- * sheet, and a screen reader on a touch screen cannot hold one, so these buttons are that reader's
- * only way to what the sheet offers.
+ * the bar out where it is the only way to reach it.
+ *
+ * Where there is no cursor they are `sr-only` rather than hidden: a long press opens the sheet, and a
+ * screen reader on a touch screen cannot hold one, so these buttons are that reader's only way to
+ * what the sheet offers.
  *
  * The `pointer-events` half is what keeps an invisible Delete from answering a finger on a hybrid
  * machine — a laptop with a touch screen answers `pointer: fine`, so the controls stay drawn there,
@@ -195,7 +197,9 @@ export function TalkMessageRow({
     highlighted?: boolean;
     grouped?: boolean;
     /** Whether a heading or the unread line stands above this row, and so already holds the boundary's
-     *  space. Such a row opens a turn (it can never be `grouped`) but must not add its own on top. */
+     *  space. Such a row opens a turn (it can never be `grouped`) but must not add its own on top.
+     *  True on the list's first row, always — it opens a day — which is what keeps a margin off the
+     *  first child and out of the margin-collapsing question entirely. */
     separatorAbove?: boolean;
     reactions: TalkRowReactions;
 }) {
