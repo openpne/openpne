@@ -72,8 +72,14 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const padding = face ? 'pr-3 pl-1' : 'px-3';
 
     return (
-        // Under the color line at the same remove every other sticky band in the app keeps, and below
-        // lg nothing: the header carries this there. Width is the content column's, from the frame.
+        // Flush under the color line, and below lg nothing: the header carries this there. A surface
+        // sits on the offset; something that floats over the conversation keeps the 0.5rem remove
+        // instead (the jump-to-unread banner) — the difference is what the thing is, not an oversight.
+        //
+        // The width cancels the frame's padding rather than taking the content column's. At the
+        // column's width this bar is not a surface at all: its ground is the ground either side of the
+        // card too, so what is left to see is the card's own side borders, cut where the bar covers
+        // them (main 672, card 640, measured).
         <div
             data-testid="place-bar"
             className={cn(
