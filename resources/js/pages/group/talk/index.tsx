@@ -1,16 +1,19 @@
 import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ChatDayHeading } from '@/components/chat-day-heading';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
+import { separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import { requestUnreadRefresh } from '@/lib/unread-refresh';
 import type { CommunitySummary } from '@/pages/community/types';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
@@ -65,6 +68,7 @@ const appendMentions =
 
 export default function GroupTalkIndex() {
     const t = useT();
+    const date = useDateFormat();
     const confirm = useConfirm();
     const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot, unreadDigest, reactionsVersion, reactionVocabulary } =
         usePage<TalkProps>().props;
@@ -428,9 +432,24 @@ export default function GroupTalkIndex() {
                     // after another row), never on a grouped continuation, and not after the unread
                     // separator, which is already a line.
                     <ul>
-                        {messages.map((message, index) => (
+                        {messages.map((message, index) => {
+                            // The day is said once over the rows that share it. Drawn above the first
+                            // row too, unlike the unread line: a heading claims only that the rows
+                            // under it are of that day, which stays true however far back the history
+                            // reaches — and when "load older" prepends more of the same day, the row
+                            // that carried it stops matching and the heading moves up with them.
+                            const previous = messages[index - 1];
+                            const opensDay =
+                                previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
+                            const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
+                            // Whatever stands above the row holds its run open (message-grouping) and
+                            // stands in for the hairline that would otherwise rule above it.
+                            const restartsHere = above.length > 0;
+
+                            return (
                             <Fragment key={message.id}>
-                                {message.id === dividerId && (
+                                {above.includes('day') && <ChatDayHeading at={message.createdAt} />}
+                                {above.includes('unread') && (
                                     // The separator is inside the row rather than being it: a list
                                     // may only hold list items, and an <li role="separator"> is the
                                     // one thing axe's `list` rule refuses. Its label is the whole of
@@ -466,9 +485,10 @@ export default function GroupTalkIndex() {
                                     onJumpToReply={jumpToReply}
                                     canReply={canPost}
                                     highlighted={message.id === highlightId}
-                                    grouped={foldsInto(messages[index - 1], message, dividerId)}
-                                    // No rule right under the separator: the line is already a rule.
-                                    rule={index > 0 && message.id !== dividerId && !foldsInto(messages[index - 1], message, dividerId)}
+                                    grouped={foldsInto(messages[index - 1], message, restartsHere)}
+                                    // No rule under something already drawn above the row, and none
+                                    // above the first: what stands there is the break.
+                                    rule={index > 0 && !restartsHere && !foldsInto(messages[index - 1], message, restartsHere)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
@@ -478,7 +498,8 @@ export default function GroupTalkIndex() {
                                     }}
                                 />
                             </Fragment>
-                        ))}
+                            );
+                        })}
                     </ul>
                 )}
 

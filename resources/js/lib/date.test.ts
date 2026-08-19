@@ -6,11 +6,14 @@ import {
     formatCivilDate,
     formatCivilMonth,
     formatCivilMonthShort,
+    formatClockTime,
     formatExact,
     formatListStamp,
     msUntilNextSiteDay,
     relativeParts,
     siteCurrentYear,
+    siteDay,
+    siteDayOffset,
 } from './date.ts';
 
 const tokyo: DateFormatContext = { locale: 'ja-JP', timeZone: 'Asia/Tokyo' };
@@ -187,4 +190,46 @@ test('a date that parses but does not exist is not rolled into the next month', 
     assert.equal(formatCivilDate('2026-13-01', tokyo), '2026-13-01');
     assert.equal(formatCivilDate('2026-00-10', tokyo), '2026-00-10');
     assert.equal(formatCivilDate('0026-08-10', tokyo), '0026-08-10'); // Date.UTC would read this as 1926
+});
+
+test('a clock time is the time alone, on the site clock and two digits wide', () => {
+    assert.equal(formatClockTime(evening, tokyo), '00:05');
+    assert.equal(formatClockTime(evening, newYork), '11:05');
+    // The shape never depends on what day it is — which is the whole reason it is not a list stamp.
+    assert.equal(formatClockTime('2025-01-02T15:05:16+00:00', tokyo), '00:05');
+});
+
+test('a chat value that is not a date renders verbatim rather than throwing', () => {
+    assert.equal(formatClockTime('', tokyo), '');
+    assert.equal(siteDay('', 'Asia/Tokyo'), null);
+    assert.equal(siteDayOffset('', 'Asia/Tokyo'), null);
+});
+
+test("a site day is the site's calendar day, zero-padded, not the viewer's", () => {
+    // The same instant, one day apart for the two sites — which is what decides where a date heading
+    // goes, so a heading cannot land between a different pair of rows for a reader elsewhere.
+    assert.equal(siteDay(evening, 'Asia/Tokyo'), '2026-08-10');
+    assert.equal(siteDay(evening, 'America/New_York'), '2026-08-09');
+});
+
+test('a day offset counts calendar days on the site clock, not on UTC', () => {
+    // 11:00 on the 10th in Tokyo, 22:00 on the 9th in New York, 02:00 on the 10th in UTC.
+    const now = new Date('2026-08-10T02:00:00+00:00');
+
+    // Tokyo: `evening` is that same day, so the heading over it reads as today. Counted on UTC it
+    // would be the day before, and the heading would say yesterday to every reader of the site.
+    assert.equal(siteDayOffset(evening, 'Asia/Tokyo', now), 0);
+    assert.equal(siteDayOffset('2026-08-08T15:05:16+00:00', 'Asia/Tokyo', now), 1);
+    assert.equal(siteDayOffset('2026-08-07T15:05:16+00:00', 'Asia/Tokyo', now), 2);
+    // The zone is what decides, not the instant: 23:00 on the 9th in Tokyo is 10:00 on the 9th in New
+    // York, and New York's own now is still that same 9th — so one site heads the row as yesterday
+    // and the other as today.
+    const lateEvening = '2026-08-09T14:00:00+00:00';
+    assert.equal(siteDayOffset(lateEvening, 'Asia/Tokyo', now), 1);
+    assert.equal(siteDayOffset(lateEvening, 'America/New_York', now), 0);
+});
+
+test('an instant on a clock ahead of the site is not yesterday', () => {
+    // Negative rather than clamped: the caller dates it normally instead of calling it today.
+    assert.ok((siteDayOffset('2026-08-12T00:00:00+00:00', 'Asia/Tokyo', new Date('2026-08-10T02:00:00+00:00')) ?? 0) < 0);
 });

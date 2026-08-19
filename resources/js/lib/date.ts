@@ -56,6 +56,18 @@ export function formatListStamp(iso: string, context: DateFormatContext, now: Da
 }
 
 /**
+ * Only the time, for a row whose day is named by the heading above it — a message in a conversation.
+ *
+ * Separate from {@link formatListStamp}, whose today branch renders the same string: that one's shape
+ * depends on the clock, so a conversation left open across the site's midnight would see every row
+ * turn from `00:05` into `8月12日` (the shared day clock exists to do exactly that). A conversation's
+ * rows are placed by their date heading and never change shape.
+ */
+export function formatClockTime(iso: string, { locale, timeZone }: DateFormatContext): string {
+    return render(new Date(iso), iso, locale, { ...HOUR_MINUTE, timeZone });
+}
+
+/**
  * A calendar day with no instant attached, as the day it was stored — in every browser timezone. The
  * weekday is for a date someone plans around: an event's open date is read as "which day is that",
  * which the numbers alone do not answer.
@@ -248,6 +260,39 @@ function siteDayKey(date: Date, timeZone: string): string {
     const { year, month, day } = siteDayParts(date, timeZone);
 
     return `${year}-${month}-${day}`;
+}
+
+/**
+ * Which calendar day an instant falls on for the site, as `Y-m-d`. Two rows carry the same value when
+ * a conversation should draw one date heading over both, so this is the unit that decides where a
+ * heading goes — computed on the site's clock, which is what keeps a heading from landing between two
+ * different pairs of rows for two readers in different timezones.
+ *
+ * Zero-padded, unlike the internal {@link siteDayKey} above, because this one is displayed: it is the
+ * `datetime` a date heading carries, and `2026-8-9` is not a valid date string.
+ */
+export function siteDay(iso: string, timeZone: string): string | null {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    const { year, month, day } = siteDayParts(date, timeZone);
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * How many of the site's calendar days back an instant is: 0 today, 1 yesterday. Negative for a clock
+ * running ahead of ours, which the caller reads as "not today and not yesterday" and dates normally.
+ */
+export function siteDayOffset(iso: string, timeZone: string, now: Date = new Date()): number | null {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return siteDayNumber(now, timeZone) - siteDayNumber(date, timeZone);
 }
 
 /**

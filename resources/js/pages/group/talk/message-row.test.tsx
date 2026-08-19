@@ -138,3 +138,15 @@ test('a reader who may not post is offered no reply control', () => {
 
     expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull();
 });
+
+test('the row carries the time alone, beside the author rather than at the far edge', () => {
+    const { container } = renderRow();
+
+    const stamp = container.querySelector('time');
+    // The day is said once by the heading above the run, so the row says only the hour and minute.
+    expect(stamp?.textContent).toBe('10:00');
+    // Still the whole instant for machines, and the whole value on hover.
+    expect(stamp?.getAttribute('datetime')).toBe('2026-08-16T10:00:00+09:00');
+    // Nothing pushes it away from the name it belongs to.
+    expect(stamp?.className).not.toContain('ml-auto');
+});
