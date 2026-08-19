@@ -4,6 +4,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { ChatDayHeading } from '@/components/chat-day-heading';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
+import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { separatorsAbove } from '@/lib/chat/separators';
@@ -66,6 +67,21 @@ export default function MessageConversation() {
     // answers to — and, with the live window, what counts as having read what arrived.
     const [atBottom, setAtBottom] = useState(true);
     useMarkRead(`${path}/read`, messages[messages.length - 1]?.id, atBottom && atLatest);
+    const [seen, setSeen] = useState<ChatSeenMark | null>(null);
+
+    // Where the reader has actually stood — see the talk page, whose rule this follows.
+    useEffect(() => {
+        const newest = messages[messages.length - 1];
+        if (!atBottom || !atLatest || newest === undefined) {
+            return;
+        }
+
+        setSeen((current) =>
+            current !== null && current.id === newest.id && current.at === newest.createdAt
+                ? current
+                : { at: newest.createdAt, id: newest.id },
+        );
+    }, [atBottom, atLatest, messages]);
 
     // The line the visit opened on. Both this and the banner below come off the render-time snapshot
     // and nothing else — mark-read never writes props, which is what makes them survive the one that
@@ -77,6 +93,14 @@ export default function MessageConversation() {
     // The backlog the page cannot draw a line for, because the boundary is further back than it has
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
+    const arrivals = arrivalsAfter(messages, seen);
+
+    // What the pill says. English needs the singular said differently, and this is the place in the
+    // app where a count of one is the *common* case — a conversation usually gets one message at a
+    // time. `useT` exposes only the string form (lib/i18n), so the choice belongs to the caller; the
+    // shape is the one use-date-format already uses for "a minute ago".
+    const latestLabel =
+        arrivals === 0 ? t('Jump to latest') : arrivals === 1 ? t('1 new message') : t(':count new messages', { count: arrivals });
 
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
@@ -338,7 +362,8 @@ export default function MessageConversation() {
                 >
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
-                        {t('Jump to latest')}
+                        {/* What is down there, when the page knows — see the talk page. */}
+                        {latestLabel}
                     </Button>
                 </div>
             )}
