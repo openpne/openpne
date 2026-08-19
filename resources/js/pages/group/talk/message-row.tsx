@@ -112,9 +112,15 @@ export interface TalkRowReactions {
  * The row's controls, and the two lanes they are reached by.
  *
  * Where a cursor can point they float over the row's top-right on reveal, which hovering the row or
- * focus reaching into it brings on — a row at rest is what was said, not what can be done about it,
- * and standing them in the flow would hold their width open on every row for controls nobody is
- * looking at. Where there is no cursor they are `sr-only` rather than hidden: a long press opens the
+ * a keyboard reaching into it brings on — a row at rest is what was said, not what can be done about
+ * it, and standing them in the flow would hold their width open on every row for controls nobody is
+ * looking at.
+ *
+ * `:focus-visible` rather than `:focus-within` for that keyboard half. A click leaves focus on what
+ * was clicked, so a reader who follows a link or opens a picture in the body takes the pointer away
+ * and leaves the bar behind — revealed over a row nobody is on, until something else is clicked. The
+ * browser withholds `:focus-visible` from a mouse click for exactly this reason, and Tab still brings
+ * the bar out where it is the only way to reach it. Where there is no cursor they are `sr-only` rather than hidden: a long press opens the
  * sheet, and a screen reader on a touch screen cannot hold one, so these buttons are that reader's
  * only way to what the sheet offers.
  *
@@ -143,7 +149,7 @@ export interface TalkRowReactions {
  * different geometry.
  */
 const ROW_ACTIONS =
-    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
+    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
 
 /**
  * One utterance. Shaped like a board comment rather than a two-sided bubble stream: the same row a
@@ -174,6 +180,7 @@ export function TalkMessageRow({
     canReply,
     highlighted = false,
     grouped = false,
+    separatorAbove = false,
     reactions,
 }: {
     message: TalkMessage;
@@ -187,6 +194,9 @@ export function TalkMessageRow({
     canReply: boolean;
     highlighted?: boolean;
     grouped?: boolean;
+    /** Whether a heading or the unread line stands above this row, and so already holds the boundary's
+     *  space. Such a row opens a turn (it can never be `grouped`) but must not add its own on top. */
+    separatorAbove?: boolean;
     reactions: TalkRowReactions;
 }) {
     const t = useT();
@@ -274,14 +284,19 @@ export function TalkMessageRow({
                 // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
-                // people speaking is the vocabulary of a board, and this is a conversation. Within a
-                // run the rows close up to a hair, since what separates them is only a pause. No gap
-                // between rows anywhere — the hover tint reaches as far as the padding does, and a
-                // gap would draw it as stripes.
-                grouped ? 'py-0.5' : 'pt-4 pb-0.5',
+                // people speaking is the vocabulary of a board, and this is a conversation.
+                //
+                // The padding is even, and the space between turns is a margin. That split is what
+                // the tint under the pointer answers to: it reaches as far as the padding and no
+                // further, so it wraps the words evenly instead of trailing a tall empty band over
+                // the row's head. The gap between two turns belongs to neither of them and stays
+                // untinted. Within a run there is no margin at all, so a run's rows tint as one
+                // continuous block.
+                'py-1',
+                !grouped && !separatorAbove && 'mt-3',
                 // Above its siblings for as long as its controls are out, so a bar taller than its
                 // own row keeps the hits it draws over the rows either side (see ROW_ACTIONS).
-                'hover:z-10 focus-within:z-10 has-[[aria-expanded=true]]:z-10',
+                'hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10',
                 // Under the pointer the row says which one it is, quickly enough to track the hand.
                 // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
                 'transition-colors duration-100 hover:bg-muted',

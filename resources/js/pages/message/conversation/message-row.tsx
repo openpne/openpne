@@ -17,7 +17,16 @@ import type { ConversationMessage } from './types';
  * `highlighted` is a `?m=` link's landing: the row it opened on, held for a moment so the reader can
  * see which message brought them here.
  */
-export function ConversationMessageRow({ message, highlighted = false }: { message: ConversationMessage; highlighted?: boolean }) {
+export function ConversationMessageRow({
+    message,
+    highlighted = false,
+    separatorAbove = false,
+}: {
+    message: ConversationMessage;
+    highlighted?: boolean;
+    /** Whether a heading or the unread line stands above this row, and so already holds the space. */
+    separatorAbove?: boolean;
+}) {
     const t = useT();
     const author = message.author;
     // Trimmed rather than compared to '': an upgraded body may be whitespace.
@@ -31,9 +40,11 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
         <li
             data-conversation-message-id={message.id}
             className={cn(
-                // Turns are told apart by the space above them rather than by a rule — see the talk
-                // row, whose shape this follows.
-                'px-4 pt-4 pb-0.5 sm:px-5',
+                // Even padding, and the space between messages as a margin — see the talk row, whose
+                // shape this follows. Nothing folds in a conversation of two, so every row opens a
+                // turn and every row carries the margin.
+                'px-4 py-1 sm:px-5',
+                separatorAbove ? undefined : 'mt-3',
                 // The transition is not conditional on the flag: what fades is the highlight being
                 // taken away, and a transition arriving with the class would have nothing to animate
                 // from. The row mounts already highlighted, so the emphasis itself is instant.
