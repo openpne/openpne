@@ -560,9 +560,14 @@ export default function GroupTalkIndex() {
 
             {/* Zero-height and sticky rather than fixed: the pill belongs over the conversation, and
                 the viewport it would otherwise be centred in is wider than the column at lg. Its foot
-                sits one line above the composer, whose height ends in that same bottom offset. */}
+                sits one line above the composer, whose height ends in that same bottom offset.
+
+                `mb-0` because zero height is not the same as taking no room: the page's reading rhythm
+                puts a margin under every child but the last, and this wrapper is one — so without it
+                the pill costs 16px of page each time it appears, which is a strange thing for
+                something drawn at zero height to do. */}
             {!atBottom && (
-                <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+4.25rem)] z-20 flex h-0 items-end justify-center">
+                <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+4.25rem)] z-20 mb-0 flex h-0 items-end justify-center">
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
                         {/* What is down there, when the page knows: a reader scrolled up is deciding
