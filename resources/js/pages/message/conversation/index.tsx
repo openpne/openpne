@@ -335,7 +335,7 @@ export default function MessageConversation() {
                                     // to whichever separator is outermost — see the talk list.
                                     <li
                                         data-conversation-divider=""
-                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-6' : 'pt-0')}
+                                        className={cn('px-4 pb-4 sm:px-5', above[0] === 'unread' ? 'pt-4' : 'pt-0')}
                                     >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />

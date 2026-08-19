@@ -232,11 +232,24 @@ carried it stops opening the day and the heading moves up with them.
 The two meet on an ordinary morning, when the first message a reader has not seen is also the first of
 that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
 than left to the order the markup happens to be written in: **the heading is outside the unread line**,
-because the day is true for every reader while the line is only this reader's place among them. They
-are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
-than one confused divider.
+because the day is true for every reader while the line is only this reader's place among them.
 
-**The unread band is the only line in the list.** Rows are told apart by the space above them: a rule
+**Both are the same shape — a label between two rules — and what tells them apart is that each carries
+its own label.** Colour reinforces it (the heading neutral, the unread line in the accent) but is not
+what does the work: in greyscale the two are still unmistakable, and the rules themselves are nearly
+the same weight. The load-older strip proves the same point the other way — its rule is the *identical*
+colour to a date heading's and sits 16px above one on every visit with history, and the pair reads
+fine because only one of them is labelled.
+
+So the thing to protect is the labels. A change that drops one ("the date is enough", "the unread line
+needs no words") is what breaks this; a theme that brings the two colours together does not.
+
+The heading was a pill for a while so that meeting the unread line could not read as one divider; that
+made its label float, and a floating label does not say which side of it the day belongs to. A rule
+says it by being a boundary. Mattermost, whose rows are shaped like these, draws one separator and
+overrides only its colours for the unread one.
+
+**Those two are the only rules in the list.** Rows are told apart by the space above them: a rule
 between two people speaking is the vocabulary of a board, and this is a conversation. Space also says
 how far apart two rows are, which a hairline cannot — a run's follow-ups close up to a hair, while a
 new turn opens with room above it.
