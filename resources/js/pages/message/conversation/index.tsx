@@ -284,28 +284,19 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-                {/* Below lg the conversation is the page, not a card on it. The card's own rule
-                    (components/card.tsx) says a card stays inset because the strip of page either
-                    side is what makes it read as a surface lying on the page — and that running it
-                    edge to edge flattened every screen into one field. Neither holds here: this
-                    screen carries one surface, and where it meets the composer the composer's own
-                    `border-t` draws the boundary the frame used to. **That line is what this depends
-                    on** — take it away and the two do become one field, which is the thing the card's
-                    rule was written against.
-
-                    What it buys is the second inset that no mobile chat client draws: Mattermost,
-                    Element and Signal each give the list one horizontal margin and no frame at all.
-                    The margins are the composer's own, so the two edges are stated once each; `lg:mx-0`
-                    stops there rather than following the composer past it (the composer overhangs the
-                    card at lg — an older disagreement, not one to copy). */}
+                {/* The conversation keeps the card's surface and loses its inset below lg —
+                    `bleed`, and the reason it is allowed, in components/card.tsx. The margins are the
+                    composer's own so each edge is stated once; `lg:mx-0` stops there rather than
+                    following the composer past the card, which is an older disagreement (not one to
+                    copy). */}
             <Panel
                 flush
-                sheet
+                bleed
                 className={cn('-mx-3 sm:-mx-4 lg:mx-0', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
             >
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
-                        <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
+                        <Button variant="secondary" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
                             {t('Load older messages')}
                         </Button>
                     </div>
@@ -361,7 +352,7 @@ export default function MessageConversation() {
 
                 {!atLatest && (
                     <div className="flex justify-center border-t border-border px-4 py-2 sm:px-5">
-                        <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()}>
+                        <Button variant="secondary" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()}>
                             {t('Load newer messages')}
                         </Button>
                     </div>

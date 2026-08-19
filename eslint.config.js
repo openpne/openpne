@@ -18,7 +18,9 @@ import tseslint from 'typescript-eslint';
 // It is easy to reach for, because the same line *is* a comment a few characters earlier, inside the
 // `{cond && (` that precedes the element. Shipped once (PR #681), visible on every visit.
 const JSX_LINE_COMMENT_RESTRICTION = {
-    selector: 'JSXText[value=/\\/\\//]',
+    // Anchored to the start of a line: a bare https:// inside a sentence is prose, and this rule
+    // has no business stopping it. esquery takes no `m` flag, so the alternation stands in for one.
+    selector: 'JSXText[value=/(^|\\n)\\s*\\/\\//]',
     message: 'This is a JSX text node, not a comment — it renders on screen. Use {/* … */}.',
 };
 

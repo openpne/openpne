@@ -16,33 +16,42 @@ type Props = {
  * lying on the page rather than as the page itself. Tested on device, that flattened every screen into
  * one field of card color divided by lines. The width comes from tighter padding instead.
  *
- * That judgment is about screens the reader browses, and `sheet` drops the chrome below lg for the two
- * screens it does not describe. Each is one surface with one job, and each has something other than
- * the frame to divide by — which is the half of this rule that is easy to drop:
+ * Two screens ask for something else, and they ask for different things:
  *
- * - the compose sheet, where the fields keep their own boxes;
- * - a conversation (group talk, a direct message), where the composer's own `border-t` draws the line
- *   the frame used to. That border is what keeps the list and the composer from reading as the one
- *   field this rule was written against — taking it away is what would break the exception, not
- *   anything about the card.
+ * - `sheet` **drops the surface**: the compose sheet below lg is one screen with one job, and its
+ *   fields keep boxes of their own, so the card underneath them was a second frame around a first.
+ * - `bleed` **keeps the surface and drops the inset**: a conversation below lg is the whole screen, and
+ *   the page margin plus the frame were taking a quarter of every line before the row's own padding
+ *   began (the reader is reading sentences, not scanning rows). The card colour stays, because it is
+ *   what tells the reader across the whole app that this is content — a diary entry, a topic and a
+ *   conversation should not be read off different backgrounds. What is dropped is the rounding, the
+ *   side borders and the margin; the top border keeps it apart from the page above, and the composer's
+ *   own `border-t` closes it below.
  *
- * A third would need both halves, not just the first.
+ * So the device finding is not overturned by `bleed`: it was about losing the *surface*, which `bleed`
+ * does not do.
  */
 export function Card({
     children,
     className,
     overflow = 'hidden',
     sheet = false,
-}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean }) {
+    bleed = false,
+}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean; bleed?: boolean }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
                 // Swapped rather than overridden: `rounded-card` is a custom token, which twMerge does
                 // not treat as the same utility as the class that would undo it.
+                // Three strings rather than classes layered over each other: `rounded-card` is a custom
+                // token and the borders differ per side, neither of which twMerge can resolve against
+                // a later override.
                 sheet
                     ? 'text-card-foreground lg:rounded-card lg:border lg:border-border lg:bg-card lg:shadow-card'
-                    : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
+                    : bleed
+                      ? 'border-t border-border bg-card text-card-foreground lg:rounded-card lg:border lg:shadow-card'
+                      : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
                 className,
             )}
         >
