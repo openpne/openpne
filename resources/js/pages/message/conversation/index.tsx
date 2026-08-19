@@ -73,7 +73,7 @@ export default function MessageConversation() {
 
     // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
     const scrollDayLine = useRef<HTMLDivElement>(null);
-    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine, messages.length);
+    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine);
     const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // Where the reader has actually stood — see the talk page, whose rule this follows.

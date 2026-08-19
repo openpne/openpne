@@ -109,7 +109,7 @@ export default function GroupTalkIndex() {
 
     // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
     const scrollDayLine = useRef<HTMLDivElement>(null);
-    const scrollDay = useScrollDay('[data-talk-message-id]', scrollDayLine, messages.length);
+    const scrollDay = useScrollDay('[data-talk-message-id]', scrollDayLine);
     const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // Where the reader has actually stood. The pill's count is what has arrived past it, so it moves

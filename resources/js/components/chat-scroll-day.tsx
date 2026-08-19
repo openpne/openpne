@@ -43,7 +43,19 @@ export function ChatScrollDay({ at, visible, ref }: { at: string | null; visible
         <div
             ref={ref}
             aria-hidden
-            className="pointer-events-none sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 mb-0 flex h-0 justify-center"
+            className={cn(
+                'pointer-events-none sticky z-20 mb-0 flex h-0 items-start justify-center',
+                // `items-start`, or the pill is stretched to the box's own zero height and its words
+                // spill out of a four-pixel line — a pill with no pill in it.
+                //
+                // Below lg the top offset is the bar's height and this clears it. At lg there is no
+                // bar; there is the place strip, which pins itself at the same offset and stands 45px
+                // tall, and nothing publishes that height — so it is written here once, as what it is:
+                // if the strip's padding changes, this changes with it. The unread banner sits at the
+                // unadjusted offset and so lands under that strip once it sticks, which is the same
+                // relationship still unfixed, and why this does not simply copy it.
+                'top-[calc(var(--modern-top-offset)+0.5rem)] lg:top-[calc(var(--modern-top-offset)+3.5rem)]',
+            )}
         >
             {at !== null && (
                 <span
