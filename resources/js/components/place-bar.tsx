@@ -30,12 +30,12 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  * page's own ground, and a seam drawn only once something has scrolled under (the phone header's
  * `useScrolled`). Every desktop client this bar answers to draws its place as a surface too.
  *
- * Opaque, where that header is translucent, and carrying the card's own side borders, because this bar
- * is exactly as wide as the card beneath it. Covering that column's edge for the height of the bar and
- * no further is what looks wrong — the line down the side of the page changes character across the
- * bar, which reads as the bar having grown borders of its own. Taking the same edge makes it one line.
- * (The column starts on a half pixel, so the card's border also antialiases a shade onto the pixel
- * outside it; that is there with or without this bar and is not what the bar can fix.)
+ * Opaque, where that header is translucent, and the frame's full width rather than the card's — the
+ * same escape from the frame's padding the composer makes at the other end of the conversation. Held
+ * to the card's width the bar is invisible as a surface, since its ground is the ground either side of
+ * the card too: what a reader sees then is not a band but the card's own side borders, cut where the
+ * bar covers them and standing in grey where it does not. Full width it is a band, and the card runs
+ * under it the way content runs under a header.
  *
  * The remove the pill keeps from the top is padding rather than offset, which is the other half of
  * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
@@ -77,7 +77,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         <div
             data-testid="place-bar"
             className={cn(
-                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-x border-b border-x-border bg-background pt-2 pb-1 lg:flex',
+                'sticky top-[var(--modern-top-offset)] z-20 -mx-4 hidden min-w-0 border-b bg-background px-4 pt-2 pb-1 lg:flex',
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >
