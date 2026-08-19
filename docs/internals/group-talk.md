@@ -221,6 +221,25 @@ remain, the true line is further back than the page reaches, and drawing one at 
 where pagination stopped rather than where reading did. That is the state the "N unread" banner
 offers to fix.
 
+### Date headings, and what stands above a row
+
+The rows of one calendar day sit under a date heading, which is what lets a row carry only a time
+([datetime.md](datetime.md)). A heading is drawn above the first loaded row as well, unlike the unread
+divider: a heading claims only that the rows below it were said on that day, which stays true however
+far back the history reaches — and when "load older" prepends more of the same day, the row that
+carried it stops opening the day and the heading moves up with them.
+
+The two meet on an ordinary morning, when the first message a reader has not seen is also the first of
+that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
+than left to the order the markup happens to be written in: **the heading is outside the unread line**,
+because the day is true for every reader while the line is only this reader's place among them. They
+are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
+than one confused divider.
+
+Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
+the row says again who is speaking, since a header is what the thing above it separates the reader
+from. It also stands in for the hairline that would otherwise rule above that row.
+
 ### The absence digest
 
 Past [`TalkAbsenceDigest::THRESHOLD`](../../app/Features/GroupTalk/Queries/TalkAbsenceDigest.php) the

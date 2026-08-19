@@ -57,7 +57,10 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
                     <span className="truncate">{t('Withdrawn member')}</span>
                 )}
                 <AiChip isAi={author?.isAi ?? false} />
-                <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
+                {/* Beside the name rather than pushed to the far edge — see the talk row, whose shape
+                    this follows. The receipt keeps its place after the time: both say something about
+                    the delivery rather than about the author, and they travel as one. */}
+                <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
                 {/* Only ever on the viewer's own: a message they received is one they are reading. */}
                 {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}
             </div>

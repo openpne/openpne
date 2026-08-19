@@ -8,9 +8,10 @@ import type { PageProps } from '@/types';
  * Which shape a displayed instant takes. `absolute` is the whole date and time, for a page that is the
  * permanent reference for one thing. `listStamp` shows only what tells one row from its neighbours —
  * time for today, date for this year, year for anything older. `relative` says how long ago, for a
- * place whose whole point is what is new. Which screens get which is docs/internals/datetime.md.
+ * place whose whole point is what is new. `clockTime` is the time alone, for a row whose day is named
+ * by the heading above it. Which screens get which is docs/internals/datetime.md.
  */
-export type TimestampPreset = 'absolute' | 'listStamp' | 'relative';
+export type TimestampPreset = 'absolute' | 'listStamp' | 'relative' | 'clockTime';
 
 /**
  * The single element every displayed instant goes through. It exists to make three things structural
@@ -37,8 +38,15 @@ export function Timestamp({ at, preset, className }: { at: string; preset: Times
     // keeps a page of list stamps from holding a timer each.
     useRelativeRefresh(preset === 'relative' ? date.relativeDeadline(at, now) : null);
 
-    const text =
-        preset === 'relative' ? date.relative(at, now) : preset === 'listStamp' ? date.listStamp(at) : date.absolute(at);
+    // A lookup rather than a chain of ternaries: the chain ended in a catch-all, so a preset added to
+    // the union without a branch fell through to `absolute` — a wrong shape on screen with nothing to
+    // fail. A record over the union has to name every preset or it does not compile.
+    const text = {
+        absolute: () => date.absolute(at),
+        listStamp: () => date.listStamp(at),
+        relative: () => date.relative(at, now),
+        clockTime: () => date.clockTime(at),
+    }[preset]();
 
     return (
         <time dateTime={at} title={preset === 'absolute' ? undefined : date.exact(at)} className={className}>

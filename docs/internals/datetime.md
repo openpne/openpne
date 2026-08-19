@@ -24,13 +24,27 @@ screens do not move under them.
 
 | Shape | Japanese | Used for |
 |-------|----------|----------|
-| `absolute` | `2026年8月10日 00:05` | The one thing a page is about — a diary entry, a message, a topic, an event, a timeline post. It gets linked to and read out of context, so the year stays. |
+| `absolute` | `2026年8月10日 00:05` | The one thing a page is about — a diary entry, a topic, an event, a timeline post. It gets linked to and read out of context, so the year stays. |
 | `listStamp` | today `00:05` · this year `8月10日` · older `2025年12月31日` | A row whose reader is placing it on a calendar: diary and topic lists, the message inbox, community activity. |
 | `relative` | `たったいま` · `3分前` · `5時間前` · `2日前`, then `listStamp` | A row whose reader is asking what is new: notifications, timeline posts and replies, comments. |
+| `clockTime` | `00:05` | A message in a conversation, whose day is named by the heading above it rather than by the row. |
 | civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. The weekday is on wherever an event's own dates appear, so the same datum never shows in two shapes. |
 
-`listStamp` and `relative` carry the full value as a `title`; `absolute` does not, since it already
+Every shape but `absolute` carries the full value as a `title`; `absolute` does not, since it already
 names the day and the minute and a title differing only in seconds is noise.
+
+### A conversation
+
+A conversation is the one place a date is split across two elements. The rows of a day sit under a
+**date heading** — `今日`, `昨日`, then the `listStamp` shape (`8月12日`, `2025年12月31日`) — and each row
+carries `clockTime` alone. That is rule 4 taken as far as it goes: the day is one unit of meaning and
+it is said once for the stretch it covers, so a row is left with only the part that tells it from the
+row above.
+
+`clockTime` rather than `listStamp`, whose today branch renders the same string: a list stamp's shape
+depends on the clock, so a conversation left open across the site's midnight would see every row turn
+from `00:05` into `8月12日` — the shared day clock in invariant 3 exists to do exactly that. A
+conversation's rows are placed by their heading and never change shape.
 
 ### How long ago
 
@@ -90,7 +104,9 @@ site clock the member surfaces render in.
 1. **Instants and civil dates are different types with different components.** `<Timestamp>` takes an
    offset-bearing ISO; `<CivilDate>` takes `Y-m-d`. Rendering a civil date as an instant shifts it a
    day for viewers west of the site, so the two are separate rather than one component with a flag,
-   and a value handed to the wrong one renders verbatim rather than shifted.
+   and a value handed to the wrong one renders verbatim rather than shifted. A conversation's date
+   heading is the third element that emits a civil date, and has to be its own: it derives the day
+   from an instant, and its visible text is `今日` where the machine value stays that day.
 2. **Every boundary is the site's, not the viewer's.** "Today" and "this year" are computed on the
    site's calendar, so one row reads the same for every reader wherever they are.
 3. **A shape that depends on the clock re-reads it**, on two timers with different shapes.

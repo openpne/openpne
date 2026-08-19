@@ -5,11 +5,14 @@ import {
     formatCivilDate,
     formatCivilMonth,
     formatCivilMonthShort,
+    formatClockTime,
     formatExact,
     formatListStamp,
     relativeDeadline,
     relativeParts,
     siteCurrentYear,
+    siteDay,
+    siteDayOffset,
 } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -26,8 +29,13 @@ import type { PageProps } from '@/types';
 export function useDateFormat(): {
     absolute: (iso: string) => string;
     listStamp: (iso: string) => string;
+    clockTime: (iso: string) => string;
     relative: (iso: string, now?: Date) => string;
     relativeDeadline: (iso: string, now?: Date) => number | null;
+    /** The site's calendar day for an instant, as `Y-m-d`; null when the value is not a date. */
+    siteDay: (iso: string) => string | null;
+    /** What a conversation's date heading says over the rows of that day. */
+    dayHeading: (iso: string, now?: Date) => string;
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
@@ -41,8 +49,11 @@ export function useDateFormat(): {
     return {
         absolute: (iso) => formatAbsolute(iso, context),
         listStamp: (iso) => formatListStamp(iso, context),
+        clockTime: (iso) => formatClockTime(iso, context),
         relative: (iso, now) => relativeLabel(iso, context, t, now),
         relativeDeadline: (iso, now) => relativeDeadline(iso, context.timeZone, now),
+        siteDay: (iso) => siteDay(iso, context.timeZone),
+        dayHeading: (iso, now) => dayHeadingLabel(iso, context, t, now),
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
@@ -58,6 +69,23 @@ export function useDateFormat(): {
  * "1 minutes ago", and the wrapper exposes only the string form of `t` (see i18n.ts). Every key is a
  * literal here so the translation scanner can find it.
  */
+/**
+ * The wording for a conversation's date heading. Only today and yesterday become words: past that the
+ * reader is placing the day on a calendar rather than against now, which is the same boundary
+ * {@link formatListStamp} already draws — and reusing it here is why no third date format exists. It
+ * can never take its today branch, because today is answered above it.
+ */
+function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: string) => string, now?: Date): string {
+    switch (siteDayOffset(iso, context.timeZone, now)) {
+        case 0:
+            return t('Today');
+        case 1:
+            return t('Yesterday');
+        default:
+            return formatListStamp(iso, context, now);
+    }
+}
+
 function relativeLabel(
     iso: string,
     context: DateFormatContext,

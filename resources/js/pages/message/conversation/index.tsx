@@ -1,12 +1,15 @@
 import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ChatDayHeading } from '@/components/chat-day-heading';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
+import { separatorsAbove } from '@/lib/chat/separators';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { MessageMember } from '../types';
@@ -40,6 +43,7 @@ const atFoot = (): boolean => window.innerHeight + window.scrollY >= document.do
 
 export default function MessageConversation() {
     const t = useT();
+    const date = useDateFormat();
     const { counterpart, page, anchor, unreadSnapshot, canSend } = usePage<ConversationProps>().props;
     // A departed member leaves no id to key a conversation by, so every one of them is addressed by
     // the bucket's own literal.
@@ -269,9 +273,19 @@ export default function MessageConversation() {
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
                     <List>
-                        {messages.map((message) => (
+                        {messages.map((message, index) => {
+                            // The day said once over the rows that share it — see the talk list,
+                            // whose rule this follows. Nothing folds here, so it is the heading alone
+                            // rather than a run to hold open as well.
+                            const previous = messages[index - 1];
+                            const opensDay =
+                                previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
+                            const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
+
+                            return (
                             <Fragment key={message.id}>
-                                {message.id === dividerId && (
+                                {above.includes('day') && <ChatDayHeading at={message.createdAt} />}
+                                {above.includes('unread') && (
                                     // The separator is inside the row rather than being it: a list
                                     // may only hold list items, and an <li role="separator"> is the
                                     // one thing axe's `list` rule refuses. Its label is the whole of
@@ -288,7 +302,8 @@ export default function MessageConversation() {
                                 )}
                                 <ConversationMessageRow message={message} highlighted={message.id === highlightId} />
                             </Fragment>
-                        ))}
+                            );
+                        })}
                     </List>
                 )}
 

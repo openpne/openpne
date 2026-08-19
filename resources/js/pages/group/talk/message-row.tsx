@@ -265,7 +265,7 @@ export function TalkMessageRow({
             {grouped ? (
                 <>
                     <span className="sr-only">
-                        {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="relative" />
+                        {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="clockTime" />
                     </span>
                     {content}
                 </>
@@ -289,7 +289,10 @@ export function TalkMessageRow({
                             <span className="truncate">{t('Withdrawn member')}</span>
                         )}
                         <AiChip isAi={author?.isAi ?? false} />
-                        <Timestamp at={message.createdAt} preset="relative" className="ml-auto shrink-0" />
+                        {/* Beside the name, not pushed to the far edge: who spoke and when they spoke
+                            are read together, and a column at the right put 435px of empty row
+                            between them on a desktop. */}
+                        <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
                     </div>
                     {content}
                 </>
