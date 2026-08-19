@@ -295,7 +295,7 @@ export default function MessageConversation() {
                                     // to whichever separator is outermost — see the talk list.
                                     <li
                                         data-conversation-divider=""
-                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-0')}
+                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-6' : 'pt-0')}
                                     >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />
@@ -306,7 +306,11 @@ export default function MessageConversation() {
                                         </div>
                                     </li>
                                 )}
-                                <ConversationMessageRow message={message} highlighted={message.id === highlightId} />
+                                <ConversationMessageRow
+                                    message={message}
+                                    highlighted={message.id === highlightId}
+                                    separatorAbove={above.length > 0}
+                                />
                             </Fragment>
                             );
                         })}
