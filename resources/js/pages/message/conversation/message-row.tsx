@@ -10,9 +10,9 @@ import { cn } from '@/lib/utils';
 import type { ConversationMessage } from './types';
 
 /**
- * One message in a conversation. Shaped like a board comment rather than a two-sided bubble stream —
- * the same row a reader already knows from a group's talk, so every conversation on the site is read
- * the same way. A withdrawn author keeps their place with the established label.
+ * One message in a conversation. A left-aligned row with the face in a gutter rather than a two-sided
+ * bubble stream — the same row a reader already knows from a group's talk, so every conversation on
+ * the site is read the same way. A withdrawn author keeps their place with the established label.
  *
  * `highlighted` is a `?m=` link's landing: the row it opened on, held for a moment so the reader can
  * see which message brought them here.
@@ -31,7 +31,9 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
         <li
             data-conversation-message-id={message.id}
             className={cn(
-                'px-4 py-3 sm:px-5',
+                // Turns are told apart by the space above them rather than by a rule — see the talk
+                // row, whose shape this follows.
+                'px-4 pt-4 pb-0.5 sm:px-5',
                 // The transition is not conditional on the flag: what fades is the highlight being
                 // taken away, and a transition arriving with the class would have nothing to animate
                 // from. The row mounts already highlighted, so the emphasis itself is instant.
@@ -39,48 +41,57 @@ export function ConversationMessageRow({ message, highlighted = false }: { messa
                 highlighted && 'bg-selected/10',
             )}
         >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Avatar
-                    id={author?.id ?? 0}
-                    name={author?.name ?? ''}
-                    src={author?.imageUrl ?? null}
-                    color={author?.avatarColor ?? null}
-                    isAi={author?.isAi ?? false}
-                    size="md"
-                    decorative
-                />
-                {author ? (
-                    <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
-                        {author.name}
-                    </Link>
-                ) : (
-                    <span className="truncate">{t('Withdrawn member')}</span>
-                )}
-                <AiChip isAi={author?.isAi ?? false} />
-                {/* Beside the name rather than pushed to the far edge — see the talk row, whose shape
-                    this follows. The receipt keeps its place after the time: both say something about
-                    the delivery rather than about the author, and they travel as one. */}
-                <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
-                {/* Only ever on the viewer's own: a message they received is one they are reading. */}
-                {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}
+            {/* The face in a gutter of its own, so everything the message says starts where the name
+                starts. Nothing folds in a conversation of two, so the gutter is never empty here. */}
+            <div className="flex gap-2">
+                <div className="w-10 shrink-0">
+                    <Avatar
+                        id={author?.id ?? 0}
+                        name={author?.name ?? ''}
+                        src={author?.imageUrl ?? null}
+                        color={author?.avatarColor ?? null}
+                        isAi={author?.isAi ?? false}
+                        size="md"
+                        decorative
+                    />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {author ? (
+                            <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
+                                {author.name}
+                            </Link>
+                        ) : (
+                            <span className="truncate">{t('Withdrawn member')}</span>
+                        )}
+                        <AiChip isAi={author?.isAi ?? false} />
+                        {/* Beside the name rather than pushed to the far edge — see the talk row, whose
+                            shape this follows. The receipt keeps its place after the time: both say
+                            something about the delivery rather than about the author, and they travel
+                            as one. */}
+                        <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
+                        {/* Only ever on the viewer's own: a message they received is one they are reading. */}
+                        {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}
+                    </div>
+                    {/* Mailbox messages carry a subject and chat ones do not, so it names this message
+                        rather than repeating the room — which is the heading recipe's job, and the one
+                        place weight is spent (docs/internals/typography.md). h2, because the page title
+                        is the h1 and nothing sits between: h3 would skip a rank. */}
+                    {message.subject && (
+                        <Heading as="h2" variant="section" className="mt-1 break-words">
+                            {message.subject}
+                        </Heading>
+                    )}
+                    {/* A message may be nothing but pictures, and an empty paragraph would leave its
+                        height behind. */}
+                    {hasBody && (
+                        <p className="mt-1 whitespace-pre-wrap break-words">
+                            <UserText text={message.body} />
+                        </p>
+                    )}
+                    <ImageGrid images={message.images} variant="boxed" className={hasTextAbove ? 'mt-2' : 'mt-1'} />
+                </div>
             </div>
-            {/* Mailbox messages carry a subject and chat ones do not, so it names this message rather
-                than repeating the room — which is the heading recipe's job, and the one place weight
-                is spent (docs/internals/typography.md). h2, because the page title is the h1 and
-                nothing sits between: h3 would skip a rank. */}
-            {message.subject && (
-                <Heading as="h2" variant="section" className="mt-1 break-words">
-                    {message.subject}
-                </Heading>
-            )}
-            {/* A message may be nothing but pictures, and an empty paragraph would leave its height
-                behind. */}
-            {hasBody && (
-                <p className="mt-1 whitespace-pre-wrap break-words">
-                    <UserText text={message.body} />
-                </p>
-            )}
-            <ImageGrid images={message.images} variant="boxed" className={hasTextAbove ? 'mt-2' : 'mt-1'} />
         </li>
     );
 }

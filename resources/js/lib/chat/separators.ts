@@ -11,25 +11,12 @@ export type ChatSeparator = 'day' | 'unread';
  *
  * A list of kinds rather than two booleans read in whatever order the markup happens to be written
  * in: the order is the decision, and a decision nothing states is one nothing can hold.
- */
-/**
- * Whether what stands above the row already draws a line across the list, so the row must not draw
- * its own as well.
  *
- * Only the unread separator does: it is a ruled band, while the date heading is a pill floating in
- * the gap. Asking "is there anything above me" instead would leave the strongest break in the
- * conversation — the turn of a calendar day — as the one boundary with no line at all, weaker than
- * the hairline between two speakers of the same afternoon.
- *
- * The two are different shapes because they are different kinds of claim. A date heading says the rows
- * under it were said on that day, which is true for every reader. The unread line says where *this*
- * reader stopped — a claim so tied to its position that `dividerBeforeId` (lib/chat/unread) withdraws
- * it rather than draw it where the position cannot be shown honestly.
+ * They are drawn as different shapes — the heading a pill, the unread line a ruled band — because
+ * they are different kinds of claim, and where they meet that has to read as two things rather than
+ * one confused divider. The band is the only line in the conversation: the rows themselves are told
+ * apart by space (components/chat-day-heading.tsx, docs/internals/group-talk.md).
  */
-export function drawsItsOwnRule(separators: readonly ChatSeparator[]): boolean {
-    return separators.includes('unread');
-}
-
 export function separatorsAbove({ opensDay, isUnreadBoundary }: { opensDay: boolean; isUnreadBoundary: boolean }): ChatSeparator[] {
     const separators: ChatSeparator[] = [];
 

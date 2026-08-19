@@ -233,8 +233,13 @@ The two meet on an ordinary morning, when the first message a reader has not see
 that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
 than left to the order the markup happens to be written in: **the heading is outside the unread line**,
 because the day is true for every reader while the line is only this reader's place among them. They
-are drawn as different shapes — a band and a ruled line — so that meeting reads as two things rather
+are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
 than one confused divider.
+
+**The unread band is the only line in the list.** Rows are told apart by the space above them: a rule
+between two people speaking is the vocabulary of a board, and this is a conversation. Space also says
+how far apart two rows are, which a hairline cannot — a run's follow-ups close up to a hair, while a
+new turn opens with room above it.
 
 **The unread line is drawn where the heading is not**, and that follows from the same difference. A
 heading says the rows under it were said on that day: true for every reader. The unread line says where
