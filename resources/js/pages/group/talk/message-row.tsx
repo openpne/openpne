@@ -318,7 +318,13 @@ export function TalkMessageRow({
                 everything else. Rows are named as well as columns — with only the column fixed, the
                 face would be placed in the first row that had room for it, which is the reference's.
                 A row nothing is placed in has no height, so the ordinary message loses nothing to the
-                one that is missing. The gutter's width is stated once, here. */}
+                one that is missing.
+
+                The reference spans both columns and carries a gutter of its own (ReplyHeader), so the
+                width is declared twice and the two have to agree. Widening one alone moves the
+                reference off the words by the difference — silently, since the name and the body
+                share a column and stay put. tools/ux-review/talk-row-shape-drive.cjs measures both
+                left edges against each other for that reason. */}
             <div className="grid grid-cols-[2.5rem_1fr] gap-x-2">
                 {/* Above the author header, and why a reply never groups (lib/chat/message-grouping):
                     the reference needs the header under it to say who is answering. */}
