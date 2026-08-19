@@ -286,7 +286,8 @@ export default function MessageConversation() {
                 once per message, in the state this exists to keep clear. The gate reads as sense
                 besides: at the foot there is no question of which day, and the last heading is usually
                 still on screen. */}
-            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && scrollDay.standingIn && backlog === null && !(atBottom && atLatest)} />
+            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && scrollDay.standingIn && backlog === null && !(atBottom && atLatest)}
+                stepAside={!scrollDay.standingIn} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary
