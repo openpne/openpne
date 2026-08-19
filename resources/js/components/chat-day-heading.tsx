@@ -8,12 +8,14 @@ import type { PageProps } from '@/types';
  * below carry only a time (docs/internals/datetime.md): the day is said once for the whole stretch
  * rather than on every line.
  *
- * A pill rather than the ruled band the unread separator draws, because the two meet: the first
- * unread message of a morning is also the first message of that day, so both are drawn at the same
- * boundary most days. Two ruled bands stacked read as one confused divider, and telling them apart by
- * suppressing one of the rules conditionally would make the shape depend on where it lands. They are
- * different shapes instead — and the heading is the outer one, since the day is true for every reader
- * while the unread line is only this reader's place.
+ * The same shape as the unread separator — a label between two rules — and a different colour. The
+ * two meet most mornings, since the first unread message of a day is usually its first message, and
+ * this was drawn as a pill for a while so that the meeting could not read as one confused divider.
+ * That cost more than it bought: a label floating on its own does not say which side of it the day
+ * belongs to, and readers asked. A rule answers that by being a boundary rather than a caption, and
+ * telling the two apart is the job of colour, not of shape — the heading takes the border token, the
+ * unread line the accent it already had. Mattermost, whose rows are shaped like these, does the same:
+ * one `Separator`, and `NotificationSeparator` overriding only its colours.
  *
  * An `<li>` carrying a `role="separator"` child rather than being one: a list may only hold list
  * items, and an `<li role="separator">` is the one thing axe's `list` rule refuses. The label says the
@@ -36,23 +38,20 @@ export function ChatDayHeading({ at }: { at: string }) {
     const label = date.dayHeading(at);
 
     return (
-        // Lopsided, and in the direction the heading means: it belongs to the day below it, not the
-        // one it closes. Roughly twice the room above as below, so the label sits with the messages
-        // it names. A row under a separator adds no turn space of its own (see the row), which is
-        // what leaves this the only thing setting the gap on either side.
-        <li className="px-4 pt-6 pb-2 sm:px-5">
-            <div role="separator" aria-label={label} className="flex justify-center">
+        // Even room on both sides. A label between two rules is a separator whichever way you read it,
+        // so it does not have to lean toward the day it names to say which one that is — which is what
+        // the lopsided spacing it used to carry was for. A row under a separator adds no turn space of
+        // its own (see the row), so this is the only thing setting either gap.
+        <li className="px-4 py-4 sm:px-5">
+            <div role="separator" aria-label={label} className="flex items-center gap-3">
+                <span aria-hidden className="h-px flex-1 bg-border" />
                 {/* `title` because the visible text abbreviates — `今日` on its own does not say which
                     day it was, and every other shape that leaves something out offers the whole value
                     the same way. Non-essential by the same rule: `dateTime` is what carries it. */}
-                <time
-                    aria-hidden
-                    dateTime={day}
-                    title={date.dayHeadingTitle(at)}
-                    className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground"
-                >
+                <time aria-hidden dateTime={day} title={date.dayHeadingTitle(at)} className="text-xs text-muted-foreground">
                     {label}
                 </time>
+                <span aria-hidden className="h-px flex-1 bg-border" />
             </div>
         </li>
     );

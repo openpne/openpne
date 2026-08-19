@@ -12,10 +12,11 @@ export type ChatSeparator = 'day' | 'unread';
  * A list of kinds rather than two booleans read in whatever order the markup happens to be written
  * in: the order is the decision, and a decision nothing states is one nothing can hold.
  *
- * They are drawn as different shapes — the heading a pill, the unread line a ruled band — because
- * they are different kinds of claim, and where they meet that has to read as two things rather than
- * one confused divider. The band is the only line in the conversation: the rows themselves are told
- * apart by space (components/chat-day-heading.tsx, docs/internals/group-talk.md).
+ * They are drawn as the same shape — a label between two rules — in two colours: the heading neutral,
+ * the unread line in the accent it claims the reader's place with. Where they meet, colour is what
+ * says they are two things. Shape was tried for that and cost more than it bought
+ * (components/chat-day-heading.tsx). They are the only rules in the conversation: the rows themselves
+ * are told apart by space (docs/internals/group-talk.md).
  */
 export function separatorsAbove({ opensDay, isUnreadBoundary }: { opensDay: boolean; isUnreadBoundary: boolean }): ChatSeparator[] {
     const separators: ChatSeparator[] = [];

@@ -232,11 +232,15 @@ carried it stops opening the day and the heading moves up with them.
 The two meet on an ordinary morning, when the first message a reader has not seen is also the first of
 that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
 than left to the order the markup happens to be written in: **the heading is outside the unread line**,
-because the day is true for every reader while the line is only this reader's place among them. They
-are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
-than one confused divider.
+because the day is true for every reader while the line is only this reader's place among them.
 
-**The unread band is the only line in the list.** Rows are told apart by the space above them: a rule
+**Both are the same shape — a label between two rules — and differ by colour**, the heading neutral and
+the unread line in the accent. The heading was a pill for a while so that the meeting could not read as
+one divider; that made the label float, and a floating label does not say which side of it the day
+belongs to. A rule says it by being a boundary. Mattermost, whose rows are shaped like these, draws
+one separator and overrides only its colours for the unread one.
+
+**Those two are the only rules in the list.** Rows are told apart by the space above them: a rule
 between two people speaking is the vocabulary of a board, and this is a conversation. Space also says
 how far apart two rows are, which a hairline cannot — a run's follow-ups close up to a hair, while a
 new turn opens with room above it.
