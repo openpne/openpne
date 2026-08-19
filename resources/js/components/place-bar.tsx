@@ -5,6 +5,7 @@ import { CommunityImage } from '@/components/community-image';
 import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
+import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 
 /** One shape for both faces of the crumb, so the bar reads the same wherever the reader lands. */
@@ -22,9 +23,28 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  * static text. What this bar adds is the place's face: the one-image rule belongs to the phone
  * header, where the brand mark is that image — here the sidebar holds the mark, so the pill is free
  * to carry the face the reader is standing in.
+ *
+ * It is a surface, not a pill floating on nothing. Left transparent it took the clicks of everything
+ * that scrolled under it — a strip of the content column wide and 32px tall where a link could be
+ * seen and not pressed — and let that content show through around the pill besides. It carries the
+ * page's own ground, and a seam drawn only once something has scrolled under (the phone header's
+ * `useScrolled`). Every desktop client this bar answers to draws its place as a surface too.
+ *
+ * Opaque, where that header is translucent, and the frame's full width rather than the card's — the
+ * same escape from the frame's padding the composer makes at the other end of the conversation. Held
+ * to the card's width the bar is invisible as a surface, since its ground is the ground either side of
+ * the card too: what a reader sees then is not a band but the card's own side borders, cut where the
+ * bar covers them and standing in grey where it does not. Full width it is a band, and the card runs
+ * under it the way content runs under a header.
+ *
+ * The remove the pill keeps from the top is padding rather than offset, which is the other half of
+ * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
+ * leaves a window above itself for rows to travel through — invisible while it was transparent,
+ * since there was no surface for them to be beside, and a seam the moment there is one.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const t = useT();
+    const scrolled = useScrolled();
     const crumb = breadcrumbCrumb(chrome);
 
     if (!crumb) {
@@ -54,7 +74,13 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     return (
         // Under the color line at the same remove every other sticky band in the app keeps, and below
         // lg nothing: the header carries this there. Width is the content column's, from the frame.
-        <div data-testid="place-bar" className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 hidden min-w-0 lg:flex">
+        <div
+            data-testid="place-bar"
+            className={cn(
+                'sticky top-[var(--modern-top-offset)] z-20 -mx-4 hidden min-w-0 border-b bg-background px-4 pt-2 pb-1 lg:flex',
+                scrolled ? 'border-border' : 'border-transparent',
+            )}
+        >
             {crumb.link ? (
                 // The phone pill's fill, unchanged: the same element means the same thing at both
                 // widths, and it is the affordance the bare trail failed to be.
