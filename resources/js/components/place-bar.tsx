@@ -26,10 +26,13 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  *
  * It is a surface, not a pill floating on nothing. Left transparent it took the clicks of everything
  * that scrolled under it — a strip of the content column wide and 32px tall where a link could be
- * seen and not pressed — and let that content show through around the pill besides. The treatment is
- * the phone header's (components/top-nav): the page's own ground at nine tenths with a blur behind
- * it, and a seam drawn only once something has scrolled under. Every desktop client this bar answers
- * to draws its place as a surface too.
+ * seen and not pressed — and let that content show through around the pill besides. It carries the
+ * page's own ground, and a seam drawn only once something has scrolled under (the phone header's
+ * `useScrolled`). Every desktop client this bar answers to draws its place as a surface too.
+ *
+ * Opaque, where that header is translucent, because this one is exactly as wide as the card beneath
+ * it: the card's side borders fall on this bar's own edges to the pixel, so any transparency prints
+ * them down its sides and the bar grows a left and right border it never asked for.
  *
  * The remove the pill keeps from the top is padding rather than offset, which is the other half of
  * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
@@ -71,7 +74,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         <div
             data-testid="place-bar"
             className={cn(
-                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-b bg-background/90 pt-2 pb-1 backdrop-blur lg:flex',
+                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-b bg-background pt-2 pb-1 lg:flex',
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >
