@@ -49,7 +49,10 @@ export function ChatDayHeading({ at }: { at: string }) {
         // so it does not have to lean toward the day it names to say which one that is — which is what
         // the lopsided spacing it used to carry was for. A row under a separator adds no turn space of
         // its own (see the row), so this is the only thing setting either gap.
-        <li className="px-4 py-4 sm:px-5">
+        // Named, because the scroll indicator asks where these are on every frame it measures, and
+        // `li:has(> [role="separator"] time)` is a match run against every list item in the document —
+        // the per-row cost `rowAtLine` exists to avoid, reintroduced beside it.
+        <li data-chat-day className="px-4 py-4 sm:px-5">
             <div role="separator" aria-label={label} className="flex items-center gap-3">
                 <span aria-hidden className="h-px flex-1 bg-border" />
                 {/* `title` because the visible text abbreviates — `今日` on its own does not say which

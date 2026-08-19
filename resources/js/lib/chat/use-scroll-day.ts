@@ -7,26 +7,8 @@ const IDLE_MS = 500;
 /** How long a fresh conversation is allowed to settle before a scroll counts as the reader's. */
 const ARM_MS = 600;
 
-/** The strip the indicator occupies: its own height and a little, measured down from the line. */
+/** The strip the indicator occupies, which is the room it needs when the page is not moving at all. */
 const STRIP_PX = 44;
-
-/** And a hair above it, so a heading is out of the way before the indicator returns. */
-const STRIP_EDGE_PX = 8;
-
-/**
- * How much further than the strip a heading has to be, on the side it is coming from.
- *
- * A wheel scroll is carried on the compositor and painted before the main thread is asked anything, so
- * this decision is always one frame behind the screen — and a frame is 260px at the speed a wheel
- * moves (measured, and it is the wheel's whole delta: one event, one frame). Judged against the strip
- * alone, a heading crosses the entire strip between two measurements and gets a date painted on it,
- * which is the flash that survived three rounds of fixing this. Judged against the distance the page
- * can travel in that frame, it is already gone before the heading arrives.
- *
- * Only on the approaching side. Slack behind the reader costs the indicator the moment it is worth
- * most — the heading has just left the top of the screen and nothing else says the day.
- */
-const LAG_PX = 320;
 
 /**
  * Which day the reader is in, while they are moving through the conversation.
@@ -75,9 +57,8 @@ export function useScrollDay(
     // one. Asked as a question instead, it is answered against the page as it is now.
     const foot = useRef(pinned);
     foot.current = pinned;
-    // Where the page was last seen, and which way it has gone since.
-    const last = useRef(0);
-    const back = useRef(false);
+    // Where the page was when this last answered, which is the distance the answer is behind by.
+    const seen = useRef(0);
 
     useEffect(() => {
         const wrapper = line.current;
@@ -99,39 +80,28 @@ export function useScrollDay(
             // cost, and rowAtLine reads nine of them.
             const rows = document.querySelectorAll(rowSelector);
             const at = rowAtLine(rows.length, (n) => rows[n]?.getBoundingClientRect().bottom ?? 0, top);
-            const owner = at === null ? null : (rows[at]?.getBoundingClientRect() ?? null);
-            const headings = [...document.querySelectorAll('li:has(> [role="separator"] time)')].map((h) =>
-                h.getBoundingClientRect(),
-            );
+            const headings = [...document.querySelectorAll('[data-chat-day]')].map((h) => h.getBoundingClientRect());
 
-            // Two ways there is nothing to do. The heading this copies may still be on screen, saying
-            // the same thing where it belongs — at the head of the list that was the same date twice,
-            // once on its rule and once floating over the load-older strip. Or a heading may be
-            // arriving underneath: that one belongs to the *next* day, so the first test says nothing
-            // about it, and left alone a floating `12日` sits on an arriving `13日` and reads as that
-            // heading carrying the wrong date.
-            const governing = owner === null ? undefined : headings.filter((h) => h.top <= owner.top).pop();
-            const standingFor = governing !== undefined && !(governing.bottom > top && governing.top < window.innerHeight);
-            // Which side to leave room on is the direction of travel: scrolling back through the
-            // conversation brings headings *down* across the line, scrolling on brings them up.
-            const above = back.current ? LAG_PX : STRIP_EDGE_PX;
-            const below = back.current ? STRIP_PX : LAG_PX;
-            const covering = headings.some((h) => h.bottom > top - above && h.top < top + below);
+            // How far the page moved while this was not looking, which is how far it can move again
+            // before the next answer — and the only honest size for the room a heading needs.
+            const y = window.scrollY;
+            const reach = Math.abs(y - seen.current) + STRIP_PX;
+            seen.current = y;
 
-            show(!off.current && !foot.current() && standingFor && !covering ? 'up' : 'aside');
+            // It stands in for a heading that is not on the screen, so a heading on the screen is the
+            // whole of the answer: no second copy of a date the reader can already see, and none of
+            // the "is it under me" arithmetic that has been wrong three times. Below the line that is
+            // also what makes it safe — a heading has to cross the entire reading area to stop being
+            // visible, which no single frame can do. Above the line there is no such runway: the gap
+            // from out-of-sight to under-the-indicator is a heading's own height, and one frame at
+            // wheel speed is 260px of it. That side gets the frame's own travel instead of a number,
+            // because a number would be this machine's wheel and nothing about anyone else's.
+            const onScreen = headings.some((h) => h.bottom > top - reach && h.top < window.innerHeight);
+            show(!off.current && !foot.current() && !onScreen ? 'up' : 'aside');
             setIndex(at);
         };
 
         const onScroll = () => {
-            // Read here rather than in the measurement, and before the arming check. A frame coalesces
-            // several of these, so the direction has to be taken from the events; and the page scrolls
-            // itself to the foot on open, so a direction measured from where it started calls the
-            // reader's first move the wrong way — and leaves it wrong, because nothing but another
-            // scroll would correct it.
-            const y = window.scrollY;
-            back.current = y < last.current;
-            last.current = y;
-
             if (!armed.current) {
                 return;
             }
@@ -146,9 +116,11 @@ export function useScrollDay(
             idle.current = setTimeout(() => show('idle'), IDLE_MS);
         };
 
-        last.current = window.scrollY;
         const arm = setTimeout(() => {
             armed.current = true;
+            // Taken at arming, not at mount: the page scrolls itself to the foot in between, and a
+            // distance measured from where it started would read as one enormous frame of travel.
+            seen.current = window.scrollY;
         }, ARM_MS);
         window.addEventListener('scroll', onScroll, { passive: true });
 
