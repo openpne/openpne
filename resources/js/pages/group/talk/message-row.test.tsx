@@ -187,5 +187,5 @@ test('a row that draws its author draws no gutter time: it already shows one bes
     // selector stops finding one.
     const stamps = [...container.querySelectorAll('time')];
     expect(stamps).toHaveLength(1);
-    expect(stamps[0].closest('[aria-hidden]')).toBeNull();
+    expect(stamps[0]?.closest('[aria-hidden]')).toBeNull();
 });
