@@ -150,3 +150,42 @@ test('the row carries the time alone, beside the author rather than at the far e
     // Nothing pushes it away from the name it belongs to.
     expect(stamp?.className).not.toContain('ml-auto');
 });
+
+test('a folded row keeps its time in the gutter, spoken as well as drawn', () => {
+    const { container } = render(
+        <ul>
+            <TalkMessageRow
+                message={message}
+                onDelete={vi.fn()}
+                onOpenActions={vi.fn()}
+                onReply={vi.fn()}
+                onJumpToReply={vi.fn()}
+                canReply={true}
+                grouped
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+            />
+        </ul>,
+    );
+
+    // Counted rather than located. A selector down the row's boxes resolves to the gutter only by
+    // today's order of children, and the companion test below asserts an *absence* — which such a
+    // selector would go on passing the moment it stopped pointing at the gutter at all.
+    const stamps = [...container.querySelectorAll('time')];
+    // Two lanes, one minute: what a cursor reveals, and what a screen reader is told instead.
+    expect(stamps.map((stamp) => stamp.textContent)).toEqual(['10:00', '10:00']);
+    // Whether the drawn one is *visible* is the hover rule, which this test never loads
+    // (tools/ux-review drives that in a browser); that it is hidden from the spoken lane is here.
+    expect(stamps.filter((stamp) => stamp.closest('[aria-hidden]') !== null)).toHaveLength(1);
+    expect(stamps.filter((stamp) => stamp.closest('.sr-only') !== null)).toHaveLength(1);
+});
+
+test('a row that draws its author draws no gutter time: it already shows one beside the name', () => {
+    const { container } = renderRow();
+
+    // One stamp, and it is the one beside the name: a second would be the gutter's, drawn on a row
+    // that never folded. Counting is what makes this fail if a stamp appears rather than if a
+    // selector stops finding one.
+    const stamps = [...container.querySelectorAll('time')];
+    expect(stamps).toHaveLength(1);
+    expect(stamps[0]?.closest('[aria-hidden]')).toBeNull();
+});
