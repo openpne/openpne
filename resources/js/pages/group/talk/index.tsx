@@ -5,6 +5,7 @@ import { ChatDayHeading } from '@/components/chat-day-heading';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
+import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
 import { separatorsAbove } from '@/lib/chat/separators';
@@ -102,6 +103,27 @@ export default function GroupTalkIndex() {
     // history window is not the foot of the conversation at all.
     const [atBottom, setAtBottom] = useState(true);
     useMarkRead(`/groups/${group.id}/talk/read`, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
+    const [seen, setSeen] = useState<ChatSeenMark | null>(null);
+
+    // Where the reader has actually stood. The pill's count is what has arrived past it, so it moves
+    // on the same fact mark-read moves on — being at the foot of the live window — and on nothing
+    // else. Not folded into the arrival effect below: the pill itself puts a reader back at the foot
+    // without changing the list, and an effect keyed on the messages would never notice.
+    //
+    // Membership is deliberately not part of it. The pill says what has *arrived*, which a reader
+    // with no stored cursor sees as plainly as anyone; the read cursor is a different claim.
+    useEffect(() => {
+        const newest = messages[messages.length - 1];
+        if (!atBottom || !atLatest || newest === undefined) {
+            return;
+        }
+
+        setSeen((current) =>
+            current !== null && current.id === newest.id && current.at === newest.createdAt
+                ? current
+                : { at: newest.createdAt, id: newest.id },
+        );
+    }, [atBottom, atLatest, messages]);
 
     // The line the visit opened on. Both this and the banner below come off the render-time snapshot
     // and nothing else — mark-read never writes props, which is what makes them survive the one that
@@ -122,6 +144,10 @@ export default function GroupTalkIndex() {
     const [caughtUp, setCaughtUp] = useState(false);
     const [catchingUp, setCatchingUp] = useState(false);
     const digestAt = digestPlacement(unreadDigest !== undefined, dividerId, backlog !== null, caughtUp);
+
+    // Zero from a history window without a gate of its own: everything loaded there is older than
+    // the mark, so nothing counts as having arrived past it.
+    const arrivals = arrivalsAfter(messages, seen);
 
     // The message this visit opened on, and its emphasis. The landing is a ref because it describes
     // the arrival rather than the render — the scroll it drives happens once, on mount — while the
@@ -528,7 +554,12 @@ export default function GroupTalkIndex() {
                 <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+4.25rem)] z-20 flex h-0 items-end justify-center">
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
-                        {t('Jump to latest')}
+                        {/* What is down there, when the page knows: a reader scrolled up is deciding
+                            whether to go back, and "latest" alone does not say whether anything has
+                            happened. A separate word from the banner's "unread" above, because they
+                            are separate claims — that one is the server's cursor, this one is what
+                            has landed since the reader was last at the foot. */}
+                        {arrivals > 0 ? t(':count new messages', { count: arrivals }) : t('Jump to latest')}
                     </Button>
                 </div>
             )}

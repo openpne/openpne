@@ -73,6 +73,7 @@
     ":count members found": ":count人のメンバーが見つかりました",
     ":count messages while you were away": "見ていない間に :count 件のメッセージ",
     ":count minutes ago": ":count分前",
+    ":count new messages": "新着 :count 件",
     ":count participants": ":count人の参加者",
     ":count pending %friend% requests": ":count件の%friend%申請",
     ":count replies": ":count件の返信",
