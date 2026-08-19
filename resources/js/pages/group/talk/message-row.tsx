@@ -93,11 +93,15 @@ export interface TalkRowReactions {
  * specificity and wins on emission order alone, so it is the one order-dependent piece here: if it
  * ever loses, the bar goes back to standing in the flow, wider — a look, not a lockout.
  *
- * `-top-1` leans the bar out the row's top rather than its foot: `isolate` keeps its z within the
- * row, rows behind paint first and rows after paint over — so what the bar overhangs must be the
- * row already painted, or a one-line follow-up's next sibling draws its hairline through it. On the
- * list's first row with no older history, the card's own clip shaves those 4px off the bar's top —
- * known and accepted over teaching the first row a different geometry.
+ * **The bar is taller than the row it belongs to**, and is meant to be: 38px of controls over a
+ * follow-up row that is one line of text. It overhangs both edges, so the row lifts above its
+ * siblings for exactly as long as the bar is out (the `z-10` trio on the row below matches these
+ * three revealing states). Without the lift the overhang is painted over by the next row — which
+ * takes its hits as well, so a cursor moving down onto the bar's own foot leaves the row, and the
+ * bar the hand was reaching for disappears. Nothing here may reintroduce a row-height floor: the
+ * spacing between turns is the list's to choose. On the list's first row with no older history, the
+ * card's own clip shaves 4px off the bar's top — known and accepted over teaching the first row a
+ * different geometry.
  */
 const ROW_ACTIONS =
     'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
@@ -110,7 +114,8 @@ const ROW_ACTIONS =
  *
  * `grouped` drops the author header: a quick follow-up in the same run (lib/chat/message-grouping)
  * reads as more of the same turn. The attribution stays, spoken rather than drawn, so a screen reader
- * hears every row whole.
+ * hears every row whole. Its gutter is left empty rather than closed up, which is what keeps a run's
+ * words under the name that opened it.
  *
  * `onOpenActions` is the touch lane's way in — the whole row, gutters included, is the press target
  * (see ROW_ACTIONS for the other one). It is offered only where there is something to offer: a row
@@ -130,7 +135,6 @@ export function TalkMessageRow({
     canReply,
     highlighted = false,
     grouped = false,
-    rule = false,
     reactions,
 }: {
     message: TalkMessage;
@@ -144,8 +148,6 @@ export function TalkMessageRow({
     canReply: boolean;
     highlighted?: boolean;
     grouped?: boolean;
-    /** Draw the hairline above this row — the list rules between turns, not inside them. */
-    rule?: boolean;
     reactions: TalkRowReactions;
 }) {
     const t = useT();
@@ -232,8 +234,15 @@ export function TalkMessageRow({
                 // would land on top of the sheet, and a cursor's text selection is nobody's to take.
                 // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
-                grouped ? 'pb-3' : 'py-3',
-                rule && 'border-t border-border',
+                // Turns are told apart by the space above them, not by a line: a rule between two
+                // people speaking is the vocabulary of a board, and this is a conversation. Within a
+                // run the rows close up to a hair, since what separates them is only a pause. No gap
+                // between rows anywhere — the hover tint reaches as far as the padding does, and a
+                // gap would draw it as stripes.
+                grouped ? 'py-0.5' : 'pt-4 pb-0.5',
+                // Above its siblings for as long as its controls are out, so a bar taller than its
+                // own row keeps the hits it draws over the rows either side (see ROW_ACTIONS).
+                'hover:z-10 focus-within:z-10 has-[[aria-expanded=true]]:z-10',
                 // Under the pointer the row says which one it is, quickly enough to track the hand.
                 // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
                 'transition-colors duration-100 hover:bg-muted',
@@ -259,19 +268,28 @@ export function TalkMessageRow({
                     highlighted ? 'opacity-100 duration-0' : 'opacity-0 duration-1000',
                 )}
             />
-            {/* Above the author header, and why a reply never groups (lib/chat/message-grouping): the
-                reference needs the header under it to say who is answering. */}
-            {message.inReplyTo !== null && <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />}
-            {grouped ? (
-                <>
-                    <span className="sr-only">
-                        {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="clockTime" />
-                    </span>
-                    {content}
-                </>
-            ) : (
-                <>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {/* The face steps out of the header and into a gutter of its own, so everything the
+                message says — its reference, its words, its pictures — starts where the name starts.
+                Under the old shape the words began 48px to the *left* of the name that owned them,
+                which left a follow-up row with nothing to say whose turn it was part of.
+
+                A grid rather than two boxes side by side, because the reference is a third block and
+                it shares the words' column: written into the flow above them, it would push the face
+                down with it, and then a face would sit at a different height on a reply than on
+                everything else. Rows are named as well as columns — with only the column fixed, the
+                face would be placed in the first row that had room for it, which is the reference's.
+                A row nothing is placed in has no height, so the ordinary message loses nothing to the
+                one that is missing. The gutter's width is stated once, here. */}
+            <div className="grid grid-cols-[2.5rem_1fr] gap-x-2">
+                {/* Above the author header, and why a reply never groups (lib/chat/message-grouping):
+                    the reference needs the header under it to say who is answering. */}
+                {message.inReplyTo !== null && (
+                    <div className="col-start-2 row-start-1 min-w-0">
+                        <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />
+                    </div>
+                )}
+                <div className="col-start-1 row-start-2">
+                    {!grouped && (
                         <Avatar
                             id={author?.id ?? 0}
                             name={author?.name ?? ''}
@@ -281,22 +299,37 @@ export function TalkMessageRow({
                             size="md"
                             decorative
                         />
-                        {author ? (
-                            <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
-                                {author.name}
-                            </Link>
-                        ) : (
-                            <span className="truncate">{t('Withdrawn member')}</span>
-                        )}
-                        <AiChip isAi={author?.isAi ?? false} />
-                        {/* Beside the name, not pushed to the far edge: who spoke and when they spoke
-                            are read together, and a column at the right put 435px of empty row
-                            between them on a desktop. */}
-                        <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
-                    </div>
-                    {content}
-                </>
-            )}
+                    )}
+                </div>
+                <div className="col-start-2 row-start-2 min-w-0">
+                    {grouped ? (
+                        <>
+                            <span className="sr-only">
+                                {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="clockTime" />
+                            </span>
+                            {content}
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {author ? (
+                                    <Link href={`/member/${author.id}`} className="truncate text-link hover:underline">
+                                        {author.name}
+                                    </Link>
+                                ) : (
+                                    <span className="truncate">{t('Withdrawn member')}</span>
+                                )}
+                                <AiChip isAi={author?.isAi ?? false} />
+                                {/* Beside the name, not pushed to the far edge: who spoke and when they
+                                    spoke are read together, and a column at the right put 435px of
+                                    empty row between them on a desktop. */}
+                                <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
+                            </div>
+                            {content}
+                        </>
+                    )}
+                </div>
+            </div>
             {actions}
         </li>
     );

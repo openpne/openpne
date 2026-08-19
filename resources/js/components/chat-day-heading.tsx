@@ -36,7 +36,11 @@ export function ChatDayHeading({ at }: { at: string }) {
     const label = date.dayHeading(at);
 
     return (
-        <li className="px-4 py-2 sm:px-5">
+        // Lopsided on purpose. A row opens its turn with the space above it and closes with almost
+        // none, so the room a separator needs on its upper side has to come from the separator
+        // itself; the row below already brings its own. The heading is always the outermost thing
+        // above a row (lib/chat/separators), so it is always the one carrying that lead space.
+        <li className="px-4 pt-5 pb-2 sm:px-5">
             <div role="separator" aria-label={label} className="flex justify-center">
                 {/* `title` because the visible text abbreviates — `今日` on its own does not say which
                     day it was, and every other shape that leaves something out offers the whole value

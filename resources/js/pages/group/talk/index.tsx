@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
-import { drawsItsOwnRule, separatorsAbove } from '@/lib/chat/separators';
+import { separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -15,6 +15,7 @@ import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { requestUnreadRefresh } from '@/lib/unread-refresh';
+import { cn } from '@/lib/utils';
 import type { CommunitySummary } from '@/pages/community/types';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
 import type { PageProps } from '@/types';
@@ -427,10 +428,9 @@ export default function GroupTalkIndex() {
                 {messages.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
-                    // Not the shared List: its divide-y would rule between a run's grouped rows. The
-                    // border is per-row instead — on every row that starts something (a header row
-                    // after another row), never on a grouped continuation, and not after the unread
-                    // separator, which is already a line.
+                    // Not the shared List: nothing rules between these rows. A turn is told from the
+                    // one before it by the space above it (see the row), and the only line left in
+                    // the conversation is the unread band, which is a different kind of claim.
                     <ul>
                         {messages.map((message, index) => {
                             // The day is said once over the rows that share it. Drawn above the first
@@ -443,8 +443,7 @@ export default function GroupTalkIndex() {
                                 previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
                             const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
                             // Whatever stands above the row holds its run open (message-grouping):
-                            // the row says again who is speaking. Whether it also replaces the row's
-                            // hairline is a separate question, and only the unread band does.
+                            // the row says again who is speaking.
                             const restartsHere = above.length > 0;
 
                             return (
@@ -455,7 +454,14 @@ export default function GroupTalkIndex() {
                                     // may only hold list items, and an <li role="separator"> is the
                                     // one thing axe's `list` rule refuses. Its label is the whole of
                                     // what it says, so what it draws is hidden.
-                                    <li data-talk-divider="" className="px-4 py-2 sm:px-5">
+                                    //
+                                    // The lead space goes to whichever separator is outermost (see
+                                    // the day heading): where the two meet they are one block with
+                                    // room around it, not two with room between them.
+                                    <li
+                                        data-talk-divider=""
+                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-2')}
+                                    >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />
                                             <span aria-hidden className="text-xs text-selected">
@@ -487,12 +493,6 @@ export default function GroupTalkIndex() {
                                     canReply={canPost}
                                     highlighted={message.id === highlightId}
                                     grouped={foldsInto(previous, message, restartsHere)}
-                                    // No rule under a separator that is already a line, and none
-                                    // above the first row. A date heading is a pill rather than a
-                                    // line, so the row under it keeps its own — otherwise the turn of
-                                    // the day would be the one boundary here with nothing drawn
-                                    // across it, weaker than a change of speaker within an afternoon.
-                                    rule={previous !== undefined && !drawsItsOwnRule(above) && !foldsInto(previous, message, restartsHere)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,

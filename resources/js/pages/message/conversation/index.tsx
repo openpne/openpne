@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
 import { Button } from '@/components/ui/button';
-import { List, Panel } from '@/components/ui/surface';
+import { Panel } from '@/components/ui/surface';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { separatorsAbove } from '@/lib/chat/separators';
@@ -272,7 +272,9 @@ export default function MessageConversation() {
                 {messages.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                 ) : (
-                    <List>
+                    // Not the shared List: nothing rules between these rows — see the talk list,
+                    // whose shape this follows.
+                    <ul>
                         {messages.map((message, index) => {
                             // The day said once over the rows that share it — see the talk list,
                             // whose rule this follows. Nothing folds here, so it is the heading alone
@@ -289,8 +291,12 @@ export default function MessageConversation() {
                                     // The separator is inside the row rather than being it: a list
                                     // may only hold list items, and an <li role="separator"> is the
                                     // one thing axe's `list` rule refuses. Its label is the whole of
-                                    // what it says, so what it draws is hidden.
-                                    <li data-conversation-divider="" className="px-4 py-2 sm:px-5">
+                                    // what it says, so what it draws is hidden. The lead space goes
+                                    // to whichever separator is outermost — see the talk list.
+                                    <li
+                                        data-conversation-divider=""
+                                        className={cn('px-4 pb-2 sm:px-5', above[0] === 'unread' ? 'pt-5' : 'pt-2')}
+                                    >
                                         <div role="separator" aria-label={t('Unread from here')} className="flex items-center gap-3">
                                             <span aria-hidden className="h-px flex-1 bg-selected/50" />
                                             <span aria-hidden className="text-xs text-selected">
@@ -304,7 +310,7 @@ export default function MessageConversation() {
                             </Fragment>
                             );
                         })}
-                    </List>
+                    </ul>
                 )}
 
                 {!atLatest && (
