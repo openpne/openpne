@@ -22,6 +22,9 @@ import type { TalkMessage, TalkReplyReference } from './types';
  * of it. A parent that was deleted between render and click keeps the same line, italic and inert:
  * there is nowhere to jump to.
  *
+ * No glyph for "reply": the elbow drawn in the gutter beside it already says the line answers
+ * something, and a second mark saying it in the same breath only takes room the excerpt wants.
+ *
  * The button carries no `aria-label`: one would override the name computed from the contents and
  * leave every reply header reading as the same "go to" button, dropping exactly the who-and-what the
  * reference exists to say. So the action is an sr-only prefix instead, and the name is built from the
@@ -34,7 +37,6 @@ function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJ
     if (reference.deleted) {
         return (
             <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground italic">
-                <Reply className="size-3.5 shrink-0" aria-hidden />
                 <span>{t('Deleted message')}</span>
             </div>
         );
@@ -47,7 +49,6 @@ function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJ
             className="mb-1 flex w-full items-center gap-1.5 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <span className="sr-only">{t('Go to the replied message')}: </span>
-            <Reply className="size-3.5 shrink-0" aria-hidden />
             <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
             {reference.thumbnailUrl !== null && <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />}
             <span className="min-w-0 truncate">{reference.excerpt}</span>
@@ -284,9 +285,25 @@ export function TalkMessageRow({
                 {/* Above the author header, and why a reply never groups (lib/chat/message-grouping):
                     the reference needs the header under it to say who is answering. */}
                 {message.inReplyTo !== null && (
-                    <div className="col-start-2 row-start-1 min-w-0">
-                        <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />
-                    </div>
+                    <>
+                        {/* The elbow, in the one cell the gutter leaves empty. Standing in the words'
+                            column with nothing else to say so, the reference reads as the tail of the
+                            message above rather than the head of this one — it is the only thing on
+                            the row whose neighbour above is a stranger's words. The line claims it
+                            for the face below by running into the top of it.
+
+                            Not the hairline this list just gave up: that one separated two rows, and
+                            this one joins two parts of the same one. */}
+                        <div className="relative col-start-1 row-start-1">
+                            <span
+                                aria-hidden
+                                className="absolute top-1/2 bottom-0 left-1/2 right-0 rounded-tl-md border-t border-l border-border"
+                            />
+                        </div>
+                        <div className="col-start-2 row-start-1 min-w-0">
+                            <ReplyHeader reference={message.inReplyTo} onJump={onJumpToReply} />
+                        </div>
+                    </>
                 )}
                 <div className="col-start-1 row-start-2">
                     {!grouped && (
