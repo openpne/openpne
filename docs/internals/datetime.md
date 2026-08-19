@@ -19,6 +19,9 @@ screens do not move under them.
    everything known about it.
 5. **Machines get the whole value.** Every stamp renders as `<time dateTime="…">` carrying the
    offset-bearing ISO, whatever the visible text says.
+6. **The weekday is shown where the reader is placing the day in their own week** — planning an event,
+   or finding their way back through a conversation. Not on a list row, whose reader is only telling it
+   from the rows around it.
 
 ## Shapes
 
@@ -28,7 +31,7 @@ screens do not move under them.
 | `listStamp` | today `00:05` · this year `8月10日` · older `2025年12月31日` | A row whose reader is placing it on a calendar: diary and topic lists, the message inbox, community activity. |
 | `relative` | `たったいま` · `3分前` · `5時間前` · `2日前`, then `listStamp` | A row whose reader is asking what is new: notifications, timeline posts and replies, comments. |
 | `clockTime` | `00:05` | A message in a conversation, whose day is named by the heading above it rather than by the row. |
-| civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. The weekday is on wherever an event's own dates appear, so the same datum never shows in two shapes. |
+| civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. Wherever an event's own dates appear they appear with the weekday, so the same datum never shows in two shapes. |
 
 Every shape but `absolute` carries the full value as a `title`; `absolute` does not, since it already
 names the day and the minute and a title differing only in seconds is noise.
@@ -36,10 +39,20 @@ names the day and the minute and a title differing only in seconds is noise.
 ### A conversation
 
 A conversation is the one place a date is split across two elements. The rows of a day sit under a
-**date heading** — `今日`, `昨日`, then the `listStamp` shape (`8月12日`, `2025年12月31日`) — and each row
-carries `clockTime` alone. That is rule 4 taken as far as it goes: the day is one unit of meaning and
-it is said once for the stretch it covers, so a row is left with only the part that tells it from the
-row above.
+**date heading** — `今日`, `昨日`, then the day written out with its weekday (`8月12日(水)`,
+`2025年12月31日(水)`) — and each row carries `clockTime` alone. That is rule 4 taken as far as it goes:
+the day is one unit of meaning and it is said once for the stretch it covers, so a row is left with
+only the part that tells it from the row above.
+
+**The heading carries the weekday**, which no shape in the table above does. Rule 6 is why: a reader
+scrolling back through a conversation is placing the day in their own week. It costs nothing per row,
+because the day is said once for the whole run under the heading. Today and yesterday stay words —
+`今日` is a more precise answer than a weekday, not a less precise one.
+
+**The year follows rule 3**, so a heading in the current year reads `8月12日(水)` and an older one
+`2025年12月31日(水)`. An event's civil date always carries its year instead, because planning crosses
+years; the two are different questions about the same-looking value.
+
 
 `clockTime` rather than `listStamp`, whose today branch renders the same string: a list stamp's shape
 depends on the clock, so a conversation left open across the site's midnight would see every row turn

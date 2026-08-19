@@ -61,8 +61,9 @@ export function Timestamp({ at, preset, className }: { at: string; preset: Times
  * day for viewers west of the site (resources/js/lib/date.ts). No title, because `Y-m-d` is already the
  * whole value.
  *
- * `weekday` is for a date someone plans around; it is on wherever an event's own dates are shown, so
- * the same datum never appears in two shapes.
+ * `weekday` is on where the reader is placing the day in their own week (datetime.md rule 6) — here,
+ * an event's own dates, and wherever those appear they appear with it, so the same datum never shows
+ * in two shapes.
  */
 export function CivilDate({ value, weekday = false, className }: { value: string; weekday?: boolean; className?: string }) {
     const date = useDateFormat();

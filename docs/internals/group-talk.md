@@ -233,12 +233,13 @@ The two meet on an ordinary morning, when the first message a reader has not see
 that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
 than left to the order the markup happens to be written in: **the heading is outside the unread line**,
 because the day is true for every reader while the line is only this reader's place among them. They
-are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
+are drawn as different shapes — a band and a ruled line — so that meeting reads as two things rather
 than one confused divider.
 
-Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
-the row says again who is speaking, since a header is what the thing above it separates the reader
-from. It also stands in for the hairline that would otherwise rule above that row.
+**The unread line is drawn where the heading is not**, and that follows from the same difference. A
+heading says the rows under it were said on that day: true for every reader. The unread line says where
+*this* reader stopped, a claim so tied to its position that `dividerBeforeId` withdraws it rather than
+draw it where the position cannot be shown honestly.
 
 ### The absence digest
 
