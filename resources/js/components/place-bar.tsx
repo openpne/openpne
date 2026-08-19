@@ -30,6 +30,11 @@ const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
  * the phone header's (components/top-nav): the page's own ground at nine tenths with a blur behind
  * it, and a seam drawn only once something has scrolled under. Every desktop client this bar answers
  * to draws its place as a surface too.
+ *
+ * The remove the pill keeps from the top is padding rather than offset, which is the other half of
+ * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
+ * leaves a window above itself for rows to travel through — invisible while it was transparent,
+ * since there was no surface for them to be beside, and a seam the moment there is one.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const t = useT();
@@ -66,7 +71,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         <div
             data-testid="place-bar"
             className={cn(
-                'sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 hidden min-w-0 border-b bg-background/90 py-1 backdrop-blur lg:flex',
+                'sticky top-[var(--modern-top-offset)] z-20 hidden min-w-0 border-b bg-background/90 pt-2 pb-1 backdrop-blur lg:flex',
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >
