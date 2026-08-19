@@ -12,10 +12,11 @@ import type { PageProps } from '@/types';
  * two meet most mornings, since the first unread message of a day is usually its first message, and
  * this was drawn as a pill for a while so that the meeting could not read as one confused divider.
  * That cost more than it bought: a label floating on its own does not say which side of it the day
- * belongs to, and readers asked. A rule answers that by being a boundary rather than a caption, and
- * telling the two apart is the job of colour, not of shape — the heading takes the border token, the
- * unread line the accent it already had. Mattermost, whose rows are shaped like these, does the same:
- * one `Separator`, and `NotificationSeparator` overriding only its colours.
+ * belongs to, and readers asked. A rule answers that by being a boundary rather than a caption. What
+ * keeps the two apart where they meet is that each carries its own label — colour reinforces it and
+ * does not carry it, which greyscale shows and the load-older strip's identically coloured rule shows
+ * again (docs/internals/group-talk.md). Mattermost does the same: one `Separator`, and
+ * `NotificationSeparator` overriding only its colours.
  *
  * An `<li>` carrying a `role="separator"` child rather than being one: a list may only hold list
  * items, and an `<li role="separator">` is the one thing axe's `list` rule refuses. The label says the
