@@ -147,8 +147,8 @@ export interface TalkRowReactions {
  * takes its hits as well, so a cursor moving down onto the bar's own foot leaves the row, and the
  * bar the hand was reaching for disappears. Nothing here may reintroduce a row-height floor: the
  * spacing between turns is the list's to choose. On the list's first row with no older history, the
- * card's own clip shaves 4px off the bar's top — known and accepted over teaching the first row a
- * different geometry.
+ * card's own clip shaves 4px off the bar's top — the clip does not branch on the frame, so this holds
+ * at every width — known and accepted over teaching the first row a different geometry.
  */
 const ROW_ACTIONS =
     'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';

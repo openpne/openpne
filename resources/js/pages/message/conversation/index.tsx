@@ -284,13 +284,29 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-            <Panel flush className={composer === null ? 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]' : undefined}>
+                {/* The conversation keeps the card's surface and loses its inset below lg —
+                    `bleed`, and the reason it is allowed, in components/card.tsx. The margins are the
+                    composer's own so each edge is stated once; `lg:mx-0` stops there rather than
+                    following the composer past the card, which is an older disagreement (not one to
+                    copy). */}
+            {/* `mb-0` and the composer-less `max-lg:mb-[…]` carry the same specificity, so which one
+                a narrow screen gets is decided by emission order — Tailwind writes variants after the
+                base, and the conditional wins. That is the one order-dependent thing here: swap
+                `max-lg:` for a variant Tailwind emits earlier and this list quietly ends flush against
+                the foot of the screen again. (An `!` on `mb-0` would decide it by force, and did,
+                which is what silenced this rule until it was measured.) */}
+            <Panel
+                flush
+                bleed
+                className={cn('-mx-3 mb-0 sm:-mx-4 lg:mx-0 lg:mb-4', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
+            >
                 {stream.hasOlder && (
-                    <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
-                        <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
-                            {t('Load older messages')}
-                        </Button>
-                    </div>
+                    // The band is the button, not a pill standing inside it. A control alone between
+                    // two full-width rules reads as a label that happens to be centred; the whole
+                    // strip pressable is the shape a list uses to say "there is more above this".
+                    <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                        {t('Load older messages')}
+                    </Button>
                 )}
 
                 {messages.length === 0 ? (
@@ -342,11 +358,9 @@ export default function MessageConversation() {
                 )}
 
                 {!atLatest && (
-                    <div className="flex justify-center border-t border-border px-4 py-2 sm:px-5">
-                        <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()}>
-                            {t('Load newer messages')}
-                        </Button>
-                    </div>
+                    <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()} className="w-full rounded-none border-t border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                        {t('Load newer messages')}
+                    </Button>
                 )}
             </Panel>
 
