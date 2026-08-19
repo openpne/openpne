@@ -29,7 +29,7 @@ type PanelProps = {
     /** Drop the body padding so an edge-to-edge <List> sits flush under the header. */
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
-    overflow?: 'hidden' | 'visible';
+    overflow?: 'hidden' | 'clip' | 'visible';
     /** Forwarded to {@link Card}: drops the card chrome below lg, for the compose sheet's one surface. */
     sheet?: boolean;
 };

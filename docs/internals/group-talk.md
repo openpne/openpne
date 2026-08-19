@@ -233,8 +233,28 @@ The two meet on an ordinary morning, when the first message a reader has not see
 that day. `separatorsAbove` (`lib/chat/separators.ts`) owns the order so that it is stated once rather
 than left to the order the markup happens to be written in: **the heading is outside the unread line**,
 because the day is true for every reader while the line is only this reader's place among them. They
-are drawn as different shapes — a pill and a ruled band — so that meeting reads as two things rather
+are drawn as different shapes — a band and a ruled line — so that meeting reads as two things rather
 than one confused divider.
+
+**The heading sticks; the unread line does not**, and that follows from the same difference. A heading
+says the rows under it were said on that day: true for every reader and true however far this one
+scrolls, so it can be pinned and go on answering — which is what a long day needs, since its heading
+would otherwise scroll away and leave the rows below saying only a time. The unread line says where
+*this* reader stopped, a claim so tied to its position that `dividerBeforeId` withdraws it rather than
+draw it where the position cannot be shown honestly. Pinned, it would go on claiming "the unread starts
+here" over rows the reader passed long ago.
+
+The list is therefore drawn **one item per calendar day** (`lib/chat/day-groups.ts`), each holding its
+heading and that day's rows: a sticky element stops at the edge of its containing block, so a heading
+inside its own day is pushed out by the next day's. Flat siblings would all stop at the same offset and
+pile up there, the newer painting over the older and a narrower label leaving the wider one behind it
+showing at both ends. The panel is `overflow="clip"` for the same feature — `hidden` would establish a
+scroll container and pin the headings to a box that never scrolls, while `clip` keeps the card's
+corners without creating one.
+
+The heading is an opaque band the width of the list rather than a floating pill, because a row here
+runs the full column: a pill over the middle of one lands on the author's name, which is what it did at
+390px before it was measured.
 
 Whatever stands above a row also **restarts the run** (`foldsInto`, `lib/chat/message-grouping.ts`):
 the row says again who is speaking, since a header is what the thing above it separates the reader

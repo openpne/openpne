@@ -9,7 +9,10 @@ type Props = {
 /**
  * Rounded card wrapping a block of page content. Clips to the rounded corners by default; pass
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
- * `position: sticky` toolbar resolving against the page instead of the clipped card).
+ * `position: sticky` toolbar resolving against the page instead of the clipped card), or
+ * `overflow="clip"` to have both — `clip` establishes no scroll container, so a sticky descendant
+ * still resolves against the page while the corners keep clipping. A browser without `overflow: clip`
+ * drops the declaration and lands on `visible`, which is the same trade the other option makes.
  *
  * The card stays inset from the screen edges at every width. Running it edge to edge does buy width,
  * but it also takes away the strip of page background either side — which is what makes a card read as
@@ -23,11 +26,13 @@ export function Card({
     className,
     overflow = 'hidden',
     sheet = false,
-}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean }) {
+}: Props & { overflow?: 'hidden' | 'clip' | 'visible'; sheet?: boolean }) {
     return (
         <div
             className={cn(
-                overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
+                // A record over the union rather than a chain of ternaries: the chain would end in a
+                // catch-all, and a mode added without a branch would silently take it.
+                { hidden: 'overflow-hidden', clip: 'overflow-clip', visible: 'overflow-visible' }[overflow],
                 // Swapped rather than overridden: `rounded-card` is a custom token, which twMerge does
                 // not treat as the same utility as the class that would undo it.
                 sheet
