@@ -38,15 +38,15 @@ export function continuesRun(previous: GroupableMessage | undefined, message: Gr
 }
 
 /**
- * Whether `message` folds under the previous row's header, in a list where the unread separator is
- * drawn above the row whose id is `dividerBeforeId` (lib/chat/unread). That row always restarts a
- * run — the separator is where the reader resumes, and it must say again who is speaking. The rows
- * after it fold normally: they and their run sit below the line together, so nothing folds across it.
+ * Whether `message` folds under the previous row's header. `restartsHere` is the caller's one fact for
+ * every reason a row opens a turn regardless of who spoke last: something is drawn above it that the
+ * run must not cross — the unread separator (lib/chat/unread), a date heading. Such a row says again
+ * who is speaking, since a header is what the thing above it separates the reader from. The rows after
+ * it fold normally: they and their run sit below together, so nothing folds across it.
+ *
+ * One boolean rather than the ids of each: the reasons accumulate, they all mean the same thing here,
+ * and the list already knows which of them it drew.
  */
-export function foldsInto(
-    previous: (GroupableMessage & { id: number }) | undefined,
-    message: GroupableMessage & { id: number },
-    dividerBeforeId: number | null,
-): boolean {
-    return message.id !== dividerBeforeId && continuesRun(previous, message);
+export function foldsInto(previous: GroupableMessage | undefined, message: GroupableMessage, restartsHere: boolean): boolean {
+    return !restartsHere && continuesRun(previous, message);
 }

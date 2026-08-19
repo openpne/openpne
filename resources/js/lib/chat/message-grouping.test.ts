@@ -39,23 +39,24 @@ test('a reply breaks the run it would otherwise continue', () => {
     const reply = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7), inReplyTo: { deleted: false } };
 
     assert.ok(!continuesRun(m1, reply));
-    assert.ok(!foldsInto(m1, reply, null));
+    assert.ok(!foldsInto(m1, reply, false));
     // A plain follow-up in the same window still folds — the reply reference is what breaks it.
     const plain = { id: 3, ...at('2026-08-16T10:01:00+09:00', 7) };
-    assert.ok(foldsInto(m1, plain, null));
+    assert.ok(foldsInto(m1, plain, false));
 });
 
-test('the unread separator restarts a run, and the rows after it fold below the line', () => {
-    // One author, three quick messages, the line above the second: [m1] — line — [m2] [m3].
+test('anything drawn above a row restarts its run, and the rows after it fold below', () => {
+    // One author, three quick messages, something drawn above the second: [m1] — sep — [m2] [m3].
     const m1 = { id: 1, ...at('2026-08-16T10:00:00+09:00', 7) };
     const m2 = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7) };
     const m3 = { id: 3, ...at('2026-08-16T10:02:00+09:00', 7) };
 
-    // m2 would continue the run — the separator above it is what forces its header back.
+    // m2 would continue the run — what stands above it is what forces its header back. Which of the
+    // reasons it was (the unread separator, a date heading) is the list's business, not this rule's.
     assert.ok(continuesRun(m1, m2));
-    assert.ok(!foldsInto(m1, m2, 2));
-    // m3 folds under m2: both sit below the line, so no fold crosses it.
-    assert.ok(foldsInto(m2, m3, 2));
-    // Without a line in the list, m2 folds as normal.
-    assert.ok(foldsInto(m1, m2, null));
+    assert.ok(!foldsInto(m1, m2, true));
+    // m3 folds under m2: both sit below, so no fold crosses it.
+    assert.ok(foldsInto(m2, m3, false));
+    // With nothing drawn above it, m2 folds as normal.
+    assert.ok(foldsInto(m1, m2, false));
 });
