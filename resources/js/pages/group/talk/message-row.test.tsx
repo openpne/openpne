@@ -167,18 +167,25 @@ test('a folded row keeps its time in the gutter, spoken as well as drawn', () =>
         </ul>,
     );
 
-    // Two stamps, in two lanes. The gutter's is what a cursor reveals; whether it is *visible* is the
-    // hover rule, which this test never loads (tools/ux-review drives that in a browser).
-    const gutter = container.querySelector('[data-talk-message-id] > div > div:first-child time');
-    expect(gutter?.textContent).toBe('10:00');
-    // Hidden from the reader who is told instead: the sr-only attribution carries author and time,
-    // and announcing the gutter as well would say the time twice on every folded row.
-    expect(gutter?.closest('[aria-hidden]')).not.toBeNull();
-    expect(container.querySelector('.sr-only')?.textContent).toContain('10:00');
+    // Counted rather than located. A selector down the row's boxes resolves to the gutter only by
+    // today's order of children, and the companion test below asserts an *absence* — which such a
+    // selector would go on passing the moment it stopped pointing at the gutter at all.
+    const stamps = [...container.querySelectorAll('time')];
+    // Two lanes, one minute: what a cursor reveals, and what a screen reader is told instead.
+    expect(stamps.map((stamp) => stamp.textContent)).toEqual(['10:00', '10:00']);
+    // Whether the drawn one is *visible* is the hover rule, which this test never loads
+    // (tools/ux-review drives that in a browser); that it is hidden from the spoken lane is here.
+    expect(stamps.filter((stamp) => stamp.closest('[aria-hidden]') !== null)).toHaveLength(1);
+    expect(stamps.filter((stamp) => stamp.closest('.sr-only') !== null)).toHaveLength(1);
 });
 
 test('a row that draws its author draws no gutter time: it already shows one beside the name', () => {
     const { container } = renderRow();
 
-    expect(container.querySelector('[data-talk-message-id] > div > div:first-child time')).toBeNull();
+    // One stamp, and it is the one beside the name: a second would be the gutter's, drawn on a row
+    // that never folded. Counting is what makes this fail if a stamp appears rather than if a
+    // selector stops finding one.
+    const stamps = [...container.querySelectorAll('time')];
+    expect(stamps).toHaveLength(1);
+    expect(stamps[0].closest('[aria-hidden]')).toBeNull();
 });
