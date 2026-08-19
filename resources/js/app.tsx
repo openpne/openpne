@@ -9,6 +9,7 @@ import { SyncLocaleWithServer } from '@/components/sync-locale';
 // on the settings page, so without this the listener/sync would load lazily with that page).
 import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
+import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
 import { installHistoryRestore } from '@/lib/history-restore';
 import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
@@ -30,6 +31,11 @@ void createInertiaApp({
     // keeps auth pages clean: they share no `unread`, so no prefix survives a SPA logout.
     title: (title, page) =>
         withUnreadPrefix(title ? `${title} - ${appName}` : appName, (page.props as PageProps).unread?.notifications ?? 0),
+    defaults: {
+        // Asked for every visit, and the one place a destination can decline being scrolled by
+        // Inertia — see lib/chat/opening-scroll.ts for why a conversation has to.
+        visitOptions: (_href: string, options: { preserveScroll?: unknown }) => conversationVisitOptions(options),
+    },
     resolve: (name) =>
         resolvePageComponent<ResolvedComponent>(
             `./pages/${name}.tsx`,
