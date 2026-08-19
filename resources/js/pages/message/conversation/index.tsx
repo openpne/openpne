@@ -2,10 +2,12 @@ import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
+import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
@@ -68,6 +70,11 @@ export default function MessageConversation() {
     const [atBottom, setAtBottom] = useState(true);
     useMarkRead(`${path}/read`, messages[messages.length - 1]?.id, atBottom && atLatest);
     const [seen, setSeen] = useState<ChatSeenMark | null>(null);
+
+    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
+    const scrollDayLine = useRef<HTMLDivElement>(null);
+    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine, messages.length);
+    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // Where the reader has actually stood — see the talk page, whose rule this follows.
     useEffect(() => {
@@ -268,6 +275,10 @@ export default function MessageConversation() {
             {/* The withdrawn bucket keeps it: nobody can write there again, so it is the one
                 conversation whose only remaining action is clearing it out. */}
             <DeleteConversation path={path} />
+
+            {/* Withheld while the banner has this slot — one slot, one occupant (chat-scroll-day.tsx).
+                That ties this to how the banner's life is decided, so moving one moves the other. */}
+            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && backlog === null} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary

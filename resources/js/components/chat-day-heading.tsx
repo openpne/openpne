@@ -18,6 +18,12 @@ import type { PageProps } from '@/types';
  * again (docs/internals/group-talk.md). Mattermost does the same: one `Separator`, and
  * `NotificationSeparator` overriding only its colours.
  *
+ * **The label sits on a pill and the unread line's does not, and that is not what separates them.**
+ * The pill is here because components/chat-scroll-day.tsx reuses this shape — a floating copy has to
+ * be legible over the words it covers, so it needs a background, and giving the same one to the
+ * heading is what makes the two coincide when a heading scrolls up under it. A shape inherited from
+ * elsewhere, not a device for telling a date from an unread line; that is still the labels.
+ *
  * An `<li>` carrying a `role="separator"` child rather than being one: a list may only hold list
  * items, and an `<li role="separator">` is the one thing axe's `list` rule refuses. The label says the
  * whole of what it means, so what it draws is hidden.
@@ -49,7 +55,12 @@ export function ChatDayHeading({ at }: { at: string }) {
                 {/* `title` because the visible text abbreviates — `今日` on its own does not say which
                     day it was, and every other shape that leaves something out offers the whole value
                     the same way. Non-essential by the same rule: `dateTime` is what carries it. */}
-                <time aria-hidden dateTime={day} title={date.dayHeadingTitle(at)} className="text-xs text-muted-foreground">
+                <time
+                    aria-hidden
+                    dateTime={day}
+                    title={date.dayHeadingTitle(at)}
+                    className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground"
+                >
                     {label}
                 </time>
                 <span aria-hidden className="h-px flex-1 bg-border" />

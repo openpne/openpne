@@ -2,6 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
+import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
@@ -11,6 +12,7 @@ import { foldsInto } from '@/lib/chat/message-grouping';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
@@ -104,6 +106,11 @@ export default function GroupTalkIndex() {
     const [atBottom, setAtBottom] = useState(true);
     useMarkRead(`/groups/${group.id}/talk/read`, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
     const [seen, setSeen] = useState<ChatSeenMark | null>(null);
+
+    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
+    const scrollDayLine = useRef<HTMLDivElement>(null);
+    const scrollDay = useScrollDay('[data-talk-message-id]', scrollDayLine, messages.length);
+    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // Where the reader has actually stood. The pill's count is what has arrived past it, so it moves
     // on the same fact mark-read moves on — being at the foot of the live window — and on nothing
@@ -424,6 +431,10 @@ export default function GroupTalkIndex() {
             <Head title={t('Talk')} />
 
             {isMember && <TalkMuteToggle groupId={group.id} muted={isMuted} />}
+
+            {/* Withheld while the banner has this slot — one slot, one occupant (chat-scroll-day.tsx).
+                That ties this to how the banner's life is decided, so moving one moves the other. */}
+            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && backlog === null} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary
