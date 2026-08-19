@@ -454,12 +454,12 @@ export default function GroupTalkIndex() {
                     composer's own so each edge is stated once; `lg:mx-0` stops there rather than
                     following the composer past the card, which is an older disagreement (not one to
                     copy). */}
-            <Panel flush bleed className="-mx-3 mb-0! sm:-mx-4 lg:mx-0 lg:mb-4!">
+            <Panel flush bleed className="-mx-3 mb-0 sm:-mx-4 lg:mx-0 lg:mb-4">
                 {stream.hasOlder && (
                     // The band is the button, not a pill standing inside it. A control alone between
                     // two full-width rules reads as a label that happens to be centred; the whole
                     // strip pressable is the shape a list uses to say "there is more above this".
-                    <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full !rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
                         {t('Load older messages')}
                     </Button>
                 )}
@@ -552,7 +552,7 @@ export default function GroupTalkIndex() {
                 )}
 
                 {!atLatest && (
-                    <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()} className="w-full !rounded-none border-t border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()} className="w-full rounded-none border-t border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
                         {t('Load newer messages')}
                     </Button>
                 )}

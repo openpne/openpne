@@ -25,8 +25,9 @@ type Props = {
  *   began (the reader is reading sentences, not scanning rows). The card colour stays, because it is
  *   what tells the reader across the whole app that this is content — a diary entry, a topic and a
  *   conversation should not be read off different backgrounds. What is dropped is the rounding, the
- *   side borders and the margin; the top border keeps it apart from the page above, and the composer's
- *   own `border-t` closes it below.
+ *   side borders and the margin; the top border keeps it apart from the page above, and below it ends
+ *   where its colour ends — against the composer's own `border-t` where there is a composer, and
+ *   against the page where there is none (a conversation with someone who has left has no bar).
  *
  * So the device finding is not overturned by `bleed`: it was about losing the *surface*, which `bleed`
  * does not do.
