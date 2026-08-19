@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
-import { separatorsAbove } from '@/lib/chat/separators';
+import { drawsItsOwnRule, separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -442,8 +442,9 @@ export default function GroupTalkIndex() {
                             const opensDay =
                                 previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
                             const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
-                            // Whatever stands above the row holds its run open (message-grouping) and
-                            // stands in for the hairline that would otherwise rule above it.
+                            // Whatever stands above the row holds its run open (message-grouping):
+                            // the row says again who is speaking. Whether it also replaces the row's
+                            // hairline is a separate question, and only the unread band does.
                             const restartsHere = above.length > 0;
 
                             return (
@@ -485,10 +486,13 @@ export default function GroupTalkIndex() {
                                     onJumpToReply={jumpToReply}
                                     canReply={canPost}
                                     highlighted={message.id === highlightId}
-                                    grouped={foldsInto(messages[index - 1], message, restartsHere)}
-                                    // No rule under something already drawn above the row, and none
-                                    // above the first: what stands there is the break.
-                                    rule={index > 0 && !restartsHere && !foldsInto(messages[index - 1], message, restartsHere)}
+                                    grouped={foldsInto(previous, message, restartsHere)}
+                                    // No rule under a separator that is already a line, and none
+                                    // above the first row. A date heading is a pill rather than a
+                                    // line, so the row under it keeps its own — otherwise the turn of
+                                    // the day would be the one boundary here with nothing drawn
+                                    // across it, weaker than a change of speaker within an afternoon.
+                                    rule={previous !== undefined && !drawsItsOwnRule(above) && !foldsInto(previous, message, restartsHere)}
                                     reactions={{
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
