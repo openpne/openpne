@@ -433,8 +433,16 @@ export default function GroupTalkIndex() {
             {isMember && <TalkMuteToggle groupId={group.id} muted={isMuted} />}
 
             {/* Withheld while the banner has this slot — one slot, one occupant (chat-scroll-day.tsx).
-                That ties this to how the banner's life is decided, so moving one moves the other. */}
-            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && backlog === null} />
+                That ties this to how the banner's life is decided, so moving one moves the other.
+
+                And withheld at the foot of the live window, which is where every scroll this page
+                makes for itself happens: it opens there, it follows arrivals there, and it goes there
+                on a send. Those all raise a scroll event the indicator cannot tell from a reader's, so
+                without this a message arriving under a settled reader put a date over their words —
+                once per message, in the state this exists to keep clear. The gate reads as sense
+                besides: at the foot there is no question of which day, and the last heading is usually
+                still on screen. */}
+            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} visible={scrollDay.moving && scrollDay.standingIn && backlog === null && !(atBottom && atLatest)} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary

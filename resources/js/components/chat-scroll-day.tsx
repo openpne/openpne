@@ -53,7 +53,9 @@ export function ChatScrollDay({ at, visible, ref }: { at: string | null; visible
                 // tall, and nothing publishes that height — so it is written here once, as what it is:
                 // if the strip's padding changes, this changes with it. The unread banner sits at the
                 // unadjusted offset and so lands under that strip once it sticks, which is the same
-                // relationship still unfixed, and why this does not simply copy it.
+                // relationship still unfixed, and why this does not simply copy it. The strip is a
+                // look's choice (member-frame) while this offset is not, so a look without one leaves
+                // the indicator sitting lower than it needs to — a gap, not a collision.
                 'top-[calc(var(--modern-top-offset)+0.5rem)] lg:top-[calc(var(--modern-top-offset)+3.5rem)]',
             )}
         >

@@ -7,6 +7,12 @@ const IDLE_MS = 500;
 /** How long a fresh conversation is allowed to settle before a scroll counts as the reader's. */
 const ARM_MS = 600;
 
+/** The strip the indicator occupies: its own height and a little, measured down from the line. */
+const BAND_PX = 44;
+
+/** And a hair above it, so a heading is out of the way before the indicator returns. */
+const EDGE_PX = 8;
+
 /**
  * Which day the reader is in, while they are moving through the conversation.
  *
@@ -22,8 +28,15 @@ const ARM_MS = 600;
  * row per message in order, so the nth matching element is the nth message; a list that filtered or
  * reordered would have to hand back element identity instead.
  */
-export function useScrollDay(rowSelector: string, line: { current: HTMLElement | null }): { index: number | null; moving: boolean } {
-    const [state, setState] = useState<{ index: number | null; moving: boolean }>({ index: null, moving: false });
+export function useScrollDay(
+    rowSelector: string,
+    line: { current: HTMLElement | null },
+): { index: number | null; moving: boolean; standingIn: boolean } {
+    const [state, setState] = useState<{ index: number | null; moving: boolean; standingIn: boolean }>({
+        index: null,
+        moving: false,
+        standingIn: false,
+    });
     // The frame a measurement is already booked for, and the timer that ends the burst. Refs because
     // neither is anything to render — they only decide when the next render is worth asking for.
     const frame = useRef<number | null>(null);
@@ -49,7 +62,33 @@ export function useScrollDay(rowSelector: string, line: { current: HTMLElement |
             const rows = document.querySelectorAll(rowSelector);
             const index = rowAtLine(rows.length, (at) => rows[at]?.getBoundingClientRect().bottom ?? 0, top);
 
-            setState((current) => (current.index === index && current.moving ? current : { index, moving: true }));
+            // Whether there is anything to stand in for. This exists because a day's heading has
+            // scrolled away; while that heading is still on the screen it is saying the same thing in
+            // the place it belongs, and a second copy is at best noise — at the head of the list it is
+            // the same date twice over, once on the rule and once floating above the load-older strip.
+            //
+            // The governing heading is the last one above the row, and there is one per day rather
+            // than per row, so a walk over them costs nothing worth avoiding.
+            const owner = index === null ? null : rows[index]?.getBoundingClientRect() ?? null;
+            const headings = [...document.querySelectorAll('li:has(> [role="separator"] time)')].map((h) =>
+                h.getBoundingClientRect(),
+            );
+            const governing = owner === null ? undefined : headings.filter((h) => h.top <= owner.top).pop();
+            const onScreen = governing !== undefined && governing.bottom > top && governing.top < window.innerHeight;
+
+            // And nothing underneath it. The heading arriving at the line belongs to the *next* day,
+            // so the rule above says nothing about it — it is the previous day's heading that governs
+            // the row at the line. Left alone, a floating `12日` covers an arriving `13日` and reads as
+            // that heading saying the wrong date. Two moving parts, two rules: one for having a job,
+            // one for not sitting on somebody.
+            const covering = headings.some((h) => h.bottom > top - EDGE_PX && h.top < top + BAND_PX);
+            const standingIn = !onScreen && !covering;
+
+            setState((current) =>
+                current.index === index && current.moving && current.standingIn === standingIn
+                    ? current
+                    : { index, moving: true, standingIn },
+            );
         };
 
         const onScroll = () => {
