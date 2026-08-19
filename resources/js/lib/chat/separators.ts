@@ -20,6 +20,11 @@ export type ChatSeparator = 'day' | 'unread';
  * the gap. Asking "is there anything above me" instead would leave the strongest break in the
  * conversation — the turn of a calendar day — as the one boundary with no line at all, weaker than
  * the hairline between two speakers of the same afternoon.
+ *
+ * The two are different shapes because they are different kinds of claim. A date heading says the rows
+ * under it were said on that day, which is true for every reader. The unread line says where *this*
+ * reader stopped — a claim so tied to its position that `dividerBeforeId` (lib/chat/unread) withdraws
+ * it rather than draw it where the position cannot be shown honestly.
  */
 export function drawsItsOwnRule(separators: readonly ChatSeparator[]): boolean {
     return separators.includes('unread');

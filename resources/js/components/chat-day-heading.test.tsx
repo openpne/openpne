@@ -29,7 +29,23 @@ test('the label is the whole of what the separator announces', () => {
     // The visible text is hidden from assistive technology, so the name has to say it instead —
     // otherwise the separator announces itself as an unnamed break in the list.
     expect(separator.getAttribute('aria-label')).toBe(separator.textContent);
-    expect(separator.textContent).toBe('March 4, 2020');
+    expect(separator.textContent).toBe('Wed, March 4, 2020');
+});
+
+test('the heading offers the whole day on hover, since the visible text may abbreviate', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-10T03:00:00+00:00'));
+
+    try {
+        renderHeading('2026-08-10T09:00:00+09:00');
+
+        const stamp = screen.getByRole('separator').querySelector('time');
+        // 'Today' does not say which day it was; the title does, year included.
+        expect(stamp?.textContent).toBe('Today');
+        expect(stamp?.getAttribute('title')).toBe('Mon, August 10, 2026');
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 test('today and yesterday are words, and older days are dates', () => {
@@ -47,7 +63,7 @@ test('today and yesterday are words, and older days are dates', () => {
         cleanup();
 
         renderHeading('2026-08-08T09:00:00+09:00');
-        expect(screen.getByRole('separator').textContent).toBe('August 8');
+        expect(screen.getByRole('separator').textContent).toBe('Sat, August 8');
     } finally {
         vi.useRealTimers();
     }

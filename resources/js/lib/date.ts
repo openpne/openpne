@@ -52,7 +52,38 @@ export function formatListStamp(iso: string, context: DateFormatContext, now: Da
         return render(date, iso, locale, { ...HOUR_MINUTE, timeZone });
     }
 
-    return render(date, iso, locale, { ...(then.year === today.year ? MONTH_DAY : YEAR_MONTH_DAY), timeZone });
+    return render(date, iso, locale, { ...dayShape(then, today), timeZone });
+}
+
+/**
+ * Which parts name a calendar day to a reader standing in `today`: rule 3 — a year they are already in
+ * is not shown. A function rather than the same comparison written out in each formatter that needs it,
+ * so the rule cannot be changed in one and left behind in the other.
+ */
+function dayShape(then: { year: number }, today: { year: number }): Intl.DateTimeFormatOptions {
+    return then.year === today.year ? MONTH_DAY : YEAR_MONTH_DAY;
+}
+
+/**
+ * The day a conversation's date heading names, for the days that are not answered with a word.
+ *
+ * Carries the weekday, which the shapes above do not: a reader scrolling back through a conversation is
+ * placing the day in their own week, and the weekday is what answers that. It costs nothing per row —
+ * a conversation says its day once for the whole run of messages under the heading.
+ */
+export function formatDayLabel(iso: string, context: DateFormatContext, now: Date = new Date()): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return iso;
+    }
+
+    const { locale, timeZone } = context;
+
+    return render(date, iso, locale, {
+        ...dayShape(siteDayParts(date, timeZone), siteDayParts(now, timeZone)),
+        weekday: 'short',
+        timeZone,
+    });
 }
 
 /**

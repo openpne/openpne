@@ -6,6 +6,7 @@ import {
     formatCivilMonth,
     formatCivilMonthShort,
     formatClockTime,
+    formatDayLabel,
     formatExact,
     formatListStamp,
     relativeDeadline,
@@ -36,6 +37,8 @@ export function useDateFormat(): {
     siteDay: (iso: string) => string | null;
     /** What a conversation's date heading says over the rows of that day. */
     dayHeading: (iso: string, now?: Date) => string;
+    /** The whole day the heading may be abbreviating, for its hover title. */
+    dayHeadingTitle: (iso: string) => string;
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
@@ -54,6 +57,14 @@ export function useDateFormat(): {
         relativeDeadline: (iso, now) => relativeDeadline(iso, context.timeZone, now),
         siteDay: (iso) => siteDay(iso, context.timeZone),
         dayHeading: (iso, now) => dayHeadingLabel(iso, context, t, now),
+        // Through the civil-date formatter rather than a shape of its own: the heading names a day, and
+        // this is that same day written out in full — the year included, since a title exists to say
+        // what the visible text left out.
+        dayHeadingTitle: (iso) => {
+            const day = siteDay(iso, context.timeZone);
+
+            return day === null ? '' : formatCivilDate(day, context, true);
+        },
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
@@ -71,9 +82,8 @@ export function useDateFormat(): {
  */
 /**
  * The wording for a conversation's date heading. Only today and yesterday become words: past that the
- * reader is placing the day on a calendar rather than against now, which is the same boundary
- * {@link formatListStamp} already draws — and reusing it here is why no third date format exists. It
- * can never take its today branch, because today is answered above it.
+ * reader is placing the day on a calendar rather than against now, and {@link formatDayLabel} writes it
+ * out with the weekday they place it by.
  */
 function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: string) => string, now?: Date): string {
     switch (siteDayOffset(iso, context.timeZone, now)) {
@@ -82,7 +92,7 @@ function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: strin
         case 1:
             return t('Yesterday');
         default:
-            return formatListStamp(iso, context, now);
+            return formatDayLabel(iso, context, now);
     }
 }
 

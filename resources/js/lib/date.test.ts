@@ -7,6 +7,7 @@ import {
     formatCivilMonth,
     formatCivilMonthShort,
     formatClockTime,
+    formatDayLabel,
     formatExact,
     formatListStamp,
     msUntilNextSiteDay,
@@ -232,4 +233,38 @@ test('a day offset counts calendar days on the site clock, not on UTC', () => {
 test('an instant on a clock ahead of the site is not yesterday', () => {
     // Negative rather than clamped: the caller dates it normally instead of calling it today.
     assert.ok((siteDayOffset('2026-08-12T00:00:00+00:00', 'Asia/Tokyo', new Date('2026-08-10T02:00:00+00:00')) ?? 0) < 0);
+});
+
+test('a day label carries the weekday the reader places it by', () => {
+    const now = new Date('2026-08-19T02:00:00+00:00'); // 11:00 on the 19th in Tokyo.
+
+    assert.equal(formatDayLabel('2026-08-12T05:00:00+00:00', tokyo, now), '8月12日(水)');
+    assert.equal(formatDayLabel('2026-08-12T05:00:00+00:00', { ...tokyo, locale: 'en' }, now), 'Wed, August 12');
+});
+
+test('a day label drops the year the reader is already in, and keeps the one they are not', () => {
+    const now = new Date('2026-08-19T02:00:00+00:00');
+
+    assert.equal(formatDayLabel('2026-01-02T05:00:00+00:00', tokyo, now), '1月2日(金)');
+    assert.equal(formatDayLabel('2025-12-31T05:00:00+00:00', tokyo, now), '2025年12月31日(水)');
+});
+
+test('a day label and a list stamp agree about the year, on both sides of the boundary', () => {
+    // The rule lives in one place (dayShape); this is what says so if it is ever written out twice.
+    const now = new Date('2026-01-01T02:00:00+00:00');
+    const thisYear = '2026-01-01T05:00:00+00:00';
+    const lastYear = '2025-12-31T05:00:00+00:00';
+
+    const showsYear = (text: string) => text.includes('2025') || text.includes('2026');
+    assert.equal(showsYear(formatDayLabel(thisYear, tokyo, now)), showsYear(formatListStamp(thisYear, tokyo, now)));
+    assert.equal(showsYear(formatDayLabel(lastYear, tokyo, now)), showsYear(formatListStamp(lastYear, tokyo, now)));
+    assert.equal(showsYear(formatDayLabel(lastYear, tokyo, now)), true);
+});
+
+test('a day label follows the site clock, not the viewer', () => {
+    const now = new Date('2026-08-10T02:00:00+00:00');
+
+    // 15:05Z is already the 10th in Tokyo and still the 9th in New York.
+    assert.equal(formatDayLabel(evening, { ...tokyo, locale: 'en' }, now), 'Mon, August 10');
+    assert.equal(formatDayLabel(evening, { ...newYork, locale: 'en' }, now), 'Sun, August 9');
 });

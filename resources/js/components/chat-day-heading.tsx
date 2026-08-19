@@ -38,7 +38,15 @@ export function ChatDayHeading({ at }: { at: string }) {
     return (
         <li className="px-4 py-2 sm:px-5">
             <div role="separator" aria-label={label} className="flex justify-center">
-                <time aria-hidden dateTime={day} className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground">
+                {/* `title` because the visible text abbreviates — `今日` on its own does not say which
+                    day it was, and every other shape that leaves something out offers the whole value
+                    the same way. Non-essential by the same rule: `dateTime` is what carries it. */}
+                <time
+                    aria-hidden
+                    dateTime={day}
+                    title={date.dayHeadingTitle(at)}
+                    className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground"
+                >
                     {label}
                 </time>
             </div>
