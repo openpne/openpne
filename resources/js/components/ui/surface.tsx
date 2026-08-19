@@ -32,6 +32,8 @@ type PanelProps = {
     overflow?: 'hidden' | 'visible';
     /** Forwarded to {@link Card}: drops the card chrome below lg, for the compose sheet's one surface. */
     sheet?: boolean;
+    /** Forwarded to {@link Card}: keeps the surface, drops the inset below lg. For a conversation. */
+    bleed?: boolean;
 };
 
 /**
@@ -39,9 +41,9 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow, sheet }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, sheet, bleed }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow} sheet={sheet}>
+        <Card className={className} overflow={overflow} sheet={sheet} bleed={bleed}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
                 take a bite out of the same line, and 20px here was the widest of the three.

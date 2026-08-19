@@ -12,6 +12,18 @@ import tseslint from 'typescript-eslint';
 // applied — the browser's are wrong for both, which is how Modern and Classic came to disagree by the
 // viewer's offset (docs/internals/runtime.md). Shared so the app.tsx block below, which sets its own
 // no-restricted-syntax and would otherwise replace this one, keeps enforcing it too.
+// A `//` line between two JSX children is not a comment — it is a text node, and it is drawn on the
+// screen. Nothing else catches it: it is valid JSX, so tsc and the build are happy, and the rule that
+// would name it (`react/jsx-no-comment-textnodes`) belongs to a plugin this config does not carry.
+// It is easy to reach for, because the same line *is* a comment a few characters earlier, inside the
+// `{cond && (` that precedes the element. Shipped once (PR #681), visible on every visit.
+const JSX_LINE_COMMENT_RESTRICTION = {
+    // Anchored to the start of a line: a bare https:// inside a sentence is prose, and this rule
+    // has no business stopping it. esquery takes no `m` flag, so the alternation stands in for one.
+    selector: 'JSXText[value=/(^|\\n)\\s*\\/\\//]',
+    message: 'This is a JSX text node, not a comment — it renders on screen. Use {/* … */}.',
+};
+
 const DATE_FORMATTING_RESTRICTIONS = [
     {
         // The member access, not the call: `Intl.DateTimeFormat(...)` is valid without `new`, and
@@ -42,7 +54,7 @@ export default tseslint.config(
     {
         files: ['resources/js/**/*.{ts,tsx}'],
         ignores: ['resources/js/lib/date.ts'],
-        rules: { 'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS] },
+        rules: { 'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION] },
     },
     {
         // The raw formatters take an explicit locale + timezone, so a caller can pass the wrong pair.

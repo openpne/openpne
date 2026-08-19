@@ -11,28 +11,48 @@ type Props = {
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
  *
- * The card stays inset from the screen edges at every width. Running it edge to edge does buy width,
- * but it also takes away the strip of page background either side — which is what makes a card read as
- * a surface lying on the page rather than as the page itself. Tested on device, that flattened every
- * screen into one field of card color divided by lines. The width comes from tighter padding instead.
- * That judgment is about screens the reader browses, which is why `sheet` is a scoped exception: the
- * compose sheet below lg is a single screen with a single job, and there the frame is the divider.
+ * The card stays inset from the screen edges. Running it edge to edge does buy width, but it also
+ * takes away the strip of page background either side — which is what makes a card read as a surface
+ * lying on the page rather than as the page itself. Tested on device, that flattened every screen into
+ * one field of card color divided by lines. The width comes from tighter padding instead.
+ *
+ * Two screens ask for something else, and they ask for different things:
+ *
+ * - `sheet` **drops the surface**: the compose sheet below lg is one screen with one job, and its
+ *   fields keep boxes of their own, so the card underneath them was a second frame around a first.
+ * - `bleed` **keeps the surface and drops the inset**: a conversation below lg is the whole screen, and
+ *   the page margin plus the frame were taking a quarter of every line before the row's own padding
+ *   began (the reader is reading sentences, not scanning rows). The card colour stays, because it is
+ *   what tells the reader across the whole app that this is content — a diary entry, a topic and a
+ *   conversation should not be read off different backgrounds. What is dropped is the rounding, the
+ *   side borders and the margin; the top border keeps it apart from the page above, and below it ends
+ *   where its colour ends — against the composer's own `border-t` where there is a composer, and
+ *   against the page where there is none (a conversation with someone who has left has no bar).
+ *
+ * So the device finding is not overturned by `bleed`: it was about losing the *surface*, which `bleed`
+ * does not do.
  */
 export function Card({
     children,
     className,
     overflow = 'hidden',
     sheet = false,
-}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean }) {
+    bleed = false,
+}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean; bleed?: boolean }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
                 // Swapped rather than overridden: `rounded-card` is a custom token, which twMerge does
                 // not treat as the same utility as the class that would undo it.
+                // Three strings rather than classes layered over each other: `rounded-card` is a custom
+                // token and the borders differ per side, neither of which twMerge can resolve against
+                // a later override.
                 sheet
                     ? 'text-card-foreground lg:rounded-card lg:border lg:border-border lg:bg-card lg:shadow-card'
-                    : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
+                    : bleed
+                      ? 'border-t border-border bg-card text-card-foreground lg:rounded-card lg:border lg:shadow-card'
+                      : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
                 className,
             )}
         >
