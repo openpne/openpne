@@ -370,7 +370,8 @@ export default function MessageConversation() {
             {!atBottom && (
                 <div
                     className={cn(
-                        'pointer-events-none sticky z-20 flex h-0 items-end justify-center',
+                        // `mb-0`: zero height is not the same as taking no room — see the talk page.
+                        'pointer-events-none sticky z-20 mb-0 flex h-0 items-end justify-center',
                         composer === null ? 'bottom-[calc(var(--modern-bottom-offset)+1rem)]' : 'bottom-[calc(var(--modern-bottom-offset)+4.25rem)]',
                     )}
                 >
