@@ -136,11 +136,11 @@ interface LookSpec {
     /** Which row the phone bottom bar draws. 'labeled' = each tab's icon over its full label;
      *  'dive' = the search | place | notifications zones. */
     bottomBar: 'dive' | 'labeled';
-    /** What a bottom tab wears while something waits on it. 'count' = the number, on every tab whose
-     *  section carries a badge; 'dot' = the notifications tab alone. A dot reads as a summons, and a
-     *  count that stays put whatever the reader does (rooms with new talk, pending requests) is not
-     *  one — so a look that marks with dots marks only the queue, and leaves the rest to the pills
-     *  the drawer already carries. */
+    /** What a labelled tab wears while something waits on it — the dive row draws its own marks as
+     *  part of its three-zone design. 'count' = the number, on every tab whose section carries a
+     *  badge; 'dot' = the notifications tab alone. A dot reads as a summons, and a count that stays
+     *  put whatever the reader does (rooms with new talk, pending requests) is not one — so a look
+     *  that marks with dots marks only the queue, and leaves the rest to the drawer's pills. */
     tabMark: TabMark;
     /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
     bottomBarInConversation: boolean;

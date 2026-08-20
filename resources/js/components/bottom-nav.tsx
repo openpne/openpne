@@ -58,8 +58,10 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
         >
             {/* A tab fills the row, so the row is the tap target, and the word under each icon is
                 what makes the labelled row the taller of the two. AppShell reserves these same
-                heights as `--modern-bottom-offset`: changing one here is changing both. */}
-            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-12')}>
+                lengths as `--modern-bottom-offset`, and a bar taller than the space it was given
+                stands over the page's last rows — so both are written as the same literal and
+                AppShellTest reads this one back off the shell's reservation. */}
+            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-[3rem]')}>
                 {bottomBar === 'dive' ? <DiveRow chrome={chrome} path={path} /> : <LabeledTabs path={path} mark={tabMark} />}
             </ul>
         </nav>
@@ -89,8 +91,10 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                         <Link
                             href={href}
                             aria-current={active ? 'page' : undefined}
-                            // The word is on screen, so it is the tab's name; a count is said beside
-                            // it, by the pill's own label or — where the mark prints nothing — here.
+                            // Named by the word on screen, with the count beside it from the pill's
+                            // own label. A dot prints nothing to name, so the phrase goes here — and
+                            // that replaces the name rather than joining it, which stays inside
+                            // WCAG 2.5.3 only because the phrase spells the word out again.
                             aria-label={dotted ? t(NOTIFICATIONS_SECTION.badge.label.key, { count }) : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
