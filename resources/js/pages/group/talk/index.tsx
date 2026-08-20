@@ -2,6 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
+import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
@@ -11,6 +12,7 @@ import { foldsInto } from '@/lib/chat/message-grouping';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
@@ -105,6 +107,7 @@ export default function GroupTalkIndex() {
     useMarkRead(`/groups/${group.id}/talk/read`, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
     const [seen, setSeen] = useState<ChatSeenMark | null>(null);
 
+
     // Where the reader has actually stood. The pill's count is what has arrived past it, so it moves
     // on the same fact mark-read moves on — being at the foot of the live window — and on nothing
     // else. Not folded into the arrival effect below: the pill itself puts a reader back at the foot
@@ -148,6 +151,10 @@ export default function GroupTalkIndex() {
     // Zero from a history window without a gate of its own: everything loaded there is older than
     // the mark, so nothing counts as having arrived past it.
     const arrivals = arrivalsAfter(messages, seen);
+    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
+    const scrollDayLine = useRef<HTMLDivElement>(null);
+    const scrollDay = useScrollDay('[data-talk-message-id]', scrollDayLine, backlog !== null, () => atFoot() && atLatest);
+    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // What the pill says. English needs the singular said differently, and this is the place in the
     // app where a count of one is the *common* case — a conversation usually gets one message at a
@@ -424,6 +431,18 @@ export default function GroupTalkIndex() {
             <Head title={t('Talk')} />
 
             {isMember && <TalkMuteToggle groupId={group.id} muted={isMuted} />}
+
+            {/* Withheld while the banner has this slot — one slot, one occupant (chat-scroll-day.tsx).
+                That ties this to how the banner's life is decided, so moving one moves the other.
+
+                And withheld at the foot of the live window, which is where every scroll this page
+                makes for itself happens: it opens there, it follows arrivals there, and it goes there
+                on a send. Those all raise a scroll event the indicator cannot tell from a reader's, so
+                without this a message arriving under a settled reader put a date over their words —
+                once per message, in the state this exists to keep clear. The gate reads as sense
+                besides: at the foot there is no question of which day, and the last heading is usually
+                still on screen. */}
+<ChatScrollDay ref={scrollDayLine} at={scrollDayAt} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary

@@ -2,10 +2,12 @@ import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
+import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
@@ -69,6 +71,7 @@ export default function MessageConversation() {
     useMarkRead(`${path}/read`, messages[messages.length - 1]?.id, atBottom && atLatest);
     const [seen, setSeen] = useState<ChatSeenMark | null>(null);
 
+
     // Where the reader has actually stood — see the talk page, whose rule this follows.
     useEffect(() => {
         const newest = messages[messages.length - 1];
@@ -94,6 +97,10 @@ export default function MessageConversation() {
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && unreadSnapshot !== null ? unreadSnapshot : null;
     const arrivals = arrivalsAfter(messages, seen);
+    // Where the reading area begins, handed to the hook so the offset stays in the class that sets it.
+    const scrollDayLine = useRef<HTMLDivElement>(null);
+    const scrollDay = useScrollDay('[data-conversation-message-id]', scrollDayLine, backlog !== null, () => atFoot() && atLatest);
+    const scrollDayAt = scrollDay.index === null ? null : (messages[scrollDay.index]?.createdAt ?? null);
 
     // What the pill says. English needs the singular said differently, and this is the place in the
     // app where a count of one is the *common* case — a conversation usually gets one message at a
@@ -268,6 +275,18 @@ export default function MessageConversation() {
             {/* The withdrawn bucket keeps it: nobody can write there again, so it is the one
                 conversation whose only remaining action is clearing it out. */}
             <DeleteConversation path={path} />
+
+            {/* Withheld while the banner has this slot — one slot, one occupant (chat-scroll-day.tsx).
+                That ties this to how the banner's life is decided, so moving one moves the other.
+
+                And withheld at the foot of the live window, which is where every scroll this page
+                makes for itself happens: it opens there, it follows arrivals there, and it goes there
+                on a send. Those all raise a scroll event the indicator cannot tell from a reader's, so
+                without this a message arriving under a settled reader put a date over their words —
+                once per message, in the state this exists to keep clear. The gate reads as sense
+                besides: at the foot there is no question of which day, and the last heading is usually
+                still on screen. */}
+<ChatScrollDay ref={scrollDayLine} at={scrollDayAt} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary
