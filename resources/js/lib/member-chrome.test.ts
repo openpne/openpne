@@ -14,7 +14,6 @@ import {
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
-    tabbedNavSections,
     TALK_ROOMS_HREF,
     unifiedTabs,
     visibleNavSections,
@@ -73,53 +72,23 @@ test('the groups section stays while only a board is off', () => {
 
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
 
-test('the bottom bar carries Home and its four sections in bar order', () => {
-    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications', '/messages']);
+test('the bottom bar is Home and three sections, and messages is not one of them', () => {
+    // A word under each icon is what costs the fifth tab, and messages is the one dropped: the
+    // drawer entry that already carries its count is where the number stays.
+    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications']);
 });
 
 test('a bottom tab goes with its unit', () => {
-    assert.deepEqual(bottomHrefs({ ...allOn, group: false }), [
-        '/dashboard',
-        '/diary/list',
-        '/notifications',
-        '/messages',
-    ]);
-    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), [
-        '/dashboard',
-        '/groups/mine',
-        '/notifications',
-        '/messages',
-    ]);
-    assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), [
-        '/dashboard',
-        '/groups/mine',
-        '/diary/list',
-        '/notifications',
-    ]);
+    assert.deepEqual(bottomHrefs({ ...allOn, group: false }), ['/dashboard', '/diary/list', '/notifications']);
+    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/dashboard', '/groups/mine', '/notifications']);
+    // Switching messages off changes nothing here, the row never having carried it.
+    assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), bottomHrefs(allOn));
 });
 
 test('Home and notifications survive every unit being off', () => {
     const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
     assert.deepEqual(bottomHrefs(allOff), ['/dashboard', '/notifications']);
-});
-
-const tabbedHrefs = (enabled: Record<FeatureKey, boolean>) => tabbedNavSections(enabled).map((section) => section.href);
-
-test('the tabbed row is four tabs, and messages is not one of them', () => {
-    // A word under each icon is what costs the fifth tab. Messages is the one dropped: its count is
-    // ambient state rather than a queue, so the drawer entry that already carries it is enough.
-    assert.deepEqual(tabbedHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications']);
-});
-
-test('a tabbed tab goes with its unit, through the same filter the five-tab row uses', () => {
-    assert.deepEqual(tabbedHrefs({ ...allOn, group: false }), ['/dashboard', '/diary/list', '/notifications']);
-    assert.deepEqual(tabbedHrefs({ ...allOn, diary: false }), ['/dashboard', '/groups/mine', '/notifications']);
-    // Switching messages off changes nothing here, the row never having carried it.
-    assert.deepEqual(tabbedHrefs({ ...allOn, directMessage: false }), tabbedHrefs(allOn));
-
-    const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
-    assert.deepEqual(tabbedHrefs(allOff), ['/dashboard', '/notifications']);
 });
 
 test('the Home tab matches its own path only', () => {
@@ -423,11 +392,12 @@ test('the Messages hub starts a message the way every other hub starts its own t
 
 // The whole row, not the fields the test author remembered: a value changed by accident is the same
 // edit as a value changed on purpose, and only an exhaustive assert tells them apart.
-test('standard is the look that deviates in nothing', () => {
+test('standard answers every question as the layout the site has always shipped', () => {
     assert.deepEqual(lookSpec('standard'), {
         topBar: 'byScreen',
         desktopTopBar: false,
-        bottomBar: 'icons',
+        bottomBar: 'labeled',
+        tabMark: 'count',
         bottomBarInConversation: false,
         ground: 'standard',
         rightRail: true,
@@ -438,43 +408,36 @@ test('standard is the look that deviates in nothing', () => {
     });
 });
 
-test('unified deviates exactly where it claims', () => {
+test('unified answers every question', () => {
     assert.deepEqual(lookSpec('unified'), {
-        // The persistent tab pair, its own ground, no third column — and no avatar menu in the
-        // bars, so the drawer carries the account rows and the hub h1 stays (the bar has no title).
         topBar: 'unified',
         desktopTopBar: true,
         bottomBar: 'dive',
+        tabMark: 'dot',
+        bottomBarInConversation: false,
         ground: 'unified',
         rightRail: false,
         accountInDrawer: true,
         foldsHubHeading: false,
-        // Where it does not deviate: standard's answer, stated rather than inherited.
-        bottomBarInConversation: false,
         colorLine: false,
         placeBar: false,
     });
 });
 
-test('tabbed deviates exactly where it claims', () => {
+test('tabbed answers every question', () => {
     assert.deepEqual(lookSpec('tabbed'), {
-        // Its own four: one breadcrumb grammar for every screen class, labelled tabs under the page,
-        // a bar that stays standing while a room is read, and the site color line.
         topBar: 'breadcrumb',
+        // Phone furniture: at lg+ the sidebar is where the reader's bearings come from.
+        desktopTopBar: false,
         bottomBar: 'labeled',
+        tabMark: 'dot',
         bottomBarInConversation: true,
-        colorLine: true,
-        // Landing next, with the desktop pass.
-        placeBar: true,
-        // Shared with unified: its ground, the account rows the bars have no room for, no third
-        // column, and a hub heading that stays in the page (the bar's copy of it is not the h1).
         ground: 'unified',
         rightRail: false,
         accountInDrawer: true,
         foldsHubHeading: false,
-        // Where it does not deviate: standard's answer, stated rather than inherited. The breadcrumb
-        // is phone furniture; at lg+ the sidebar is where the reader's bearings come from.
-        desktopTopBar: false,
+        colorLine: true,
+        placeBar: true,
     });
 });
 

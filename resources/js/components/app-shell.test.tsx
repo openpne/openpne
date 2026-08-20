@@ -95,18 +95,19 @@ const bar = () => document.querySelector('nav[aria-label="Navigation"]');
 const header = () => document.querySelector('header');
 
 /**
- * Wiring, not values: several LookSpec fields carry identical value vectors (rightRail and
- * foldsHubHeading; colorLine, placeBar and bottomBarInConversation), so a registry-value test can
- * never catch a consumer reading the wrong one. What the shell actually renders per look can.
+ * Wiring, not values: LookSpec fields whose value vectors coincide are indistinguishable to a
+ * registry-value test, so a consumer reading the wrong one of them surfaces only in what the shell
+ * renders. The bottom offset rides along because its value is a look's answer too; that the length
+ * it reserves is the length the bar stands at is a different claim, made below.
  */
 test.each([
     // Null = no desktop override at all: the unified bar stands at every width, so the phone's
     // reserved height is the desktop's too. The two that drop it differ by what is left above the
     // page — nothing, or the site-color line.
-    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', width: 'max-w-6xl xl:max-w-7xl' }],
-    ['unified', { ground: true, rail: false, line: false, desktopOffset: null, width: 'max-w-6xl lg:max-w-[58rem]' }],
-    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', width: 'max-w-6xl lg:max-w-[58rem]' }],
-] as const)('%s wires ground, rail, the color line and the desktop offset from its own fields', (look, expected) => {
+    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', width: 'max-w-6xl xl:max-w-7xl', bottom: '3.625rem' }],
+    ['unified', { ground: true, rail: false, line: false, desktopOffset: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3rem' }],
+    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
+] as const)('%s wires ground, rail, the color line and its offsets from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
     const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
 
@@ -121,6 +122,27 @@ test.each([
     // Rail-less looks shrink the frame to sidebar + content so the pair centers as one block —
     // the retired rail's width must not survive as a dead band beside the page.
     expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
+    expect(shell.className).toContain(`[--modern-bottom-offset:calc(${expected.bottom}+1px+env(safe-area-inset-bottom))]`);
+});
+
+/**
+ * The bar's height is written in bottom-nav.tsx and reserved again here, and the two disagreeing is
+ * not a visible bug but a permanent one: a bar taller than its reservation stands over the page's
+ * last rows at every scroll position. So this reads the reserved length back off the shell and
+ * requires the row that stands in it to be exactly that tall — the literals are compared, not two
+ * copies of one expectation.
+ */
+test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length its own row stands at', (look) => {
+    const chrome = arrive('dashboard', '/dashboard', { look });
+    const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
+
+    const shell = container.firstElementChild as HTMLElement;
+    const reserved = /\[--modern-bottom-offset:calc\(([^+]+)\+1px/.exec(shell.className)?.[1];
+    const row = bar()?.querySelector('ul');
+
+    expect(reserved).toBeTruthy();
+    expect(row).not.toBeNull();
+    expect(row?.className.split(' ')).toContain(`h-[${reserved}]`);
 });
 
 test('the desktop line is the site color, and only desktop draws it', () => {

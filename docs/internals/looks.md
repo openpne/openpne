@@ -36,8 +36,11 @@ The looks today:
   the site name on the three pages that ARE a place (home, a member's, a group's — the
   three-page symmetry extends to the header, and each place's own hero names it directly
   below), `[mark] › section` on a hub, `[mark] › place` on screens *inside* one, with the
-  site color as a 4px line atop the row. Under the page, four labelled tabs (Home,
-  groups, diaries, notifications) in a 58px row. The menu drawer is the header's mirror:
+  site color as a 4px line atop the row. The tab row under the page is the shipped one,
+  marked its own way: a dot on the notifications tab and nothing on the rest of the row,
+  where the shipped look prints each count — a dot can be answered by emptying one
+  screen, which is not true of the counts cleared a room at a time. The menu drawer is
+  the header's mirror:
   full-bleed from the trigger's edge with the slide visible, the color line and the brand
   holding their exact positions across open and shut, and the close control the trigger's
   labelled twin — the same box in the same seat, "close" where "menu" stood, first in the

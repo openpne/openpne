@@ -54,7 +54,7 @@ const placeLink = (): HTMLElement => {
     return link;
 };
 
-test('the shipped bar is five section tabs and names no place', () => {
+test('the shipped bar is four labelled section tabs and names no place', () => {
     const chrome = arrive('dashboard', '/dashboard');
 
     render(<BottomNav chrome={chrome} />);
@@ -64,9 +64,28 @@ test('the shipped bar is five section tabs and names no place', () => {
         '/groups/mine',
         '/diary/list',
         '/notifications',
-        '/messages',
     ]);
+    // The word is on screen, not only in the accessible name an icon-only row would have to lean on.
+    expect(screen.getByRole('link', { name: 'Home' }).textContent).toBe('Home');
     expect(document.querySelector('[data-dive-place]')).toBeNull();
+});
+
+test('the shipped row prints every count it carries, each said in words as well', () => {
+    const chrome = arrive('dashboard', '/dashboard', {
+        unread: { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 },
+    });
+
+    render(<BottomNav chrome={chrome} />);
+
+    // The phrase rides the pill's own label rather than the link's, so the word under the icon stays
+    // the tab's name and the number joins it — the shape the drawer's entries already have.
+    const groups = screen.getByRole('link', { name: /3 %communities% with new messages/ });
+    expect(groups.getAttribute('href')).toBe('/groups/mine');
+    expect(groups.textContent).toContain('3');
+    expect(groups.textContent).toContain('%Communities%');
+    expect(screen.getByRole('link', { name: /2 unread notifications/ }).textContent).toContain('2');
+    // The DM count is not on this row to print: it stays on the drawer entry that carries it.
+    expect(screen.queryByRole('link', { name: /Messages/ })).toBeNull();
 });
 
 /**
@@ -120,27 +139,6 @@ test('the unified bar says how many notifications are waiting, in words', () => 
     expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
 });
 
-/**
- * The tabbed row goes back to sections, four of them, each icon over its own word. Messages steps
- * out: a word under every icon is what costs the fifth tab, and the DM count is ambient state the
- * drawer entry already carries rather than a queue this row has to answer for.
- */
-test('the tabbed bar is four labelled tabs, and messages is not one of them', () => {
-    const chrome = arrive('unified/home', '/dashboard', { look: 'tabbed' });
-
-    render(<BottomNav chrome={chrome} />);
-
-    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-        '/dashboard',
-        '/groups/mine',
-        '/diary/list',
-        '/notifications',
-    ]);
-    // The word is on screen, not only in the accessible name the icon-only row had to lean on.
-    expect(screen.getByRole('link', { name: 'Home' }).textContent).toBe('Home');
-    expect(document.querySelector('[data-dive-place]')).toBeNull();
-});
-
 test('the tabbed row marks the notification tab alone, and with a dot rather than a number', () => {
     const chrome = arrive('unified/home', '/dashboard', {
         look: 'tabbed',
@@ -149,11 +147,10 @@ test('the tabbed row marks the notification tab alone, and with a dot rather tha
 
     const { container } = render(<BottomNav chrome={chrome} />);
 
-    // The one queue here empties by being read, so it says how many in words and prints nothing.
+    // A dot cannot print how many, so the count is said in words instead.
     expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
     expect(container.textContent).not.toMatch(/\d/);
-    // The counts that stay put whatever the reader does are state, not a summons: they keep their
-    // pills in the drawer, and this row leaves the tabs carrying them plainly named.
+    // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
     expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();
     expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '%Diaries%' })).toBeTruthy();
