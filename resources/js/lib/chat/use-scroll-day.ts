@@ -80,28 +80,34 @@ export function useScrollDay(
             // cost, and rowAtLine reads nine of them.
             const rows = document.querySelectorAll(rowSelector);
             const at = rowAtLine(rows.length, (n) => rows[n]?.getBoundingClientRect().bottom ?? 0, top);
+            const owner = at === null ? null : (rows[at]?.getBoundingClientRect() ?? null);
             const headings = [...document.querySelectorAll('[data-chat-day]')].map((h) => h.getBoundingClientRect());
 
             // How far the page moved while this was not looking, which is how far it can move again
-            // before the next answer — and the only honest size for the room a heading needs.
+            // before the next answer — and so the only honest size for the room a heading needs. A
+            // number here would be this machine's wheel and nothing about anyone else's; this is the
+            // lag itself, measured, and a fling too fast to leave room for simply has no indicator.
             const y = window.scrollY;
             const reach = Math.abs(y - seen.current) + STRIP_PX;
             seen.current = y;
 
-            // It stands in for a heading that is not on the screen, so a heading on the screen is the
-            // whole of the answer: no second copy of a date the reader can already see, and none of
-            // the "is it under me" arithmetic that has been wrong three times.
+            // Two ways there is nothing to do, and they are different questions.
             //
-            // The two sides are not the same rule, and the asymmetry is geometric rather than
-            // empirical. Below, a heading stops being visible at `h.top === innerHeight` while the
-            // indicator sits at `top`, so the runway is the reading area — hundreds of pixels no
-            // single frame can cross. Above, a heading stops being visible at `h.bottom === top`,
-            // which is the indicator's own upper edge: the moment it leaves the test is the moment it
-            // starts overlapping, and the runway is exactly zero. So that side takes the distance the
-            // page moved in the frame this is already behind by, rather than a number — a number
-            // would be this machine's wheel and nothing about anyone else's.
-            const onScreen = headings.some((h) => h.bottom > top - reach && h.top < window.innerHeight);
-            show(!off.current && !foot.current() && !onScreen ? 'up' : 'aside');
+            // The heading this copies may still be on the screen, saying the same thing where it
+            // belongs — at the head of the list, the same date on its own rule and again floating
+            // over the load-older strip.
+            //
+            // Or a heading may be about to arrive under the indicator. That one belongs to the *next*
+            // day, so the first question says nothing about it, and left alone a floating `12日` sits
+            // on an arriving `13日` and reads as that heading carrying the wrong date. Asked only of
+            // the strip and the room around it, though: a heading elsewhere on the screen is in the
+            // way of nothing, and hiding for it gives up most of what the indicator is for — the
+            // middle of a long day, surrendered for an overlap that cannot happen there.
+            const governing = owner === null ? undefined : headings.filter((h) => h.top <= owner.top).pop();
+            const standingFor = governing !== undefined && !(governing.bottom > top && governing.top < window.innerHeight);
+            const covering = headings.some((h) => h.bottom > top - reach && h.top < top + reach);
+
+            show(!off.current && !foot.current() && standingFor && !covering ? 'up' : 'aside');
             setIndex(at);
         };
 
