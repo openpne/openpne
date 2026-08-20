@@ -121,6 +121,8 @@ export function chromeRecedes(chrome: Chrome): boolean {
     return !chrome.form && !chrome.conversation;
 }
 
+export type TabMark = 'count' | 'dot';
+
 /** One field per question the shell asks a look. Every field is answered, so a partial row is a type error. */
 interface LookSpec {
     /** Which top-bar grammar the phone header speaks. 'byScreen' = the per-screen-class bars
@@ -131,9 +133,15 @@ interface LookSpec {
     topBar: 'byScreen' | 'unified' | 'breadcrumb';
     /** Whether a top bar stands at lg+ (reserves --modern-top-offset on desktop). */
     desktopTopBar: boolean;
-    /** Which row the phone bottom bar draws. 'icons' = icon-only section tabs; 'dive' = the
-     *  search | place | notifications zones; 'labeled' = each tab's icon over its full label. */
-    bottomBar: 'icons' | 'dive' | 'labeled';
+    /** Which row the phone bottom bar draws. 'labeled' = each tab's icon over its full label;
+     *  'dive' = the search | place | notifications zones. */
+    bottomBar: 'dive' | 'labeled';
+    /** What a labelled tab wears while something waits on it — the dive row draws its own marks as
+     *  part of its three-zone design. 'count' = the number, on every tab whose section carries a
+     *  badge; 'dot' = the notifications tab alone, every other tab unmarked and its count left to
+     *  the drawer's pill. Which tabs a mark may stand over is the look's own answer (looks.md), not
+     *  a property of the counts. */
+    tabMark: TabMark;
     /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
     bottomBarInConversation: boolean;
     /** Which ground the shell paints behind the page (html class). */
@@ -156,22 +164,23 @@ interface LookSpec {
  * nothing about renders standard, which is what keeps a look from being a second copy of the UI
  * (docs/internals/looks.md).
  *
- * Fields whose value vectors coincide (rightRail and foldsHubHeading; colorLine, placeBar and
- * bottomBarInConversation) are indistinguishable to every test — registry values and consumer
- * renders alike — until some look splits the vectors, at which point the consumers' render tests
- * catch a crossed read at once. Inside a coinciding group, the only guard is the discipline of
- * reading the field whose name answers the question being asked.
+ * Fields whose value vectors coincide — the table below is where to read off which — are
+ * indistinguishable to every test, registry values and consumer renders alike, until some look
+ * splits them. Until then the only guard against a crossed read is the discipline of reading the
+ * field whose name answers the question being asked.
  *
- * A question becomes a field when a consumer OUTSIDE the bar component itself branches on it; how
- * one bar arranges its own insides stays inside that bar. Each row is complete by type, so a look
- * added here answers as itself at every branch point instead of reading standard-ish wherever it
- * happened not to speak.
+ * A question becomes a field when its answer varies by look, including inside a single bar once two
+ * looks draw the same row and differ within it: the alternative is a component branching on look
+ * identity, which goes stale the moment a look is added. What no look varies stays in the component
+ * that draws it. Each row is complete by type, so a look added here answers as itself at every
+ * branch point instead of reading standard-ish wherever it happened not to speak.
  */
 export const LOOKS = {
     standard: {
         topBar: 'byScreen',
         desktopTopBar: false,
-        bottomBar: 'icons',
+        bottomBar: 'labeled',
+        tabMark: 'count',
         bottomBarInConversation: false,
         ground: 'standard',
         rightRail: true,
@@ -184,6 +193,7 @@ export const LOOKS = {
         topBar: 'unified',
         desktopTopBar: true,
         bottomBar: 'dive',
+        tabMark: 'dot',
         bottomBarInConversation: false,
         ground: 'unified',
         rightRail: false,
@@ -196,6 +206,7 @@ export const LOOKS = {
         topBar: 'breadcrumb',
         desktopTopBar: false,
         bottomBar: 'labeled',
+        tabMark: 'dot',
         bottomBarInConversation: true,
         ground: 'unified',
         rightRail: false,
@@ -339,31 +350,20 @@ export function isHomeComponent(component: string): boolean {
  * The phone bottom bar's tabs after Home, in bar order. A deliberately fixed list — one change
  * point for the composition — rather than something an administrator picks; per-site composition is
  * a later question, and a unit switched off still drops its tab through visibleNavSections.
+ *
+ * Three plus Home, because a word under each icon is what a phone seats without truncating the
+ * longest of them. Messages is what the fourth would have been; the drawer entry that carries its
+ * count is where it went.
  */
-const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications', '/messages'];
+const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
 
-/**
- * The tabbed look's row, one tab shorter: a label under each icon needs the width, and four is what
- * a phone seats without truncating the longest of them. Messages is the one dropped — its count is
- * ambient state rather than a queue, so it stays on the drawer entry that already carries it.
- */
-const TABBED_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
-
-const navRow = (hrefs: string[], enabled: Record<FeatureKey, boolean>): NavSection[] => {
+export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
     const visible = visibleNavSections(enabled);
 
     return [
         HOME_SECTION,
-        ...hrefs.map((href) => visible.find((section) => section.href === href)).filter((section) => section !== undefined),
+        ...BOTTOM_NAV_HREFS.map((href) => visible.find((section) => section.href === href)).filter((section) => section !== undefined),
     ];
-};
-
-export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
-    return navRow(BOTTOM_NAV_HREFS, enabled);
-}
-
-export function tabbedNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
-    return navRow(TABBED_NAV_HREFS, enabled);
 }
 
 /**

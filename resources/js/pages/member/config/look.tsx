@@ -46,9 +46,9 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
     {
         dimension: 'Bottom bar on a phone',
         cells: {
-            standard: 'Five icon-only tabs: Home, %communities%, %diaries%, notifications, messages.',
+            standard: 'Four labelled tabs: Home, %communities%, %diaries%, notifications. Messages moves into the menu.',
             unified: 'Three parts: search | where you are | notifications.',
-            tabbed: 'Four labelled tabs: Home, %communities%, %diaries%, notifications. Messages moves into the menu.',
+            tabbed: 'The same as Standard.',
         },
     },
     {

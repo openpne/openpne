@@ -11,7 +11,7 @@ import {
     MEMBER_SEARCH_SECTION,
     type NavSection,
     NOTIFICATIONS_SECTION,
-    tabbedNavSections,
+    type TabMark,
 } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -20,8 +20,7 @@ import type { PageProps } from '@/types';
 /**
  * Mobile (< lg) bottom bar. Members only: a guest (a web-public profile is reachable signed out) has
  * no member nav to shortcut. `hidden` slides it away while the reader scrolls down (AppShell owns the
- * signal). The shell — its height, its insets, the space it reserves — is the same whichever row
- * stands in it, so only what the row says changes.
+ * signal).
  */
 export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
@@ -43,7 +42,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
 
     // Exact pathname match (strip query/hash) for the tabs that ask for one; see NavSection.exact.
     const path = url.replace(/[?#].*$/, '');
-    const { bottomBar } = lookSpec(props.look);
+    const { bottomBar, tabMark } = lookSpec(props.look);
 
     return (
         <nav
@@ -57,29 +56,25 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
                 hidden && 'translate-y-full',
             )}
         >
-            {/* This row is the top bar's height — the two bands a phone always carries are one
-                measure — and `--modern-bottom-offset` is it plus the hairline above and the
-                safe-area inset below. A tab fills the row, so the row is the tap target. A label
-                under each icon is the one row that needs more than that height. */}
-            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-12')}>
-                {bottomBar === 'dive' ? (
-                    <DiveRow chrome={chrome} path={path} />
-                ) : bottomBar === 'labeled' ? (
-                    <LabeledTabs path={path} />
-                ) : (
-                    <SectionTabs path={path} />
-                )}
+            {/* A tab fills the row, so the row is the tap target, and the word under each icon is
+                what makes the labelled row the taller of the two. AppShell reserves these same
+                lengths as `--modern-bottom-offset`, and a bar taller than the space it was given
+                stands over the page's last rows — so both are written as the same literal and
+                AppShellTest reads this one back off the shell's reservation. */}
+            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-[3rem]')}>
+                {bottomBar === 'dive' ? <DiveRow chrome={chrome} path={path} /> : <LabeledTabs path={path} mark={tabMark} />}
             </ul>
         </nav>
     );
 }
 
 /**
- * The few sections a phone reaches for, with their unread badges on the first screen. Without it the
- * counts live only behind the hamburger, so nothing on a phone says anything is waiting. The tabs
- * stay in the drawer too — this is a shortcut, not the whole nav.
+ * The section row: Home and the few sections a phone reaches for, each icon over its own word, with
+ * what waits on them marked as the look says. Without it the counts live only behind the hamburger,
+ * so nothing on a phone says anything is waiting. The tabs stay in the drawer too — this is a
+ * shortcut, not the whole nav.
  */
-function SectionTabs({ path }: { path: string }) {
+function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
     const t = useT();
     const { props } = usePage<PageProps>();
 
@@ -89,63 +84,18 @@ function SectionTabs({ path }: { path: string }) {
                 const { href, icon: Icon, label, badge } = section;
                 const active = isSectionActive(section, path);
                 const count = badge ? (props.unread?.[badge.count] ?? 0) : 0;
+                const dotted = mark === 'dot' && href === NOTIFICATIONS_SECTION.href && count > 0;
 
                 return (
                     <li key={href} className="flex-1">
                         <Link
                             href={href}
                             aria-current={active ? 'page' : undefined}
-                            // Icon-only tabs, so the count belongs in the name rather than beside it.
-                            aria-label={
-                                badge && count > 0 ? t(badge.label.key, { count }) : t(label.key, label.replacements)
-                            }
-                            className={
-                                'flex size-full min-h-11 items-center justify-center transition ' +
-                                (active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
-                            }
-                        >
-                            <span className="relative inline-flex">
-                                <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
-                                <CountPill count={count} className="absolute -top-2 -right-2.5" />
-                            </span>
-                        </Link>
-                    </li>
-                );
-            })}
-        </>
-    );
-}
-
-/**
- * The tabbed look's row: four sections, each icon over its own full word. The words are why there
- * are four rather than five — messages steps out, its count being ambient state the drawer entry
- * already carries — and why the row is taller than the others.
- *
- * One badge, and it is a dot: notifications is the only queue here, a queue empties by being read,
- * and how many is the notification screen's answer rather than the bar's. The counts that stay put
- * whatever the reader does (rooms with new talk, pending requests) are state, not a summons, and
- * they keep their pills in the drawer.
- */
-function LabeledTabs({ path }: { path: string }) {
-    const t = useT();
-    const { props } = usePage<PageProps>();
-    const notifications = props.unread?.notifications ?? 0;
-
-    return (
-        <>
-            {tabbedNavSections(props.enabledFeatures).map((section) => {
-                const { href, icon: Icon, label } = section;
-                const active = isSectionActive(section, path);
-                const dotted = href === NOTIFICATIONS_SECTION.href && notifications > 0;
-
-                return (
-                    <li key={href} className="flex-1">
-                        <Link
-                            href={href}
-                            aria-current={active ? 'page' : undefined}
-                            // The visible word is the name; the dot's count joins it rather than
-                            // replacing it, since the word is still on screen beside the number.
-                            aria-label={dotted ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications }) : undefined}
+                            // Named by the word on screen, with the count beside it from the pill's
+                            // own label. A dot prints nothing to name, so the phrase goes here — and
+                            // that replaces the name rather than joining it, which stays inside
+                            // WCAG 2.5.3 only because the phrase spells the word out again.
+                            aria-label={dotted ? t(NOTIFICATIONS_SECTION.badge.label.key, { count }) : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
                                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -153,6 +103,9 @@ function LabeledTabs({ path }: { path: string }) {
                         >
                             <span className="relative inline-flex">
                                 <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
+                                {mark === 'count' && badge && (
+                                    <CountPill count={count} label={t(badge.label.key, { count })} className="absolute -top-2 -right-2.5" />
+                                )}
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
                             <span className="max-w-full truncate text-[11px] leading-none">{t(label.key, label.replacements)}</span>
