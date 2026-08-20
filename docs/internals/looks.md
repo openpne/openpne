@@ -37,8 +37,10 @@ The looks today:
   three-page symmetry extends to the header, and each place's own hero names it directly
   below), `[mark] › section` on a hub, `[mark] › place` on screens *inside* one, with the
   site color as a 4px line atop the row. The tab row under the page is the shipped one,
-  marked its own way: a dot on the notifications tab, the row's one queue, rather than a
-  number on each tab that has a count. The menu drawer is the header's mirror:
+  marked its own way: a dot on the notifications tab and nothing on the rest of the row,
+  where the shipped look prints each count — a dot can be answered by emptying one
+  screen, which is not true of the counts cleared a room at a time. The menu drawer is
+  the header's mirror:
   full-bleed from the trigger's edge with the slide visible, the color line and the brand
   holding their exact positions across open and shut, and the close control the trigger's
   labelled twin — the same box in the same seat, "close" where "menu" stood, first in the

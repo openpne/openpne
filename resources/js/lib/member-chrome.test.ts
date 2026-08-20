@@ -73,8 +73,8 @@ test('the groups section stays while only a board is off', () => {
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
 
 test('the bottom bar is Home and three sections, and messages is not one of them', () => {
-    // A word under each icon is what costs the fifth tab. Messages is the one dropped: its count is
-    // ambient state rather than a queue, so the drawer entry that already carries it is enough.
+    // A word under each icon is what costs the fifth tab, and messages is the one dropped: the
+    // drawer entry that already carries its count is where the number stays.
     assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications']);
 });
 

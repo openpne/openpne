@@ -147,11 +147,10 @@ test('the tabbed row marks the notification tab alone, and with a dot rather tha
 
     const { container } = render(<BottomNav chrome={chrome} />);
 
-    // The one queue here empties by being read, so it says how many in words and prints nothing.
+    // A dot cannot print how many, so the count is said in words instead.
     expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
     expect(container.textContent).not.toMatch(/\d/);
-    // The counts that stay put whatever the reader does are state, not a summons: they keep their
-    // pills in the drawer, and this row leaves the tabs carrying them plainly named.
+    // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
     expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();
     expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '%Diaries%' })).toBeTruthy();

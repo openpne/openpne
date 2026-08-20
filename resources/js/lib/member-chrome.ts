@@ -138,9 +138,9 @@ interface LookSpec {
     bottomBar: 'dive' | 'labeled';
     /** What a labelled tab wears while something waits on it — the dive row draws its own marks as
      *  part of its three-zone design. 'count' = the number, on every tab whose section carries a
-     *  badge; 'dot' = the notifications tab alone. A dot reads as a summons, and a count that stays
-     *  put whatever the reader does (rooms with new talk, pending requests) is not one — so a look
-     *  that marks with dots marks only the queue, and leaves the rest to the drawer's pills. */
+     *  badge; 'dot' = the notifications tab alone, every other tab unmarked and its count left to
+     *  the drawer's pill. Which tabs a mark may stand over is the look's own answer (looks.md), not
+     *  a property of the counts. */
     tabMark: TabMark;
     /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
     bottomBarInConversation: boolean;
@@ -352,8 +352,8 @@ export function isHomeComponent(component: string): boolean {
  * a later question, and a unit switched off still drops its tab through visibleNavSections.
  *
  * Three plus Home, because a word under each icon is what a phone seats without truncating the
- * longest of them. Messages is what the fourth would have been: its count is ambient state rather
- * than a queue, so it stays on the drawer entry that already carries it.
+ * longest of them. Messages is what the fourth would have been; the drawer entry that carries its
+ * count is where it went.
  */
 const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
 
