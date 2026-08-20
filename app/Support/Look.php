@@ -19,7 +19,7 @@ enum Look: string
     /** The experiment that renders home, member pages and group tops in one shared shape. */
     case Unified = 'unified';
 
-    /** The experiment that moves finding your way into a breadcrumb header and labelled bottom tabs. */
+    /** The experiment that moves finding your way into one breadcrumb header, with no back button. */
     case Tabbed = 'tabbed';
 
     /**
@@ -53,7 +53,7 @@ enum Look: string
         return match ($this) {
             self::Standard => 'The Modern layout as it has always been.',
             self::Unified => 'The experimental layout that renders home, profiles and %communities% in one shared shape.',
-            self::Tabbed => 'The experimental layout with bottom tabs and the site mark up top for finding your way.',
+            self::Tabbed => 'The experimental layout where the site mark and a breadcrumb up top say where you are.',
         };
     }
 }
