@@ -83,10 +83,17 @@ export function useScrollDay(
             const owner = at === null ? null : (rows[at]?.getBoundingClientRect() ?? null);
             const headings = [...document.querySelectorAll('[data-chat-day]')].map((h) => h.getBoundingClientRect());
 
-            // How far the page moved while this was not looking, which is how far it can move again
-            // before the next answer — and so the only honest size for the room a heading needs. A
-            // number here would be this machine's wheel and nothing about anyone else's; this is the
-            // lag itself, measured, and a fling too fast to leave room for simply has no indicator.
+            // The distance the page moved since this last answered: the lag measured rather than
+            // guessed at, and taken as the prediction of the lag about to happen. A number here would
+            // be this machine's wheel and nothing about anyone else's — and speed alone cannot beat a
+            // measurement of speed, since a fling widens the room as fast as it closes the gap, and
+            // ends up with no indicator at all, which is the right answer for a fling.
+            //
+            // What can beat it is acceleration. A heading outside the band stays clear of the
+            // indicator for as long as the next frame does not travel STRIP_PX further than this one
+            // did — less than that below the line, where the indicator hangs its own height under the
+            // band's centre. The drive reports the closest a heading ever came for that reason: if
+            // acceleration eats into the room, that number falls before anything touches.
             const y = window.scrollY;
             const reach = Math.abs(y - seen.current) + STRIP_PX;
             seen.current = y;
