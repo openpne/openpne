@@ -159,6 +159,38 @@ class LinkCardRenderingTest extends TestCase
             ->assertSee('rel="noopener noreferrer nofollow"', false);
     }
 
+    public function test_the_classic_card_reads_host_first_and_puts_a_wide_picture_last(): void
+    {
+        $this->card->image->update(['width' => 1200, 'height' => 630]);
+        $diary = $this->diary();
+
+        $html = $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk()->getContent();
+
+        // Matched as markup, never as a bare class name: the card's stylesheet names every one of
+        // these classes, and a substring probe over the page finds the rules before the card.
+        $host = strpos($html, '<span class="linkCardDomain">');
+        $title = strpos($html, '<span class="linkCardTitle">');
+        $banner = strpos($html, '<img class="linkCardBanner"');
+
+        $this->assertIsInt($banner, 'The wide shape drew no picture.');
+        $this->assertLessThan($title, $host, 'The host must be read before the claim, not after it.');
+        $this->assertLessThan($banner, $title, 'The picture belongs under the words.');
+        // The square thumbnail is the other shape's; drawing both would be two pictures.
+        $this->assertStringNotContainsString('<span class="linkCardImage">', $html);
+    }
+
+    public function test_the_classic_card_keeps_the_thumbnail_beside_the_words_when_it_is_small(): void
+    {
+        $this->card->image->update(['width' => 100, 'height' => 100]);
+        $diary = $this->diary();
+
+        $html = $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk()->getContent();
+
+        $this->assertStringContainsString('<span class="linkCardImage">', $html);
+        $this->assertStringNotContainsString('<img class="linkCardBanner"', $html);
+        $this->assertLessThan(strpos($html, '<span class="linkCardTitle">'), strpos($html, '<span class="linkCardDomain">'));
+    }
+
     public function test_every_body_kind_renders_its_card(): void
     {
         $group = Group::factory()->create();
@@ -168,13 +200,19 @@ class LinkCardRenderingTest extends TestCase
         $post = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
 
-        foreach ([
-            "/topics/{$topic->id}",
-            "/events/{$event->id}",
-            "/timeline/{$post->id}",
-            "/groups/{$group->id}/talk",
-        ] as $url) {
-            $this->actingAs($this->author)->get($url)->assertOk()->assertSee('A title from the page');
+        // Both shapes on every surface: a renderer taught only one of them draws a card that is
+        // half missing — no picture, or the picture in the place the other shape put it.
+        foreach ([[100, 100], [1200, 630]] as [$width, $height]) {
+            $this->card->image->update(['width' => $width, 'height' => $height]);
+
+            foreach ([
+                "/topics/{$topic->id}",
+                "/events/{$event->id}",
+                "/timeline/{$post->id}",
+                "/groups/{$group->id}/talk",
+            ] as $url) {
+                $this->actingAs($this->author)->get($url)->assertOk()->assertSee('A title from the page');
+            }
         }
     }
 

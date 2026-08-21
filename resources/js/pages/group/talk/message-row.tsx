@@ -220,9 +220,9 @@ export function TalkMessageRow({
                     <EntityText text={message.body} mentions={message.mentions} />
                 </p>
             )}
-            {/* Capped at the width a boxed picture takes, so what a message attaches — a card, a
-                photo — stands in one column rather than running the width of the conversation. */}
-            <LinkCard card={message.linkCard} className="mt-2 max-w-[24rem]" />
+            {/* The same placement its pictures take, so what a message attaches — a card, a photo —
+                stands in one column rather than running the width of the conversation. */}
+            <LinkCard card={message.linkCard} placement="boxed" className="mt-2" />
             <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
             <TalkReactionChips
                 chips={reactions.chips}
