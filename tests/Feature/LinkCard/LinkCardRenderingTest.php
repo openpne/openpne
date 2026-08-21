@@ -350,8 +350,12 @@ class LinkCardRenderingTest extends TestCase
         // serializer's card, and that card's picture.
         config(['openpne.surface_mode' => 'modern_default']);
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_synced_at' => now()]);
-        $cards = LinkCard::factory()->count(5)->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
-        foreach ($cards as $card) {
+        // With pictures, deliberately: `$card->image` costs no query when `image_file_id` is null, so
+        // a guard built on the factory's default watches two of the three reads it names — and stays
+        // green when the picture is dropped from the eager load.
+        foreach (range(1, 5) as $ignored) {
+            $card = LinkCard::factory()->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
+            $card->update(['image_file_id' => $this->imageFor($card)->id]);
             TimelinePost::factory()->for($this->author)->create([
                 'visibility' => Visibility::Open,
                 'in_reply_to_id' => $root->id,
@@ -379,8 +383,11 @@ class LinkCardRenderingTest extends TestCase
     {
         // The Classic timeline row is shared by the feed, the profile and three gadgets, so a card
         // read per row would multiply across every one of them.
-        $cards = LinkCard::factory()->count(5)->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
-        foreach ($cards as $card) {
+        // With pictures — see the thread guard for why a card without one leaves this watching two
+        // reads of three.
+        foreach (range(1, 5) as $ignored) {
+            $card = LinkCard::factory()->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
+            $card->update(['image_file_id' => $this->imageFor($card)->id]);
             TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $card->id, 'link_card_synced_at' => now()]);
         }
 
@@ -433,5 +440,15 @@ class LinkCardRenderingTest extends TestCase
         $this->app->make(FileStorage::class)->writeStream($file, $stream);
 
         return $file;
+    }
+
+    /** A stored picture belonging to $card, as the fetch job would have left one. */
+    private function imageFor(LinkCard $card): File
+    {
+        return File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'link_card',
+            'related_entity_id' => $card->id,
+        ]);
     }
 }
