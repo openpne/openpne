@@ -21,7 +21,7 @@ class LinkCardTest extends TestCase
      * The shape switch, at its boundaries.
      *
      * @param  array{int, int}|string|null  $size  the size the picture renders at, null for a picture
-     *                                              with no recorded size, 'none' for no picture
+     *                                             with no recorded size, 'none' for no picture
      */
     #[DataProvider('imageSizes')]
     public function test_only_a_big_landscape_picture_is_drawn_full_width(array|string|null $size, bool $expected, string $why): void
