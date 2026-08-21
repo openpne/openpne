@@ -284,9 +284,11 @@ the reply's own rule admits the *replier's* friends, who are not who the page wa
 cannot open the thread at all. The page re-centers a reply permalink to the root and asks there
 (`ShowTimelinePost`); `CardContext` asks the same question of the same row.
 
-That makes the card's audience exactly the page's, and it holds because **the page shows the whole
-thread**: `TimelinePost::replies()` carries no per-row filter, so there is no reply the thread hides
-and the root's rule would admit. Put a filter there and the card would become the wider of the two.
+That makes the card's audience exactly the page's, and it holds from both sides. The page is not
+narrower: `TimelinePost::replies()` carries no per-row filter, so there is no reply the thread hides
+and the root's rule would admit. And the card is not wider: every feed query reads top-level rows
+only (`whereNull('in_reply_to_id')`), so the thread page is the one place a reply is drawn. Put a
+filter in `replies()`, or a reply into a feed, and one of the two sides gives.
 
 Both directions of the file-to-card relation are checked. Card-to-file rules out a URL that outlived
 a refresh; file-to-card is unreachable through a well-formed database and exists for the case where
