@@ -18,6 +18,7 @@ import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import { BodyCounter, overBodyLimit } from './body-counter';
+import { TimelineReplyRow } from './reply-row';
 import type { TimelinePostEntry } from './types';
 
 interface ShowProps extends PageProps {
@@ -87,22 +88,7 @@ export default function TimelineShow() {
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
-                            <li key={reply.id} className="space-y-1 px-4 py-3 sm:px-5">
-                                <div className="flex items-center justify-between text-sm">
-                                    <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
-                                        {reply.author.name}
-                                    </Link>
-                                    <Timestamp at={reply.createdAt} preset="relative" className="text-muted-foreground" />
-                                </div>
-                                <p className="whitespace-pre-wrap break-words">
-                                    <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
-                                </p>
-                                {reply.author.id === viewerId && (
-                                    <button type="button" onClick={() => deleteReply(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
-                                        {t('Delete')}
-                                    </button>
-                                )}
-                            </li>
+                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} />
                         ))}
                     </List>
                 </Panel>

@@ -118,7 +118,13 @@ class TimelineController extends Controller
         // Eager-load the replies' images, mentions and tags too: all three are read per reply when it
         // renders, so loading only replies.member would fire a query per reply for each (an images
         // load being empty, by the no-image contract, still costs the query).
-        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file', 'replies.mentions', 'replies.tags']);
+        // `replies.linkCard.image` for the same reason the rest are here: without it a reply that
+        // carries a card costs three queries of its own — the read trigger's freshness check, the
+        // serializer's card, and that card's picture.
+        $post->load([
+            'member.avatar.file', 'replies.member.avatar.file', 'replies.images.file',
+            'replies.mentions', 'replies.tags', 'replies.linkCard.image',
+        ]);
         // The thread, not only its root: a reply is a body of its own, and this page is where one is
         // read — as a conversation page is for talk (LinkCardSync::ensureAll). Placed after the
         // reply-permalink redirect above, so a request that never renders queues nothing. Two calls

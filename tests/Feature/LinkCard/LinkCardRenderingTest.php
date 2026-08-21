@@ -325,6 +325,56 @@ class LinkCardRenderingTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('replies.0.linkCard.title', 'A title from the page')->etc());
     }
 
+    public function test_the_classic_thread_draws_a_reply_card(): void
+    {
+        // Classic's thread and its feed row are different templates: the feed's card comes from
+        // `_post.blade.php`, and a reply is drawn by `show.blade.php` itself.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        TimelinePost::factory()->for($this->author)->create([
+            'visibility' => Visibility::Open,
+            'in_reply_to_id' => $root->id,
+            'link_card_id' => $this->card->id,
+            'link_card_synced_at' => now(),
+        ]);
+
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")
+            ->assertOk()
+            ->assertSee('A title from the page')
+            ->assertSee('<span class="linkCardImage">', false);
+    }
+
+    public function test_a_thread_costs_the_same_whatever_the_replies_carry(): void
+    {
+        // The same guard the feed has, on the page this change put cards on. A reply's card costs
+        // three queries of its own without the eager load: the read trigger's freshness check, the
+        // serializer's card, and that card's picture.
+        config(['openpne.surface_mode' => 'modern_default']);
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_synced_at' => now()]);
+        $cards = LinkCard::factory()->count(5)->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
+        foreach ($cards as $card) {
+            TimelinePost::factory()->for($this->author)->create([
+                'visibility' => Visibility::Open,
+                'in_reply_to_id' => $root->id,
+                'link_card_id' => $card->id,
+                'link_card_synced_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($this->author)->get("/timeline/{$root->id}");
+        DB::enableQueryLog();
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")->assertOk()->assertSee('A title from the page');
+        $withCards = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        TimelinePost::query()->whereNotNull('in_reply_to_id')->update(['link_card_id' => null]);
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")->assertOk();
+        $withoutCards = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // One query for the replies' cards and one for their images, however many replies carry them.
+        $this->assertLessThanOrEqual($withoutCards + 2, $withCards, "A thread cost {$withCards} queries with cards against {$withoutCards} without.");
+    }
+
     public function test_a_timeline_list_costs_the_same_whatever_the_cards(): void
     {
         // The Classic timeline row is shared by the feed, the profile and three gadgets, so a card
