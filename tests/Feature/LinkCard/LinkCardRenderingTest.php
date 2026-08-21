@@ -11,6 +11,7 @@ use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -106,11 +107,13 @@ class LinkCardRenderingTest extends TestCase
         $topic = GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         $event = GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         $post = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
+        GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
 
         foreach ([
             "/topics/{$topic->id}",
             "/events/{$event->id}",
             "/timeline/{$post->id}",
+            "/groups/{$group->id}/talk",
         ] as $url) {
             $this->actingAs($this->author)->get($url)->assertOk()->assertSee('A title from the page');
         }

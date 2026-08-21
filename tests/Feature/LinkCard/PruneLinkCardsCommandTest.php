@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
+use App\LinkCard\CardContext;
 use App\Models\Diary;
 use App\Models\File;
 use App\Models\GroupEvent;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -40,8 +42,9 @@ class PruneLinkCardsCommandTest extends TestCase
 
     public function test_every_body_table_counts_as_a_reference(): void
     {
-        // Four tables can hold the reference, and a sweep that checked only some would delete cards
-        // that are visibly in use on the others.
+        // Any of these tables can hold the reference, and a sweep that checked only some would delete
+        // cards that are visibly in use on the others — permanently, since the body it belonged to is
+        // left marked as examined.
         $member = Member::factory()->create();
 
         $referenced = [
@@ -49,7 +52,15 @@ class PruneLinkCardsCommandTest extends TestCase
             'group_topics' => GroupTopic::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'group_events' => GroupEvent::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'timeline_posts' => TimelinePost::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'group_messages' => GroupMessage::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
         ];
+
+        // The sweep reads its tables from CardContext, so this list has to be that list: a kind added
+        // there and not here would leave the claim in the method name untested.
+        $this->assertSame(
+            array_map(fn (CardContext $context): string => $context->table(), CardContext::cases()),
+            array_keys($referenced),
+        );
 
         $this->artisan('openpne:prune-link-cards')->assertSuccessful();
 

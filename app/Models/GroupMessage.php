@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use Database\Factories\GroupMessageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,12 +14,22 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * One utterance in a group's talk. Ordering is the (created_at, id) tuple everywhere — see
  * App\Features\GroupTalk\Queries\GroupTalkMessages.
+ *
+ * A message is never edited, so HasLinkCard's invalidation half has no call site here: the card
+ * attached to a body is attached to the only body that row will ever have.
  */
 #[Fillable(['group_id', 'member_id', 'in_reply_to_id', 'body'])]
 class GroupMessage extends Model
 {
     /** @use HasFactory<GroupMessageFactory> */
     use HasFactory;
+
+    use HasLinkCard;
+
+    protected function casts(): array
+    {
+        return ['link_card_synced_at' => 'datetime'];
+    }
 
     /** @return BelongsTo<Group, $this> */
     public function group(): BelongsTo

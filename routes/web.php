@@ -333,7 +333,7 @@ Route::middleware('auth.session')->group(function () {
         ->where([
             // A closed list, not a class name: the URL may choose which post is consulted, never
             // which model the app resolves.
-            'context' => 'diary|topic|event|timeline',
+            'context' => 'diary|topic|event|timeline|talk',
             'record' => '[0-9]+',
             'format' => 'jpg|png|gif|webp',
             'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',

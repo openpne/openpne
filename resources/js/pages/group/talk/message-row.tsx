@@ -5,6 +5,7 @@ import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
+import { LinkCard } from '@/components/link-card';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
@@ -219,6 +220,9 @@ export function TalkMessageRow({
                     <EntityText text={message.body} mentions={message.mentions} />
                 </p>
             )}
+            {/* Capped at the width a boxed picture takes, so what a message attaches — a card, a
+                photo — stands in one column rather than running the width of the conversation. */}
+            <LinkCard card={message.linkCard} className="mt-2 max-w-[24rem]" />
             <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
             <TalkReactionChips
                 chips={reactions.chips}

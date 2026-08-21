@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\LinkCard\CardContext;
 use App\Models\LinkCard;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -116,12 +117,15 @@ class PruneLinkCardsCommand extends Command
     /**
      * A subquery matching any body that still points at the card.
      *
+     * Every table a card can be referenced from, taken from CardContext so that adding a kind cannot
+     * leave this behind — but the *tables*, never that enum's queries: see CardContext::table().
+     *
      * `unionAll`, not `union`: this only ever asks whether a row exists, and de-duplicating the
      * matches costs a temporary B-tree per card for an answer that cannot change.
      */
     private function anyReference($query): void
     {
-        $tables = ['diaries', 'group_topics', 'group_events', 'timeline_posts'];
+        $tables = array_map(fn (CardContext $context): string => $context->table(), CardContext::cases());
 
         $query->select(DB::raw('1'))->from($tables[0])->whereColumn($tables[0].'.link_card_id', 'link_cards.id');
 

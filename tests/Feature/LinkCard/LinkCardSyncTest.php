@@ -133,6 +133,27 @@ class LinkCardSyncTest extends TestCase
         Queue::assertPushed(SyncLinkCard::class);
     }
 
+    public function test_a_page_of_records_is_asked_about_one_by_one(): void
+    {
+        $records = collect([$this->diary(['link_card_synced_at' => null]), $this->diary(['link_card_synced_at' => null])]);
+
+        $this->sync()->ensureAll($records);
+
+        Queue::assertPushed(SyncLinkCard::class, 2);
+    }
+
+    public function test_a_page_queues_nothing_while_the_setting_is_off(): void
+    {
+        // Answered once for the batch rather than once per record: the setting is read through a
+        // cache the default store keeps in the database, so a page of a busy room would otherwise
+        // pay a query per row to be told the same thing.
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+
+        $this->sync()->ensureAll([$this->diary(['link_card_synced_at' => null])]);
+
+        Queue::assertNothingPushed();
+    }
+
     public function test_a_null_record_is_not_an_error(): void
     {
         $this->sync()->ensure(null);

@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 export interface LinkCardData {
     url: string;
     title: string;
@@ -20,7 +22,7 @@ export interface LinkCardData {
  * page being linked and can claim to be anyone, so the reader gets the one part of the card that
  * cannot lie about where the link goes.
  */
-export function LinkCard({ card }: { card: LinkCardData | null }) {
+export function LinkCard({ card, className }: { card: LinkCardData | null; className?: string }) {
     if (card === null) {
         return null;
     }
@@ -30,7 +32,10 @@ export function LinkCard({ card }: { card: LinkCardData | null }) {
             href={card.url}
             target="_blank"
             rel="noopener noreferrer nofollow"
-            className="flex overflow-hidden rounded-lg border border-border no-underline transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className={cn(
+                'flex overflow-hidden rounded-lg border border-border no-underline transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                className,
+            )}
         >
             {card.imageUrl && (
                 // Decorative: the title and domain beside it already name the destination, so a
