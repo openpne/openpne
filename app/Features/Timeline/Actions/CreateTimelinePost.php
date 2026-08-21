@@ -50,8 +50,6 @@ class CreateTimelinePost
             relation: fn (TimelinePost $post) => $post->images(),
         );
 
-        // Replies are deliberately not synced: they share this table but are rendered as a thread
-        // under the post, where a stack of cards would read as noise.
         SyncLinkCard::for($post);
 
         return $post;

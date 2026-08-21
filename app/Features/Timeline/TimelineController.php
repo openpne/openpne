@@ -118,11 +118,20 @@ class TimelineController extends Controller
         // Eager-load the replies' images, mentions and tags too: all three are read per reply when it
         // renders, so loading only replies.member would fire a query per reply for each (an images
         // load being empty, by the no-image contract, still costs the query).
-        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file', 'replies.mentions', 'replies.tags']);
-        // The thread root only. Replies share this table but render as a thread underneath, where a
-        // stack of cards would read as noise — and asking per reply would queue a job each. Placed
-        // after the reply-permalink redirect above, so a request that never renders queues nothing.
+        // `replies.linkCard.image` for the same reason the rest are here: without it a reply that
+        // carries a card costs three queries of its own — the read trigger's freshness check, the
+        // serializer's card, and that card's picture.
+        $post->load([
+            'member.avatar.file', 'replies.member.avatar.file', 'replies.images.file',
+            'replies.mentions', 'replies.tags', 'replies.linkCard.image',
+        ]);
+        // The thread, not only its root: a reply is a body of its own, and this page is where one is
+        // read — as a conversation page is for talk (LinkCardSync::ensureAll). Placed after the
+        // reply-permalink redirect above, so a request that never renders queues nothing. Two calls
+        // rather than one over a combined collection: `prepend` on a loaded relation mutates it in
+        // place, which put the root into the page's own reply list.
         $linkCards->ensure($post);
+        $linkCards->ensureAll($post->replies);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [

@@ -32,6 +32,7 @@
                             <a href="{{ route('member.profile.show', $reply->member) }}">{{ $reply->member->name }}</a>
                         </div>
                         <div class="timeline-post-body"><x-timeline-body :post="$reply" /></div>
+                        <x-link-card :record="$reply" />
                         <div class="timeline-post-control">
                             <span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($reply->created_at) }}</span>
                             @if ($reply->member->is($viewer))

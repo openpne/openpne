@@ -4,6 +4,7 @@ namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Events\TimelineReplyPosted;
 use App\Features\Timeline\HashtagParser;
+use App\Jobs\SyncLinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,9 @@ class CreateReply
             // Dispatched here so the snapshot is taken from the rows just written; delivery waits
             // for the commit (ShouldDispatchAfterCommit).
             TimelineReplyPosted::dispatch($reply, $author, ResolveMentions::memberIds($resolved));
+
+            // Likewise held until the commit: the job re-reads the row by id (SyncLinkCard::for).
+            SyncLinkCard::for($reply);
 
             return $reply;
         });
