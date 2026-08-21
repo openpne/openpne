@@ -106,6 +106,8 @@ export interface TopicComment {
     number: number;
     body: string;
     images: GridImage[];
+    /** First URL in the body, previewed; null when there is none, or while it is still being fetched. */
+    linkCard: LinkCardData | null;
     author: TopicAuthor | null;
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side

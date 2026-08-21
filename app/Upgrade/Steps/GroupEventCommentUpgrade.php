@@ -32,4 +32,16 @@ class GroupEventCommentUpgrade extends UpgradeStep
             'updated_at' => Column::source('updated_at'),
         ];
     }
+
+    /**
+     * `link_card_id` / `link_card_synced_at` are left at their schema default (null) rather than
+     * mapped, as every other body's step leaves them: OpenPNE 3 has no equivalent, and a null
+     * `link_card_synced_at` is exactly the "never examined" state the read path looks for — so a
+     * migrated comment picks up a card the first time its page is opened, if the operator has the
+     * feature on at all.
+     */
+    public function targetDefaults(): array
+    {
+        return ['link_card_id', 'link_card_synced_at'];
+    }
 }

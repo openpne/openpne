@@ -7,6 +7,7 @@ use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionFailure;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -50,6 +51,8 @@ class CreateTopicComment
                 $topic->save(); // dirty → updated_at bumped too, lifting the topic on the board
 
                 TopicCommentPosted::dispatch($topic, $comment, $author);
+                // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).
+                SyncLinkCard::for($comment);
 
                 return $comment;
             },

@@ -7,6 +7,7 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
@@ -229,6 +230,24 @@ class LinkCardRenderingTest extends TestCase
                 $this->actingAs($this->author)->get($url)->assertOk()->assertSee('A title from the page');
             }
         }
+    }
+
+    public function test_a_comment_carries_its_card_on_both_surfaces(): void
+    {
+        $diary = Diary::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        DiaryComment::factory()->for($diary)->for($this->author, 'member')->create([
+            'body' => 'See https://www.example.com/article?id=7',
+            'link_card_id' => $this->card->id,
+            'link_card_synced_at' => now(),
+        ]);
+
+        // Classic draws it in the comment's own block, after the words.
+        $html = $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk()->getContent();
+        $this->assertStringContainsString('<span class="linkCardImage">', $html);
+
+        config(['openpne.surface_mode' => 'modern_default']);
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")
+            ->assertInertia(fn ($page) => $page->where('comments.0.linkCard.title', 'A title from the page')->etc());
     }
 
     public function test_card_text_is_escaped_not_rendered(): void

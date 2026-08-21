@@ -107,6 +107,7 @@
                         <div class="body">
                             @include('group-topic._images', ['images' => $comment->images])
                             <p class="text"><x-user-text :value="$comment->body" /></p>
+                            <x-link-card :record="$comment" />
                         </div>
                     </dd>
                 </dl>
