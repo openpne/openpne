@@ -42,6 +42,27 @@ class LinkCardLayoutParityTest extends TestCase
         );
     }
 
+    public function test_the_classic_banner_is_held_to_the_box_the_image_grid_declares(): void
+    {
+        // The box is named once, in boxedPictureMaxWidth, and Modern calls it; Classic writes the
+        // formula out by hand in Blade. Two string assertions that do not know each other held them
+        // together before, which is how one surface once shipped without the other's cap.
+        $grid = (string) file_get_contents(resource_path('js/components/image-grid.tsx'));
+        $this->assertSame(1, preg_match('/export function boxedPictureMaxWidth\([^)]*\)[^{]*\{(?<body>.*?)\n\}/s', $grid, $fn));
+        preg_match_all('/\d+rem/', $fn['body'], $box);
+
+        $blade = (string) file_get_contents(resource_path('views/components/link-card.blade.php'));
+        $this->assertSame(1, preg_match('/class="linkCardBanner"[^>]*style="max-width: (?<cap>[^"]+)"/s', $blade, $banner));
+        preg_match_all('/\d+rem/', $banner['cap'], $classic);
+
+        $this->assertNotEmpty($box[0], 'boxedPictureMaxWidth no longer names its box in rems.');
+        $this->assertSame(
+            $box[0],
+            $classic[0],
+            'The Classic banner is held to a different box than image-grid\'s boxedPictureMaxWidth declares.',
+        );
+    }
+
     public function test_the_classic_component_compares_against_a_layout_that_exists(): void
     {
         // Blade names only the shape it branches on — the other is the fallthrough — so this is not a

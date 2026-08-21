@@ -184,8 +184,9 @@ class LinkCardRenderingTest extends TestCase
     {
         // The smallest picture the shape admits is 267x200, and a Classic card is ~460 wide, so
         // `width: 100%` on its own stretches it by 1.7. The cap is the formula Modern writes
-        // (link-card.test.tsx, the same string): the box a member's own picture gets, then the
-        // source's width — one surface shipped without the other's cap once.
+        // (link-card.test.tsx; Modern's carries the ratio in parentheses): the box a member's own
+        // picture gets, then the source's width — one surface shipped without the other's cap once.
+        // LinkCardLayoutParityTest holds the two boxes to the same rems.
         $this->card->image->update(['width' => 267, 'height' => 200]);
         $diary = $this->diary();
 

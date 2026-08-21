@@ -353,8 +353,9 @@ reason the image grid never crops a lone hero does not carry over — and a fixe
 column of cards from ragging. It is never enlarged past its own width.
 
 **And it is held to the box a member's own picture gets in a comment or a chat row** — the image
-grid's `boxed`, 24rem by 20rem ([images.md](images.md)) — on every surface, by the same width formula
-(`boxedPictureMaxWidth`; a height cap set as `max-height` squashes a picture with a set width). Left
+grid's `boxed`, 24rem by 20rem, as `boxedPictureMaxWidth` in
+[image-grid.tsx](../../resources/js/components/image-grid.tsx) writes it — on every surface, by that
+same width formula (a height cap set as `max-height` squashes a picture with a set width). Left
 at the column's width it was 313px tall in a feed, taller than the post beside it, and half of a
 conversation's viewport — and the page's furniture outsized the member's own photo in the same
 comment. Under the banner ratio the width term binds: a 1.91:1 picture is at most 384×201 on any

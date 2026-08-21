@@ -22,8 +22,10 @@ export type ImageGridVariant = 'post' | 'boxed';
  * aspect" — so a tall one over-declares and may fetch one rung high. Bounded, and the alternative is
  * measuring the layout in JS before the first byte is asked for.
  */
-// `boxed` is read by link-card.tsx as well: a card's picture is held to the same box, so what is
-// true of this row has to stay true there.
+// `boxed` is read by link-card.tsx as well: a card's picture is held to the same box, inside the
+// card's padding and whatever inset its surface adds — a quarter, on a phone in a conversation — so
+// this over-declares there. That costs at most one rung too large, where under-declaring costs a
+// blurry pick.
 export const HERO_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 37.5rem, 92vw',
     boxed: 'min(24rem, 92vw)',
