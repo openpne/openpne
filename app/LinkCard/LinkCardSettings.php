@@ -18,10 +18,18 @@ use App\Support\SnsSettingKey;
  */
 final class LinkCardSettings
 {
+    private ?bool $enabled = null;
+
     public function __construct(private readonly SnsSettingService $settings) {}
 
+    /**
+     * Remembered for as long as this instance lives, which the container makes one request or one
+     * queued job (AppServiceProvider binds it scoped). The setting is stored behind a cache the
+     * default store keeps in the database, so a fresh read costs a query — and a page of talk asks
+     * once per message, twice over.
+     */
     public function enabled(): bool
     {
-        return (bool) $this->settings->get(SnsSettingKey::LinkCardEnabled);
+        return $this->enabled ??= (bool) $this->settings->get(SnsSettingKey::LinkCardEnabled);
     }
 }

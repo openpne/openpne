@@ -29,6 +29,7 @@ const message: TalkMessage = {
     images: [],
     reactions: [],
     inReplyTo: null,
+    linkCard: null,
     createdAt: '2026-08-16T10:00:00+09:00',
     isOwn: true,
     canDelete: true,
@@ -188,4 +189,34 @@ test('a row that draws its author draws no gutter time: it already shows one bes
     const stamps = [...container.querySelectorAll('time')];
     expect(stamps).toHaveLength(1);
     expect(stamps[0]?.closest('[aria-hidden]')).toBeNull();
+});
+
+test('a message whose body holds a link draws the card under the words', () => {
+    const { container } = renderRow({
+        body: 'Look at https://example.com/a',
+        linkCard: {
+            url: 'https://example.com/a',
+            title: 'A title from the page',
+            description: 'What the page says it is about.',
+            siteName: 'Example',
+            domain: 'example.com',
+            imageUrl: null,
+        },
+    });
+
+    // The body keeps its own link, so the card is the second way to the same page.
+    expect(container.querySelectorAll('a[href="https://example.com/a"]').length).toBe(2);
+
+    const card = screen.getByText('A title from the page').closest('a');
+    expect(card).not.toBeNull();
+    // The domain is what a reader acts on, and it is drawn whatever the title claims.
+    expect(card?.textContent).toContain('example.com');
+    // Capped like a boxed picture, so an attachment does not run the width of the conversation.
+    expect(card?.className).toContain('max-w-[24rem]');
+});
+
+test('a message with no card leaves the body link standing alone', () => {
+    const { container } = renderRow({ body: 'Look at https://example.com/a', linkCard: null });
+
+    expect(container.querySelectorAll('a[href="https://example.com/a"]').length).toBe(1);
 });

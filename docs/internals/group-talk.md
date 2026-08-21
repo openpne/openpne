@@ -41,7 +41,7 @@ would silently change nothing for the sites that matter — the ones with no row
 
 | table | what it holds |
 |---|---|
-| `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable, **no FK** — see [Replies](#replies)), `body`, timestamps |
+| `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable, **no FK** — see [Replies](#replies)), `body`, `link_card_id` / `link_card_synced_at` (see [Link cards](#link-cards)), timestamps |
 | `group_message_images` | join rows to `files`, numbered slots, shaped exactly like `timeline_post_images` — see [Images](#images) |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
@@ -371,9 +371,9 @@ still claiming five.
 
 ## Mentions
 
-Talk parses `@mentions` and nothing else: no hashtags (a chat has no tag culture, and a per-group tag
-index would be a screen nobody asked for) and no link cards. URLs are linkified at render, as
-everywhere.
+Talk parses `@mentions` and nothing else — no hashtags: a chat has no tag culture, and a per-group
+tag index would be a screen nobody asked for. URLs are linkified at render, as everywhere, and the
+first of them is previewed as a card (below).
 
 The mechanics are the timeline's, reused rather than re-implemented — the range storage, the resolver
 and the composer state machine are all shared code. [timeline.md](timeline.md#a-mention-is-a-range-not-text)
@@ -555,6 +555,21 @@ purge after:
 - [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) — every message in the
   group, before the group row goes. Talk is flat, so there is no parent whose purge would reach the
   rest; the arm walks them all, beside the existing topic, event and timeline arms.
+
+## Link cards
+
+The first URL in a message is previewed, on the same two columns and through the same two jobs as
+every other body that carries a card ([link-cards.md](link-cards.md)). Two things here are talk's
+own:
+
+- **Nothing invalidates.** A message cannot be edited, so a card belongs to the only body its row
+  will ever have, and the shared trait's `clearLinkCardIfBodyChanged` has no call site here.
+- **The conversation page is the read trigger**, because talk has no detail page for one to hang off.
+  What bounds that, and what a reader who already has the room open does *not* see, is in
+  [link-cards.md](link-cards.md#the-conversation-page-is-talks-detail-page).
+
+Direct messages carry no card. That difference between the two chat surfaces is deliberate: a
+private message's URL is not one this site announces to the far end.
 
 ## Reactions
 
@@ -753,3 +768,6 @@ role once per request and the serializer asks it per row.
     the reference it carries adds no notification of its own.
 25. The parent lookup is bound to the group, so an id from another conversation reads as deleted, and
     only one level is ever serialized.
+26. A message's link card is attached once and never invalidated, because a message is never edited.
+    The conversation page is what asks for one on read; the rows it decorates itself with are not
+    asked about.

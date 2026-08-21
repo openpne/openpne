@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Database;
 
+use App\LinkCard\CardContext;
 use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -71,13 +72,16 @@ class LinkCardsTableTest extends TestCase
     public function test_the_link_card_key_is_indexed_on_every_body_table(): void
     {
         // The prune sweep asks "does any body still point at this card?" once per candidate. Without
-        // an index that is a full scan of all four tables each time, worst for exactly the
+        // an index that is a full scan of every body table each time, worst for exactly the
         // unreferenced cards the command exists to find.
         //
         // InnoDB creates a backing index for every foreign key and SQLite creates none, so the two
         // engines reach this by different routes — the migration adds one only on SQLite. Asserted
         // on both lanes, because what matters is that the column is indexed, not how.
-        foreach (['diaries', 'group_topics', 'group_events', 'timeline_posts'] as $table) {
+        //
+        // The tables come from CardContext, which is where the sweep reads them: a kind added there
+        // and not here would leave the new table unasserted while this went on passing.
+        foreach (array_map(fn (CardContext $context): string => $context->table(), CardContext::cases()) as $table) {
             $this->assertTrue(
                 Schema::hasIndex($table, ['link_card_id']),
                 "{$table}.link_card_id is not indexed; the prune sweep degrades to a full scan.",
@@ -94,16 +98,21 @@ class LinkCardsTableTest extends TestCase
         $create = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
         $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
         $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
+        $talk = require database_path('migrations/2026_08_21_000001_add_link_card_to_group_messages.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
 
-        // Every migration that touches these tables, newest first. SQLite refuses to drop a column
-        // an index still names, and MySQL refuses to drop a table another still references — so this
-        // order is not a preference, it is the only one that works, and the one a real rollback uses.
+        // Every migration that touches these tables, newest first — and *every* one: a body that
+        // still holds a reference is what MySQL refuses the drop for, whichever migration attached
+        // it. SQLite refuses to drop a column an index still names, and MySQL refuses to drop a
+        // table another still references (errno 3730), so this order is not a preference; it is the
+        // only one that works, and the one a real rollback uses.
+        $talk->down();
         $index->down();
         $attach->down();
         $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
+        $this->assertFalse(Schema::hasColumn('group_messages', 'link_card_id'));
 
         $create->down();
         $this->assertFalse(Schema::hasTable('link_cards'));
@@ -111,10 +120,12 @@ class LinkCardsTableTest extends TestCase
         $create->up();
         $attach->up();
         $index->up();
+        $talk->up();
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
         $this->assertTrue(Schema::hasColumn('timeline_posts', 'link_card_synced_at'));
+        $this->assertTrue(Schema::hasColumn('group_messages', 'link_card_synced_at'));
     }
 
     private function column(string $table, string $name): ?array

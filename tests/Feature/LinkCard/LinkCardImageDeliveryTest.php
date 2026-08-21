@@ -12,6 +12,7 @@ use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -227,18 +228,38 @@ class LinkCardImageDeliveryTest extends TestCase
         foreach ([$closed, $open] as $group) {
             $topic = GroupTopic::factory()->for($group)->for($this->author, 'member')
                 ->create(['link_card_id' => $this->card->id]);
+            // Talk reads the same column the board does, so the same three answers have to come back
+            // for something said in the room.
+            $message = GroupMessage::factory()->for($group)->for($this->author, 'author')
+                ->create(['link_card_id' => $this->card->id]);
 
-            $this->actingAs($this->author)->get($this->urlFor($topic))->assertOk();
+            foreach ([$topic, $message] as $record) {
+                $this->actingAs($this->author)->get($this->urlFor($record))->assertOk();
 
-            // Signed out has no case to express on a community board, whichever it is. The explicit
-            // logout is load-bearing: actingAs holds for the rest of the test, so without it this
-            // would re-ask as the member above and pass while proving nothing.
-            $this->app['auth']->forgetGuards();
-            $this->get($this->urlFor($topic))->assertNotFound();
+                // Signed out has no case to express on a group board, whichever it is. The explicit
+                // logout is load-bearing: actingAs holds for the rest of the test, so without it this
+                // would re-ask as the member above and pass while proving nothing.
+                $this->app['auth']->forgetGuards();
+                $this->get($this->urlFor($record))->assertNotFound();
 
-            $this->actingAs($stranger)->get($this->urlFor($topic))
-                ->assertStatus($group->topic_read_access === TopicReadAccess::MembersOnly ? 404 : 200);
+                $this->actingAs($stranger)->get($this->urlFor($record))
+                    ->assertStatus($group->topic_read_access === TopicReadAccess::MembersOnly ? 404 : 200);
+            }
         }
+    }
+
+    public function test_a_message_from_another_room_is_answered_by_that_room(): void
+    {
+        // The talk lookup is deliberately not scoped to a group: which room a message belongs to is
+        // the message's own fact, and that room is what decides. So an id from a conversation the
+        // asker may not read resolves, and is then refused — by its rule, not by the URL's shape.
+        $mine = Group::factory()->create();
+        $theirs = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        GroupMember::factory()->create(['group_id' => $mine->id, 'member_id' => $this->author->id]);
+        $elsewhere = GroupMessage::factory()->for($theirs)->for(Member::factory()->create(), 'author')
+            ->create(['link_card_id' => $this->card->id]);
+
+        $this->actingAs($this->author)->get($this->urlFor($elsewhere))->assertNotFound();
     }
 
     public function test_every_body_kind_is_served_through_its_own_rule(): void
@@ -251,7 +272,15 @@ class LinkCardImageDeliveryTest extends TestCase
             'topic' => GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
             'event' => GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
             'timeline' => TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id]),
+            'talk' => GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id]),
         ];
+
+        // "Every" is the claim, so it is checked rather than assumed: a kind added to the enum and
+        // forgotten here would otherwise leave this passing while proving less than its name says.
+        $this->assertSame(
+            array_map(fn (CardContext $context): string => $context->value, CardContext::cases()),
+            array_keys($records),
+        );
 
         foreach ($records as $kind => $record) {
             $this->assertStringContainsString("/linkCard/{$kind}/", (string) $this->urlFor($record), "{$kind}: wrong context slug.");
@@ -332,6 +361,9 @@ class LinkCardImageDeliveryTest extends TestCase
             [SnsSettingKey::FeatureGroupEventEnabled, $this->urlFor(
                 GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
             )],
+            [SnsSettingKey::FeatureGroupTalkEnabled, $this->urlFor(
+                GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id])
+            )],
         ];
 
         foreach ($urls as [$key, $url]) {
@@ -350,11 +382,13 @@ class LinkCardImageDeliveryTest extends TestCase
         GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
         $topic = GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
         $event = GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+        $message = GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id]);
 
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
 
         $this->actingAs($this->author)->get($this->urlFor($topic))->assertNotFound();
         $this->actingAs($this->author)->get($this->urlFor($event))->assertNotFound();
+        $this->actingAs($this->author)->get($this->urlFor($message))->assertNotFound();
     }
 
     public function test_a_timeline_reply_is_never_addressable(): void

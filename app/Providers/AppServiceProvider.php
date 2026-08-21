@@ -11,6 +11,7 @@ use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
+use App\LinkCard\LinkCardSettings;
 use App\Models\BannerImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -79,6 +80,12 @@ class AppServiceProvider extends ServiceProvider
         // Likewise for the Classic header sprite's window: read once per request, however many
         // surfaces in that request ask (see NotificationCenterWindow).
         $this->app->scoped(NotificationCenterWindow::class);
+
+        // Scoped rather than singleton, deliberately: a queue worker outlives the job it is running,
+        // and FetchLinkCard re-reads this setting so that work queued while cards were on stops when
+        // an operator switches them off. A process-lifetime memo would answer that re-read with what
+        // the worker booted with. Scoped instances are forgotten between jobs.
+        $this->app->scoped(LinkCardSettings::class);
 
         $this->app->singleton(Captcha::class, function ($app): Captcha {
             $config = $app['config']['openpne.captcha'];

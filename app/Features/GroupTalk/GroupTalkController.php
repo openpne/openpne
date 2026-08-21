@@ -21,6 +21,7 @@ use App\Features\Reactions\ReactionVocabulary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
 use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
+use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +43,7 @@ use Inertia\Response as InertiaResponse;
  */
 class GroupTalkController extends Controller
 {
-    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies): InertiaResponse
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -54,6 +55,10 @@ class GroupTalkController extends Controller
         // sit below the watermark the client starts polling from and never be asked for again.
         $reactionsVersion = TalkReactionVersion::of($group);
         $page = $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor));
+        // A conversation has no detail page, so this page is where a card is asked for — see
+        // LinkCardSync::ensureAll for what bounds it. The rows the page renders, not the parents
+        // read to decorate them.
+        $linkCards->ensureAll($page->messages);
         $snapshot = $unread($group, $viewer);
 
         $props = [
@@ -113,7 +118,7 @@ class GroupTalkController extends Controller
      * does not parse is simply no cursor — pagination is a position, not a permission, and the gate
      * above already decided the audience.
      */
-    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions, ReplyReferences $replies): JsonResponse
+    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions, ReplyReferences $replies, LinkCardSync $linkCards): JsonResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -133,6 +138,10 @@ class GroupTalkController extends Controller
             $before !== null => $query->before($group, $before),
             default => $query->latest($group),
         };
+
+        // As in show(): every page this answers is a page of the conversation itself, including the
+        // history "load older" walks back through.
+        $linkCards->ensureAll($page->messages);
 
         $permissions = GroupTalkPermissions::for($group, $viewer);
         $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages), $replies($group, $page->messages));

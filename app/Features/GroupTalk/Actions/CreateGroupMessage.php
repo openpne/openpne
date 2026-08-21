@@ -9,6 +9,7 @@ use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Features\Timeline\Actions\ResolveMentions;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
@@ -116,6 +117,9 @@ class CreateGroupMessage
                 // Dispatched from inside the write so the snapshot is the rows just stored; delivery
                 // waits for the commit (ShouldDispatchAfterCommit).
                 GroupMessagePosted::dispatch($message, $author, ResolveMentions::memberIds($resolved));
+
+                // Likewise held until the commit: the job re-reads the row by id (SyncLinkCard::for).
+                SyncLinkCard::for($message);
 
                 return $message;
             },
