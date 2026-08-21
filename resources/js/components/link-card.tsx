@@ -1,4 +1,4 @@
-import type { ImageGridVariant } from '@/components/image-grid';
+import { HERO_SIZES, type ImageGridVariant } from '@/components/image-grid';
 import { type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +19,13 @@ export interface LinkCardData {
     fitSources: FitSource[];
 }
 
-/** How wide the card may run — the same box the surface gives an attached picture. */
+/**
+ * How wide the card may run.
+ *
+ * `boxed` is the cap a chat row already puts on a picture, so a card and a photo in one conversation
+ * line up. `post` has no such cap to borrow — a picture there is as wide as the column — so this is
+ * the card's own, and it is what keeps a preview from running the width of a desktop page.
+ */
 const WIDTH: Record<ImageGridVariant, string> = {
     post: 'max-w-[37.5rem]',
     boxed: 'max-w-[24rem]',
@@ -91,7 +97,9 @@ export function LinkCard({
                 <img
                     src={fitFallbackUrl(card.fitSources) ?? undefined}
                     srcSet={fitSrcSet(card.fitSources, card.imageWidth, card.imageHeight) ?? undefined}
-                    sizes={placement === 'boxed' ? 'min(24rem, 92vw)' : '(min-width: 40rem) 37.5rem, 92vw'}
+                    // The placement's own declaration, shared with the pictures it sits among rather
+                    // than copied — the two would drift into different candidate picks otherwise.
+                    sizes={HERO_SIZES[placement]}
                     alt=""
                     aria-hidden
                     loading="lazy"
@@ -112,6 +120,10 @@ export function LinkCard({
                 // words beside it and leaves no gap under itself. That only stays a shrink — never a
                 // blurry enlargement — because the text block cannot outgrow the stored 120px square:
                 // a two-line title, one line of description and the host come to 116px.
+                //
+                // The box is no longer square, so the server's square crop and this `cover` compose:
+                // at 96×116 another 17% of the width goes. Small against a gap that was 42px, and the
+                // alternative is a cell-ratio crop variant per placement for a decorative thumbnail.
                 <img
                     src={card.imageUrl}
                     alt=""

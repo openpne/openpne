@@ -179,6 +179,20 @@ class LinkCardRenderingTest extends TestCase
         $this->assertStringNotContainsString('<span class="linkCardImage">', $html);
     }
 
+    public function test_the_classic_wide_picture_is_not_enlarged_past_its_own_size(): void
+    {
+        // The smallest picture the shape admits is 267x200, and a Classic card is ~460 wide, so
+        // `width: 100%` on its own stretches it by 1.7. Modern caps it at the source's width; this is
+        // the same cap on the other surface, which is where it was missing.
+        $this->card->image->update(['width' => 267, 'height' => 200]);
+        $diary = $this->diary();
+
+        $html = $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk()->getContent();
+
+        $this->assertStringContainsString('<img class="linkCardBanner"', $html);
+        $this->assertStringContainsString('style="max-width: 267px"', $html);
+    }
+
     public function test_the_classic_card_keeps_the_thumbnail_beside_the_words_when_it_is_small(): void
     {
         $this->card->image->update(['width' => 100, 'height' => 100]);
@@ -200,8 +214,9 @@ class LinkCardRenderingTest extends TestCase
         $post = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
 
-        // Both shapes on every surface: a renderer taught only one of them draws a card that is
-        // half missing — no picture, or the picture in the place the other shape put it.
+        // Every surface draws a card in either shape without falling over. Which shape it drew is
+        // not visible here — the Modern four decide that client-side — so that is asserted where it
+        // can be seen: the Classic pair below, and link-card.test.tsx.
         foreach ([[100, 100], [1200, 630]] as [$width, $height]) {
             $this->card->image->update(['width' => $width, 'height' => $height]);
 

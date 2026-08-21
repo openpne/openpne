@@ -24,8 +24,9 @@
             .linkCardWide .linkCardText,
             .linkCardWide .linkCardBannerBox { display: block; }
             /* Cut to the same banner shape Modern uses, so a column of cards does not rag and the
-               two surfaces draw one card rather than two. */
-            .linkCardWide .linkCardBanner { display: block; width: 100%; aspect-ratio: 1.91; height: auto; object-fit: cover; }
+               two surfaces draw one card rather than two. Centred, because the inline max-width
+               below stops a small picture at its own size rather than stretching it to the box. */
+            .linkCardWide .linkCardBanner { display: block; width: 100%; aspect-ratio: 1.91; height: auto; margin: 0 auto; object-fit: cover; }
             /* Blocks, not the inline spans they are marked up as: the markup sits inside an <a>,
                where only phrasing content is valid. */
             .linkCardTitle,
@@ -35,6 +36,9 @@
                descriptions are capped at 300 / 500 characters on the way in, not to a line count. */
             .linkCardTitle,
             .linkCardDescription { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            /* One line beside a thumbnail, as Modern clamps it there: the words must not outgrow the
+               120px square they sit next to, or the card gains height the picture cannot fill. */
+            .linkCard:not(.linkCardWide) .linkCardDescription { -webkit-line-clamp: 1; }
             .linkCardTitle { font-weight: bold; margin: 0 0 0.3em; }
             .linkCardDescription { font-size: 0.9em; color: #666666; margin: 0; }
             /* First, so the margin is under it. #767676 is the lightest grey that still clears
@@ -65,7 +69,10 @@
             @if ($wide)
                 {{-- Below the words, at the card's width. Classic has no placement to size it by, so
                      the box it lands in does: `width: 100%` in a gadget is the gadget's column. --}}
-                <span class="linkCardBannerBox"><img class="linkCardBanner" src="{{ $banner }}" alt="" loading="lazy"></span>
+                {{-- Never enlarged past its own size: `width: 100%` alone would stretch a 267px
+                     picture across a 461px card. --}}
+                <span class="linkCardBannerBox"><img class="linkCardBanner" src="{{ $banner }}" alt="" loading="lazy"
+                    @if ($card['imageWidth']) style="max-width: {{ $card['imageWidth'] }}px" @endif></span>
             @endif
         </a>
     </div>

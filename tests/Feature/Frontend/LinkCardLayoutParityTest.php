@@ -12,6 +12,11 @@ use Tests\TestCase;
  * component and the Blade one — so all three have to mean the same strings by it. Drift ships a card
  * that falls through to the wrong shape on one surface only, which is invisible from either side:
  * both keep rendering, and neither is obviously wrong on its own.
+ *
+ * **This guards the vocabulary, not the drawing.** Both renderers agreeing on the word "wide" says
+ * nothing about their agreeing on what a wide card looks like — one of them shipped without the
+ * no-enlarging cap the other had, and this test was green throughout. What holds the drawing to the
+ * same rules is LinkCardRenderingTest for Classic and link-card.test.tsx for Modern, side by side.
  */
 class LinkCardLayoutParityTest extends TestCase
 {
