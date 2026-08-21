@@ -55,7 +55,9 @@ final class LinkCardSync
         foreach ($records as $record) {
             // Read on the first row rather than on entry: the talk poll runs every few seconds and
             // usually answers with no rows at all, and the setting is behind a cache the default
-            // store keeps in the database. A page with nothing on it asks nothing.
+            // store keeps in the database. A page with nothing on it asks nothing — and a page with
+            // rows asks once, because LinkCardSettings remembers the answer for its scope. Take that
+            // memo away and this is a query per row.
             if (! $this->settings->enabled()) {
                 return;
             }
