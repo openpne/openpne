@@ -419,6 +419,25 @@ class LinkCardImageDeliveryTest extends TestCase
         $this->actingAs($replier)->get($this->urlFor($reply))->assertOk();
     }
 
+    public function test_a_reply_whose_thread_is_gone_is_refused_rather_than_judged_on_its_own(): void
+    {
+        // The unsafe half of "authorise by the thread" is the fallback: no thread, judge the row —
+        // which is exactly the audience this rule exists to avoid. Asserted against the predicate
+        // rather than through a request, because the database will not hold the state: the foreign
+        // key cascades, and it refuses a reply repointed at a row that is not there. So the guard is
+        // for a reply that arrives without its root by some other route.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        $reply = TimelinePost::factory()->for($this->author)->create([
+            'in_reply_to_id' => $root->id,
+            'visibility' => Visibility::Open,
+            'link_card_id' => $this->card->id,
+        ]);
+        $reply->setRelation('parent', null);
+
+        $this->assertTrue(CardContext::TimelinePost->canView($reply->fresh(), $this->author), 'The thread is readable while its root is there.');
+        $this->assertFalse(CardContext::TimelinePost->canView($reply, $this->author), 'A reply with no thread was judged on its own rule.');
+    }
+
     public function test_a_reply_addresses_its_picture_like_any_other_row(): void
     {
         // A reply used to resolve to nothing here, because it would have been authorised against a

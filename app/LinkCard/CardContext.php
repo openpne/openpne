@@ -162,6 +162,29 @@ enum CardContext: string
     }
 
     /**
+     * Whether $viewer may read the thread $post is in.
+     *
+     * The thread's root, never the row itself, when the row is a reply: a reply inherits the root's
+     * visibility but carries its own author, and `TimelineAccess` reads the row's author — so the
+     * reply's own rule admits the *replier's* friends, who are not who the page was gated for. The
+     * page re-centers a reply permalink to the root and asks there (`ShowTimelinePost`); this asks
+     * the same question of the same row.
+     *
+     * A reply whose root is gone is refused rather than falling back to its own rule, which is the
+     * unsafe half of this. The foreign key cascades, so that state should not exist — and the page
+     * refuses it too (`ShowTimelinePost` returns null), which is the point: what a fallback here
+     * would do is quietly restore the audience this method exists to avoid.
+     */
+    private static function canViewThread(TimelinePost $post, ?Member $viewer): bool
+    {
+        if ($post->in_reply_to_id !== null) {
+            return $post->parent !== null && TimelineAccess::canView($viewer, $post->parent);
+        }
+
+        return TimelineAccess::canView($viewer, $post);
+    }
+
+    /**
      * Whether $viewer may read $record, by that kind's own rule.
      *
      * Diary and timeline posts can be web-public, so they take a nullable viewer; the group bodies
@@ -172,12 +195,7 @@ enum CardContext: string
     {
         return match ($this) {
             self::Diary => $record instanceof Diary && DiaryAccess::canView($viewer, $record),
-            // The thread's root, never the row itself, when the row is a reply: a reply inherits the
-            // root's visibility but carries its own author, and TimelineAccess reads the row's author
-            // — so the reply's own rule admits the replier's friends, who are not who the page was
-            // gated for. The page re-centers a reply permalink to the root and asks there
-            // (ShowTimelinePost); this asks the same question of the same row.
-            self::TimelinePost => $record instanceof TimelinePost && TimelineAccess::canView($viewer, $record->parent ?? $record),
+            self::TimelinePost => $record instanceof TimelinePost && self::canViewThread($record, $viewer),
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
