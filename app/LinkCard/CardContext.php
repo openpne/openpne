@@ -225,7 +225,9 @@ enum CardContext: string
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
             // A comment carries no audience of its own: the page is the body it hangs under, and
-            // that body's rule is the one the page asked.
+            // that body's rule is the one the page asked. No branch for a missing parent, unlike the
+            // reply above: the column is NOT NULL and cascades, so a comment cannot outlive the body
+            // it belongs to — and there is no permissive fallback here to guard against either.
             self::DiaryComment => $record instanceof DiaryComment && DiaryAccess::canView($viewer, $record->diary),
             self::TopicComment => $record instanceof GroupTopicComment && $viewer !== null && GroupTopicAccess::canViewTopic($record->topic, $viewer),
             self::EventComment => $record instanceof GroupEventComment && $viewer !== null && GroupEventAccess::canViewEvent($record->event, $viewer),
