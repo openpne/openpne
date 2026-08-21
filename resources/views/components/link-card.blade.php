@@ -21,12 +21,13 @@
                (this partial is shared by the feed, the profile and three gadgets) as on a detail
                page. Classic has no placement to size a picture by; the box it lands in is the size. */
             .linkCard.linkCardWide a { display: block; }
-            .linkCardWide .linkCardText,
-            .linkCardWide .linkCardBannerBox { display: block; }
+            .linkCardWide .linkCardText { display: block; }
+            /* In with the words, as Modern sets it: padded like the text cell, less the top the
+               cell's own bottom padding already gives. */
+            .linkCardWide .linkCardBannerBox { display: block; padding: 0 0.8em 0.6em; }
             /* Cut to the same banner shape Modern uses, so a column of cards does not rag and the
-               two surfaces draw one card rather than two. Centred, because the inline max-width
-               below stops a small picture at its own size rather than stretching it to the box. */
-            .linkCardWide .linkCardBanner { display: block; width: 100%; aspect-ratio: 1.91; height: auto; margin: 0 auto; object-fit: cover; }
+               two surfaces draw one card rather than two. */
+            .linkCardWide .linkCardBanner { display: block; width: 100%; aspect-ratio: 1.91; height: auto; border-radius: 4px; object-fit: cover; }
             /* Blocks, not the inline spans they are marked up as: the markup sits inside an <a>,
                where only phrasing content is valid. */
             .linkCardTitle,
@@ -69,10 +70,11 @@
             @if ($wide)
                 {{-- Below the words, at the card's width. Classic has no placement to size it by, so
                      the box it lands in does: `width: 100%` in a gadget is the gadget's column. --}}
-                {{-- Never enlarged past its own size: `width: 100%` alone would stretch a 267px
-                     picture across a 461px card. --}}
+                {{-- Held to the box a member's own picture gets in a comment or a chat row, and never
+                     enlarged past its own size: the formula image-grid's boxedPictureMaxWidth writes
+                     for Modern, with the banner ratio. --}}
                 <span class="linkCardBannerBox"><img class="linkCardBanner" src="{{ $banner }}" alt="" loading="lazy"
-                    @if ($card['imageWidth']) style="max-width: {{ $card['imageWidth'] }}px" @endif></span>
+                    style="max-width: min(100%, 24rem, {{ $card['imageWidth'] ? $card['imageWidth'].'px, ' : '' }}calc(20rem * 1.91))"></span>
             @endif
         </a>
     </div>
