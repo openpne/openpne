@@ -55,6 +55,8 @@ export interface DiaryComment {
     number: number;
     body: string;
     images: GridImage[];
+    /** First URL in the body, previewed; null when there is none, or while it is still being fetched. */
+    linkCard: LinkCardData | null;
     author: DiaryAvatarAuthor | null; // null once the author has withdrawn
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side

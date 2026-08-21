@@ -7,6 +7,7 @@ use App\Features\GroupEvent\Exceptions\GroupEventActionException;
 use App\Features\GroupEvent\Exceptions\GroupEventActionFailure;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\File;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -68,6 +69,8 @@ class CreateEventComment
 
         // Both entry points (direct and the merged RSVP+comment submit) funnel through here.
         EventCommentPosted::dispatch($event, $comment, $author);
+        // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).
+        SyncLinkCard::for($comment);
 
         return $comment;
     }

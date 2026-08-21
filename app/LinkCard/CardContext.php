@@ -10,9 +10,12 @@ use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMessage;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -46,6 +49,12 @@ enum CardContext: string
 
     case Talk = 'talk';
 
+    case DiaryComment = 'diaryComment';
+
+    case TopicComment = 'topicComment';
+
+    case EventComment = 'eventComment';
+
     /** The context named by a URL segment, or null when the segment is not one of these. */
     public static function fromSlug(string $slug): ?self
     {
@@ -61,6 +70,9 @@ enum CardContext: string
             GroupEvent::class => self::Event,
             TimelinePost::class => self::TimelinePost,
             GroupMessage::class => self::Talk,
+            DiaryComment::class => self::DiaryComment,
+            GroupTopicComment::class => self::TopicComment,
+            GroupEventComment::class => self::EventComment,
             default => null,
         };
     }
@@ -83,6 +95,9 @@ enum CardContext: string
             self::Event => (new GroupEvent)->getTable(),
             self::TimelinePost => (new TimelinePost)->getTable(),
             self::Talk => (new GroupMessage)->getTable(),
+            self::DiaryComment => (new DiaryComment)->getTable(),
+            self::TopicComment => (new GroupTopicComment)->getTable(),
+            self::EventComment => (new GroupEventComment)->getTable(),
         };
     }
 
@@ -102,6 +117,11 @@ enum CardContext: string
             self::Event => Feature::GroupEvent,
             self::TimelinePost => Feature::Timeline,
             self::Talk => Feature::GroupTalk,
+            // A comment belongs to the unit its body does: switching diaries off takes their
+            // comments' pictures with them, as it takes the diaries'.
+            self::DiaryComment => Feature::Diary,
+            self::TopicComment => Feature::GroupTopic,
+            self::EventComment => Feature::GroupEvent,
         };
     }
 
@@ -158,6 +178,11 @@ enum CardContext: string
             // canView asks that group. Naming another group's message resolves and is then refused
             // by its own room's rule, which is the same answer the conversation page would give.
             self::Talk => GroupMessage::with(['group', 'linkCard'])->find($id),
+            // The body a comment hangs under comes with it: that is whose rule decides, so it is
+            // loaded with what that rule reads.
+            self::DiaryComment => DiaryComment::with(['diary.member', 'linkCard'])->find($id),
+            self::TopicComment => GroupTopicComment::with(['topic.group', 'linkCard'])->find($id),
+            self::EventComment => GroupEventComment::with(['event.group', 'linkCard'])->find($id),
         };
     }
 
@@ -199,6 +224,15 @@ enum CardContext: string
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
+            // A comment carries no audience of its own: the page is the body it hangs under, and
+            // that body's rule is the one the page asked. No branch for a missing parent, unlike the
+            // reply above, and it takes two facts rather than one: the column is NOT NULL and
+            // cascades, so a comment cannot outlive its body; and none of the three bodies is
+            // soft-deleted, so none resolves to null through a default scope while its row is still
+            // there. Give one of them SoftDeletes and this needs the reply's refusal.
+            self::DiaryComment => $record instanceof DiaryComment && DiaryAccess::canView($viewer, $record->diary),
+            self::TopicComment => $record instanceof GroupTopicComment && $viewer !== null && GroupTopicAccess::canViewTopic($record->topic, $viewer),
+            self::EventComment => $record instanceof GroupEventComment && $viewer !== null && GroupEventAccess::canViewEvent($record->event, $viewer),
         };
     }
 }
