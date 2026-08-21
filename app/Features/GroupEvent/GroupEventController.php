@@ -74,12 +74,17 @@ class GroupEventController extends Controller
         $linkCards->ensure($found);
 
         return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $linkCards) {
                 $this->markLocalNavGroup($found->group);
+
+                $thread = GroupEventCommentThread::paginate($found, $request->query('order'), $request->query('page'));
+                // The comments this page renders, as the body was above: a comment is a body of its
+                // own, and this is the page it is read on (LinkCardSync::ensureAll).
+                $linkCards->ensureAll($thread->comments);
 
                 return view('group-event.show', [
                     'event' => $found,
-                    'thread' => GroupEventCommentThread::paginate($found, $request->query('order'), $request->query('page')),
+                    'thread' => $thread,
                     'canComment' => GroupEventAccess::canComment($found, $viewer),
                     'canEdit' => GroupEventAccess::canEditEvent($found, $viewer),
                     'isParticipant' => $found->isParticipant($viewer),
@@ -88,11 +93,12 @@ class GroupEventController extends Controller
                     'isFull' => $found->isFull(),
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
                 $found->loadMissing('member.avatar.file');
                 // Reuse the id-ordered, size-20 pager so Modern matches Classic and never serializes
                 // an unbounded thread (same contract as the topic board).
                 $thread = GroupEventCommentThread::paginate($found, $request->query('order'), $request->query('page'));
+                $linkCards->ensureAll($thread->comments);
 
                 return Inertia::render('group/event/show', [
                     'group' => GroupSerializer::summary($found->group),

@@ -74,6 +74,7 @@ class GroupTopicSerializer
             'number' => $comment->number,
             'body' => $comment->body,
             'images' => $comment->images->map([self::class, 'image'])->all(),
+            'linkCard' => LinkCardSerializer::card($comment),
             'author' => self::author($comment->member),
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => GroupTopicAccess::canDeleteComment($comment, $viewer),

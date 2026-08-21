@@ -26,14 +26,15 @@ pins that no field of the extracted metadata ever carries markup.
 
 ## Which bodies carry one
 
-Diaries, group topics, group events, timeline posts — replies included — and talk messages. Only
-direct messages do not: fetching a URL out of a private message tells its destination that the link
-was shared, which is a different bargain from a body written into a room. That is why the two chat
-surfaces differ, and the difference is deliberate rather than pending.
+Every body that carries text: diaries, group topics, group events, timeline posts — replies
+included — talk messages, and the comments on the first three. Only direct messages do not: fetching
+a URL out of a private message tells its destination that the link was shared, which is a different
+bargain from a body written into a room. That is why the two chat surfaces differ, and the difference
+is deliberate rather than pending.
 
-Replies were left out at first on the grounds that a stack of cards under a post would read as
-noise. Talk settled that the other way: it draws the same cards in a denser list than any thread,
-sixty rows to a page.
+Comments and replies were left out at first on the grounds that a thread of them stacks cards where
+the pages behind the links add little. Talk settled that the other way: it draws the same cards in a
+denser list than any thread, sixty rows to a page.
 
 ## When a card is fetched
 
@@ -462,6 +463,11 @@ rather than something that hurts, so this is an operator's tool.
 - A switched-off module serves no card images.
 - A card image is authorised exactly as the page that shows it: a reply by its thread root, a comment
   by the body it hangs under. Never by the row's own author when the page does not ask that.
+- A body's comments are asked about on the page that renders them, as talk's are. What bounds that is
+  the page: five of the six comment lists page at twenty, and the sixth — the diary's Modern thread —
+  is the one place a page's length is the body's to decide.
+- A comment's card answers to its parent body's rule, and that is exactly the page's audience because
+  no comment list filters per row — the same thing that makes a reply's root rule exact.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.

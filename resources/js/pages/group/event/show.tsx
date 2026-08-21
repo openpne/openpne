@@ -185,6 +185,7 @@ export default function GroupEventShow() {
                                 <p className="mt-1 whitespace-pre-wrap break-words">
                                     <UserText text={comment.body} />
                                 </p>
+                                <LinkCard card={comment.linkCard} className="mt-2" />
                                 <ImageGrid images={comment.images} variant="boxed" className="mt-2" />
                             </li>
                         ))}

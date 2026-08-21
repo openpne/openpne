@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use Database\Factories\DiaryCommentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['diary_id', 'member_id', 'number', 'body'])]
 class DiaryComment extends Model
 {
+    use HasLinkCard;
+
+    protected function casts(): array
+    {
+        return ['link_card_synced_at' => 'datetime'];
+    }
+
     /** @use HasFactory<DiaryCommentFactory> */
     use HasFactory;
 

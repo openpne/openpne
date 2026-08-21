@@ -144,6 +144,7 @@ export default function DiaryShow() {
                                 <p className="whitespace-pre-wrap break-words">
                                     <UserText text={comment.body} />
                                 </p>
+                                <LinkCard card={comment.linkCard} className="mt-1" />
                                 <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
                             </li>
                         ))}

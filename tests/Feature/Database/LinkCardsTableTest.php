@@ -99,6 +99,7 @@ class LinkCardsTableTest extends TestCase
         $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
         $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
         $talk = require database_path('migrations/2026_08_21_000001_add_link_card_to_group_messages.php');
+        $comments = require database_path('migrations/2026_08_21_000002_add_link_card_to_comment_tables.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
@@ -108,11 +109,13 @@ class LinkCardsTableTest extends TestCase
         // it. SQLite refuses to drop a column an index still names, and MySQL refuses to drop a
         // table another still references (errno 3730), so this order is not a preference; it is the
         // only one that works, and the one a real rollback uses.
+        $comments->down();
         $talk->down();
         $index->down();
         $attach->down();
         $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
         $this->assertFalse(Schema::hasColumn('group_messages', 'link_card_id'));
+        $this->assertFalse(Schema::hasColumn('diary_comments', 'link_card_id'));
 
         $create->down();
         $this->assertFalse(Schema::hasTable('link_cards'));
@@ -121,11 +124,13 @@ class LinkCardsTableTest extends TestCase
         $attach->up();
         $index->up();
         $talk->up();
+        $comments->up();
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
         $this->assertTrue(Schema::hasColumn('timeline_posts', 'link_card_synced_at'));
         $this->assertTrue(Schema::hasColumn('group_messages', 'link_card_synced_at'));
+        $this->assertTrue(Schema::hasColumn('diary_comments', 'link_card_synced_at'));
     }
 
     private function column(string $table, string $name): ?array

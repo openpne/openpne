@@ -4,6 +4,7 @@ namespace App\Features\Diary\Actions;
 
 use App\Features\Diary\Events\DiaryCommentPosted;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\Member;
@@ -45,6 +46,8 @@ class CreateComment
             }
 
             DiaryCommentPosted::dispatch($diary, $comment, $author);
+            // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).
+            SyncLinkCard::for($comment);
 
             return $comment;
         });

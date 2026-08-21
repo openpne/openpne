@@ -8,12 +8,15 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Files\FileStorage;
 use App\LinkCard\CardContext;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -274,6 +277,13 @@ class LinkCardImageDeliveryTest extends TestCase
             'event' => GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
             'timeline' => TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id]),
             'talk' => GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id]),
+            'diaryComment' => DiaryComment::factory()->for($this->diary(Visibility::Open))->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
+            'topicComment' => GroupTopicComment::factory()
+                ->for(GroupTopic::factory()->for($group)->for($this->author, 'member')->create(), 'topic')
+                ->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
+            'eventComment' => GroupEventComment::factory()
+                ->for(GroupEvent::factory()->for($group)->for($this->author, 'member')->create(), 'event')
+                ->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
         ];
 
         // "Every" is the claim, so it is checked rather than assumed: a kind added to the enum and

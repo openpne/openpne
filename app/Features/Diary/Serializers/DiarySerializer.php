@@ -152,6 +152,7 @@ class DiarySerializer
             'number' => $comment->number,
             'body' => $comment->body,
             'images' => $comment->images->map([self::class, 'image'])->all(),
+            'linkCard' => LinkCardSerializer::card($comment),
             'author' => $comment->member ? MemberRefSerializer::ref($comment->member) : null,
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => $comment->isDeletableBy($viewer),

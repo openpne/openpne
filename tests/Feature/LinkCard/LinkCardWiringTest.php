@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
+use App\Features\Diary\Actions\CreateComment;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Data\DiaryFormData;
 use App\Features\GroupEvent\Actions\CreateEvent;
+use App\Features\GroupEvent\Actions\CreateEventComment;
 use App\Features\GroupEvent\Actions\UpdateEvent;
 use App\Features\GroupEvent\Data\GroupEventFormData;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTopic\Actions\CreateTopic;
+use App\Features\GroupTopic\Actions\CreateTopicComment;
 use App\Features\GroupTopic\Actions\UpdateTopic;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
 use App\Features\Timeline\Actions\CreateTimelinePost;
@@ -20,11 +23,14 @@ use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Files\ImageEdit;
 use App\Jobs\SyncLinkCard;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -179,6 +185,9 @@ class LinkCardWiringTest extends TestCase
             'Event' => ['Event'],
             'TimelinePost' => ['TimelinePost'],
             'TalkMessage' => ['TalkMessage'],
+            'DiaryComment' => ['DiaryComment'],
+            'TopicComment' => ['TopicComment'],
+            'EventComment' => ['EventComment'],
         ];
     }
 
@@ -374,6 +383,27 @@ class LinkCardWiringTest extends TestCase
         Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->id === $reply->id);
     }
 
+    public function test_opening_a_body_queues_a_sync_for_its_comments_too(): void
+    {
+        // A comment is a body of its own, and the page it is read on is the one its parent is read
+        // on — the same relaxation talk needed, for the same reason.
+        $diary = Diary::factory()->for($this->member)->create(['body' => 'no link here', 'link_card_synced_at' => now()]);
+        $comments = DiaryComment::factory()->count(2)->for($diary)->for($this->member, 'member')->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('diary.show', $diary))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class, 2);
+        foreach ($comments as $comment) {
+            Queue::assertPushed(
+                SyncLinkCard::class,
+                fn (SyncLinkCard $job): bool => $job->model === DiaryComment::class && $job->id === $comment->id,
+            );
+        }
+    }
+
     public function test_nothing_is_queued_while_the_setting_is_off(): void
     {
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
@@ -419,6 +449,21 @@ class LinkCardWiringTest extends TestCase
             $this->member,
             new TimelinePostFormData(body: 'See https://example.com/a', visibility: Visibility::Open),
         );
+    }
+
+    private function createDiaryComment(): DiaryComment
+    {
+        return $this->app->make(CreateComment::class)($this->member, $this->createDiary(), 'See https://example.com/a');
+    }
+
+    private function createTopicComment(): GroupTopicComment
+    {
+        return $this->app->make(CreateTopicComment::class)($this->member, $this->createTopic(), 'See https://example.com/a');
+    }
+
+    private function createEventComment(): GroupEventComment
+    {
+        return $this->app->make(CreateEventComment::class)($this->member, $this->createEvent(), 'See https://example.com/a');
     }
 
     private function createTalkMessage(): GroupMessage

@@ -38,7 +38,7 @@ final class DiaryCommentThread
         $lastPage = max(1, (int) ceil($total / $size));
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
-        $comments = $diary->comments()->with(['member', 'images.file'])
+        $comments = $diary->comments()->with(['member', 'images.file', 'linkCard.image'])
             ->orderBy('number', $ascending ? 'asc' : 'desc')
             ->forPage($page, $size)
             ->get();

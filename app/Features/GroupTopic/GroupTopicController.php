@@ -75,22 +75,28 @@ class GroupTopicController extends Controller
         $linkCards->ensure($found);
 
         return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $linkCards) {
                 $this->markLocalNavGroup($found->group);
+
+                $thread = GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
+                // The comments this page renders, as the root was above: a comment is a body of its
+                // own, and this is the page it is read on (LinkCardSync::ensureAll).
+                $linkCards->ensureAll($thread->comments);
 
                 return view('group-topic.show', [
                     'topic' => $found,
-                    'thread' => GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page')),
+                    'thread' => $thread,
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
                 $found->loadMissing('member.avatar.file');
                 // Reuse the Classic thread pager (id-ordered, size 20, reversible) so Modern shows
                 // comments in the same order as Classic — number is racy on migrated data — and never
                 // serializes an unbounded thread in one response.
                 $thread = GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
+                $linkCards->ensureAll($thread->comments);
 
                 return Inertia::render('group/topic/show', [
                     'group' => GroupSerializer::summary($found->group),

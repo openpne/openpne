@@ -217,12 +217,15 @@ class DiaryController extends Controller
         ['older' => $older, 'newer' => $newer] = $adjacent($viewer, $found);
 
         return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => function () use ($request, $found, $older, $newer) {
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $older, $newer, $linkCards) {
                 $thread = DiaryCommentThread::paginate(
                     $found, $request->query('size'), $request->query('order'), $request->query('page'),
                 );
                 // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
                 $thread->comments->each->setRelation('diary', $found);
+                // The comments this page renders, as the diary was above: a comment is a body of its
+                // own, and this is the page it is read on (LinkCardSync::ensureAll).
+                $linkCards->ensureAll($thread->comments);
 
                 // Classic keeps OpenPNE 3's previous(older)/next(newer) template vars for parity.
                 return $this->classicScreen('diary.show', [
@@ -232,9 +235,10 @@ class DiaryController extends Controller
                     'nextDiary' => $newer,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer, $older, $newer) {
-                $comments = $found->comments()->with(['member.avatar.file', 'images.file'])->orderBy('number')->get();
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $older, $newer, $linkCards) {
+                $comments = $found->comments()->with(['member.avatar.file', 'images.file', 'linkCard.image'])->orderBy('number')->get();
                 $comments->each->setRelation('diary', $found);
+                $linkCards->ensureAll($comments);
 
                 return Inertia::render('diary/show', [
                     'diary' => DiarySerializer::detail($found),

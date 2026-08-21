@@ -6,10 +6,13 @@ namespace Tests\Feature\LinkCard;
 
 use App\LinkCard\CardContext;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMessage;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -53,6 +56,9 @@ class PruneLinkCardsCommandTest extends TestCase
             'group_events' => GroupEvent::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'timeline_posts' => TimelinePost::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'group_messages' => GroupMessage::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'diary_comments' => DiaryComment::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'group_topic_comments' => GroupTopicComment::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'group_event_comments' => GroupEventComment::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
         ];
 
         // The sweep reads its tables from CardContext, so this list has to be that list: a kind added
