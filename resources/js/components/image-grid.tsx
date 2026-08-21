@@ -22,7 +22,7 @@ export type ImageGridVariant = 'post' | 'boxed';
  * aspect" — so a tall one over-declares and may fetch one rung high. Bounded, and the alternative is
  * measuring the layout in JS before the first byte is asked for.
  */
-const HERO_SIZES: Record<ImageGridVariant, string> = {
+export const HERO_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 37.5rem, 92vw',
     boxed: 'min(24rem, 92vw)',
 };
