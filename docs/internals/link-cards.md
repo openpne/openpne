@@ -347,6 +347,12 @@ what a surface gives a *picture* first, which left it stopping short of the text
 card under 550px of message, the title wrapping and clipping inside the narrower box. A card
 restates something in the body, so the body's column is its width, and no surface needs a number.
 
+**An attached photo keeps its own column**, which in a conversation is narrower. A message carrying
+both therefore draws the card to the words' edge and the photo short of it. The asymmetry is the
+distinction, not an oversight: a card is this app restating a page in the body's own measure, while a
+photo is the author's framing of their own picture, and it keeps the column the surface hands a
+picture ([images.md](images.md)).
+
 **The compact picture is fixed in width and stretched in height**, so it is exactly as tall as the
 words beside it and leaves no gap under itself. That stays a shrink rather than a blurry enlargement
 because the text block cannot outgrow the stored 120px square: host, a two-line title and one line of
