@@ -90,7 +90,13 @@ reply's parent — are excluded: they are not on screen, and they arrive without
 **A card that lands after a page was rendered does not reach a reader who already holds that row.**
 The poll reads forward from a `(created_at, id)` position and attaching a card moves neither half of
 it, so a conversation left open keeps showing the message without its card until the tab is reloaded
-or jumps back to the newest page. Closing that means giving talk's reaction watermark
+or jumps back to the newest page.
+
+There is one accidental exception, and it is the shape of the fix. A reaction on that message bumps
+the watermark it *does* watch, and a touched row is re-serialized in full and replaces the row the
+client holds — card included, since the eager load rides `GroupTalkMessages::WITH`. So the delivery
+path already works end to end; what is missing is only that attaching a card does not bump anything.
+Closing this means giving talk's reaction watermark
 ([group-talk.md](group-talk.md#the-version-is-the-second-watermark)) the wider meaning of "this row
 changed".
 
@@ -406,8 +412,9 @@ rather than something that hurts, so this is an operator's tool.
   `www.` host gets the same scheme the renderer gives it.
 - Only the first URL in a body becomes a card.
 - A fetch result is written only under the lease that claimed it.
-- The read trigger fires on detail pages only, and only ever queues work. Timeline replies are not
-  synced: they share the table but render as a thread, where a stack of cards would read as noise.
+- The read trigger fires on detail pages only, with the one exception below, and only ever queues
+  work. Timeline replies are not synced: they share the table but render as a thread, where a stack
+  of cards would read as noise.
 - Talk's conversation page is the single exception to that, and it rests on three bounds together —
   a record examined once in its life, a due predicate that respects the backoff, one card per URL.
   Weaken any of them and the exception no longer holds.

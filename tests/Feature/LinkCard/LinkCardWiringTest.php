@@ -324,7 +324,7 @@ class LinkCardWiringTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_the_talk_poll_queues_for_the_page_it_answers(): void
+    public function test_walking_back_through_talk_history_queues_for_the_page_it_answers(): void
     {
         // "Load older" walks back through history a page at a time, and every one of those pages is
         // as much the conversation as the newest one.

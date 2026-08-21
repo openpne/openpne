@@ -73,7 +73,9 @@ abstract class TestCase extends BaseTestCase
         // A service that read this setting once for its scope (LinkCardSettings) holds the old
         // answer, and in production that scope ends with the request or the job. The test container
         // outlives both, so flipping a setting mid-test has to end it here or the change is
-        // invisible to everything already resolved.
+        // invisible to everything already resolved. This takes the other scoped services with it —
+        // UnreadCounts and NotificationCenterWindow — so a test asserting that two surfaces share
+        // one set of counts must not change a setting between them.
         $this->app->forgetScopedInstances();
     }
 }

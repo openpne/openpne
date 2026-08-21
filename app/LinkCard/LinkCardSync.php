@@ -52,11 +52,14 @@ final class LinkCardSync
      */
     public function ensureAll(iterable $records): void
     {
-        if (! $this->settings->enabled()) {
-            return;
-        }
-
         foreach ($records as $record) {
+            // Read on the first row rather than on entry: the talk poll runs every few seconds and
+            // usually answers with no rows at all, and the setting is behind a cache the default
+            // store keeps in the database. A page with nothing on it asks nothing.
+            if (! $this->settings->enabled()) {
+                return;
+            }
+
             $this->ensure($record);
         }
     }
