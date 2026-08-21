@@ -20,10 +20,11 @@ class LinkCardTest extends TestCase
     /**
      * The shape switch, at its boundaries.
      *
-     * @param  array{int, int}|null  $size  the size the picture renders at, or null for no picture
+     * @param  array{int, int}|string|null  $size  the size the picture renders at, null for a picture
+     *                                              with no recorded size, 'none' for no picture
      */
     #[DataProvider('imageSizes')]
-    public function test_only_a_big_landscape_picture_is_drawn_full_width(?array $size, bool $expected, string $why): void
+    public function test_only_a_big_landscape_picture_is_drawn_full_width(array|string|null $size, bool $expected, string $why): void
     {
         $card = $this->cardWithImageSized($size);
 
@@ -31,7 +32,7 @@ class LinkCardTest extends TestCase
     }
 
     /**
-     * @return array<string, array{array{int, int}|null, bool, string}>
+     * @return array<string, array{array{int, int}|string|null, bool, string}>
      */
     public static function imageSizes(): array
     {
@@ -46,8 +47,10 @@ class LinkCardTest extends TestCase
             'one side under the floor' => [[200, 150], false, 'Both sides must clear it, not just the wide one.'],
             // The term neither Signal nor Mattermost has: Mattermost would draw this one wide.
             'wide but short' => [[1000, 150], false, 'A short banner drawn full width reads as a stripe.'],
-            'no size recorded' => [[0, 0], false, 'A zero side must not divide, and cannot be measured.'],
-            'no picture at all' => [null, false, 'Nothing to draw large.'],
+            // `files` never records a zero side — ImageDimensions reads one as no size at all — so
+            // the case an unmeasurable picture actually produces is this one, not a 0.
+            'no size recorded' => [null, false, 'A picture nothing could measure cannot be laid out.'],
+            'no picture at all' => ['none', false, 'Nothing to draw large.'],
         ];
     }
 
@@ -129,12 +132,17 @@ class LinkCardTest extends TestCase
         $this->assertSame(LinkCardStatus::Failed, $card->fresh()?->status);
     }
 
-    /** A renderable card whose picture renders at $size, or which has no picture at all. */
-    private function cardWithImageSized(?array $size): LinkCard
+    /**
+     * A renderable card whose picture renders at $size — null for a picture whose size was never
+     * recorded, 'none' for a card with no picture at all.
+     *
+     * @param  array{int, int}|string|null  $size
+     */
+    private function cardWithImageSized(array|string|null $size): LinkCard
     {
-        $file = $size === null
+        $file = $size === 'none'
             ? null
-            : File::factory()->create(['width' => $size[0] ?: null, 'height' => $size[1] ?: null]);
+            : File::factory()->create(['width' => $size[0] ?? null, 'height' => $size[1] ?? null]);
 
         return LinkCard::factory()->create(['image_file_id' => $file?->id]);
     }

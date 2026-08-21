@@ -91,8 +91,8 @@ class LinkCard extends Model
      * full-width shape, where it draws as a stripe.
      *
      * **The dimensions come from the File, not from this row.** `image_width` / `image_height` here
-     * are what the container declared, read before decoding as part of the size guard; `files` holds
-     * what the bytes actually *render* at, EXIF Orientation applied ({@see App\Files\ImageDimensions}).
+     * are what the container declared and are read by nothing; `files` holds what the bytes actually
+     * *render* at, EXIF Orientation applied ({@see App\Files\ImageDimensions}).
      * For a sideways-shot JPEG the two disagree by a quarter turn, and every use downstream — this
      * predicate, the reserved aspect box, the `w` descriptors — would be wrong together.
      *

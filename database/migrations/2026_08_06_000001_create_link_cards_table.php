@@ -40,10 +40,11 @@ return new class extends Migration
             // emit BIGINT UNSIGNED and the constraint would not create.
             $table->integer('image_file_id')->nullable();
             $table->foreign('image_file_id')->references('id')->on('files')->nullOnDelete();
-            // What the container declared, read from the header before decoding as part of the size
-            // guard — NOT what the image renders at, and not for laying anything out: EXIF
-            // Orientation is not applied here, so a sideways-shot JPEG has these two the wrong way
-            // round. `files.width/height` is the drawn size (App\Files\ImageDimensions).
+            // What the container declared, kept as a record of what was fetched. **Nothing reads
+            // them**, and nothing should: EXIF Orientation is not applied here, so a sideways-shot
+            // JPEG has these two the wrong way round. Anything that lays the picture out — the shape
+            // it is drawn in, the box reserved for it, the `w` descriptors — reads `files.width` /
+            // `files.height`, which is the size the bytes render at (App\Files\ImageDimensions).
             $table->unsignedInteger('image_width')->nullable();
             $table->unsignedInteger('image_height')->nullable();
 
