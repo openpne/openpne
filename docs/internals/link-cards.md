@@ -26,11 +26,14 @@ pins that no field of the extracted metadata ever carries markup.
 
 ## Which bodies carry one
 
-Diaries, group topics, group events, timeline roots and talk messages. Comments do not: a thread of
-them stacks cards where the pages behind the links add little to what is being said. Neither do
-direct messages — fetching a URL out of a private message tells its destination that the link was
-shared, which is a different bargain from a body written into a room. That is why the two chat
+Diaries, group topics, group events, timeline posts — replies included — and talk messages. Only
+direct messages do not: fetching a URL out of a private message tells its destination that the link
+was shared, which is a different bargain from a body written into a room. That is why the two chat
 surfaces differ, and the difference is deliberate rather than pending.
+
+Replies were left out at first on the grounds that a stack of cards under a post would read as
+noise. Talk settled that the other way: it draws the same cards in a denser list than any thread,
+sixty rows to a page.
 
 ## When a card is fetched
 
@@ -275,10 +278,17 @@ same reason: bytes fetched by URL have no page to mediate them, so switching a u
 its images too, or they stay readable while every screen around them is gone.
 `Feature::enabled()` resolves ancestors, so a topic's card also stops when groups are off.
 
-A timeline reply is not addressable. Replies are never synced, but this does not lean on that: a
-permalink to a reply re-centers to its thread root and is authorised as the root, while
-`TimelineAccess::canView` given the reply answers for the reply's own author — a card URL naming one
-would ask a different audience than the page it appears on.
+**A reply is authorised by its thread, not by itself.** A reply inherits the root's visibility
+(`CreateReply`) but carries its own author, and `TimelineAccess::canView` reads the row's author — so
+the reply's own rule admits the *replier's* friends, who are not who the page was gated for and who
+cannot open the thread at all. The page re-centers a reply permalink to the root and asks there
+(`ShowTimelinePost`); `CardContext` asks the same question of the same row.
+
+That makes the card's audience exactly the page's, and it holds from both sides. The page is not
+narrower: `TimelinePost::replies()` carries no per-row filter, so there is no reply the thread hides
+and the root's rule would admit. And the card is not wider: every feed query reads top-level rows
+only (`whereNull('in_reply_to_id')`), so the thread page is the one place a reply is drawn. Put a
+filter in `replies()`, or a reply into a feed, and one of the two sides gives.
 
 Both directions of the file-to-card relation are checked. Card-to-file rules out a URL that outlived
 a refresh; file-to-card is unreachable through a well-formed database and exists for the case where
@@ -362,9 +372,9 @@ description come to 116px.
 not render — for a viewer whose card failed to fetch, or who is on a build where the feature is off,
 the link has to still be there.
 
-Whether a record may carry a card at all is `CardContext::carriesCard`, shared between the metadata
-and the picture. Enforced in one and not the other, a reply row from broken or migrated data would
-have surfaced its title and description while its image URL stayed unbuildable.
+The metadata and the picture are gated together, never one without the other: `entry()` shapes
+replies and roots alike, so a rule applied only where the image URL is built would leave a title and
+description in a payload whose picture was unreachable.
 
 Timeline posts carry their card into lists as well as the detail page, so the four feed queries
 eager-load it. A card read per row would multiply across the feed, the profile and three gadgets,
@@ -426,9 +436,10 @@ foreign key and SQLite creates none, so without it this sweep degrades into a fu
 body table per candidate — worst exactly for the unreferenced cards it exists to find.
 
 Which tables those are comes from `CardContext::table()`, so a body kind added later cannot be left
-out of the sweep. The **tables** and nothing else: the enum's `find()` refuses to resolve a timeline
-reply, and a filter like that crossing into the sweep would read a row still holding a card as no
-reference at all — deleting a card that is in use, permanently, by the paragraph above.
+out of the sweep. The **tables** and nothing else: whatever query `find()` builds is about serving
+one record to one viewer, and a filter of that kind crossing into the sweep would read a row still
+holding a card as no reference at all — deleting a card that is in use, permanently, by the paragraph
+above.
 
 Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is cache
 rather than something that hurts, so this is an operator's tool.
@@ -449,8 +460,8 @@ rather than something that hurts, so this is an operator's tool.
   on current data, on every request — never by the file, and never by the most permissive post that
   happens to share it.
 - A switched-off module serves no card images.
-- A timeline reply carries no card — not its picture, and not its metadata. `entry()` shapes replies
-  and roots alike, so gating only the image URL would leave a title and description in the payload.
+- A card image is authorised exactly as the page that shows it: a reply by its thread root, a comment
+  by the body it hangs under. Never by the row's own author when the page does not ask that.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.
@@ -465,8 +476,7 @@ rather than something that hurts, so this is an operator's tool.
   decides is the size the picture *renders* at, from `files`, never the card row's own columns.
 - A fetch result is written only under the lease that claimed it.
 - The read trigger fires on detail pages only, with the one exception below, and only ever queues
-  work. Timeline replies are not synced: they share the table but render as a thread, where a stack
-  of cards would read as noise.
+  work.
 - Talk's conversation page is the single exception to that, and it rests on three bounds together —
   a record examined once in its life, a due predicate that respects the backoff, one card per URL.
   Weaken any of them and the exception no longer holds.

@@ -118,7 +118,7 @@ enum CardContext: string
         $kind = self::forRecord($record);
         $card = $record->getAttribute('link_card_id') === null ? null : $record->linkCard;
 
-        if ($kind === null || ! $kind->carriesCard($record) || ! $card instanceof LinkCard || ! $card->isRenderable()) {
+        if ($kind === null || ! $card instanceof LinkCard || ! $card->isRenderable()) {
             return null;
         }
 
@@ -151,9 +151,9 @@ enum CardContext: string
             self::Diary => Diary::with(['member', 'linkCard'])->find($id),
             self::Topic => GroupTopic::with(['group', 'linkCard'])->find($id),
             self::Event => GroupEvent::with(['group', 'linkCard'])->find($id),
-            // Replies are excluded in the query, not filtered after: a reply id must not resolve at
-            // all, so nothing downstream can authorize against it. See carriesCard.
-            self::TimelinePost => TimelinePost::with(['member', 'linkCard'])->whereNull('in_reply_to_id')->find($id),
+            // A reply resolves, and is authorised by the thread it is in — see canView. Its root
+            // comes with it, because that is whose audience decides.
+            self::TimelinePost => TimelinePost::with(['member', 'parent.member', 'linkCard'])->find($id),
             // Not scoped to a group: which group a message belongs to is the message's own fact, and
             // canView asks that group. Naming another group's message resolves and is then refused
             // by its own room's rule, which is the same answer the conversation page would give.
@@ -162,22 +162,26 @@ enum CardContext: string
     }
 
     /**
-     * Whether $record is the kind of row that may carry a card at all.
+     * Whether $viewer may read the thread $post is in.
      *
-     * Timeline replies are deliberately never synced — they render as a thread, where a stack of
-     * cards reads as noise — so today no reply row has a `link_card_id` to serve. This does not rely
-     * on that: a permalink to a reply re-centers to its thread root and is authorised as the root
-     * (`ShowTimelinePost`), while `TimelineAccess::canView` given the reply would answer for the
-     * reply's own author and visibility. A card URL naming a reply would therefore ask a different
-     * audience than the page it appears on, so it is refused rather than answered.
+     * The thread's root, never the row itself, when the row is a reply: a reply inherits the root's
+     * visibility but carries its own author, and `TimelineAccess` reads the row's author — so the
+     * reply's own rule admits the *replier's* friends, who are not who the page was gated for. The
+     * page re-centers a reply permalink to the root and asks there (`ShowTimelinePost`); this asks
+     * the same question of the same row.
      *
-     * Public because it has to hold for the metadata too: `TimelinePostSerializer::entry` shapes
-     * replies as well as roots, so a rule enforced only where the image URL is built would let a
-     * reply's title and description into a payload while its picture stayed unreachable.
+     * A reply whose root is gone is refused rather than falling back to its own rule, which is the
+     * unsafe half of this. The foreign key cascades, so that state should not exist — and the page
+     * refuses it too (`ShowTimelinePost` returns null), which is the point: what a fallback here
+     * would do is quietly restore the audience this method exists to avoid.
      */
-    public function carriesCard(Model $record): bool
+    private static function canViewThread(TimelinePost $post, ?Member $viewer): bool
     {
-        return ! ($record instanceof TimelinePost) || $record->in_reply_to_id === null;
+        if ($post->in_reply_to_id !== null) {
+            return $post->parent !== null && TimelineAccess::canView($viewer, $post->parent);
+        }
+
+        return TimelineAccess::canView($viewer, $post);
     }
 
     /**
@@ -191,7 +195,7 @@ enum CardContext: string
     {
         return match ($this) {
             self::Diary => $record instanceof Diary && DiaryAccess::canView($viewer, $record),
-            self::TimelinePost => $record instanceof TimelinePost && TimelineAccess::canView($viewer, $record),
+            self::TimelinePost => $record instanceof TimelinePost && self::canViewThread($record, $viewer),
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),

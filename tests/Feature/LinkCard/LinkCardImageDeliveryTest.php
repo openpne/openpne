@@ -21,6 +21,7 @@ use App\Support\LinkCardStatus;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -391,11 +392,57 @@ class LinkCardImageDeliveryTest extends TestCase
         $this->actingAs($this->author)->get($this->urlFor($message))->assertNotFound();
     }
 
-    public function test_a_timeline_reply_is_never_addressable(): void
+    public function test_a_reply_is_authorised_by_its_thread_root_not_by_its_own_author(): void
     {
-        // A permalink to a reply re-centers to its thread root and is authorised as the root, so a
-        // card URL naming the reply would ask a different audience than the page it appears on.
-        // Replies are never synced, so this is defence against that changing, not a live hole.
+        // The audience of a thread is the root author's, in one place: a reply inherits the root's
+        // visibility (CreateReply) but carries its *own* author, and TimelineAccess reads the row's
+        // author. So the reply's own rule admits the replier's friends — who are not the audience
+        // the page was gated for, and who cannot open the thread the card sits in.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Friends]);
+        $replier = Member::factory()->create();
+        $this->makeFriends($this->author, $replier);
+        $reply = TimelinePost::factory()->for($replier)->create([
+            'in_reply_to_id' => $root->id,
+            'visibility' => Visibility::Friends,
+            'link_card_id' => $this->card->id,
+        ]);
+
+        $friendOfTheReplierOnly = Member::factory()->create();
+        $this->makeFriends($replier, $friendOfTheReplierOnly);
+
+        // They cannot open the thread…
+        $this->actingAs($friendOfTheReplierOnly)->get("/timeline/{$root->id}")->assertNotFound();
+        // …so they cannot have the picture out of it either.
+        $this->actingAs($friendOfTheReplierOnly)->get($this->urlFor($reply))->assertNotFound();
+
+        // The audience the page was gated for does get it.
+        $this->actingAs($replier)->get($this->urlFor($reply))->assertOk();
+    }
+
+    public function test_a_reply_whose_thread_is_gone_is_refused_rather_than_judged_on_its_own(): void
+    {
+        // The unsafe half of "authorise by the thread" is the fallback: no thread, judge the row —
+        // which is exactly the audience this rule exists to avoid. Asserted against the predicate
+        // rather than through a request, because the database will not hold the state: the foreign
+        // key cascades, and it refuses a reply repointed at a row that is not there. So the guard is
+        // for a reply that arrives without its root by some other route.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        $reply = TimelinePost::factory()->for($this->author)->create([
+            'in_reply_to_id' => $root->id,
+            'visibility' => Visibility::Open,
+            'link_card_id' => $this->card->id,
+        ]);
+        $reply->setRelation('parent', null);
+
+        $this->assertTrue(CardContext::TimelinePost->canView($reply->fresh(), $this->author), 'The thread is readable while its root is there.');
+        $this->assertFalse(CardContext::TimelinePost->canView($reply, $this->author), 'A reply with no thread was judged on its own rule.');
+    }
+
+    public function test_a_reply_addresses_its_picture_like_any_other_row(): void
+    {
+        // A reply used to resolve to nothing here, because it would have been authorised against a
+        // different audience than the page. It is addressable now that it is authorised against the
+        // thread — see the test above for the audience, this one for the address.
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for(Member::factory()->create())->create([
             'visibility' => Visibility::Open,
@@ -403,12 +450,10 @@ class LinkCardImageDeliveryTest extends TestCase
             'link_card_id' => $this->card->id,
         ]);
 
-        $this->assertNull($this->urlFor($reply));
+        $url = $this->urlFor($reply);
 
-        // …and not merely absent from the page: the address cannot be constructed by hand either.
-        $this->actingAs($this->author)
-            ->get(route('linkCard.image', array_merge($this->urlParts($reply), ['record' => $reply->id])))
-            ->assertNotFound();
+        $this->assertStringContainsString("/linkCard/timeline/{$reply->id}/", (string) $url);
+        $this->actingAs($this->author)->get($url)->assertOk();
     }
 
     private function diary(Visibility $visibility): Diary
@@ -465,5 +510,13 @@ class LinkCardImageDeliveryTest extends TestCase
             'name' => $this->image->name,
             'ext' => 'png',
         ];
+    }
+
+    private function makeFriends(Member $a, Member $b): void
+    {
+        DB::table('friendships')->insert([
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+        ]);
     }
 }

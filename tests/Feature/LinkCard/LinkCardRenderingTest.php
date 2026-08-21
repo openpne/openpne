@@ -306,11 +306,10 @@ class LinkCardRenderingTest extends TestCase
             ->assertDontSee('<span class="linkCardImage">', false);
     }
 
-    public function test_a_reply_carries_no_card_even_if_its_row_names_one(): void
+    public function test_a_reply_in_a_thread_carries_its_card(): void
     {
-        // Replies are never synced, so a row like this comes from broken or migrated data. It must
-        // not leak: the thread serializer shapes replies and roots alike, and the image URL being
-        // unbuildable would leave the title and description exposed on their own.
+        // The thread serializer shapes replies and roots alike, so this is the same shape the root
+        // gets — which is why the picture and the words could never have been enabled apart.
         config(['openpne.surface_mode' => 'modern_default']);
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for($this->author)->create([
@@ -320,18 +319,75 @@ class LinkCardRenderingTest extends TestCase
             'link_card_synced_at' => now(),
         ]);
 
-        $this->assertNull(LinkCardSerializer::card($reply->fresh()));
+        $this->assertNotNull(LinkCardSerializer::card($reply->fresh()));
 
         $this->actingAs($this->author)->get("/timeline/{$root->id}")
-            ->assertInertia(fn ($page) => $page->where('replies.0.linkCard', null)->etc());
+            ->assertInertia(fn ($page) => $page->where('replies.0.linkCard.title', 'A title from the page')->etc());
+    }
+
+    public function test_the_classic_thread_draws_a_reply_card(): void
+    {
+        // Classic's thread and its feed row are different templates: the feed's card comes from
+        // `_post.blade.php`, and a reply is drawn by `show.blade.php` itself.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        TimelinePost::factory()->for($this->author)->create([
+            'visibility' => Visibility::Open,
+            'in_reply_to_id' => $root->id,
+            'link_card_id' => $this->card->id,
+            'link_card_synced_at' => now(),
+        ]);
+
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")
+            ->assertOk()
+            ->assertSee('A title from the page')
+            ->assertSee('<span class="linkCardImage">', false);
+    }
+
+    public function test_a_thread_costs_the_same_whatever_the_replies_carry(): void
+    {
+        // The same guard the feed has, on the page this change put cards on. A reply's card costs
+        // three queries of its own without the eager load: the read trigger's freshness check, the
+        // serializer's card, and that card's picture.
+        config(['openpne.surface_mode' => 'modern_default']);
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_synced_at' => now()]);
+        // With pictures, deliberately: `$card->image` costs no query when `image_file_id` is null, so
+        // a guard built on the factory's default watches two of the three reads it names — and stays
+        // green when the picture is dropped from the eager load.
+        foreach (range(1, 5) as $ignored) {
+            $card = LinkCard::factory()->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
+            $card->update(['image_file_id' => $this->imageFor($card)->id]);
+            TimelinePost::factory()->for($this->author)->create([
+                'visibility' => Visibility::Open,
+                'in_reply_to_id' => $root->id,
+                'link_card_id' => $card->id,
+                'link_card_synced_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($this->author)->get("/timeline/{$root->id}");
+        DB::enableQueryLog();
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")->assertOk()->assertSee('A title from the page');
+        $withCards = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        TimelinePost::query()->whereNotNull('in_reply_to_id')->update(['link_card_id' => null]);
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")->assertOk();
+        $withoutCards = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // One query for the replies' cards and one for their images, however many replies carry them.
+        $this->assertLessThanOrEqual($withoutCards + 2, $withCards, "A thread cost {$withCards} queries with cards against {$withoutCards} without.");
     }
 
     public function test_a_timeline_list_costs_the_same_whatever_the_cards(): void
     {
         // The Classic timeline row is shared by the feed, the profile and three gadgets, so a card
         // read per row would multiply across every one of them.
-        $cards = LinkCard::factory()->count(5)->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
-        foreach ($cards as $card) {
+        // With pictures — see the thread guard for why a card without one leaves this watching two
+        // reads of three.
+        foreach (range(1, 5) as $ignored) {
+            $card = LinkCard::factory()->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
+            $card->update(['image_file_id' => $this->imageFor($card)->id]);
             TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $card->id, 'link_card_synced_at' => now()]);
         }
 
@@ -384,5 +440,15 @@ class LinkCardRenderingTest extends TestCase
         $this->app->make(FileStorage::class)->writeStream($file, $stream);
 
         return $file;
+    }
+
+    /** A stored picture belonging to $card, as the fetch job would have left one. */
+    private function imageFor(LinkCard $card): File
+    {
+        return File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'link_card',
+            'related_entity_id' => $card->id,
+        ]);
     }
 }
