@@ -251,11 +251,11 @@ class LinkCardWiringTest extends TestCase
         Queue::assertPushed(SyncLinkCard::class);
     }
 
-    public function test_viewing_a_timeline_post_queues_a_sync_for_the_root_only(): void
+    public function test_viewing_a_timeline_post_queues_a_sync_for_the_thread(): void
     {
-        // Replies live in the same table and carry the column, but render as a thread underneath
-        // where a stack of cards would read as noise — and one job per reply is what the detail-page
-        // rule exists to avoid.
+        // The root and every reply: a reply is a body of its own, and the thread page is the page it
+        // is read on. It used to be the root alone, on the grounds that a stack of cards under a post
+        // would read as noise — talk draws them in a denser list than this one.
         $post = TimelinePost::factory()->for($this->member)->create([
             'body' => 'Root https://example.com/root',
             'link_card_synced_at' => null,
@@ -268,7 +268,7 @@ class LinkCardWiringTest extends TestCase
 
         $this->actingAs($this->member)->get(route('timeline.show', $post))->assertOk();
 
-        Queue::assertPushed(SyncLinkCard::class, 1);
+        Queue::assertPushed(SyncLinkCard::class, 3);
         Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->id === $post->id);
     }
 

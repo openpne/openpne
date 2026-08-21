@@ -42,7 +42,7 @@ final class LinkCardSerializer
         $kind = CardContext::forRecord($record);
         $card = $record->getAttribute('link_card_id') === null ? null : $record->getRelationValue('linkCard');
 
-        if ($kind === null || ! $kind->carriesCard($record)) {
+        if ($kind === null) {
             return null;
         }
 

@@ -122,7 +122,12 @@ class TimelineController extends Controller
         // The thread root only. Replies share this table but render as a thread underneath, where a
         // stack of cards would read as noise — and asking per reply would queue a job each. Placed
         // after the reply-permalink redirect above, so a request that never renders queues nothing.
+        // The thread, not only its root: a reply is a body of its own, and the page is where one is
+        // asked for — as a conversation page is for talk (LinkCardSync::ensureAll). Two calls rather
+        // than one over a combined collection: `prepend` on a loaded relation mutates it in place,
+        // which put the root into the page's own reply list.
         $linkCards->ensure($post);
+        $linkCards->ensureAll($post->replies);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [

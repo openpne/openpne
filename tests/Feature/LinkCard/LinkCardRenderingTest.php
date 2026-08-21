@@ -306,11 +306,10 @@ class LinkCardRenderingTest extends TestCase
             ->assertDontSee('<span class="linkCardImage">', false);
     }
 
-    public function test_a_reply_carries_no_card_even_if_its_row_names_one(): void
+    public function test_a_reply_in_a_thread_carries_its_card(): void
     {
-        // Replies are never synced, so a row like this comes from broken or migrated data. It must
-        // not leak: the thread serializer shapes replies and roots alike, and the image URL being
-        // unbuildable would leave the title and description exposed on their own.
+        // The thread serializer shapes replies and roots alike, so this is the same shape the root
+        // gets — which is why the picture and the words could never have been enabled apart.
         config(['openpne.surface_mode' => 'modern_default']);
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for($this->author)->create([
@@ -320,10 +319,10 @@ class LinkCardRenderingTest extends TestCase
             'link_card_synced_at' => now(),
         ]);
 
-        $this->assertNull(LinkCardSerializer::card($reply->fresh()));
+        $this->assertNotNull(LinkCardSerializer::card($reply->fresh()));
 
         $this->actingAs($this->author)->get("/timeline/{$root->id}")
-            ->assertInertia(fn ($page) => $page->where('replies.0.linkCard', null)->etc());
+            ->assertInertia(fn ($page) => $page->where('replies.0.linkCard.title', 'A title from the page')->etc());
     }
 
     public function test_a_timeline_list_costs_the_same_whatever_the_cards(): void
