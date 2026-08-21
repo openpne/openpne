@@ -226,8 +226,10 @@ enum CardContext: string
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
             // A comment carries no audience of its own: the page is the body it hangs under, and
             // that body's rule is the one the page asked. No branch for a missing parent, unlike the
-            // reply above: the column is NOT NULL and cascades, so a comment cannot outlive the body
-            // it belongs to — and there is no permissive fallback here to guard against either.
+            // reply above, and it takes two facts rather than one: the column is NOT NULL and
+            // cascades, so a comment cannot outlive its body; and none of the three bodies is
+            // soft-deleted, so none resolves to null through a default scope while its row is still
+            // there. Give one of them SoftDeletes and this needs the reply's refusal.
             self::DiaryComment => $record instanceof DiaryComment && DiaryAccess::canView($viewer, $record->diary),
             self::TopicComment => $record instanceof GroupTopicComment && $viewer !== null && GroupTopicAccess::canViewTopic($record->topic, $viewer),
             self::EventComment => $record instanceof GroupEventComment && $viewer !== null && GroupEventAccess::canViewEvent($record->event, $viewer),
