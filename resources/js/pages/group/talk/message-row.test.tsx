@@ -200,7 +200,11 @@ test('a message whose body holds a link draws the card under the words', () => {
             description: 'What the page says it is about.',
             siteName: 'Example',
             domain: 'example.com',
+            layout: 'compact',
             imageUrl: null,
+            imageWidth: null,
+            imageHeight: null,
+            fitSources: [],
         },
     });
 

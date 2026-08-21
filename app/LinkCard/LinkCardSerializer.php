@@ -59,8 +59,8 @@ final class LinkCardSerializer
             'siteName' => $card->site_name,
             'domain' => self::domain($card->url),
             // Which of the two shapes to draw, decided here so the two renderers cannot disagree —
-            // the same reason the gates below are not restated per surface. See LinkCard::hasLargeImage.
-            'layout' => $wide ? 'wide' : 'compact',
+            // the same reason the gates below are not restated per surface. See CardLayout.
+            'layout' => ($wide ? CardLayout::Wide : CardLayout::Compact)->value,
             // Never the file's own URL: a card is shared by every body mentioning the link, so the
             // address has to name this record for the request to be authorised against it.
             'imageUrl' => CardContext::imageUrl($record, self::THUMBNAIL, self::THUMBNAIL, square: true),

@@ -306,9 +306,50 @@ Classic could have assembled its own from the model, and the *gates* would have 
 whether the setting is on, whether the card has enough to draw, and which URL its picture is served
 from are decided once, in there.
 
-**The domain is always shown, and shown last.** A title is written by the page being previewed and
-can claim to be anyone; the host is the one part of a card that cannot misstate where the link goes.
-`www.` is dropped because it distinguishes nothing a reader acts on.
+**The domain is always shown, and shown first.** A title is written by the page being previewed and
+can claim to be anyone; the host is the one part of a card that cannot misstate where the link goes,
+so the reader gets it before the claim rather than after it. It is the host from the URL and never
+`og:site_name` — the page naming itself is exactly the thing that can lie, which is why the clients
+that show a site name here are not followed in that. `www.` is dropped because it distinguishes
+nothing a reader acts on.
+
+### Two shapes, chosen by the picture
+
+A big landscape picture is a preview and is drawn **across the card, under the words**; a small or
+square one is an icon and sits **beside them**. Neither shape survives the other's picture: a 64px
+logo blown across the card, or a magazine cover shrunk into a 120px tile.
+
+[`LinkCard::hasLargeImage()`](../../app/Models/LinkCard.php) decides, and
+[`CardLayout`](../../app/LinkCard/CardLayout.php) is what crosses to the renderers — the same reason
+the gates are decided once: two renderers each asking "is this big enough" would drift, and the drift
+would show as one surface enlarging what the other tiles.
+
+The threshold is **ours**, assembled rather than copied. Signal requires both sides ≥ 200 and merely
+not-square, so it enlarges portraits too; Mattermost requires width ≥ 150 and 4:3 with no lower bound
+on height. Here it is both sides ≥ 200 **and** 4:3, by integer cross-multiplication so the boundary
+is exact and a zero height cannot divide. The `height >= 200` term is in neither source and is what
+keeps a wide, short banner — 1000×150 — out of the full-width shape, where it draws as a stripe.
+
+**The dimensions come from the `File`, not from `link_cards.image_width/height`.** Those columns are
+what the container declared, recorded before decoding as part of the size guard and read by nothing;
+`files` holds what the bytes render at, EXIF Orientation applied ([images.md](images.md)). For a
+sideways-shot JPEG the two disagree by a quarter turn, and the shape, the reserved box and the `w`
+descriptors would be wrong together.
+
+**The wide picture is cut to the banner shape** (1.91:1, what pages publish), rather than kept at its
+own. A card's picture is the linked page's furniture, not a member's framing of their own photo — the
+reason the image grid never crops a lone hero does not carry over — and a fixed ratio is what keeps a
+column of cards from ragging. It is never enlarged past its own width: a smaller picture is centred
+instead.
+
+**A card is capped at the width its surface gives a picture** — `ImageGrid`'s placement, under that
+component's own name for it. A card and a photo in the same conversation line up in one column
+instead of two.
+
+**The compact picture is fixed in width and stretched in height**, so it is exactly as tall as the
+words beside it and leaves no gap under itself. That stays a shrink rather than a blurry enlargement
+because the text block cannot outgrow the stored 120px square: host, a two-line title and one line of
+description come to 116px.
 
 **The body keeps its URL.** It is the author's text and is not rewritten to suit a preview that may
 not render — for a viewer whose card failed to fetch, or who is on a build where the feature is off,
@@ -411,6 +452,10 @@ rather than something that hurts, so this is an operator's tool.
   (`BodyRenderer::urls`) alongside rendering, so a Markdown code span yields no card and a bare
   `www.` host gets the same scheme the renderer gives it.
 - Only the first URL in a body becomes a card.
+- The host is always drawn, before the title, and it is the host from the URL — never the name the
+  page gives itself.
+- Which shape a card takes is decided in PHP and read by both renderers; neither derives it. What
+  decides is the size the picture *renders* at, from `files`, never the card row's own columns.
 - A fetch result is written only under the lease that claimed it.
 - The read trigger fires on detail pages only, with the one exception below, and only ever queues
   work. Timeline replies are not synced: they share the table but render as a thread, where a stack
