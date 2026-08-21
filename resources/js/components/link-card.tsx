@@ -1,4 +1,4 @@
-import { HERO_SIZES, type ImageGridVariant } from '@/components/image-grid';
+import { HERO_SIZES } from '@/components/image-grid';
 import { type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
 
@@ -18,18 +18,6 @@ export interface LinkCardData {
     /** The fit ladder the wide shape draws from; empty for a compact card. */
     fitSources: FitSource[];
 }
-
-/**
- * How wide the card may run.
- *
- * `boxed` is the cap a chat row already puts on a picture, so a card and a photo in one conversation
- * line up. `post` has no such cap to borrow — a picture there is as wide as the column — so this is
- * the card's own, and it is what keeps a preview from running the width of a desktop page.
- */
-const WIDTH: Record<ImageGridVariant, string> = {
-    post: 'max-w-[37.5rem]',
-    boxed: 'max-w-[24rem]',
-};
 
 /** What a wide card's picture is cut to. 1200×630 is the shape pages publish, so most are uncut. */
 const BANNER_RATIO = 1.91;
@@ -54,28 +42,19 @@ const BANNER_RATIO = 1.91;
  * survives the other's picture — a 64px logo blown across the card, or a magazine cover shrunk into
  * a corner.
  *
- * `placement` is `ImageGrid`'s `variant` under the name that component's own docblock uses for it
- * ("the placement, not a size"): a card is capped at the width its surface gives a picture, so the
- * two line up in the same column.
+ * **A card is as wide as the words it belongs to** — it carries no width of its own. Capped at what
+ * a surface gives a *picture* instead, it stopped short of the text above it: 384px of card under
+ * 550px of message, with the title wrapping and clipping inside the narrower box. A card is a
+ * restatement of something in the body, so the body's column is its width, and every surface then
+ * needs no number.
  */
-export function LinkCard({
-    card,
-    placement = 'post',
-    className,
-}: {
-    card: LinkCardData | null;
-    placement?: ImageGridVariant;
-    className?: string;
-}) {
+export function LinkCard({ card, className }: { card: LinkCardData | null; className?: string }) {
     if (card === null) {
         return null;
     }
 
-    // The width cap is the card's, not the shape's: both shapes are the same object seen from a
-    // different picture, and a surface that gives a picture one column should not give a card two.
     const frame = cn(
         'overflow-hidden rounded-lg border border-border no-underline transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-        WIDTH[placement],
         className,
     );
 
@@ -97,9 +76,11 @@ export function LinkCard({
                 <img
                     src={fitFallbackUrl(card.fitSources) ?? undefined}
                     srcSet={fitSrcSet(card.fitSources, card.imageWidth, card.imageHeight) ?? undefined}
-                    // The placement's own declaration, shared with the pictures it sits among rather
-                    // than copied — the two would drift into different candidate picks otherwise.
-                    sizes={HERO_SIZES[placement]}
+                    // The card fills its column, and the widest column any surface gives it is the
+                    // one a post's own picture declares. A conversation's is narrower, so this
+                    // over-declares there by under a tenth — which costs at most one rung too large,
+                    // where under-declaring costs a blurry pick (see image-grid's own note).
+                    sizes={HERO_SIZES.post}
                     alt=""
                     aria-hidden
                     loading="lazy"

@@ -82,13 +82,16 @@ test('the compact picture stretches to the height of the words, so nothing is le
     expect(container.querySelector('img')?.className).not.toContain('size-24');
 });
 
-test('a card is capped at the width its surface gives a picture', () => {
-    const { container } = render(<LinkCard card={wide} placement="boxed" />);
-    expect(container.querySelector('a')?.className).toContain('max-w-[24rem]');
+test('a card carries no width of its own, so it is as wide as the words it belongs to', () => {
+    // The regression this catches is a cap coming back: one did, and left a 384px card under 550px
+    // of message text with its title wrapping inside the narrower box.
+    for (const card of [wide, base]) {
+        cleanup();
+        const { container } = render(<LinkCard card={card} />);
 
-    cleanup();
-    const post = render(<LinkCard card={wide} placement="post" />);
-    expect(post.container.querySelector('a')?.className).toContain('max-w-[37.5rem]');
+        expect(container.querySelector('a')?.className).not.toMatch(/\bmax-w-/);
+        expect(container.querySelector('a')?.className).not.toMatch(/\bw-\[/);
+    }
 });
 
 test('a wide card with no ladder falls back to the shape that has a picture to draw', () => {

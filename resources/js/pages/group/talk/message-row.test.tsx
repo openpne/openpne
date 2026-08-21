@@ -215,8 +215,9 @@ test('a message whose body holds a link draws the card under the words', () => {
     expect(card).not.toBeNull();
     // The domain is what a reader acts on, and it is drawn whatever the title claims.
     expect(card?.textContent).toContain('example.com');
-    // Capped like a boxed picture, so an attachment does not run the width of the conversation.
-    expect(card?.className).toContain('max-w-[24rem]');
+    // No width of its own: a card restates something in the message, so it runs to the words' edge
+    // rather than stopping short of them (link-card.tsx).
+    expect(card?.className).not.toMatch(/\bmax-w-/);
 });
 
 test('a message with no card leaves the body link standing alone', () => {
