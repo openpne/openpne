@@ -1,4 +1,4 @@
-import { HERO_SIZES } from '@/components/image-grid';
+import { boxedPictureMaxWidth, HERO_SIZES } from '@/components/image-grid';
 import { type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +47,13 @@ const BANNER_RATIO = 1.91;
  * 550px of message, with the title wrapping and clipping inside the narrower box. A card is a
  * restatement of something in the body, so the body's column is its width, and every surface then
  * needs no number.
+ *
+ * **Its picture is held to the box a member's own picture gets in a comment or a chat row** (the
+ * image grid's `boxed`: 24rem by 20rem). A card is the linked page's furniture, and furniture does
+ * not outsize the member's photo beside it — which, left at the column's width, it did: 313px tall
+ * in a feed, taller than the post next to it, and half of a conversation's viewport. On a desktop
+ * column that leaves the picture narrower than the card, so it sits in with the words rather than
+ * bleeding to the frame.
  */
 export function LinkCard({ card, className }: { card: LinkCardData | null; className?: string }) {
     if (card === null) {
@@ -68,25 +75,21 @@ export function LinkCard({ card, className }: { card: LinkCardData | null; class
                     {host}
                     {title}
                     {card.description && <p className="mt-1 line-clamp-2 text-sm break-words text-muted-foreground">{card.description}</p>}
+                    {/* Cut to the banner shape rather than kept at its own: a card's picture is the
+                        linked page's furniture, not a member's framing of their own photo, and a fixed
+                        ratio is what keeps a list of cards from ragging. The source's own width is one
+                        of the caps, so a picture is never enlarged. */}
+                    <img
+                        src={fitFallbackUrl(card.fitSources) ?? undefined}
+                        srcSet={fitSrcSet(card.fitSources, card.imageWidth, card.imageHeight) ?? undefined}
+                        sizes={HERO_SIZES.boxed}
+                        alt=""
+                        aria-hidden
+                        loading="lazy"
+                        className="mt-2 block w-full rounded-md bg-muted object-cover"
+                        style={{ aspectRatio: `${BANNER_RATIO}`, maxWidth: boxedPictureMaxWidth(card.imageWidth, `${BANNER_RATIO}`) }}
+                    />
                 </div>
-                {/* Cut to the banner shape rather than kept at its own: a card's picture is the
-                    linked page's furniture, not a member's framing of their own photo, and a fixed
-                    ratio is what keeps a list of cards from ragging. The width cap is the source's
-                    own size, so a picture is never enlarged — a narrower one is centred instead. */}
-                <img
-                    src={fitFallbackUrl(card.fitSources) ?? undefined}
-                    srcSet={fitSrcSet(card.fitSources, card.imageWidth, card.imageHeight) ?? undefined}
-                    // The card fills its column, and the widest column any surface gives it is the
-                    // one a post's own picture declares. A conversation's is narrower, so this
-                    // over-declares there by under a tenth — which costs at most one rung too large,
-                    // where under-declaring costs a blurry pick (see image-grid's own note).
-                    sizes={HERO_SIZES.post}
-                    alt=""
-                    aria-hidden
-                    loading="lazy"
-                    className="mx-auto block w-full bg-muted object-cover"
-                    style={{ aspectRatio: `${BANNER_RATIO}`, maxWidth: card.imageWidth ? `${card.imageWidth}px` : undefined }}
-                />
             </a>
         );
     }

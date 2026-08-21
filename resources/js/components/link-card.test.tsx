@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
+import { HERO_SIZES } from './image-grid';
 import { LinkCard, type LinkCardData } from './link-card';
 
 afterEach(cleanup);
@@ -68,10 +69,22 @@ test('the wide picture offers every rung, with the widths it will really be serv
     );
 });
 
-test('a wide picture is never enlarged past its own size', () => {
+test("a wide picture is held to the box a member's own picture gets in a comment or a chat row", () => {
+    // The formula the image grid's `boxed` hero writes, with the banner ratio in place of the
+    // picture's own: the column, the box (24rem by 20rem) and the source's size — so a 300px picture
+    // is never enlarged either.
     const { container } = render(<LinkCard card={{ ...wide, imageWidth: 300, imageHeight: 200 }} />);
+    const image = container.querySelector('img');
 
-    expect(container.querySelector('img')?.style.maxWidth).toBe('300px');
+    expect(image?.style.maxWidth).toBe('min(100%, 24rem, 300px, calc(20rem * (1.91)))');
+    expect(image?.getAttribute('sizes')).toBe(HERO_SIZES.boxed);
+});
+
+test('the wide picture sits in with the words rather than bleeding to the frame', () => {
+    // Narrower than the card on any desktop column, so where it sits is a decision: with the words.
+    const { container } = render(<LinkCard card={wide} />);
+
+    expect(container.querySelector('img')?.parentElement).toBe(screen.getByText('A title from the page').parentElement);
 });
 
 test('the compact picture stretches to the height of the words, so nothing is left under it', () => {

@@ -350,19 +350,29 @@ descriptors would be wrong together.
 **The wide picture is cut to the banner shape** (1.91:1, what pages publish), rather than kept at its
 own. A card's picture is the linked page's furniture, not a member's framing of their own photo — the
 reason the image grid never crops a lone hero does not carry over — and a fixed ratio is what keeps a
-column of cards from ragging. It is never enlarged past its own width: a smaller picture is centred
-instead.
+column of cards from ragging. It is never enlarged past its own width.
+
+**And it is held to the box a member's own picture gets in a comment or a chat row** — the image
+grid's `boxed`, 24rem by 20rem, as `boxedPictureMaxWidth` in
+[image-grid.tsx](../../resources/js/components/image-grid.tsx) writes it — on every surface, by that
+same width formula (a height cap set as `max-height` squashes a picture with a set width). Left
+at the column's width it was 313px tall in a feed, taller than the post beside it, and half of a
+conversation's viewport — and the page's furniture outsized the member's own photo in the same
+comment. Under the banner ratio the width term binds: a 1.91:1 picture is at most 384×201 on any
+wider column, and simply the column on a phone. Narrower than the card on a desktop column, it sits
+in with the words rather than bleeding to the frame.
 
 **A card is as wide as the words it belongs to**, and carries no width of its own. It was capped at
 what a surface gives a *picture* first, which left it stopping short of the text above it — 384px of
 card under 550px of message, the title wrapping and clipping inside the narrower box. A card
 restates something in the body, so the body's column is its width, and no surface needs a number.
 
-**An attached photo keeps its own column**, which in a conversation is narrower. A message carrying
-both therefore draws the card to the words' edge and the photo short of it. The asymmetry is the
-distinction, not an oversight: a card is this app restating a page in the body's own measure, while a
-photo is the author's framing of their own picture, and it keeps the column the surface hands a
-picture ([images.md](images.md)).
+**An attached photo keeps its own column**, which in a conversation is narrower than the words. A
+message carrying both therefore draws the card's frame to the words' edge and the photo short of it,
+with the card's picture, held to the same box as the photo, of a size with it. The asymmetry of the
+frames is the distinction, not an oversight: a card is this app restating a page in the body's own
+measure, while a photo is the author's framing of their own picture, and it keeps the column the
+surface hands a picture ([images.md](images.md)).
 
 **The compact picture is fixed in width and stretched in height**, so it is exactly as tall as the
 words beside it and leaves no gap under itself. That stays a shrink rather than a blurry enlargement
