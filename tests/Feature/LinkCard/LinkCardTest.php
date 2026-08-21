@@ -4,16 +4,79 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
+use App\Files\ImageDimensions;
 use App\Models\File;
 use App\Models\LinkCard;
 use App\Support\LinkCardStatus;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LinkCardTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * The shape switch, at its boundaries.
+     *
+     * @param  array{int, int}|null  $size  the size the picture renders at, or null for no picture
+     */
+    #[DataProvider('imageSizes')]
+    public function test_only_a_big_landscape_picture_is_drawn_full_width(?array $size, bool $expected, string $why): void
+    {
+        $card = $this->cardWithImageSized($size);
+
+        $this->assertSame($expected, $card->hasLargeImage(), $why);
+    }
+
+    /**
+     * @return array<string, array{array{int, int}|null, bool, string}>
+     */
+    public static function imageSizes(): array
+    {
+        return [
+            'the common og banner' => [[1200, 630], true, '1200x630 is what a preview image looks like.'],
+            'exactly 4:3' => [[400, 300], true, 'The ratio boundary is inclusive, by cross-multiplication.'],
+            'just inside 4:3' => [[399, 300], false, '399x300 is narrower than 4:3 and must stay a thumbnail.'],
+            'square' => [[200, 200], false, 'A square picture is an icon, not a preview.'],
+            'portrait' => [[600, 900], false, 'Taller than wide is never the full-width shape.'],
+            'both sides just under the floor' => [[199, 149], false, 'Below 200 a side has nothing to enlarge.'],
+            'at the height floor' => [[267, 200], true, 'The floor is inclusive: 200 is big enough.'],
+            'one side under the floor' => [[200, 150], false, 'Both sides must clear it, not just the wide one.'],
+            // The term neither Signal nor Mattermost has: Mattermost would draw this one wide.
+            'wide but short' => [[1000, 150], false, 'A short banner drawn full width reads as a stripe.'],
+            'no size recorded' => [[0, 0], false, 'A zero side must not divide, and cannot be measured.'],
+            'no picture at all' => [null, false, 'Nothing to draw large.'],
+        ];
+    }
+
+    public function test_the_shape_follows_the_size_the_picture_renders_at(): void
+    {
+        // The card row and the File disagree for a sideways-shot JPEG: the row holds what the
+        // container declared (read from the header, before decoding, as part of the size guard) and
+        // the File holds what the bytes draw as, EXIF Orientation applied. The shape has to follow
+        // the second, or a portrait photo is laid out as a landscape one.
+        $file = File::factory()->create(['width' => 300, 'height' => 900]);
+        $card = LinkCard::factory()->create([
+            'image_file_id' => $file->id,
+            'image_width' => 900,
+            'image_height' => 300,
+        ]);
+
+        $this->assertFalse($card->hasLargeImage(), 'The declared size won over the rendered one.');
+    }
+
+    public function test_the_two_recorded_sizes_really_do_diverge(): void
+    {
+        // Guards the premise of the test above rather than any of our code: if the header and the
+        // rendered size ever stopped disagreeing, the care taken over which one to read would be
+        // cargo, and this says so out loud instead.
+        $bytes = (string) file_get_contents(base_path('tests/Fixtures/images/jpeg-gps-orientation.jpg'));
+
+        $this->assertSame([12, 6], array_slice((array) getimagesizefromstring($bytes), 0, 2));
+        $this->assertSame([6, 12], ImageDimensions::fromBytes($bytes));
+    }
 
     public function test_a_url_can_only_have_one_card(): void
     {
@@ -64,5 +127,15 @@ class LinkCardTest extends TestCase
         $card = LinkCard::factory()->failed()->create();
 
         $this->assertSame(LinkCardStatus::Failed, $card->fresh()?->status);
+    }
+
+    /** A renderable card whose picture renders at $size, or which has no picture at all. */
+    private function cardWithImageSized(?array $size): LinkCard
+    {
+        $file = $size === null
+            ? null
+            : File::factory()->create(['width' => $size[0] ?: null, 'height' => $size[1] ?: null]);
+
+        return LinkCard::factory()->create(['image_file_id' => $file?->id]);
     }
 }

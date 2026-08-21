@@ -24,9 +24,18 @@ final class LinkCardSerializer
     private const THUMBNAIL = 120;
 
     /**
+     * Boxes for the full-width picture, the same fit ladder a post's own images ship
+     * (App\Features\Timeline\Serializers\TimelinePostSerializer::image). Every one is already in
+     * `openpne.images.allowed_sizes`, and fit scales down only — so a box above the source collapses
+     * onto the source's own width, which is why the client derives the `w` descriptors from the
+     * recorded size rather than from the box (resources/js/lib/image-sources.ts).
+     */
+    private const FIT_BOXES = [320, 640, 1200];
+
+    /**
      * $record's card, or null when there is nothing to draw.
      *
-     * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null
+     * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
      */
     public static function card(Model $record): ?array
     {
@@ -41,16 +50,50 @@ final class LinkCardSerializer
             return null;
         }
 
+        $wide = $card->hasLargeImage();
+
         return [
             'url' => $card->url,
             'title' => (string) $card->title,
             'description' => $card->description,
             'siteName' => $card->site_name,
             'domain' => self::domain($card->url),
+            // Which of the two shapes to draw, decided here so the two renderers cannot disagree —
+            // the same reason the gates below are not restated per surface. See LinkCard::hasLargeImage.
+            'layout' => $wide ? 'wide' : 'compact',
             // Never the file's own URL: a card is shared by every body mentioning the link, so the
             // address has to name this record for the request to be authorised against it.
             'imageUrl' => CardContext::imageUrl($record, self::THUMBNAIL, self::THUMBNAIL, square: true),
+            // The size the bytes *render* at, from the File rather than from the card row: the card's
+            // own columns are what the container declared, read before decoding as part of the size
+            // guard, and a sideways-shot JPEG declares its sides the other way round
+            // (App\Files\ImageDimensions). Shipped for the reserved aspect box and the `w`
+            // descriptors, which is not the same thing as the size it is drawn at.
+            'imageWidth' => $card->image?->width,
+            'imageHeight' => $card->image?->height,
+            // Only the full-width shape asks for these; the thumbnail above is a fixed square.
+            'fitSources' => $wide ? self::fitSources($record) : [],
         ];
+    }
+
+    /**
+     * The picture at each box, aspect kept.
+     *
+     * @return list<array{url: string, box: int}>
+     */
+    private static function fitSources(Model $record): array
+    {
+        $sources = [];
+
+        foreach (self::FIT_BOXES as $box) {
+            $url = CardContext::imageUrl($record, $box, $box);
+
+            if ($url !== null) {
+                $sources[] = ['url' => $url, 'box' => $box];
+            }
+        }
+
+        return $sources;
     }
 
     /**

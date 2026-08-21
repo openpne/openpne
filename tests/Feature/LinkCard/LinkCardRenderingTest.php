@@ -21,6 +21,7 @@ use App\Support\LinkCardStatus;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -86,6 +87,64 @@ class LinkCardRenderingTest extends TestCase
                 ->where('diary.linkCard.imageUrl', fn (?string $url) => $url !== null
                     && str_contains($url, "/linkCard/diary/{$diary->id}/img/"))
                 ->etc());
+    }
+
+    public function test_a_big_landscape_picture_asks_for_the_full_width_shape(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $this->card->image->update(['width' => 1200, 'height' => 630]);
+        $diary = $this->diary();
+
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")
+            ->assertInertia(fn ($page) => $page
+                ->where('diary.linkCard.layout', 'wide')
+                // The size the bytes render at, for the box the client reserves before they arrive.
+                ->where('diary.linkCard.imageWidth', 1200)
+                ->where('diary.linkCard.imageHeight', 630)
+                ->where('diary.linkCard.fitSources', function (Collection $sources): bool {
+                    $rows = $sources->map(fn ($source) => (array) $source)->all();
+
+                    // Never a square crop: the whole point of this shape is the picture's own ratio,
+                    // and `_sq` would flatten it back to a tile.
+                    return array_column($rows, 'box') === [320, 640, 1200]
+                        && ! str_contains(implode(' ', array_column($rows, 'url')), '_sq');
+                })
+                ->etc());
+    }
+
+    public function test_a_small_picture_stays_the_thumbnail_shape(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $this->card->image->update(['width' => 100, 'height' => 100]);
+        $diary = $this->diary();
+
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")
+            ->assertInertia(fn ($page) => $page
+                ->where('diary.linkCard.layout', 'compact')
+                ->where('diary.linkCard.fitSources', [])
+                ->etc());
+    }
+
+    public function test_the_thumbnail_url_is_the_same_whichever_shape_was_chosen(): void
+    {
+        // The square thumbnail is what every surface draws today. Whichever shape the server names,
+        // the address it hands over stays the one the current renderers ask for — so nothing on
+        // screen moves until the renderers are taught the second shape.
+        config(['openpne.surface_mode' => 'modern_default']);
+        $diary = $this->diary();
+
+        $compact = $this->actingAs($this->author)->get("/diary/{$diary->id}")
+            ->viewData('page')['props']['diary']['linkCard'];
+
+        $this->card->image->update(['width' => 1200, 'height' => 630]);
+
+        $wide = $this->actingAs($this->author)->get("/diary/{$diary->id}")
+            ->viewData('page')['props']['diary']['linkCard'];
+
+        $this->assertSame('compact', $compact['layout']);
+        $this->assertSame('wide', $wide['layout']);
+        $this->assertSame($compact['imageUrl'], $wide['imageUrl']);
+        $this->assertStringContainsString('_sq', (string) $wide['imageUrl']);
     }
 
     public function test_the_classic_diary_detail_renders_the_card(): void
