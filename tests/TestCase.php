@@ -70,5 +70,10 @@ abstract class TestCase extends BaseTestCase
             ['value'],
         );
         app(SnsSettingService::class)->clearCache();
+        // A service that read this setting once for its scope (LinkCardSettings) holds the old
+        // answer, and in production that scope ends with the request or the job. The test container
+        // outlives both, so flipping a setting mid-test has to end it here or the change is
+        // invisible to everything already resolved.
+        $this->app->forgetScopedInstances();
     }
 }

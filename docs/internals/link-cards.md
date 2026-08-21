@@ -24,6 +24,14 @@ So **oEmbed's `html` field is never read** — it is provider-authored markup, u
 there is nothing it could contribute that text and an image do not already give. `OembedClientTest`
 pins that no field of the extracted metadata ever carries markup.
 
+## Which bodies carry one
+
+Diaries, group topics, group events, timeline roots and talk messages. Comments do not: a thread of
+them stacks cards where the pages behind the links add little to what is being said. Neither do
+direct messages — fetching a URL out of a private message tells its destination that the link was
+shared, which is a different bargain from a body written into a room. That is why the two chat
+surfaces differ, and the difference is deliberate rather than pending.
+
 ## When a card is fetched
 
 Posting is not the only moment one is needed: records written before the feature was switched on
@@ -44,7 +52,8 @@ mark it examined. It also writes through the query builder rather than saving th
 synced from someone opening an old post would float it back to the top of the board. **On read**,
 [`LinkCardSync`](../../app/LinkCard/LinkCardSync.php) is called from the controller of a *detail*
 page — after authorization, never from a serializer, and never from a list, where one page view
-would queue a page's worth of jobs. Nothing runs inline; a page view never waits on the network.
+would queue a page's worth of jobs. Talk is the one exception, for the reason given below. Nothing
+runs inline; a page view never waits on the network.
 
 The two jobs are split because they are keyed differently:
 
@@ -60,6 +69,33 @@ it the read path could not tell whether there is work to do, and a body with no 
 re-parsed on every view forever. It is also why turning the setting off and on again loses nothing:
 records posted while it was off keep a null `link_card_synced_at`, so they are indistinguishable
 from any other never-examined record when it returns.
+
+### The conversation page is talk's detail page
+
+Talk has no detail page — a message is a line in a screen, not a screen — so the rule above would
+leave a conversation with only its write trigger: a site that switches cards on gains nothing for
+what has already been said, and a fetch that failed once is never asked again. So the conversation
+page is the read trigger there, over the rows it renders
+([`LinkCardSync::ensureAll`](../../app/LinkCard/LinkCardSync.php)). Three bounds hold at once, and
+that is what keeps a list trigger from being a crawl:
+
+- a record is examined **once in its life**, so re-opening a room queues nothing;
+- a due card is decided by `isDueForFetch`, so a URL serving out its backoff is not re-queued per view;
+- a URL is one card, so what a room costs is its number of *distinct* links, not of rows.
+
+Relax any one of them and the exception stops holding — including when OpenPNE 3 history is one day
+imported into a talk, which would arrive entirely unexamined. Rows read only to decorate the page — a
+reply's parent — are excluded: they are not on screen, and they arrive without their card loaded.
+
+**A card that lands after a page was rendered does not reach a reader who already holds that row.**
+The poll reads forward from a `(created_at, id)` position and attaching a card moves neither half of
+it, so a conversation left open keeps showing the message without its card until the tab is reloaded
+or jumps back to the newest page. Closing that means giving talk's reaction watermark
+([group-talk.md](group-talk.md#the-version-is-the-second-watermark)) the wider meaning of "this row
+changed".
+
+Reads through the MCP tools trigger none of this. A bot polling a room would otherwise be what drives
+this site's outbound requests, and what it reads is the body text, where the URL already is.
 
 ### Two workers, one URL
 
@@ -332,8 +368,13 @@ The grace period (default 7 days) still covers the simpler case: a card created 
 owning record has not been written yet is never a candidate at all.
 
 `link_card_id` is indexed on SQLite by its own migration. InnoDB creates a backing index for every
-foreign key and SQLite creates none, so without it this sweep degrades into a full scan of all four
-body tables per candidate — worst exactly for the unreferenced cards it exists to find.
+foreign key and SQLite creates none, so without it this sweep degrades into a full scan of every
+body table per candidate — worst exactly for the unreferenced cards it exists to find.
+
+Which tables those are comes from `CardContext::table()`, so a body kind added later cannot be left
+out of the sweep. The **tables** and nothing else: the enum's `find()` refuses to resolve a timeline
+reply, and a filter like that crossing into the sweep would read a row still holding a card as no
+reference at all — deleting a card that is in use, permanently, by the paragraph above.
 
 Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is cache
 rather than something that hurts, so this is an operator's tool.
@@ -367,6 +408,11 @@ rather than something that hurts, so this is an operator's tool.
 - A fetch result is written only under the lease that claimed it.
 - The read trigger fires on detail pages only, and only ever queues work. Timeline replies are not
   synced: they share the table but render as a thread, where a stack of cards would read as noise.
+- Talk's conversation page is the single exception to that, and it rests on three bounds together —
+  a record examined once in its life, a due predicate that respects the backoff, one card per URL.
+  Weaken any of them and the exception no longer holds.
+- The sweep's list of body tables comes from `CardContext`, and carries no row filter from it: a
+  reference the sweep cannot see is a card deleted while it is still in use.
 - Syncing a card never changes a record's `updated_at`, and never writes to a body it did not read.
 - One predicate decides whether a fetch is due, shared by the queueing side, the read path and the
   claim.

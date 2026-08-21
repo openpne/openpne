@@ -6,10 +6,12 @@ namespace App\LinkCard;
 
 use App\Features\Diary\DiaryAccess;
 use App\Features\GroupEvent\GroupEventAccess;
+use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\Diary;
 use App\Models\GroupEvent;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -42,6 +44,8 @@ enum CardContext: string
 
     case TimelinePost = 'timeline';
 
+    case Talk = 'talk';
+
     /** The context named by a URL segment, or null when the segment is not one of these. */
     public static function fromSlug(string $slug): ?self
     {
@@ -56,7 +60,29 @@ enum CardContext: string
             GroupTopic::class => self::Topic,
             GroupEvent::class => self::Event,
             TimelinePost::class => self::TimelinePost,
+            GroupMessage::class => self::Talk,
             default => null,
+        };
+    }
+
+    /**
+     * The table this kind's records live in — the one place that knows every table with a
+     * `link_card_id` column, so the prune sweep cannot be left behind when a kind is added.
+     *
+     * A table name and nothing more. Whatever query {@see find()} builds is about *serving one
+     * record*, and prune asks the opposite question: does any row at all still point at this card.
+     * Carrying a filter across would delete a card a row the filter refuses is still using — and
+     * that loss is permanent, not transient: the reference is nulled, `link_card_synced_at` stays,
+     * and the read path then reads the body as one with no URL and never revisits it.
+     */
+    public function table(): string
+    {
+        return match ($this) {
+            self::Diary => (new Diary)->getTable(),
+            self::Topic => (new GroupTopic)->getTable(),
+            self::Event => (new GroupEvent)->getTable(),
+            self::TimelinePost => (new TimelinePost)->getTable(),
+            self::Talk => (new GroupMessage)->getTable(),
         };
     }
 
@@ -75,6 +101,7 @@ enum CardContext: string
             self::Topic => Feature::GroupTopic,
             self::Event => Feature::GroupEvent,
             self::TimelinePost => Feature::Timeline,
+            self::Talk => Feature::GroupTalk,
         };
     }
 
@@ -127,6 +154,10 @@ enum CardContext: string
             // Replies are excluded in the query, not filtered after: a reply id must not resolve at
             // all, so nothing downstream can authorize against it. See carriesCard.
             self::TimelinePost => TimelinePost::with(['member', 'linkCard'])->whereNull('in_reply_to_id')->find($id),
+            // Not scoped to a group: which group a message belongs to is the message's own fact, and
+            // canView asks that group. Naming another group's message resolves and is then refused
+            // by its own room's rule, which is the same answer the conversation page would give.
+            self::Talk => GroupMessage::with(['group', 'linkCard'])->find($id),
         };
     }
 
@@ -152,8 +183,9 @@ enum CardContext: string
     /**
      * Whether $viewer may read $record, by that kind's own rule.
      *
-     * Diary and timeline posts can be web-public, so they take a nullable viewer; the community
-     * bodies are members-only at the board level and have no signed-out case to express.
+     * Diary and timeline posts can be web-public, so they take a nullable viewer; the group bodies
+     * are members-only at the board level and have no signed-out case to express — their rules take
+     * a Member, so the null check is what answers a guest rather than failing on one.
      */
     public function canView(Model $record, ?Member $viewer): bool
     {
@@ -162,6 +194,7 @@ enum CardContext: string
             self::TimelinePost => $record instanceof TimelinePost && TimelineAccess::canView($viewer, $record),
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
+            self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
         };
     }
 }

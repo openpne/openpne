@@ -10,6 +10,8 @@ use App\Features\Diary\Data\DiaryFormData;
 use App\Features\GroupEvent\Actions\CreateEvent;
 use App\Features\GroupEvent\Actions\UpdateEvent;
 use App\Features\GroupEvent\Data\GroupEventFormData;
+use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTopic\Actions\CreateTopic;
 use App\Features\GroupTopic\Actions\UpdateTopic;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
@@ -21,6 +23,7 @@ use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -168,9 +171,15 @@ class LinkCardWiringTest extends TestCase
      */
     public static function bodyKinds(): array
     {
-        // Diary and the community bodies carry a format column; a timeline post does not, and the
-        // sync has a branch for that.
-        return ['Diary' => ['Diary'], 'Topic' => ['Topic'], 'Event' => ['Event'], 'TimelinePost' => ['TimelinePost']];
+        // Diary and the group bodies carry a format column; a timeline post and a talk message do
+        // not, and the sync has a branch for that.
+        return [
+            'Diary' => ['Diary'],
+            'Topic' => ['Topic'],
+            'Event' => ['Event'],
+            'TimelinePost' => ['TimelinePost'],
+            'TalkMessage' => ['TalkMessage'],
+        ];
     }
 
     /**
@@ -178,7 +187,7 @@ class LinkCardWiringTest extends TestCase
      */
     public static function editableKinds(): array
     {
-        // A timeline post has no update action — it cannot be edited at all.
+        // A timeline post and a talk message have no update action — they cannot be edited at all.
         return ['Diary' => ['Diary'], 'Topic' => ['Topic'], 'Event' => ['Event']];
     }
 
@@ -277,6 +286,94 @@ class LinkCardWiringTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_opening_a_talk_queues_a_sync_for_every_unexamined_row_it_renders(): void
+    {
+        // Talk's exception to the detail-page rule: a conversation has no detail page, so the page is
+        // where a card is asked for. The bound is the page — and the marker below is what keeps that
+        // from being asked twice.
+        $group = $this->joinedGroup();
+        $messages = GroupMessage::factory()->count(3)->for($group)->for($this->member, 'author')->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('group.talk.show', $group))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class, 3);
+
+        foreach ($messages as $message) {
+            Queue::assertPushed(
+                SyncLinkCard::class,
+                fn (SyncLinkCard $job): bool => $job->model === GroupMessage::class && $job->id === $message->id,
+            );
+        }
+    }
+
+    public function test_a_talk_page_of_examined_rows_queues_nothing(): void
+    {
+        // What makes the exception hold: a record is examined once in its life, so re-opening a busy
+        // room costs nothing however often it is read.
+        $group = $this->joinedGroup();
+        GroupMessage::factory()->count(3)->for($group)->for($this->member, 'author')->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => CarbonImmutable::now(),
+        ]);
+
+        $this->actingAs($this->member)->get(route('group.talk.show', $group))->assertOk();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_the_talk_poll_queues_for_the_page_it_answers(): void
+    {
+        // "Load older" walks back through history a page at a time, and every one of those pages is
+        // as much the conversation as the newest one.
+        $group = $this->joinedGroup();
+        $newest = GroupMessage::factory()->for($group)->for($this->member, 'author')->create([
+            'body' => 'Newest https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+        $older = GroupMessage::factory()->for($group)->for($this->member, 'author')->create([
+            'body' => 'Older https://example.com/b',
+            'created_at' => CarbonImmutable::now()->subHour(),
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)
+            ->getJson(route('group.talk.messages', ['group' => $group, 'before' => (string) GroupTalkCursor::of($newest)]))
+            ->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class, 1);
+        Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->id === $older->id);
+    }
+
+    public function test_a_reply_parent_read_only_to_decorate_the_page_is_not_examined(): void
+    {
+        // The parent of a reply is quoted in the row above the answer, from a row that is not on the
+        // page and arrives without its card loaded. Examining it would mark a body nobody looked at
+        // and lazy-load a query per reply.
+        $group = $this->joinedGroup();
+        $parent = GroupMessage::factory()->for($group)->for($this->member, 'author')->create([
+            'body' => 'Parent https://example.com/parent',
+            'created_at' => CarbonImmutable::now()->subDays(2),
+            'link_card_synced_at' => null,
+        ]);
+        $reply = GroupMessage::factory()->for($group)->for($this->member, 'author')->create([
+            'body' => 'Reply https://example.com/reply',
+            'in_reply_to_id' => $parent->id,
+            'link_card_synced_at' => null,
+        ]);
+
+        // A page that ends after the parent, so the reply's reference is read but the parent is not
+        // one of the rows rendered.
+        $this->actingAs($this->member)
+            ->getJson(route('group.talk.messages', ['group' => $group, 'after' => (string) GroupTalkCursor::of($parent)]))
+            ->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class, 1);
+        Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->id === $reply->id);
+    }
+
     public function test_nothing_is_queued_while_the_setting_is_off(): void
     {
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
@@ -321,6 +418,15 @@ class LinkCardWiringTest extends TestCase
         return $this->app->make(CreateTimelinePost::class)(
             $this->member,
             new TimelinePostFormData(body: 'See https://example.com/a', visibility: Visibility::Open),
+        );
+    }
+
+    private function createTalkMessage(): GroupMessage
+    {
+        return $this->app->make(CreateGroupMessage::class)(
+            $this->member,
+            $this->joinedGroup(),
+            'See https://example.com/a',
         );
     }
 

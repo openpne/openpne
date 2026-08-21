@@ -19,6 +19,7 @@ const message = (over: Partial<TalkMessage> = {}): TalkMessage => ({
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     mentions: [],
     images: [],
+    linkCard: null,
     reactions: [],
     inReplyTo: null,
     createdAt: '2026-08-16T10:00:00+09:00',

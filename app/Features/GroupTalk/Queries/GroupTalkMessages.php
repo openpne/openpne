@@ -33,7 +33,7 @@ class GroupTalkMessages
      *
      * @var list<string>
      */
-    public const WITH = ['author.avatar.file', 'mentions', 'images.file'];
+    public const WITH = ['author.avatar.file', 'mentions', 'images.file', 'linkCard.image'];
 
     /**
      * How much of the conversation rides above the position an around() page opens on. A landing
