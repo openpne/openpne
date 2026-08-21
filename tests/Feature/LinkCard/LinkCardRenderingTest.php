@@ -180,18 +180,19 @@ class LinkCardRenderingTest extends TestCase
         $this->assertStringNotContainsString('<span class="linkCardImage">', $html);
     }
 
-    public function test_the_classic_wide_picture_is_not_enlarged_past_its_own_size(): void
+    public function test_the_classic_wide_picture_is_held_to_the_same_box_as_modern_and_never_enlarged(): void
     {
         // The smallest picture the shape admits is 267x200, and a Classic card is ~460 wide, so
-        // `width: 100%` on its own stretches it by 1.7. Modern caps it at the source's width; this is
-        // the same cap on the other surface, which is where it was missing.
+        // `width: 100%` on its own stretches it by 1.7. The cap is the formula Modern writes
+        // (link-card.test.tsx, the same string): the box a member's own picture gets, then the
+        // source's width — one surface shipped without the other's cap once.
         $this->card->image->update(['width' => 267, 'height' => 200]);
         $diary = $this->diary();
 
         $html = $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk()->getContent();
 
         $this->assertStringContainsString('<img class="linkCardBanner"', $html);
-        $this->assertStringContainsString('style="max-width: 267px"', $html);
+        $this->assertStringContainsString('style="max-width: min(100%, 24rem, 267px, calc(20rem * 1.91))"', $html);
     }
 
     public function test_the_classic_card_keeps_the_thumbnail_beside_the_words_when_it_is_small(): void

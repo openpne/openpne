@@ -22,13 +22,23 @@ export type ImageGridVariant = 'post' | 'boxed';
  * aspect" — so a tall one over-declares and may fetch one rung high. Bounded, and the alternative is
  * measuring the layout in JS before the first byte is asked for.
  */
-// `post` is read by link-card.tsx as well, under its own meaning — "the widest column any surface
-// gives a card" — so a change to this row has to be true of that reader too, or it silently declares
-// the wrong width there.
+// `boxed` is read by link-card.tsx as well: a card's picture is held to the same box, so what is
+// true of this row has to stay true there.
 export const HERO_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 37.5rem, 92vw',
     boxed: 'min(24rem, 92vw)',
 };
+
+/**
+ * The widest a picture that must stay subordinate to its words may draw: a comment's or a chat row's
+ * own picture, and a link card's preview on every surface. Every cap in one width formula — the
+ * container, the picture's own size (never enlarged) and the 20rem height limit carried through
+ * `ratio` (a CSS expression for width ÷ height) — because a height cap set as `max-height` squashes
+ * anything with a non-auto width (see the hero below).
+ */
+export function boxedPictureMaxWidth(ownWidth: number | null, ratio: string): string {
+    return `min(100%, 24rem, ${ownWidth === null ? '' : `${ownWidth}px, `}calc(20rem * (${ratio})))`;
+}
 
 const CELL_SIZES: Record<ImageGridVariant, string> = {
     post: '(min-width: 40rem) 18.75rem, 46vw',
@@ -108,7 +118,7 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                                   aspectRatio: `${hero.width} / ${hero.height}`,
                                   maxWidth:
                                       variant === 'boxed'
-                                          ? `min(100%, 24rem, ${hero.width}px, calc(20rem * (${hero.width} / ${hero.height})))`
+                                          ? boxedPictureMaxWidth(hero.width, `${hero.width} / ${hero.height}`)
                                           : `min(100%, ${hero.width}px, calc(min(70vh, 32rem) * (${hero.width} / ${hero.height})))`,
                               }
                             : undefined
