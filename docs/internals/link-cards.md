@@ -342,9 +342,10 @@ reason the image grid never crops a lone hero does not carry over — and a fixe
 column of cards from ragging. It is never enlarged past its own width: a smaller picture is centred
 instead.
 
-**A card is capped at the width its surface gives a picture** — `ImageGrid`'s placement, under that
-component's own name for it. A card and a photo in the same conversation line up in one column
-instead of two.
+**A card is as wide as the words it belongs to**, and carries no width of its own. It was capped at
+what a surface gives a *picture* first, which left it stopping short of the text above it — 384px of
+card under 550px of message, the title wrapping and clipping inside the narrower box. A card
+restates something in the body, so the body's column is its width, and no surface needs a number.
 
 **The compact picture is fixed in width and stretched in height**, so it is exactly as tall as the
 words beside it and leaves no gap under itself. That stays a shrink rather than a blurry enlargement
