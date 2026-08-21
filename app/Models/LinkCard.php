@@ -77,6 +77,40 @@ class LinkCard extends Model
         return $this->status === LinkCardStatus::Ok && ($this->title ?? '') !== '';
     }
 
+    /**
+     * Whether this card's picture is worth drawing at full width, rather than as a thumbnail beside
+     * the text.
+     *
+     * Every chat and feed client that draws these has the same two shapes and switches between them
+     * on the picture itself — a big landscape image is a preview, a small or square one is an icon —
+     * so the reader is not shown a 64px logo blown across the card, or a magazine cover shrunk into a
+     * corner. The threshold below is **ours**, assembled from two of them rather than copied:
+     * Signal requires both sides ≥ 200 and merely not-square (so it enlarges portraits too),
+     * Mattermost requires width ≥ 150 and 4:3 with no lower bound on height. Neither has the
+     * `height >= 200` term; that one is here to keep a wide, short banner — 1000×150 — out of the
+     * full-width shape, where it draws as a stripe.
+     *
+     * **The dimensions come from the File, not from this row.** `image_width` / `image_height` here
+     * are what the container declared and are read by nothing; `files` holds what the bytes actually
+     * *render* at, EXIF Orientation applied ({@see App\Files\ImageDimensions}).
+     * For a sideways-shot JPEG the two disagree by a quarter turn, and every use downstream — this
+     * predicate, the reserved aspect box, the `w` descriptors — would be wrong together.
+     *
+     * Integer cross-multiplication rather than a ratio: the boundary is exact and visible, and a
+     * zero height cannot divide.
+     */
+    public function hasLargeImage(): bool
+    {
+        $width = $this->image?->width;
+        $height = $this->image?->height;
+
+        if ($width === null || $height === null) {
+            return false;
+        }
+
+        return $width >= 200 && $height >= 200 && $width * 3 >= $height * 4;
+    }
+
     /** Whether the cached metadata is old enough to be worth fetching again. */
     public function isStale(): bool
     {
