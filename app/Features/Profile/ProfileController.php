@@ -6,6 +6,8 @@ use App\Features\Block\BlockLookup;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Group\Queries\ListMemberGroups;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
@@ -36,7 +38,7 @@ class ProfileController extends Controller
 {
     use RespondsWithSurface;
 
-    public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets, VisibleAge $visibleAge): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets, VisibleAge $visibleAge, ConsumeNotificationRows $feedRows): View|InertiaResponse|RedirectResponse
     {
         /** @var Member|null $viewer */
         $viewer = $request->user();
@@ -67,6 +69,10 @@ class ProfileController extends Controller
             $viewer->hasPendingRequestFrom($member) => 'received',
             default => 'none',
         } : null;
+
+        if ($viewer !== null) {
+            $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::member((int) $member->getKey()));
+        }
 
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [

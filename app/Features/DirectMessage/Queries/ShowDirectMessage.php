@@ -3,6 +3,7 @@
 namespace App\Features\DirectMessage\Queries;
 
 use App\Features\DirectMessage\DirectMessageBox;
+use App\Features\DirectMessage\DirectMessageNotificationRows;
 use App\Features\DirectMessage\DirectMessageView;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ShowDirectMessage
 {
+    public function __construct(private readonly DirectMessageNotificationRows $feedRows) {}
+
     public function __invoke(Member $viewer, DirectMessageBox $box, int $messageId): ?DirectMessageView
     {
         $message = DirectMessage::query()
@@ -59,6 +62,8 @@ class ShowDirectMessage
         if ($receipt !== null && $receipt->read_at === null) {
             $receipt->forceFill(['read_at' => now()])->save();
         }
+
+        $this->feedRows->markReadFor($viewer);
     }
 
     /**

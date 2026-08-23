@@ -33,6 +33,8 @@ use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Group\GroupRequest;
@@ -66,7 +68,7 @@ class GroupController extends Controller
      * group's own details. Five, like the topic and event boxes beside it — the box's "show
      * all" link carries the rest.
      */
-    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread): View|InertiaResponse
+    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
         $found = $query($group);
         abort_if($found === null, 404);
@@ -106,6 +108,9 @@ class GroupController extends Controller
         // still reports its count here: mute silences the nav badge, not the group's own card
         // (UnreadTalkCounts).
         $talkUnreadCount = $canViewTalk ? ($talkUnread($viewer)[$found->getKey()]['count'] ?? 0) : 0;
+        // The group's own rows only: the room's talk row is the conversation's, and reading it is
+        // what the talk read cursor does.
+        $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::group((int) $found->getKey()));
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($found, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk) {

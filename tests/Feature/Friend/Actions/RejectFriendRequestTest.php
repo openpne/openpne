@@ -26,7 +26,7 @@ class RejectFriendRequestTest extends TestCase
             'target_id' => $bob->getKey(),
         ]);
 
-        (new RejectFriendRequest)($bob, $alice);
+        app(RejectFriendRequest::class)($bob, $alice);
 
         $this->assertDatabaseCount('friend_requests', 0);
         $this->assertDatabaseCount('friendships', 0);
@@ -39,7 +39,7 @@ class RejectFriendRequestTest extends TestCase
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
 
         try {
-            (new RejectFriendRequest)($bob, $alice);
+            app(RejectFriendRequest::class)($bob, $alice);
             $this->fail('expected FriendActionException');
         } catch (FriendActionException $e) {
             $this->assertSame(FriendActionFailure::RequestNotFound, $e->reason);

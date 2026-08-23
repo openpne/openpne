@@ -27,7 +27,7 @@ class ShowDirectMessageTest extends TestCase
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $message = $this->deliver($sender, $recipient);
 
-        $view = (new ShowDirectMessage)($recipient, DirectMessageBox::Receive, $message->getKey());
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $message->getKey());
 
         $this->assertNotNull($view);
         $this->assertFalse($view->viewerIsSender);
@@ -43,8 +43,8 @@ class ShowDirectMessageTest extends TestCase
         $draft = $this->deliver($sender, $recipient, ['is_draft' => true]);
         $delivered = $this->deliver($sender, $recipient);
 
-        $this->assertNull((new ShowDirectMessage)($recipient, DirectMessageBox::Receive, $draft->getKey()));
-        $this->assertNull((new ShowDirectMessage)($stranger, DirectMessageBox::Receive, $delivered->getKey()));
+        $this->assertNull(app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $draft->getKey()));
+        $this->assertNull(app(ShowDirectMessage::class)($stranger, DirectMessageBox::Receive, $delivered->getKey()));
     }
 
     public function test_sent_show_resolves_for_the_sender_and_lists_recipients(): void
@@ -52,7 +52,7 @@ class ShowDirectMessageTest extends TestCase
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $message = $this->deliver($sender, $recipient);
 
-        $view = (new ShowDirectMessage)($sender, DirectMessageBox::Sent, $message->getKey());
+        $view = app(ShowDirectMessage::class)($sender, DirectMessageBox::Sent, $message->getKey());
 
         $this->assertNotNull($view);
         $this->assertTrue($view->viewerIsSender);
@@ -64,7 +64,7 @@ class ShowDirectMessageTest extends TestCase
         $sender = Member::factory()->create();
         $draft = DirectMessage::factory()->draft()->create(['sender_id' => $sender->getKey()]);
 
-        $this->assertNull((new ShowDirectMessage)($sender, DirectMessageBox::Draft, $draft->getKey()));
+        $this->assertNull(app(ShowDirectMessage::class)($sender, DirectMessageBox::Draft, $draft->getKey()));
     }
 
     public function test_trash_show_resolves_for_either_side_but_not_after_purge(): void
@@ -74,9 +74,9 @@ class ShowDirectMessageTest extends TestCase
         $asRecipient = $this->deliver($other, $me, receipt: ['recipient_deleted_at' => now()]);
         $purged = DirectMessage::factory()->purgedBySender()->create(['sender_id' => $me->getKey()]);
 
-        $this->assertNotNull((new ShowDirectMessage)($me, DirectMessageBox::Trash, $asSender->getKey()));
-        $this->assertNotNull((new ShowDirectMessage)($me, DirectMessageBox::Trash, $asRecipient->getKey()));
-        $this->assertNull((new ShowDirectMessage)($me, DirectMessageBox::Trash, $purged->getKey()));
+        $this->assertNotNull(app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $asSender->getKey()));
+        $this->assertNotNull(app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $asRecipient->getKey()));
+        $this->assertNull(app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $purged->getKey()));
     }
 
     public function test_previous_and_next_walk_the_box_by_id(): void
@@ -86,7 +86,7 @@ class ShowDirectMessageTest extends TestCase
         $middle = $this->deliver($sender, $recipient);
         $newer = $this->deliver($sender, $recipient);
 
-        $view = (new ShowDirectMessage)($recipient, DirectMessageBox::Receive, $middle->getKey());
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $middle->getKey());
 
         $this->assertSame($older->getKey(), $view->previousId); // older = smaller id
         $this->assertSame($newer->getKey(), $view->nextId);     // newer = larger id

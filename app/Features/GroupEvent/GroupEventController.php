@@ -12,6 +12,8 @@ use App\Features\GroupEvent\Queries\EventParticipants;
 use App\Features\GroupEvent\Queries\ListGroupEvents;
 use App\Features\GroupEvent\Queries\ShowEvent;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -65,13 +67,14 @@ class GroupEventController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $event, ShowEvent $query, LinkCardSync $linkCards): View|InertiaResponse
+    public function show(Request $request, int $event, ShowEvent $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
         $found = $query($event);
         abort_if($found === null, 404);
         $viewer = $this->viewer();
         abort_unless(GroupEventAccess::canViewEvent($found, $viewer), 404);
         $linkCards->ensure($found);
+        $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::event((int) $found->getKey()));
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $linkCards) {

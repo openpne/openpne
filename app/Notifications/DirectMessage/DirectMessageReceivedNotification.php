@@ -54,13 +54,18 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
      * The delivery-time re-check (docs/internals/notifications.md#delivery-time-re-checks). The mail
      * carries the body, so every fact that decides whether the recipient may read this message is
      * asked again here — SerializesModels hands the job fresh rows, so the answer is current.
+     *
+     * The feed row asks one more thing than the mail does, which is why the channel decides between
+     * two forms of the same query rather than both being run: a row written for a message already
+     * read would put the bell over something the recipient has read. The mail is a copy, not a
+     * badge, so it still goes.
      */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
         return $this->featureShouldSend($notifiable, $channel)
             && ! $notifiable->is_login_rejected
             && ! BlockLookup::hasAnyBlockBetween($notifiable, $this->sender)
-            && $this->stillTheirs($notifiable);
+            && ($channel === 'database' ? $this->stillUnread($notifiable) : $this->stillTheirs($notifiable));
     }
 
     /** @return list<string> */
@@ -114,6 +119,16 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
         return $this->message->recipients()
             ->where('recipient_id', $notifiable->getKey())
             ->whereNull('recipient_purged_at')
+            ->exists();
+    }
+
+    /** stillTheirs(), and not read yet. */
+    private function stillUnread(Member $notifiable): bool
+    {
+        return $this->message->recipients()
+            ->where('recipient_id', $notifiable->getKey())
+            ->whereNull('recipient_purged_at')
+            ->whereNull('read_at')
             ->exists();
     }
 

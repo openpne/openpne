@@ -3,6 +3,7 @@
 namespace App\Notifications\GroupTalk;
 
 use App\Features\GroupTalk\GroupTalkNotificationEligibility;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Group;
@@ -13,6 +14,7 @@ use App\Notifications\Concerns\RendersMailTemplate;
 use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\Feature;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -50,11 +52,28 @@ class GroupTalkMentionedNotification extends Notification implements FeatureNoti
         return Feature::GroupTalk;
     }
 
-    /** SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current. */
+    /**
+     * SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current.
+     *
+     * The feed row additionally waits on the reader's cursor, as the room's broadcast does: a row
+     * written for a message they have already read is a bell over nothing. Mail is unaffected — a
+     * mention is worth telling someone about whether or not they were looking.
+     */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
         return $this->featureShouldSend($notifiable, $channel)
-            && GroupTalkNotificationEligibility::canReceive($notifiable, $this->group(), $this->author);
+            && GroupTalkNotificationEligibility::canReceive($notifiable, $this->group(), $this->author)
+            && ($channel !== 'database' || $this->stillUnread($notifiable));
+    }
+
+    private function stillUnread(Member $notifiable): bool
+    {
+        return TalkReadCursor::isBehind(
+            (int) $this->message->group_id,
+            (int) $notifiable->getKey(),
+            CarbonImmutable::instance($this->message->created_at),
+            (int) $this->message->getKey(),
+        );
     }
 
     /** @return list<string> */

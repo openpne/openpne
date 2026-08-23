@@ -23,9 +23,18 @@ document covers the delivery model around it.
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing — only opening a row or the explicit mark-all does. A row that is no longer
-   there — the talk broadcast replaces a room's row with each message — returns to the feed rather
-   than erroring; only a row that exists but belongs to a switched-off unit is refused.
+   feed marks nothing. Reading what a row points at marks it read too: the feed is an inbox, so a
+   row is spent by the thing it announces.
+   [`NotificationTarget`](../../app/Features/Notifications/NotificationTarget.php) is the per-kind
+   table of what that is, and
+   [`ConsumeNotificationRows`](../../app/Features/Notifications/ConsumeNotificationRows.php) the
+   rule; on a chat surface the read is the read cursor rather than the page view, since opening a
+   conversation is not reading what sits above where the reader stopped. A landing page is a GET, so
+   **a GET writes `read_at`** here — unlike the row-open and the auth screens, which are POSTs so
+   that no prefetch can spend them. What a prefetch spends here is a bell number: the domain state
+   the row is about is untouched. A row that is no longer there — the talk broadcast replaces a
+   room's row with each message — returns to the feed rather than erroring; only a row that exists
+   but belongs to a switched-off unit is refused.
    **Returning to the feed re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
    popstate, the whole document from the back/forward cache — which is the state before the row the
    member just opened was marked read. Modern re-reads every restored page, this one included
@@ -69,10 +78,11 @@ callback because the head manager owns that DOM write. A failed refresh keeps wh
 no websocket at this layer; a closed tab is reached by web push instead (below).
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
-the feed never mutates domain state. OpenPNE 3 kept only the per-event side — a `member_config`
-array capped at 20, which both its badges and its panel read — so a count there could never
-disagree with the list under it. These layers answer more questions than that store could, which
-is why each display surface has to say which layer it is reading.
+the feed never mutates domain state. The other direction is the rule, not a violation of it —
+reading, or answering, what a row is about marks the row read. OpenPNE 3 kept only the per-event
+side — a `member_config` array capped at 20, which both its badges and its panel read — so a count
+there could never disagree with the list under it. These layers answer more questions than that
+store could, which is why each display surface has to say which layer it is reading.
 
 ## The per-member catalog
 
@@ -216,6 +226,11 @@ own — asked once, so it stays with the notification — each composed with the
 trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
 the channels decided back then.
 
+Two of those re-checks are **`database`-only**, and are the delivery-time half of the rule that a read
+target spends its rows: a direct message whose receipt is already read, and a talk mention the
+recipient's cursor has passed, write no feed row — the row would otherwise arrive already spent. Mail
+still goes in both cases, so the branch is on the channel rather than folded into the shared gate.
+
 ## Web push
 
 A layer-3 row only reaches a member who is looking. Web push delivers the same event a second time,
@@ -298,6 +313,7 @@ That endpoint is a URL the site later POSTs to, over a Guzzle client outside `Ap
 - The imported `member_config` key names derive from `NotificationKind::op3ConfigName()`
   (`is_send_{name}_web` / `is_send_pc_{name}_mail`) over `importableCases()` — the upgrade has no
   second name list, and a native kind has no key to invent (asking for one throws).
-- Layer-1 counts and layer-3 `read_at` never feed each other.
+- Layer-3 `read_at` never feeds layer 1: no count reads it, and reading the feed moves no domain
+  state. The other way is the rule — reading (or answering) what a row is about marks the row read.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.

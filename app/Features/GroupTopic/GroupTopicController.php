@@ -11,6 +11,8 @@ use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
 use App\Features\GroupTopic\Queries\ListGroupTopics;
 use App\Features\GroupTopic\Queries\ShowTopic;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -64,7 +66,7 @@ class GroupTopicController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $topic, ShowTopic $query, LinkCardSync $linkCards): View|InertiaResponse
+    public function show(Request $request, int $topic, ShowTopic $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
         $found = $query($topic);
         abort_if($found === null, 404);
@@ -73,6 +75,7 @@ class GroupTopicController extends Controller
         // After the authorization decision, and only on the detail page: a board index renders many
         // topics, and asking on each would queue a page's worth of jobs for someone scrolling past.
         $linkCards->ensure($found);
+        $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::topic((int) $found->getKey()));
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $linkCards) {
