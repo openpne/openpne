@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\GroupTalk;
 
+use App\Features\GroupTalk\Actions\MarkTalkRead;
 use App\Features\GroupTalk\GroupTalkNotificationEligibility;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Mail\Template\MailTemplate;
@@ -153,6 +154,27 @@ class TalkMentionNotificationTest extends TalkTestCase
         $this->freshRequestState();
 
         $this->assertFalse($notification->shouldSend($target, 'mail'));
+    }
+
+    /**
+     * The feed row additionally waits on the reader's cursor, as the room's broadcast does: a row for
+     * a message they have already read is a bell over nothing. The mail still goes — a mention is
+     * worth telling someone about whether or not they were looking.
+     */
+    public function test_a_mention_read_before_delivery_writes_no_feed_row_but_still_mails(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $target = $this->joined($group, 'Bob');
+        $message = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $notification = new GroupTalkMentionedNotification($author, $message);
+
+        $this->assertTrue($notification->shouldSend($target, 'database'));
+
+        app(MarkTalkRead::class)($target, $group, (int) $message->getKey());
+
+        $this->assertFalse($notification->shouldSend($target->fresh(), 'database'));
+        $this->assertTrue($notification->shouldSend($target->fresh(), 'mail'));
     }
 
     /** An author gone before delivery takes the queued job with them rather than arriving anonymous. */

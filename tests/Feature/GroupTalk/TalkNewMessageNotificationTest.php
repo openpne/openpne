@@ -467,7 +467,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
 
         match ($way) {
             'http' => $this->actingAs($reader)
-                ->postJson("/groups/{$group->getKey()}/talk/read", ['message_id' => $message->getKey()])
+                ->postJson("/groups/{$group->getKey()}/talk/read", ['messageId' => $message->getKey()])
                 ->assertNoContent(),
             'catchUp' => $this->actingAs($reader)
                 ->postJson("/groups/{$group->getKey()}/talk/read", [])

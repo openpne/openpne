@@ -12,6 +12,8 @@ use App\Features\Notifications\NotificationCenterCategory;
 use App\Features\Notifications\NotificationCenterRow;
 use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
+use App\Features\Notifications\NotificationTarget;
+use App\Features\Notifications\NotificationTargetType;
 use App\Features\Notifications\Queries\ListNotificationCenterRows;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\Diary;
@@ -127,24 +129,22 @@ class NotificationFeedSerializer
      */
     public static function targetUrl(DatabaseNotification $row): ?string
     {
-        $data = $row->data;
+        $target = NotificationTarget::of($row);
 
-        return match ($data['kind'] ?? null) {
-            'friend_requested' => '/friend/requests',
-            'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
-            'direct_message_received' => self::directMessageUrl($row, $data['direct_message_id'] ?? null),
-            'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
-            'group_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
-            'group_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
-            'group_joined' => self::groupUrl($data['group_id'] ?? null),
-            'group_admin_transfer_requested', 'group_sub_admin_appointed' => self::groupUrl($data['group_id'] ?? null),
-            'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
-            'group_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
-            'group_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
-            'group_talk_mention' => self::groupTalkUrl($row, $data['message_id'] ?? null),
-            'group_talk_new_message' => self::groupTalkRoomUrl($row, $data['group_id'] ?? null),
-            'timeline_mentioned', 'timeline_posted', 'timeline_replied' => self::timelineUrl($row, $data['post_id'] ?? null),
-            default => null,
+        // Which entity the row names is NotificationTarget's table; whether it still exists and the
+        // reader may still see it is asked here, at click time.
+        return match ($target?->type) {
+            NotificationTargetType::FriendRequests => '/friend/requests',
+            NotificationTargetType::Member => self::profileUrl($target->id),
+            NotificationTargetType::DirectMessage => self::directMessageUrl($row, $target->id),
+            NotificationTargetType::Diary => self::diaryUrl($row, $target->id),
+            NotificationTargetType::Topic => self::topicUrl($row, $target->id),
+            NotificationTargetType::Event => self::eventUrl($row, $target->id),
+            NotificationTargetType::Group => self::groupUrl($target->id),
+            NotificationTargetType::TalkMessage => self::groupTalkUrl($row, $target->id),
+            NotificationTargetType::TalkRoom => self::groupTalkRoomUrl($row, $target->id),
+            NotificationTargetType::TimelinePost => self::timelineUrl($row, $target->id),
+            null => null,
         };
     }
 
@@ -189,9 +189,9 @@ class NotificationFeedSerializer
         );
     }
 
-    private static function profileUrl(?int $memberId): ?string
+    private static function profileUrl(int $memberId): ?string
     {
-        if ($memberId === null || ! Member::whereKey($memberId)->exists()) {
+        if (! Member::whereKey($memberId)->exists()) {
             return null;
         }
 
@@ -199,9 +199,9 @@ class NotificationFeedSerializer
     }
 
     /** A dissolved community counts as gone; the recipient is an admin, so no extra view gate. */
-    private static function groupUrl(?int $groupId): ?string
+    private static function groupUrl(int $groupId): ?string
     {
-        if ($groupId === null || ! Group::whereKey($groupId)->exists()) {
+        if (! Group::whereKey($groupId)->exists()) {
             return null;
         }
 
@@ -209,9 +209,9 @@ class NotificationFeedSerializer
     }
 
     /** A deleted diary — or one the recipient can no longer view — counts as gone. */
-    private static function diaryUrl(DatabaseNotification $row, ?int $diaryId): ?string
+    private static function diaryUrl(DatabaseNotification $row, int $diaryId): ?string
     {
-        $diary = $diaryId === null ? null : Diary::find($diaryId);
+        $diary = Diary::find($diaryId);
         if ($diary === null) {
             return null;
         }
@@ -224,9 +224,9 @@ class NotificationFeedSerializer
     }
 
     /** A deleted topic — or one whose board the recipient can no longer read — counts as gone. */
-    private static function topicUrl(DatabaseNotification $row, ?int $topicId): ?string
+    private static function topicUrl(DatabaseNotification $row, int $topicId): ?string
     {
-        $topic = $topicId === null ? null : GroupTopic::find($topicId);
+        $topic = GroupTopic::find($topicId);
         if ($topic === null) {
             return null;
         }
@@ -239,9 +239,9 @@ class NotificationFeedSerializer
     }
 
     /** The event twin of topicUrl(). */
-    private static function eventUrl(DatabaseNotification $row, ?int $eventId): ?string
+    private static function eventUrl(DatabaseNotification $row, int $eventId): ?string
     {
-        $event = $eventId === null ? null : GroupEvent::find($eventId);
+        $event = GroupEvent::find($eventId);
         if ($event === null) {
             return null;
         }
@@ -261,9 +261,9 @@ class NotificationFeedSerializer
      * Re-checked at click time, not trusted from delivery: the message may have been deleted since,
      * and the reader may have left a members-only group or lost read access with it.
      */
-    private static function groupTalkUrl(DatabaseNotification $row, ?int $messageId): ?string
+    private static function groupTalkUrl(DatabaseNotification $row, int $messageId): ?string
     {
-        $message = $messageId === null ? null : GroupMessage::find($messageId);
+        $message = GroupMessage::find($messageId);
         if ($message === null) {
             return null;
         }
@@ -283,9 +283,9 @@ class NotificationFeedSerializer
      * Re-checked at click time like every other target: the group may have dissolved, or the reader
      * may have left a members-only one since.
      */
-    private static function groupTalkRoomUrl(DatabaseNotification $row, ?int $groupId): ?string
+    private static function groupTalkRoomUrl(DatabaseNotification $row, int $groupId): ?string
     {
-        $group = $groupId === null ? null : Group::find($groupId);
+        $group = Group::find($groupId);
         if ($group === null) {
             return null;
         }
@@ -302,9 +302,9 @@ class NotificationFeedSerializer
      * one address, so a row about a reply opens the root; the whole thread is one audience, which
      * is also what the clearance is read against.
      */
-    private static function timelineUrl(DatabaseNotification $row, ?int $postId): ?string
+    private static function timelineUrl(DatabaseNotification $row, int $postId): ?string
     {
-        $post = $postId === null ? null : TimelinePost::find($postId);
+        $post = TimelinePost::find($postId);
         $root = $post === null || $post->in_reply_to_id === null ? $post : $post->parent;
         if ($root === null) {
             return null;
@@ -321,12 +321,8 @@ class NotificationFeedSerializer
      * The read page 404s unless the viewer still holds a live inbox receipt (ShowDirectMessage's
      * Receive-box predicate), so a trashed/purged message counts as gone.
      */
-    private static function directMessageUrl(DatabaseNotification $row, ?int $messageId): ?string
+    private static function directMessageUrl(DatabaseNotification $row, int $messageId): ?string
     {
-        if ($messageId === null) {
-            return null;
-        }
-
         $stillInInbox = DirectMessageRecipient::query()->ofDelivered()->recipientLive()
             ->where('recipient_id', $row->notifiable_id)
             ->where('direct_message_id', $messageId)

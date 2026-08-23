@@ -174,6 +174,22 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
+    /**
+     * The one fact the two channels answer differently: a feed row for a message already read would
+     * stand the bell over something the recipient has read, while the mail is a copy of the message
+     * rather than a badge, and still goes.
+     */
+    public function test_a_message_read_before_delivery_keeps_the_mail_and_writes_no_feed_row(): void
+    {
+        $jobs = $this->queuedSend();
+        $this->sent['message']->recipients()->update(['read_at' => now()]);
+
+        $this->runQueued($jobs);
+
+        $this->assertSame(1, $this->sentMailCount());
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
     /** A sender or a message gone before delivery takes the queued job with it. */
     public function test_the_job_is_dropped_when_its_models_are_missing(): void
     {

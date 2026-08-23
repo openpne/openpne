@@ -5,11 +5,14 @@ namespace App\Features\Friend\Actions;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
 use App\Features\Friend\FriendRequestLock;
+use App\Features\Friend\FriendRequestNotificationRows;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 class RejectFriendRequest
 {
+    public function __construct(private readonly FriendRequestNotificationRows $feedRows) {}
+
     public function __invoke(Member $rejecter, Member $requester): void
     {
         DB::transaction(function () use ($rejecter, $requester) {
@@ -23,6 +26,8 @@ class RejectFriendRequest
             if ($deleted === 0) {
                 throw new FriendActionException(FriendActionFailure::RequestNotFound);
             }
+
+            $this->feedRows->markAnswered((int) $rejecter->getKey(), (int) $requester->getKey());
         });
     }
 }

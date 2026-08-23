@@ -14,6 +14,8 @@ use App\Features\Friend\Queries\ListFriends;
 use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
 use App\Features\Friend\Serializers\FriendSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Friend\AcceptRequest;
@@ -74,11 +76,12 @@ class FriendController extends Controller
         ]);
     }
 
-    public function requests(Request $request, ListPendingRequests $query): View|InertiaResponse
+    public function requests(Request $request, ListPendingRequests $query, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $received = $query($viewer, PendingRequestDirection::Received, pageName: 'received_page');
         $sent = $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page');
+        $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::friendRequests());
 
         return $this->respondWith($request, 'friend', [
             self::SURFACE_CLASSIC => fn () => view('friend.requests', [

@@ -17,6 +17,8 @@ use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -193,7 +195,7 @@ class DiaryController extends Controller
         ], bodyIdRoute: $bodyIdRoute);
     }
 
-    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent, LinkCardSync $linkCards): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewerOrGuest();
         $found = $query($viewer, $diary);
@@ -212,6 +214,9 @@ class DiaryController extends Controller
         // After the access decision, and only here: the feeds render many entries, and asking on
         // each would queue a page's worth of jobs for someone scrolling past.
         $linkCards->ensure($found);
+        if ($viewer !== null) {
+            $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::diary((int) $found->getKey()));
+        }
 
         // Same viewer-scoped adjacency for both surfaces; hoisted so Modern gets it too.
         ['older' => $older, 'newer' => $newer] = $adjacent($viewer, $found);

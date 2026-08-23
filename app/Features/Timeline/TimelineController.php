@@ -4,6 +4,8 @@ namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Notifications\ConsumeNotificationRows;
+use App\Features\Notifications\NotificationTarget;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
@@ -100,7 +102,7 @@ class TimelineController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         $post = $query($viewer, $timelinePost);
@@ -132,6 +134,13 @@ class TimelineController extends Controller
         // place, which put the root into the page's own reply list.
         $linkCards->ensure($post);
         $linkCards->ensureAll($post->replies);
+        // The whole thread, as the clearance above was read against it: a row about a reply is spent
+        // by reading the page that reply is on, and this is that page.
+        $feedRows->markTargetsRead(
+            (int) $viewer->getKey(),
+            NotificationTarget::timelinePost((int) $post->getKey()),
+            ...$post->replies->map(fn (TimelinePost $reply): NotificationTarget => NotificationTarget::timelinePost((int) $reply->getKey()))->all(),
+        );
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
