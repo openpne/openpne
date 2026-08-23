@@ -16,6 +16,7 @@ use App\Notifications\GroupEvent\EventCommentBroadcastNotification;
 use App\Notifications\GroupEvent\EventCommentedNotification;
 use App\Notifications\GroupEvent\EventPostedNotification;
 use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
+use App\Notifications\GroupTalk\GroupTalkMessagePostedNotification;
 use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;
@@ -44,6 +45,7 @@ final class FeatureNotificationMap
         EventCommentedNotification::class,
         EventPostedNotification::class,
         GroupTalkMentionedNotification::class,
+        GroupTalkMessagePostedNotification::class,
         TopicCommentBroadcastNotification::class,
         TopicCommentedNotification::class,
         TopicPostedNotification::class,

@@ -321,7 +321,8 @@ nothing else: its own per-group count keeps showing, de-emphasized, because the 
 quiet rather than to lose track of the conversation. Leaving clears it with the row.
 
 Mentions **pierce mute** — a message addressed to you outranks the room's quiet — see
-[Mentions](#mentions) below.
+[Mentions](#mentions) below. The per-message broadcast does not: muting takes the room out of it
+([What talk notifies](#what-talk-notifies)).
 
 ## The joined-group list is a room list
 
@@ -424,28 +425,54 @@ only from the foot of the *live* window, so a reader taken back into history mar
 return to the newest message. The unread snapshot is read exactly as it is for an ordinary visit —
 where the reader had got to, not where the link sent them.
 
-### The one notification talk sends
+### What talk notifies
 
-`group_talk_mention` (OpenPNE-4-native, no OpenPNE 3 ancestor) under a new `GroupTalk` category, with
-a configurable `group-talk-mention` mail template. There is deliberately **no per-message broadcast**:
-a chat that notified on every line would empty the feed of meaning, so the room's unread badge carries
-that job instead.
+Two kinds, both OpenPNE-4-native (no OpenPNE 3 ancestor) under the `GroupTalk` category, each with a
+configurable mail template.
+
+**`group_talk_mention`** — sent by every site, in-request, to the members a message named.
+
+**`group_talk_new_message`** — one notification per message to the whole room, sent only where an
+administrator asked for it: `group_talk_notify_default` (**Talk settings**, read through
+[`GroupTalkNotifyDefault`](../../app/Features/GroupTalk/GroupTalkNotifyDefault.php)) is the kind's
+**web** default, and its mail default is off whatever the site says. A member's own row overrides
+both, and for this kind a row is an override rather than a copy of the default
+([notifications.md](notifications.md#the-per-member-catalog)). The audience
+([`GroupTalkBroadcastRecipients`](../../app/Features/GroupTalk/Queries/GroupTalkBroadcastRecipients.php))
+is the room minus the author, banned members, blocks, the members the message mentioned — they are
+getting the mention instead — and **anyone who muted the room**. On a mentions-only site with nobody
+opted in, the queued job exits on two indexed probes without touching the membership.
 
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php)
 answers who may receive one: a current group member, not banned, still able to read the group, with no
 block in either direction with the author, and never the author. It is asked **twice** — when the
-listener enqueues and again in `shouldSend()` immediately before each channel — because a mention mail
+sender enqueues and again in `shouldSend()` immediately before each channel — because a talk mail
 carries the message body and a queued job can outlive the facts it was enqueued under
 ([notifications.md](notifications.md#delivery-time-re-checks)).
 
-Two asymmetries are deliberate:
+Three asymmetries are deliberate:
 
-- **Mute does not gate a mention.** `is_talk_muted` silences the room's badge; being named is
-  addressed to one person and outranks having asked the room for quiet. A member who wants no mention
-  mail turns the catalog kind off, which is a different question and is honoured.
-- **Blocking does gate it**, though talk history does not filter by block at all. History is the
+- **Mute does not gate a mention, and does gate the broadcast.** `is_talk_muted` silences the room's
+  badge; being named is addressed to one person and outranks having asked the room for quiet, while a
+  message addressed to the room is exactly what the quiet answers. A member who wants no mention mail
+  turns the catalog kind off, which is a different question and is honoured.
+- **Blocking gates both**, though talk history does not filter by block at all. History is the
   record of what was said; a notification is putting two people in front of each other, which is
   exactly what a block refuses.
+- **An already-read message is not broadcast.** `BroadcastGroupMessagePosted` is dispatched with a
+  `GRACE_SECONDS` delay so a member sitting in the room marks it read first, and the job then drops
+  anyone whose cursor has passed it (`TalkReadCursor::isBehind`, the same tuple `advance()` moves).
+  It is a **race, not a guarantee**: a read landing after the check still leaves the notification sent.
+
+**One feed row per room.** The broadcast writes the room's row, not the message's: once the new row is
+written, [`KeepOneGroupTalkRoomRow`](../../app/Listeners/GroupTalk/KeepOneGroupTalkRoomRow.php) deletes
+the room's other rows of that kind, read ones included, so the feed holds one line per conversation
+however much is said in it while the device is still nudged for each message (push follows the
+`database` send). Reading the room marks that row read — every path through
+[`MarkTalkRead`](../../app/Features/GroupTalk/Actions/MarkTalkRead.php), the page's report, the digest
+catch-up and MCP alike, plus posting into the room — so on an `all` site the bell and the rooms badge
+light and clear together. Deleting only after the insert is what makes a lost listener or a vetoed
+send harmless; two messages landing at once can briefly leave two rows, and the next one settles it.
 
 An author who withdraws before delivery takes the queued notification with them
 (`deleteWhenMissingModels`): "Withdrawn member mentioned you" is a notification nobody can act on.
@@ -732,7 +759,9 @@ role once per request and the serializer asks it per row.
 8. No body is ever parsed for `@`. Two producers write mention rows and no third may appear: the
    composer's picker, and the MCP reply, where the server itself builds the prefix and its range.
    What a producer may name and what the write will accept are the same set, by construction.
-9. A mention pierces mute; a block stops it. Talk history does neither, and neither do its images.
+9. A mention pierces mute; the per-message broadcast does not, and a block stops both. Talk history
+   does neither, and neither do its images. At most one broadcast row per room stands at a time, and
+   reading the room reads it.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.

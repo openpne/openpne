@@ -99,6 +99,7 @@ class NotificationKindTest extends TestCase
                 NotificationKind::GroupEventReplyNewPost,
                 NotificationKind::GroupEventRelatedNewPost,
                 NotificationKind::GroupTalkMention,
+                NotificationKind::GroupTalkNewMessage,
                 NotificationKind::FriendLinkConfirm,
                 NotificationKind::FriendLinkComplete,
                 NotificationKind::DirectMessageNew,
@@ -108,13 +109,29 @@ class NotificationKindTest extends TestCase
         );
     }
 
-    public function test_every_kind_defaults_enabled(): void
+    public function test_every_kind_without_a_site_default_defaults_enabled(): void
     {
         // Imported kinds must default on (an absent source key meant enabled); flipping one is a
         // deliberate one-arm change, never an accident.
         foreach (NotificationKind::cases() as $kind) {
-            $this->assertTrue($kind->defaultEnabled(), "{$kind->value} should default on");
+            if ($kind->hasSiteDefault()) {
+                continue;
+            }
+
+            foreach (NotificationChannel::cases() as $channel) {
+                $this->assertTrue($kind->defaultEnabled($channel), "{$kind->value} should default on for {$channel->value}");
+            }
         }
+    }
+
+    public function test_the_talk_broadcast_is_the_only_kind_whose_default_is_a_site_setting(): void
+    {
+        $withSiteDefault = array_values(array_filter(
+            NotificationKind::cases(),
+            static fn (NotificationKind $kind): bool => $kind->hasSiteDefault(),
+        ));
+
+        $this->assertSame([NotificationKind::GroupTalkNewMessage], $withSiteDefault);
     }
 
     public function test_every_kind_has_a_caption_source_string(): void

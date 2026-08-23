@@ -116,7 +116,7 @@ class NotificationFeedSerializer
             'group_joined' => $data['new_member_id'] ?? null,
             'group_admin_transfer_requested' => $data['requester_id'] ?? null,
             'group_sub_admin_appointed' => $data['appointer_id'] ?? null,
-            'diary_posted', 'group_talk_mention', 'group_topic_posted', 'group_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
+            'diary_posted', 'group_talk_mention', 'group_talk_new_message', 'group_topic_posted', 'group_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
             default => null,
         };
     }
@@ -142,6 +142,7 @@ class NotificationFeedSerializer
             'group_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'group_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
             'group_talk_mention' => self::groupTalkUrl($row, $data['message_id'] ?? null),
+            'group_talk_new_message' => self::groupTalkRoomUrl($row, $data['group_id'] ?? null),
             'timeline_mentioned', 'timeline_posted', 'timeline_replied' => self::timelineUrl($row, $data['post_id'] ?? null),
             default => null,
         };
@@ -272,6 +273,27 @@ class NotificationFeedSerializer
 
         return $viewer !== null && $group !== null && GroupTalkAccess::canView($group, $viewer)
             ? '/groups/'.$group->getKey().'/talk?m='.$message->getKey()
+            : null;
+    }
+
+    /**
+     * The room itself, with no `?m=`: the row stands for everything said there since the member last
+     * looked, and talk opens on the unread boundary, which is where they want to arrive.
+     *
+     * Re-checked at click time like every other target: the group may have dissolved, or the reader
+     * may have left a members-only one since.
+     */
+    private static function groupTalkRoomUrl(DatabaseNotification $row, ?int $groupId): ?string
+    {
+        $group = $groupId === null ? null : Group::find($groupId);
+        if ($group === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+
+        return $viewer !== null && GroupTalkAccess::canView($group, $viewer)
+            ? '/groups/'.$group->getKey().'/talk'
             : null;
     }
 

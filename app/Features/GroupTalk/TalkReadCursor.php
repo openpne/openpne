@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\DB;
  * counts as read). The message id is a **copied value, not a foreign key**: deleting the message a
  * cursor points at is a no-op, and the count simply falls as the row stops existing.
  *
- * Two operations, and both are total orders on the tuple, never on the timestamp alone — a MySQL
- * timestamp is second-precise, so `created_at` by itself cannot separate two messages in one second.
+ * Moving the cursor and asking whether it is behind a message compare the same tuple (whereBehind),
+ * never the timestamp alone — a MySQL timestamp is second-precise, so `created_at` by itself cannot
+ * separate two messages in one second.
  */
 final class TalkReadCursor
 {
@@ -63,13 +64,36 @@ final class TalkReadCursor
      */
     public static function advance(int $groupId, int $memberId, CarbonImmutable $at, int $messageId): bool
     {
-        return self::membership($groupId, $memberId)
-            ->where(fn (Builder $behind) => $behind
-                ->where('talk_read_at', '<', $at)
-                ->orWhere(fn (Builder $tie) => $tie
-                    ->where('talk_read_at', '=', $at)
-                    ->where('talk_read_message_id', '<', $messageId)))
+        return self::whereBehind(self::membership($groupId, $memberId), $at, $messageId)
             ->update(['talk_read_at' => $at, 'talk_read_message_id' => $messageId]) > 0;
+    }
+
+    /**
+     * Whether the member's cursor still sits before $at/$messageId — "they have not read this yet".
+     *
+     * The same tuple comparison advance() moves on, so what counts as read here and what a read
+     * leaves behind are one rule rather than two that can drift apart. A member with no membership
+     * row has no cursor, and so is not behind anything.
+     */
+    public static function isBehind(int $groupId, int $memberId, CarbonImmutable $at, int $messageId): bool
+    {
+        return self::whereBehind(self::membership($groupId, $memberId), $at, $messageId)->exists();
+    }
+
+    /**
+     * Narrow to the membership rows whose cursor is strictly before the $at/$messageId tuple. Written
+     * out rather than as a row constructor (SQLite has none), and comparing the timestamp alone would
+     * not separate two messages written in the same second.
+     *
+     * @param  Builder  $membership  the membership query to narrow
+     */
+    private static function whereBehind(Builder $membership, CarbonImmutable $at, int $messageId): Builder
+    {
+        return $membership->where(fn (Builder $behind) => $behind
+            ->where('talk_read_at', '<', $at)
+            ->orWhere(fn (Builder $tie) => $tie
+                ->where('talk_read_at', '=', $at)
+                ->where('talk_read_message_id', '<', $messageId)));
     }
 
     /** Whether the member holds a membership in this group — the row the cursor lives on. */

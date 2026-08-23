@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Features\GroupTalk\GroupTalkNotifyMode;
 use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -171,6 +172,24 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame('standard', $key->encode([Look::Standard]));
         // A crafted post can nest an array where an id belongs; it drops instead of fatalling.
         $this->assertSame([], $key->coerce([['unified']]));
+    }
+
+    public function test_the_talk_notification_default_is_mentions_until_an_operator_opts_in(): void
+    {
+        $key = SnsSettingKey::GroupTalkNotifyDefault;
+
+        $this->assertSame(SettingGroup::GroupTalk, $key->group());
+        // OpenPNE 3 had no group chat, so there is nothing to carry over.
+        $this->assertNull($key->op3SourceName());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertFalse($key->isRequired());
+        $this->assertSame(GroupTalkNotifyMode::Mentions->value, $key->default());
+
+        // Stored as the plain backing value, like RegistrationMode. What an unreadable one means is
+        // GroupTalkNotifyDefault's to answer (the quieter mode), not the codec's to guess.
+        $this->assertSame('all', $key->encode($key->coerce(' all ')));
+        $this->assertSame('all', $key->decode('all'));
+        $this->assertSame(GroupTalkNotifyMode::Mentions->value, $key->decode(null));
     }
 
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void

@@ -30,6 +30,7 @@ enum MailTemplate: string
     case TimelineMentionNotified = 'timeline-mention';
 
     case GroupTalkMentionNotified = 'group-talk-mention';
+    case GroupTalkMessageNotified = 'group-talk-message';
     case TimelinePostingNotified = 'timeline-posting';
     case GroupPostingNotified = 'group-posting';
     case GroupJoinNotice = 'group-join';
@@ -170,6 +171,18 @@ enum MailTemplate: string
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     // The conversation, opened on the message that named them (group-talk.md); talk
                     // has no screen for one message to link to instead.
+                    'url' => ['help' => 'The %community% talk URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::GroupTalkMessageNotified => new MailTemplateDefinition(
+                // OpenPNE-4-only, like the mention above: OpenPNE 3 had no group chat.
+                op3SourceName: null,
+                isConfigurable: true,
+                caption: 'New %community% talk message',
+                variables: [
+                    'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    'community_name' => ['help' => 'The %community% the message was posted in.', 'sample' => 'Example %community%'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %community% talk URL.', 'sample' => 'https://example.test'],
                 ],
             ),

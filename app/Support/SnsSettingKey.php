@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Features\GroupTalk\GroupTalkNotifyMode;
+
 /**
  * The closed registry of global, site-wide SNS settings kept in `sns_settings`.
  *
@@ -187,6 +189,14 @@ enum SnsSettingKey: string
     case SelectableLooks = 'selectable_looks';
 
     /**
+     * How much of a group's talk this site notifies about by default
+     * (App\Features\GroupTalk\GroupTalkNotifyMode value): mentions|all. It is the web default of the
+     * `group_talk_new_message` catalog kind, which a member's own row overrides
+     * (docs/internals/notifications.md).
+     */
+    case GroupTalkNotifyDefault = 'group_talk_notify_default';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -215,6 +225,7 @@ enum SnsSettingKey: string
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
             self::DefaultLook, self::SelectableLooks => SettingGroup::Look,
+            self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
         };
     }
 
@@ -270,6 +281,8 @@ enum SnsSettingKey: string
             self::UserAgreement, self::PrivacyPolicy => $this->value,
             // OpenPNE 4-native: OpenPNE 3 had no Modern surface to lay out.
             self::DefaultLook, self::SelectableLooks => null,
+            // OpenPNE 4-native: OpenPNE 3 had no group chat to notify about.
+            self::GroupTalkNotifyDefault => null,
         };
     }
 
@@ -291,7 +304,10 @@ enum SnsSettingKey: string
             // accounts likewise: nothing in an OpenPNE 3 site says whether this one should offer them.
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             // The look is a choice about this site's Modern surface, which OpenPNE 3 had none of.
-            SettingGroup::Ai, SettingGroup::Look => false,
+            SettingGroup::Ai, SettingGroup::Look,
+            // How loud this site's chat is belongs to the people running it, and OpenPNE 3 had no
+            // chat to have decided it.
+            SettingGroup::GroupTalk => false,
         };
     }
 
@@ -354,6 +370,9 @@ enum SnsSettingKey: string
             // Nothing on offer until an operator ticks a look: the site runs on its default alone,
             // and the member config page shows no layout section.
             self::SelectableLooks => [],
+            // The quiet end: an OSS site notifies about being named and nothing else until an
+            // operator asks for more.
+            self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
         };
     }
 
@@ -495,6 +514,7 @@ enum SnsSettingKey: string
             self::LoginMessage => __('Login screen message'),
             self::UserAgreement => __('Terms of service'),
             self::PrivacyPolicy => __('Privacy policy'),
+            self::GroupTalkNotifyDefault => __('Talk notification default'),
             self::DefaultLook => __('Default UI layout'),
             self::SelectableLooks => __('Selectable UI layouts'),
         };
@@ -514,7 +534,8 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
-            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks => false,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
+            self::GroupTalkNotifyDefault => false,
         };
     }
 
