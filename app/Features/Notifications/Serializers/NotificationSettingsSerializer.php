@@ -15,7 +15,7 @@ use App\Notifications\Settings\NotificationKind;
 class NotificationSettingsSerializer
 {
     /**
-     * @return array{groups: list<array{key: string, caption: string, kinds: list<array{kind: string, caption: string, dependOnNot: ?string, web: bool, mail: bool}>}>}
+     * @return array{groups: list<array{key: string, caption: string, kinds: list<array{kind: string, caption: string, dependOnNot: ?string, web: bool, mail: bool, siteDefault: array{web: bool, mail: bool}}>}>}
      */
     public static function form(Member $viewer): array
     {
@@ -40,9 +40,30 @@ class NotificationSettingsSerializer
                 'dependOnNot' => $kind->dependOnNot()?->value,
                 'web' => $viewer->wantsNotification($kind, NotificationChannel::Web),
                 'mail' => $viewer->wantsNotification($kind, NotificationChannel::Mail),
+                'siteDefault' => self::siteDefault($viewer, $kind),
             ];
         }
 
         return ['groups' => array_values($groups)];
+    }
+
+    /**
+     * Whether the value shown on each channel is the site's rather than the member's own — what the
+     * surfaces label "(default)". Only a kind whose default is an admin setting can be inherited at
+     * all (NotificationKind::hasSiteDefault); for every other kind the shown value is the member's
+     * either way, since an absent row there means a default nobody can move.
+     *
+     * @return array{web: bool, mail: bool}
+     */
+    private static function siteDefault(Member $viewer, NotificationKind $kind): array
+    {
+        if (! $kind->hasSiteDefault()) {
+            return ['web' => false, 'mail' => false];
+        }
+
+        return [
+            'web' => ! $viewer->hasNotificationSetting($kind, NotificationChannel::Web),
+            'mail' => ! $viewer->hasNotificationSetting($kind, NotificationChannel::Mail),
+        ];
     }
 }

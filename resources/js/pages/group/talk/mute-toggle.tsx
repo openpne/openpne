@@ -5,6 +5,9 @@ import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { requestUnreadRefresh } from '@/lib/unread-refresh';
 
+/** How long the unmute line stays before the control speaks for itself again. */
+const UNMUTED_MS = 3000;
+
 /**
  * Per-group quiet, sitting above the conversation as a small text action rather than in the page
  * heading — the heading is the chrome's, shared by every group subpage.
@@ -13,11 +16,19 @@ import { requestUnreadRefresh } from '@/lib/unread-refresh';
  * On success the page reloads only this prop and rings the shell: the nav badge and the sidebar row
  * for this room are the shell's, and quiet changes both — so its own refresh is what corrects them,
  * rather than this page patching props it does not own (lib/unread-refresh.ts).
+ *
+ * Muting states what it did and what it did not: what stops and what still arrives is the one thing
+ * every product that ships this control writes down, because a member cannot otherwise tell a mute
+ * that is working from one that never had anything to stop. It stays for as long as the mute does —
+ * it is the room's state, not an acknowledgement — and is the button's description. Unmuting leaves
+ * no state to read, so it gets a spoken line instead.
  */
 export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boolean }) {
     const t = useT();
     const [saving, setSaving] = useState(false);
+    const [unmuted, setUnmuted] = useState(false);
     const Icon = muted ? BellOff : Bell;
+    const explainerId = `talk-mute-explainer-${groupId}`;
 
     const toggle = async () => {
         if (saving) {
@@ -35,6 +46,10 @@ export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boo
             if (response.ok) {
                 router.reload({ only: ['isMuted'] });
                 requestUnreadRefresh();
+                if (muted) {
+                    setUnmuted(true);
+                    window.setTimeout(() => setUnmuted(false), UNMUTED_MS);
+                }
             }
         } finally {
             setSaving(false);
@@ -42,17 +57,29 @@ export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boo
     };
 
     return (
-        <div className="flex justify-end">
-            <button
-                type="button"
-                onClick={toggle}
-                disabled={saving}
-                aria-pressed={muted}
-                className="inline-flex items-center gap-1 rounded-md text-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            >
-                <Icon className="size-4" aria-hidden />
-                {muted ? t('Unmute') : t('Mute')}
-            </button>
+        <div className="space-y-1">
+            <div className="flex justify-end">
+                <button
+                    type="button"
+                    onClick={toggle}
+                    disabled={saving}
+                    aria-pressed={muted}
+                    aria-describedby={muted ? explainerId : undefined}
+                    className="inline-flex items-center gap-1 rounded-md text-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                    <Icon className="size-4" aria-hidden />
+                    {muted ? t('Unmute') : t('Mute')}
+                </button>
+            </div>
+            {muted && (
+                <p id={explainerId} className="text-sm text-muted-foreground">
+                    {t('Muted: new-message notifications are off and this %community% is not counted in the badge. You are still notified when mentioned.')}
+                </p>
+            )}
+            {/* In the tree whether or not it has words, so the change is what is announced. */}
+            <p aria-live="polite" className="text-sm text-muted-foreground">
+                {unmuted ? t('Unmuted.') : null}
+            </p>
         </div>
     );
 }

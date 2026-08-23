@@ -94,6 +94,14 @@ deletes the row instead — the stated exception to the invariant below. Without
 (the Classic form posts every kind on every save) would freeze the site default into a row per member and
 the next administrator flip would silently pass them by.
 
+Both surfaces therefore label such a value **"(default)"** while no row backs it (`siteDefault`, from
+[`NotificationSettingsSerializer`](../../app/Features/Notifications/Serializers/NotificationSettingsSerializer.php)),
+so an unticked box reads as the site's answer rather than one the member gave. The talk category also
+lists the rooms they have muted one at a time
+([`MutedTalkRooms`](../../app/Features/GroupTalk/Queries/MutedTalkRooms.php)) — a mute is an exception
+to what these toggles say, and it is otherwise only visible from inside the room
+([group-talk.md](group-talk.md#mute)).
+
 Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only
 **wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. A kind with no
 `op3Name` is native to OpenPNE 4: there is no stored choice to import, so `importableCases()`

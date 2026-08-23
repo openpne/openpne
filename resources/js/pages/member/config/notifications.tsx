@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useState } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioCardGroup } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { RadioPill } from '@/components/ui/radio-pill';
+import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { currentSubscription, isIosNotInstalled, permissionState, subscribeThisDevice, unsubscribeThisDevice } from '@/lib/push';
+import { requestUnreadRefresh } from '@/lib/unread-refresh';
 import type { PageProps } from '@/types';
 
 interface KindRow {
@@ -16,6 +18,8 @@ interface KindRow {
     dependOnNot: string | null;
     web: boolean;
     mail: boolean;
+    /** Per channel: the shown value is the site's default, not a choice this member made. */
+    siteDefault: Record<Channel, boolean>;
 }
 
 interface Group {
@@ -24,8 +28,14 @@ interface Group {
     kinds: KindRow[];
 }
 
+interface MutedRoom {
+    id: number;
+    name: string;
+}
+
 interface NotificationsProps extends PageProps {
     form: { groups: Group[] };
+    mutedRooms: MutedRoom[];
     pushSettings: { enabled: boolean };
 }
 
@@ -33,6 +43,9 @@ type Channel = 'web' | 'mail';
 type TriState = 'all' | 'friends' | 'off';
 
 const CHANNELS: Channel[] = ['web', 'mail'];
+
+/** The category whose settings a per-room mute is an exception to. */
+const TALK_GROUP = 'group_talk';
 
 /**
  * Push: a global pause switch (instant-saved like the catalog toggles) plus this-device
@@ -156,6 +169,63 @@ function PushSection() {
     );
 }
 
+/**
+ * The rooms quieted one at a time, listed under the settings they are the exceptions to — otherwise
+ * a mute set months ago in one room is only discoverable by opening that room.
+ *
+ * Unmuting here is the same POST the room's own toggle makes, so the two can never disagree, and it
+ * rings the shell for the badges that change with it (lib/unread-refresh.ts).
+ */
+function MutedRoomsSection() {
+    const t = useT();
+    const { mutedRooms } = usePage<NotificationsProps>().props;
+    const [unmuting, setUnmuting] = useState<number | null>(null);
+
+    if (mutedRooms.length === 0) {
+        return null;
+    }
+
+    const unmute = async (groupId: number) => {
+        if (unmuting !== null) {
+            return;
+        }
+        setUnmuting(groupId);
+        try {
+            const response = await fetch(`/groups/${groupId}/talk/mute`, {
+                method: 'POST',
+                headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ muted: false }),
+            });
+
+            if (response.ok) {
+                router.reload({ only: ['mutedRooms'] });
+                requestUnreadRefresh();
+            }
+        } finally {
+            setUnmuting(null);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <Heading as="h3" variant="minor">{t('Muted %communities%')}</Heading>
+            <ul className="space-y-2">
+                {mutedRooms.map((room) => (
+                    <li key={room.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                        <Link href={`/groups/${room.id}/talk`} className="text-sm text-link hover:underline">
+                            {room.name}
+                        </Link>
+                        <Button variant="outline" size="sm" loading={unmuting === room.id} onClick={() => void unmute(room.id)}>
+                            {t('Unmute')}
+                        </Button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 /** Notification catalog opt-ins: instant per-toggle saves; the page re-renders from server truth. */
 export default function NotificationSettings() {
     const t = useT();
@@ -198,6 +268,11 @@ export default function NotificationSettings() {
                     return (
                         <section key={group.key} className="space-y-4">
                             <Heading as="h2" variant="section" className="border-b border-border pb-2">{group.caption}</Heading>
+                            {group.key === TALK_GROUP && (
+                                <p className="text-sm text-muted-foreground">
+                                    {t('Applies to every %community% you belong to. To quiet one %community%, use Mute on its talk screen.')}
+                                </p>
+                            )}
                             {singles.map((kind) => (
                                 <div key={kind.kind} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
                                     <span className="text-sm text-foreground">{kind.caption}</span>
@@ -211,6 +286,9 @@ export default function NotificationSettings() {
                                                 />
                                                 <span className="sr-only">{kind.caption} — </span>
                                                 {channelLabel[channel]}
+                                                {kind.siteDefault[channel] && (
+                                                    <span className="text-muted-foreground">{t('(default)')}</span>
+                                                )}
                                             </label>
                                         ))}
                                     </span>
@@ -251,6 +329,7 @@ export default function NotificationSettings() {
                                     })}
                                 </div>
                             )}
+                            {group.key === TALK_GROUP && <MutedRoomsSection />}
                         </section>
                     );
                 })}

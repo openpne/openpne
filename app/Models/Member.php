@@ -304,10 +304,23 @@ class Member extends Authenticatable
      */
     public function wantsNotification(NotificationKind $kind, NotificationChannel $channel): bool
     {
-        $setting = $this->notificationSettings
-            ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
+        return $this->notificationSetting($kind, $channel)?->is_enabled ?? $kind->defaultEnabled($channel);
+    }
 
-        return $setting?->is_enabled ?? $kind->defaultEnabled($channel);
+    /**
+     * Whether the value wantsNotification() answers with is this member's own rather than the kind's
+     * default. Only a kind whose default can move under them (NotificationKind::hasSiteDefault) makes
+     * the distinction worth showing.
+     */
+    public function hasNotificationSetting(NotificationKind $kind, NotificationChannel $channel): bool
+    {
+        return $this->notificationSetting($kind, $channel) !== null;
+    }
+
+    private function notificationSetting(NotificationKind $kind, NotificationChannel $channel): ?MemberNotificationSetting
+    {
+        return $this->notificationSettings
+            ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
     }
 
     /**

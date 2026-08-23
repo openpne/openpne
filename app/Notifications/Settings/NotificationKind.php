@@ -177,10 +177,12 @@ enum NotificationKind: string
                 isWired: true,
             ),
             // OpenPNE-4-native: OpenPNE 3 had no group chat, so there is no stored preference to
-            // carry over and no op3Name. The only thing talk notifies about is being named.
+            // carry over and no op3Name. The caption states that mute does not gate this kind, since
+            // the control that would suggest otherwise lives on a different screen
+            // (docs/internals/group-talk.md#what-talk-notifies).
             self::GroupTalkMention => new NotificationKindDefinition(
                 category: NotificationCategory::GroupTalk,
-                caption: 'When you are mentioned in a %community% talk message',
+                caption: 'When you are mentioned in a %community% talk message (delivered even while the %community% is muted)',
                 isWired: true,
             ),
             // Off unless the site says otherwise: its web default is the admin's
