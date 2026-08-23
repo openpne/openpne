@@ -35,8 +35,8 @@ interface FeedProps extends PageProps {
     feed: { data: FeedItem[]; meta: PaginationMeta };
 }
 
-/** The per-event notification feed. Opening a row (a POST, so nothing prefetches it into "read")
- *  marks it read and lands on what it is about — and so does reaching that target any other way;
+/** The per-event notification feed. Opening a row (a POST) marks it read and lands on what it is
+ *  about — and so does reaching that target any other way, a GET included (docs/internals/notifications.md);
  *  the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
