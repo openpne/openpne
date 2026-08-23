@@ -36,7 +36,8 @@ interface FeedProps extends PageProps {
 }
 
 /** The per-event notification feed. Opening a row (a POST, so nothing prefetches it into "read")
- *  marks it read and lands on what it is about; the page itself never marks anything. */
+ *  marks it read and lands on what it is about — and so does reaching that target any other way;
+ *  the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
     const { feed, unread } = usePage<FeedProps>().props;

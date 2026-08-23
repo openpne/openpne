@@ -6,14 +6,20 @@ use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Features\GroupTalk\GroupTalkRoomNotificationRows;
 use App\Features\GroupTalk\TalkReadCursor;
+use App\Features\Notifications\ConsumeNotificationRows;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
+use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use Carbon\CarbonImmutable;
+use Illuminate\Notifications\DatabaseNotification;
 
 class MarkTalkRead
 {
-    public function __construct(private readonly GroupTalkRoomNotificationRows $rows) {}
+    public function __construct(
+        private readonly GroupTalkRoomNotificationRows $rows,
+        private readonly ConsumeNotificationRows $feedRows,
+    ) {}
 
     /**
      * Record that the member has read as far as $messageId — or, with no id, as far as the
@@ -58,22 +64,67 @@ class MarkTalkRead
             // cannot pull the cursor back over messages already marked read.
             $latest = TalkReadCursor::snapshot($groupId);
             TalkReadCursor::advance($groupId, $memberId, $latest['talk_read_at'], $latest['talk_read_message_id']);
+        } else {
+            // Live row of THIS group: a deleted message, or one belonging to another conversation,
+            // resolves to no tuple at all rather than to someone else's clock.
+            $message = GroupMessage::query()
+                ->where('group_id', $groupId)
+                ->whereKey($messageId)
+                ->first(['id', 'created_at']);
 
+            if ($message === null) {
+                throw new GroupTalkActionException(GroupTalkActionFailure::UnknownMessage);
+            }
+
+            // Forward only, so replaying an older id — a retry, a second tab a page behind — is a no-op.
+            TalkReadCursor::advance($groupId, $memberId, CarbonImmutable::instance($message->created_at), (int) $message->getKey());
+        }
+
+        $this->markMentionsRead($groupId, $memberId);
+    }
+
+    /**
+     * Spend the feed rows for the mentions the cursor has now reached. A mention is one person's, so
+     * the room's own row is not the rule for it: being in the room is not having read what was said
+     * above where the reader stopped.
+     *
+     * The position is read back from the membership rather than taken from this call, since the
+     * advance is forward-only and may have moved nothing. A message deleted since has no position to
+     * compare and keeps its row for the feed's own mark-read.
+     */
+    private function markMentionsRead(int $groupId, int $memberId): void
+    {
+        $rows = $this->feedRows->unreadRows($memberId, GroupTalkMentionedNotification::class)
+            ->filter(static fn (DatabaseNotification $row): bool => (int) ($row->data['group_id'] ?? 0) === $groupId);
+
+        if ($rows->isEmpty()) {
             return;
         }
 
-        // Live row of THIS group: a deleted message, or one belonging to another conversation,
-        // resolves to no tuple at all rather than to someone else's clock.
-        $message = GroupMessage::query()
-            ->where('group_id', $groupId)
-            ->whereKey($messageId)
-            ->first(['id', 'created_at']);
+        $messages = GroupMessage::query()
+            ->whereKey($rows->map(self::mentionedMessageId(...))->all())
+            ->get(['id', 'created_at'])
+            ->keyBy(static fn (GroupMessage $message): int => (int) $message->getKey());
 
-        if ($message === null) {
-            throw new GroupTalkActionException(GroupTalkActionFailure::UnknownMessage);
-        }
+        $ids = $rows
+            ->filter(static function (DatabaseNotification $row) use ($messages, $groupId, $memberId): bool {
+                $message = $messages->get(self::mentionedMessageId($row));
 
-        // Forward only, so replaying an older id — a retry, a second tab a page behind — is a no-op.
-        TalkReadCursor::advance($groupId, $memberId, CarbonImmutable::instance($message->created_at), (int) $message->getKey());
+                return $message !== null && ! TalkReadCursor::isBehind(
+                    $groupId,
+                    $memberId,
+                    CarbonImmutable::instance($message->created_at),
+                    (int) $message->getKey(),
+                );
+            })
+            ->map(static fn (DatabaseNotification $row): string => $row->getKey())
+            ->all();
+
+        $this->feedRows->markRead(...$ids);
+    }
+
+    private static function mentionedMessageId(DatabaseNotification $row): int
+    {
+        return (int) ($row->data['message_id'] ?? 0);
     }
 }

@@ -27,7 +27,7 @@ class AcceptFriendRequestTest extends TestCase
             'target_id' => $bob->getKey(),
         ]);
 
-        (new AcceptFriendRequest)($bob, $alice);
+        app(AcceptFriendRequest::class)($bob, $alice);
 
         $this->assertDatabaseCount('friend_requests', 0);
         $this->assertDatabaseHas('friendships', ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey()]);
@@ -41,7 +41,7 @@ class AcceptFriendRequestTest extends TestCase
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
 
         try {
-            (new AcceptFriendRequest)($bob, $alice);
+            app(AcceptFriendRequest::class)($bob, $alice);
             $this->fail('expected FriendActionException');
         } catch (FriendActionException $e) {
             $this->assertSame(FriendActionFailure::RequestNotFound, $e->reason);
@@ -59,7 +59,7 @@ class AcceptFriendRequestTest extends TestCase
         (new SendFriendRequest)($bob, $alice); // auto-accepts, deletes the pending row
 
         try {
-            (new AcceptFriendRequest)($bob, $alice);
+            app(AcceptFriendRequest::class)($bob, $alice);
             $this->fail('expected FriendActionException');
         } catch (FriendActionException $e) {
             $this->assertSame(FriendActionFailure::RequestNotFound, $e->reason);
@@ -85,7 +85,7 @@ class AcceptFriendRequestTest extends TestCase
         $this->expectException(QueryException::class);
 
         try {
-            (new AcceptFriendRequest)($bob, $alice);
+            app(AcceptFriendRequest::class)($bob, $alice);
         } finally {
             $this->assertDatabaseHas('friend_requests', [
                 'requester_id' => $alice->getKey(),
@@ -110,7 +110,7 @@ class AcceptFriendRequestTest extends TestCase
         ]);
 
         try {
-            (new AcceptFriendRequest)($bob, $alice);
+            app(AcceptFriendRequest::class)($bob, $alice);
             $this->fail('expected FriendActionException');
         } catch (FriendActionException $e) {
             $this->assertSame(FriendActionFailure::Blocked, $e->reason);

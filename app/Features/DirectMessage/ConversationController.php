@@ -136,14 +136,14 @@ class ConversationController extends Controller
      * "I have read this conversation as far as this message." Fire-and-forget from the reader's
      * side: it carries no body back, and the shell's own refresh is what moves the badge.
      */
-    public function read(MarkConversationReadRequest $request, Member $member, MarkConversationRead $action): Response
+    public function read(MarkConversationReadRequest $request, Member $member, MarkConversationRead $action, DirectMessageNotificationRows $feedRows): Response
     {
-        return $this->markRead($request, $this->counterpart($member), $action);
+        return $this->markRead($request, $this->counterpart($member), $action, $feedRows);
     }
 
-    public function readWithdrawn(MarkConversationReadRequest $request, MarkConversationRead $action): Response
+    public function readWithdrawn(MarkConversationReadRequest $request, MarkConversationRead $action, DirectMessageNotificationRows $feedRows): Response
     {
-        return $this->markRead($request, null, $action);
+        return $this->markRead($request, null, $action, $feedRows);
     }
 
     /**
@@ -220,7 +220,7 @@ class ConversationController extends Controller
         return redirect()->route('message.chat.index')->with('status', __('Deleted the conversation.'));
     }
 
-    private function markRead(MarkConversationReadRequest $request, ?Member $counterpart, MarkConversationRead $action): Response
+    private function markRead(MarkConversationReadRequest $request, ?Member $counterpart, MarkConversationRead $action, DirectMessageNotificationRows $feedRows): Response
     {
         try {
             $action($this->viewer(), $counterpart, (int) $request->validated('messageId'));
@@ -229,6 +229,8 @@ class ConversationController extends Controller
             // race, and so is a stale id from another conversation; neither is worth its own answer.
             abort(404);
         }
+
+        $feedRows->markReadFor($this->viewer());
 
         return response()->noContent();
     }

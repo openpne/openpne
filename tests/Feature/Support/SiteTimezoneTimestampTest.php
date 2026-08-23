@@ -53,7 +53,7 @@ class SiteTimezoneTimestampTest extends TestCase
             'created_at' => now(),
         ]);
 
-        (new AcceptFriendRequest)($bob, $alice);
+        app(AcceptFriendRequest::class)($bob, $alice);
 
         $this->assertStampedByApp('friendships', 2);
     }
