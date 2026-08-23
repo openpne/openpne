@@ -177,10 +177,12 @@ enum NotificationKind: string
                 isWired: true,
             ),
             // OpenPNE-4-native: OpenPNE 3 had no group chat, so there is no stored preference to
-            // carry over and no op3Name. The only thing talk notifies about is being named.
+            // carry over and no op3Name. The caption states that mute does not gate this kind, since
+            // the control that would suggest otherwise lives on a different screen
+            // (docs/internals/group-talk.md#what-talk-notifies).
             self::GroupTalkMention => new NotificationKindDefinition(
                 category: NotificationCategory::GroupTalk,
-                caption: 'When you are mentioned in a %community% talk message',
+                caption: 'When you are mentioned in a %community% talk message (delivered even while the %community% is muted)',
                 isWired: true,
             ),
             // Off unless the site says otherwise: its web default is the admin's
@@ -260,14 +262,16 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether this kind's default comes from an admin setting rather than being fixed. Such a kind
-     * stores a row only as an OVERRIDE: a value equal to the current default is not written, so an
-     * administrator's flip still reaches every member who has not decided otherwise
-     * (Member::setNotificationSetting, docs/internals/notifications.md).
+     * Whether this kind's default on $channel comes from an admin setting rather than being fixed.
+     * Per channel, because the talk broadcast's mail default is fixed off whatever the site says —
+     * only its web channel can move under a member. Such a channel stores a row only as an OVERRIDE:
+     * a value equal to the current default is not written, so an administrator's flip still reaches
+     * every member who has not decided otherwise (Member::setNotificationSetting,
+     * docs/internals/notifications.md).
      */
-    public function hasSiteDefault(): bool
+    public function hasSiteDefault(NotificationChannel $channel): bool
     {
-        return $this === self::GroupTalkNewMessage;
+        return $this === self::GroupTalkNewMessage && $channel === NotificationChannel::Web;
     }
 
     /**

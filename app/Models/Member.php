@@ -304,15 +304,28 @@ class Member extends Authenticatable
      */
     public function wantsNotification(NotificationKind $kind, NotificationChannel $channel): bool
     {
-        $setting = $this->notificationSettings
-            ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
-
-        return $setting?->is_enabled ?? $kind->defaultEnabled($channel);
+        return $this->notificationSetting($kind, $channel)?->is_enabled ?? $kind->defaultEnabled($channel);
     }
 
     /**
-     * Store an explicit opt-in/out for $kind on $channel, even one equal to the default — except for
-     * a kind whose default is a site setting (NotificationKind::hasSiteDefault), where a row is an
+     * Whether the value wantsNotification() answers with is this member's own rather than the kind's
+     * default. Only a channel whose default can move under them (NotificationKind::hasSiteDefault)
+     * makes the distinction worth showing.
+     */
+    public function hasNotificationSetting(NotificationKind $kind, NotificationChannel $channel): bool
+    {
+        return $this->notificationSetting($kind, $channel) !== null;
+    }
+
+    private function notificationSetting(NotificationKind $kind, NotificationChannel $channel): ?MemberNotificationSetting
+    {
+        return $this->notificationSettings
+            ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
+    }
+
+    /**
+     * Store an explicit opt-in/out for $kind on $channel, even one equal to the default — except on a
+     * channel whose default is a site setting (NotificationKind::hasSiteDefault), where a row is an
      * OVERRIDE and a value equal to the current default deletes it instead. The Classic settings form
      * posts every kind on every save, so without that exception the site default would be frozen into
      * a row per member and an administrator's later flip would silently pass them by.
@@ -321,7 +334,7 @@ class Member extends Authenticatable
     {
         $keys = ['kind' => $kind->value, 'channel' => $channel->value];
 
-        if ($kind->hasSiteDefault() && $enabled === $kind->defaultEnabled($channel)) {
+        if ($kind->hasSiteDefault($channel) && $enabled === $kind->defaultEnabled($channel)) {
             $this->notificationSettings()->where($keys)->delete();
         } else {
             $this->notificationSettings()->updateOrCreate($keys, ['is_enabled' => $enabled]);

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Http\Requests\Member\UpdateNotificationSettingsRequest;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
@@ -52,6 +54,7 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('form.groups.4.key', 'group_talk')
                 ->has('form.groups.4.kinds', 2)
                 ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
+                ->where('form.groups.4.kinds.0.caption', __('When you are mentioned in a %community% talk message (delivered even while the %community% is muted)'))
                 // Its web toggle reads the site default, which an OSS install leaves at mentions-only.
                 ->where('form.groups.4.kinds.1.kind', 'group_talk_new_message')
                 ->where('form.groups.4.kinds.1.web', false)
@@ -63,6 +66,47 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('form.groups.6.key', 'direct_message')
                 ->where('form.groups.6.kinds.0.mail', false)
                 ->where('form.groups.6.kinds.1.dependOnNot', 'direct_message_new'),
+            );
+    }
+
+    /**
+     * The "(default)" label's input: true only where the shown value is the site's, which is only
+     * ever a kind whose default an administrator can move.
+     */
+    public function test_the_site_default_flag_marks_an_inherited_value_until_the_member_overrides_it(): void
+    {
+        $member = Member::factory()->create();
+        $member->setNotificationSetting(NotificationKind::GroupTalkNewMessage, NotificationChannel::Web, true);
+
+        $this->actingAs($member)->get('/member/config/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // The overridden channel is the member's own; mail is never the site's to begin with
+                // (its default is fixed off), so it is not labelled either.
+                ->where('form.groups.4.kinds.1.kind', 'group_talk_new_message')
+                ->where('form.groups.4.kinds.1.siteDefault.web', false)
+                ->where('form.groups.4.kinds.1.siteDefault.mail', false)
+                // A kind with no site default is never labelled, row or no row.
+                ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
+                ->where('form.groups.4.kinds.0.siteDefault.web', false)
+                ->where('form.groups.4.kinds.0.siteDefault.mail', false),
+            );
+    }
+
+    public function test_the_modern_page_lists_the_members_muted_rooms(): void
+    {
+        $member = Member::factory()->create();
+        $muted = Group::factory()->create(['name' => 'Anvil']);
+        GroupMember::factory()->create(['group_id' => $muted->getKey(), 'member_id' => $member->getKey(), 'is_talk_muted' => true]);
+        $audible = Group::factory()->create(['name' => 'Bellows']);
+        GroupMember::factory()->create(['group_id' => $audible->getKey(), 'member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get('/member/config/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('mutedRooms', 1)
+                ->where('mutedRooms.0.id', $muted->getKey())
+                ->where('mutedRooms.0.name', 'Anvil'),
             );
     }
 
@@ -187,6 +231,23 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee(NotificationKind::GroupTalkMention->caption())
             // Dormant since the group-talk cutover: registered, but off the page.
             ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
+    }
+
+    public function test_classic_category_page_explains_the_talk_settings_reach_and_lists_the_muted_rooms(): void
+    {
+        $member = Member::factory()->create();
+        $muted = Group::factory()->create(['name' => 'Anvil']);
+        GroupMember::factory()->create(['group_id' => $muted->getKey(), 'member_id' => $member->getKey(), 'is_talk_muted' => true]);
+        $audible = Group::factory()->create(['name' => 'Bellows']);
+        GroupMember::factory()->create(['group_id' => $audible->getKey(), 'member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get('/member/config?category=notification')
+            ->assertOk()
+            ->assertSee(__('Applies to every %community% you belong to. To quiet one %community%, use Mute on its talk screen.'))
+            ->assertSee(__('Muted %communities%'))
+            ->assertSee('Anvil')
+            ->assertSee(route('group.talk.show', ['group' => $muted->getKey()]), false)
+            ->assertDontSee('Bellows');
     }
 
     public function test_legacy_config_notification_url_redirects_to_the_category(): void

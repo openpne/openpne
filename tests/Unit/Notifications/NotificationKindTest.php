@@ -109,16 +109,17 @@ class NotificationKindTest extends TestCase
         );
     }
 
-    public function test_every_kind_without_a_site_default_defaults_enabled(): void
+    public function test_every_kind_defaults_enabled_unless_its_arm_declares_otherwise(): void
     {
         // Imported kinds must default on (an absent source key meant enabled); flipping one is a
-        // deliberate one-arm change, never an accident.
+        // deliberate one-arm change, never an accident. The talk broadcast is that arm — web follows
+        // the site, mail is fixed off — so what this guards is a kind going off WITHOUT declaring it.
         foreach (NotificationKind::cases() as $kind) {
-            if ($kind->hasSiteDefault()) {
-                continue;
-            }
-
             foreach (NotificationChannel::cases() as $channel) {
+                if ($kind === NotificationKind::GroupTalkNewMessage) {
+                    continue;
+                }
+
                 $this->assertTrue($kind->defaultEnabled($channel), "{$kind->value} should default on for {$channel->value}");
             }
         }
@@ -128,10 +129,12 @@ class NotificationKindTest extends TestCase
     {
         $withSiteDefault = array_values(array_filter(
             NotificationKind::cases(),
-            static fn (NotificationKind $kind): bool => $kind->hasSiteDefault(),
+            static fn (NotificationKind $kind): bool => $kind->hasSiteDefault(NotificationChannel::Web) || $kind->hasSiteDefault(NotificationChannel::Mail),
         ));
 
         $this->assertSame([NotificationKind::GroupTalkNewMessage], $withSiteDefault);
+        // Its mail default is fixed off, so that channel is nobody's to inherit from.
+        $this->assertFalse(NotificationKind::GroupTalkNewMessage->hasSiteDefault(NotificationChannel::Mail));
     }
 
     public function test_every_kind_has_a_caption_source_string(): void
