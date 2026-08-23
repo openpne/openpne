@@ -324,6 +324,12 @@ Mentions **pierce mute** — a message addressed to you outranks the room's quie
 [Mentions](#mentions) below. The per-message broadcast does not: muting takes the room out of it
 ([What talk notifies](#what-talk-notifies)).
 
+While it is on, the room says so: a line under the toggle (its `aria-describedby`) states that the
+broadcast is off and the room is out of the badge, and that a mention still arrives. It lasts as long
+as the mute does, so muting is its own confirmation; unmuting leaves nothing to read and gets a
+spoken line instead. The member's mutes are also listed together on the notification settings page
+([notifications.md](notifications.md#the-per-member-catalog)).
+
 ## The joined-group list is a room list
 
 `/groups/mine` serves two shapes from one component and the server names which one it sent (`view`).

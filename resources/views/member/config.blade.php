@@ -128,6 +128,11 @@
                     <table>
                         @foreach ($notificationGroups as $group)
                             <tr><th colspan="2">{{ $group['caption'] }}</th></tr>
+                            @if ($group['key'] === 'group_talk')
+                                <tr>
+                                    <td colspan="2">{{ __('Applies to every %community% you belong to. To quiet one %community%, use Mute on its talk screen.') }}</td>
+                                </tr>
+                            @endif
                             @foreach ($group['kinds'] as $kind)
                                 <tr>
                                     <th>{{ $kind['caption'] }}</th>
@@ -136,15 +141,31 @@
                                             <input type="hidden" name="settings[{{ $kind['kind'] }}][web]" value="0">
                                             <input type="checkbox" name="settings[{{ $kind['kind'] }}][web]" value="1" @checked($kind['web'])>
                                             {{ __('In-app notifications') }}
+                                            @if ($kind['siteDefault']['web']) {{ __('(default)') }} @endif
                                         </label>
                                         <label>
                                             <input type="hidden" name="settings[{{ $kind['kind'] }}][mail]" value="0">
                                             <input type="checkbox" name="settings[{{ $kind['kind'] }}][mail]" value="1" @checked($kind['mail'])>
                                             {{ __('Email notifications') }}
+                                            @if ($kind['siteDefault']['mail']) {{ __('(default)') }} @endif
                                         </label>
                                     </td>
                                 </tr>
                             @endforeach
+                            {{-- The rooms quieted one at a time, where the settings they are the exceptions to
+                                 are. Unmuting stays on the talk screen, which is where the control lives. --}}
+                            @if ($group['key'] === 'group_talk' && count($mutedTalkRooms) > 0)
+                                <tr>
+                                    <th>{{ __('Muted %communities%') }}</th>
+                                    <td>
+                                        <ul>
+                                            @foreach ($mutedTalkRooms as $room)
+                                                <li><a href="{{ route('group.talk.show', ['group' => $room['id']]) }}">{{ $room['name'] }}</a></li>
+                                            @endforeach
+                                        </ul>
+                                    </td>
+                                </tr>
+                            @endif
                         @endforeach
                     </table>
                     @error('settings')<p class="error">{{ $message }}</p>@enderror

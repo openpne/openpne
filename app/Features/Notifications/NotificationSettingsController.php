@@ -2,6 +2,7 @@
 
 namespace App\Features\Notifications;
 
+use App\Features\GroupTalk\Queries\MutedTalkRooms;
 use App\Features\Member\MemberConfigCategory;
 use App\Features\Notifications\Serializers\NotificationSettingsSerializer;
 use App\Http\Controllers\Controller;
@@ -23,10 +24,13 @@ use Inertia\Response;
  */
 class NotificationSettingsController extends Controller
 {
-    public function edit(): Response
+    public function edit(MutedTalkRooms $mutedRooms): Response
     {
         return Inertia::render('member/config/notifications', [
             'form' => NotificationSettingsSerializer::form($this->viewer()),
+            // The rooms the member has quieted one by one, shown beside the catalog toggles those
+            // mutes are exceptions to (docs/internals/group-talk.md#mute).
+            'mutedRooms' => $mutedRooms($this->viewer()),
             // Deliberately not called `push`: Inertia merges page props over the shared ones, so a
             // top-level `push` here would replace the shared VAPID key this page needs to subscribe.
             'pushSettings' => ['enabled' => $this->viewer()->pushDelivery() === PushDelivery::Enabled],

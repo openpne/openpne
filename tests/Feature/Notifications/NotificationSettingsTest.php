@@ -119,7 +119,17 @@ class NotificationSettingsTest extends TestCase
             ],
         ])->assertRedirect();
 
-        $this->assertDatabaseCount('member_notification_settings', 0);
+        // Web is the site's to move, so the save leaves it no row; mail's default is fixed, so its
+        // row is stored like any other kind's and is no one's to inherit from.
+        $this->assertDatabaseMissing('member_notification_settings', [
+            'kind' => NotificationKind::GroupTalkNewMessage->value,
+            'channel' => NotificationChannel::Web->value,
+        ]);
+        $this->assertDatabaseHas('member_notification_settings', [
+            'kind' => NotificationKind::GroupTalkNewMessage->value,
+            'channel' => NotificationChannel::Mail->value,
+            'is_enabled' => false,
+        ]);
 
         $this->setSnsSetting(SnsSettingKey::GroupTalkNotifyDefault, GroupTalkNotifyMode::Mentions->value);
 

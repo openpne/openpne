@@ -7,6 +7,7 @@ use App\Features\AiAccount\AiAccountSettings;
 use App\Features\AiAccount\AiAccountTokens;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
 use App\Features\Diary\DiaryVisibility;
+use App\Features\GroupTalk\Queries\MutedTalkRooms;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
@@ -53,7 +54,7 @@ class MemberConfigController extends Controller
 
     public function __construct(private readonly AiAccountSettings $aiSettings) {}
 
-    public function show(Request $request, BirthdayFieldExists $birthdayExists): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, BirthdayFieldExists $birthdayExists, MutedTalkRooms $mutedTalkRooms): View|InertiaResponse|RedirectResponse
     {
         // OpenPNE 3 access-block lived at /member/config?category=accessBlock; preserve that URL by
         // resolving just that category to the canonical Block list.
@@ -75,7 +76,7 @@ class MemberConfigController extends Controller
             // unrecognized value resolves to null = the "select an item" landing (no 404 — OpenPNE 4
             // keeps unknown categories renderable; only accessBlock redirects, handled above). Resolved
             // inside the Classic closure so the Modern single page never sees ?category=.
-            SurfaceResolver::CLASSIC => function () use ($viewer, $currentSurface, $request, $birthdayExists) {
+            SurfaceResolver::CLASSIC => function () use ($viewer, $currentSurface, $request, $birthdayExists, $mutedTalkRooms) {
                 $raw = $request->query('category');
                 $category = is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null;
 
@@ -121,6 +122,9 @@ class MemberConfigController extends Controller
                         : null,
                     'notificationGroups' => $category === MemberConfigCategory::Notification
                         ? NotificationSettingsSerializer::form($viewer)['groups']
+                        : null,
+                    'mutedTalkRooms' => $category === MemberConfigCategory::Notification
+                        ? $mutedTalkRooms($viewer)
                         : null,
                 ]);
             }, // Modern serves no age section — its setter lives on the profile-edit form.
