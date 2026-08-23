@@ -88,8 +88,8 @@ matching the extension's absent `member_config` = `'1'`. Typed access is
 
 One kind's default is not fixed: `group_talk_new_message`'s **web** default is the administrator's
 `group_talk_notify_default` setting ([group-talk.md](group-talk.md#what-talk-notifies)) and its mail
-default is off whatever the site says. For a kind like that (`NotificationKind::hasSiteDefault()`) a
-stored row is an **override**: a value equal to the current default is not written, and writing one
+default is off whatever the site says. On a channel like that (`NotificationKind::hasSiteDefault()`,
+the broadcast's web channel only) a stored row is an **override**: a value equal to the current default is not written, and writing one
 deletes the row instead — the stated exception to the invariant below. Without it, a settings save
 (the Classic form posts every kind on every save) would freeze the site default into a row per member and
 the next administrator flip would silently pass them by.
@@ -284,7 +284,7 @@ That endpoint is a URL the site later POSTs to, over a Guzzle client outside `Ap
 - An absent settings row means the kind's `defaultEnabled($channel)`. An explicit choice is stored
   even when it equals the default (the UI saves what the member picked; the upgrade copies source
   rows verbatim where present), so a default flip later applies only to members with no stored row —
-  **except for a kind whose default is a site setting** (`hasSiteDefault()`), where a row is an
+  **except on a channel whose default is a site setting** (`hasSiteDefault($channel)`), where a row is an
   override and a value equal to the current default is never stored, so an administrator's flip
   reaches everyone who has not chosen otherwise. `Member::setNotificationSetting` and the OpenPNE 3
   import (`App\Upgrade\Steps\MemberNotificationSettingUpgrade`) are the only writers of these rows,

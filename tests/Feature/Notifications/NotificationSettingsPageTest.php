@@ -81,10 +81,11 @@ class NotificationSettingsPageTest extends TestCase
         $this->actingAs($member)->get('/member/config/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                // The overridden channel is the member's own; the untouched one still reads the site.
+                // The overridden channel is the member's own; mail is never the site's to begin with
+                // (its default is fixed off), so it is not labelled either.
                 ->where('form.groups.4.kinds.1.kind', 'group_talk_new_message')
                 ->where('form.groups.4.kinds.1.siteDefault.web', false)
-                ->where('form.groups.4.kinds.1.siteDefault.mail', true)
+                ->where('form.groups.4.kinds.1.siteDefault.mail', false)
                 // A kind with no site default is never labelled, row or no row.
                 ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
                 ->where('form.groups.4.kinds.0.siteDefault.web', false)

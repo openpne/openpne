@@ -1,12 +1,12 @@
 import { router } from '@inertiajs/react';
 import { Bell, BellOff } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { requestUnreadRefresh } from '@/lib/unread-refresh';
 
-/** How long the unmute line stays before the control speaks for itself again. */
-const UNMUTED_MS = 3000;
+/** How long a spoken confirmation stays before the control speaks for itself again. */
+const SPOKEN_MS = 3000;
 
 /**
  * Per-group quiet, sitting above the conversation as a small text action rather than in the page
@@ -20,15 +20,35 @@ const UNMUTED_MS = 3000;
  * Muting states what it did and what it did not: what stops and what still arrives is the one thing
  * every product that ships this control writes down, because a member cannot otherwise tell a mute
  * that is working from one that never had anything to stop. It stays for as long as the mute does —
- * it is the room's state, not an acknowledgement — and is the button's description. Unmuting leaves
- * no state to read, so it gets a spoken line instead.
+ * it is the room's state, not an acknowledgement — and is the button's description. Both directions
+ * also get a short spoken line, since whether a changed description is re-read differs by screen
+ * reader.
  */
 export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boolean }) {
     const t = useT();
     const [saving, setSaving] = useState(false);
-    const [unmuted, setUnmuted] = useState(false);
+    const [spoken, setSpoken] = useState<string | null>(null);
+    const spokenTimer = useRef<number | null>(null);
     const Icon = muted ? BellOff : Bell;
     const explainerId = `talk-mute-explainer-${groupId}`;
+
+    // A line still pending when the room is left must not set state on an unmounted control.
+    useEffect(() => () => {
+        if (spokenTimer.current !== null) {
+            window.clearTimeout(spokenTimer.current);
+        }
+    }, []);
+
+    const speak = (line: string) => {
+        if (spokenTimer.current !== null) {
+            window.clearTimeout(spokenTimer.current);
+        }
+        setSpoken(line);
+        spokenTimer.current = window.setTimeout(() => {
+            setSpoken(null);
+            spokenTimer.current = null;
+        }, SPOKEN_MS);
+    };
 
     const toggle = async () => {
         if (saving) {
@@ -46,10 +66,7 @@ export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boo
             if (response.ok) {
                 router.reload({ only: ['isMuted'] });
                 requestUnreadRefresh();
-                if (muted) {
-                    setUnmuted(true);
-                    window.setTimeout(() => setUnmuted(false), UNMUTED_MS);
-                }
+                speak(muted ? t('Unmuted.') : t('Muted.'));
             }
         } finally {
             setSaving(false);
@@ -78,7 +95,7 @@ export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boo
             )}
             {/* In the tree whether or not it has words, so the change is what is announced. */}
             <p aria-live="polite" className="text-sm text-muted-foreground">
-                {unmuted ? t('Unmuted.') : null}
+                {spoken}
             </p>
         </div>
     );

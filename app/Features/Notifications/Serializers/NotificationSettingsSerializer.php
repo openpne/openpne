@@ -49,21 +49,21 @@ class NotificationSettingsSerializer
 
     /**
      * Whether the value shown on each channel is the site's rather than the member's own — what the
-     * surfaces label "(default)". Only a kind whose default is an admin setting can be inherited at
-     * all (NotificationKind::hasSiteDefault); for every other kind the shown value is the member's
-     * either way, since an absent row there means a default nobody can move.
+     * surfaces label "(default)". Only a channel whose default is an admin setting can be inherited
+     * at all (NotificationKind::hasSiteDefault); anywhere else the shown value is the member's either
+     * way, since an absent row there means a default nobody can move — the talk broadcast's mail
+     * channel included.
      *
      * @return array{web: bool, mail: bool}
      */
     private static function siteDefault(Member $viewer, NotificationKind $kind): array
     {
-        if (! $kind->hasSiteDefault()) {
-            return ['web' => false, 'mail' => false];
-        }
+        $inherited = static fn (NotificationChannel $channel): bool => $kind->hasSiteDefault($channel)
+            && ! $viewer->hasNotificationSetting($kind, $channel);
 
         return [
-            'web' => ! $viewer->hasNotificationSetting($kind, NotificationChannel::Web),
-            'mail' => ! $viewer->hasNotificationSetting($kind, NotificationChannel::Mail),
+            'web' => $inherited(NotificationChannel::Web),
+            'mail' => $inherited(NotificationChannel::Mail),
         ];
     }
 }

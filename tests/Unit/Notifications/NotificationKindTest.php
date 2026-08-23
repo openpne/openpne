@@ -114,11 +114,11 @@ class NotificationKindTest extends TestCase
         // Imported kinds must default on (an absent source key meant enabled); flipping one is a
         // deliberate one-arm change, never an accident.
         foreach (NotificationKind::cases() as $kind) {
-            if ($kind->hasSiteDefault()) {
-                continue;
-            }
-
             foreach (NotificationChannel::cases() as $channel) {
+                if ($kind->hasSiteDefault($channel) || $kind === NotificationKind::GroupTalkNewMessage) {
+                    continue;
+                }
+
                 $this->assertTrue($kind->defaultEnabled($channel), "{$kind->value} should default on for {$channel->value}");
             }
         }
@@ -128,10 +128,12 @@ class NotificationKindTest extends TestCase
     {
         $withSiteDefault = array_values(array_filter(
             NotificationKind::cases(),
-            static fn (NotificationKind $kind): bool => $kind->hasSiteDefault(),
+            static fn (NotificationKind $kind): bool => $kind->hasSiteDefault(NotificationChannel::Web) || $kind->hasSiteDefault(NotificationChannel::Mail),
         ));
 
         $this->assertSame([NotificationKind::GroupTalkNewMessage], $withSiteDefault);
+        // Its mail default is fixed off, so that channel is nobody's to inherit from.
+        $this->assertFalse(NotificationKind::GroupTalkNewMessage->hasSiteDefault(NotificationChannel::Mail));
     }
 
     public function test_every_kind_has_a_caption_source_string(): void

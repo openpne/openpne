@@ -262,14 +262,16 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether this kind's default comes from an admin setting rather than being fixed. Such a kind
-     * stores a row only as an OVERRIDE: a value equal to the current default is not written, so an
-     * administrator's flip still reaches every member who has not decided otherwise
-     * (Member::setNotificationSetting, docs/internals/notifications.md).
+     * Whether this kind's default on $channel comes from an admin setting rather than being fixed.
+     * Per channel, because the talk broadcast's mail default is fixed off whatever the site says —
+     * only its web channel can move under a member. Such a channel stores a row only as an OVERRIDE:
+     * a value equal to the current default is not written, so an administrator's flip still reaches
+     * every member who has not decided otherwise (Member::setNotificationSetting,
+     * docs/internals/notifications.md).
      */
-    public function hasSiteDefault(): bool
+    public function hasSiteDefault(NotificationChannel $channel): bool
     {
-        return $this === self::GroupTalkNewMessage;
+        return $this === self::GroupTalkNewMessage && $channel === NotificationChannel::Web;
     }
 
     /**

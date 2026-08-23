@@ -763,6 +763,7 @@
     "Mute": "ミュート",
     "Muted": "ミュート中",
     "Muted %communities%": "ミュート中の%communities%",
+    "Muted.": "ミュートしました。",
     "Muted: new-message notifications are off and this %community% is not counted in the badge. You are still notified when mentioned.": "ミュート中：新着の通知は届かず、この%community%はバッジにも数えません。メンションされたときは届きます。",
     "My %activity%": "自分の%activity%",
     "My %communities%": "参加中の%communities%",
