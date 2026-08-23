@@ -109,13 +109,14 @@ class NotificationKindTest extends TestCase
         );
     }
 
-    public function test_every_kind_without_a_site_default_defaults_enabled(): void
+    public function test_every_kind_defaults_enabled_unless_its_arm_declares_otherwise(): void
     {
         // Imported kinds must default on (an absent source key meant enabled); flipping one is a
-        // deliberate one-arm change, never an accident.
+        // deliberate one-arm change, never an accident. The talk broadcast is that arm — web follows
+        // the site, mail is fixed off — so what this guards is a kind going off WITHOUT declaring it.
         foreach (NotificationKind::cases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
-                if ($kind->hasSiteDefault($channel) || $kind === NotificationKind::GroupTalkNewMessage) {
+                if ($kind === NotificationKind::GroupTalkNewMessage) {
                     continue;
                 }
 
