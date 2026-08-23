@@ -50,8 +50,12 @@ class NotificationSettingsPageTest extends TestCase
                 ->has('form.groups.3.kinds', 4)
                 ->where('form.groups.3.kinds.0.kind', 'group_event_new_post')
                 ->where('form.groups.4.key', 'group_talk')
-                ->has('form.groups.4.kinds', 1)
+                ->has('form.groups.4.kinds', 2)
                 ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
+                // Its web toggle reads the site default, which an OSS install leaves at mentions-only.
+                ->where('form.groups.4.kinds.1.kind', 'group_talk_new_message')
+                ->where('form.groups.4.kinds.1.web', false)
+                ->where('form.groups.4.kinds.1.mail', false)
                 ->where('form.groups.5.key', 'friend_link')
                 ->has('form.groups.5.kinds', 2)
                 ->where('form.groups.5.kinds.0.kind', 'friend_link_confirm')

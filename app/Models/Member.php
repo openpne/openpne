@@ -298,8 +298,8 @@ class Member extends Authenticatable
     }
 
     /**
-     * Whether this member receives $kind on $channel. An absent row means the kind's default
-     * (enabled). Reads the loaded `notificationSettings` relation (lazy-loaded once and cached),
+     * Whether this member receives $kind on $channel. An absent row means the kind's default for
+     * that channel. Reads the loaded `notificationSettings` relation (lazy-loaded once and cached),
      * so a notification's per-channel checks share one query.
      */
     public function wantsNotification(NotificationKind $kind, NotificationChannel $channel): bool
@@ -307,16 +307,26 @@ class Member extends Authenticatable
         $setting = $this->notificationSettings
             ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
 
-        return $setting?->is_enabled ?? $kind->defaultEnabled();
+        return $setting?->is_enabled ?? $kind->defaultEnabled($channel);
     }
 
-    /** Store an explicit opt-in/out for $kind on $channel (even one equal to the default). */
+    /**
+     * Store an explicit opt-in/out for $kind on $channel, even one equal to the default — except for
+     * a kind whose default is a site setting (NotificationKind::hasSiteDefault), where a row is an
+     * OVERRIDE and a value equal to the current default deletes it instead. Both settings forms post
+     * every kind on every save, so without that exception the site default would be frozen into a row
+     * per member and an administrator's later flip would silently pass them by.
+     */
     public function setNotificationSetting(NotificationKind $kind, NotificationChannel $channel, bool $enabled): void
     {
-        $this->notificationSettings()->updateOrCreate(
-            ['kind' => $kind->value, 'channel' => $channel->value],
-            ['is_enabled' => $enabled],
-        );
+        $keys = ['kind' => $kind->value, 'channel' => $channel->value];
+
+        if ($kind->hasSiteDefault() && $enabled === $kind->defaultEnabled($channel)) {
+            $this->notificationSettings()->where($keys)->delete();
+        } else {
+            $this->notificationSettings()->updateOrCreate($keys, ['is_enabled' => $enabled]);
+        }
+
         $this->unsetRelation('notificationSettings');
     }
 

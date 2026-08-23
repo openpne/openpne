@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications\Settings;
 
+use App\Features\GroupTalk\GroupTalkNotifyDefault;
+use App\Features\GroupTalk\GroupTalkNotifyMode;
 use LogicException;
 
 /**
@@ -42,6 +44,7 @@ enum NotificationKind: string
     case GroupEventRelatedNewPost = 'group_event_related_new_post';
 
     case GroupTalkMention = 'group_talk_mention';
+    case GroupTalkNewMessage = 'group_talk_new_message';
 
     case FriendLinkConfirm = 'friend_link_confirm';
     case FriendLinkComplete = 'friend_link_complete';
@@ -69,11 +72,11 @@ enum NotificationKind: string
                 dependOnNot: self::TimelineNewPost,
                 isWired: true,
             ),
-            // Dormant. The community timeline it announced is gone, replaced by group talk, which
-            // sends no per-message broadcast at all — its unread badge does that job instead. The
-            // case and the imported preference rows stay: a member's stored choice is a record of
-            // what they asked for, and throwing it away would be inventing consent if a talk digest
-            // ever wants this kind back. isWired false takes it off the settings page meanwhile.
+            // Dormant. The community timeline it announced is gone, replaced by group talk, whose own
+            // per-message broadcast is a separate kind behind a site setting (GroupTalkNewMessage).
+            // The case and the imported preference rows stay: a member's stored choice is a record of
+            // what they asked for, and reading these rows as consent to that kind would be inventing
+            // it. isWired false takes it off the settings page meanwhile.
             //
             // OpenPNE 3 registered this kind and never sent it; OpenPNE 4 wired it for the community
             // timeline only, so nothing that ever reached a member is being withdrawn.
@@ -180,6 +183,13 @@ enum NotificationKind: string
                 caption: 'When you are mentioned in a %community% talk message',
                 isWired: true,
             ),
+            // Off unless the site says otherwise: its web default is the admin's
+            // group_talk_notify_default, and its mail default is always off (defaultEnabled below).
+            self::GroupTalkNewMessage => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTalk,
+                caption: 'New messages in %community% talk',
+                isWired: true,
+            ),
             self::FriendLinkConfirm => new NotificationKindDefinition(
                 category: NotificationCategory::FriendLink,
                 op3Name: 'friendLinkConfirm',
@@ -231,13 +241,33 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether an absent settings row means enabled. Must stay true for imported kinds (an
-     * absent source key meant enabled, and the import writes no row for it); kept per-kind so
-     * each kind's default is declared in one place.
+     * Whether an absent settings row means enabled on $channel. Must stay true on BOTH channels for
+     * imported kinds (an absent source key meant enabled, and the import writes no row for it);
+     * kept per-kind so each kind's default is declared in one place.
+     *
+     * Per-channel because one kind's default is not the same on both: the talk broadcast follows the
+     * site setting on web and is off on mail, since a mail per chat message is a decision each member
+     * makes rather than one an operator makes for them. A kind whose default can be false is read in
+     * both polarities by every fan-out — never as the opted-out set alone (docs/internals/notifications.md).
      */
-    public function defaultEnabled(): bool
+    public function defaultEnabled(NotificationChannel $channel): bool
     {
-        return true;
+        return match ($this) {
+            self::GroupTalkNewMessage => $channel === NotificationChannel::Web
+                && app(GroupTalkNotifyDefault::class)->mode() === GroupTalkNotifyMode::All,
+            default => true,
+        };
+    }
+
+    /**
+     * Whether this kind's default comes from an admin setting rather than being fixed. Such a kind
+     * stores a row only as an OVERRIDE: a value equal to the current default is not written, so an
+     * administrator's flip still reaches every member who has not decided otherwise
+     * (Member::setNotificationSetting, docs/internals/notifications.md).
+     */
+    public function hasSiteDefault(): bool
+    {
+        return $this === self::GroupTalkNewMessage;
     }
 
     /**

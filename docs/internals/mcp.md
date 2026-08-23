@@ -74,8 +74,8 @@ its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorElig
 caller is a room asking them for something, and a room list that only said "twelve unread" would
 leave the client reading every one of them to find out. It is the same unread predicate as `unread`,
 narrowed to messages that **name the caller or answer something they said** — being replied to is
-being spoken to, though only the mention notifies
-([group-talk.md](group-talk.md#the-one-notification-talk-sends)). It counts messages, so a line that
+being spoken to, though a reply notifies only where the site broadcasts every message
+([group-talk.md](group-talk.md#what-talk-notifies)). It counts messages, so a line that
 does both is one message waiting. Only this tool asks for it — the counts every web page draws are
 the ones the nav needs, and a subselect nobody reads is a subselect every page pays for.
 

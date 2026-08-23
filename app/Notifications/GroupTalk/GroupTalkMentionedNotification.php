@@ -20,9 +20,9 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Tells a member a talk message @mentions them. Mail + database, gated by the recipient's catalog
- * kind — the only notification talk sends. There is deliberately no per-message broadcast: a chat
- * that notified on every line would empty the feed of meaning, so the room's unread badge carries
- * that job instead.
+ * kind. It is the notification every site sends: the per-message broadcast beside it
+ * (GroupTalkMessagePostedNotification) fires only where an administrator asked for one, and this one
+ * pierces the mute that stops it.
  */
 class GroupTalkMentionedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

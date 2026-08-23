@@ -23,8 +23,10 @@ document covers the delivery model around it.
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing — only opening a row or the explicit mark-all does. **Returning to the feed
-   re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
+   feed marks nothing — only opening a row or the explicit mark-all does. A row that is no longer
+   there — the talk broadcast replaces a room's row with each message — returns to the feed rather
+   than erroring; only a row that exists but belongs to a switched-off unit is refused.
+   **Returning to the feed re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
    popstate, the whole document from the back/forward cache — which is the state before the row the
    member just opened was marked read. Modern re-reads every restored page, this one included
    ([`revalidate-on-restore.ts`](../../resources/js/lib/revalidate-on-restore.ts)); on Classic —
@@ -80,9 +82,17 @@ catalog). Each kind is toggleable per
 [`NotificationChannel`](../../app/Notifications/Settings/NotificationChannel.php): **mail**
 gates the notification email, **web** gates the layer-3 `database` record. Rows live in
 [`member_notification_settings`](../../database/migrations/2026_07_08_000001_create_member_notification_settings_table.php);
-an **absent row means the kind's default (enabled)**, matching the extension's absent
-`member_config` = `'1'`. Typed access is
+an **absent row means the kind's per-channel default**, which for every imported kind is enabled,
+matching the extension's absent `member_config` = `'1'`. Typed access is
 `Member::wantsNotification()` / `setNotificationSetting()`.
+
+One kind's default is not fixed: `group_talk_new_message`'s **web** default is the administrator's
+`group_talk_notify_default` setting ([group-talk.md](group-talk.md#what-talk-notifies)) and its mail
+default is off whatever the site says. For a kind like that (`NotificationKind::hasSiteDefault()`) a
+stored row is an **override**: a value equal to the current default is not written, and writing one
+deletes the row instead — the stated exception to the invariant below. Without it, a settings save
+(both surfaces post every kind on every save) would freeze the site default into a row per member and
+the next administrator flip would silently pass them by.
 
 Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only
 **wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. A kind with no
@@ -160,6 +170,19 @@ excluded ids are snapshotted when the comment is posted and passed to the async 
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and
 notify them twice.
 
+A talk message broadcasts to its room where the site asked for it. The audience
+([`GroupTalkBroadcastRecipients`](../../app/Features/GroupTalk/Queries/GroupTalkBroadcastRecipients.php))
+is the group's members minus the author / banned / blocked / already mentioned, and minus anyone who
+muted the room. Because the kind's default can be false, the queued
+[`BroadcastGroupMessagePosted`](../../app/Jobs/BroadcastGroupMessagePosted.php) reads each chunk's
+rows in both polarities (`explicit ?? default`) rather than an opted-out set; with both defaults off
+and nobody opted in it exits on two indexed probes without walking the membership, and with someone
+opted in the audience is narrowed to the opt-ins. It is dispatched with a short delay so a member
+reading the room marks it read first: the job then drops anyone whose cursor has passed the message,
+which is a race rather than a guarantee. Its feed row is the room's — one per (member, group), read or
+unread ([group-talk.md](group-talk.md#what-talk-notifies)) — the one kind whose rows are deleted
+outside the display filter, and the one whose bell badge moves with the rooms badge by design.
+
 A new timeline post broadcasts like a diary — visibility-scoped audience
 ([`TimelinePostedRecipients`](../../app/Features/Timeline/Queries/TimelinePostedRecipients.php)), the
 same two-kind union, a queued [`BroadcastTimelinePosted`](../../app/Jobs/BroadcastTimelinePosted.php)
@@ -174,8 +197,10 @@ A queued notification decides its channels when it is *enqueued* and delivers th
 kinds that gap is harmless: the recipient already holds the thing being announced. It is not harmless
 where the mail carries content the recipient's access to can lapse — a ban, a new block, a revoked
 friendship on a Friends thread, a member who has left the group, a message the recipient has purged —
-so every timeline notification, the group talk mention and the direct message re-run their eligibility
-in `shouldSend()`, the one hook `NotificationSender` consults immediately before each channel send
+so every timeline notification, both group talk notifications (the mention and the per-message
+broadcast, which additionally re-checks mute and whether the message has since been read) and the
+direct message re-run their eligibility in `shouldSend()`, the one hook `NotificationSender` consults
+immediately before each channel send
 ([`TimelineNotificationEligibility`](../../app/Features/Timeline/TimelineNotificationEligibility.php),
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php),
 and [`DirectMessageReceivedNotification`](../../app/Notifications/DirectMessage/DirectMessageReceivedNotification.php)'s
@@ -248,9 +273,20 @@ That endpoint is a URL the site later POSTs to, over a Guzzle client outside `Ap
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
-- An absent settings row means the kind's `defaultEnabled()`. An explicit choice is stored even
-  when it equals the default (the UI saves what the member picked; the upgrade copies source
-  rows verbatim where present), so a default flip later applies only to members with no stored row.
+- An absent settings row means the kind's `defaultEnabled($channel)`. An explicit choice is stored
+  even when it equals the default (the UI saves what the member picked; the upgrade copies source
+  rows verbatim where present), so a default flip later applies only to members with no stored row —
+  **except for a kind whose default is a site setting** (`hasSiteDefault()`), where a row is an
+  override and a value equal to the current default is never stored, so an administrator's flip
+  reaches everyone who has not chosen otherwise. `Member::setNotificationSetting` and the OpenPNE 3
+  import (`App\Upgrade\Steps\MemberNotificationSettingUpgrade`) are the only writers of these rows,
+  and the import never touches a native kind.
+- A kind whose default can be false is read in **both polarities** by every fan-out — never as the
+  opted-out set alone. [`BroadcastTimelinePosted`](../../app/Jobs/BroadcastTimelinePosted.php),
+  [`BroadcastDiaryPosted`](../../app/Jobs/BroadcastDiaryPosted.php) and
+  [`GroupNewPostFanout`](../../app/Features/Group/GroupNewPostFanout.php) load only the opted-out set
+  (`optedOut`), which is correct **because their kinds default to true on both channels**;
+  [`BroadcastGroupMessagePosted`](../../app/Jobs/BroadcastGroupMessagePosted.php) loads both.
 - The imported `member_config` key names derive from `NotificationKind::op3ConfigName()`
   (`is_send_{name}_web` / `is_send_pc_{name}_mail`) over `importableCases()` — the upgrade has no
   second name list, and a native kind has no key to invent (asking for one throws).

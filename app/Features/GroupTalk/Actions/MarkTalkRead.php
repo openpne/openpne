@@ -4,6 +4,7 @@ namespace App\Features\GroupTalk\Actions;
 
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
+use App\Features\GroupTalk\GroupTalkRoomNotificationRows;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\GroupMessage;
@@ -12,6 +13,8 @@ use Carbon\CarbonImmutable;
 
 class MarkTalkRead
 {
+    public function __construct(private readonly GroupTalkRoomNotificationRows $rows) {}
+
     /**
      * Record that the member has read as far as $messageId — or, with no id, as far as the
      * conversation goes.
@@ -43,6 +46,11 @@ class MarkTalkRead
         if (! TalkReadCursor::exists($groupId, $memberId)) {
             throw new GroupTalkActionException(GroupTalkActionFailure::NotMember);
         }
+
+        // Reading the room is what marks its broadcast row read. Unconditional, and ahead of the
+        // cursor move: whether this particular call advances the cursor says nothing about whether
+        // the member has now seen the room (another tab may have moved it first).
+        $this->rows->markRead($memberId, $groupId);
 
         if ($messageId === null) {
             // Forward only, like every other advance: a slow request that read an older newest —

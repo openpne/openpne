@@ -50,6 +50,8 @@ class NotificationKindLabelTest extends TestCase
             'new diary' => ['diary_posted', null, 'Alice posted a new diary.'],
             'new topic' => ['group_topic_posted', null, 'Alice posted a new topic.'],
             'new event' => ['group_event_posted', null, 'Alice posted a new event.'],
+            'talk mention' => ['group_talk_mention', null, 'Alice mentioned you in a group talk message.'],
+            'new talk message' => ['group_talk_new_message', null, 'Alice posted in group talk.'],
             'mention' => ['timeline_mentioned', null, 'Alice mentioned you in a timeline post.'],
             'new timeline post' => ['timeline_posted', null, 'Alice posted to the timeline.'],
             'reply on mine' => ['timeline_replied', 'reply', 'Alice commented on your timeline post.'],
