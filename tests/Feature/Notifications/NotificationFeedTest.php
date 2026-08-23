@@ -319,14 +319,31 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect(route('notifications.index'));
     }
 
+    /**
+     * Another member's row is not this member's to open, and answers exactly as a row that is no
+     * longer there does — so the response says nothing about whether the id exists.
+     */
     public function test_open_rejects_another_members_notification(): void
     {
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();
         $row = $this->seedRow($other, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")->assertNotFound();
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
 
         $this->assertNull($row->fresh()->read_at);
+    }
+
+    /** A row replaced between the feed rendering and the tap (the talk broadcast does that). */
+    public function test_open_returns_to_the_feed_when_the_row_is_gone(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
+        $id = $row->getKey();
+        $row->delete();
+
+        $this->actingAs($viewer)->post("/notifications/{$id}/open")
+            ->assertRedirect(route('notifications.index'));
     }
 
     public function test_read_all_marks_only_own_unread_rows(): void

@@ -7,6 +7,7 @@ namespace Tests\Feature\Mcp;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Events\GroupMessagePosted;
 use App\Features\GroupTalk\GroupTalkPermissions;
+use App\Features\GroupTalk\GroupTalkRoomNotificationRows;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
@@ -848,11 +849,11 @@ class TalkToolsTest extends McpTestCase
      */
     private function raceBeforeTheWrite(Closure $race, int $times = 1): void
     {
-        $this->app->singleton(CreateGroupMessage::class, fn () => new class(app(PostImages::class), app(ResolveMentions::class), $race, $times) extends CreateGroupMessage
+        $this->app->singleton(CreateGroupMessage::class, fn () => new class(app(PostImages::class), app(ResolveMentions::class), app(GroupTalkRoomNotificationRows::class), $race, $times) extends CreateGroupMessage
         {
-            public function __construct(PostImages $images, ResolveMentions $mentions, private readonly Closure $race, private int $times)
+            public function __construct(PostImages $images, ResolveMentions $mentions, GroupTalkRoomNotificationRows $rows, private readonly Closure $race, private int $times)
             {
-                parent::__construct($images, $mentions);
+                parent::__construct($images, $mentions, $rows);
             }
 
             public function __invoke(Member $author, Group $group, string $body, array $mentions = [], array $images = [], bool $mentionsRequired = false, ?GroupMessage $inReplyTo = null): GroupMessage

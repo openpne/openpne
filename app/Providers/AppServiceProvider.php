@@ -7,6 +7,7 @@ use App\Auth\MemberUserProvider;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
+use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Http\Middleware\StartSession;
@@ -86,6 +87,10 @@ class AppServiceProvider extends ServiceProvider
         // an operator switches them off. A process-lifetime memo would answer that re-read with what
         // the worker booted with. Scoped instances are forgotten between jobs.
         $this->app->scoped(LinkCardSettings::class);
+
+        // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a
+        // settings page once per request, and an administrator's flip must reach the next one.
+        $this->app->scoped(GroupTalkNotifyDefault::class);
 
         $this->app->singleton(Captcha::class, function ($app): Captcha {
             $config = $app['config']['openpne.captcha'];

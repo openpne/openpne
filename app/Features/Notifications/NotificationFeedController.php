@@ -50,10 +50,18 @@ class NotificationFeedController extends Controller
     /** Mark one row read and land on what it is about (or back on the feed when that is gone). */
     public function open(string $notification): RedirectResponse
     {
-        // Filtered before the lookup: a hidden row's target is a switched-off unit's screen, so
-        // opening it must 404 here rather than redirect into one.
-        /** @var DatabaseNotification $row */
-        $row = VisibleNotifications::apply($this->viewer()->notifications())->whereKey($notification)->firstOrFail();
+        /** @var ?DatabaseNotification $row */
+        $row = $this->viewer()->notifications()->whereKey($notification)->first();
+
+        // A row that is no longer there is not a refusal: the talk broadcast replaces a room's row
+        // with each message, so an open feed can hold one that has since been superseded. Only a row
+        // that EXISTS but is hidden 404s — its target is a switched-off unit's screen, and opening it
+        // must not redirect into one.
+        if ($row === null) {
+            return redirect()->route('notifications.index');
+        }
+        abort_if(VisibleNotifications::hides($row), 404);
+
         $row->markAsRead();
 
         return redirect(NotificationFeedSerializer::targetUrl($row) ?? route('notifications.index'));

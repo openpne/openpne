@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * The one notification talk sends. Eligibility is asked twice — at enqueue and again in
- * shouldSend() before each channel — because a mention mail carries the message body and can outlive
- * the facts it was enqueued under.
+ * The notification every site sends, whatever its talk notification default. Eligibility is asked
+ * twice — at enqueue and again in shouldSend() before each channel — because a mention mail carries
+ * the message body and can outlive the facts it was enqueued under.
  */
 class TalkMentionNotificationTest extends TalkTestCase
 {

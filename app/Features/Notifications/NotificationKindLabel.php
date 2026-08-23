@@ -43,6 +43,7 @@ final class NotificationKindLabel
             'group_topic_posted' => __(':name posted a new %topic%.', ['name' => $name]),
             'group_event_posted' => __(':name posted a new event.', ['name' => $name]),
             'group_talk_mention' => __(':name mentioned you in a %community% talk message.', ['name' => $name]),
+            'group_talk_new_message' => __(':name posted in %community% talk.', ['name' => $name]),
             'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
             'timeline_posted' => __(':name posted to the %activity%.', ['name' => $name]),
             'timeline_replied' => $cause === CommentReason::Related

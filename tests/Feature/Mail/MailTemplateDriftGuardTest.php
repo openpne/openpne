@@ -24,6 +24,7 @@ use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Group\GroupJoinedNotification;
 use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
+use App\Notifications\GroupTalk\GroupTalkMessagePostedNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
@@ -119,6 +120,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaDisabledNotification('en'), $recipient],
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
             [new GroupTalkMentionedNotification($sender, $talkMessage), $recipient],
+            [new GroupTalkMessagePostedNotification($sender, $talkMessage, ['mail']), $recipient],
             [new TimelineMentionedNotification($sender, $post), $recipient],
             [new TimelinePostedNotification($post, $sender, ['mail']), $recipient],
         ];

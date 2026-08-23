@@ -6,6 +6,7 @@ use App\Features\GroupTalk\Events\GroupMessagePosted;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\GroupTalkRoomNotificationRows;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Features\Timeline\Actions\ResolveMentions;
 use App\Files\PostImages;
@@ -26,6 +27,7 @@ class CreateGroupMessage
     public function __construct(
         private readonly PostImages $images,
         private readonly ResolveMentions $mentions,
+        private readonly GroupTalkRoomNotificationRows $rows,
     ) {}
 
     /**
@@ -113,6 +115,10 @@ class CreateGroupMessage
                     CarbonImmutable::instance($message->created_at),
                     (int) $message->getKey(),
                 );
+
+                // Writing is reading here too: whatever the room was telling the author about, they
+                // have just been in it.
+                $this->rows->markRead((int) $author->getKey(), (int) $group->getKey());
 
                 // Dispatched from inside the write so the snapshot is the rows just stored; delivery
                 // waits for the commit (ShouldDispatchAfterCommit).
