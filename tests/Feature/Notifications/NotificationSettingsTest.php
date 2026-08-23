@@ -104,8 +104,8 @@ class NotificationSettingsTest extends TestCase
     }
 
     /**
-     * The reason a row is an override rather than a copy: the settings form posts every kind on every
-     * save, so a member who merely saved the page under `all` must still follow the administrator
+     * The reason a row is an override rather than a copy: the Classic settings form posts every kind on
+     * every save, so a member who merely saved the page under `all` must still follow the administrator
      * back to `mentions` — only a member who chose differently keeps their answer.
      */
     public function test_a_bulk_save_under_all_does_not_freeze_the_site_default_into_a_row(): void

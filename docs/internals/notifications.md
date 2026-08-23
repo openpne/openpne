@@ -91,7 +91,7 @@ One kind's default is not fixed: `group_talk_new_message`'s **web** default is t
 default is off whatever the site says. For a kind like that (`NotificationKind::hasSiteDefault()`) a
 stored row is an **override**: a value equal to the current default is not written, and writing one
 deletes the row instead — the stated exception to the invariant below. Without it, a settings save
-(both surfaces post every kind on every save) would freeze the site default into a row per member and
+(the Classic form posts every kind on every save) would freeze the site default into a row per member and
 the next administrator flip would silently pass them by.
 
 Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only

@@ -313,9 +313,9 @@ class Member extends Authenticatable
     /**
      * Store an explicit opt-in/out for $kind on $channel, even one equal to the default — except for
      * a kind whose default is a site setting (NotificationKind::hasSiteDefault), where a row is an
-     * OVERRIDE and a value equal to the current default deletes it instead. Both settings forms post
-     * every kind on every save, so without that exception the site default would be frozen into a row
-     * per member and an administrator's later flip would silently pass them by.
+     * OVERRIDE and a value equal to the current default deletes it instead. The Classic settings form
+     * posts every kind on every save, so without that exception the site default would be frozen into
+     * a row per member and an administrator's later flip would silently pass them by.
      */
     public function setNotificationSetting(NotificationKind $kind, NotificationChannel $channel, bool $enabled): void
     {

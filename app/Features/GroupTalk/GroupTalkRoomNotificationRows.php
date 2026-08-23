@@ -14,17 +14,20 @@ use Illuminate\Support\Collection;
  * read or unread. A chat that left a row per message would bury every other notification, so the new
  * row replaces the room's previous ones and reading the room marks the survivor read.
  *
- * `data` is a TEXT column, so the group is matched in PHP rather than in SQL. The scan is bounded by
- * the type filter over one member's own rows — and by this kind holding at most one row per room.
+ * `data` is a TEXT column, so the group is matched in PHP rather than in SQL. No index covers `type`,
+ * so the SQL narrows by what the notifiable indexes do cover: markRead() runs in the request (and
+ * inside the posting transaction), so it reads only the member's unread rows; deleteOthers() needs
+ * the read ones too and runs in the queued job, where reading the member's whole feed is affordable.
  */
 class GroupTalkRoomNotificationRows
 {
     /** @return Collection<int, DatabaseNotification> the member's rows for this room */
-    public function rowsFor(int $memberId, int $groupId): Collection
+    public function rowsFor(int $memberId, int $groupId, bool $unreadOnly = false): Collection
     {
         return DatabaseNotification::query()
             ->where('notifiable_type', (new Member)->getMorphClass())
             ->where('notifiable_id', $memberId)
+            ->when($unreadOnly, static fn ($query) => $query->whereNull('read_at'))
             ->where('type', GroupTalkMessagePostedNotification::class)
             ->get()
             ->filter(static fn (DatabaseNotification $row): bool => (int) ($row->data['group_id'] ?? 0) === $groupId)
@@ -55,8 +58,7 @@ class GroupTalkRoomNotificationRows
      */
     public function markRead(int $memberId, int $groupId): void
     {
-        $ids = $this->rowsFor($memberId, $groupId)
-            ->filter(static fn (DatabaseNotification $row): bool => $row->read_at === null)
+        $ids = $this->rowsFor($memberId, $groupId, unreadOnly: true)
             ->map(static fn (DatabaseNotification $row): string => $row->getKey())
             ->all();
 
