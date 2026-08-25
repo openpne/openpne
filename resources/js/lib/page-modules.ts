@@ -9,6 +9,9 @@ import type { ResolvedComponent } from '@inertiajs/react';
  *
  * Lives here rather than in app.tsx so `page-modules.test.tsx` can assert on the resolved map — the
  * pattern and the thing that checks it stay one file apart, with no second copy of the pattern.
+ *
+ * Both patterns have to keep the same `../pages` base: the negation is resolved against the base the
+ * affirmative one establishes, so narrowing the include alone silently stops excluding anything.
  */
 export const pageModules = import.meta.glob<ResolvedComponent>(['../pages/**/*.tsx', '!../pages/**/*.test.tsx']);
 
