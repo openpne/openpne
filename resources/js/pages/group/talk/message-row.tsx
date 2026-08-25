@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { Link as LinkIcon, Reply, Trash2 } from 'lucide-react';
+import { Check, Link as LinkIcon, Reply, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
@@ -174,6 +175,61 @@ const ROW_ACTIONS =
  * `highlighted` is the deep link's landing: the row a `?m=` link opened on — and now also the parent
  * a reply header jumped to — held for a moment so the reader can see which message named them.
  */
+/** How long the glyph answers for a completed copy before the button reads as an offer again. */
+const COPIED_MS = 1500;
+
+/**
+ * The bar's copy-link control, answering its own click: the glyph becomes a check for a moment and a
+ * spoken line says what happened — a clipboard write leaves nothing on screen, so without this the
+ * click cannot be told from a miss. Only a *completed* write answers; a refusal changes nothing the
+ * reader could not see for themselves at the paste. The accessible name never changes — the control
+ * is still the same control — so the acknowledgement is spoken beside it, as the mute toggle speaks.
+ */
+function CopyLinkButton({ messageId }: { messageId: number }) {
+    const t = useT();
+    const [copied, setCopied] = useState(false);
+    const timer = useRef<number | null>(null);
+
+    // An acknowledgement still pending when the row leaves must not set state on an unmounted control.
+    useEffect(
+        () => () => {
+            if (timer.current !== null) {
+                window.clearTimeout(timer.current);
+            }
+        },
+        [],
+    );
+
+    return (
+        <button
+            type="button"
+            aria-label={t('Copy link')}
+            onClick={() =>
+                void navigator.clipboard
+                    .writeText(messageLink(messageId))
+                    .then(() => {
+                        setCopied(true);
+                        if (timer.current !== null) {
+                            window.clearTimeout(timer.current);
+                        }
+                        timer.current = window.setTimeout(() => {
+                            setCopied(false);
+                            timer.current = null;
+                        }, COPIED_MS);
+                    })
+                    .catch(() => {})
+            }
+            className={ICON_BUTTON}
+        >
+            {copied ? <Check className="size-4 text-success" aria-hidden /> : <LinkIcon className="size-4" aria-hidden />}
+            {/* In the tree whether or not it has words, so the change is what is announced. */}
+            <span aria-live="polite" className="sr-only">
+                {copied ? t('Link copied.') : null}
+            </span>
+        </button>
+    );
+}
+
 export function TalkMessageRow({
     message,
     onDelete,
@@ -266,14 +322,7 @@ export function TalkMessageRow({
             {canCopyLink() && (
                 // The address the sheet offers a thumb, one click here: text is the cursor's to
                 // select, so of the two copies only the link earns a place in the bar.
-                <button
-                    type="button"
-                    aria-label={t('Copy link')}
-                    onClick={() => void navigator.clipboard.writeText(messageLink(message.id)).catch(() => {})}
-                    className={ICON_BUTTON}
-                >
-                    <LinkIcon className="size-4" aria-hidden />
-                </button>
+                <CopyLinkButton messageId={message.id} />
             )}
             {message.canDelete && (
                 // A glyph shaped like its neighbour, so the bar reads as one set of controls; the

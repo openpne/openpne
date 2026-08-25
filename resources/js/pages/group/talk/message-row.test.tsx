@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkMessageRow } from './message-row';
@@ -248,4 +248,40 @@ test('no clipboard leaves the bar without a link button', () => {
     renderRow();
 
     expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+});
+
+test('a completed copy answers with a check and a spoken line, then offers again', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    // Spoken on completion, not on the click: the acknowledgement claims the write happened.
+    expect(screen.getByText('Link copied.')).toBeTruthy();
+
+    act(() => {
+        vi.advanceTimersByTime(1600);
+    });
+    expect(screen.queryByText('Link copied.')).toBeNull();
+    vi.useRealTimers();
+    window.history.replaceState(null, '', '/');
+});
+
+test('a refused copy answers nothing', async () => {
+    const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+    clipboard(writeText);
+    renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    expect(screen.queryByText('Link copied.')).toBeNull();
 });
