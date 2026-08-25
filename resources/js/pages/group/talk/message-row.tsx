@@ -384,11 +384,12 @@ export function TalkMessageRow({
                 //
                 // What pays for the selection is the sheet's own copy item — which a deployment
                 // without a clipboard cannot offer, so there the words become uncopyable. Withholding
-                // the suppression there does not follow from that: the native selection takes the
-                // press with it, and a finger has no other way to this row's actions (the bar is
-                // sr-only for one), so it would trade copying for reacting. That needs a fallback,
-                // not a condition here. Saving a picture is unaffected either way: the lightbox a
-                // tap opens suppresses neither.
+                // the suppression there does not follow from that. The press would likely go with the
+                // native selection that replaces it — expected, not measured on a device — and a
+                // finger has no other way to this row's actions, the bar being sr-only for one. So it
+                // risks trading copying for reacting, and wants a fallback rather than a condition
+                // here. Saving a picture is unaffected either way: the lightbox a tap opens
+                // suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
                 // people speaking is the vocabulary of a board, and this is a conversation.
