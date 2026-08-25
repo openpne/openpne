@@ -10,6 +10,9 @@ import type { TalkMessage } from './types';
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
 afterEach(cleanup);
+// vitest shares the environment across a file, so a clipboard shadow left in place would be what
+// every later test in it sees. Deleting the own property restores happy-dom's prototype getter.
+afterEach(() => delete (navigator as { clipboard?: unknown }).clipboard);
 
 const VOCABULARY = ['👍', '🎉', '❤️', '😂', '😮', '🙏', '👀', '🔥'];
 
