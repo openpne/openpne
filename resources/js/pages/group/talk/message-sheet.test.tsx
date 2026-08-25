@@ -63,7 +63,7 @@ function open({ chips = [], canReact = true, canReply = true, ...over }: { chips
 test('the link is offered whenever the clipboard is, and copies this conversation\'s own address', () => {
     const writeText = vi.fn(() => Promise.resolve());
     clipboard(writeText);
-    window.history.replaceState(null, '', '/groups/3/talk?context=abc');
+    window.history.replaceState(null, '', '/groups/3/talk?context=abc#foo');
     const spies = open({ body: '' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));

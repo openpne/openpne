@@ -38,6 +38,7 @@ export function canCopyLink(): boolean {
 export function messageLink(id: number): string {
     const url = new URL(window.location.href);
     url.search = '';
+    url.hash = '';
     url.searchParams.set('m', String(id));
 
     return url.toString();
