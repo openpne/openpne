@@ -189,10 +189,14 @@ function CopyLinkButton({ messageId }: { messageId: number }) {
     const t = useT();
     const [copied, setCopied] = useState(false);
     const timer = useRef<number | null>(null);
+    const mounted = useRef(true);
 
-    // An acknowledgement still pending when the row leaves must not set state on an unmounted control.
+    // An acknowledgement still pending when the row leaves must not set state on an unmounted
+    // control — the write itself can outlive the row, so the flag covers the then as well as the
+    // timeout it would have scheduled.
     useEffect(
         () => () => {
+            mounted.current = false;
             if (timer.current !== null) {
                 window.clearTimeout(timer.current);
             }
@@ -208,6 +212,9 @@ function CopyLinkButton({ messageId }: { messageId: number }) {
                 void navigator.clipboard
                     .writeText(messageLink(messageId))
                     .then(() => {
+                        if (!mounted.current) {
+                            return;
+                        }
                         setCopied(true);
                         if (timer.current !== null) {
                             window.clearTimeout(timer.current);

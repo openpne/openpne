@@ -285,3 +285,24 @@ test('a refused copy answers nothing', async () => {
 
     expect(screen.queryByText('Link copied.')).toBeNull();
 });
+
+test('a write that completes after the row left schedules nothing', async () => {
+    vi.useFakeTimers();
+    let settle = () => {};
+    const writeText = vi.fn(() => new Promise<void>((resolve) => (settle = resolve)));
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    const view = renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    view.unmount();
+    settle();
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    // The guard's observable half: without it the late then schedules the clear-timer anyway.
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+    window.history.replaceState(null, '', '/');
+});
