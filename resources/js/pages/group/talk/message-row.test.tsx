@@ -225,3 +225,27 @@ test('a message with no card leaves the body link standing alone', () => {
 
     expect(container.querySelectorAll('a[href="https://example.com/a"]').length).toBe(1);
 });
+
+/** What the row asks the platform for — absent stands for a site served without a secure context. */
+function clipboard(writeText: ((text: string) => Promise<void>) | null) {
+    Object.defineProperty(navigator, 'clipboard', { value: writeText === null ? undefined : { writeText }, configurable: true });
+}
+
+test('the actions bar copies the message link in one click', () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
+    window.history.replaceState(null, '', '/');
+});
+
+test('no clipboard leaves the bar without a link button', () => {
+    clipboard(null);
+    renderRow();
+
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+});
