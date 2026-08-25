@@ -1,8 +1,7 @@
 import { expect, test } from 'vitest';
 import { pageModules, pagePath } from './page-modules';
 
-// In the vitest lane despite testing no component: `import.meta.glob` needs Vite's transform, which
-// the node lane does not run.
+// In the vitest lane, not the node one: `import.meta.glob` needs Vite's transform.
 
 test('resolves a real page', () => {
     expect(pageModules[pagePath('timeline/index')]).toBeTypeOf('function');
