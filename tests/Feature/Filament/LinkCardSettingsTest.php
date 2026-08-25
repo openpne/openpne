@@ -83,7 +83,7 @@ class LinkCardSettingsTest extends TestCase
 
             $this->assertStringContainsString(SnsSettingKey::LinkCardEnabled->label(), $rendered);
             $this->assertStringContainsString(
-                __('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are always previewed, and are never requested.'),
+                __('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are never requested.'),
                 $rendered,
             );
         }
