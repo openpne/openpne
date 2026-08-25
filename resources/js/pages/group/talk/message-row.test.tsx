@@ -19,6 +19,8 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 afterEach(cleanup);
+// Fake timers must not outlive a failing assertion in the tests that arm them.
+afterEach(() => vi.useRealTimers());
 
 const message: TalkMessage = {
     id: 7,
@@ -264,16 +266,18 @@ test('a completed copy answers with a check and a spoken line, then offers again
 
     // Spoken on completion, not on the click: the acknowledgement claims the write happened.
     expect(screen.getByText('Link copied.')).toBeTruthy();
+    // data-ack is what holds the bar out while the answer is showing.
+    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBe('copied');
 
     act(() => {
         vi.advanceTimersByTime(1600);
     });
     expect(screen.queryByText('Link copied.')).toBeNull();
-    vi.useRealTimers();
+    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBeNull();
     window.history.replaceState(null, '', '/');
 });
 
-test('a refused copy answers nothing', async () => {
+test('a refused copy says so rather than letting the old clipboard read as success', async () => {
     const writeText = vi.fn(() => Promise.reject(new Error('denied')));
     clipboard(writeText);
     renderRow();
@@ -284,6 +288,7 @@ test('a refused copy answers nothing', async () => {
     });
 
     expect(screen.queryByText('Link copied.')).toBeNull();
+    expect(screen.getByText('The link could not be copied.')).toBeTruthy();
 });
 
 test('a write that completes after the row left schedules nothing', async () => {
@@ -301,8 +306,7 @@ test('a write that completes after the row left schedules nothing', async () => 
         await Promise.resolve();
     });
 
-    // The guard's observable half: without it the late then schedules the clear-timer anyway.
+    // The guard's observable half: without it the late settle schedules the clear-timer anyway.
     expect(vi.getTimerCount()).toBe(0);
-    vi.useRealTimers();
     window.history.replaceState(null, '', '/');
 });
