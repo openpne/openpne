@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Copy, Reply, Trash2, Users } from 'lucide-react';
+import { Copy, Link, Reply, Trash2, Users } from 'lucide-react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
@@ -23,6 +23,24 @@ const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-card div
  */
 export function canCopyText(body: string): boolean {
     return body.trim() !== '' && typeof navigator.clipboard?.writeText === 'function';
+}
+
+/** Whether a link to a message can be offered — the clipboard alone decides; every message has an address. */
+export function canCopyLink(): boolean {
+    return typeof navigator.clipboard?.writeText === 'function';
+}
+
+/**
+ * The address of one message: this conversation's own URL carrying only `m` — the same deep link a
+ * notification hands out, built from the page itself so a sub-directory install needs no telling.
+ * Any other query is dropped: `context` names this visit's position, not the message's.
+ */
+export function messageLink(id: number): string {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.searchParams.set('m', String(id));
+
+    return url.toString();
 }
 
 /**
@@ -61,6 +79,7 @@ export function TalkMessageSheet({
 }) {
     const t = useT();
     const canCopy = canCopyText(message.body);
+    const canLink = canCopyLink();
     const contentRef = useRef<HTMLDivElement>(null);
 
     return (
@@ -111,7 +130,7 @@ export function TalkMessageSheet({
                     </div>
                 )}
 
-                {(canReply || chips.length > 0 || canCopy) && (
+                {(canReply || chips.length > 0 || canCopy || canLink) && (
                     <div className={SHEET_GROUP}>
                         {canReply && (
                             <button
@@ -157,6 +176,21 @@ export function TalkMessageSheet({
                             >
                                 <Copy className="size-5 shrink-0" aria-hidden />
                                 {t('Copy text')}
+                            </button>
+                        )}
+
+                        {canLink && (
+                            <button
+                                type="button"
+                                className={SHEET_ITEM}
+                                onClick={() => {
+                                    // Same bargain as the text above: a refusal leaves things as they are.
+                                    void navigator.clipboard.writeText(messageLink(message.id)).catch(() => {});
+                                    onClose();
+                                }}
+                            >
+                                <Link className="size-5 shrink-0" aria-hidden />
+                                {t('Copy link')}
                             </button>
                         )}
                     </div>

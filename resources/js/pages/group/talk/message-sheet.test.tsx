@@ -60,6 +60,26 @@ function open({ chips = [], canReact = true, canReply = true, ...over }: { chips
     return spies;
 }
 
+test('the link is offered whenever the clipboard is, and copies this conversation\'s own address', () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk?context=abc');
+    const spies = open({ body: '' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+
+    // The page's URL carrying only `m`: `context` names this visit's position, not the message's.
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
+    expect(spies.onClose).toHaveBeenCalled();
+});
+
+test('no clipboard, no link item', () => {
+    clipboard(null);
+    open();
+
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+});
+
 test('the sheet is named for a reader who cannot see what it is', () => {
     clipboard(null);
     open();
