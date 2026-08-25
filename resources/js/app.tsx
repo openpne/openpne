@@ -12,6 +12,7 @@ import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
 import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
 import { installHistoryRestore } from '@/lib/history-restore';
+import { pageModules, pagePath } from '@/lib/page-modules';
 import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
@@ -37,11 +38,7 @@ void createInertiaApp({
         // Inertia — see lib/chat/opening-scroll.ts for why a conversation has to.
         visitOptions: (_href: string, options: { preserveScroll?: unknown }) => conversationVisitOptions(options),
     },
-    resolve: (name) =>
-        resolvePageComponent<ResolvedComponent>(
-            `./pages/${name}.tsx`,
-            import.meta.glob<ResolvedComponent>('./pages/**/*.tsx'),
-        ),
+    resolve: (name) => resolvePageComponent<ResolvedComponent>(pagePath(name), pageModules),
     // Default layout for every non-auth page: nav chrome + the member page frame (single <main>,
     // hub header from the chrome registry, central flash). auth/* keep their own AuthLayout. A page
     // overrides its frame via `Page.layout = (props) => ({ chrome: {…} })` (Inertia merges the

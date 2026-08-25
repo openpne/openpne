@@ -88,6 +88,26 @@ export default tseslint.config(
         },
     },
     {
+        // Test helpers are named `test-*` and pull in @testing-library. Production code importing one
+        // puts that dependency in the shipped bundle, which is how a page test's 17 kB became 473 kB
+        // of it — and unlike a stray page test, nothing about the module's path says it is test-only.
+        files: ['resources/js/**/*.{ts,tsx}'],
+        ignores: ['resources/js/**/*.test.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            regex: '(^@/|/|^\\./)test-[^/]*(\\.tsx?)?$',
+                            message: 'A `test-*` module is for tests only — importing one ships @testing-library to visitors.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         // The Inertia entry must stay a pure side-effect module: a component defined here makes it a
         // Vite Fast Refresh boundary, and plugin-react's boundary self-import re-runs the top-level
         // createRoot in dev, mounting the app twice. Enforce the contract directly — no exports (a
