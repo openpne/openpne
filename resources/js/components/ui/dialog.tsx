@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { X } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export const Dialog = DialogPrimitive.Root;
@@ -31,12 +32,11 @@ export function DialogContent({
                 {...props}
             >
                 {children}
-                <DialogPrimitive.Close
-                    className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent"
-                    aria-label={closeLabel}
-                >
-                    <X className="size-5" />
-                </DialogPrimitive.Close>
+                <Tip label={closeLabel}>
+                    <DialogPrimitive.Close className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent">
+                        <X className="size-5" />
+                    </DialogPrimitive.Close>
+                </Tip>
             </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
     );
@@ -94,6 +94,7 @@ export function SheetContent({
                     // The trigger's geometry, restated: a size-12 box whose right edge sits 0.5rem
                     // (0.75 gutter − 0.25 overhang) from the screen's, its row starting under the
                     // 4px line — so opening the drawer swaps the word under the glyph, nothing more.
+                    // Wordful, so no Tip: it is named by what it shows.
                     <DialogPrimitive.Close className="absolute top-[calc(0.25rem+env(safe-area-inset-top))] right-[calc(0.5rem+env(safe-area-inset-right))] inline-flex size-12 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent">
                         <X className="size-6" aria-hidden />
                         <span className="text-[11px] leading-none">{closeLabel}</span>
@@ -102,17 +103,18 @@ export function SheetContent({
                 {children}
                 {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
                 {side !== 'right' && (
-                    <DialogPrimitive.Close
-                        className={cn(
-                            'absolute right-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent',
-                            // A sheet standing on the foot of the screen has no status bar over its top
-                            // corner, so its close sits at the plain gutter.
-                            side === 'bottom' ? 'top-3' : 'top-[calc(0.75rem+env(safe-area-inset-top))]',
-                        )}
-                        aria-label={closeLabel}
-                    >
-                        <X className="size-5" />
-                    </DialogPrimitive.Close>
+                    <Tip label={closeLabel}>
+                        <DialogPrimitive.Close
+                            className={cn(
+                                'absolute right-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent',
+                                // A sheet standing on the foot of the screen has no status bar over its top
+                                // corner, so its close sits at the plain gutter.
+                                side === 'bottom' ? 'top-3' : 'top-[calc(0.75rem+env(safe-area-inset-top))]',
+                            )}
+                        >
+                            <X className="size-5" />
+                        </DialogPrimitive.Close>
+                    </Tip>
                 )}
             </DialogPrimitive.Content>
         </DialogPrimitive.Portal>

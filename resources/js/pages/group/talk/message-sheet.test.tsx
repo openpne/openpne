@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkMessageSheet } from './message-sheet';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import type { TalkMessage } from './types';
 
@@ -42,7 +43,7 @@ function open({ chips = [], canReact = true, canReply = true, ...over }: { chips
         onClose: vi.fn(),
     };
 
-    render(
+    renderWithProviders(
         <TalkMessageSheet
             message={message(over)}
             chips={chips}

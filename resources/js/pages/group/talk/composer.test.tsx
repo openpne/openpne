@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkComposer } from './composer';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import type { GridImage } from '@/components/image-grid';
 import type { TalkMessage } from './types';
 
@@ -38,7 +39,7 @@ const parent = (over: Partial<TalkMessage> = {}): TalkMessage => ({
 
 function mount(over: Partial<Parameters<typeof TalkComposer>[0]> = {}) {
     const props = { groupId: 1, groupName: 'Rope crew', replyTo: null, onCancelReply: vi.fn(), onSend: vi.fn(), ...over };
-    render(<TalkComposer {...props} />);
+    renderWithProviders(<TalkComposer {...props} />);
 
     return props;
 }
