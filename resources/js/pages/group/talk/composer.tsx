@@ -1,5 +1,6 @@
 import { ImagePlus, Reply, SendHorizontal, X } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
+import { BLEED_EDGES } from '@/components/card';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { ACCEPT, shrink } from '@/components/images-field';
@@ -11,6 +12,7 @@ import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import type { TalkMessage } from './types';
+import { cn } from '@/lib/utils';
 
 /** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {
@@ -188,7 +190,12 @@ export function TalkComposer({
             // The transition is for the look whose bottom bar stands here while the room is read and
             // leaves when someone writes: the var jumps, but the length it computes to is what
             // animates, matching the bar's own 200ms. Inert elsewhere — no other look moves it.
-            className="sticky bottom-0 z-10 -mx-3 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:-mx-4 sm:px-4"
+            className={cn(
+                // The card's own edges, from the card: below lg both run to the screen, at lg both
+                // come back inside the frame — they are one surface split by a border, not two.
+                BLEED_EDGES,
+                'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
+            )}
         >
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">
