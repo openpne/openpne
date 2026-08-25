@@ -67,6 +67,13 @@ final class LinkCardImage
         private readonly SafeHttpFetcher $fetcher,
         private readonly FileUploader $uploader,
         private readonly ImageManager $images,
+        /**
+         * Where fetched bytes are staged before the uploader takes them; the system temp directory
+         * unless told otherwise. Injectable so a test can watch a directory it owns: the staged names
+         * say nothing about which process wrote them, so counting them anywhere shared counts every
+         * other test worker's in-flight files too.
+         */
+        private readonly ?string $stagingDir = null,
     ) {}
 
     /**
@@ -189,7 +196,7 @@ final class LinkCardImage
      */
     private function store(string $bytes, string $mime, array $dimensions, int $linkCardId): ?array
     {
-        $path = tempnam(sys_get_temp_dir(), 'linkcard');
+        $path = tempnam($this->stagingDir ?? sys_get_temp_dir(), 'linkcard');
 
         if ($path === false) {
             return null;
