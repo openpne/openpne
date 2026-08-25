@@ -195,6 +195,11 @@ The picture is the record's own file at its own address, so `FilePolicy` authori
 the same record whose rule admitted the card. The `/linkCard/…` route is for pictures a fetch
 downloaded and refuses these rows, since an internal row is never renderable.
 
+For a reply those are not the same record: the card is the thread's to authorise and the picture is
+the reply's own file, so a reader the replier has blocked is offered a picture that 404s. That is the
+asymmetry the thread page already has — it draws the same reply's picture on the same terms — and it
+is pinned as current behaviour rather than given a second rule here.
+
 ### The URL is read again at render time
 
 The pointer is not trusted on its own: the URL is resolved afresh and must still be ours and still
@@ -219,8 +224,16 @@ would make a body's card depend on when the job happened to run.
 requesting it. That is the repair as well as the guard: rows minted earlier hold a card of the login
 screen or a failure, nothing else revisits them, and the read trigger goes on offering them to the
 fetch job week after week. They correct themselves the next time a page they are on is opened — no
-migration, no command. The conversion clears the metadata and deletes any picture the fetch had
-stored, which is otherwise referenced by a row nobody renders and reachable by no sweep. Nulling
+migration, no command. The same repair runs from the sync side, and there it does not depend on the
+address resolving: no row is *minted* for one of ours that names nothing, but one already there is
+converted anyway, since the row is shared by every body that mentions the URL and would otherwise go
+on drawing a login screen under all of them.
+
+The conversion clears the metadata and deletes the pictures the fetch had stored, which are otherwise
+referenced by a row nobody renders and reachable by no sweep. They are found by what the files say
+they belong to and deleted *after* the row is converted, rather than from the column as it read
+before: a fetch already in flight can store its own picture in that window, and the column would
+name neither it nor both. Nulling
 `next_attempt_at` also releases the lease, so a fetch still in flight fails its fence and drops its
 result rather than writing metadata onto the converted row. Behind that sits the claim's own
 `status != internal` condition, which answers the row the URL test cannot: one already marked
@@ -236,6 +249,25 @@ and the first card that needs a record reads every record the page will ask for 
 without opting in, which is the point — an opt-in would be missing from whichever list nobody
 remembered. `InternalLinkCardQueryCostTest` holds three surfaces to a count that does not move with
 the number of rows.
+
+**What the rules then ask batches with it.** Reading the records is half of what a card costs; the
+other half is what each rule asks about the *reader* — does this author block me, are we friends,
+what am I to this group — which is a single-row question asked once per card. So the moment a kind's
+records are read, the relations those rules are about to ask for are read for exactly that set, one
+query each, into a memo of **pairs** ([`ViewerRelations`](../../app/Support/ViewerRelations.php)).
+Nothing is loaded on the strength of who is reading, so what it holds is bounded by the page rather
+than by the size of a reader's social graph.
+
+Every rule keeps **one** path — the memo if the pair is in it, its own query if not — so a page that
+read nothing behaves and costs exactly as it did before, and a pair the page never named is asked
+about the way it always was. A pair read and found *unrelated* is memoised as such: recording only
+the matches would leave a page of strangers, which is the common one, paying per row. That makes the
+bulk read and the single-row read two spellings of one predicate, and `ViewerRelationsTest` pins them
+against each other branch by branch rather than trusting them to agree.
+
+The memo is answers taken at a moment, so a write to a block, a friendship or a membership drops it
+(`ViewerRelations::flush()`). Forgetting that call fails **open** and leaves nothing to see at the
+call site, so `ViewerRelationsFlushTest` is what says the wiring is complete.
 
 ### What does not reach back
 
@@ -256,6 +288,7 @@ not.
 | [`InternalCardTarget`](../../app/LinkCard/InternalCardTarget.php) | The seven kinds a URL of ours can name, with each one's unit, rule and content |
 | [`InternalCardResolver`](../../app/LinkCard/InternalCardResolver.php) | The records a request's internal cards are built from, read one query per kind |
 | [`InternalCardRow`](../../app/LinkCard/InternalCardRow.php) | The one state a row of ours is in, and the only way it gets there |
+| [`ViewerRelations`](../../app/Support/ViewerRelations.php) | What the reader is to the records a page names, read one query per relation |
 | [`Encoding`](../../app/LinkCard/Encoding.php) | Converts a fetched page to UTF-8 |
 | [`MetadataExtractor`](../../app/LinkCard/MetadataExtractor.php) | Markup in, `LinkMetadata` out. Pure — it never fetches |
 | [`OembedClient`](../../app/LinkCard/OembedClient.php) | Calls a discovered oEmbed endpoint for the structured fields only |
@@ -573,6 +606,10 @@ rather than something that hurts, so this is an operator's tool.
   shared and what such a card says depends on who is reading it.
 - An internal card's content is read from the record on every render, and gated by that record's own
   unit and access rule — never by a copy of either, and never by anything cached on the row.
+- Reading a page's relations in bulk is a memo of the answers those rules would have read anyway,
+  pair by pair, and never a second rule. An unread pair costs a query; it never decides anything.
+- A row leaving the fetch lifecycle takes every picture stored for it, found by the relation and
+  after the row is converted — never by the id the row held before.
 - Whether a URL of ours has a card does not depend on the link-card setting; whether an external one
   is examined at all does.
 - One row per normalised URL; a widely-shared link is fetched once.

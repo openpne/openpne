@@ -10,6 +10,8 @@ use App\Files\ImageCache;
 use App\Files\ImageTransform;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
+use App\LinkCard\InternalCardRow;
+use App\LinkCard\InternalUrl;
 use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
 use App\LinkCard\LinkCardSync;
@@ -189,6 +191,73 @@ class InternalLinkCardTest extends TestCase
         $this->assertDatabaseMissing('files', ['id' => $image->id]);
         $this->assertFalse($this->app->make(FileStorage::class)->exists($image), 'The stored bytes outlived the card.');
         $this->assertFalse(Storage::disk(config('openpne.images.cache_disk'))->exists($cacheKey), 'A cached thumbnail outlived the file.');
+    }
+
+    public function test_a_picture_a_fetch_stored_while_this_ran_goes_with_the_rest(): void
+    {
+        // The window the row's own column cannot close: a fetch already in flight stores its picture
+        // and writes image_file_id around the conversion, so the card owns two files while the row
+        // names at most one. Both are referenced by nothing the moment the row becomes a pointer, and
+        // nothing else can reach them — the sweep collects cards, and this card stays.
+        Queue::fake();
+        $card = $this->fetchedCard($this->selfUrl());
+        $named = $card->image;
+        $inFlight = $this->storedImageFor($card);
+        $cacheKey = $this->cachedThumbnailOf($inFlight);
+        $elsewhere = $this->fetchedCard('https://example.com/article');
+        $diary = $this->bodyLinking($this->selfUrl());
+
+        $this->sync($diary);
+
+        $this->assertDatabaseMissing('files', ['id' => $named->id]);
+        $this->assertNull(File::find($inFlight->id), 'A picture stored around the conversion was left behind.');
+        $this->assertFalse(Storage::disk(config('openpne.images.cache_disk'))->exists($cacheKey), 'A cached thumbnail outlived the file.');
+        $this->assertNotNull(File::find($elsewhere->image_file_id), "Another card's picture was deleted with this one's.");
+    }
+
+    public function test_a_row_of_ours_that_names_no_record_is_repaired_where_one_already_exists(): void
+    {
+        // No row is minted for such an address, but one already there is shared by every body that
+        // mentions it — left alone it goes on drawing the login screen under all of them.
+        Queue::fake();
+        $url = 'https://sns.example.com/diary';
+        $card = $this->fetchedCard($url);
+        $image = $card->image;
+        $diary = $this->bodyLinking($url);
+
+        $this->sync($diary);
+
+        $card->refresh();
+        $this->assertSame(LinkCardStatus::Internal, $card->status);
+        $this->assertNull($card->title, 'The card of a login screen survived.');
+        $this->assertNull($card->internal_context, 'A row of ours naming no record must hold no pointer.');
+        $this->assertDatabaseMissing('files', ['id' => $image->id]);
+        $this->assertSame($card->id, $diary->fresh()->link_card_id);
+    }
+
+    public function test_a_row_that_points_at_the_record_but_holds_more_is_still_cleared(): void
+    {
+        // Status and pointer agree, so the pointer alone reads as "already converted" — and the
+        // metadata beside them is exactly what a row shared by every body must never carry.
+        $card = $this->internalRow();
+        $card->forceFill([
+            'title' => 'Log in',
+            'description' => 'Sign in to continue',
+            'image_file_id' => $this->storedImageFor($card)->id,
+            'fetched_at' => CarbonImmutable::now(),
+            'failure_count' => 3,
+        ])->save();
+        $image = $card->fresh()->image;
+
+        InternalCardRow::convert($card->fresh(), InternalUrl::of($this->selfUrl()));
+
+        $card->refresh();
+        $this->assertNull($card->title);
+        $this->assertNull($card->description);
+        $this->assertNull($card->image_file_id);
+        $this->assertNull($card->fetched_at);
+        $this->assertSame(0, $card->failure_count);
+        $this->assertDatabaseMissing('files', ['id' => $image->id]);
     }
 
     public function test_an_internal_row_is_never_claimed_for_a_fetch(): void

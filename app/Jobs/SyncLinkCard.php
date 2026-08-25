@@ -172,26 +172,28 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The row for $url when $url is one of this site's own, or null when there is no card to point
-     * at.
+     * The row for $url when $url is one of this site's own, or null when there is none to point at.
      *
-     * Null is for an address of ours that names nothing a card can be built from — an OpenPNE 3
-     * spelling, a list page, a route the resolver does not know. The body is still marked examined,
-     * so it stops being re-parsed, but it gets no row: a row that could only ever draw nothing is
-     * one more thing for the sweep to collect. What that costs is stated in link-cards.md — a kind
-     * added to the resolver later does not reach bodies already examined.
+     * **No row is created for an address of ours that names nothing a card can be built from** — an
+     * OpenPNE 3 spelling, a list page, a route the resolver does not know. A row that could only
+     * ever draw nothing is one more thing for the sweep to collect. What that costs is stated in
+     * link-cards.md: a kind added to the resolver later does not reach bodies already examined.
      *
-     * An existing row is converted rather than left as it is, so a URL first posted while it named
-     * an unresolvable page, or fetched before this app knew its own host, ends up in the one state
-     * internal rows have.
+     * **An existing row is converted either way**, and that is not the same decision. A row is
+     * shared by every body that mentions the URL, so one minted before this existed holds a card of
+     * the login screen — and left alone it goes on being drawn on all of them, whether or not this
+     * particular address resolves to a record.
      */
     private function internalCardFor(string $url, InternalUrl $link): ?LinkCard
     {
-        if ($link->target === null) {
+        $card = $link->target === null
+            ? LinkCard::where('url_hash', LinkUrl::hash($url))->first()
+            : $this->rowFor($url, InternalCardRow::attributes($link));
+
+        if ($card === null) {
             return null;
         }
 
-        $card = $this->rowFor($url, InternalCardRow::attributes($link));
         InternalCardRow::convert($card, $link);
 
         return $card;

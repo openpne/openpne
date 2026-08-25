@@ -25,6 +25,7 @@ use App\Support\BodyRenderer;
 use App\Support\BodyText;
 use App\Support\ChatPreview;
 use App\Support\Feature;
+use App\Support\ViewerRelations;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
@@ -107,6 +108,40 @@ enum InternalCardTarget: string
     }
 
     /**
+     * Read what $viewer is to the records this page's cards name, in one query per relation.
+     *
+     * Beside {@see canView()} deliberately: this is the same list of rules read in bulk, and written
+     * apart the two drift the moment a rule changes what it asks. Nothing is decided here — the memo
+     * only holds answers the rules go on to ask for ({@see ViewerRelations}), so a kind left out
+     * costs queries rather than admitting anyone.
+     *
+     * A group's own page has no arm here: any signed-in member may read it, which asks nothing.
+     *
+     * @param  Collection<int, Model>  $records
+     */
+    public function warmRelations(Collection $records, Member $viewer): void
+    {
+        $relations = app(ViewerRelations::class);
+
+        match ($this) {
+            // The clearance rule asks both, and asks them of the author.
+            self::Diary => $this->warmAudience($relations, $viewer, $records->pluck('member_id')->all()),
+            // Of the thread root's author, never the reply's own — see canViewThread.
+            self::TimelinePost => $this->warmAudience($relations, $viewer, $records->map(
+                fn (Model $post): mixed => $post->in_reply_to_id === null ? $post->member_id : $post->parent?->member_id,
+            )->all()),
+            // MemberPolicy asks about the block and nothing else; a profile's own web-public switch
+            // is a column already loaded.
+            self::Member => $relations->warmBlocks($viewer, $records->modelKeys()),
+            self::Topic, self::Event, self::TalkMessage => $relations->warmRoles($viewer, $records->pluck('group_id')->all()),
+            // Asked whatever the group's read column says: reading the column here to skip the
+            // groups that admit everyone would be a second copy of the board rule, and one query for
+            // a page is not worth that.
+            self::Group => null,
+        };
+    }
+
+    /**
      * Whether $viewer may read $record, by that kind's own rule.
      *
      * Diaries, timeline posts and profiles can be web-public and take a nullable viewer; the group
@@ -169,6 +204,11 @@ enum InternalCardTarget: string
             self::TimelinePost => [
                 'title' => __('%post_activity% by :name', ['name' => $record->member->name]),
                 'description' => BodyRenderer::excerpt($record->body, BodyFormat::Plain),
+                // A reply's picture belongs to the reply, and FilePolicy asks the row that owns the
+                // bytes — the replier's own rule, not the thread's, which is what admitted this card.
+                // So a reader the replier has blocked gets a card whose picture 404s. That is exactly
+                // what the thread page does with the same reply's picture, and a rule written here to
+                // differ would be a second answer for one file.
                 'image' => $this->firstImage($record),
             ],
             self::Group => [
@@ -204,6 +244,18 @@ enum InternalCardTarget: string
         $content['description'] = $content['description'] === '' ? null : $content['description'];
 
         return $content;
+    }
+
+    /**
+     * The pair of relations `Visibility::clearanceFor` and the block test between them ask about an
+     * owner.
+     *
+     * @param  list<int|string|null>  $ownerIds
+     */
+    private function warmAudience(ViewerRelations $relations, Member $viewer, array $ownerIds): void
+    {
+        $relations->warmBlocks($viewer, $ownerIds);
+        $relations->warmFriends($viewer, $ownerIds);
     }
 
     /** The picture a body leads with, or null when it has none. */

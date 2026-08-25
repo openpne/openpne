@@ -11,6 +11,7 @@ use App\Files\PostImages;
 use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Http\UploadedFile;
 
 class CreateGroup
@@ -25,7 +26,7 @@ class CreateGroup
 
         // compensating() (not a bare transaction) so a failed top-image byte write rolls back
         // wholesale without orphaning bytes on a disk backend.
-        return $this->images->compensating(function (callable $store) use ($creator, $data, $image): Group {
+        $group = $this->images->compensating(function (callable $store) use ($creator, $data, $image): Group {
             $group = Group::create([
                 'name' => $data->name,
                 'description' => $data->description,
@@ -51,5 +52,9 @@ class CreateGroup
 
             return $group;
         });
+
+        ViewerRelations::flush();
+
+        return $group;
     }
 }

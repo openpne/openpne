@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Files\FileUploader;
 use App\LinkCard\InternalCardResolver;
 use App\LinkCard\InternalCardTarget;
 use App\LinkCard\LinkCardSerializer;
@@ -20,13 +21,16 @@ use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\TimelinePost;
+use App\Models\TimelinePostImage;
 use App\Support\Feature;
 use App\Support\LinkCardStatus;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -206,6 +210,42 @@ class InternalLinkCardRenderingTest extends TestCase
         $this->assertNull($this->draw($reply, $viewer), "A replier's friend was admitted to a thread they cannot open.");
         $this->befriend($this->author, $viewer);
         $this->assertNotNull($this->draw($reply, $viewer));
+    }
+
+    public function test_a_reply_cards_picture_answers_to_the_replier_as_the_thread_page_does(): void
+    {
+        // Pinned rather than fixed. The card is authorised by the thread root, but its picture is the
+        // reply's own file, and FilePolicy asks the row that owns the bytes — so a reader the replier
+        // has blocked is offered a picture that 404s. The thread page draws that same reply's picture
+        // on the same terms; one file answering two ways would be the worse outcome.
+        Storage::fake('image_cache');
+        $replier = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Members]);
+        $reply = TimelinePost::factory()->for($replier)->create([
+            'visibility' => Visibility::Members,
+            'in_reply_to_id' => $root->id,
+        ]);
+        $file = app(FileUploader::class)->store(
+            UploadedFile::fake()->image('a.png', 40, 40),
+            'timelinePost',
+            (int) $reply->id,
+        );
+        TimelinePostImage::factory()->create(['timeline_post_id' => $reply->id, 'file_id' => $file->id]);
+
+        $before = $this->draw($reply, $viewer);
+        $this->assertNotNull($before['imageUrl']);
+        $this->actingAs($viewer)->get($before['imageUrl'])->assertOk();
+
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $replier->getKey(),
+            'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
+        ]);
+
+        $after = $this->draw($reply, $viewer);
+        $this->assertNotNull($after['imageUrl'], 'The card is the thread\'s to authorise, and the thread still admits this reader.');
+        $this->actingAs($viewer)->get($after['imageUrl'])->assertNotFound();
     }
 
     public function test_a_record_that_is_gone_draws_nothing(): void

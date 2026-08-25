@@ -10,6 +10,7 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /** Promote a plain member to sub-admin. See AcceptAdminTransfer for the group-row lock protocol. */
@@ -45,5 +46,7 @@ class AppointSubAdmin
 
             SubAdminAppointed::dispatch($locked, $actor, $target);
         });
+
+        ViewerRelations::flush();
     }
 }

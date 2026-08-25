@@ -46,6 +46,15 @@ use Throwable;
  */
 final class LinkCardImage
 {
+    /**
+     * What a stored card picture says it belongs to.
+     *
+     * Not a morph alias, deliberately: `link_card` resolves to no model, and FilePolicy denies a
+     * related entity it cannot resolve — so these bytes are refused by the generic file route
+     * whatever else changes. It is written down once because {@see InternalCardRow} deletes by it.
+     */
+    public const RELATED_TYPE = 'link_card';
+
     /** Formats the card renders. SVG is absent deliberately: it is a document, not a picture. */
     private const ACCEPTED = [
         'image/jpeg' => 'jpg',
@@ -205,7 +214,7 @@ final class LinkCardImage
             //
             // So the row is stored fail-closed (FilePolicy denies an unrecognised related entity) and
             // is served only through LinkCardImageController, which asks the referencing body.
-            $file = $this->uploader->store($upload, relatedType: 'link_card', relatedId: $linkCardId);
+            $file = $this->uploader->store($upload, relatedType: self::RELATED_TYPE, relatedId: $linkCardId);
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
         } catch (Throwable) {

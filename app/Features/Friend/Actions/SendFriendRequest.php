@@ -9,6 +9,7 @@ use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
 use App\Features\Friend\FriendRequestLock;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class SendFriendRequest
@@ -67,5 +68,7 @@ class SendFriendRequest
         ]);
 
         FriendRequestAccepted::dispatch($originalRequester, $requester);
+
+        ViewerRelations::flush();
     }
 }

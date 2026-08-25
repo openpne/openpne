@@ -36,6 +36,7 @@ use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Support\SiteTimezone;
+use App\Support\ViewerRelations;
 use App\Translation\TermTranslator;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -92,6 +93,11 @@ class AppServiceProvider extends ServiceProvider
         // Same scope, same reason it is not static: it holds records read for this page's internal
         // cards, and a worker serves many jobs (see InternalCardResolver).
         $this->app->scoped(InternalCardResolver::class);
+
+        // The answers those cards' access rules needed, kept for the page that read them. Scoped for
+        // the same reason again, and cleared by any write that changes what it holds
+        // (ViewerRelations::flush).
+        $this->app->scoped(ViewerRelations::class);
 
         // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a
         // settings page once per request, and an administrator's flip must reach the next one.

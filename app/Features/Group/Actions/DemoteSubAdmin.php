@@ -9,6 +9,7 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /** Demote a sub-admin back to plain member. See AcceptAdminTransfer for the group-row lock protocol. */
@@ -38,5 +39,7 @@ class DemoteSubAdmin
                 ->where('member_id', $target->getKey())
                 ->update(['role' => GroupRole::Member]);
         });
+
+        ViewerRelations::flush();
     }
 }

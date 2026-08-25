@@ -136,7 +136,7 @@ final class LinkCardSerializer
             return null;
         }
 
-        $record = app(InternalCardResolver::class)->find($target, $link->recordId);
+        $record = app(InternalCardResolver::class)->find($target, $link->recordId, $viewer);
 
         if ($record === null || ! $target->canView($record, $viewer)) {
             return null;

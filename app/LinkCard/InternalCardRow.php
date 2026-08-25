@@ -55,24 +55,65 @@ final class InternalCardRow
     /** Move $card into that state, if it is not already there. */
     public static function convert(LinkCard $card, InternalUrl $link): void
     {
-        if ($card->status === LinkCardStatus::Internal
-            && $card->internal_context === $link->target?->value
-            && $card->internal_record_id === $link->recordId) {
+        $attributes = self::attributes($link);
+
+        if (self::holds($card, $attributes)) {
             return;
         }
-
-        $attributes = self::attributes($link);
-        $image = $card->image_file_id === null ? null : File::find($card->image_file_id);
 
         LinkCard::query()
             ->whereKey($card->getKey())
             ->update($attributes + ['updated_at' => CarbonImmutable::now()]);
 
-        // A picture a fetch had already stored is now referenced by nothing, and no unreferenced-file
-        // sweep can reach it while the row it hangs off still exists. Deleting the File takes its
-        // bytes and its cached thumbnails with it (FileObserver).
-        $image?->delete();
+        self::deleteStoredPictures($card);
 
         $card->forceFill($attributes)->syncOriginal();
+    }
+
+    /**
+     * Whether $card is already exactly the row this class describes.
+     *
+     * The whole state, not only the pointer: a row carrying a title, a picture or a schedule beside
+     * an internal status is not in the one state internal rows have, and returning early on it would
+     * leave a fetched card's metadata where the invariant says there is none.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private static function holds(LinkCard $card, array $attributes): bool
+    {
+        foreach ($attributes as $column => $value) {
+            if ($card->getAttribute($column) !== $value) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Delete every picture stored for $card — after the update, and by what the files say they
+     * belong to rather than by the id the row held a moment ago.
+     *
+     * Read first, the id is a race: a fetch already in flight can store its own picture and write
+     * `image_file_id` in the window before the update, and that picture would then be referenced by
+     * nothing and reachable by nothing — no unreferenced-file sweep collects a file whose card row
+     * still exists. Ordering it this way closes the window from both ends. The update nulls
+     * `next_attempt_at`, which releases the lease, so every later write fails its fence and that
+     * worker deletes its own image; anything stored before the update is still related to this card
+     * and is collected here.
+     */
+    private static function deleteStoredPictures(LinkCard $card): void
+    {
+        $pictures = File::query()
+            // Both halves, always: this deletes bytes, and a filter that named only the card would
+            // take another card's pictures with it.
+            ->where('related_entity_type', LinkCardImage::RELATED_TYPE)
+            ->where('related_entity_id', $card->getKey())
+            ->get();
+
+        // One at a time, so FileObserver runs for each: the bytes and the cached thumbnails go too.
+        foreach ($pictures as $picture) {
+            $picture->delete();
+        }
     }
 }

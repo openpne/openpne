@@ -5,6 +5,7 @@ namespace App\Features\Block\Actions;
 use App\Features\Block\Exceptions\BlockActionException;
 use App\Features\Block\Exceptions\BlockActionFailure;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class UnblockMember
@@ -25,5 +26,7 @@ class UnblockMember
                 throw new BlockActionException(BlockActionFailure::NotBlocked);
             }
         });
+
+        ViewerRelations::flush();
     }
 }
