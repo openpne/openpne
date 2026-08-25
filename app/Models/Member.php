@@ -12,6 +12,7 @@ use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
 use App\Support\Surface;
+use App\Support\ViewerRelations;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -118,9 +119,14 @@ class Member extends Authenticatable
             ->withPivot('created_at');
     }
 
+    /**
+     * A page that read this member's side of the pair in bulk has already answered it
+     * (ViewerRelations); an unread pair asks as it always has.
+     */
     public function isFriendsWith(self $other): bool
     {
-        return $this->friendships()->whereKey($other->getKey())->exists();
+        return app(ViewerRelations::class)->isFriend($this, $other)
+            ?? $this->friendships()->whereKey($other->getKey())->exists();
     }
 
     public function hasPendingRequestFrom(self $other): bool

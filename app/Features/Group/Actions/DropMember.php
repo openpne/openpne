@@ -9,6 +9,7 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /** Remove a plain member from a group. See AcceptAdminTransfer for the group-row lock protocol. */
@@ -43,5 +44,7 @@ class DropMember
                 $locked->save();
             }
         });
+
+        ViewerRelations::flush();
     }
 }

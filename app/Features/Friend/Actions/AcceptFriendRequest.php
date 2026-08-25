@@ -9,6 +9,7 @@ use App\Features\Friend\Exceptions\FriendActionFailure;
 use App\Features\Friend\FriendRequestLock;
 use App\Features\Friend\FriendRequestNotificationRows;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class AcceptFriendRequest
@@ -45,5 +46,7 @@ class AcceptFriendRequest
 
             FriendRequestAccepted::dispatch($requester, $accepter);
         });
+
+        ViewerRelations::flush();
     }
 }

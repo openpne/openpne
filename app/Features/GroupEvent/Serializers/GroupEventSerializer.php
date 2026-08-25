@@ -53,9 +53,9 @@ class GroupEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
-    public static function detail(GroupEvent $event): array
+    public static function detail(GroupEvent $event, Member $viewer): array
     {
         return [
             'id' => $event->getKey(),
@@ -66,7 +66,7 @@ class GroupEventSerializer
             'bodyHtml' => $event->format === BodyFormat::Plain ? null : BodyRenderer::render($event->body, $event->format)->toHtml(),
             'images' => $event->images->map([self::class, 'image'])->all(),
             'author' => self::author($event->member),
-            'linkCard' => LinkCardSerializer::card($event),
+            'linkCard' => LinkCardSerializer::card($event, $viewer),
             'createdAt' => $event->created_at->toIso8601String(),
             'openDate' => $event->open_date->format('Y-m-d'),
             'openDateComment' => $event->open_date_comment ?? '',
@@ -78,7 +78,7 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupEventComment $comment, Member $viewer): array
     {
@@ -87,7 +87,7 @@ class GroupEventSerializer
             'number' => $comment->number,
             'body' => $comment->body,
             'images' => $comment->images->map([self::class, 'image'])->all(),
-            'linkCard' => LinkCardSerializer::card($comment),
+            'linkCard' => LinkCardSerializer::card($comment, $viewer),
             'author' => self::author($comment->member),
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => GroupEventAccess::canDeleteComment($comment, $viewer),

@@ -138,8 +138,10 @@ class LinkCardSettings extends Page
                     ->label(SnsSettingKey::LinkCardEnabled->label())
                     // Stated on the page because it is not what "show previews" implies: the server
                     // reaches out to every linked page, including from bodies only a few people can
-                    // read, and the destination learns the link was shared here.
-                    ->helperText(__('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here.')),
+                    // read, and the destination learns the link was shared here. What the switch does
+                    // *not* govern is worth saying too: a link to one of this site's own pages is
+                    // built from the record it names, so it needs no request and no permission.
+                    ->helperText(__('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are never requested.')),
             ]);
     }
 }

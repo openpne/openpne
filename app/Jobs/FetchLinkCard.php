@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\LinkCard\InternalCardRow;
+use App\LinkCard\InternalUrl;
 use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
 use App\LinkCard\MetadataExtractor;
@@ -81,6 +83,23 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Decided from the URL, before the lease and before the row's own status is trusted, so
+        // "this app never requests its own pages" holds whatever state a row is in. It is also the
+        // repair: rows minted before internal links existed are ok-with-a-login-screen or failed,
+        // and nothing else would ever revisit them — the read trigger goes on offering them here
+        // week after week, and this is where that stops, without a migration or a command.
+        $link = InternalUrl::of($card->url);
+
+        if ($link->isSelfHosted) {
+            InternalCardRow::convert($card, $link);
+
+            return;
+        }
+
+        // The second belt is the claim's own `status != internal` condition rather than a check
+        // repeated here: it answers the row this one cannot — one already marked internal whose URL
+        // has stopped reading as ours, after a host is renamed — and it is where the lease is
+        // decided, so nothing can take one on a row whose bookkeeping columns are null by invariant.
         $lease = $card->claimFetch(self::LEASE_SECONDS);
 
         if ($lease === null) {

@@ -7,6 +7,7 @@ use App\Features\Auth\Events\MemberRegistered;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use App\Support\ViewerRelations;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -67,5 +68,7 @@ class CompleteRegistration
             ['member_id' => $pending->inviter_id, 'friend_id' => $member->getKey(), 'created_at' => $at],
             ['member_id' => $member->getKey(), 'friend_id' => $pending->inviter_id, 'created_at' => $at],
         ]);
+
+        ViewerRelations::flush();
     }
 }

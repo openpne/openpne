@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Member;
+use App\Support\ViewerRelations;
 
 abstract class BasePolicy
 {
@@ -13,6 +14,7 @@ abstract class BasePolicy
      */
     protected function ownerBlocksViewer(Member $owner, Member $viewer): bool
     {
-        return $owner->blocksMade()->whereKey($viewer->getKey())->exists();
+        return app(ViewerRelations::class)->ownerBlocksViewer($owner, $viewer)
+            ?? $owner->blocksMade()->whereKey($viewer->getKey())->exists();
     }
 }

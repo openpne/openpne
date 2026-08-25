@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Files\ImageCache;
 use App\Files\ImageTransform;
 use App\LinkCard\CardContext;
+use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
 use App\Models\File;
 use App\Models\LinkCard;
@@ -97,7 +98,7 @@ class LinkCardImageController extends Controller
     private function belongsToCard(File $file, LinkCard $card): bool
     {
         return $card->image_file_id === $file->id
-            && $file->related_entity_type === 'link_card'
+            && $file->related_entity_type === LinkCardImage::RELATED_TYPE
             && (int) $file->related_entity_id === (int) $card->id;
     }
 }

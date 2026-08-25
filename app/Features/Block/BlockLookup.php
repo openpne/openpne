@@ -3,6 +3,7 @@
 namespace App\Features\Block;
 
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -29,9 +30,21 @@ class BlockLookup
             ->exists();
     }
 
-    /** One-directional visibility: does the owner block this viewer? */
+    /**
+     * One-directional visibility: does the owner block this viewer?
+     *
+     * A caller drawing a whole page reads its owners in one go first, and this pair is then already
+     * answered (ViewerRelations). Nothing else changes: an unread pair asks the same question of the
+     * same table it always has.
+     */
     public static function ownerBlocksViewer(Member $owner, Member $viewer): bool
     {
+        $known = app(ViewerRelations::class)->ownerBlocksViewer($owner, $viewer);
+
+        if ($known !== null) {
+            return $known;
+        }
+
         return DB::table('member_blocks')
             ->where('blocker_id', $owner->getKey())
             ->where('blocked_id', $viewer->getKey())

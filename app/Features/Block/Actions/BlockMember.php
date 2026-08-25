@@ -6,6 +6,7 @@ use App\Features\Block\Exceptions\BlockActionException;
 use App\Features\Block\Exceptions\BlockActionFailure;
 use App\Features\Friend\FriendRequestLock;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class BlockMember
@@ -35,6 +36,8 @@ class BlockMember
 
             $this->severFriendGraph($blocker, $target);
         });
+
+        ViewerRelations::flush();
     }
 
     /** Blocking removes any friendship and cancels pending requests in both directions. */

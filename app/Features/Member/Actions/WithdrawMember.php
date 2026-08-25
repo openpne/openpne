@@ -12,6 +12,7 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SecurityLog;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -95,6 +96,8 @@ class WithdrawMember
         }
 
         $this->deleteMemberRow($member);
+
+        ViewerRelations::flush();
 
         // Logged here once so it covers both callers (self-withdrawal and the Filament DeleteAction),
         // and before the event dispatch — enqueueing its listeners is fallible and must not suppress

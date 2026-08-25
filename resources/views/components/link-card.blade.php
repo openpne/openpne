@@ -1,5 +1,8 @@
 @props(['record'])
-@php($card = \App\LinkCard\LinkCardSerializer::card($record))
+{{-- The reader is resolved here rather than passed in by eight templates: a view is the one layer
+     that may ask who is looking, and a card of one of this site's own pages is built against them. --}}
+@php($viewer = auth()->user())
+@php($card = \App\LinkCard\LinkCardSerializer::card($record, $viewer instanceof \App\Models\Member ? $viewer : null))
 @if ($card)
     {{-- The OpenPNE 3 skin styles by element within its own boxes, so a card needs its own rules to
          read as one object rather than as loose text after the body. Scoped to .linkCard and emitted

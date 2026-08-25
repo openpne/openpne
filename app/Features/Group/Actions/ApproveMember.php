@@ -10,6 +10,7 @@ use App\Features\Group\GroupRole;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class ApproveMember
@@ -44,5 +45,7 @@ class ApproveMember
 
             GroupJoined::dispatch($locked, $applicant);
         });
+
+        ViewerRelations::flush();
     }
 }

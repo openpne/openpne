@@ -95,6 +95,7 @@ class HomeController extends Controller
         $groupOn = Feature::Group->enabled();
 
         return Inertia::render('dashboard', HomeSerializer::dashboard(
+            $viewer,
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
             Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect(),
             $groupActivity($viewer, self::PREVIEW),

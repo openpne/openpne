@@ -246,7 +246,7 @@ class DiaryController extends Controller
                 $linkCards->ensureAll($comments);
 
                 return Inertia::render('diary/show', [
-                    'diary' => DiarySerializer::detail($found),
+                    'diary' => DiarySerializer::detail($found, $viewer),
                     'comments' => DiarySerializer::comments($comments, $viewer),
                     'older' => DiarySerializer::neighbor($older),
                     'newer' => DiarySerializer::neighbor($newer),
@@ -299,7 +299,7 @@ class DiaryController extends Controller
                 'visibilityOptions' => $options,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
-                'diary' => DiarySerializer::detail($diary),
+                'diary' => DiarySerializer::detail($diary, $viewer),
                 'visibility' => (string) $diary->visibility->value,
                 'visibilityOptions' => self::modernVisibilityOptions($options),
                 'composeEditor' => $viewer->composeEditor()->value,

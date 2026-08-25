@@ -340,7 +340,7 @@ class LinkCardRenderingTest extends TestCase
             'link_card_synced_at' => now(),
         ]);
 
-        $this->assertNotNull(LinkCardSerializer::card($reply->fresh()));
+        $this->assertNotNull(LinkCardSerializer::card($reply->fresh(), $this->author));
 
         $this->actingAs($this->author)->get("/timeline/{$root->id}")
             ->assertInertia(fn ($page) => $page->where('replies.0.linkCard.title', 'A title from the page')->etc());

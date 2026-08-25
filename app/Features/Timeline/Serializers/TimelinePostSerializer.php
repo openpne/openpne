@@ -4,6 +4,7 @@ namespace App\Features\Timeline\Serializers;
 
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\LinkCard\LinkCardSerializer;
+use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use App\Models\TimelinePostMention;
@@ -18,9 +19,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string}
      */
-    public static function entry(TimelinePost $post): array
+    public static function entry(TimelinePost $post, ?Member $viewer): array
     {
         $images = $post->images->map([self::class, 'image'])->all();
 
@@ -50,7 +51,7 @@ class TimelinePostSerializer
             'replyCount' => $post->replies_count ?? 0,
             'images' => $images,
             'author' => MemberRefSerializer::ref($post->member),
-            'linkCard' => LinkCardSerializer::card($post),
+            'linkCard' => LinkCardSerializer::card($post, $viewer),
             'createdAt' => $post->created_at->toIso8601String(),
         ];
     }
@@ -95,10 +96,10 @@ class TimelinePostSerializer
      * @param  LengthAwarePaginator<int, TimelinePost>  $paginator
      * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
-    public static function paginator(LengthAwarePaginator $paginator): array
+    public static function paginator(LengthAwarePaginator $paginator, ?Member $viewer): array
     {
         return [
-            'data' => array_map([self::class, 'entry'], $paginator->items()),
+            'data' => array_map(fn (TimelinePost $post): array => self::entry($post, $viewer), $paginator->items()),
             'meta' => [
                 'currentPage' => $paginator->currentPage(),
                 'lastPage' => $paginator->lastPage(),

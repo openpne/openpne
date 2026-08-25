@@ -12,6 +12,7 @@ use App\Features\Group\JoinPolicy;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class JoinGroup
@@ -54,5 +55,7 @@ class JoinGroup
 
             GroupJoined::dispatch($group, $member);
         });
+
+        ViewerRelations::flush();
     }
 }

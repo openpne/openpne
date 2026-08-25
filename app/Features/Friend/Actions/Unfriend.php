@@ -5,6 +5,7 @@ namespace App\Features\Friend\Actions;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 class Unfriend
@@ -32,5 +33,7 @@ class Unfriend
                 throw new FriendActionException(FriendActionFailure::NotFriends);
             }
         });
+
+        ViewerRelations::flush();
     }
 }

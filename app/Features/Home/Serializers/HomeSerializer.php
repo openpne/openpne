@@ -10,6 +10,7 @@ use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
+use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Support\Collection;
 
@@ -32,6 +33,7 @@ class HomeSerializer
      * @return array{announcements: array, talkRooms: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
+        Member $viewer,
         Collection $diaries,
         Collection $timeline,
         Collection $groupActivity,
@@ -54,7 +56,7 @@ class HomeSerializer
             // so there is no pager here to feed.
             'talkRooms' => $talkRooms->map([TalkRoomSerializer::class, 'room'])->all(),
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
-            'timeline' => $timeline->map([TimelinePostSerializer::class, 'entry'])->all(),
+            'timeline' => $timeline->map(fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer))->all(),
             'groupActivity' => $groupActivity->map([self::class, 'activityEntry'])->all(),
             'myDiaries' => $myDiaries->map([DiarySerializer::class, 'summary'])->all(),
         ];

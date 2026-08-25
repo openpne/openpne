@@ -43,9 +43,9 @@ class GroupTopicSerializer
     /**
      * The topic show shape: the full body and images plus the author and post time.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string}
      */
-    public static function detail(GroupTopic $topic): array
+    public static function detail(GroupTopic $topic, Member $viewer): array
     {
         return [
             'id' => $topic->getKey(),
@@ -56,7 +56,7 @@ class GroupTopicSerializer
             'bodyHtml' => $topic->format === BodyFormat::Plain ? null : BodyRenderer::render($topic->body, $topic->format)->toHtml(),
             'images' => $topic->images->map([self::class, 'image'])->all(),
             'author' => self::author($topic->member),
-            'linkCard' => LinkCardSerializer::card($topic),
+            'linkCard' => LinkCardSerializer::card($topic, $viewer),
             'createdAt' => $topic->created_at->toIso8601String(),
         ];
     }
@@ -65,7 +65,7 @@ class GroupTopicSerializer
      * A single comment. `deletable` is the viewer's delete permission (its author, or anyone who may
      * edit the topic), so the client renders the button without re-deriving the rule.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupTopicComment $comment, Member $viewer): array
     {
@@ -74,7 +74,7 @@ class GroupTopicSerializer
             'number' => $comment->number,
             'body' => $comment->body,
             'images' => $comment->images->map([self::class, 'image'])->all(),
-            'linkCard' => LinkCardSerializer::card($comment),
+            'linkCard' => LinkCardSerializer::card($comment, $viewer),
             'author' => self::author($comment->member),
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => GroupTopicAccess::canDeleteComment($comment, $viewer),

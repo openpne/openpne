@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 use App\Models\LinkCard;
+use App\Models\Member;
+use App\Support\LinkCardStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -35,18 +37,30 @@ final class LinkCardSerializer
     /**
      * $record's card, or null when there is nothing to draw.
      *
+     * $viewer is passed rather than read off the request because a card of one of this site's own
+     * pages is built from a record the reader may not be allowed to see, and there is no default
+     * that is right for both a web-public page and a queued job. No convenience fallback: a call
+     * site that forgets it fails loudly instead of quietly serving the card to a guest.
+     *
      * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
      */
-    public static function card(Model $record): ?array
+    public static function card(Model $record, ?Member $viewer): ?array
     {
         $kind = CardContext::forRecord($record);
         $card = $record->getAttribute('link_card_id') === null ? null : $record->getRelationValue('linkCard');
 
-        if ($kind === null) {
+        if ($kind === null || ! $card instanceof LinkCard) {
             return null;
         }
 
-        if (! $card instanceof LinkCard || ! $card->isRenderable() || ! app(LinkCardSettings::class)->enabled()) {
+        // Before both gates below, and neither applies to it: an internal row is never renderable —
+        // it holds no metadata to render — and the setting it would be tested against governs
+        // fetching, which this card did not need.
+        if ($card->status === LinkCardStatus::Internal) {
+            return self::internalCard($card, $viewer);
+        }
+
+        if (! $card->isRenderable() || ! app(LinkCardSettings::class)->enabled()) {
             return null;
         }
 
@@ -73,6 +87,101 @@ final class LinkCardSerializer
             'imageHeight' => $card->image?->height,
             // Only the full-width shape asks for these; the thumbnail above is a fixed square.
             'fitSources' => $wide ? self::fitSources($record) : [],
+        ];
+    }
+
+    /**
+     * A card of one of this site's own pages, assembled from the record it names.
+     *
+     * Nothing is read from the row but the URL and the pointer. What such a card says depends on who
+     * is asking, and one row is shared by every body that mentions the URL, so caching any of it
+     * would be caching one reader's answer for everyone.
+     *
+     * The order of the tests is the design:
+     *
+     *  1. **The URL is read again**, and the pointer must still agree with it. A card is drawn beside
+     *     its own `url`, which is what the reader clicks; if this site's address has changed, that
+     *     link now leads somewhere else, and describing it with the record the pointer names would be
+     *     describing one page while linking to another. It also refuses the row the rename leaves
+     *     behind at the old host, which someone else may now answer for.
+     *  2. **The unit**, before the record is loaded — as `LinkCardImageController` does, and for the
+     *     same reason: an operator switching diaries off has to take their previews with them.
+     *  3. **The record's own access rule**, never a copy of it.
+     *
+     * Everything that fails answers null, so a record that is gone, one the reader may not see, and a
+     * row whose pointer is missing or names a kind this app no longer has all read alike — as a link
+     * with no card, which is what the body says on its own.
+     *
+     * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
+     */
+    private static function internalCard(LinkCard $card, ?Member $viewer): ?array
+    {
+        $link = InternalUrl::of($card->url);
+        $target = $link->target;
+
+        // A target is only ever set for our own host, so this one test covers both halves: an
+        // address that has stopped being ours resolves to nothing, and so does one of ours that
+        // names no record — the state a row of an OpenPNE 3 spelling is left in.
+        if ($target === null) {
+            return null;
+        }
+
+        if ($card->internal_context !== $target->value || $card->internal_record_id !== $link->recordId) {
+            return null;
+        }
+
+        $feature = $target->feature();
+
+        if ($feature !== null && ! $feature->enabled()) {
+            return null;
+        }
+
+        $record = app(InternalCardResolver::class)->find($target, $link->recordId, $viewer);
+
+        if ($record === null || ! $target->canView($record, $viewer)) {
+            return null;
+        }
+
+        // The reader clicks the card's own URL, so a record that URL does not lead to — a talk
+        // message reached through another room's path — is not described, however readable it is.
+        if (! $target->urlLeadsTo($record, $link)) {
+            return null;
+        }
+
+        $content = $target->content($record);
+
+        if ($content === null) {
+            return null;
+        }
+
+        $file = $content['image'];
+
+        // As the fetched path does (CardContext::imageUrl): a File that is not an image gets no
+        // URL, rather than one whose thumbnail route will 404 — a card is better bare than broken.
+        if ($file !== null && $file->imageFormat() === null) {
+            $file = null;
+        }
+
+        $layout = CardLayout::forImage($file?->width, $file?->height);
+
+        return [
+            'url' => $card->url,
+            'title' => $content['title'],
+            'description' => $content['description'],
+            // A page of this site does not introduce itself by name: the host is beside the title
+            // already, and neither surface draws this field.
+            'siteName' => null,
+            'domain' => self::domain($card->url),
+            'layout' => $layout->value,
+            // The record's own picture at its own address, so `FilePolicy` authorises the bytes
+            // against the same record whose rule admitted this card. The `/linkCard/…` route is for
+            // pictures a fetch downloaded, and refuses these rows.
+            'imageUrl' => $file?->thumbnailUrl(self::THUMBNAIL, self::THUMBNAIL, square: true),
+            'imageWidth' => $file?->width,
+            'imageHeight' => $file?->height,
+            'fitSources' => $layout === CardLayout::Wide && $file !== null
+                ? array_map(fn (int $box): array => ['url' => $file->thumbnailUrl($box, $box), 'box' => $box], self::FIT_BOXES)
+                : [],
         ];
     }
 
