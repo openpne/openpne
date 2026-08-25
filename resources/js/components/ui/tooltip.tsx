@@ -52,6 +52,13 @@ export function TooltipContent({
  * disagreement impossible, and a child that brought its own `aria-label` fails loudly in dev instead.
  * The guard reads the direct child's props and nothing deeper: an `aria-label` written inside a
  * component child is invisible to it, so this catches a mistake rather than proving there is none.
+ * The injection has the same reach: the child must carry its props and ref to a DOM node (a plain
+ * element, a Radix trigger, Inertia's Link). A component that drops them leaves the control with no
+ * name at all — and nothing here throws for it, for the same reason the guard cannot see inside.
+ *
+ * Layered on another Radix trigger (`<Tip><PopoverTrigger asChild>…`), both roots write `data-state`
+ * and which survives is spread order. Trigger styling therefore keys on `aria-expanded`, never
+ * `data-[state=…]` — the choice ROW_ACTIONS already made.
  *
  * `aria-describedby={undefined}` on the trigger drops the association Radix makes between the trigger
  * and the panel. Radix's own answer to the double announcement is the reverse — give `Content` an

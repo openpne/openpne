@@ -31,7 +31,9 @@ would keep it, disagree with the panel beside it, and leave the tooltip, the scr
 that brought its own name throws in dev instead.
 
 That guard sees the direct child's props and nothing deeper. An `aria-label` written inside a
-component child is invisible to it — it catches a mistake, it does not prove there is none.
+component child is invisible to it — it catches a mistake, it does not prove there is none. The
+injection is bounded the same way: wrap something that carries its props and ref to a DOM node. A
+component child that drops them ends up with no name anywhere, and nothing throws for it.
 
 ## Why the panel is not a description
 
