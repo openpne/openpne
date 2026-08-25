@@ -230,6 +230,9 @@ export function TalkMessageRow({
         </>
     );
 
+    // canCopyLink puts the bar (and the sheet a long press opens) on rows whose reader has no
+    // other power — an Everyone room's non-member. Deliberate: the address of a message is
+    // takeable by anyone who may read it, and it is the first control that lane has had.
     const actions = (reactions.canReact || canReply || message.canDelete || canCopyLink()) && (
         <div className={ROW_ACTIONS}>
             {reactions.canReact && (

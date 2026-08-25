@@ -240,6 +240,7 @@ test('the actions bar copies the message link in one click', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
+    window.history.replaceState(null, '', '/');
 });
 
 test('no clipboard leaves the bar without a link button', () => {

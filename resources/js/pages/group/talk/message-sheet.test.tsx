@@ -68,9 +68,23 @@ test('the link is offered whenever the clipboard is, and copies this conversatio
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
-    // The page's URL carrying only `m`: `context` names this visit's position, not the message's.
+    // The page's URL carrying only `m`: `context` names this visit's position, and the fragment
+    // is this visit's scroll, not the message's.
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
     expect(spies.onClose).toHaveBeenCalled();
+    window.history.replaceState(null, '', '/');
+});
+
+test('a sub-directory install keeps its prefix in the copied link', () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/sns/groups/3/talk');
+    open();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/sns/groups/3/talk?m=7`);
+    window.history.replaceState(null, '', '/');
 });
 
 test('no clipboard, no link item', () => {
