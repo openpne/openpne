@@ -185,6 +185,8 @@ test('the tabbed home is the site mark and its name, and nothing else', () => {
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/dashboard');
+    // And named by that alone — a word spelled over a name the reader can see says something else.
+    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Notifications' })).toBeNull();
     expect(screen.queryByRole('link', { name: '3 unread notifications' })).toBeNull();
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
@@ -255,6 +257,10 @@ test('a tabbed page that is nowhere leaves the mark standing alone', () => {
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
     expect(container.textContent).not.toContain('›');
+    // BrandMark is aria-hidden in both its arms, so a mark standing alone has whatever name is put
+    // on the link and no other. The site's name is not it: nothing spells it here to read.
+    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
 });
 
 /** A sheet is a mode rather than a screen class, and it is left by its own ✕. */

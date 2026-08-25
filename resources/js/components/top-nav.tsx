@@ -290,20 +290,25 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
             {/* Left-aligned, not centered: a trail reads from its root, and the root is the way home. */}
-            {/* Named "Home" only where the mark stands alone — where the site name is beside it, that
-                name is what a reader sees, and a label over it would announce something else. */}
-            <Link
-                href="/dashboard"
-                aria-label={brand ? undefined : t('Home')}
-                // Carrying the name, it is the element that gives way, so an unbounded site name
-                // truncates instead of running under the menu. Carrying only the mark, it holds its
-                // size and the crumb beside it is what shortens.
-                className={cn('flex min-h-12 items-center gap-2', brand ? 'min-w-0' : 'shrink-0')}
-            >
-                <BrandMark size="sm" />
-                {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
-                {brand && <BrandName className="truncate" />}
-            </Link>
+            {brand ? (
+                // No Tip: the site name beside the mark is the word a reader sees, and one spelled
+                // over it — announced or floated — would say something else. Carrying the name, this
+                // is the element that gives way, so an unbounded site name truncates instead of
+                // running under the menu.
+                <Link href="/dashboard" className="flex min-h-12 min-w-0 items-center gap-2">
+                    <BrandMark size="sm" />
+                    {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
+                    <BrandName className="truncate" />
+                </Link>
+            ) : (
+                // The mark alone, and BrandMark is aria-hidden in both its arms, so without this the
+                // link has no name at all. Holding its size here: the crumb beside it is what shortens.
+                <Tip label={t('Home')}>
+                    <Link href="/dashboard" className="flex min-h-12 shrink-0 items-center gap-2">
+                        <BrandMark size="sm" />
+                    </Link>
+                </Tip>
+            )}
             {(hubTitle || crumb) && (
                 <span aria-hidden className="shrink-0 text-muted-foreground">
                     ›
