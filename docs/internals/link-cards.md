@@ -595,8 +595,14 @@ one record to one viewer, and a filter of that kind crossing into the sweep woul
 holding a card as no reference at all — deleting a card that is in use, permanently, by the paragraph
 above.
 
-Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is cache
-rather than something that hurts, so this is an operator's tool.
+On the weekly schedule ([`routes/console.php`](../../routes/console.php)), which the deployment
+already drives for the daily token sweep. Weekly rather than daily because an unreferenced card is
+cache rather than something that hurts, and the sweep walks every card; `--days` and `--dry-run` are
+there for an operator who wants a reclaim sooner or wants to see it first.
+
+What costs is the deleting rather than the walking — each card goes in a statement of its own — so a
+run is as long as the orphans it finds, and the first run on a site that has never swept carries
+every one since link cards arrived. `--dry-run` says how many that is before it starts.
 
 ## Key invariants
 
