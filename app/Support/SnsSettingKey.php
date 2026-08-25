@@ -477,7 +477,7 @@ enum SnsSettingKey: string
             self::SnsTitle => __('SNS title'),
             self::AdminMailAddress => __('Administrator email address'),
             self::SurfaceMode => __('Surface mode'),
-            self::LinkCardEnabled => __('Show link previews'),
+            self::LinkCardEnabled => __('Fetch link previews from other sites'),
             self::AiAccountsEnabled => __('Allow members to create AI accounts'),
             self::AiAccountLimit => __('AI accounts per member'),
             self::RegistrationMode => __('Registration mode'),

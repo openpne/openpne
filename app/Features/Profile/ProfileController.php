@@ -44,7 +44,7 @@ class ProfileController extends Controller
         $viewer = $request->user();
 
         // A guest can only reach a web-public profile; otherwise send them to log in.
-        if ($viewer === null && $member->profile_visibility !== Visibility::Open) {
+        if ($viewer === null && ! ProfileAccess::isWebPublic($member)) {
             return GuestLoginRedirect::response();
         }
 

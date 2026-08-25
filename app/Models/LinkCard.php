@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\LinkCard\CardLayout;
+use App\LinkCard\InternalCardResolver;
 use App\Support\LinkCardStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\LinkCardFactory;
@@ -35,11 +37,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $fetched_at
  * @property Carbon|null $expires_at
  * @property Carbon|null $next_attempt_at
+ * @property string|null $internal_context
+ * @property int|null $internal_record_id
  */
 #[Fillable([
     'url_hash', 'url', 'status', 'title', 'description', 'site_name', 'author_name',
     'image_file_id', 'image_width', 'image_height', 'failure_count',
     'fetched_at', 'expires_at', 'next_attempt_at',
+    'internal_context', 'internal_record_id',
 ])]
 class LinkCard extends Model
 {
@@ -57,7 +62,28 @@ class LinkCard extends Model
             'fetched_at' => 'datetime',
             'expires_at' => 'datetime',
             'next_attempt_at' => 'datetime',
+            'internal_record_id' => 'integer',
+            // internal_context stays a string on purpose: cast to InternalCardTarget, a value this
+            // enum no longer has would throw as the row is hydrated. It is compared as text where it
+            // is read, so an unrecognised one draws no card.
         ];
+    }
+
+    /**
+     * Announce an internal row's target as this row is hydrated, so the page's cards are read
+     * together rather than one query at a time.
+     *
+     * On the retrieval rather than at each list, because every list that draws cards already loads
+     * them in one go, and an opt-in would be missing from whichever list nobody remembered. External
+     * rows pay one property read ({@see InternalCardResolver}).
+     */
+    protected static function booted(): void
+    {
+        static::retrieved(function (self $card): void {
+            if ($card->internal_context !== null) {
+                app(InternalCardResolver::class)->note($card);
+            }
+        });
     }
 
     public function image(): BelongsTo
@@ -79,36 +105,16 @@ class LinkCard extends Model
 
     /**
      * Whether this card's picture is worth drawing at full width, rather than as a thumbnail beside
-     * the text.
-     *
-     * Every chat and feed client that draws these has the same two shapes and switches between them
-     * on the picture itself — a big landscape image is a preview, a small or square one is an icon —
-     * so the reader is not shown a 64px logo blown across the card, or a magazine cover shrunk into a
-     * corner. The threshold below is **ours**, assembled from two of them rather than copied:
-     * Signal requires both sides ≥ 200 and merely not-square (so it enlarges portraits too),
-     * Mattermost requires width ≥ 150 and 4:3 with no lower bound on height. Neither has the
-     * `height >= 200` term; that one is here to keep a wide, short banner — 1000×150 — out of the
-     * full-width shape, where it draws as a stripe.
+     * the text. The threshold itself is {@see CardLayout::forImage()}, which a card built from a
+     * record of this site reads too.
      *
      * **The dimensions come from the File, not from this row.** `image_width` / `image_height` here
      * are what the container declared and are read by nothing; `files` holds what the bytes actually
      * *render* at, EXIF Orientation applied ({@see App\Files\ImageDimensions}).
-     * For a sideways-shot JPEG the two disagree by a quarter turn, and every use downstream — this
-     * predicate, the reserved aspect box, the `w` descriptors — would be wrong together.
-     *
-     * Integer cross-multiplication rather than a ratio: the boundary is exact and visible, and a
-     * zero height cannot divide.
      */
     public function hasLargeImage(): bool
     {
-        $width = $this->image?->width;
-        $height = $this->image?->height;
-
-        if ($width === null || $height === null) {
-            return false;
-        }
-
-        return $width >= 200 && $height >= 200 && $width * 3 >= $height * 4;
+        return CardLayout::forImage($this->image?->width, $this->image?->height) === CardLayout::Wide;
     }
 
     /** Whether the cached metadata is old enough to be worth fetching again. */
@@ -137,6 +143,9 @@ class LinkCard extends Model
         return match ($this->status) {
             LinkCardStatus::Pending, LinkCardStatus::Failed => true,
             LinkCardStatus::Ok => $this->isStale(),
+            // A URL of this site's own is never fetched, and its card is assembled from the record
+            // it names on every render — there is nothing to refresh.
+            LinkCardStatus::Internal => false,
         };
     }
 
@@ -160,6 +169,11 @@ class LinkCard extends Model
             ->whereKey($this->getKey())
             // Nobody is holding it and no backoff is running.
             ->where(fn ($query) => $query->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', $now))
+            // Its own condition, deliberately outside the group below: an internal row carries no
+            // expiry, so folded in there the `expires_at IS NULL` arm would satisfy the OR and the
+            // claim would succeed — taking the lease on a row that must never be fetched, and
+            // writing a timestamp into a row whose bookkeeping columns are all null by invariant.
+            ->where('status', '!=', LinkCardStatus::Internal->value)
             // And it is actually due. This condition belongs in the UPDATE, not only in the caller:
             // ShouldBeUnique is an optimisation with a time window, so a duplicate job delayed past
             // it arrives after the first has already succeeded — with a released lease and a fresh

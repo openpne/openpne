@@ -16,6 +16,7 @@ use App\Models\GroupTopicComment;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\LinkCardStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,6 +42,20 @@ class PruneLinkCardsCommandTest extends TestCase
         $this->artisan('openpne:prune-link-cards')->assertSuccessful();
 
         $this->assertDatabaseHas('link_cards', ['id' => $card->id]);
+    }
+
+    public function test_an_internal_row_is_swept_on_the_same_terms_as_any_other(): void
+    {
+        // A pointer row is a row: nothing about it is special to the sweep, and a body that has since
+        // been edited leaves one behind exactly as a fetched card does.
+        $orphan = $this->agedCard(['status' => LinkCardStatus::Internal, 'internal_context' => 'diary', 'internal_record_id' => 1]);
+        $used = $this->agedCard(['status' => LinkCardStatus::Internal, 'internal_context' => 'diary', 'internal_record_id' => 1]);
+        Diary::factory()->for(Member::factory())->create(['link_card_id' => $used->id]);
+
+        $this->artisan('openpne:prune-link-cards')->assertSuccessful();
+
+        $this->assertDatabaseMissing('link_cards', ['id' => $orphan->id]);
+        $this->assertDatabaseHas('link_cards', ['id' => $used->id]);
     }
 
     public function test_every_body_table_counts_as_a_reference(): void

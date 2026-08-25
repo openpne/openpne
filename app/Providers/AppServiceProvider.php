@@ -12,6 +12,7 @@ use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
+use App\LinkCard\InternalCardResolver;
 use App\LinkCard\LinkCardSettings;
 use App\Models\BannerImage;
 use App\Models\Diary;
@@ -87,6 +88,10 @@ class AppServiceProvider extends ServiceProvider
         // an operator switches them off. A process-lifetime memo would answer that re-read with what
         // the worker booted with. Scoped instances are forgotten between jobs.
         $this->app->scoped(LinkCardSettings::class);
+
+        // Same scope, same reason it is not static: it holds records read for this page's internal
+        // cards, and a worker serves many jobs (see InternalCardResolver).
+        $this->app->scoped(InternalCardResolver::class);
 
         // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a
         // settings page once per request, and an administrator's flip must reach the next one.

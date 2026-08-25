@@ -47,7 +47,7 @@ class TimelineController extends Controller
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
-                'posts' => TimelinePostSerializer::paginator($posts),
+                'posts' => TimelinePostSerializer::paginator($posts, $viewer),
             ]),
         ]);
     }
@@ -71,7 +71,7 @@ class TimelineController extends Controller
                     'owner' => MemberRefSerializer::ref($owner),
                     'isOwner' => $viewer->is($owner),
                     'viewerId' => $viewer->getKey(),
-                    'posts' => TimelinePostSerializer::paginator($posts),
+                    'posts' => TimelinePostSerializer::paginator($posts, $viewer),
                 ]);
             },
         ]);
@@ -97,7 +97,7 @@ class TimelineController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/tag', [
                 'viewerId' => $viewer->getKey(),
                 'tag' => $normalized,
-                'posts' => TimelinePostSerializer::paginator($posts),
+                'posts' => TimelinePostSerializer::paginator($posts, $viewer),
             ]),
         ]);
     }
@@ -148,8 +148,8 @@ class TimelineController extends Controller
                 'viewer' => $viewer,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
-                'post' => TimelinePostSerializer::entry($post),
-                'replies' => array_map([TimelinePostSerializer::class, 'entry'], $post->replies->all()),
+                'post' => TimelinePostSerializer::entry($post, $viewer),
+                'replies' => array_map(fn (TimelinePost $reply): array => TimelinePostSerializer::entry($reply, $viewer), $post->replies->all()),
                 'viewerId' => $viewer->getKey(),
             ]),
         ]);

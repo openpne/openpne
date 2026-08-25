@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\LinkCard\InternalCardRow;
+use App\LinkCard\InternalUrl;
 use App\LinkCard\LinkCardSettings;
 use App\LinkCard\LinkUrl;
 use App\Models\LinkCard;
@@ -30,6 +32,9 @@ use Illuminate\Queue\SerializesModels;
  *
  * Only the first URL becomes a card: a body full of links is better served by the links themselves
  * than by a stack of cards.
+ *
+ * When that URL is one of this site's own it takes the other branch entirely — a pointer row, no
+ * fetch, and an answer that does not depend on the outbound setting ({@see InternalUrl}).
  */
 class SyncLinkCard implements ShouldBeUnique, ShouldQueue
 {
@@ -66,10 +71,6 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
 
     public function handle(LinkCardSettings $settings): void
     {
-        if (! $settings->enabled()) {
-            return;
-        }
-
         $record = $this->model::query()->find($this->id);
 
         if ($record === null) {
@@ -79,6 +80,21 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
         $body = (string) $record->getAttribute('body');
         $format = $record->getAttribute('format') ?? BodyFormat::Plain;
         $url = $this->firstFetchableUrl($body, $format);
+        $link = $url === null ? null : InternalUrl::of($url);
+
+        if ($link !== null && $link->isSelfHosted) {
+            $this->attach($record, $body, $format, $this->internalCardFor($url, $link)?->id);
+
+            return;
+        }
+
+        // Read after the body, not on entry, because the switch governs *fetching*: a card of one of
+        // this site's own pages is drawn without one and so is decided above whatever it says. What
+        // it does govern is the marker — a body whose first URL is external is left unexamined while
+        // this is off, so switching it on later still picks up everything already posted.
+        if (! $settings->enabled()) {
+            return;
+        }
 
         if ($url === null) {
             // Marked as looked at, so the read path stops asking. The body genuinely has no card.
@@ -149,21 +165,52 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
         return null;
     }
 
+    /** The row for $url, awaiting its fetch. */
+    private function cardFor(string $url): LinkCard
+    {
+        return $this->rowFor($url, ['status' => LinkCardStatus::Pending]);
+    }
+
     /**
-     * The row for $url, created if this is the first time anyone has posted it.
+     * The row for $url when $url is one of this site's own, or null when there is no card to point
+     * at.
+     *
+     * Null is for an address of ours that names nothing a card can be built from — an OpenPNE 3
+     * spelling, a list page, a route the resolver does not know. The body is still marked examined,
+     * so it stops being re-parsed, but it gets no row: a row that could only ever draw nothing is
+     * one more thing for the sweep to collect. What that costs is stated in link-cards.md — a kind
+     * added to the resolver later does not reach bodies already examined.
+     *
+     * An existing row is converted rather than left as it is, so a URL first posted while it named
+     * an unresolvable page, or fetched before this app knew its own host, ends up in the one state
+     * internal rows have.
+     */
+    private function internalCardFor(string $url, InternalUrl $link): ?LinkCard
+    {
+        if ($link->target === null) {
+            return null;
+        }
+
+        $card = $this->rowFor($url, InternalCardRow::attributes($link));
+        InternalCardRow::convert($card, $link);
+
+        return $card;
+    }
+
+    /**
+     * The row for $url, created with $attributes if this is the first time anyone has posted it.
      *
      * firstOrCreate races against another worker doing the same, and the unique index is what
      * settles it; the loser reads back the winner's row rather than failing the job.
+     *
+     * @param  array<string, mixed>  $attributes
      */
-    private function cardFor(string $url): LinkCard
+    private function rowFor(string $url, array $attributes): LinkCard
     {
         $hash = LinkUrl::hash($url);
 
         try {
-            return LinkCard::firstOrCreate(
-                ['url_hash' => $hash],
-                ['url' => $url, 'status' => LinkCardStatus::Pending],
-            );
+            return LinkCard::firstOrCreate(['url_hash' => $hash], ['url' => $url] + $attributes);
         } catch (UniqueConstraintViolationException) {
             return LinkCard::where('url_hash', $hash)->firstOrFail();
         }

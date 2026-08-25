@@ -70,8 +70,9 @@ class LinkCardSettingsTest extends TestCase
 
     public function test_the_page_says_what_turning_it_on_does(): void
     {
-        // "Show link previews" does not imply the server reaches out to every linked page, from
-        // private posts included — so the page has to say so where the decision is made.
+        // The label does not imply the server reaches out to every linked page, from private posts
+        // included — nor that a link to one of this site's own pages is previewed whatever the
+        // switch says. Both belong where the decision is made.
         // Asserted through __() under an explicit locale: the admin panel renders in the site
         // language, so hardcoding the English copy would pass or fail depending on that setting
         // rather than on whether the page carries the warning.
@@ -82,7 +83,7 @@ class LinkCardSettingsTest extends TestCase
 
             $this->assertStringContainsString(SnsSettingKey::LinkCardEnabled->label(), $rendered);
             $this->assertStringContainsString(
-                __('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here.'),
+                __('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are always previewed, and are never requested.'),
                 $rendered,
             );
         }

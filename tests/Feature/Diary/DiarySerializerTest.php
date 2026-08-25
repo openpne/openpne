@@ -40,7 +40,7 @@ class DiarySerializerTest extends TestCase
         // commentCount too; a route-bound diary lazy-loads it.
         $fresh = Diary::findOrFail($diary->getKey());
 
-        $this->assertSame(1, DiarySerializer::detail($fresh)['commentCount']);
+        $this->assertSame(1, DiarySerializer::detail($fresh, $owner)['commentCount']);
     }
 
     public function test_summary_excerpt_collapses_newlines_to_a_single_line(): void
@@ -106,7 +106,7 @@ class DiarySerializerTest extends TestCase
 
         // ShowDiary eager-loads images.file; detail() derives the thumbnails from them, number-ordered.
         $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
-        $detail = DiarySerializer::detail($loaded);
+        $detail = DiarySerializer::detail($loaded, $owner);
 
         $this->assertSame('Body text', $detail['excerpt']);
         $this->assertSame(
@@ -122,7 +122,7 @@ class DiarySerializerTest extends TestCase
         $file = File::factory()->create(['type' => 'image/png', 'width' => 1600, 'height' => 900]);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => 1]);
 
-        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail($diary->getKey()));
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail($diary->getKey()), $owner);
 
         $this->assertSame($file->thumbnailUrl(640, 640), $detail['images'][0]['fitSources'][1]['url']);
         $this->assertSame(1600, $detail['images'][0]['width']);
@@ -137,7 +137,7 @@ class DiarySerializerTest extends TestCase
 
         $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
 
-        $this->assertSame([], DiarySerializer::detail($loaded)['thumbnails']);
+        $this->assertSame([], DiarySerializer::detail($loaded, $owner)['thumbnails']);
     }
 
     public function test_detail_body_html_is_null_for_a_plain_body(): void
@@ -145,7 +145,7 @@ class DiarySerializerTest extends TestCase
         $owner = Member::factory()->create();
         Diary::factory()->create(['id' => 1, 'member_id' => $owner->getKey(), 'body' => '<op:b>x</op:b>']);
 
-        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1));
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1), $owner);
 
         $this->assertSame('plain', $detail['format']);
         $this->assertNull($detail['bodyHtml']);
@@ -156,7 +156,7 @@ class DiarySerializerTest extends TestCase
         $owner = Member::factory()->create();
         Diary::factory()->create(['id' => 1, 'member_id' => $owner->getKey(), 'format' => BodyFormat::Op3, 'body' => '<op:b>x</op:b>']);
 
-        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1));
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1), $owner);
 
         $this->assertSame('op3', $detail['format']);
         $this->assertSame('<span class="op_b">x</span>', $detail['bodyHtml']);
