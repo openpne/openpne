@@ -9,6 +9,7 @@ import {
     DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import type { InputMethod } from './editor-mode';
 
@@ -37,17 +38,17 @@ export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSel
         // Non-modal: a three-item menu that closes on pick needs no focus trap, and the modal variant
         // would aria-hidden the rest of the form while it is open (axe: aria-hidden-focus).
         <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    data-testid="compose-input-method-trigger"
-                    aria-label={t('Change input method')}
-                    title={t('Change input method')}
-                    className="-my-3 inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                    <SlidersHorizontal className="size-4" />
-                </button>
-            </DropdownMenuTrigger>
+            <Tip label={t('Change input method')}>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        data-testid="compose-input-method-trigger"
+                        className="-my-3 inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <SlidersHorizontal className="size-4" />
+                    </button>
+                </DropdownMenuTrigger>
+            </Tip>
             {/* Descriptions size the menu, so cap it to the viewport or it overflows a phone screen. */}
             <DropdownMenuContent
                 align="end"

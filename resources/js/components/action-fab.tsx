@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeAction } from '@/lib/member-chrome';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,25 @@ function Fab({ action, extended }: { action: ChromeAction; extended: boolean }) 
     const t = useT();
     const label = t(action.label.key, action.label.replacements);
 
+    const pill = (
+        <Link
+            href={action.href}
+            // px-4 in both states — 16 + the 24px icon + 16 is exactly the 56px circle the
+            // collapsed state wants, so the pill never animates its own width, only the label does.
+            className="inline-flex h-14 items-center rounded-full bg-primary px-4 text-primary-foreground shadow-lg transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
+        >
+            <action.icon className="size-6" strokeWidth={2.25} aria-hidden />
+            <span
+                className={cn(
+                    'overflow-hidden whitespace-nowrap transition-[max-width,margin,opacity] motion-reduce:transition-none',
+                    extended ? 'ml-2 max-w-48 opacity-100' : 'ml-0 max-w-0 opacity-0',
+                )}
+            >
+                {label}
+            </span>
+        </Link>
+    );
+
     // The nav landmark keeps this action inside a region (axe) and carries the fixed positioning, so
     // no blurred/transformed ancestor becomes its containing block.
     return (
@@ -36,25 +56,11 @@ function Fab({ action, extended }: { action: ChromeAction; extended: boolean }) 
             aria-label={label}
             className="fixed right-[calc(1.25rem+env(safe-area-inset-right))] bottom-[calc(1.25rem+var(--modern-bottom-offset))] z-30 lg:hidden"
         >
-            <Link
-                href={action.href}
-                // The full label in both states: collapsing is a visual economy, so the control's
-                // name must not travel with it.
-                aria-label={label}
-                // px-4 in both states — 16 + the 24px icon + 16 is exactly the 56px circle the
-                // collapsed state wants, so the pill never animates its own width, only the label does.
-                className="inline-flex h-14 items-center rounded-full bg-primary px-4 text-primary-foreground shadow-lg transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
-            >
-                <action.icon className="size-6" strokeWidth={2.25} aria-hidden />
-                <span
-                    className={cn(
-                        'overflow-hidden whitespace-nowrap transition-[max-width,margin,opacity] motion-reduce:transition-none',
-                        extended ? 'ml-2 max-w-48 opacity-100' : 'ml-0 max-w-0 opacity-0',
-                    )}
-                >
-                    {label}
-                </span>
-            </Link>
+            {/* The name in both states, the floated word only while the pill has no room to print
+                one: collapsing is a visual economy, and the control's name must not travel with it. */}
+            <Tip label={label} silent={extended}>
+                {pill}
+            </Tip>
         </nav>
     );
 }

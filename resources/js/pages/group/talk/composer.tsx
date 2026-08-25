@@ -5,6 +5,7 @@ import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { ACCEPT, shrink } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
+import { Tip } from '@/components/ui/tooltip';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
@@ -201,14 +202,15 @@ export function TalkComposer({
                     <Reply className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                     <span className="shrink-0">{t('Replying to :name', { name: replyName })}</span>
                     {replyLine !== '' && <span className="min-w-0 truncate text-muted-foreground">{replyLine}</span>}
-                    <button
-                        type="button"
-                        onClick={onCancelReply}
-                        aria-label={t('Cancel reply')}
-                        className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                        <X className="size-4" aria-hidden />
-                    </button>
+                    <Tip label={t('Cancel reply')}>
+                        <button
+                            type="button"
+                            onClick={onCancelReply}
+                            className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <X className="size-4" aria-hidden />
+                        </button>
+                    </Tip>
                 </div>
             )}
             {(images.length > 0 || attachmentNote !== null) && (
@@ -221,17 +223,18 @@ export function TalkComposer({
                                     {previews[index] !== undefined && (
                                         <img src={previews[index]} alt="" className="size-16 rounded-lg border border-border object-cover" />
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => remove(index)}
-                                        disabled={sending}
-                                        aria-label={t('Remove image :number', { number: index + 1 })}
-                                        className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                                    >
-                                        <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                                            <path d="M3 3l10 10M13 3L3 13" />
-                                        </svg>
-                                    </button>
+                                    <Tip label={t('Remove image :number', { number: index + 1 })}>
+                                        <button
+                                            type="button"
+                                            onClick={() => remove(index)}
+                                            disabled={sending}
+                                            className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                        >
+                                            <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                                                <path d="M3 3l10 10M13 3L3 13" />
+                                            </svg>
+                                        </button>
+                                    </Tip>
                                 </li>
                             ))}
                         </ul>
@@ -247,16 +250,17 @@ export function TalkComposer({
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
                 <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => fileInput.current?.click()}
-                    disabled={sending || images.length >= MAX_POST_IMAGES}
-                    aria-label={t('Attach an image')}
-                    className="shrink-0 text-muted-foreground"
-                >
-                    <ImagePlus className="size-5" aria-hidden />
-                </Button>
+                <Tip label={t('Attach an image')}>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => fileInput.current?.click()}
+                        disabled={sending || images.length >= MAX_POST_IMAGES}
+                        className="shrink-0 text-muted-foreground"
+                    >
+                        <ImagePlus className="size-5" aria-hidden />
+                    </Button>
+                </Tip>
                 <div className="min-w-0 flex-1">
                     {/* No HTML maxlength: it counts UTF-16 units while the server's cap counts code
                         points, so it would cut astral-heavy text off early (the timeline textarea pins
@@ -282,9 +286,11 @@ export function TalkComposer({
                         className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-[9px] leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>
-                <Button type="submit" size="icon" disabled={sending || nothingToSend} aria-busy={sending} aria-label={t('Send')} className="shrink-0">
-                    {sending ? <Spinner size={5} /> : <SendHorizontal className="size-5" aria-hidden />}
-                </Button>
+                <Tip label={t('Send')}>
+                    <Button type="submit" size="icon" disabled={sending || nothingToSend} aria-busy={sending} className="shrink-0">
+                        {sending ? <Spinner size={5} /> : <SendHorizontal className="size-5" aria-hidden />}
+                    </Button>
+                </Tip>
             </div>
         </form>
     );

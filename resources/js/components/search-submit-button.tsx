@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { Spinner } from '@/components/spinner';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -11,14 +12,15 @@ import { useT } from '@/lib/i18n';
 export function SearchSubmitButton({ loading = false }: { loading?: boolean }) {
     const t = useT();
     return (
-        <button
-            type="submit"
-            aria-label={t('Search')}
-            aria-busy={loading}
-            disabled={loading}
-            className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
-        >
-            {loading ? <Spinner size={4} /> : <Search className="size-4" aria-hidden />}
-        </button>
+        <Tip label={t('Search')}>
+            <button
+                type="submit"
+                aria-busy={loading}
+                disabled={loading}
+                className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
+            >
+                {loading ? <Spinner size={4} /> : <Search className="size-4" aria-hidden />}
+            </button>
+        </Tip>
     );
 }

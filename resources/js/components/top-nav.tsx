@@ -9,6 +9,7 @@ import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-
 import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
+import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
@@ -112,34 +113,39 @@ function LeadingControl({
 
     if (target.type === 'history') {
         return (
-            <button type="button" onClick={() => leave(() => window.history.back())} aria-label={label} className={BAR_CONTROL}>
-                {glyph}
-            </button>
+            <Tip label={label}>
+                <button type="button" onClick={() => leave(() => window.history.back())} className={BAR_CONTROL}>
+                    {glyph}
+                </button>
+            </Tip>
         );
     }
 
     // The sheet's link stays a link — a real href, so it reads and behaves as one (status bar, open in
     // a new tab) — and only the plain click is taken over, to play the exit before visiting. A
     // modified click is the browser's to answer, and the sheet has nothing to animate for it.
-    return sheet ? (
-        <a
-            href={target.href}
-            aria-label={label}
-            className={BAR_CONTROL}
-            onClick={(event) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-                    return;
-                }
-                event.preventDefault();
-                exit(() => router.visit(target.href));
-            }}
-        >
-            {glyph}
-        </a>
-    ) : (
-        <Link href={target.href} aria-label={label} className={BAR_CONTROL}>
-            {glyph}
-        </Link>
+    return (
+        <Tip label={label}>
+            {sheet ? (
+                <a
+                    href={target.href}
+                    className={BAR_CONTROL}
+                    onClick={(event) => {
+                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                            return;
+                        }
+                        event.preventDefault();
+                        exit(() => router.visit(target.href));
+                    }}
+                >
+                    {glyph}
+                </a>
+            ) : (
+                <Link href={target.href} className={BAR_CONTROL}>
+                    {glyph}
+                </Link>
+            )}
+        </Tip>
     );
 }
 
@@ -244,18 +250,18 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
             {/* The count is announced in words or not at all — the mock's grammar is a dot, not a
                 number: something is waiting, and how much is the notification screen's answer. The
                 link's name still carries the count for a reader who cannot see the dot. */}
-            <Link
-                href={NOTIFICATIONS_SECTION.href}
-                aria-label={
+            <Tip
+                label={
                     notifications > 0
                         ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications })
                         : t(NOTIFICATIONS_SECTION.label.key)
                 }
-                className={cn(BAR_CONTROL, 'relative')}
             >
-                <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
-                {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
-            </Link>
+                <Link href={NOTIFICATIONS_SECTION.href} className={cn(BAR_CONTROL, 'relative')}>
+                    <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
+                    {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
+                </Link>
+            </Tip>
         </TopBar>
     );
 }

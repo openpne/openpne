@@ -1,5 +1,6 @@
 import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 
@@ -137,16 +138,17 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
                             className="flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm text-secondary-foreground"
                         >
                             <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                            <button
-                                type="button"
-                                onClick={() => remove(index)}
-                                aria-label={t('Remove :name', { name: file.name })}
-                                className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                                <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                                    <path d="M3 3l10 10M13 3L3 13" />
-                                </svg>
-                            </button>
+                            <Tip label={t('Remove :name', { name: file.name })}>
+                                <button
+                                    type="button"
+                                    onClick={() => remove(index)}
+                                    className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                                        <path d="M3 3l10 10M13 3L3 13" />
+                                    </svg>
+                                </button>
+                            </Tip>
                         </li>
                     ))}
                 </ul>

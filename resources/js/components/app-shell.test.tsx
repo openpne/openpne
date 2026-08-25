@@ -1,9 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode, RefObject } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { AppShell } from './app-shell';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import { type Chrome, resolveChrome } from '@/lib/member-chrome';
 import type { AuthUser, FeatureKey } from '@/types';
 
@@ -81,7 +82,7 @@ function StubComposer() {
 
 function room(look: string) {
     const chrome = arrive('group/talk/index', '/groups/7/talk', { look, group: cyclists });
-    const { container } = render(
+    const { container } = renderWithProviders(
         <AppShell chrome={chrome}>
             <StubComposer />
         </AppShell>,
@@ -109,7 +110,7 @@ test.each([
     ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
 ] as const)('%s wires ground, rail, the color line and its offsets from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
-    const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
+    const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     expect(document.documentElement.classList.contains('unified')).toBe(expected.ground);
     expect(screen.queryByTestId('right-rail') !== null).toBe(expected.rail);
@@ -134,7 +135,7 @@ test.each([
  */
 test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length its own row stands at', (look) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
-    const { container } = render(<AppShell chrome={chrome}>page</AppShell>);
+    const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     const shell = container.firstElementChild as HTMLElement;
     const reserved = /\[--modern-bottom-offset:calc\(([^+]+)\+1px/.exec(shell.className)?.[1];
@@ -147,7 +148,7 @@ test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length it
 
 test('the desktop line is the site color, and only desktop draws it', () => {
     const chrome = arrive('dashboard', '/dashboard', { look: 'tabbed' });
-    render(<AppShell chrome={chrome}>page</AppShell>);
+    renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
     const line = screen.getByTestId('site-color-line');
 
     // Inline, because the color is per-site data — no palette class can carry it.

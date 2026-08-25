@@ -1,8 +1,9 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkMessageRow } from './message-row';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import type { TalkMessage } from './types';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
@@ -38,7 +39,7 @@ const message: TalkMessage = {
 };
 
 function renderRow(over: Partial<TalkMessage> = {}, props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void } = {}) {
-    return render(
+    return renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={{ ...message, ...over }}
@@ -70,7 +71,7 @@ const liveReply = {
  * `sr-only` lane rests on.
  */
 test.each([false, true])('a row (grouped: %s) offers reacting, replying and deleting by name', (grouped) => {
-    render(
+    renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={message}
@@ -155,7 +156,7 @@ test('the row carries the time alone, beside the author rather than at the far e
 });
 
 test('a folded row keeps its time in the gutter, spoken as well as drawn', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={message}

@@ -1,6 +1,7 @@
 import { SmilePlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tip } from '@/components/ui/tooltip';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -63,9 +64,11 @@ export function TalkReactionChips({
                 ),
             )}
             {/* Only ever offered beside chips: with none there is nobody to name. */}
-            <button type="button" aria-label={t('See who reacted')} onClick={onShowReactors} className={ICON_BUTTON}>
-                <Users className="size-4" aria-hidden />
-            </button>
+            <Tip label={t('See who reacted')}>
+                <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
+                    <Users className="size-4" aria-hidden />
+                </button>
+            </Tip>
         </div>
     );
 }
@@ -140,11 +143,13 @@ export function TalkReactionAdd({
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button type="button" aria-label={t('Add a reaction')} className={ICON_BUTTON}>
-                    <SmilePlus className="size-4" aria-hidden />
-                </button>
-            </PopoverTrigger>
+            <Tip label={t('Add a reaction')}>
+                <PopoverTrigger asChild>
+                    <button type="button" className={ICON_BUTTON}>
+                        <SmilePlus className="size-4" aria-hidden />
+                    </button>
+                </PopoverTrigger>
+            </Tip>
             {/* Upward and right-aligned: the button sits at the end of a row inside a list that
                 usually ends at the foot of the screen, so below is where there is no room. The card
                 the list stands in clips its overflow, which is why this is portalled rather than a

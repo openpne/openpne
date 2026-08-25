@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { type CSSProperties } from 'react';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { useSwipeDeck } from '@/lib/use-swipe-deck';
 import { cn } from '@/lib/utils';
@@ -106,12 +107,11 @@ export function Lightbox({
                     {/* pointer-events-none so the gaps between the two controls stay part of the
                         scrim and still dismiss; each control opts back in. */}
                     <div className="lightbox-chrome pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[var(--lb-chrome-top)] items-center justify-between pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
-                        <DialogPrimitive.Close
-                            aria-label={t('Close')}
-                            className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <X className="size-5" aria-hidden />
-                        </DialogPrimitive.Close>
+                        <Tip label={t('Close')}>
+                            <DialogPrimitive.Close className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                <X className="size-5" aria-hidden />
+                            </DialogPrimitive.Close>
+                        </Tip>
                         {index !== null && (
                             <a
                                 href={images[index]?.url}
@@ -206,24 +206,26 @@ export function Lightbox({
                         down with it, on the one button that has to stay focusable. */}
                     {many && (
                         <div className="lightbox-chrome pointer-events-none absolute inset-0">
-                            <button
-                                type="button"
-                                onClick={goPrev}
-                                aria-disabled={!hasPrev}
-                                aria-label={t('Previous image')}
-                                className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
-                            >
-                                <ChevronLeft className="size-6" aria-hidden />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={goNext}
-                                aria-disabled={!hasNext}
-                                aria-label={t('Next image')}
-                                className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
-                            >
-                                <ChevronRight className="size-6" aria-hidden />
-                            </button>
+                            <Tip label={t('Previous image')}>
+                                <button
+                                    type="button"
+                                    onClick={goPrev}
+                                    aria-disabled={!hasPrev}
+                                    className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                >
+                                    <ChevronLeft className="size-6" aria-hidden />
+                                </button>
+                            </Tip>
+                            <Tip label={t('Next image')}>
+                                <button
+                                    type="button"
+                                    onClick={goNext}
+                                    aria-disabled={!hasNext}
+                                    className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                >
+                                    <ChevronRight className="size-6" aria-hidden />
+                                </button>
+                            </Tip>
                         </div>
                     )}
                 </DialogPrimitive.Content>
