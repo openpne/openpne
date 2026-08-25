@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { isIosNotInstalled, permissionState, subscribeThisDevice } from '@/lib/push';
 import type { PageProps } from '@/types';
@@ -70,14 +71,15 @@ export function PushPrompt() {
                     </>
                 )}
             </div>
-            <button
-                type="button"
-                onClick={dismiss}
-                aria-label={t('Dismiss')}
-                className="-mr-1 -mt-1 shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-                <X className="size-4" aria-hidden />
-            </button>
+            <Tip label={t('Dismiss')}>
+                <button
+                    type="button"
+                    onClick={dismiss}
+                    className="-mr-1 -mt-1 shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <X className="size-4" aria-hidden />
+                </button>
+            </Tip>
         </div>
     );
 }

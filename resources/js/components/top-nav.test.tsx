@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ScopeIdentity, TopNav } from './top-nav';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import { type Chrome, type ChromeScope, resolveChrome } from '@/lib/member-chrome';
 import type { AuthUser, FeatureKey } from '@/types';
 
@@ -34,25 +35,25 @@ const memberScope: ChromeScope = { kind: 'member', id: 7, name: 'Shirabe', image
  * truncating name for a chip, which leaves the link's accessible name as the only place the fact fits.
  */
 test('an AI scope is named as one', () => {
-    render(<ScopeIdentity scope={{ ...memberScope, isAi: true }} />);
+    renderWithProviders(<ScopeIdentity scope={{ ...memberScope, isAi: true }} />);
 
     expect(screen.getByRole('link', { name: 'Shirabe (AI)' })).toBeTruthy();
 });
 
 test("a person's scope is named by their name alone", () => {
-    render(<ScopeIdentity scope={memberScope} />);
+    renderWithProviders(<ScopeIdentity scope={memberScope} />);
 
     expect(screen.getByRole('link', { name: 'Shirabe' })).toBeTruthy();
 });
 
 test('a group scope is named by the group, unmarked', () => {
-    render(<ScopeIdentity scope={{ kind: 'group', id: 3, name: 'Book club', imageUrl: null }} />);
+    renderWithProviders(<ScopeIdentity scope={{ kind: 'group', id: 3, name: 'Book club', imageUrl: null }} />);
 
     expect(screen.getByRole('link', { name: 'Book club' })).toBeTruthy();
 });
 
 test('the scope block still links to whoever it names', () => {
-    render(<ScopeIdentity scope={{ ...memberScope, isAi: true }} />);
+    renderWithProviders(<ScopeIdentity scope={{ ...memberScope, isAi: true }} />);
 
     expect(screen.getByRole('link').getAttribute('href')).toBe('/member/7');
 });
@@ -85,7 +86,7 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
 test('the shipped home keeps the brand bar', () => {
     const chrome = arrive('dashboard', '/dashboard');
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByText('Test SNS')).toBeTruthy();
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
@@ -94,7 +95,7 @@ test('the shipped home keeps the brand bar', () => {
 test('the unified layout puts the two places in the bar instead of the brand', () => {
     const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     // The brand is what the tab pair replaces: it named a page the member was already on.
     expect(screen.queryByText('Test SNS')).toBeNull();
@@ -108,7 +109,7 @@ test('the unified layout puts the two places in the bar instead of the brand', (
 test('a hub in the unified layout takes the same bar, with the group tab current', () => {
     const chrome = arrive('community/list', '/groups/mine', { look: 'unified', owner: user, isOwner: true });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: '%Communities%' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBeNull();
@@ -117,7 +118,7 @@ test('a hub in the unified layout takes the same bar, with the group tab current
 test('the group tab goes with its unit', () => {
     const chrome = arrive('unified/home', '/dashboard', { look: 'unified', enabledFeatures: { ...allOn, group: false } });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
@@ -129,7 +130,7 @@ test('the bell says how many are waiting, in words', () => {
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     const bell = screen.getByRole('link', { name: '3 unread notifications' });
     expect(bell.getAttribute('href')).toBe('/notifications');
@@ -138,7 +139,7 @@ test('the bell says how many are waiting, in words', () => {
 test('the bell is named plainly while nothing is waiting', () => {
     const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications');
 });
@@ -153,7 +154,7 @@ test('a page below the top level keeps its own bar with the switch on', () => {
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
     expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
@@ -164,7 +165,7 @@ test("a guest's bar is the same with the switch on", () => {
     // a signed-out visitor has no member nav to carry.
     const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByText('Test SNS')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
@@ -181,7 +182,7 @@ test('the tabbed home is the site mark and its name, and nothing else', () => {
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/dashboard');
     expect(screen.queryByRole('link', { name: 'Notifications' })).toBeNull();
@@ -195,7 +196,7 @@ test('the tabbed home is the site mark and its name, and nothing else', () => {
 test('a tabbed hub is the mark and the section it stands on', () => {
     const chrome = arrive('community/list', '/groups/mine', { look: 'tabbed', owner: user, isOwner: true });
 
-    const { container } = render(<TopNav chrome={chrome} />);
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     // The mark alone, so it is named rather than left to a site name that is not beside it.
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
@@ -211,7 +212,7 @@ test('a tabbed deep page carries the place it is inside, as something to press',
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
     expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
@@ -228,7 +229,7 @@ test('a tabbed place top speaks the home grammar — no crumb over its own hero'
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByText('Test SNS')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
@@ -239,7 +240,7 @@ test('a tabbed place top speaks the home grammar — no crumb over its own hero'
 test('a tabbed form names where it sits without offering a way out of itself', () => {
     const chrome = arrive('member/config/email', '/member/config/email', { look: 'tabbed' });
 
-    const { container } = render(<TopNav chrome={chrome} />);
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(container.textContent).toContain('Settings');
     // The invariant the pill must not reverse: no link stands beside an unsaved form.
@@ -250,7 +251,7 @@ test('a tabbed form names where it sits without offering a way out of itself', (
 test('a tabbed page that is nowhere leaves the mark standing alone', () => {
     const chrome = arrive('block/list', '/block/list', { look: 'tabbed' });
 
-    const { container } = render(<TopNav chrome={chrome} />);
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
     expect(container.textContent).not.toContain('›');
@@ -260,7 +261,7 @@ test('a tabbed page that is nowhere leaves the mark standing alone', () => {
 test('a tabbed compose screen keeps the sheet header', () => {
     const chrome = arrive('diary/new', '/diary/new', { look: 'tabbed' });
 
-    render(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Close' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
@@ -277,7 +278,7 @@ test('the unified bar carries no account menu and prints no count', () => {
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
-    const { container } = render(<TopNav chrome={chrome} />);
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.queryByRole('button', { name: 'Account menu' })).toBeNull();
     expect(container.textContent).not.toContain('3');

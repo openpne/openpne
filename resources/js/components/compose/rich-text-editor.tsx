@@ -34,6 +34,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Tip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
 import { composeEditorRowsStyle } from '@/components/compose/editor-rows';
@@ -149,7 +150,13 @@ function useToolbarActions(editor: Editor) {
     };
 }
 
-/** onMouseDown preventDefault keeps the editor selection (and the mobile keyboard) while clicking. */
+/**
+ * onMouseDown preventDefault keeps the editor selection (and the mobile keyboard) while clicking.
+ *
+ * Tip stands inside rather than around the caller's `<ToolbarButton>`: this component takes a fixed
+ * prop list and forwards neither ref nor the rest, so a tooltip wrapped around it from outside would
+ * have nothing to anchor to. One Tip here labels the whole toolbar.
+ */
 function ToolbarButton({
     label,
     pressed,
@@ -164,18 +171,18 @@ function ToolbarButton({
     children: ReactNode;
 }) {
     return (
-        <button
-            type="button"
-            aria-label={label}
-            aria-pressed={pressed}
-            title={label}
-            disabled={disabled}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={onClick}
-            className={TOOLBAR_BUTTON_CLASS}
-        >
-            {children}
-        </button>
+        <Tip label={label}>
+            <button
+                type="button"
+                aria-pressed={pressed}
+                disabled={disabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={onClick}
+                className={TOOLBAR_BUTTON_CLASS}
+            >
+                {children}
+            </button>
+        </Tip>
     );
 }
 
@@ -318,28 +325,28 @@ function MoreMenu({ editor }: { editor: Editor }) {
 
     return (
         <div ref={containerRef}>
-            <button
-                ref={triggerRef}
-                type="button"
-                aria-label={t('More formatting')}
-                aria-haspopup="dialog"
-                aria-expanded={open}
-                aria-controls={open ? panelId : undefined}
-                title={t('More formatting')}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                    if (!open) {
-                        // Hold the selection painted across the blur: it is what the sheet's commands
-                        // will act on, and blurring clears the range the browser would draw.
-                        editor.commands.holdSelection(true);
-                        editor.commands.blur();
-                    }
-                    setOpen((value) => !value);
-                }}
-                className={cn(TOOLBAR_BUTTON_CLASS, open && 'bg-accent text-accent-foreground')}
-            >
-                <MoreHorizontal className="size-4" />
-            </button>
+            <Tip label={t('More formatting')}>
+                <button
+                    ref={triggerRef}
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={open}
+                    aria-controls={open ? panelId : undefined}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                        if (!open) {
+                            // Hold the selection painted across the blur: it is what the sheet's commands
+                            // will act on, and blurring clears the range the browser would draw.
+                            editor.commands.holdSelection(true);
+                            editor.commands.blur();
+                        }
+                        setOpen((value) => !value);
+                    }}
+                    className={cn(TOOLBAR_BUTTON_CLASS, open && 'bg-accent text-accent-foreground')}
+                >
+                    <MoreHorizontal className="size-4" />
+                </button>
+            </Tip>
             {open &&
                 createPortal(
                     <>
@@ -542,9 +549,11 @@ function TableMenu({ editor }: { editor: Editor }) {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger aria-label={t('Table')} title={t('Table')} className={TOOLBAR_BUTTON_CLASS}>
-                <TableIcon className="size-4" />
-            </DropdownMenuTrigger>
+            <Tip label={t('Table')}>
+                <DropdownMenuTrigger className={TOOLBAR_BUTTON_CLASS}>
+                    <TableIcon className="size-4" />
+                </DropdownMenuTrigger>
+            </Tip>
             <DropdownMenuContent align="start">
                 <DropdownMenuItem
                     onSelect={() =>

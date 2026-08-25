@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Menu, UserRound } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { Dialog, DialogTitle, DialogTrigger, SheetContent } from '@/components/ui/dialog';
+import { Tip } from '@/components/ui/tooltip';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
@@ -40,16 +41,18 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             {labeled ? (
-                // No aria-label: the word under the glyph is the name, and one spelled above it would
-                // replace what the reader can see.
+                // No aria-label and no Tip: the word under the glyph is the name, and one spelled
+                // above it — announced or floated — would replace what the reader can see.
                 <DialogTrigger className={BAR_CONTROL_LABELED}>
                     <Menu className="size-6" aria-hidden />
                     <span className="text-[11px] leading-none">{t('Menu')}</span>
                 </DialogTrigger>
             ) : (
-                <DialogTrigger aria-label={t('Menu')} className={BAR_CONTROL}>
-                    <Menu className="size-6" />
-                </DialogTrigger>
+                <Tip label={t('Menu')}>
+                    <DialogTrigger className={BAR_CONTROL}>
+                        <Menu className="size-6" />
+                    </DialogTrigger>
+                </Tip>
             )}
             <SheetContent
                 side={labeled ? 'right' : 'left'}

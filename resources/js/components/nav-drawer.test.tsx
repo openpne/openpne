@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { NavDrawer } from './nav-drawer';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import type { AuthUser, FeatureKey } from '@/types';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
@@ -44,7 +45,7 @@ function arrive(look: string) {
 }
 
 function openDrawer(labeled = false) {
-    render(<NavDrawer labeled={labeled} />);
+    renderWithProviders(<NavDrawer labeled={labeled} />);
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
 }
 
@@ -82,4 +83,48 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
     expect(close.className).toContain('size-12');
     expect(close.className).toContain('right-[calc(0.5rem+env(safe-area-inset-right))]');
     expect(close.textContent).toContain('Close');
+});
+
+/**
+ * Both of the tabbed look's controls carry the word under the glyph, and a tooltip over one of them
+ * would float a second copy of what the reader is already looking at. The rule is per state, not per
+ * component — the same trigger is icon-only in every other look, and there it does get one.
+ */
+test('the tabbed look shows its words, so nothing floats over them', () => {
+    vi.useFakeTimers();
+    arrive('tabbed');
+    renderWithProviders(<NavDrawer labeled />);
+
+    const raise = (control: HTMLElement) => {
+        fireEvent.pointerMove(control, { pointerType: 'mouse' });
+        fireEvent.focus(control);
+        act(() => {
+            vi.advanceTimersByTime(1000);
+        });
+    };
+
+    const trigger = screen.getByRole('button', { name: 'Menu' });
+    expect(trigger.textContent).toContain('Menu');
+    raise(trigger);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    // Its twin in the sheet it opens, which spells the word the same way.
+    fireEvent.click(trigger);
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close.textContent).toContain('Close');
+    raise(close);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    vi.useRealTimers();
+});
+
+test('the bare hamburger says what it is instead', () => {
+    arrive('standard');
+    renderWithProviders(<NavDrawer />);
+
+    act(() => {
+        fireEvent.focus(screen.getByRole('button', { name: 'Menu' }));
+    });
+
+    expect(screen.getByRole('tooltip').textContent).toBe('Menu');
 });

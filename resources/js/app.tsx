@@ -4,6 +4,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { MemberLayout } from '@/components/member-layout';
 import { SyncLocaleWithServer } from '@/components/sync-locale';
+import { TooltipProvider } from '@/components/ui/tooltip';
 // Side-effect import: applies the saved color mode, keeps <meta name="theme-color"> in sync, and
 // installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
 // on the settings page, so without this the listener/sync would load lazily with that page).
@@ -73,7 +74,15 @@ void createInertiaApp({
                 files={import.meta.glob('/lang/*.json', { eager: true })}
             >
                 <SyncLocaleWithServer />
-                <App {...props} />
+                {/* One provider for the whole app, not one per tooltip: `skipDelayDuration` is what
+                    makes the second of two neighbouring icons answer instantly, and it is shared
+                    state — per-tooltip providers would each start their own delay again. */}
+                {/* disableHoverableContent: these are labels, not panels to mouse into — and a
+                    hoverable panel floats over the neighbouring icon and eats the pointer that
+                    would have raised that icon's own label. */}
+                <TooltipProvider delayDuration={500} skipDelayDuration={300} disableHoverableContent>
+                    <App {...props} />
+                </TooltipProvider>
             </LaravelReactI18nProvider>,
         );
     },

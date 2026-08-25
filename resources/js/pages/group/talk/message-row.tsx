@@ -7,6 +7,7 @@ import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
+import { Tip } from '@/components/ui/tooltip';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
@@ -222,26 +223,27 @@ function CopyLinkButton({ messageId }: { messageId: number }) {
 
     return (
         <>
-            <button
-                type="button"
-                aria-label={t('Copy link')}
-                data-ack={ack ?? undefined}
-                onClick={() =>
-                    void navigator.clipboard.writeText(messageLink(messageId)).then(
-                        () => answer('copied'),
-                        () => answer('failed'),
-                    )
-                }
-                className={ICON_BUTTON}
-            >
-                {ack === 'copied' ? (
-                    <Check className="size-4 text-success" aria-hidden />
-                ) : ack === 'failed' ? (
-                    <X className="size-4 text-destructive" aria-hidden />
-                ) : (
-                    <LinkIcon className="size-4" aria-hidden />
-                )}
-            </button>
+            <Tip label={t('Copy link')}>
+                <button
+                    type="button"
+                    data-ack={ack ?? undefined}
+                    onClick={() =>
+                        void navigator.clipboard.writeText(messageLink(messageId)).then(
+                            () => answer('copied'),
+                            () => answer('failed'),
+                        )
+                    }
+                    className={ICON_BUTTON}
+                >
+                    {ack === 'copied' ? (
+                        <Check className="size-4 text-success" aria-hidden />
+                    ) : ack === 'failed' ? (
+                        <X className="size-4 text-destructive" aria-hidden />
+                    ) : (
+                        <LinkIcon className="size-4" aria-hidden />
+                    )}
+                </button>
+            </Tip>
             {/* Beside the control rather than inside it, where the mute toggle puts its line: a
                 button's subtree is presentational by the ARIA spec, and Chromium declining to prune
                 it is not a contract. In the tree whether or not it has words, so the change is what
@@ -338,9 +340,11 @@ export function TalkMessageRow({
                 </>
             )}
             {canReply && (
-                <button type="button" aria-label={t('Reply')} onClick={onReply} className={ICON_BUTTON}>
-                    <Reply className="size-4" aria-hidden />
-                </button>
+                <Tip label={t('Reply')}>
+                    <button type="button" onClick={onReply} className={ICON_BUTTON}>
+                        <Reply className="size-4" aria-hidden />
+                    </button>
+                </Tip>
             )}
             {canCopyLink() && (
                 // The address the sheet offers a thumb, one click here: text is the cursor's to
@@ -351,14 +355,15 @@ export function TalkMessageRow({
                 // A glyph shaped like its neighbour, so the bar reads as one set of controls; the
                 // name says what a glyph cannot, and what it is for turns red only under the hand —
                 // on a touch screen this button is a screen reader's only delete, heard once per row.
-                <button
-                    type="button"
-                    aria-label={t('Delete message')}
-                    onClick={() => onDelete(message.id)}
-                    className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}
-                >
-                    <Trash2 className="size-4" aria-hidden />
-                </button>
+                <Tip label={t('Delete message')}>
+                    <button
+                        type="button"
+                        onClick={() => onDelete(message.id)}
+                        className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}
+                    >
+                        <Trash2 className="size-4" aria-hidden />
+                    </button>
+                </Tip>
             )}
         </div>
     );
