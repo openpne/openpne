@@ -288,9 +288,10 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
-    const press = useLongPress(onOpenActions, {
-        enabled: reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0,
-    });
+    // Whether a press has anything to open.
+    const pressOpens =
+        reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
+    const press = useLongPress(onOpenActions, { enabled: pressOpens });
 
     const content = (
         <>
@@ -377,9 +378,18 @@ export function TalkMessageRow({
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
                 'group relative isolate px-4 sm:px-5',
-                // Only where the press is the way in: the lens and the image menu a held finger raises
-                // would land on top of the sheet, and a cursor's text selection is nobody's to take.
-                // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
+                // Every row a finger can reach, and deliberately not gated on `pressOpens`: the lens
+                // and the image menu a held finger raises would land on top of the sheet, and a
+                // cursor's text selection is nobody's to take.
+                //
+                // What pays for the selection is the sheet's own copy item — which a deployment
+                // without a clipboard cannot offer, so there the words become uncopyable. Withholding
+                // the suppression there does not follow from that. The press would likely go with the
+                // native selection that replaces it — expected, not measured on a device — and a
+                // finger has no other way to this row's actions, the bar being sr-only for one. So it
+                // risks trading copying for reacting, and wants a fallback rather than a condition
+                // here. Saving a picture is unaffected either way: the lightbox a tap opens
+                // suppresses neither.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
                 // people speaking is the vocabulary of a board, and this is a conversation.

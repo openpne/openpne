@@ -88,7 +88,9 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
  * attached in every environment, and the cursor's own press is ignored inside (see pressReducer).
  *
  * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners
- * and suppresses no menu.
+ * and keeps its own context menu. Where it is enabled the menu is held off for the length of a press
+ * (see `onContextMenu` below) — the element's `user-select` / `-webkit-touch-callout` classes are the
+ * other half of that, and the two have to be decided together.
  */
 export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
     const press = useRef<PressState>(IDLE);
