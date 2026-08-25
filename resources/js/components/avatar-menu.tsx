@@ -41,8 +41,8 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
     return (
         <DropdownMenu>
             {/* A conditional, not `silent`: unlike the FAB, compact never toggles within a mount
-    (it is the page's shape) and nothing here animates, so swapping the element type is free. */}
-{compact ? <Tip label={t('Account menu')}>{trigger}</Tip> : trigger}
+                (it is the page's shape) and nothing here animates, so swapping the element type is free. */}
+            {compact ? <Tip label={t('Account menu')}>{trigger}</Tip> : trigger}
             <DropdownMenuContent align="start" side="top" className="w-64">
                 <DropdownMenuItem asChild>
                     <Link href={`/member/${user.id}`}>
