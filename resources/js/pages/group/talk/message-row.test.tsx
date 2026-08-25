@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkMessageRow } from './message-row';
@@ -19,6 +19,8 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 afterEach(cleanup);
+// Fake timers must not outlive a failing assertion in the tests that arm them.
+afterEach(() => vi.useRealTimers());
 
 const message: TalkMessage = {
     id: 7,
@@ -248,4 +250,63 @@ test('no clipboard leaves the bar without a link button', () => {
     renderRow();
 
     expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+});
+
+test('a completed copy answers with a check and a spoken line, then offers again', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    // Spoken on completion, not on the click: the acknowledgement claims the write happened.
+    expect(screen.getByText('Link copied.')).toBeTruthy();
+    // data-ack is what holds the bar out while the answer is showing.
+    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBe('copied');
+
+    act(() => {
+        vi.advanceTimersByTime(1600);
+    });
+    expect(screen.queryByText('Link copied.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBeNull();
+    window.history.replaceState(null, '', '/');
+});
+
+test('a refused copy says so rather than letting the old clipboard read as success', async () => {
+    const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+    clipboard(writeText);
+    renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    expect(screen.queryByText('Link copied.')).toBeNull();
+    expect(screen.getByText('The link could not be copied.')).toBeTruthy();
+});
+
+test('a write that completes after the row left schedules nothing', async () => {
+    vi.useFakeTimers();
+    let settle = () => {};
+    const writeText = vi.fn(() => new Promise<void>((resolve) => (settle = resolve)));
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    const view = renderRow();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    view.unmount();
+    settle();
+    await act(async () => {
+        await Promise.resolve();
+    });
+
+    // The guard's observable half: without it the late settle schedules the clear-timer anyway.
+    expect(vi.getTimerCount()).toBe(0);
+    window.history.replaceState(null, '', '/');
 });
