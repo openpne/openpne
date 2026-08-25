@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { Link as LinkIcon, Reply, Trash2 } from 'lucide-react';
+import { Check, Link as LinkIcon, Reply, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
@@ -129,7 +130,7 @@ export interface TalkRowReactions {
  *
  * The `pointer-events` half is what keeps an invisible Delete from answering a finger on a hybrid
  * machine — a laptop with a touch screen answers `pointer: fine`, so the controls stay drawn there,
- * and `opacity: 0` alone does not stop a tap. The three revealing states beat the default by selector
+ * and `opacity: 0` alone does not stop a tap. The revealing states beat the default by selector
  * specificity (0,2,0 against 0,1,0), not by source order: Tailwind emits `pointer-fine` after them.
  * Simplifying the reveal to a bare `pointer-events-auto` would tie the specificity, hand the cascade
  * back to source order, and leave the controls dead to every click. Nothing in the coarse lane writes
@@ -143,8 +144,8 @@ export interface TalkRowReactions {
  *
  * **The bar is taller than the row it belongs to**, and is meant to be: 38px of controls over a
  * follow-up row that is one line of text. It overhangs both edges, so the row lifts above its
- * siblings for exactly as long as the bar is out (the `z-10` trio on the row below matches these
- * three revealing states). Without the lift the overhang is painted over by the next row — which
+ * siblings for exactly as long as the bar is out (the `z-10` set on the row below matches these
+ * revealing states — `data-ack` among them, so an acknowledgement outlives the pointer leaving). Without the lift the overhang is painted over by the next row — which
  * takes its hits as well, so a cursor moving down onto the bar's own foot leaves the row, and the
  * bar the hand was reaching for disappears. Nothing here may reintroduce a row-height floor: the
  * spacing between turns is the list's to choose. On the list's first row with no older history, the
@@ -152,7 +153,7 @@ export interface TalkRowReactions {
  * at every width — known and accepted over teaching the first row a different geometry.
  */
 const ROW_ACTIONS =
-    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
+    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto has-[[data-ack]]:opacity-100 has-[[data-ack]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
 
 /**
  * One utterance. Shaped like a board comment rather than a two-sided bubble stream: the same row a
@@ -174,6 +175,84 @@ const ROW_ACTIONS =
  * `highlighted` is the deep link's landing: the row a `?m=` link opened on — and now also the parent
  * a reply header jumped to — held for a moment so the reader can see which message named them.
  */
+/** How long the glyph answers for a completed copy before the button reads as an offer again. */
+const COPIED_MS = 1500;
+
+/**
+ * The bar's copy-link control, answering its own click: the glyph becomes a check for a moment and a
+ * spoken line says what happened — a clipboard write leaves nothing on screen, so without this the
+ * click cannot be told from a miss. A refusal is answered too, and honestly: silence there would
+ * leave the clipboard's *previous* contents to read as a copy that worked. The accessible name never
+ * changes — the control is still the same control — so the acknowledgement is spoken beside it, as
+ * the mute toggle speaks. `data-ack` also holds the bar out while an answer is showing
+ * ({@see ROW_ACTIONS}): a click that leaves the row must not fade the check it earned.
+ */
+function CopyLinkButton({ messageId }: { messageId: number }) {
+    const t = useT();
+    const [ack, setAck] = useState<'copied' | 'failed' | null>(null);
+    const timer = useRef<number | null>(null);
+    const mounted = useRef(true);
+
+    // An acknowledgement still pending when the row leaves must not set state on an unmounted
+    // control — the write itself can outlive the row, so the flag covers the settle as well as the
+    // timeout it would have scheduled.
+    useEffect(
+        () => () => {
+            mounted.current = false;
+            if (timer.current !== null) {
+                window.clearTimeout(timer.current);
+            }
+        },
+        [],
+    );
+
+    const answer = (outcome: 'copied' | 'failed') => {
+        if (!mounted.current) {
+            return;
+        }
+        setAck(outcome);
+        if (timer.current !== null) {
+            window.clearTimeout(timer.current);
+        }
+        timer.current = window.setTimeout(() => {
+            setAck(null);
+            timer.current = null;
+        }, COPIED_MS);
+    };
+
+    return (
+        <>
+            <button
+                type="button"
+                aria-label={t('Copy link')}
+                data-ack={ack ?? undefined}
+                onClick={() =>
+                    void navigator.clipboard.writeText(messageLink(messageId)).then(
+                        () => answer('copied'),
+                        () => answer('failed'),
+                    )
+                }
+                className={ICON_BUTTON}
+            >
+                {ack === 'copied' ? (
+                    <Check className="size-4 text-success" aria-hidden />
+                ) : ack === 'failed' ? (
+                    <X className="size-4 text-destructive" aria-hidden />
+                ) : (
+                    <LinkIcon className="size-4" aria-hidden />
+                )}
+            </button>
+            {/* Beside the control rather than inside it, where the mute toggle puts its line: a
+                button's subtree is presentational by the ARIA spec, and Chromium declining to prune
+                it is not a contract. In the tree whether or not it has words, so the change is what
+                is announced. */}
+            <span aria-live="polite" className="sr-only">
+                {ack === 'copied' ? t('Link copied.') : ack === 'failed' ? t('The link could not be copied.') : null}
+            </span>
+        </>
+    );
+}
+
 export function TalkMessageRow({
     message,
     onDelete,
@@ -266,14 +345,7 @@ export function TalkMessageRow({
             {canCopyLink() && (
                 // The address the sheet offers a thumb, one click here: text is the cursor's to
                 // select, so of the two copies only the link earns a place in the bar.
-                <button
-                    type="button"
-                    aria-label={t('Copy link')}
-                    onClick={() => void navigator.clipboard.writeText(messageLink(message.id)).catch(() => {})}
-                    className={ICON_BUTTON}
-                >
-                    <LinkIcon className="size-4" aria-hidden />
-                </button>
+                <CopyLinkButton messageId={message.id} />
             )}
             {message.canDelete && (
                 // A glyph shaped like its neighbour, so the bar reads as one set of controls; the
@@ -317,7 +389,7 @@ export function TalkMessageRow({
                 !grouped && !separatorAbove && 'mt-3',
                 // Above its siblings for as long as its controls are out, so a bar taller than its
                 // own row keeps the hits it draws over the rows either side (see ROW_ACTIONS).
-                'hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10',
+                'hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10 has-[[data-ack]]:z-10',
                 // Under the pointer the row says which one it is, quickly enough to track the hand.
                 // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
                 'transition-colors duration-100 hover:bg-muted',
