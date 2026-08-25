@@ -87,8 +87,9 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
  * Handlers that turn a long press into one call. Spread onto the element the press belongs to; it is
  * attached in every environment, and the cursor's own press is ignored inside (see pressReducer).
  *
- * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners
- * and suppresses no menu.
+ * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners.
+ * Nothing here suppresses the native menu — that is a class on the element, which has to be gated on
+ * the same condition or a row that opens no sheet loses the finger's gestures for nothing.
  */
 export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
     const press = useRef<PressState>(IDLE);

@@ -54,6 +54,55 @@ function renderRow(over: Partial<TalkMessage> = {}, props: { canReply?: boolean;
     );
 }
 
+/**
+ * A row with nothing a press could open. `navigator.clipboard` is absent under happy-dom, which is
+ * also the shape of a site served over plain http — the case where the finger's own selection is the
+ * only way left to copy the words.
+ */
+function renderInertRow() {
+    return renderWithProviders(
+        <ul>
+            <TalkMessageRow
+                message={{ ...message, canDelete: false }}
+                onDelete={vi.fn()}
+                onOpenActions={vi.fn()}
+                onReply={vi.fn()}
+                onJumpToReply={vi.fn()}
+                canReply={false}
+                reactions={{ chips: [], vocabulary: ['\u{1F44D}'], canReact: false, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+            />
+        </ul>,
+    );
+}
+
+function rowSuppressesGestures(): boolean {
+    return document.querySelector('[data-talk-message-id]')!.classList.contains('pointer-coarse:select-none');
+}
+
+/** Plain http: the clipboard is a secure-context API, so copy is off the sheet and off the row. */
+function withoutClipboard(body: () => void) {
+    const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    try {
+        body();
+    } finally {
+        if (own) Object.defineProperty(navigator, 'clipboard', own);
+        else delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+}
+
+test("takes the finger's own gestures only where a press opens something", () => {
+    renderRow();
+    expect(rowSuppressesGestures()).toBe(true);
+
+    cleanup();
+
+    withoutClipboard(() => {
+        renderInertRow();
+        expect(rowSuppressesGestures()).toBe(false);
+    });
+});
+
 /** The live reference a reply draws above its header, distinct from the row's own author and body. */
 const liveReply = {
     deleted: false as const,

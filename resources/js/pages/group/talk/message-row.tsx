@@ -288,9 +288,11 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
-    const press = useLongPress(onOpenActions, {
-        enabled: reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0,
-    });
+    // Whether a press has anything to open. Also gates the suppression on the row below, so the two
+    // cannot drift apart: taking the finger's own gestures is only paid for by a sheet arriving.
+    const pressOpens =
+        reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
+    const press = useLongPress(onOpenActions, { enabled: pressOpens });
 
     const content = (
         <>
@@ -379,8 +381,10 @@ export function TalkMessageRow({
                 'group relative isolate px-4 sm:px-5',
                 // Only where the press is the way in: the lens and the image menu a held finger raises
                 // would land on top of the sheet, and a cursor's text selection is nobody's to take.
-                // Saving a picture still has a way: the lightbox a tap opens suppresses neither.
-                'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
+                // A row that opens nothing keeps both — on a site with no clipboard the selection is
+                // the only way to copy its words. Saving a picture still has a way either way: the
+                // lightbox a tap opens suppresses neither.
+                pressOpens && 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
                 // people speaking is the vocabulary of a board, and this is a conversation.
                 //
