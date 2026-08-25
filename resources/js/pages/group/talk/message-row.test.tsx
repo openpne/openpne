@@ -22,6 +22,9 @@ vi.mock('@inertiajs/react', () => ({
 afterEach(cleanup);
 // Fake timers must not outlive a failing assertion in the tests that arm them.
 afterEach(() => vi.useRealTimers());
+// Likewise the clipboard: vitest shares the environment across a file, so a shadow left in place
+// would be what every later test in it sees.
+afterEach(() => delete (navigator as { clipboard?: unknown }).clipboard);
 
 const message: TalkMessage = {
     id: 7,
@@ -38,13 +41,16 @@ const message: TalkMessage = {
     canDelete: true,
 };
 
-function renderRow(over: Partial<TalkMessage> = {}, props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void } = {}) {
+function renderRow(
+    over: Partial<TalkMessage> = {},
+    props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void; onOpenActions?: () => void } = {},
+) {
     return renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={{ ...message, ...over }}
                 onDelete={vi.fn()}
-                onOpenActions={vi.fn()}
+                onOpenActions={props.onOpenActions ?? vi.fn()}
                 onReply={props.onReply ?? vi.fn()}
                 onJumpToReply={props.onJumpToReply ?? vi.fn()}
                 canReply={props.canReply ?? true}
@@ -55,13 +61,13 @@ function renderRow(over: Partial<TalkMessage> = {}, props: { canReply?: boolean;
 }
 
 /** A row with nothing a press could open — no react, reply, delete, chip, or clipboard. */
-function renderInertRow() {
+function renderInertRow(onOpenActions: () => void = vi.fn()) {
     return renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={{ ...message, canDelete: false }}
                 onDelete={vi.fn()}
-                onOpenActions={vi.fn()}
+                onOpenActions={onOpenActions}
                 onReply={vi.fn()}
                 onJumpToReply={vi.fn()}
                 canReply={false}
@@ -74,40 +80,54 @@ function renderInertRow() {
 const SUPPRESSION = ['pointer-coarse:select-none', 'pointer-coarse:[-webkit-touch-callout:none]'];
 
 /** Which of the two the row carries — not whether it carries them all, so one slipping back to
- *  unconditional on its own still shows up on the inert row. */
+ *  unconditional on its own still shows up. */
 function suppressionOn(): string[] {
     const row = document.querySelector('[data-talk-message-id]')!;
 
     return SUPPRESSION.filter((c) => row.classList.contains(c));
 }
 
-/**
- * happy-dom answers `navigator.clipboard` from a prototype getter, so the secure-context case has to
- * be built by shadowing it. What is left is the shape of a site served over plain http, where the
- * Clipboard API is not exposed at all.
- */
-function withoutClipboard(body: () => void) {
-    const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
-    try {
-        body();
-    } finally {
-        if (own) Object.defineProperty(navigator, 'clipboard', own);
-        else delete (navigator as { clipboard?: unknown }).clipboard;
-    }
-}
-
-test("takes the finger's own gestures only where a press opens something", () => {
+test('takes the finger\'s own gestures only where the sheet can give the words back', () => {
     renderRow();
     expect(suppressionOn()).toEqual(SUPPRESSION);
 
     cleanup();
 
-    withoutClipboard(() => {
-        renderInertRow();
-        expect(suppressionOn()).toEqual([]);
-    });
+    // Plain http, where the sheet has no copy item to offer in exchange — including on a row whose
+    // reader can reply, which is the ordinary case and the one the exchange is really about.
+    clipboard(null);
+    renderRow({}, { canReply: true });
+    expect(suppressionOn()).toEqual([]);
 });
+
+test('a press on a row with nothing to open raises no sheet', () => {
+    vi.useFakeTimers();
+    clipboard(null);
+    const onOpenActions = vi.fn();
+    renderInertRow(onOpenActions);
+
+    press(document.querySelector('[data-talk-message-id]')!);
+
+    expect(onOpenActions).not.toHaveBeenCalled();
+});
+
+test('a press on a row with something to open raises the sheet', () => {
+    vi.useFakeTimers();
+    const onOpenActions = vi.fn();
+    renderRow({}, { onOpenActions });
+
+    press(document.querySelector('[data-talk-message-id]')!);
+
+    expect(onOpenActions).toHaveBeenCalled();
+});
+
+/** A finger held still for longer than the hold — the whole of what makes a press a press. */
+function press(row: Element) {
+    fireEvent.pointerDown(row, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+}
 
 /** The live reference a reply draws above its header, distinct from the row's own author and body. */
 const liveReply = {
@@ -284,7 +304,11 @@ test('a message with no card leaves the body link standing alone', () => {
     expect(container.querySelectorAll('a[href="https://example.com/a"]').length).toBe(1);
 });
 
-/** What the row asks the platform for — absent stands for a site served without a secure context. */
+/**
+ * What the row asks the platform for — absent stands for a site served over plain http, which has no
+ * Clipboard API at all. happy-dom answers from a prototype getter, so this shadows it with an own
+ * property and the afterEach above deletes that back off.
+ */
 function clipboard(writeText: ((text: string) => Promise<void>) | null) {
     Object.defineProperty(navigator, 'clipboard', { value: writeText === null ? undefined : { writeText }, configurable: true });
 }

@@ -288,8 +288,7 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
-    // Whether a press has anything to open. Also gates the suppression on the row below, so the two
-    // cannot drift apart: taking the finger's own gestures is only paid for by a sheet arriving.
+    // Whether a press has anything to open.
     const pressOpens =
         reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
     const press = useLongPress(onOpenActions, { enabled: pressOpens });
@@ -379,12 +378,15 @@ export function TalkMessageRow({
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
                 'group relative isolate px-4 sm:px-5',
-                // Only where the press is the way in: the lens and the image menu a held finger raises
-                // would land on top of the sheet, and a cursor's text selection is nobody's to take.
-                // A row that opens nothing keeps both — on a site with no clipboard the selection is
-                // the only way to copy its words. Saving a picture still has a way either way: the
-                // lightbox a tap opens suppresses neither.
-                pressOpens && 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
+                // The lens and the image menu a held finger raises would land on top of the sheet, and
+                // a cursor's text selection is nobody's to take. But the sheet is what pays for the
+                // selection it takes — it offers the words back, copied — and without a clipboard it
+                // has nothing to pay with. So a site served over plain http keeps its selection and
+                // accepts the lens landing over the sheet; that is the only way to copy a message
+                // there. The clipboard alone decides, since having one already makes `pressOpens`
+                // true. Saving a picture has its own way regardless: the lightbox a tap opens
+                // suppresses neither.
+                canCopyLink() && 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
                 // people speaking is the vocabulary of a board, and this is a conversation.
                 //

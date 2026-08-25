@@ -88,8 +88,8 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
  * attached in every environment, and the cursor's own press is ignored inside (see pressReducer).
  *
  * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners.
- * Nothing here suppresses the native menu — that is a class on the element, which has to be gated on
- * the same condition or a row that opens no sheet loses the finger's gestures for nothing.
+ * Nothing here suppresses the native menu either — that is a class on the element, and it is the
+ * caller's job to withhold it wherever the sheet cannot give back what the suppression takes.
  */
 export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
     const press = useRef<PressState>(IDLE);
