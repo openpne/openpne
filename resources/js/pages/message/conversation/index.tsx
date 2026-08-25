@@ -303,11 +303,10 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-                {/* The conversation keeps the card's surface and loses its inset below lg —
-                    `bleed`, and the reason it is allowed, in components/card.tsx. The margins are the
-                    composer's own so each edge is stated once; `lg:mx-0` stops there rather than
-                    following the composer past the card, which is an older disagreement (not one to
-                    copy). */}
+            {/* The conversation keeps the card's surface and loses its inset below lg — `bleed`, and
+                the reason it is allowed, in components/card.tsx. Both edges come from there: the
+                composer under this list is not a Card, and imports the same constant so the two
+                cannot end on different lines. */}
             {/* `mb-0` and the composer-less `max-lg:mb-[…]` carry the same specificity, so which one
                 a narrow screen gets is decided by emission order — Tailwind writes variants after the
                 base, and the conditional wins. That is the one order-dependent thing here: swap

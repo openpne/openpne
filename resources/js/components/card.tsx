@@ -7,6 +7,14 @@ type Props = {
 };
 
 /**
+ * What a bleeding surface does to its own edges: out through the frame's padding below lg, back
+ * inside it at lg. Applied by `bleed` itself rather than passed in, and exported because the
+ * composer is not a Card and has to end on the same two lines the card it sits under does — one
+ * source, so the pair cannot drift apart the 16px they had drifted.
+ */
+export const BLEED_EDGES = '-mx-3 sm:-mx-4 lg:mx-0';
+
+/**
  * Rounded card wrapping a block of page content. Clips to the rounded corners by default; pass
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
@@ -32,14 +40,6 @@ type Props = {
  * So the device finding is not overturned by `bleed`: it was about losing the *surface*, which `bleed`
  * does not do.
  */
-/**
- * What a bleeding surface does to its own edges: out through the frame's padding below lg, back
- * inside it at lg. Applied by `bleed` itself rather than passed in, and exported because the
- * composer is not a Card and has to end on the same two lines the card it sits under does — one
- * source, so the pair cannot drift apart the 16px they had drifted.
- */
-export const BLEED_EDGES = '-mx-3 sm:-mx-4 lg:mx-0';
-
 export function Card({
     children,
     className,
