@@ -54,11 +54,7 @@ function renderRow(over: Partial<TalkMessage> = {}, props: { canReply?: boolean;
     );
 }
 
-/**
- * A row with nothing a press could open. `navigator.clipboard` is absent under happy-dom, which is
- * also the shape of a site served over plain http — the case where the finger's own selection is the
- * only way left to copy the words.
- */
+/** A row with nothing a press could open — no react, reply, delete, chip, or clipboard. */
 function renderInertRow() {
     return renderWithProviders(
         <ul>
@@ -75,11 +71,21 @@ function renderInertRow() {
     );
 }
 
-function rowSuppressesGestures(): boolean {
-    return document.querySelector('[data-talk-message-id]')!.classList.contains('pointer-coarse:select-none');
+const SUPPRESSION = ['pointer-coarse:select-none', 'pointer-coarse:[-webkit-touch-callout:none]'];
+
+/** Which of the two the row carries — not whether it carries them all, so one slipping back to
+ *  unconditional on its own still shows up on the inert row. */
+function suppressionOn(): string[] {
+    const row = document.querySelector('[data-talk-message-id]')!;
+
+    return SUPPRESSION.filter((c) => row.classList.contains(c));
 }
 
-/** Plain http: the clipboard is a secure-context API, so copy is off the sheet and off the row. */
+/**
+ * happy-dom answers `navigator.clipboard` from a prototype getter, so the secure-context case has to
+ * be built by shadowing it. What is left is the shape of a site served over plain http, where the
+ * Clipboard API is not exposed at all.
+ */
 function withoutClipboard(body: () => void) {
     const own = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
@@ -93,13 +99,13 @@ function withoutClipboard(body: () => void) {
 
 test("takes the finger's own gestures only where a press opens something", () => {
     renderRow();
-    expect(rowSuppressesGestures()).toBe(true);
+    expect(suppressionOn()).toEqual(SUPPRESSION);
 
     cleanup();
 
     withoutClipboard(() => {
         renderInertRow();
-        expect(rowSuppressesGestures()).toBe(false);
+        expect(suppressionOn()).toEqual([]);
     });
 });
 
