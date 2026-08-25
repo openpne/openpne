@@ -103,7 +103,7 @@ class GroupTopicController extends Controller
 
                 return Inertia::render('group/topic/show', [
                     'group' => GroupSerializer::summary($found->group),
-                    'topic' => GroupTopicSerializer::detail($found),
+                    'topic' => GroupTopicSerializer::detail($found, $viewer),
                     'thread' => GroupTopicSerializer::thread($thread, $viewer),
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
@@ -154,7 +154,7 @@ class GroupTopicController extends Controller
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('group/topic/edit', [
                 'group' => GroupSerializer::summary($topic->group),
-                'topic' => GroupTopicSerializer::detail($topic),
+                'topic' => GroupTopicSerializer::detail($topic, $this->viewer()),
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);

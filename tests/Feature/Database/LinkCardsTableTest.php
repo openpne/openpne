@@ -100,6 +100,7 @@ class LinkCardsTableTest extends TestCase
         $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
         $talk = require database_path('migrations/2026_08_21_000001_add_link_card_to_group_messages.php');
         $comments = require database_path('migrations/2026_08_21_000002_add_link_card_to_comment_tables.php');
+        $internal = require database_path('migrations/2026_08_25_000001_add_internal_pointer_to_link_cards.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
@@ -109,6 +110,7 @@ class LinkCardsTableTest extends TestCase
         // it. SQLite refuses to drop a column an index still names, and MySQL refuses to drop a
         // table another still references (errno 3730), so this order is not a preference; it is the
         // only one that works, and the one a real rollback uses.
+        $internal->down();
         $comments->down();
         $talk->down();
         $index->down();
@@ -116,6 +118,7 @@ class LinkCardsTableTest extends TestCase
         $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
         $this->assertFalse(Schema::hasColumn('group_messages', 'link_card_id'));
         $this->assertFalse(Schema::hasColumn('diary_comments', 'link_card_id'));
+        $this->assertFalse(Schema::hasColumn('link_cards', 'internal_context'));
 
         $create->down();
         $this->assertFalse(Schema::hasTable('link_cards'));
@@ -125,12 +128,14 @@ class LinkCardsTableTest extends TestCase
         $index->up();
         $talk->up();
         $comments->up();
+        $internal->up();
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
         $this->assertTrue(Schema::hasColumn('timeline_posts', 'link_card_synced_at'));
         $this->assertTrue(Schema::hasColumn('group_messages', 'link_card_synced_at'));
         $this->assertTrue(Schema::hasColumn('diary_comments', 'link_card_synced_at'));
+        $this->assertTrue(Schema::hasColumn('link_cards', 'internal_record_id'));
     }
 
     private function column(string $table, string $name): ?array

@@ -6,6 +6,7 @@ use App\Features\Group\GroupRole;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -52,6 +53,8 @@ class AddAllMembers
 
         // Everyone is now a member, so any pending join requests for this group are redundant.
         DB::table('group_join_requests')->where('group_id', $groupId)->delete();
+
+        ViewerRelations::flush();
 
         return $added;
     }

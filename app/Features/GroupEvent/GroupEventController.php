@@ -105,7 +105,7 @@ class GroupEventController extends Controller
 
                 return Inertia::render('group/event/show', [
                     'group' => GroupSerializer::summary($found->group),
-                    'event' => GroupEventSerializer::detail($found),
+                    'event' => GroupEventSerializer::detail($found, $viewer),
                     'thread' => GroupEventSerializer::thread($thread, $viewer),
                     'canComment' => GroupEventAccess::canComment($found, $viewer),
                     'canEdit' => GroupEventAccess::canEditEvent($found, $viewer),
@@ -219,7 +219,8 @@ class GroupEventController extends Controller
 
     public function memberList(Request $request, GroupEvent $event, EventParticipants $query): View|InertiaResponse
     {
-        abort_unless(GroupEventAccess::canViewEvent($event, $this->viewer()), 404);
+        $viewer = $this->viewer();
+        abort_unless(GroupEventAccess::canViewEvent($event, $viewer), 404);
         $participants = $query($event);
 
         return $this->respondWith($request, 'group', [
@@ -231,12 +232,12 @@ class GroupEventController extends Controller
                     'participants' => $participants,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($event, $participants) {
+            SurfaceResolver::MODERN => function () use ($event, $participants, $viewer) {
                 $event->loadMissing('group');
 
                 return Inertia::render('group/event/members', [
                     'group' => GroupSerializer::summary($event->group),
-                    'event' => GroupEventSerializer::detail($event),
+                    'event' => GroupEventSerializer::detail($event, $viewer),
                     'participants' => GroupEventSerializer::participantPaginator($participants),
                 ]);
             },

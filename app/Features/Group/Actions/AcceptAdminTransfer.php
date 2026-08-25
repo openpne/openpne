@@ -9,6 +9,7 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -69,6 +70,8 @@ class AcceptAdminTransfer
 
             return null;
         });
+
+        ViewerRelations::flush();
 
         if ($failure !== null) {
             throw new GroupActionException($failure);

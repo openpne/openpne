@@ -142,11 +142,153 @@ attempt replaces it. That also avoids a leak that the alternative created: demot
 leaving `image_file_id` in place kept the old image referenced by a card nobody renders, where no
 unreferenced-file sweep could collect it.
 
+## Links to this site are never fetched
+
+A URL on this site's own host takes a different path end to end: **a pointer row, and content read
+from the record it names at render time.** Nothing about the destination is stored.
+
+That split is forced by the table. One row is shared by every body that mentions a URL, and what a
+card of a members-only diary says depends on who is reading it — so there is nowhere on the row to
+put it. The pointer is the part that is the same for everyone: `internal_context` (an
+[`InternalCardTarget`](../../app/LinkCard/InternalCardTarget.php) slug) and `internal_record_id`,
+with `status` = `internal` and every metadata column null.
+
+**Being ours is decided before being resolvable.** [`InternalUrl`](../../app/LinkCard/InternalUrl.php)
+answers two questions, not one: is this host ours, and does the path name a record. A URL of ours
+that resolves to nothing — an OpenPNE 3 spelling, a list page, a route added since — is still ours,
+and is still never handed to the fetcher. Deciding the other way round, and treating what cannot be
+resolved as external, would leave this app requesting its own pages for every address outside the
+canonical set; behind a private address `PublicIpGuard` refuses those, so they would also be a
+permanent supply of failed rows serving out their backoff.
+
+Host and port decide it, never the scheme: `http://` and `https://` of this site are the same server.
+A port outside `LinkUrl`'s 80 and 443 never reaches the question at all — normalisation refuses it on
+both sides — so a site served on another port draws no internal cards, which is a deployment outside
+the fleet standard.
+
+| | canonical route | title | description | picture |
+|---|---|---|---|---|
+| diary | `/diary/{id}` | its title | body excerpt | first image |
+| topic | `/topics/{id}` | its name | body excerpt | first image |
+| event | `/events/{id}` | its name | body excerpt | first image |
+| timeline post | `/timeline/{id}` | composed from the author | body excerpt | first image |
+| group | `/groups/{id}` | its name | its description | top image |
+| member | `/member/{id}` | their name | — | avatar |
+| talk message | `/groups/{gid}/talk?m={id}` | composed from the author | the line lists preview it by | first image |
+
+### Who may see one
+
+**Two gates, and neither is a copy.** The owning unit has to be on, checked before the record is
+loaded, as `LinkCardImageController` does — an operator switching diaries off has to take their
+previews with them. Then the record's own access rule decides, by delegation: a second
+implementation of "who may read this topic" would drift, and silently. A record that is gone, one
+the reader may not see, and a row whose pointer is missing or names a kind this app no longer has all
+answer the same way — no card. Refusal and absence must not be distinguishable, or the card is an
+oracle over records the reader cannot open.
+
+A member's profile takes both halves of its page's gate, which are easy to mistake for one: the block
+policy lets a guest through by design (a guest is nobody to block), so what answers a signed-out
+reader is the profile's own web-public setting. [`ProfileAccess`](../../app/Features/Profile/ProfileAccess.php)
+is where that pair is written down, and `ProfileController` reads it.
+
+The picture is the record's own file at its own address, so `FilePolicy` authorises the bytes against
+the same record whose rule admitted the card. The `/linkCard/…` route is for pictures a fetch
+downloaded and refuses these rows, since an internal row is never renderable.
+
+For a reply those are not the same record: the card is the thread's to authorise and the picture is
+the reply's own file, so a reader the replier has blocked is offered a picture that 404s. That is the
+asymmetry the thread page already has — it draws the same reply's picture on the same terms — and it
+is pinned as current behaviour rather than given a second rule here.
+
+### The URL is read again at render time
+
+The pointer is not trusted on its own: the URL is resolved afresh and must still be ours and still
+name the record the pointer does. A card is drawn beside its own `url`, which is what the reader
+clicks — once this site has been renamed, that address is somebody else's, and describing it with a
+record of ours would describe one page while linking to another, with whoever now answers the old
+host doing the describing.
+
+### The setting does not govern it
+
+`LinkCardEnabled` is about *fetching*, and these cards need no fetch, so they are drawn whatever it
+says. That reaches into `SyncLinkCard`, which would otherwise not run at all while the switch is off:
+a body whose **first** URL is one of ours is resolved and marked examined regardless, because the
+answer does not depend on the setting. A body whose first URL is external is left unexamined, so
+switching the setting on later still picks it up — `link_card_synced_at` is written once in a body's
+life. Nothing looks past the first URL for one of ours; a card is the first URL, and going looking
+would make a body's card depend on when the job happened to run.
+
+### Rows written before this existed
+
+`FetchLinkCard` resolves the URL **before the claim**, and converts a row of ours instead of
+requesting it. That is the repair as well as the guard: rows minted earlier hold a card of the login
+screen or a failure, nothing else revisits them, and the read trigger goes on offering them to the
+fetch job week after week. They correct themselves the next time a page they are on is opened — no
+migration, no command. The same repair runs from the sync side, and there it does not depend on the
+address resolving: no row is *minted* for one of ours that names nothing, but one already there is
+converted anyway, since the row is shared by every body that mentions the URL and would otherwise go
+on drawing a login screen under all of them.
+
+The conversion clears the metadata and deletes the pictures the fetch had stored, which are otherwise
+referenced by a row nobody renders and reachable by no sweep. They are found by what the files say
+they belong to and deleted *after* the row is converted, rather than from the column as it read
+before: a fetch already in flight can store its own picture in that window, and the column would
+name neither it nor both. Nulling
+`next_attempt_at` also releases the lease, so a fetch still in flight fails its fence and drops its
+result rather than writing metadata onto the converted row. Behind that sits the claim's own
+`status != internal` condition, which answers the row the URL test cannot: one already marked
+internal whose host has since been renamed.
+
+### What a page of them costs
+
+A card read one record at a time is three queries per row on the conversation poll — the app's most
+frequent request, sixty rows every few seconds. So the batch assembles itself: every page eager-loads
+its cards in one go before anything is serialized, each row announces its pointer as it is hydrated,
+and the first card that needs a record reads every record the page will ask for together
+([`InternalCardResolver`](../../app/LinkCard/InternalCardResolver.php)). A list added later gets that
+without opting in, which is the point — an opt-in would be missing from whichever list nobody
+remembered. `InternalLinkCardQueryCostTest` holds three surfaces to a count that does not move with
+the number of rows.
+
+**What the rules then ask batches with it.** Reading the records is half of what a card costs; the
+other half is what each rule asks about the *reader* — does this author block me, are we friends,
+what am I to this group — which is a single-row question asked once per card. So the moment a kind's
+records are read, the relations those rules are about to ask for are read for exactly that set, one
+query each, into a memo of **pairs** ([`ViewerRelations`](../../app/Support/ViewerRelations.php)).
+Nothing is loaded on the strength of who is reading, so what it holds is bounded by the page rather
+than by the size of a reader's social graph.
+
+Every rule keeps **one** path — the memo if the pair is in it, its own query if not — so a page that
+read nothing behaves and costs exactly as it did before, and a pair the page never named is asked
+about the way it always was. A pair read and found *unrelated* is memoised as such: recording only
+the matches would leave a page of strangers, which is the common one, paying per row. That makes the
+bulk read and the single-row read two spellings of one predicate, and `ViewerRelationsTest` pins them
+against each other branch by branch rather than trusting them to agree.
+
+The memo is answers taken at a moment, so a write to a block, a friendship or a membership drops it
+(`ViewerRelations::flush()`). Forgetting that call fails **open** and leaves nothing to see at the
+call site, so `ViewerRelationsFlushTest` is what says the wiring is complete.
+
+### What does not reach back
+
+**A body examined once is never examined again**, and that cuts two ways here. A kind added to the
+resolver later does not reach bodies already marked — a URL that resolved to nothing when it was
+posted stays without a card until the body is edited or reposted. The same is true of a site moved
+onto a standard port: links posted while it was on another one were never stored at all. These are
+the price of the marker, which is what keeps a body with no link from being re-parsed on every view
+forever, and they are the same fact seen from either end: the mark is permanent, the list of kinds is
+not.
+
 ## Pieces
 
 | | |
 |---|---|
 | [`LinkUrl`](../../app/LinkCard/LinkUrl.php) | Normalises a URL into the key a card is stored under; resolves references found in a page |
+| [`InternalUrl`](../../app/LinkCard/InternalUrl.php) | Reads a URL as one of ours, and as a record it names |
+| [`InternalCardTarget`](../../app/LinkCard/InternalCardTarget.php) | The seven kinds a URL of ours can name, with each one's unit, rule and content |
+| [`InternalCardResolver`](../../app/LinkCard/InternalCardResolver.php) | The records a request's internal cards are built from, read one query per kind |
+| [`InternalCardRow`](../../app/LinkCard/InternalCardRow.php) | The one state a row of ours is in, and the only way it gets there |
+| [`ViewerRelations`](../../app/Support/ViewerRelations.php) | What the reader is to the records a page names, read one query per relation |
 | [`Encoding`](../../app/LinkCard/Encoding.php) | Converts a fetched page to UTF-8 |
 | [`MetadataExtractor`](../../app/LinkCard/MetadataExtractor.php) | Markup in, `LinkMetadata` out. Pure — it never fetches |
 | [`OembedClient`](../../app/LinkCard/OembedClient.php) | Calls a discovered oEmbed endpoint for the structured fields only |
@@ -330,10 +472,11 @@ A big landscape picture is a preview and is drawn **across the card, under the w
 square one is an icon and sits **beside them**. Neither shape survives the other's picture: a 64px
 logo blown across the card, or a magazine cover shrunk into a 120px tile.
 
-[`LinkCard::hasLargeImage()`](../../app/Models/LinkCard.php) decides, and
-[`CardLayout`](../../app/LinkCard/CardLayout.php) is what crosses to the renderers — the same reason
-the gates are decided once: two renderers each asking "is this big enough" would drift, and the drift
-would show as one surface enlarging what the other tiles.
+[`CardLayout::forImage()`](../../app/LinkCard/CardLayout.php) decides, and the value it returns is
+what crosses to the renderers — the same reason the gates are decided once: two renderers each asking
+"is this big enough" would drift, and the drift would show as one surface enlarging what the other
+tiles. A fetched card asks it through `LinkCard::hasLargeImage()` and an internal one from the
+record's own file, so the two kinds of card cannot take different shapes at the same size either.
 
 The threshold is **ours**, assembled rather than copied. Signal requires both sides ≥ 200 and merely
 not-square, so it enlarges portraits too; Mattermost requires width ≥ 150 and 4:3 with no lower bound
@@ -411,11 +554,11 @@ in the reader's browser, where this fetches arbitrary hosts from the server.
 It is read through `LinkCardSettings` from three places, and all three have to agree or the switch
 does not mean what it says: the read path (do not start work), the fetch job (do not make the
 request, even if it was queued while the setting was on), and the renderer (do not show a card
-fetched earlier).
+fetched earlier). It governs none of the internal path above, which needs no request.
 
-The admin page states what turning it on does, because "show link previews" does not imply it: the
-server reaches out to every linked page, from bodies only a few people can read as well as open
-ones, and each destination learns the link was shared here.
+The admin page states both, because neither follows from a label: the server reaches out to every
+linked page, from bodies only a few people can read as well as open ones, and each destination learns
+the link was shared here — while a link to one of this site's own pages is previewed either way.
 
 ## Cleaning up
 
@@ -457,6 +600,18 @@ rather than something that hurts, so this is an operator's tool.
 
 ## Key invariants
 
+- **A URL on this site's own host is never requested**, whatever state its row is in. The URL decides
+  that, before the claim and before the row's status is trusted.
+- An internal row holds a pointer and nothing else: every metadata column is null, because the row is
+  shared and what such a card says depends on who is reading it.
+- An internal card's content is read from the record on every render, and gated by that record's own
+  unit and access rule — never by a copy of either, and never by anything cached on the row.
+- Reading a page's relations in bulk is a memo of the answers those rules would have read anyway,
+  pair by pair, and never a second rule. An unread pair costs a query; it never decides anything.
+- A row leaving the fetch lifecycle takes every picture stored for it, found by the relation and
+  after the row is converted — never by the id the row held before.
+- Whether a URL of ours has a card does not depend on the link-card setting; whether an external one
+  is examined at all does.
 - One row per normalised URL; a widely-shared link is fetched once.
 - A card renders only when it was fetched successfully **and** has a title. A fetch can succeed
   against a page carrying no metadata at all, so status alone is not the test.

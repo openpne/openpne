@@ -4,6 +4,7 @@ namespace App\Features\Group;
 
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,8 +14,18 @@ use Illuminate\Support\Facades\DB;
  */
 class GroupMembership
 {
+    /**
+     * A page that read this member's groups in bulk has already answered this pair
+     * (ViewerRelations) — asked separately from the answer because no role is one of the answers.
+     */
     public static function roleOf(Group $group, Member $member): ?GroupRole
     {
+        $relations = app(ViewerRelations::class);
+
+        if ($relations->knowsRole($group, $member)) {
+            return $relations->roleIn($group, $member);
+        }
+
         $value = DB::table('group_members')
             ->where('group_id', $group->getKey())
             ->where('member_id', $member->getKey())

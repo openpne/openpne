@@ -34,7 +34,11 @@ class GroupMessageSerializer
      * @param  array<int, GroupMessage>  $parents  the answered messages of the whole page, as
      *                                             ReplyReferences read them. Required rather than defaulted: a caller that
      *                                             forgot it would draw every reply as one whose parent was deleted
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
+     *
+     * The reader is taken off $permissions rather than passed alongside it — a card of one of this
+     * site's own pages is built against whoever is asking, and `$permissions->member` is already
+     * that person. Passing them twice would let the two disagree.
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
@@ -46,7 +50,7 @@ class GroupMessageSerializer
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
             'images' => $message->images->map([self::class, 'image'])->values()->all(),
-            'linkCard' => LinkCardSerializer::card($message),
+            'linkCard' => LinkCardSerializer::card($message, $permissions->member),
             'reactions' => $reactions,
             'inReplyTo' => self::inReplyTo($message, $parents),
             'isOwn' => $permissions->owns($message),
