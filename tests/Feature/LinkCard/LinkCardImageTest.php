@@ -283,32 +283,55 @@ class LinkCardImageTest extends TestCase
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->png(10, 10), 'image/png');
         $this->queueBinary('not an image at all', 'image/png');
+        $staging = $this->stagingDirectory();
 
-        $before = $this->tempFileCount();
-        $this->importer()->import('https://cdn.example.com/ok.png', $card->id);
-        $this->importer()->import('https://cdn.example.com/bad.png', $card->id);
+        $this->importer(staging: $staging)->import('https://cdn.example.com/ok.png', $card->id);
+        $this->importer(staging: $staging)->import('https://cdn.example.com/bad.png', $card->id);
 
-        $this->assertSame($before, $this->tempFileCount(), 'A temp file survived one of the two paths.');
+        // Emptiness, not a count that came back to where it started: nobody else writes here, so
+        // anything left is a file one of the two paths failed to clean up.
+        $this->assertSame([], $this->stagedFiles($staging), 'A temp file survived one of the two paths.');
     }
 
-    private function importer(?ImageManager $images = null): LinkCardImage
+    /**
+     * A staging directory this test alone writes to, removed when it ends.
+     *
+     * The importer stages under the system temp directory by default, which every ParaTest worker
+     * shares, and a staged name says nothing about which process wrote it. Watching that directory
+     * watches the other workers' imports too — one of them finishing mid-window moves the count
+     * without this test doing anything, which is the failure this test used to have.
+     */
+    private function stagingDirectory(): string
+    {
+        $dir = sys_get_temp_dir().'/linkcard-staging-'.getmypid().'-'.bin2hex(random_bytes(6));
+        mkdir($dir, 0o700);
+        $this->beforeApplicationDestroyed(function () use ($dir) {
+            array_map(fn (string $name) => @unlink($dir.'/'.$name), $this->stagedFiles($dir));
+            @rmdir($dir);
+        });
+
+        return $dir;
+    }
+
+    /** @return list<string> */
+    private function stagedFiles(string $dir): array
+    {
+        return array_values(array_diff(scandir($dir) ?: [], ['.', '..']));
+    }
+
+    private function importer(?ImageManager $images = null, ?string $staging = null): LinkCardImage
     {
         return new LinkCardImage(
             $this->fakeFetcher(),
             $this->app->make(FileUploader::class),
             $images ?? $this->app->make(ImageManager::class),
+            $staging,
         );
     }
 
     private function card(): LinkCard
     {
         return LinkCard::create(['url_hash' => str_repeat('a', 64), 'url' => 'https://example.com/']);
-    }
-
-    /** Counts our own temp files, so an unrelated one in the directory cannot mask a leak. */
-    private function tempFileCount(): int
-    {
-        return count(glob(sys_get_temp_dir().'/linkcard*') ?: []);
     }
 
     private function png(int $width, int $height): string
