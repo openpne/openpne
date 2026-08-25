@@ -11,6 +11,7 @@ use App\Models\File;
 use App\Models\LinkCard;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\DecoderInterface;
@@ -284,13 +285,51 @@ class LinkCardImageTest extends TestCase
         $this->queueBinary($this->png(10, 10), 'image/png');
         $this->queueBinary('not an image at all', 'image/png');
         $staging = $this->stagingDirectory();
+        $uploader = $this->recordingUploader($staged);
 
-        $this->importer(staging: $staging)->import('https://cdn.example.com/ok.png', $card->id);
-        $this->importer(staging: $staging)->import('https://cdn.example.com/bad.png', $card->id);
+        $stored = $this->importer(staging: $staging, uploader: $uploader)->import('https://cdn.example.com/ok.png', $card->id);
+        $refused = $this->importer(staging: $staging, uploader: $uploader)->import('https://cdn.example.com/bad.png', $card->id);
+
+        // Before the outcome, that the stimulus landed. An empty directory is also what two imports
+        // that never ran leave behind, and what an importer staging somewhere else leaves behind, and
+        // this test reads emptiness as success.
+        $this->assertNotNull($stored, 'The storing path did not store.');
+        $this->assertNull($refused, 'The refusing path did not refuse.');
+        $this->assertNotSame([], $staged, 'Nothing reached the uploader, so nothing was staged.');
+        foreach ($staged as $path) {
+            $this->assertSame($staging, dirname($path), 'The importer staged outside the directory it was given.');
+        }
 
         // Emptiness, not a count that came back to where it started: nobody else writes here, so
         // anything left is a file one of the two paths failed to clean up.
         $this->assertSame([], $this->stagedFiles($staging), 'A temp file survived one of the two paths.');
+    }
+
+    /**
+     * An uploader that notes where the bytes it is handed are sitting.
+     *
+     * The staged file is gone by the time the assertions run — cleaning it up is what is under test —
+     * so the only moment its path can be seen is as it is passed on.
+     *
+     * @param  list<string>|null  $staged
+     */
+    private function recordingUploader(?array &$staged): FileUploader
+    {
+        $staged = [];
+        $real = $this->app->make(FileUploader::class);
+
+        return new class($real, $staged) extends FileUploader
+        {
+            /** @param  list<string>  $staged */
+            public function __construct(private readonly FileUploader $inner, private array &$staged) {}
+
+            public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
+            {
+                $this->staged[] = $upload->getPathname();
+
+                return $this->inner->store($upload, $relatedType, $relatedId, $explicitVisibility);
+            }
+        };
     }
 
     /**
@@ -304,7 +343,11 @@ class LinkCardImageTest extends TestCase
     private function stagingDirectory(): string
     {
         $dir = sys_get_temp_dir().'/linkcard-staging-'.getmypid().'-'.bin2hex(random_bytes(6));
-        mkdir($dir, 0o700);
+        // Said by the test rather than left to the framework: tempnam falls back to the shared
+        // directory when the one it is given is missing, and scandir on a missing directory answers
+        // with the empty list this test reads as success. Today an E_NOTICE-to-exception conversion
+        // catches that; this does not depend on it staying.
+        $this->assertTrue(mkdir($dir, 0o700), 'Could not create the staging directory.');
         $this->beforeApplicationDestroyed(function () use ($dir) {
             array_map(fn (string $name) => @unlink($dir.'/'.$name), $this->stagedFiles($dir));
             @rmdir($dir);
@@ -319,11 +362,11 @@ class LinkCardImageTest extends TestCase
         return array_values(array_diff(scandir($dir) ?: [], ['.', '..']));
     }
 
-    private function importer(?ImageManager $images = null, ?string $staging = null): LinkCardImage
+    private function importer(?ImageManager $images = null, ?string $staging = null, ?FileUploader $uploader = null): LinkCardImage
     {
         return new LinkCardImage(
             $this->fakeFetcher(),
-            $this->app->make(FileUploader::class),
+            $uploader ?? $this->app->make(FileUploader::class),
             $images ?? $this->app->make(ImageManager::class),
             $staging,
         );
