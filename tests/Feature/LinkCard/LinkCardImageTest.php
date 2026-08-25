@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
+use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageMetadataStripper;
 use App\LinkCard\LinkCardImage;
@@ -16,6 +17,7 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\DecoderInterface;
 use Intervention\Image\Interfaces\ImageInterface;
+use RuntimeException;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
@@ -283,19 +285,21 @@ class LinkCardImageTest extends TestCase
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->png(10, 10), 'image/png');
-        $this->queueBinary('not an image at all', 'image/png');
+        $this->queueBinary($this->png(10, 10), 'image/png');
         $staging = $this->stagingDirectory();
-        $uploader = $this->recordingUploader($staged);
+        $staged = [];
 
-        $stored = $this->importer(staging: $staging, uploader: $uploader)->import('https://cdn.example.com/ok.png', $card->id);
-        $refused = $this->importer(staging: $staging, uploader: $uploader)->import('https://cdn.example.com/bad.png', $card->id);
+        $stored = $this->importer(staging: $staging, uploader: $this->watchingUploader($staged))
+            ->import('https://cdn.example.com/ok.png', $card->id);
+        $dropped = $this->importer(staging: $staging, uploader: $this->watchingUploader($staged, thenThrow: true))
+            ->import('https://cdn.example.com/also-ok.png', $card->id);
 
-        // Before the outcome, that the stimulus landed. An empty directory is also what two imports
-        // that never ran leave behind, and what an importer staging somewhere else leaves behind, and
-        // this test reads emptiness as success.
+        // Before the outcome, that the stimulus landed: an empty directory is equally what two
+        // imports that never staged leave behind, and what an importer writing somewhere else leaves
+        // behind, and this test reads emptiness as success.
         $this->assertNotNull($stored, 'The storing path did not store.');
-        $this->assertNull($refused, 'The refusing path did not refuse.');
-        $this->assertNotSame([], $staged, 'Nothing reached the uploader, so nothing was staged.');
+        $this->assertNull($dropped, 'A throwing upload should leave import() with nothing to return.');
+        $this->assertCount(2, $staged, 'Both paths must reach the uploader, or there was nothing staged to clean up.');
         foreach ($staged as $path) {
             $this->assertSame($staging, dirname($path), 'The importer staged outside the directory it was given.');
         }
@@ -306,28 +310,38 @@ class LinkCardImageTest extends TestCase
     }
 
     /**
-     * An uploader that notes where the bytes it is handed are sitting.
+     * An uploader that notes where the bytes it is handed are sitting, and optionally throws there.
      *
      * The staged file is gone by the time the assertions run — cleaning it up is what is under test —
-     * so the only moment its path can be seen is as it is passed on.
+     * so the only moment its path can be seen is as it is passed on. Throwing is how the second path
+     * through `store()` is reached at all: every refusal `import()` makes is decided above `store()`,
+     * so a body that is not an image never stages anything and can say nothing about cleaning up.
      *
-     * @param  list<string>|null  $staged
+     * @param  list<string>  $staged
      */
-    private function recordingUploader(?array &$staged): FileUploader
+    private function watchingUploader(array &$staged, bool $thenThrow = false): FileUploader
     {
-        $staged = [];
-        $real = $this->app->make(FileUploader::class);
-
-        return new class($real, $staged) extends FileUploader
+        return new class($this->app->make(FileStorage::class), $this->app->make(ImageMetadataStripper::class), $staged, $thenThrow) extends FileUploader
         {
             /** @param  list<string>  $staged */
-            public function __construct(private readonly FileUploader $inner, private array &$staged) {}
+            public function __construct(
+                FileStorage $storage,
+                ImageMetadataStripper $stripper,
+                private array &$staged,
+                private readonly bool $thenThrow,
+            ) {
+                parent::__construct($storage, $stripper);
+            }
 
             public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
             {
                 $this->staged[] = $upload->getPathname();
 
-                return $this->inner->store($upload, $relatedType, $relatedId, $explicitVisibility);
+                if ($this->thenThrow) {
+                    throw new RuntimeException('the upload failed after the bytes were staged');
+                }
+
+                return parent::store($upload, $relatedType, $relatedId, $explicitVisibility);
             }
         };
     }
