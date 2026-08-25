@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Reply, Trash2 } from 'lucide-react';
+import { Link as LinkIcon, Reply, Trash2 } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
@@ -10,7 +10,7 @@ import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
-import { canCopyText } from './message-sheet';
+import { canCopyLink, canCopyText, messageLink } from './message-sheet';
 import { ICON_BUTTON, QUICK_REACTIONS, TalkReactionAdd, TalkReactionChips, TalkReactionPickerGrid } from './reaction-bar';
 import type { TalkMessage, TalkReplyReference } from './types';
 
@@ -208,7 +208,7 @@ export function TalkMessageRow({
     const author = message.author;
     const hasBody = message.body.trim() !== '';
     const press = useLongPress(onOpenActions, {
-        enabled: reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || reactions.chips.length > 0,
+        enabled: reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0,
     });
 
     const content = (
@@ -230,7 +230,10 @@ export function TalkMessageRow({
         </>
     );
 
-    const actions = (reactions.canReact || canReply || message.canDelete) && (
+    // canCopyLink puts the bar (and the sheet a long press opens) on rows whose reader has no
+    // other power — an Everyone room's non-member. Deliberate: the address of a message is
+    // takeable by anyone who may read it, and it is the first control that lane has had.
+    const actions = (reactions.canReact || canReply || message.canDelete || canCopyLink()) && (
         <div className={ROW_ACTIONS}>
             {reactions.canReact && (
                 <>
@@ -258,6 +261,18 @@ export function TalkMessageRow({
             {canReply && (
                 <button type="button" aria-label={t('Reply')} onClick={onReply} className={ICON_BUTTON}>
                     <Reply className="size-4" aria-hidden />
+                </button>
+            )}
+            {canCopyLink() && (
+                // The address the sheet offers a thumb, one click here: text is the cursor's to
+                // select, so of the two copies only the link earns a place in the bar.
+                <button
+                    type="button"
+                    aria-label={t('Copy link')}
+                    onClick={() => void navigator.clipboard.writeText(messageLink(message.id)).catch(() => {})}
+                    className={ICON_BUTTON}
+                >
+                    <LinkIcon className="size-4" aria-hidden />
                 </button>
             )}
             {message.canDelete && (
