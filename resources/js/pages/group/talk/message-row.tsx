@@ -378,15 +378,18 @@ export function TalkMessageRow({
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
                 'group relative isolate px-4 sm:px-5',
-                // The lens and the image menu a held finger raises would land on top of the sheet, and
-                // a cursor's text selection is nobody's to take. But the sheet is what pays for the
-                // selection it takes — it offers the words back, copied — and without a clipboard it
-                // has nothing to pay with. So a site served over plain http keeps its selection and
-                // accepts the lens landing over the sheet; that is the only way to copy a message
-                // there. The clipboard alone decides, since having one already makes `pressOpens`
-                // true. Saving a picture has its own way regardless: the lightbox a tap opens
-                // suppresses neither.
-                canCopyLink() && 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
+                // Every row a finger can reach, and deliberately not gated on `pressOpens`: the lens
+                // and the image menu a held finger raises would land on top of the sheet, and a
+                // cursor's text selection is nobody's to take.
+                //
+                // What pays for the selection is the sheet's own copy item — which a deployment
+                // without a clipboard cannot offer, so there the words become uncopyable. Withholding
+                // the suppression there does not follow from that: the native selection takes the
+                // press with it, and a finger has no other way to this row's actions (the bar is
+                // sr-only for one), so it would trade copying for reacting. That needs a fallback,
+                // not a condition here. Saving a picture is unaffected either way: the lightbox a
+                // tap opens suppresses neither.
+                'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // Turns are told apart by the space above them, not by a line: a rule between two
                 // people speaking is the vocabulary of a board, and this is a conversation.
                 //

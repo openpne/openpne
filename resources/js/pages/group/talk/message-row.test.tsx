@@ -77,29 +77,6 @@ function renderInertRow(onOpenActions: () => void = vi.fn()) {
     );
 }
 
-const SUPPRESSION = ['pointer-coarse:select-none', 'pointer-coarse:[-webkit-touch-callout:none]'];
-
-/** Which of the two the row carries — not whether it carries them all, so one slipping back to
- *  unconditional on its own still shows up. */
-function suppressionOn(): string[] {
-    const row = document.querySelector('[data-talk-message-id]')!;
-
-    return SUPPRESSION.filter((c) => row.classList.contains(c));
-}
-
-test('takes the finger\'s own gestures only where the sheet can give the words back', () => {
-    renderRow();
-    expect(suppressionOn()).toEqual(SUPPRESSION);
-
-    cleanup();
-
-    // Plain http, where the sheet has no copy item to offer in exchange — including on a row whose
-    // reader can reply, which is the ordinary case and the one the exchange is really about.
-    clipboard(null);
-    renderRow({}, { canReply: true });
-    expect(suppressionOn()).toEqual([]);
-});
-
 test('a press on a row with nothing to open raises no sheet', () => {
     vi.useFakeTimers();
     clipboard(null);

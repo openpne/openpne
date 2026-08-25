@@ -87,9 +87,10 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
  * Handlers that turn a long press into one call. Spread onto the element the press belongs to; it is
  * attached in every environment, and the cursor's own press is ignored inside (see pressReducer).
  *
- * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners.
- * Nothing here suppresses the native menu either — that is a class on the element, and it is the
- * caller's job to withhold it wherever the sheet cannot give back what the suppression takes.
+ * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners
+ * and keeps its own context menu. Where it is enabled the menu is held off for the length of a press
+ * (see `onContextMenu` below) — the element's `user-select` / `-webkit-touch-callout` classes are the
+ * other half of that, and the two have to be decided together.
  */
 export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
     const press = useRef<PressState>(IDLE);
