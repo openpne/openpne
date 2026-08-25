@@ -25,9 +25,9 @@ use Illuminate\Support\Facades\DB;
  * row. That deletion is the only way those bytes become collectable at all, since a File referenced
  * by a living card is by definition still in use.
  *
- * Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is
- * cache, not garbage that hurts — so this is an operator's tool, run when storage says it is worth
- * running.
+ * On the weekly schedule (routes/console.php) rather than an operator's tool: a deployment already
+ * has to drive `schedule:run` for the daily token sweep, so this needs nothing new of it. Still
+ * takes `--days` and `--dry-run` for a reclaim an operator wants sooner or wants to see first.
  */
 class PruneLinkCardsCommand extends Command
 {
