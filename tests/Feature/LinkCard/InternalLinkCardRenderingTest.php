@@ -124,6 +124,21 @@ class InternalLinkCardRenderingTest extends TestCase
         $this->assertNull($this->draw($message, Member::factory()->create()));
     }
 
+    public function test_a_talk_message_card_answers_only_through_its_own_rooms_path(): void
+    {
+        // The conversation page refuses an anchor naming another room's message, so a card drawn
+        // through the wrong room's path would describe a message its own URL does not open — for a
+        // reader allowed into both rooms, not an authorization question at all.
+        [$group, $member] = $this->membersOnlyGroup();
+        $other = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $other->id, 'member_id' => $member->id]);
+        $message = GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['body' => 'Said in the first room']);
+
+        $wrongRoom = "https://sns.example.com/groups/{$other->id}/talk?m={$message->getKey()}";
+
+        $this->assertNull($this->drawUrl($wrongRoom, InternalCardTarget::TalkMessage, (int) $message->getKey(), $member));
+    }
+
     public function test_a_talk_message_by_a_withdrawn_member_still_draws(): void
     {
         [$group, $member] = $this->membersOnlyGroup();
@@ -300,6 +315,22 @@ class InternalLinkCardRenderingTest extends TestCase
         // A big landscape picture takes the wide shape, by the same threshold a fetched card uses.
         $this->assertSame('wide', $card['layout']);
         $this->assertSame($file->thumbnailUrl(640, 640), $card['fitSources'][1]['url']);
+    }
+
+    public function test_a_file_that_is_not_an_image_gets_no_url_rather_than_a_broken_one(): void
+    {
+        // As the fetched path does (CardContext::imageUrl): thumbnailUrl falls back to jpg for a
+        // format it cannot name, and that address 404s — a card is better bare than broken.
+        $subject = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $file = File::factory()->create(['type' => 'application/pdf', 'width' => 1200, 'height' => 630]);
+        MemberImage::factory()->create(['member_id' => $subject->getKey(), 'file_id' => $file->getKey()]);
+
+        $card = $this->draw($subject, $this->author);
+
+        $this->assertNull($card['imageUrl']);
+        $this->assertNull($card['imageWidth']);
+        $this->assertSame('compact', $card['layout']);
+        $this->assertSame([], $card['fitSources']);
     }
 
     public function test_a_small_picture_takes_the_compact_shape_and_ships_no_fit_ladder(): void

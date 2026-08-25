@@ -142,6 +142,12 @@ final class LinkCardSerializer
             return null;
         }
 
+        // The reader clicks the card's own URL, so a record that URL does not lead to — a talk
+        // message reached through another room's path — is not described, however readable it is.
+        if (! $target->urlLeadsTo($record, $link)) {
+            return null;
+        }
+
         $content = $target->content($record);
 
         if ($content === null) {
@@ -149,6 +155,13 @@ final class LinkCardSerializer
         }
 
         $file = $content['image'];
+
+        // As the fetched path does (CardContext::imageUrl): a File that is not an image gets no
+        // URL, rather than one whose thumbnail route will 404 — a card is better bare than broken.
+        if ($file !== null && $file->imageFormat() === null) {
+            $file = null;
+        }
+
         $layout = CardLayout::forImage($file?->width, $file?->height);
 
         return [

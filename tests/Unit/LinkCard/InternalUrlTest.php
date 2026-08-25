@@ -129,6 +129,10 @@ class InternalUrlTest extends TestCase
         $this->assertNull($this->read('https://sns.example.com/groups/3/talk')->target);
         $this->assertNull($this->read('https://sns.example.com/groups/3/talk?m=abc')->target);
         $this->assertSame(7, $this->read('https://sns.example.com/groups/3/talk?m=7&x=1')->recordId);
+        // The path's own group rides along for talk, and only for talk — the render refuses a
+        // message reached through another room's path.
+        $this->assertSame(3, $this->read('https://sns.example.com/groups/3/talk?m=7')->groupId);
+        $this->assertNull($this->read('https://sns.example.com/diary/7')->groupId);
     }
 
     public function test_a_query_on_another_kind_does_not_stop_it_resolving(): void

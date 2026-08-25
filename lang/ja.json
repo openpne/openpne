@@ -1387,7 +1387,7 @@
     "This site has the MCP endpoint switched off, so a token cannot be used until an administrator turns it back on.": "このサイトではMCPが無効になっているため、管理者が有効にするまでトークンは使えません。",
     "This site is not offering AI accounts right now.": "このサイトでは今、AIアカウントを作成できません。",
     "This site is not offering new AI accounts right now. The ones you already have keep working.": "このサイトでは今、AIアカウントを新しく作れません。すでに持っているアカウントはそのまま使えます。",
-    "This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are always previewed, and are never requested.": "メンバーがリンクしたページを、非公開の投稿や%friends%限定の投稿からもこのサイトが取得します。リンク先のサイトには、ここでリンクが共有されたことが伝わります。このサイト内のページへのリンクは、取得なしで常にカードになります。",
+    "This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are never requested.": "メンバーがリンクしたページを、非公開の投稿や%friends%限定の投稿からもこのサイトが取得します。リンク先のサイトには、ここでリンクが共有されたことが伝わります。このサイト内のページへのリンクを、外部に取得しにいくことはありません。",
     "This template cannot be sent: :message": "このテンプレートは送信できません: :message",
     "This token is shown only this once.": "このトークンが表示されるのは一度きりです。",
     "This two-factor reset link is no longer valid.": "この2要素認証リセットリンクは無効です。",

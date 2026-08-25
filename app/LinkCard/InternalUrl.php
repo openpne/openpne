@@ -40,6 +40,8 @@ final class InternalUrl
         public ?InternalCardTarget $target,
         /** That record's id, null exactly when $target is. */
         public ?int $recordId,
+        /** The group the URL's path names, for the one kind whose path carries one (talk). */
+        public ?int $groupId = null,
     ) {}
 
     /** How $normalizedUrl relates to this site. Takes the output of {@see LinkUrl::normalize()}. */
@@ -69,9 +71,9 @@ final class InternalUrl
         $segments = self::segments(substr($path, strlen($base['path'])));
         parse_str($parts['query'] ?? '', $query);
 
-        [$target, $id] = self::route($segments, $query);
+        [$target, $id, $groupId] = self::route($segments, $query);
 
-        return new self(true, $target, $id);
+        return new self(true, $target, $id, $groupId);
     }
 
     /**
@@ -88,7 +90,7 @@ final class InternalUrl
      *
      * @param  list<string>  $segments
      * @param  array<string, mixed>  $query
-     * @return array{InternalCardTarget|null, int|null}
+     * @return array{InternalCardTarget|null, int|null, int|null}
      */
     private static function route(array $segments, array $query): array
     {
@@ -105,22 +107,23 @@ final class InternalUrl
         };
 
         if ($kind !== null && $id !== null) {
-            return [$kind, $id];
+            return [$kind, $id, null];
         }
 
         // A conversation is a page rather than a row, so the message is in the query — the deep link
-        // the talk surface itself hands out. Which group the path names is not checked against the
-        // message's own: `canView` asks the group the message is actually in, and the conversation
-        // page treats a mismatched anchor the same way, by ignoring it.
-        if (count($segments) === 3 && $segments[0] === 'groups' && $segments[2] === 'talk' && self::id($segments[1]) !== null) {
+        // the talk surface itself hands out. The group the path names rides along rather than being
+        // checked here: the conversation page refuses an anchor naming another room's message
+        // (GroupTalkController::anchor scopes its lookup to the route's group), and the render
+        // applies the same refusal through {@see InternalCardTarget::urlLeadsTo()}.
+        if (count($segments) === 3 && $segments[0] === 'groups' && $segments[2] === 'talk' && ($group = self::id($segments[1])) !== null) {
             $message = self::id(is_string($query['m'] ?? null) ? $query['m'] : null);
 
             if ($message !== null) {
-                return [InternalCardTarget::TalkMessage, $message];
+                return [InternalCardTarget::TalkMessage, $message, $group];
             }
         }
 
-        return [null, null];
+        return [null, null, null];
     }
 
     /** $segment as a record id, or null when it is not one. */

@@ -7,6 +7,7 @@ namespace App\LinkCard;
 use App\Features\Diary\DiaryAccess;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\GroupTalkController;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Profile\ProfileAccess;
 use App\Features\Timeline\TimelineAccess;
@@ -123,6 +124,22 @@ enum InternalCardTarget: string
             self::TalkMessage => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
             self::Group => $record instanceof Group && $viewer !== null,
             self::Member => $record instanceof Member && ProfileAccess::canView($viewer, $record),
+        };
+    }
+
+    /**
+     * Whether the URL that resolved here actually leads to $record.
+     *
+     * Only talk carries a second address in its path. The conversation page refuses an anchor
+     * naming another room's message ({@see GroupTalkController} scopes the
+     * lookup to the route's group), so a card that answered for one would describe a message its
+     * own URL does not open. Every other kind is named by its id alone.
+     */
+    public function urlLeadsTo(Model $record, InternalUrl $link): bool
+    {
+        return match ($this) {
+            self::TalkMessage => $record instanceof GroupMessage && $record->group_id === $link->groupId,
+            default => true,
         };
     }
 

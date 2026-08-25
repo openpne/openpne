@@ -141,7 +141,7 @@ class LinkCardSettings extends Page
                     // read, and the destination learns the link was shared here. What the switch does
                     // *not* govern is worth saying too: a link to one of this site's own pages is
                     // built from the record it names, so it needs no request and no permission.
-                    ->helperText(__('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are always previewed, and are never requested.')),
+                    ->helperText(__('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are never requested.')),
             ]);
     }
 }

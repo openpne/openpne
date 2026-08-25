@@ -57,10 +57,10 @@ class InternalLinkCardQueryCostTest extends TestCase
         $poll = "/groups/{$group->id}/talk/messages";
 
         $this->messages($group, 4);
-        $few = $this->queriesFor($poll);
+        $few = $this->queriesFor($poll, cardsDrawn: 4);
 
         $this->messages($group, 16);
-        $many = $this->queriesFor($poll);
+        $many = $this->queriesFor($poll, cardsDrawn: 20);
 
         $this->assertSame($many, $few, "The poll cost {$few} queries for 4 cards and {$many} for 20.");
     }
@@ -70,10 +70,10 @@ class InternalLinkCardQueryCostTest extends TestCase
         // The Classic row partial is shared by the feed, the profile and three gadgets, so a read
         // per row would multiply across every one of them.
         $this->posts(4);
-        $few = $this->queriesFor('/timeline');
+        $few = $this->queriesFor('/timeline', cardsDrawn: 4);
 
         $this->posts(16);
-        $many = $this->queriesFor('/timeline');
+        $many = $this->queriesFor('/timeline', cardsDrawn: 20);
 
         $this->assertSame($many, $few, "The feed cost {$few} queries for 4 cards and {$many} for 20.");
     }
@@ -84,10 +84,10 @@ class InternalLinkCardQueryCostTest extends TestCase
         $page = "/diary/{$diary->id}";
 
         $this->comments($diary, 4);
-        $few = $this->queriesFor($page);
+        $few = $this->queriesFor($page, cardsDrawn: 4);
 
         $this->comments($diary, 16);
-        $many = $this->queriesFor($page);
+        $many = $this->queriesFor($page, cardsDrawn: 20);
 
         $this->assertSame($many, $few, "The thread cost {$few} queries for 4 cards and {$many} for 20.");
     }
@@ -99,16 +99,26 @@ class InternalLinkCardQueryCostTest extends TestCase
      * set of them and the container under test does not: left in place, the warm-up's records answer
      * the measured run and every guard here passes without the batching it exists to defend.
      */
-    private function queriesFor(string $url): int
+    private function queriesFor(string $url, int $cardsDrawn): int
     {
         $this->actingAs($this->author)->get($url)->assertOk();
         $this->app->forgetScopedInstances();
 
         DB::enableQueryLog();
-        $this->actingAs($this->author)->get($url)->assertOk();
+        $response = $this->actingAs($this->author)->get($url);
+        $response->assertOk();
         $count = count(DB::getQueryLog());
         DB::flushQueryLog();
         DB::disableQueryLog();
+
+        // Flatness can hold vacuously — a page size falling to the smaller run's count would make
+        // the two runs equal with nothing batched — so the guard also pins that the measured run
+        // actually drew the cards it claims to measure. Each internal card carries its target's URL
+        // exactly once; both the raw and the JSON-escaped spelling are counted so the pin holds on
+        // an HTML surface and a JSON payload alike.
+        $content = $response->getContent();
+        $drawn = substr_count($content, 'sns.example.com/diary/') + substr_count($content, 'sns.example.com\/diary\/');
+        $this->assertSame($cardsDrawn, $drawn, "Expected {$cardsDrawn} cards in the measured response, found {$drawn}.");
 
         return $count;
     }
