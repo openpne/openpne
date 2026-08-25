@@ -33,6 +33,7 @@ class PruneLinkCardsCommandTest extends TestCase
 
         $this->assertCount(1, $events, 'the prune is not registered on the schedule');
         $this->assertSame('10 3 * * 0', $events->first()->expression);
+        $this->assertTrue($events->first()->runInBackground, 'a foreground sweep occupies schedule:run for its whole run');
     }
 
     public function test_it_deletes_a_card_no_post_refers_to(): void

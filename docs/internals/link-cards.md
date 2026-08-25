@@ -600,6 +600,10 @@ already drives for the daily token sweep. Weekly rather than daily because an un
 cache rather than something that hurts, and the sweep walks every card; `--days` and `--dry-run` are
 there for an operator who wants a reclaim sooner or wants to see it first.
 
+What costs is the deleting rather than the walking — each card goes in a statement of its own — so a
+run is as long as the orphans it finds, and the first run on a site that has never swept carries
+every one since link cards arrived. `--dry-run` says how many that is before it starts.
+
 ## Key invariants
 
 - **A URL on this site's own host is never requested**, whatever state its row is in. The URL decides
