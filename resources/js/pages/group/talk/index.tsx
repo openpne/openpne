@@ -473,7 +473,7 @@ export default function GroupTalkIndex() {
                     composer's own so each edge is stated once; `lg:mx-0` stops there rather than
                     following the composer past the card, which is an older disagreement (not one to
                     copy). */}
-            <Panel flush bleed className="-mx-3 mb-0 sm:-mx-4 lg:mx-0 lg:mb-4">
+            <Panel flush bleed className="mb-0 lg:mb-4">
                 {stream.hasOlder && (
                     // The band is the button, not a pill standing inside it. A control alone between
                     // two full-width rules reads as a label that happens to be centred; the whole

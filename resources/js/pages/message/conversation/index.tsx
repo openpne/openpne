@@ -317,7 +317,7 @@ export default function MessageConversation() {
             <Panel
                 flush
                 bleed
-                className={cn('-mx-3 mb-0 sm:-mx-4 lg:mx-0 lg:mb-4', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
+                className={cn('mb-0 lg:mb-4', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
             >
                 {stream.hasOlder && (
                     // The band is the button, not a pill standing inside it. A control alone between
