@@ -114,8 +114,8 @@ once `TRUSTED_PROXIES` says the proxy may set them.
 
 A deployment must run Laravel's scheduler — `php artisan schedule:run` every
 minute from cron (or a systemd timer) — or scheduled work silently never runs.
-Currently that is the daily prune of expired pending tokens — registration
-links and email-change links — and the weekly prune of unreferenced link cards
+Currently that is the daily prune of expired pending tokens — registration,
+email-change and MFA-reset links — and the weekly prune of unreferenced link cards
 ([`routes/console.php`](../../routes/console.php)); without the scheduler those
 rows and the cards' image bytes accumulate. `php artisan schedule:list` shows
 what is registered.

@@ -25,9 +25,8 @@ use Illuminate\Support\Facades\DB;
  * row. That deletion is the only way those bytes become collectable at all, since a File referenced
  * by a living card is by definition still in use.
  *
- * On the weekly schedule (routes/console.php) rather than an operator's tool: a deployment already
- * has to drive `schedule:run` for the daily token sweep, so this needs nothing new of it. Still
- * takes `--days` and `--dry-run` for a reclaim an operator wants sooner or wants to see first.
+ * On the weekly schedule (routes/console.php): weekly rather than daily because an unreferenced card
+ * is cache, and the sweep walks every one of them.
  */
 class PruneLinkCardsCommand extends Command
 {
