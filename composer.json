@@ -13,7 +13,7 @@
         "guzzlehttp/guzzle": "^7.15",
         "inertiajs/inertia-laravel": "^3.1",
         "intervention/image": "^4",
-        "laravel-notification-channels/webpush": "^11.0",
+        "laravel-notification-channels/webpush": "^12.1",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
         "laravel/mcp": "^0.9.3",
