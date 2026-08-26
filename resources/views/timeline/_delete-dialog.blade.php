@@ -3,9 +3,10 @@
      the path without it. `ajaxDelete` says whether the confirmed form posts as JSON and the row leaves
      the page, or posts as the page would: the thread root on its own page goes the second way,
      because the page itself is what goes. --}}
-<dialog class="timeline-post-delete-dialog" id="timeline-post-delete-confirm-{{ $post->getKey() }}" aria-labelledby="timeline-post-delete-heading-{{ $post->getKey() }}">
+{{-- aria-label rather than aria-labelledby: the ids repeat when two gadgets draw the same row. --}}
+<dialog class="timeline-post-delete-dialog" id="timeline-post-delete-confirm-{{ $post->getKey() }}" aria-label="{{ __('Delete post') }}">
     <div class="timeline-post-delete-confirm">
-        <div class="partsHeading"><h3 id="timeline-post-delete-heading-{{ $post->getKey() }}">{{ __('Delete post') }}</h3></div>
+        <div class="partsHeading"><h3>{{ __('Delete post') }}</h3></div>
         <div class="timeline-post-delete-confirm-context">{{ __('Delete this post?') }}</div>
         <div class="timeline-post-delete-confirm-content">
             <div class="timeline-post-member-image"><x-classic.image :file="$post->member->avatar?->file" :size="48" :alt="$post->member->name" /></div>

@@ -59,6 +59,14 @@ test('a future date reads by its distance, as allowFuture=false read it', () => 
     assert.equal(label(-3 * h), '3時間前');
 });
 
+test('a rung with no words leaves the absolute text alone', () => {
+    const missing = { ...STRINGS };
+    delete missing.month;
+    assert.equal(relativeLabel(30 * d, missing), null);
+    assert.equal(relativeLabel(29 * d, missing), '29日前');
+    assert.equal(relativeLabel(30 * d, { ...STRINGS, month: '' }), null);
+});
+
 test('a distance that is not a number leaves the absolute text alone', () => {
     assert.equal(label(NaN), null);
     assert.equal(label(undefined), null);

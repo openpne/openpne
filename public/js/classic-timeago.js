@@ -22,8 +22,9 @@
         var days = hours / 24;
         var years = days / 365;
 
+        // A rung the page gave no words for keeps the absolute text: null, not an empty stamp.
         function words(key, count) {
-            return String(strings[key] || '').replace(':count', String(count));
+            return typeof strings[key] === 'string' && strings[key] !== '' ? strings[key].replace(':count', String(count)) : null;
         }
 
         // seconds < 45 and < 90 both said "1分" in OpenPNE 3's ja strings.

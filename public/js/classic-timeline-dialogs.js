@@ -30,6 +30,29 @@
         dialog.showModal();
     }
 
+    /** The list a reply row sits in counts its changes; a removal is one, or a list drawn before it lands over the gap. */
+    function bumpGeneration(comments) {
+        comments.setAttribute('data-generation', String(parseInt(comments.getAttribute('data-generation') || '0', 10) + 1));
+    }
+
+    /**
+     * Where focus goes once a row is gone: the row's own reply box, else its list. Resolved while the
+     * row is still in the tree, since a detached row has no ancestors to ask.
+     */
+    function focusTargetAfterRemoval(row) {
+        var post = row.classList.contains('timeline-post-comment') ? row.closest('.timeline-post') : null;
+        var input = post ? post.querySelector('[data-timeline-reply] input[name="body"]') : null;
+        var list = row.closest('#timeline-list');
+        if (input) {
+            return input;
+        }
+        if (list) {
+            list.setAttribute('tabindex', '-1');
+        }
+
+        return list;
+    }
+
     document.addEventListener('close', function (event) {
         var dialog = event.target;
         if (dialog.returnFocusTo && dialog.returnFocusTo.focus) {
@@ -39,9 +62,20 @@
     }, true);
 
     // A click on the backdrop lands on the dialog element itself; a click inside lands on a child.
+    // Both ends of the click have to be the backdrop, or a drag that starts on the text and ends
+    // outside would close it.
+    document.addEventListener('pointerdown', function (event) {
+        if (event.target instanceof HTMLDialogElement) {
+            event.target.pointerDownOnBackdrop = true;
+        }
+    });
     document.addEventListener('click', function (event) {
-        if (event.target instanceof HTMLDialogElement && event.target.open) {
-            event.target.close();
+        var dialog = event.target;
+        if (dialog instanceof HTMLDialogElement) {
+            if (dialog.open && dialog.pointerDownOnBackdrop) {
+                dialog.close();
+            }
+            dialog.pointerDownOnBackdrop = false;
         }
     });
 
@@ -57,6 +91,8 @@
             return; // the link is the confirm page
         }
         event.preventDefault();
+        var error = dialog.querySelector('.timeline-post-delete-error');
+        if (error) error.textContent = ''; // a refusal from last time is not this time's
         open(dialog, link);
     });
 
@@ -104,11 +140,19 @@
                     throw new Error('refused');
                 }
                 var rows = id !== null ? document.querySelectorAll('[data-timeline-id="' + id + '"]') : [];
+                var target = row ? focusTargetAfterRemoval(row) : null;
                 var i;
-                if (dialog) dialog.close();
+                var comments;
+                if (dialog) dialog.returnFocusTo = null; // the link is leaving with the row
                 for (i = 0; i < rows.length; i += 1) {
+                    comments = rows[i].closest('.timeline-post-comments');
+                    if (comments) bumpGeneration(comments);
                     rows[i].parentNode.removeChild(rows[i]);
                 }
+                // The dialog left with its row; closing it now restores focus to nothing, so the
+                // focus set after it is the one that stays.
+                if (dialog && dialog.open) dialog.close();
+                if (target) target.focus();
             })
             .catch(function (failure) {
                 form.removeAttribute('data-pending');
