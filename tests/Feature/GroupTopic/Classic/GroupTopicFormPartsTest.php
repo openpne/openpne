@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * OpenPNE 3's form parts (`_partsForm.php`) starred every required label and printed
- * "* is required field." between the table and the buttons.
+ * "* is required field." above the table.
  */
 class GroupTopicFormPartsTest extends TestCase
 {
@@ -32,7 +32,7 @@ class GroupTopicFormPartsTest extends TestCase
         return $member;
     }
 
-    public function test_new_and_edit_forms_star_the_required_labels_and_print_the_notice_below_the_table(): void
+    public function test_new_and_edit_forms_star_the_required_labels_and_print_the_notice_above_the_table(): void
     {
         $group = Group::factory()->create();
         $member = $this->joined($group);
@@ -43,10 +43,11 @@ class GroupTopicFormPartsTest extends TestCase
 
             $response->assertOk();
             $response->assertSeeInOrder([
+                self::NOTICE,
+                '<table>',
                 'Title <strong>*</strong>',
                 'Body <strong>*</strong>',
                 '</table>',
-                self::NOTICE,
                 'class="operation"',
             ], false);
         }
@@ -63,9 +64,10 @@ class GroupTopicFormPartsTest extends TestCase
         $response->assertOk();
         $response->assertSeeInOrder([
             'id="formCommunityTopicComment"',
+            self::NOTICE,
+            '<table>',
             'Comment <strong>*</strong>',
             '</table>',
-            self::NOTICE,
             'class="operation"',
         ], false);
     }

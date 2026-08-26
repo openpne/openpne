@@ -4,7 +4,8 @@
 
 @section('content')
     {{-- OpenPNE 3 deleteSuccess.php's yesNo kind (_partsYesNo.php): a .block statement over one
-         li per answer, each answer a form with a submit — the "no" too, sent back to the home. --}}
+         li per answer, each answer a form with a submit. Its "no" posted back to the delete URL,
+         which redirected home; this one goes home by GET. --}}
     <x-classic.parts id="deleteConfirmForm" name="yesNo" :title="__('Delete %community%')">
         <div class="block">{{ __('Delete :name? This cannot be undone.', ['name' => $group->name]) }}</div>
         <div class="operation">

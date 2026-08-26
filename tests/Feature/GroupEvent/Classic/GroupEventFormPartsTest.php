@@ -12,8 +12,8 @@ use Tests\TestCase;
 
 /**
  * OpenPNE 3's form parts (`_partsForm.php`) starred every required label and printed
- * "* is required field." between the table and the buttons; the hand-written event comment
- * form printed the notice above its table and starred nothing.
+ * "* is required field." above the table; the hand-written event comment form printed the same
+ * line above its table and starred nothing.
  */
 class GroupEventFormPartsTest extends TestCase
 {
@@ -33,7 +33,7 @@ class GroupEventFormPartsTest extends TestCase
         return $member;
     }
 
-    public function test_new_and_edit_forms_star_the_required_labels_and_print_the_notice_below_the_table(): void
+    public function test_new_and_edit_forms_star_the_required_labels_and_print_the_notice_above_the_table(): void
     {
         $group = Group::factory()->create();
         $member = $this->joined($group);
@@ -44,12 +44,13 @@ class GroupEventFormPartsTest extends TestCase
 
             $response->assertOk();
             $response->assertSeeInOrder([
+                self::NOTICE,
+                '<table>',
                 'Title <strong>*</strong>',
                 'Open date <strong>*</strong>',
                 'Area <strong>*</strong>',
                 'Body <strong>*</strong>',
                 '</table>',
-                self::NOTICE,
                 'class="operation"',
             ], false);
             $response->assertDontSee('Capacity <strong>*</strong>', false);

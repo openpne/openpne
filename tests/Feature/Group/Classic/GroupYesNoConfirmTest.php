@@ -11,8 +11,8 @@ use Tests\TestCase;
 
 /**
  * OpenPNE 3's yesNo parts answered "no" with a second form (`_partsYesNo.php` no_url / no_method),
- * not a link: the community delete confirm sent it back to the same page, the drop and demote
- * confirms to the roster by GET.
+ * not a link: the drop and demote confirms sent it to the roster by GET; the delete confirm posted
+ * back to the delete URL, which redirected home, so a GET form home is the same landing.
  */
 class GroupYesNoConfirmTest extends TestCase
 {

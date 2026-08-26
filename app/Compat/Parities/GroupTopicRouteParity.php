@@ -102,7 +102,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Missing, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'the link that prepends ">>N name" into the comment textarea is not ported'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
-                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice below the table'),
+                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
                 new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the topic board, not the community home, and drops the "[name] %Community% Top Page" label'),
             ],
             // newSuccess.php (PluginCommunityTopicForm) → group-topic/new.blade.php
@@ -111,7 +111,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
                 new ScreenElement('image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm, ul#community_topic_photo_N', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row inside a ul#community_topic_photo_N'),
                 new ScreenElement('post button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
-                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice below the table'),
+                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
             ],
             // editSuccess.php (same form as new) → group-topic/edit.blade.php
             'edit' => [
@@ -121,7 +121,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('new image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('delete-topic box', L::Two, S::Ported, "op_include_parts('buttonBox', 'toDelete')", 'GET form to the delete confirm page'),
-                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice below the table'),
+                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
             ],
             // deleteConfirmSuccess.php → group-topic/delete.blade.php
             'deleteConfirm' => [

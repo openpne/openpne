@@ -82,6 +82,7 @@
         <x-classic.parts id="formCommunityTopicComment" name="form" :title="__('Post a comment')">
             <form method="POST" action="{{ route('group.topics.comment.store', $topic) }}" enctype="multipart/form-data">
                 @csrf
+                <x-classic.required-notice />
                 <table>
                     <tr>
                         <th><label for="comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
@@ -92,7 +93,6 @@
                     </tr>
                     @include('group-topic._image_fields')
                 </table>
-                <x-classic.required-notice />
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>

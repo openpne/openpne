@@ -6,6 +6,7 @@
     <x-classic.parts id="formCommunityEvent" name="form" :title="__('Edit event')">
         <form method="POST" action="{{ route('group.events.update', $event) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 @include('group-event._fields', ['event' => $event])
                 @if ($event->images->isNotEmpty())
@@ -26,7 +27,6 @@
                 @endif
                 @include('group-event._image_fields')
             </table>
-            <x-classic.required-notice />
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
