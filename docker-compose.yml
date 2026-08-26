@@ -35,7 +35,7 @@ services:
       - mailpit
 
   nginx:
-    image: nginx:1.31.3-alpine
+    image: nginx:1.31.4-alpine
     ports:
       - "${OPENPNE_HTTP_PORT:-8080}:80"
     volumes:
@@ -61,6 +61,6 @@ services:
   # Dev mail sink: catches every outgoing mail instead of delivering it and shows
   # it at http://localhost:8025. The app reaches it over SMTP on the compose network.
   mailpit:
-    image: axllent/mailpit:v1.30.7
+    image: axllent/mailpit:v1.31.0
     ports:
       - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
