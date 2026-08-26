@@ -61,7 +61,9 @@ return [
     | product has to stay under WebPushNudge::$timeout, which in turn stays
     | under the queue's retry_after — past it the job is reserved a second time
     | while the first is still sending, and every reachable device is pushed
-    | twice. WebPushTimeoutBudgetTest holds the arithmetic.
+    | twice. WebPushTimeoutBudgetTest holds the arithmetic. On SQS that window
+    | is the queue's visibility timeout in AWS, which this app cannot read and
+    | which defaults below the ceiling: raise it past WebPushNudge::$timeout.
     | See docs/internals/outbound-http.md.
     |
     */

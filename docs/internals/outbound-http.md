@@ -111,7 +111,8 @@ plainly:
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
   own `$timeout`, which stays under the queue's `retry_after` — past it the job is handed out again
   mid-send and every reachable device is pushed twice. `WebPushTimeoutBudgetTest` holds the relation
-  between the three numbers.
+  between the three numbers. It cannot hold it for SQS, where that window is the queue's visibility
+  timeout in AWS: a deployment on that driver has to raise it past the job's `$timeout` itself.
 
 This app does not take the channel package's route of sending through Laravel's HTTP client, so
 global HTTP middleware, request logging and `Http::fake()` do not see push requests.
