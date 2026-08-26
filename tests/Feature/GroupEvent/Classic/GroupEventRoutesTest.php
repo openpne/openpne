@@ -99,7 +99,6 @@ class GroupEventRoutesTest extends TestCase
             ->assertOk();
 
         // One dl per event: the last-activity datetime in the dt, the "name(count)" link in the dd.
-        // then the open date as the single trailing parenthetical (the author stays on the show page).
         $response->assertSee('<dt>2026年06月04日 13:44</dt>', false);
         $response->assertSee(
             '<dd><a href="'.route('group.events.show', $event).'">A meetup(0)</a></dd>',

@@ -5,7 +5,7 @@
 @section('content')
     {{-- OpenPNE 3 listCommunitySuccess.php: a buttonBox (id communityEventList) with the Create
          button above a recentList box (no id; the id is OpenPNE 4's) headed "List of events", one dl
-         per event, the pager above and below. --}}
+         per event, the pager above and below — and nothing after the box. --}}
     @if ($canPost)
         <x-classic.parts id="communityEventList" name="buttonBox" :title="__('Create a new event')">
             <div class="operation">
@@ -37,7 +37,4 @@
         @endif
     </x-classic.parts>
 
-    <x-classic.parts id="linkLine" name="line">
-        <a href="{{ route('group.show', $group) }}">[{{ $group->name }}] {{ __('%Community% Top Page') }}</a>
-    </x-classic.parts>
 @endsection
