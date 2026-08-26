@@ -467,7 +467,8 @@ enum SnsSettingKey: string
             // on-by-default install fallback is untouched — unreadable is corruption, not consent.
             self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
             // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
-            self::LinkCardEnabled, self::AiAccountsEnabled => $value === '1',
+            self::LinkCardEnabled, self::AiAccountsEnabled,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => $value === '1',
             // The one integer key. A stored value that is not a number is corruption rather than a
             // decision, so it reads as the shipped cap; a negative one clamps to 0 (create nothing)
             // rather than inverting the comparison it feeds.

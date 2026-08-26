@@ -80,6 +80,21 @@ class GroupSettingsTest extends TestCase
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'group_topic_comment_reply', 'value' => '1']);
         $this->assertDatabaseHas('sns_settings', ['key' => 'group_event_comment_reply', 'value' => '1']);
-        $this->assertTrue((bool) app(SnsSettingService::class)->get(SnsSettingKey::GroupTopicCommentReply));
+        $this->assertTrue(app(SnsSettingService::class)->get(SnsSettingKey::GroupTopicCommentReply));
+    }
+
+    public function test_saved_reply_switches_round_trip_into_the_form(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::GroupTopicCommentReply, true);
+        $this->setSnsSetting(SnsSettingKey::GroupEventCommentReply, false);
+
+        Livewire::test(GroupSettings::class)
+            ->assertSet('data.group_topic_comment_reply', true)
+            ->assertSet('data.group_event_comment_reply', false);
+    }
+
+    public function test_the_talk_settings_url_still_reaches_the_page(): void
+    {
+        $this->get('/admin/group-talk-settings')->assertRedirect('/admin/group-settings');
     }
 }

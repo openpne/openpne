@@ -218,6 +218,10 @@ class SnsSettingKeyTest extends TestCase
             $this->assertTrue($key->coerce('1'));
             $this->assertFalse($key->coerce('0'));
             $this->assertSame('1', $key->encode(true));
+            // A stored row decodes to a typed bool, and only an explicit '1' switches the link on.
+            $this->assertSame(true, $key->decode('1'));
+            $this->assertSame(false, $key->decode('0'));
+            $this->assertSame(false, $key->decode('yes'));
         }
     }
 }
