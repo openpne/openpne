@@ -18,7 +18,7 @@
 @php($items = collect($members)->map(fn ($membership) => [
     'url' => route('member.profile.show', $membership->member),
     'imageUrl' => $membership->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
-    'name' => $membership->member->name.($friendCounts ? ' ('.($membership->member->friendships_count ?? $membership->member->friendships()->count()).')' : ''),
+    'name' => $membership->member->name.($friendCounts && isset($membership->member->friendships_count) ? ' ('.$membership->member->friendships_count.')' : ''),
     'crown' => $membership->role === \App\Features\Group\GroupRole::Admin,
 ])->all())
 @if (count($items))

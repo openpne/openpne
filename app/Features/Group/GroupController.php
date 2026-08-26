@@ -80,9 +80,11 @@ class GroupController extends Controller
         $isTransferNominee = $found->pending_admin_member_id !== null
             && (int) $found->pending_admin_member_id === (int) $viewer->getKey();
         // The sidemenu member grid (3×3), admins first like ListGroupMembers.
-        // Shared by the Classic grid and the Modern member preview.
+        // Shared by the Classic grid and the Modern member preview; only the Classic caption
+        // carries the friend count (getNameAndCount), so only it pays for the count.
+        $countFriends = Feature::Friend->enabled() && SurfaceResolver::resolve($request, 'group') === SurfaceResolver::CLASSIC;
         $sidebarMembers = $found->members()
-            ->with(['member' => fn ($members) => $members->with('avatar.file')->withCount('friendships')])
+            ->with(['member' => fn ($members) => $countFriends ? $members->with('avatar.file')->withCount('friendships') : $members->with('avatar.file')])
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
         // The recent-topics / recent-events boxes only show when the viewer
         // may read that board; events share the topic read gate, so one check covers both.
@@ -325,6 +327,7 @@ class GroupController extends Controller
         return array_map(fn ($case): array => [
             'slug' => $case->slug(),
             'label' => $case->label(),
+            'op3Value' => $case->op3Value(),
         ], $cases);
     }
 

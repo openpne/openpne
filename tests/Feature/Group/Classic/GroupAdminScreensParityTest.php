@@ -45,10 +45,13 @@ class GroupAdminScreensParityTest extends TestCase
             '<ul class="radio_list">',
             'name="register_policy" value="open" id="community_config_register_policy_open" class="input_radio"',
             '<label for="community_config_register_policy_open">',
+            'name="register_policy" value="approval" id="community_config_register_policy_close" class="input_radio"',
+            'name="topic_read_access" value="members_only" id="community_config_public_flag_auth_commu_member" class="input_radio"',
+            'name="topic_post_authority" value="admins_only" id="community_config_topic_authority_admin_only" class="input_radio"',
             '<th>Receive a notice mail when member joined</th>',
-            'name="is_join_notification_enabled" value="1" id="community_config_is_join_notification_enabled_1" class="input_radio" checked',
-            '<label for="community_config_is_join_notification_enabled_1">Receive</label>',
-            'name="is_join_notification_enabled" value="0" id="community_config_is_join_notification_enabled_0" class="input_radio"',
+            'name="is_join_notification_enabled" value="1" id="community_config_is_send_pc_joinCommunity_mail_1" class="input_radio" checked',
+            '<label for="community_config_is_send_pc_joinCommunity_mail_1">Receive</label>',
+            'name="is_join_notification_enabled" value="0" id="community_config_is_send_pc_joinCommunity_mail_0" class="input_radio"',
             '<div class="help">',
         ], false);
         $response->assertDontSee('<select name="register_policy">', false);
