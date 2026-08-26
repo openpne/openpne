@@ -6,5 +6,6 @@
     @push('pluginCss')
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/timeline.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/classic-timeline.css') }}">
     @endpush
 @endonce

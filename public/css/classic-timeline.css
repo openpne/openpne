@@ -1,0 +1,6 @@
+/* First-party rules beside the vendored opTimelinePlugin/css/timeline.css, which is byte-locked. */
+
+/* The load-more box is hidden until its script runs; nothing in the vendored CSS styles the box. */
+[data-timeline-loadmore-box][hidden] {
+    display: none;
+}

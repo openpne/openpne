@@ -41,7 +41,7 @@ class TimelineComposeTest extends TestCase
         $html = $response->getContent();
         $this->assertGreaterThan(strpos($html, 'opTimelinePlugin/css/timeline.css'), strpos($html, 'opTimelinePlugin/css/counter.css'));
         // The compose box leads OpenPNE 3's .timeline shell.
-        $response->assertSeeInOrder(['<div class="timeline">', 'data-timeline-compose', '<div id="timeline-list">'], false);
+        $response->assertSeeInOrder(['<div class="timeline" data-timeline-container>', 'data-timeline-compose', '<div id="timeline-list">'], false);
     }
 
     public function test_the_home_gadgets_share_one_script_and_one_counter_css(): void
@@ -111,7 +111,7 @@ class TimelineComposeTest extends TestCase
         $this->actingAs($member)->get("/member/{$member->getKey()}/timeline")->assertOk()
             ->assertDontSee('data-timeline-compose', false)
             ->assertDontSee('counter.css', false)
-            ->assertSee(route('timeline.new'), false);
+            ->assertDontSee(route('timeline.new'), false); // no OpenPNE 4 link either: OpenPNE 3 had no compose path here
         $this->actingAs($member)->get(route('timeline.show', $post))->assertOk()
             ->assertDontSee('data-timeline-compose', false);
     }
