@@ -59,7 +59,10 @@
         return parent ? parent.querySelector('[data-timeline-pager]') : null;
     }
 
-    /** Show the controls and hide the pagers: once we are live the button is the way on. */
+    /**
+     * Show the controls, and hide a pager only where a button stands in for it: a last page
+     * reached by its own URL has no next to offer, and keeps the pager as its way back.
+     */
     function apply(root) {
         var boxes = root.querySelectorAll('[data-timeline-loadmore-box]');
         var pagers = root.querySelectorAll('[data-timeline-pager]');
@@ -68,7 +71,9 @@
             boxes[i].removeAttribute('hidden');
         }
         for (i = 0; i < pagers.length; i += 1) {
-            pagers[i].setAttribute('hidden', '');
+            if (pagers[i].parentNode && pagers[i].parentNode.querySelector('[data-timeline-loadmore-box]')) {
+                pagers[i].setAttribute('hidden', '');
+            }
         }
     }
 

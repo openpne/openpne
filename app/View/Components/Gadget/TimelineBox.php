@@ -3,6 +3,7 @@
 namespace App\View\Components\Gadget;
 
 use App\Features\Timeline\Queries\RecentReplies;
+use App\Features\Timeline\Queries\RowsPage;
 use App\Models\TimelinePost;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -23,7 +24,7 @@ abstract class TimelineBox extends Component
     /** @param array<string, mixed> $config */
     protected static function limit(array $config): int
     {
-        return max(1, (int) ($config['limit'] ?? 20));
+        return min(RowsPage::MAX, max(1, (int) ($config['limit'] ?? RowsPage::DEFAULT)));
     }
 
     /**

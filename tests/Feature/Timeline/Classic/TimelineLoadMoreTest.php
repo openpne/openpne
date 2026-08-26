@@ -8,6 +8,7 @@ use App\Models\TimelinePost;
 use App\Services\GadgetService;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -85,6 +86,11 @@ class TimelineLoadMoreTest extends TestCase
         $this->get('/timeline/rows')->assertRedirect('/login');
         $this->get("/member/{$author->getKey()}/timeline/rows")->assertRedirect('/login');
         $this->actingAs($author)->withHeaders(self::FETCH)->get('/member/999999/timeline/rows')->assertNotFound();
+        // A member the owner blocks gets the same 404 as the screen: the rows are no oracle.
+        $blocked = Member::factory()->create();
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
+        $this->actingAs($blocked)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline")->assertNotFound();
+        $this->actingAs($blocked)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline/rows")->assertNotFound();
         $this->actingAs($author)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline/rows")->assertOk()
             ->assertSee($post->body);
     }
@@ -163,6 +169,21 @@ class TimelineLoadMoreTest extends TestCase
 
         $this->assertSame(1, substr_count($html, 'js/classic-timeline-more.js'));
         $this->assertSame(1, substr_count($html, 'css/classic-timeline.css'));
+    }
+
+    public function test_a_gadget_limit_is_held_to_the_page_the_rows_will_serve(): void
+    {
+        // limit=60 would have the button ask for a page the fragment refuses (per_page ≤ 50).
+        $viewer = Member::factory()->create();
+        $gadget = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'timelineAll', 'sort_order' => 0]);
+        $gadget->configs()->create(['name' => 'limit', 'value' => '60']);
+        app(GadgetService::class)->clearCache();
+        $this->posts($viewer, 52);
+
+        $html = $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertSame(50, substr_count($html, '<div class="timeline-post"'));
+        $this->assertStringContainsString('data-next-url="'.e(route('timeline.index.rows', ['page' => 2, 'per_page' => 50])).'"', $html);
     }
 
     public function test_the_friend_gadget_offers_no_control(): void

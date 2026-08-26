@@ -168,8 +168,8 @@ The gadgets fetch one row past their limit to know whether to offer the button (
 home feed's rows at the gadget's own `per_page`, timelineProfile → the member's at the default 20;
 timelineFriend has no page of its own to fetch from). Paging is by offset where OpenPNE 3 keyed on
 `max_id`: a post made meanwhile shifts the next page by one. Classic posts from the home gadget's
-box (its standalone page without the script); a site whose home draws no timeline gadget has no
-Classic way to post, as OpenPNE 3 had none.
+box (its standalone page without the script); a site whose home draws no timeline gadget links to no
+Classic way to post, as OpenPNE 3 linked none — the standalone page stays routable.
 
 Both are gated exactly as the thread page is (`ShowTimelinePost`), and the fragment answers for a
 **root id only** — a reply's id would re-center, and answering there would say which thread it is on.

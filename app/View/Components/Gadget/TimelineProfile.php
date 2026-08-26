@@ -4,6 +4,7 @@ namespace App\View\Components\Gadget;
 
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\RecentReplies;
+use App\Features\Timeline\Queries\RowsPage;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
 
@@ -11,10 +12,10 @@ use Illuminate\Contracts\View\View;
 class TimelineProfile extends TimelineBox
 {
     /**
-     * OpenPNE 3 hard-coded 20 posts on the JS side; this kind has no config. Also the page size the
-     * load-more asks timeline.member.rows for, by leaving per_page to its default (pinned in tests).
+     * OpenPNE 3 hard-coded 20 posts on the JS side; this kind has no config. The load-more names no
+     * per_page, so the fragment's default has to be the same twenty.
      */
-    private const LIMIT = 20;
+    private const LIMIT = RowsPage::DEFAULT;
 
     /** @param array<string, mixed> $config */
     public function __construct(

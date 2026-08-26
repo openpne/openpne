@@ -13,6 +13,7 @@ use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\MentionCandidates;
 use App\Features\Timeline\Queries\RecentReplies;
+use App\Features\Timeline\Queries\RowsPage;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Queries\TagFeed;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
@@ -336,10 +337,10 @@ class TimelineController extends Controller
     {
         $validated = $request->validate([
             'page' => ['integer', 'min:1'],
-            'per_page' => ['integer', 'min:1', 'max:50'],
+            'per_page' => ['integer', 'min:1', 'max:'.RowsPage::MAX],
         ]);
 
-        return (int) ($validated['per_page'] ?? 20);
+        return (int) ($validated['per_page'] ?? RowsPage::DEFAULT);
     }
 
     private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
