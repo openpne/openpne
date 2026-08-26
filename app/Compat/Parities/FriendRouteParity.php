@@ -34,6 +34,21 @@ class FriendRouteParity extends RouteParity
     public function screens(): array
     {
         return [
+            // listSuccess.php: a roster as one photoTable parts; listError.php when it is empty.
+            'list' => [
+                new ScreenElement('photoTable band, id friendList', L::One, S::Ported, "listSuccess.php op_include_parts('photoTable', 'friendList')"),
+                new ScreenElement('band title', L::Three, S::Partial, "listSuccess.php title __('%friend% List')", "OpenPNE 4 prints '%Friends%' on your own roster and \":name's %friends%\" on another member's, where OpenPNE 3 printed one title for both"),
+                new ScreenElement('5-column bands: 76×76 photo row then name row, short rows padded with empty td', L::One, S::Ported, '_partsPhotoTable.php col=5, tr.photo / tr.text', 'x-classic.photo-table'),
+                new ScreenElement('both cells link to the member profile', L::One, S::Ported, "_partsPhotoTable.php op_link_to_member(..., '@obj_member_profile') under use_op_link_to_member"),
+                new ScreenElement('name shown as "name (%friend% count)"', L::Two, S::Ported, "Member::getNameAndCount('%s (%d)')", "withCount('friendships'); OpenPNE 3 drops the count when enable_friend_link is off, where OpenPNE 4 removes the screen with the %friend% unit"),
+                new ScreenElement('pager above and below the table', L::Two, S::Ported, '_partsPhotoTable.php op_include_pager_navigation ×2 (rendered once, echoed twice)'),
+                new ScreenElement('50 members per page', L::Two, S::Partial, 'friendActions::executeList $this->size = 50', 'OpenPNE 4 pages at 20 (ListFriends default), so the same roster spans more pages'),
+                new ScreenElement("?id= subject: another member's roster, kept on the pager links", L::Two, S::Ported, "opFriendAction::preExecute \$this->id = getRequestParameter('id', myMemberId) + link_to_pager '@friend_list?page=%d&id='", 'withQueryString keeps ?id= on page 2'),
+                new ScreenElement('empty roster swaps in the noFriend box + backLink line', L::Two, S::Ported, "listError.php op_include_box('noFriend', \"You don't have any %friend%.\") + backLink link_to_function history.back()", "x-classic.history-back with a home fallback; OpenPNE 3's line stays second-person on another member's roster"),
+                new ScreenElement('a member who blocks the viewer hides their roster', L::Two, S::Ported, "executeList redirectIf(\$this->relation->isAccessBlocked(), '@error')", 'MemberPolicy::access answers 404 rather than the OpenPNE 3 error page, and ListFriends empties the query'),
+                new ScreenElement("friend localNav on another member's roster, default on your own", L::Two, S::Ported, "friend/config/module.yml default_nav: friend + friendActions::preExecute sf_nav_type='default' when the id is yours", 'markLocalNavSubject records only a non-self subject'),
+                new ScreenElement('members only: a guest is sent to login', L::Two, S::Ported, 'friend/config/security.yml is_secure + credentials SNSMember', 'auth middleware plus the %friend% feature gate'),
+            ],
             // manageSuccess.php: the member's own roster as one manageList parts.
             'manage' => [
                 new ScreenElement('roster manageList (76×76 photo + name, one row per %friend%)', L::One, S::Ported, "op_include_parts('manageList','manageList') over getFriendListPager"),

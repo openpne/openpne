@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Compat;
 
+use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\RouteParityRegistry;
 use App\Compat\ScreenStatus;
 use Illuminate\Support\Facades\Route;
@@ -15,20 +16,16 @@ use Tests\TestCase;
  */
 class ScreenParityAuditTest extends TestCase
 {
-    public function test_each_screen_action_is_a_mapped_route_that_exists(): void
+    public function test_each_screen_key_resolves_to_a_map_that_derives_a_body_id(): void
     {
         foreach (RouteParityRegistry::all() as $parity) {
-            foreach (array_keys($parity->screens()) as $action) {
-                $actions = array_map(static fn ($map) => $map->op3Action, $parity->maps());
-                $this->assertContains($action, $actions,
-                    "{$parity->module()}: screen `{$action}` has no route map with that op3Action");
+            foreach (array_keys($parity->screens()) as $key) {
+                $map = $parity->screenMap((string) $key);
+                $this->assertNotNull($map,
+                    "{$parity->module()}: screen `{$key}` resolves to no route map (action / module/action / Laravel route)");
 
-                $route = $parity->bodyId(
-                    // resolve the action's Laravel route via the matching map
-                    collect($parity->maps())->firstWhere('op3Action', $action)->laravelRoute,
-                );
-                $this->assertNotNull($route,
-                    "{$parity->module()}: screen `{$action}` does not derive a body id");
+                $this->assertNotNull($parity->bodyId($map->laravelRoute),
+                    "{$parity->module()}: screen `{$key}` does not derive a body id");
             }
         }
     }
@@ -36,12 +33,23 @@ class ScreenParityAuditTest extends TestCase
     public function test_screen_routes_are_registered(): void
     {
         foreach (RouteParityRegistry::all() as $parity) {
-            foreach (array_keys($parity->screens()) as $action) {
-                $map = collect($parity->maps())->firstWhere('op3Action', $action);
+            foreach (array_keys($parity->screens()) as $key) {
+                $map = $parity->screenMap((string) $key);
                 $this->assertNotNull(Route::getRoutes()->getByName($map->laravelRoute),
-                    "{$parity->module()}: screen `{$action}` route `{$map->laravelRoute}` is not registered");
+                    "{$parity->module()}: screen `{$key}` route `{$map->laravelRoute}` is not registered");
             }
         }
+    }
+
+    public function test_screen_keys_resolve_by_module_not_declaration_order(): void
+    {
+        // diary declares its own deleteConfirm before the diaryComment one: a bare action must
+        // stay within the parity's module, and module/action must reach the op3Module route.
+        $diary = new DiaryRouteParity;
+        $this->assertSame('diary.delete.show', $diary->screenMap('deleteConfirm')?->laravelRoute);
+        $this->assertSame('diary.comment.delete.show', $diary->screenMap('diaryComment/deleteConfirm')?->laravelRoute);
+        $this->assertSame('diary.comment.delete.show', $diary->screenMap('diary.comment.delete.show')?->laravelRoute);
+        $this->assertNull($diary->screenMap('diaryComment/show'));
     }
 
     public function test_elements_are_well_formed(): void
