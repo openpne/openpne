@@ -74,6 +74,20 @@ class TimelineComposeTest extends TestCase
         }
     }
 
+    public function test_the_home_gadgets_share_one_inline_reply_script(): void
+    {
+        $this->makeHomeGadget('timelineAll');
+        $this->makeHomeGadget('timelineFriend');
+        $member = Member::factory()->create();
+        // The same post lands in both boxes: two rows, one script.
+        TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+
+        $html = $this->actingAs($member)->get('/')->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($html, 'data-timeline-reply'));
+        $this->assertSame(1, substr_count($html, 'js/classic-timeline-replies.js'));
+    }
+
     public function test_the_home_gadgets_share_one_mention_script(): void
     {
         $this->makeHomeGadget('timelineAll');

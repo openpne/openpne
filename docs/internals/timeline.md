@@ -145,6 +145,40 @@ queue, and a mail carries the post body to whoever is eligible at *delivery* tim
   notification's viewability and its feed row's link are judged against.
 - The events' mention snapshot is the only input to notification precedence; no path re-derives it.
 
+## Classic inline replies
+
+A Classic feed row carries the **last ten replies by id** and a box to add one, as OpenPNE 3's
+`timelineTemplate` did. Ten is [`RecentReplies::LIMIT`](../../app/Features/Timeline/Queries/RecentReplies.php),
+which also decides whether the row offers to fetch the rest — one number, or a row draws a control
+over a list that is already complete. The tail is one query for the page (`limit()` on an
+eager-loaded `HasMany` compiles to a window-function partition), attached by the Classic responders
+and the three gadget components: Modern's feed carries a reply count, not the replies. A reply row's
+avatar is the 48px thumbnail drawn at 36, as OpenPNE 3 did — 36 is not an [allowed size](images.md).
+
+Two contracts, because they fail differently:
+
+| what | how | why |
+|---|---|---|
+| the whole reply list | `GET timeline.replies`, HTML fragment, `private, no-store` | the rows the page would have drawn, so the script inserts server markup rather than assembling any |
+| posting a reply | `POST timeline.reply.store`, `wantsJson()` → `201 {html}` | 422 / 419 / 429 then arrive as Laravel's own JSON, and the answer is the row to insert |
+
+Both are gated exactly as the thread page is (`ShowTimelinePost`), and the fragment answers for a
+**root id only** — a reply's id would re-center, and answering there would say which thread it is on.
+
+The layer is an enhancement over markup that already works: every control ships as a real link and
+the form as a real POST, so a browser that never runs
+[`classic-timeline-replies.js`](../../public/js/classic-timeline-replies.js) reaches the thread page
+by ordinary navigation. Three things it deliberately does not do:
+
+- **No @mention picker in the row's box** — a plain body input, as OpenPNE 3 had it. The picker is
+  on the thread page's form.
+- **Reading a reply inline does not mark its notification read.** The thread page is what spends
+  that row, and it still is.
+- **Load-more replaces the whole list** rather than appending a window of it. OpenPNE 3 asked for
+  "what I have plus twenty"; this asks for all of them, as the thread page already shows all of them.
+  A long thread therefore answers with a long fragment, with no cap — an L3 difference, and the same
+  unbounded response the thread page has always served.
+
 ## The community timeline was replaced by group talk
 
 The timeline was once two audiences: SNS-wide posts, and posts scoped to one community by

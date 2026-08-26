@@ -6,6 +6,7 @@
 
 @section('content')
     @include('timeline._stylesheets')
+    @include('timeline._scripts')
     {{-- OpenPNE 3's showSuccess.php emits a bare partsHeading over a .timeline-large div its themes
          alias to the box treatment, so there is no kind to reproduce; the frame keeps the heading
          inside the box and the OpenPNE 4 id stands. --}}
@@ -16,33 +17,13 @@
 
         {{-- OpenPNE 3 showSuccess.php's div.timeline-large > div#timeline-list shell around the
              thread root, which renders as the shared row; its comment link is a same-page jump
-             to the reply form below. --}}
+             to the reply form below. The row carries the whole thread here, oldest first
+             (OpenPNE 3 reads by id), and no inline form — this page's own is that. --}}
         <div class="timeline-large">
             <div id="timeline-list">
-                @include('timeline._post', ['post' => $post])
+                @include('timeline._post', ['post' => $post, 'thread' => true])
             </div>
         </div>
-
-        {{-- Replies, oldest first (OpenPNE 3 reads by id). --}}
-        @if ($post->replies->isNotEmpty())
-            <ul class="timeline-comment-list">
-                @foreach ($post->replies as $reply)
-                    <li class="timeline-comment" data-timeline-id="{{ $reply->getKey() }}">
-                        <div class="timeline-member-name">
-                            <a href="{{ route('member.profile.show', $reply->member) }}">{{ $reply->member->name }}</a>
-                        </div>
-                        <div class="timeline-post-body"><x-timeline-body :post="$reply" /></div>
-                        <x-link-card :record="$reply" />
-                        <div class="timeline-post-control">
-                            <span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($reply->created_at) }}</span>
-                            @if ($reply->member->is($viewer))
-                                <a href="{{ route('timeline.delete.show', $reply) }}">{{ __('Delete') }}</a>
-                            @endif
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
-        @endif
 
         <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
               data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">

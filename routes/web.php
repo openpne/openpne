@@ -504,6 +504,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
         Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');
         Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->middleware('throttle:posting')->name('timeline.reply.store');
+        // What the Classic row's 以前のコメントを見る reads: the thread's whole reply list as an HTML
+        // fragment, gated exactly as the thread page is.
+        Route::get('/timeline/{timelinePost}/replies', 'replies')->whereNumber('timelinePost')->name('timeline.replies');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
     });
 

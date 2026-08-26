@@ -18,6 +18,14 @@
     return Array.from(value.replace(/\r\n?/g, '\n')).length;
   }
 
+  // `node --test` evaluates this file with a `module` in scope and takes the pure half alone —
+  // here, so the inline reply layer's copy of this rule can be pinned against it.
+  if (typeof module !== 'undefined') {
+    module.exports = { bodyLength: bodyLength };
+
+    return;
+  }
+
   function setUp(form) {
     var textarea = form.querySelector('#timeline-textarea');
     var area = form.querySelector('#timeline-submit-area');
