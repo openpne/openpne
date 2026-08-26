@@ -51,10 +51,12 @@ return [
     | App\Outbound\PushClientFactory. This is a second egress seam, over a
     | member-supplied endpoint URL, so the shape App\Rules\PushEndpoint accepts
     | on store has to hold at send time too. `allow_redirects` and `proxy` are
-    | therefore fixed in the factory and cannot be loosened from here: a 30x is
-    | the one move that turns a validated https endpoint into a request
-    | somewhere else, and the proxy environment variables Guzzle honours by
-    | default would resolve the destination elsewhere again.
+    | therefore fixed in the factory and are not loosened by anything set here,
+    | short of the `curl` escape hatch, which Guzzle applies last and which can
+    | say the same thing in CURLOPT_ terms: a 30x is the one move that turns a
+    | validated https endpoint into a request somewhere else, and the proxy
+    | environment variables Guzzle honours by default would resolve the
+    | destination elsewhere again.
     |
     | `timeout` bounds one request, and the library sends a member's devices one
     | after another, so what bounds the job is timeout x MAX_DEVICES. That
