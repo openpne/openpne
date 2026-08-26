@@ -36,7 +36,11 @@ final class WebPushNudge extends Notification implements ShouldQueue
      * per-request timeouts only bound each one. Stated here rather than left to the worker's own
      * default, which a deployment sets on the command line and this class cannot see. It has to
      * stay under the queue's retry_after: past that the job is handed out again while it is still
-     * sending, and every device that did answer is pushed twice. WebPushTimeoutBudgetTest.
+     * sending, and every device that did answer is pushed twice.
+     *
+     * It applies only where a worker runs this as a job. On an inline queue the send happens in the
+     * process that queued it — the request of whoever caused the notification — and nothing here
+     * bounds that but the per-request timeout times the device cap. WebPushTimeoutBudgetTest.
      */
     public int $timeout = 60;
 

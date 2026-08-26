@@ -6,10 +6,17 @@ namespace Tests\Feature\Notifications;
 
 use App\Features\Notifications\PushSubscriptionController;
 use App\Notifications\Push\WebPushNudge;
+use App\Outbound\PushClientFactory;
 use Tests\TestCase;
 
 /**
  * Holds the arithmetic that bounds a push job.
+ *
+ * A job is what it bounds, so the ceiling is only there on a queue that runs one. On `sync`,
+ * `deferred` and `background` the notification is sent in the process that queued it and no job
+ * timeout exists to apply — the send blocks whatever was running, which for a push triggered by
+ * someone else's post is that person's own request. Only the per-request timeout and the device cap
+ * bound it there. That is why they are kept small enough to be a tolerable answer on their own.
  *
  * The transport sends a member's devices one after another — the library's flush() calls a PSR-18
  * sendRequest() per subscription, and that interface is synchronous by definition — so the option
@@ -27,7 +34,23 @@ class WebPushTimeoutBudgetTest extends TestCase
 {
     public function test_a_full_batch_of_unresponsive_devices_finishes_inside_the_jobs_timeout(): void
     {
-        $worst = PushSubscriptionController::MAX_DEVICES * (int) config('webpush.client_options.timeout');
+        $timeout = config('webpush.client_options.timeout');
+
+        // Fail here rather than read a missing key as nought, which would satisfy every bound below.
+        $this->assertIsInt($timeout);
+
+        $worst = PushSubscriptionController::MAX_DEVICES * $timeout;
+
+        $this->assertLessThanOrEqual((new WebPushNudge(null, null, null))->timeout, $worst);
+    }
+
+    /**
+     * A site that deletes the timeout from its config gets the factory's, and that one has to hold
+     * the same bound — it is the value that applies exactly when nobody is looking at this file.
+     */
+    public function test_the_transports_own_default_holds_the_same_bound(): void
+    {
+        $worst = PushSubscriptionController::MAX_DEVICES * PushClientFactory::FALLBACK_TIMEOUT;
 
         $this->assertLessThanOrEqual((new WebPushNudge(null, null, null))->timeout, $worst);
     }

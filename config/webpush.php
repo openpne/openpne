@@ -64,6 +64,11 @@ return [
     | twice. WebPushTimeoutBudgetTest holds the arithmetic. On SQS that window
     | is the queue's visibility timeout in AWS, which this app cannot read and
     | which defaults below the ceiling: raise it past WebPushNudge::$timeout.
+    |
+    | On an inline queue (sync and friends) there is no job to time out at all:
+    | the send runs in the request of whoever caused the notification, and this
+    | product is the whole of what bounds it. Keep it small enough to be an
+    | acceptable answer on its own, not merely under the ceiling.
     | See docs/internals/outbound-http.md.
     |
     */

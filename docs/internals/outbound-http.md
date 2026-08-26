@@ -104,15 +104,19 @@ plainly:
 - **The transport is closed to the moves that leave that shape behind**: redirects are not followed
   and the proxy environment variables Guzzle otherwise honours are disabled. A 30x or a proxy is
   exactly what turns a validated https host into a request elsewhere. Those two are set by the
-  factory after the options `config/webpush.php` supplies, so a site can tighten this transport but
-  not open it — the channel package would otherwise build this client in a way that drops the option
-  bag entirely, and every guarantee here would be config that no longer applies.
+  factory after the options `config/webpush.php` supplies, so those two survive a site deleting them
+  — an absent `proxy` is the environment's, not a neutral default. Nothing else in that array is
+  pinned. The client is built here at all because the channel package would otherwise build it in a
+  way that drops the option bag entirely, and every guarantee here would be config that no longer
+  applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
   own `$timeout`, which stays under the queue's `retry_after` — past it the job is handed out again
   mid-send and every reachable device is pushed twice. `WebPushTimeoutBudgetTest` holds the relation
   between the three numbers. It cannot hold it for SQS, where that window is the queue's visibility
-  timeout in AWS: a deployment on that driver has to raise it past the job's `$timeout` itself.
+  timeout in AWS: a deployment on that driver has to raise it past the job's `$timeout` itself. Nor
+  is there a job to bound on an inline queue — there the send runs in the request of whoever caused
+  the notification, and the per-request timeout times the device cap is all of it.
 
 This app does not take the channel package's route of sending through Laravel's HTTP client, so
 global HTTP middleware, request logging and `Http::fake()` do not see push requests.

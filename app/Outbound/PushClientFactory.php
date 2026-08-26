@@ -17,9 +17,14 @@ use Psr\Http\Client\ClientInterface;
  * egress boundary test expects an HTTP client to be constructed.
  *
  * `proxy` and `allow_redirects` are applied after the caller's options rather than before them:
- * they are what keeps a validated https endpoint from becoming a request somewhere else, so config
- * may tighten this transport but never open it. The timeouts are defaults the config owns, because
- * the bound they belong to is arithmetic the config states (see config/webpush.php).
+ * those two are what keeps a validated https endpoint from becoming a request somewhere else, and
+ * an absent `proxy` is not a neutral default but the environment's. Nothing else here is pinned —
+ * the rest of the option bag is the config's to set.
+ *
+ * The timeout is the config's to set too, but its fallback is not a free choice: it is what applies
+ * on a site that deleted the key, and the transport sends one device after another, so a generous
+ * default silently multiplies into a job that outlives the queue's reservation. It is therefore the
+ * same value config/webpush.php ships, and WebPushTimeoutBudgetTest holds this one too.
  *
  * This is not SafeHttpFetcher's client: no address is validated and no connection is pinned, which
  * is the documented weakness of this seam (docs/internals/outbound-http.md). CurlClientFactory is
@@ -33,11 +38,14 @@ use Psr\Http\Client\ClientInterface;
  */
 final class PushClientFactory
 {
+    /** Applies when `webpush.client_options` states none; see the note above on why it is not 30. */
+    public const FALLBACK_TIMEOUT = 5;
+
     /** @param  array<string, mixed>  $options */
     public function make(array $options): ClientInterface
     {
         return new Client([
-            'timeout' => 30,
+            'timeout' => self::FALLBACK_TIMEOUT,
             ...$options,
             'allow_redirects' => false,
             'proxy' => '',
