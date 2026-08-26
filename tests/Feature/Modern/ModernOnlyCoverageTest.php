@@ -53,6 +53,7 @@ class ModernOnlyCoverageTest extends TestCase
         'notifications.center',
         'unread.counts',
         'timeline.mention_candidates',
+        'timeline.index.rows',
         'group.talk.mention_candidates',
         'message.chat.recipients',
         'message.chat.withdrawn.messages',
