@@ -195,13 +195,13 @@ class GroupRoutesTest extends TestCase
 
         $this->assertStringContainsString(e(__('Authority to Read %Topic%')), $content);
         $this->assertStringContainsString(
-            '<input type="radio" name="topic_read_access" value="members_only" class="input_radio" checked>', $content);
+            '<input type="radio" name="topic_read_access" value="members_only" id="community_config_public_flag_members_only" class="input_radio" checked>', $content);
         $this->assertStringContainsString(
-            '<input type="radio" name="topic_post_authority" value="admins_only" class="input_radio" checked>', $content);
+            '<input type="radio" name="topic_post_authority" value="admins_only" id="community_config_topic_authority_admins_only" class="input_radio" checked>', $content);
         // The other option renders unchecked, with OpenPNE 3's caption.
         $this->assertStringNotContainsString(
-            '<input type="radio" name="topic_read_access" value="everyone" class="input_radio" checked>', $content);
-        $this->assertStringContainsString('value="everyone" class="input_radio"', $content);
+            '<input type="radio" name="topic_read_access" value="everyone" id="community_config_public_flag_everyone" class="input_radio" checked>', $content);
+        $this->assertStringContainsString('value="everyone" id="community_config_public_flag_everyone" class="input_radio"', $content);
         $this->assertStringContainsString(e(__('Everyone can read')), $content);
     }
 
@@ -213,9 +213,9 @@ class GroupRoutesTest extends TestCase
 
         // Both fields are required on the wire, so the create form itself supplies the defaults.
         $this->assertStringContainsString(
-            '<input type="radio" name="topic_read_access" value="everyone" class="input_radio" checked>', $content);
+            '<input type="radio" name="topic_read_access" value="everyone" id="community_config_public_flag_everyone" class="input_radio" checked>', $content);
         $this->assertStringContainsString(
-            '<input type="radio" name="topic_post_authority" value="members" class="input_radio" checked>', $content);
+            '<input type="radio" name="topic_post_authority" value="members" id="community_config_topic_authority_members" class="input_radio" checked>', $content);
     }
 
     public function test_saving_persists_the_topic_settings(): void
@@ -288,7 +288,7 @@ class GroupRoutesTest extends TestCase
         // The flashed old input drives the re-render, not the stored Everyone/Members.
         $content = (string) $this->actingAs($admin)->get($editUrl)->assertOk()->getContent();
         $this->assertStringContainsString(
-            '<input type="radio" name="topic_read_access" value="members_only" class="input_radio" checked>', $content);
+            '<input type="radio" name="topic_read_access" value="members_only" id="community_config_public_flag_members_only" class="input_radio" checked>', $content);
     }
 
     public function test_editing_renders_and_persists_the_join_notification_toggle(): void
@@ -299,7 +299,7 @@ class GroupRoutesTest extends TestCase
         // The hidden 0 + checkbox 1 pair renders, so the value is always submitted.
         $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]))
             ->assertOk()
-            ->assertSee('type="hidden" name="is_join_notification_enabled" value="0"', false);
+            ->assertSee('name="is_join_notification_enabled" value="0" id="community_config_is_join_notification_enabled_0" class="input_radio"', false);
 
         // Unchecking submits the hidden 0, turning it off.
         $this->actingAs($admin)->post('/groups/edit?'.http_build_query(['id' => $group->getKey()]), [
@@ -331,8 +331,8 @@ class GroupRoutesTest extends TestCase
         // Re-rendering reflects the unchecked choice (old '0'), not the still-true stored value.
         $this->actingAs($admin)->get($editUrl)
             ->assertOk()
-            ->assertSee('name="is_join_notification_enabled" value="1"', false)
-            ->assertDontSee('value="1" checked', false);
+            ->assertSee('value="0" id="community_config_is_join_notification_enabled_0" class="input_radio" checked', false)
+            ->assertDontSee('value="1" id="community_config_is_join_notification_enabled_1" class="input_radio" checked', false);
     }
 
     public function test_join_list_shows_another_members_communities(): void

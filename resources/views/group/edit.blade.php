@@ -29,11 +29,11 @@
                 <tr>
                     <th>{{ __('Join policy') }}</th>
                     <td>
-                        <select name="register_policy">
+                        <ul class="radio_list">
                             @foreach ($policies as $policy)
-                                <option value="{{ $policy['slug'] }}" @selected(old('register_policy', $group?->register_policy?->slug()) === $policy['slug'])>{{ __($policy['label']) }}</option>
+                                <li><input type="radio" name="register_policy" value="{{ $policy['slug'] }}" id="community_config_register_policy_{{ $policy['slug'] }}" class="input_radio" @checked(old('register_policy', $group?->register_policy?->slug() ?? $policies[0]['slug']) === $policy['slug'])> <label for="community_config_register_policy_{{ $policy['slug'] }}">{{ __($policy['label']) }}</label></li>
                             @endforeach
-                        </select>
+                        </ul>
                     </td>
                 </tr>
                 {{-- OpenPNE 3's two opCommunityTopicPlugin settings (community_config.yml
@@ -42,29 +42,35 @@
                 <tr>
                     <th>{{ __('Authority to Read %Topic%') }}</th>
                     <td>
-                        @foreach ($topicReadChoices as $choice)
-                            <label><input type="radio" name="topic_read_access" value="{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_read_access', $group?->topic_read_access->slug() ?? 'everyone') === $choice['slug'])> {{ __($choice['label']) }}</label>
-                        @endforeach
+                        <ul class="radio_list">
+                            @foreach ($topicReadChoices as $choice)
+                                <li><input type="radio" name="topic_read_access" value="{{ $choice['slug'] }}" id="community_config_public_flag_{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_read_access', $group?->topic_read_access->slug() ?? 'everyone') === $choice['slug'])> <label for="community_config_public_flag_{{ $choice['slug'] }}">{{ __($choice['label']) }}</label></li>
+                            @endforeach
+                        </ul>
                     </td>
                 </tr>
                 <tr>
                     <th>{{ __('Authority to Create %Topic%') }}</th>
                     <td>
-                        @foreach ($topicPostChoices as $choice)
-                            <label><input type="radio" name="topic_post_authority" value="{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_post_authority', $group?->topic_post_authority->slug() ?? 'members') === $choice['slug'])> {{ __($choice['label']) }}</label>
-                        @endforeach
+                        <ul class="radio_list">
+                            @foreach ($topicPostChoices as $choice)
+                                <li><input type="radio" name="topic_post_authority" value="{{ $choice['slug'] }}" id="community_config_topic_authority_{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_post_authority', $group?->topic_post_authority->slug() ?? 'members') === $choice['slug'])> <label for="community_config_topic_authority_{{ $choice['slug'] }}">{{ __($choice['label']) }}</label></li>
+                            @endforeach
+                        </ul>
                     </td>
                 </tr>
                 <tr>
-                    <th>{{ __('Notifications') }}</th>
+                    <th>{{ __('Receive a notice mail when member joined') }}</th>
                     <td>
-                        {{-- hidden 0 + checkbox 1: the field is always submitted, so an unchecked box
-                             survives a validation round-trip (old() sees '0', not the current value). --}}
-                        <label>
-                            <input type="hidden" name="is_join_notification_enabled" value="0">
-                            <input type="checkbox" name="is_join_notification_enabled" value="1" @checked(old('is_join_notification_enabled', $group?->is_join_notification_enabled ?? true))>
-                            {{ __('Notify admins when a member joins.') }}
-                        </label>
+                        {{-- OpenPNE 3 CommunityConfigForm's two-option radio (Receive / Don't Receive) with
+                             its help line; a radio is always submitted, so an unchecked state survives a
+                             validation round-trip on its own. --}}
+                        <ul class="radio_list">
+                            @foreach ([1 => __('Receive'), 0 => __("Don't Receive")] as $value => $label)
+                                <li><input type="radio" name="is_join_notification_enabled" value="{{ $value }}" id="community_config_is_join_notification_enabled_{{ $value }}" class="input_radio" @checked((int) old('is_join_notification_enabled', (int) ($group?->is_join_notification_enabled ?? true)) === $value)> <label for="community_config_is_join_notification_enabled_{{ $value }}">{{ $label }}</label></li>
+                            @endforeach
+                        </ul>
+                        <div class="help">{{ __('Send a notice mail to administrator when new member joined the %community%.') }}</div>
                     </td>
                 </tr>
                 <tr>

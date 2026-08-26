@@ -81,7 +81,8 @@ class GroupController extends Controller
             && (int) $found->pending_admin_member_id === (int) $viewer->getKey();
         // The sidemenu member grid (3×3), admins first like ListGroupMembers.
         // Shared by the Classic grid and the Modern member preview.
-        $sidebarMembers = $found->members()->with('member.avatar.file')
+        $sidebarMembers = $found->members()
+            ->with(['member' => fn ($members) => $members->with('avatar.file')->withCount('friendships')])
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
         // The recent-topics / recent-events boxes only show when the viewer
         // may read that board; events share the topic read gate, so one check covers both.
@@ -398,13 +399,19 @@ class GroupController extends Controller
     {
         $group = $this->groupFrom($request);
         $viewer = $this->viewer();
-        // Already in the group or awaiting approval: nothing to confirm.
-        if (GroupMembership::isMember($group, $viewer) || GroupMembership::isPending($group, $viewer)) {
-            return redirect()->route('group.show', $group);
+        $modern = SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN;
+        // Already in the group or awaiting approval: nothing to confirm. Classic says so on
+        // OpenPNE 3's joinError screen; Modern confirms joining inline, so it goes back to the group.
+        foreach ([
+            [GroupMembership::isMember($group, $viewer), __('You are already joined to this %community%.')],
+            [GroupMembership::isPending($group, $viewer), __('You have already sent the participation request to this %community%.')],
+        ] as [$blocked, $body]) {
+            if ($blocked) {
+                return $modern ? redirect()->route('group.show', $group) : $this->classic('group.error', ['group' => $group, 'body' => $body]);
+            }
         }
 
-        // Modern confirms joining inline — send a Modern viewer back to the group.
-        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+        if ($modern) {
             return redirect()->route('group.show', $group);
         }
 
@@ -432,13 +439,19 @@ class GroupController extends Controller
     {
         $group = $this->groupFrom($request);
         $viewer = $this->viewer();
-        // Only a non-admin member can quit (the sole admin must hand off first).
-        if (! GroupMembership::isMember($group, $viewer) || GroupMembership::isAdmin($group, $viewer)) {
-            return redirect()->route('group.show', $group);
+        $modern = SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN;
+        // Only a non-admin member can quit (the sole admin must hand off first). Classic says so on
+        // OpenPNE 3's quitError screen; Modern confirms leaving inline, so it goes back to the group.
+        foreach ([
+            [GroupMembership::isAdmin($group, $viewer), __("The administrator doesn't leave the %community%.")],
+            [! GroupMembership::isMember($group, $viewer), __("You haven't joined this %community% yet.")],
+        ] as [$blocked, $body]) {
+            if ($blocked) {
+                return $modern ? redirect()->route('group.show', $group) : $this->classic('group.error', ['group' => $group, 'body' => $body]);
+            }
         }
 
-        // Modern confirms leaving inline — send a Modern viewer back to the group.
-        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+        if ($modern) {
             return redirect()->route('group.show', $group);
         }
 
