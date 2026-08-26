@@ -47,9 +47,9 @@ class GroupEventFormPartsTest extends TestCase
                 self::NOTICE,
                 '<table>',
                 'Title <strong>*</strong>',
+                'Body <strong>*</strong>',
                 'Open date <strong>*</strong>',
                 'Area <strong>*</strong>',
-                'Body <strong>*</strong>',
                 '</table>',
                 'class="operation"',
             ], false);

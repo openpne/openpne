@@ -10,7 +10,7 @@
             <x-classic.required-notice />
             <table>
                 @include('group-topic._fields')
-                @include('group-topic._image_fields')
+                <x-classic.photo-rows kind="topic" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">
