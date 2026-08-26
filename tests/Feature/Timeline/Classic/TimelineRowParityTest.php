@@ -93,6 +93,7 @@ class TimelineRowParityTest extends TestCase
                 '<div id="timeline-list">',
                 '<div class="timeline-post" data-timeline-id="'.$post->getKey().'">',
                 'id="timeline-reply-form"',
+                'aria-label="Post comment"', // the OpenPNE 3 skin gave the textarea no label; a name is the floor
             ], false);
     }
 

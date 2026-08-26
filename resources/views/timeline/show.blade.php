@@ -29,7 +29,7 @@
               data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
             @include('timeline._mention-draft')
-            <textarea name="body" required>{{ old('body') }}</textarea>
+            <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>
             @error('body')
                 <p role="alert">{{ $message }}</p>
             @enderror
