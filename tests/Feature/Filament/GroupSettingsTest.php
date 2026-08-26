@@ -71,6 +71,7 @@ class GroupSettingsTest extends TestCase
 
     public function test_board_reply_links_are_off_until_switched_on(): void
     {
+        config(['openpne.surface_mode' => 'classic_default']);
         Livewire::test(GroupSettings::class)
             ->assertSet('data.group_topic_comment_reply', false)
             ->assertSet('data.group_event_comment_reply', false)
@@ -85,6 +86,7 @@ class GroupSettingsTest extends TestCase
 
     public function test_saved_reply_switches_round_trip_into_the_form(): void
     {
+        config(['openpne.surface_mode' => 'classic_default']);
         $this->setSnsSetting(SnsSettingKey::GroupTopicCommentReply, true);
         $this->setSnsSetting(SnsSettingKey::GroupEventCommentReply, false);
 
@@ -93,8 +95,29 @@ class GroupSettingsTest extends TestCase
             ->assertSet('data.group_event_comment_reply', false);
     }
 
-    public function test_the_talk_settings_url_still_reaches_the_page(): void
+    public function test_board_switches_exist_only_where_classic_is_served(): void
     {
-        $this->get('/admin/group-talk-settings')->assertRedirect('/admin/group-settings');
+        config(['openpne.surface_mode' => 'classic_default']);
+        Livewire::test(GroupSettings::class)
+            ->assertFormFieldExists('group_topic_comment_reply')
+            ->assertFormFieldExists('group_event_comment_reply');
+
+        config(['openpne.surface_mode' => 'modern_only']);
+        Livewire::test(GroupSettings::class)
+            ->assertFormFieldHidden('group_topic_comment_reply')
+            ->assertFormFieldHidden('group_event_comment_reply');
+    }
+
+    public function test_saving_on_a_modern_only_install_leaves_a_stored_board_switch_alone(): void
+    {
+        config(['openpne.surface_mode' => 'modern_only']);
+        $this->setSnsSetting(SnsSettingKey::GroupTopicCommentReply, true);
+
+        Livewire::test(GroupSettings::class)
+            ->fillForm(['group_talk_notify_default' => GroupTalkNotifyMode::All->value])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_topic_comment_reply', 'value' => '1']);
     }
 }

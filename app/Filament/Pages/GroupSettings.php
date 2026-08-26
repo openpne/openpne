@@ -8,6 +8,7 @@ use App\Features\GroupTalk\GroupTalkNotifyMode;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceResolver;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
@@ -130,19 +131,30 @@ class GroupSettings extends Page
         return $values;
     }
 
-    /** @return list<SnsSettingKey> */
+    /**
+     * The keys this page edits. The board switches drive Classic markup only, so on a modern_only
+     * install they are neither shown nor rewritten (a stored value survives a later surface change).
+     *
+     * @return list<SnsSettingKey>
+     */
     private function keys(): array
     {
-        return [...SnsSettingKey::inGroup(SettingGroup::GroupTalk), ...SnsSettingKey::inGroup(SettingGroup::GroupBoard)];
+        return [
+            ...SnsSettingKey::inGroup(SettingGroup::GroupTalk),
+            ...(SurfaceResolver::classicAvailable() ? SnsSettingKey::inGroup(SettingGroup::GroupBoard) : []),
+        ];
     }
 
     private function buildBoardSection(): Section
     {
         $reply = static fn (SnsSettingKey $key): Toggle => Toggle::make($key->value)
             ->label($key->label())
-            ->helperText(__('Each comment gets a Reply link that quotes its number and author into the comment box.'));
+            // Classic-only, and the copy says so (docs/internals/classic-compatibility.md); the
+            // section is absent altogether where Classic is never served.
+            ->helperText(__('Classic only: each comment gets a Reply link that quotes its number and author into the comment box.'));
 
         return Section::make(__('%Topics% and events'))
+            ->hidden(static fn (): bool => ! SurfaceResolver::classicAvailable())
             ->schema([$reply(SnsSettingKey::GroupTopicCommentReply), $reply(SnsSettingKey::GroupEventCommentReply)]);
     }
 

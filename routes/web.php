@@ -97,9 +97,6 @@ Route::post('/locale', function (Request $request) {
     return redirect($target);
 })->name('locale.switch');
 
-// The talk settings page grew into the group settings page; its URL stays reachable.
-Route::permanentRedirect('/admin/group-talk-settings', '/admin/group-settings');
-
 // Session-only locale toggle for the Filament admin panel (and its login screen). Unlike
 // `locale.switch` this NEVER writes members.locale: a co-logged-in member switching the panel
 // language must not have their durable preference changed (OpenPNE 3 pc_backend changeLanguage

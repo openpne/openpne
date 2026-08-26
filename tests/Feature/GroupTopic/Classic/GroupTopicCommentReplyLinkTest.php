@@ -66,6 +66,9 @@ class GroupTopicCommentReplyLinkTest extends TestCase
         $response->assertOk();
         $response->assertSee('<a class="reply" href="#formCommunityTopicComment" data-comment-reply="#comment_body" data-number="1" data-name="'.e($author->name).'">Reply</a>', false);
         $response->assertSee('js/classic-comment-reply.js', false);
+        // The link's selector and anchor name real elements on the page.
+        $response->assertSee('id="comment_body"', false);
+        $response->assertSee('id="formCommunityTopicComment"', false);
     }
 
     public function test_a_viewer_who_cannot_comment_gets_no_reply_link(): void
