@@ -54,6 +54,18 @@ class PublicRouteBoundaryTest extends TestCase
             "route [{$name}] is guest-reachable but lost [auth.session]: a stale session would keep a viewer here.");
     }
 
+    public function test_a_stale_session_is_ended_on_the_home_page(): void
+    {
+        // Classic serves the member's gadget home at /; a Modern surface would redirect instead.
+        config(['openpne.surface_mode' => 'classic_default']);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')->assertOk();
+        // Another device changes the password; this session's stored hash is now stale.
+        $member->forceFill(['password' => Hash::make('changed-elsewhere')])->save();
+        $this->get('/')->assertRedirect('/login');
+    }
+
     public function test_a_stale_session_reads_no_more_than_a_guest_on_a_public_page(): void
     {
         $author = Member::factory()->create();
