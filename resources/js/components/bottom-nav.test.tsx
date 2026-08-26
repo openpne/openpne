@@ -77,8 +77,10 @@ test('the shipped row prints every count it carries, each said in words as well'
 
     render(<BottomNav chrome={chrome} />);
 
-    // The phrase rides the pill's own label rather than the link's, so the word under the icon stays
-    // the tab's name and the number joins it — the shape the drawer's entries already have.
+    // The phrase comes up through the pill rather than off the link itself, so the word under the
+    // icon stays the tab's name and the number joins it — the shape the drawer's entries already
+    // have. Exact names for this bar are pinned in count-pill.test.tsx; this match is on the phrase.
+    
     const groups = screen.getByRole('link', { name: /3 %communities% with new messages/ });
     expect(groups.getAttribute('href')).toBe('/groups/mine');
     expect(groups.textContent).toContain('3');

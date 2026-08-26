@@ -8,6 +8,7 @@ import { CountPill } from './count-pill';
 import { NavItems } from './nav-items';
 import { PageTabs } from './page-tabs';
 import { ConversationRow } from '@/pages/message/conversations/conversation-row';
+import { RoomRow } from '@/pages/community/room-row';
 import { HomeSection } from '@/pages/unified/home-section';
 import { fakeT } from '@/lib/test-i18n';
 import { type Chrome, resolveChrome } from '@/lib/member-chrome';
@@ -209,7 +210,9 @@ test('every unread phrase is given the count it names', () => {
         // deferred {key, replacements} label, and its calls are supposed to carry no count — the
         // component that draws the badge supplies it.
         if (!code.includes("from '@/lib/i18n'")) return [];
-        const found = code.match(/t\(':count [^']+'[^)]*\)/g) ?? [];
+        // Anywhere in the key, not only at its start: `Jump to :count unread messages` and
+        // `%Friends% (:count)` are the same template and were sailing past a `^:count` match.
+        const found = code.match(/t\('[^']*:count[^']*'[^)]*\)/g) ?? [];
 
         // The replacement object, not the word: `:count` is itself in every match, which is how the
         // first version of this passed the very call site it was written for.
@@ -218,4 +221,63 @@ test('every unread phrase is given the count it names', () => {
     // Non-empty haystack: the regex finding nothing at all would pass this the same way.
     expect(sources(root).length).toBeGreaterThan(50);
     expect(calls).toEqual([]);
+});
+
+test('a group room row is named by the group and how many are waiting', () => {
+    render(
+        <RoomRow
+            room={{
+                id: 3,
+                name: 'Book club',
+                imageUrl: null,
+                unread: 4,
+                muted: false,
+                latest: { body: 'see you there', authorName: 'Sato', authorIsAi: false, createdAt: '2026-08-20T10:00:00+09:00' },
+            }}
+        />,
+    );
+
+    named('Book club 4 unread messages');
+});
+
+/*
+ * The heading tests above build the counted title the way the two pages build it, which proves the
+ * mechanism and not the wiring: either page could drop its `sr-only` phrase and stay green. This
+ * reads the pages instead — a `right={<CountPill …>}` is a heading that has to carry the count.
+ */
+test('every heading that shows a pill also says the count', () => {
+    const root = path.join(import.meta.dirname, '..');
+    const pages = (dir: string): string[] =>
+        readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory()) return pages(full);
+
+            return /\.tsx$/.test(e.name) && !/\.test\.tsx$/.test(e.name) ? [full] : [];
+        });
+
+    const PILL_IN_HEADER = /right=\{<CountPill/;
+    const COUNTED_TITLE = /title=\{[\s\S]{0,400}?sr-only/;
+
+    const headers = pages(root).filter((file) => PILL_IN_HEADER.test(readFileSync(file, 'utf8')));
+    // Two pages use this shape today; a scan finding none would pass on an empty set.
+    expect(headers).toHaveLength(2);
+
+    const bare = headers.filter((file) => !COUNTED_TITLE.test(readFileSync(file, 'utf8')));
+    expect(bare.map((f) => path.relative(root, f))).toEqual([]);
+});
+
+/*
+ * The group tile's own page is not rendered here, but its shape is: a link whose pill comes before
+ * the word, which is why its name leads with the count. Pinned so the count-first half of shape A is
+ * not held by the bar alone.
+ */
+test('a link whose pill precedes its word is named count first', () => {
+    render(
+        <a href="/groups/3">
+            <CountPill count={4} label="4 unread messages" />
+            <span>Book club</span>
+        </a>,
+    );
+
+    named('4 unread messages Book club');
 });
