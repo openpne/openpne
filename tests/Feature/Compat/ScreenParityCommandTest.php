@@ -12,6 +12,8 @@ class ScreenParityCommandTest extends TestCase
             ->assertSuccessful()
             // A screen is headed by its OpenPNE 3 body id and the Laravel route it binds to.
             ->expectsOutputToContain('`page_diary_show` — `diary.show`')
+            // A screen keyed by route name resolves to the page, not to a redirect sharing its action.
+            ->expectsOutputToContain('`page_default_userAgreement` — `policy.terms` `/terms`')
             // A ported element and a missing one both surface, with the source column visible.
             ->expectsOutputToContain('comment thread (author, number, delete)')
             ->expectsOutputToContain('visibility label')

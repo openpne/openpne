@@ -12,7 +12,8 @@ use App\Compat\ScreenStatus as S;
  * OpenPNE 3's `default` module: the two site policy screens, served in place at /terms and /privacy
  * with every OpenPNE 3 URL for them preserved by redirect (compatRedirects()); the customizing
  * stylesheet, served at its OpenPNE 3 URL; and the module's helper and error catch-alls, which are
- * gaps. The native maps come first so a screens() key resolves to the page, not to a redirect.
+ * gaps. screens() keys by Laravel route name: the pages and their redirects share an action, and
+ * a key must resolve to the page whatever order maps() declares them in.
  */
 class PolicyRouteParity extends RouteParity
 {
@@ -64,10 +65,10 @@ class PolicyRouteParity extends RouteParity
     {
         return [
             // userAgreementSuccess.php / privacyPolicySuccess.php: one box, no heading, body only.
-            'userAgreement' => $this->policyScreen('user_agreement', 'userAgreement'),
-            'privacyPolicy' => $this->policyScreen('privacy_policy', 'privacyPolicy'),
+            'policy.terms' => $this->policyScreen('user_agreement', 'userAgreement'),
+            'policy.privacy' => $this->policyScreen('privacy_policy', 'privacyPolicy'),
             // customizingCssAction: no page, the stored stylesheet as text/css.
-            'customizingCss' => [
+            'design.customizing_css' => [
                 new ScreenElement('stylesheet body', L::One, S::Ported, "customizingCssAction \$op_config['customizing_css'] as text/css", 'the same setting (SnsSettingKey::CustomCss) served at the OpenPNE 3 URL'),
             ],
         ];

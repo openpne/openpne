@@ -195,7 +195,9 @@ return [
         // pages, the customizing stylesheet, the global search entry (/search?search_module=X
         // forwards to X/search), the JS route-name resolver (urlFor.txt), and the error catch-alls
         // that answer /default/*, /symfony/* and a bare /member/profile/*. `no_default` is one of
-        // those catch-alls, so the global fallback is off for this module. Every route is
+        // those catch-alls, so the global fallback is off for this module. A plugin's own
+        // `*_nodefaults` catch-all (diary, communityTopic, …) also targets default/error, but is
+        // recorded as that module's `disables_global_fallback`, not here. Every route is
         // sf_method-unconstrained, so all are ANY.
         'disables_global_fallback' => true,
         'routes' => [
