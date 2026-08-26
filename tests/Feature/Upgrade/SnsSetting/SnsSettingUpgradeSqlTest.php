@@ -117,6 +117,17 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'diary_allow_web_public', 'value' => '0']);
     }
 
+    public function test_migrates_the_board_comment_reply_switches(): void
+    {
+        $this->seedConfig('op_community_topic_plugin_community_topic_comment_reply', '1');
+        $this->seedConfig('op_community_topic_plugin_community_event_comment_reply', '1');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_topic_comment_reply', 'value' => '1']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_event_comment_reply', 'value' => '1']);
+    }
+
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
         $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default

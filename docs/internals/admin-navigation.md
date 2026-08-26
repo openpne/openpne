@@ -10,7 +10,7 @@ locale mismatch would silently drop the group to the end of the sidebar.
 | *(ungrouped)* | The panel landing page | Dashboard |
 | Members | The people on the site, and how they get in | Member list, Member invites |
 | Content | What members posted, for moderation | Groups, Diaries, Files |
-| Settings | What an operator configures | Base settings, Feature settings, Talk settings, Profile item settings |
+| Settings | What an operator configures | Base settings, Feature settings, Group settings, Profile item settings |
 | Appearance (Classic) | Classic-surface look and layout | Gadgets, Navigation, Custom CSS & HTML |
 | System | Running the install itself | Cache, Admin Users |
 

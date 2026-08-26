@@ -11,6 +11,7 @@ use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -24,14 +25,15 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick how much of a group's talk this site notifies about (App\Features\GroupTalk\GroupTalkNotifyMode).
- * `sns_settings` is authoritative; the value is stored verbatim on save and resolves to `mentions`
- * while no row exists. It sets a default, not a policy: a member's own catalog row overrides it
- * (docs/internals/notifications.md).
+ * The group-wide settings: how much of a group's talk this site notifies about
+ * (App\Features\GroupTalk\GroupTalkNotifyMode) and what the topic / event boards offer.
+ * `sns_settings` is authoritative; a value is stored verbatim on save and resolves to its default
+ * while no row exists. The talk default sets a default, not a policy: a member's own catalog row
+ * overrides it (docs/internals/notifications.md).
  *
  * @property-read Schema $form
  */
-class GroupTalkSettings extends Page
+class GroupSettings extends Page
 {
     protected static ?int $navigationSort = 17;
 
@@ -52,12 +54,12 @@ class GroupTalkSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Talk settings');
+        return __('%Group% settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Talk settings');
+        return __('%Group% settings');
     }
 
     public function mount(): void
@@ -68,7 +70,7 @@ class GroupTalkSettings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema
-            ->components([$this->buildSection()])
+            ->components([$this->buildTalkSection(), $this->buildBoardSection()])
             ->statePath('data');
     }
 
@@ -97,7 +99,7 @@ class GroupTalkSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (SnsSettingKey::inGroup(SettingGroup::GroupTalk) as $key) {
+            foreach ($this->keys() as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
@@ -121,18 +123,34 @@ class GroupTalkSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (SnsSettingKey::inGroup(SettingGroup::GroupTalk) as $key) {
+        foreach ($this->keys() as $key) {
             $values[$key->value] = app(SnsSettingService::class)->get($key);
         }
 
         return $values;
     }
 
-    private function buildSection(): Section
+    /** @return list<SnsSettingKey> */
+    private function keys(): array
+    {
+        return [...SnsSettingKey::inGroup(SettingGroup::GroupTalk), ...SnsSettingKey::inGroup(SettingGroup::GroupBoard)];
+    }
+
+    private function buildBoardSection(): Section
+    {
+        $reply = static fn (SnsSettingKey $key): Toggle => Toggle::make($key->value)
+            ->label($key->label())
+            ->helperText(__('Each comment gets a Reply link that quotes its number and author into the comment box.'));
+
+        return Section::make(__('%Topics% and events'))
+            ->schema([$reply(SnsSettingKey::GroupTopicCommentReply), $reply(SnsSettingKey::GroupEventCommentReply)]);
+    }
+
+    private function buildTalkSection(): Section
     {
         $modes = GroupTalkNotifyMode::cases();
 
-        return Section::make()
+        return Section::make(__('Talk'))
             ->schema([
                 Radio::make(SnsSettingKey::GroupTalkNotifyDefault->value)
                     ->label(SnsSettingKey::GroupTalkNotifyDefault->label())
