@@ -91,9 +91,9 @@ function TalkRooms({ rooms: { rooms, hasMore }, url }: { rooms: TalkNavRooms; ur
                             <CommunityImage name={room.name} src={room.imageUrl} className="size-6" textClassName="text-[10px]" decorative />
                             <span className="min-w-0 flex-1 truncate">{room.name}</span>
                             {room.muted && <BellOff className="size-3 shrink-0" aria-label={t('Muted')} />}
-                            {/* The row is one link named by the group alone, so the pill has to say
-                                what its number counts. A muted room keeps that number and gives up
-                                the pill's insistence, as its row on the joined list does. */}
+                            {/* The row is one link, so the pill's phrase joins its name
+                                (components/count-pill.tsx). A muted room keeps that number and gives
+                                up the pill's insistence, as its row on the joined list does. */}
                             <CountPill
                                 count={room.unread}
                                 label={t(':count unread messages', { count: room.unread })}

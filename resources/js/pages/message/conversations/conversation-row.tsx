@@ -27,6 +27,10 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
                     <p className="min-w-0 truncate text-base text-foreground">
                         <Link href={href} className={stretchedLink}>
                             {name}
+                            {/* The pill is in the other column, outside this link, so its number
+                                would belong to nothing. The row is what the count is about, and this
+                                is the row. */}
+                            {unread > 0 && <span className="sr-only"> {t(':count unread messages', { count: unread })}</span>}
                         </Link>
                     </p>
                     <AiChip isAi={counterpart?.isAi ?? false} />
@@ -37,7 +41,7 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
                 <Timestamp at={latest.createdAt} preset="relative" className="text-xs text-muted-foreground" />
-                <CountPill count={unread} label={t(':count unread messages', { count: unread })} />
+                <CountPill count={unread} />
             </div>
         </ListRow>
     );

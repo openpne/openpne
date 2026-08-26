@@ -34,8 +34,9 @@ export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabIt
                     }
                 >
                     {item.label}
-                    {/* The label replaces the bare digits, so this link reads "Joined, N … with
-                        new messages" — the count in words, once, on the link itself. */}
+                    {/* The digits are hidden and the phrase joins this link's name, so it reads
+                        "Joined, N … with new messages" — the count in words, once, on the link
+                        itself (components/count-pill.tsx). */}
                     <CountPill count={item.count ?? 0} label={item.countLabel} />
                 </Link>
             ))}

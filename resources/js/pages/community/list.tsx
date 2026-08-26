@@ -79,13 +79,13 @@ function CommunityGrid({ groups, talkUnread }: { groups: PaginatedCommunities; t
                                 <Link href={`/groups/${group.id}`} className="flex flex-col gap-1">
                                     <span className="relative block">
                                         <CommunityImage name={group.name} src={group.imageUrl} className="aspect-square w-full" textClassName="text-2xl" decorative />
-                                        {/* The whole tile is one link, so the pill can name the count itself
-                                            rather than needing a separate sr-only label. A muted group keeps
-                                            its number but gives up the pill's insistence — it is still there
-                                            to be found, it just stops asking to be looked at. */}
+                                        {/* The whole tile is one link, so the pill's phrase joins that link's
+                                            name (components/count-pill.tsx). A muted group keeps its number
+                                            but gives up the pill's insistence — it is still there to be
+                                            found, it just stops asking to be looked at. */}
                                         <CountPill
                                             count={unread}
-                                            label={t(':count unread messages')}
+                                            label={t(':count unread messages', { count: unread })}
                                             className={cn(
                                                 'absolute -top-1.5 -right-1.5',
                                                 talk?.muted === true && 'bg-muted text-muted-foreground',

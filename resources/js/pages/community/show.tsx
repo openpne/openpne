@@ -125,8 +125,15 @@ export default function CommunityShow() {
             {canViewTalk && (
                 <Panel
                     flush
-                    title={t('Talk')}
-                    right={<CountPill count={talkUnread} label={t(':count unread messages', { count: talkUnread })} />}
+                    title={
+                        <>
+                            {t('Talk')}
+                            {/* The pill in `right` is beside the heading, not inside a control, so
+                                its number would belong to nothing. The heading is what it is about. */}
+                            {talkUnread > 0 && <span className="sr-only"> {t(':count unread messages', { count: talkUnread })}</span>}
+                        </>
+                    }
+                    right={<CountPill count={talkUnread} />}
                 >
                     {/* The row is the entrance, the way a topic row is: a footer link beside it would
                         be a second way into the one screen the card is about. The empty state carries
