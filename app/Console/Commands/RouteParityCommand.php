@@ -20,6 +20,7 @@ class RouteParityCommand extends Command
 
         foreach (RouteParityRegistry::all() as $parity) {
             $module = $parity->module();
+            $inventoryModule = $parity->openpne3Module(); // the inventory binding; null for a native feature
             $this->line("## `{$module}`");
             $this->line('');
             // 🔗 = GET-reachable, under the URL-compatibility contract (bookmarks/mail/links).
@@ -31,7 +32,7 @@ class RouteParityCommand extends Command
             foreach ($parity->maps() as $map) {
                 $uri = Route::getRoutes()->getByName($map->laravelRoute)?->uri();
                 $laravelUrl = $uri === null ? '(missing)' : '/'.ltrim($uri, '/'); // root uri() is '/', avoid '//'
-                $scope = $this->scope($inventory, $module, $map->op3Route);
+                $scope = $this->scope($inventory, $inventoryModule, $map->op3Route);
                 $op3Route = $map->op3Route === null ? '—' : "`{$map->op3Route}`";
                 $op3Url = $map->op3Url === null ? '—' : "`{$map->op3Url}`";
                 $note = $map->note ?? '';
@@ -42,7 +43,7 @@ class RouteParityCommand extends Command
                 $this->line('');
                 $this->line('Not ported:');
                 foreach ($parity->gaps() as $route => $reason) {
-                    $scope = $this->scope($inventory, $module, $route);
+                    $scope = $this->scope($inventory, $inventoryModule, $route);
                     $this->line("- {$scope} `{$route}` — {$reason}");
                 }
             }
@@ -63,7 +64,7 @@ class RouteParityCommand extends Command
         return self::SUCCESS;
     }
 
-    private function scope(Openpne3Routes $inventory, string $module, ?string $op3Route): string
+    private function scope(Openpne3Routes $inventory, ?string $module, ?string $op3Route): string
     {
         if ($op3Route === null) {
             return '🆕';

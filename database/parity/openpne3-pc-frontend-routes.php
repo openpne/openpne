@@ -190,4 +190,28 @@ return [
             'sns_timeline' => ['/sns/timeline', 'ANY'],
         ],
     ],
+    'default' => [
+        // The symfony default module OpenPNE 3 hung its site-wide odds and ends on: the two policy
+        // pages, the customizing stylesheet, the global search entry (/search?search_module=X
+        // forwards to X/search), the JS route-name resolver (urlFor.txt), and the error catch-alls
+        // that answer /default/*, /symfony/* and a bare /member/profile/*. `no_default` is one of
+        // those catch-alls, so the global fallback is off for this module. A plugin's own
+        // `*_nodefaults` catch-all (diary, communityTopic, …) also targets default/error, but is
+        // recorded as that module's `disables_global_fallback`, not here. Every route is
+        // sf_method-unconstrained, so all are ANY.
+        'disables_global_fallback' => true,
+        'routes' => [
+            'error' => ['/default/error', 'ANY'],
+            'global_search' => ['/search', 'ANY'],
+            'global_privacy_policy' => ['/privacyPolicy', 'ANY'],
+            'global_user_agreement' => ['/userAgreement', 'ANY'],
+            'url_for' => ['/default/urlFor.txt', 'ANY'],
+            'customizing_css' => ['/cache/css/customizing.:sf_format', 'ANY'],
+            'member_profile_no_default' => ['/member/profile/*', 'ANY'],
+            'privacy_policy' => ['/default/privacyPolicy', 'ANY'],
+            'user_agreement' => ['/default/userAgreement', 'ANY'],
+            'no_default' => ['/default/*', 'ANY'],
+            'no_symfony' => ['/symfony/*', 'ANY'],
+        ],
+    ],
 ];
