@@ -117,7 +117,7 @@ class GroupTopicRouteParity extends RouteParity
             'edit' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput'),
                 new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
-                new ScreenElement('existing image edit / delete', L::Two, S::Ported, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows the photo over a replacement input and a remove checkbox, as _formEditImage.php did'),
+                new ScreenElement('existing image edit / delete', L::Two, S::Partial, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows its photo and the remove checkbox, keyed by the slot number; OpenPNE 3 also swapped the photo in place from the same row, here that is a removal now and an upload into the freed slot'),
                 new ScreenElement('new image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_topic_photo_N'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('delete-topic box', L::Two, S::Ported, "op_include_parts('buttonBox', 'toDelete')", 'GET form to the delete confirm page'),

@@ -125,7 +125,7 @@ class GroupEventRouteParity extends RouteParity
             // editSuccess.php (same form as new) → group-event/edit.blade.php
             'edit' => [
                 new ScreenElement('event fields (title, body, open date + supplement, area, deadline, capacity)', L::Two, S::Partial, 'editSuccess.php formCommunityEvent (the create form)', 'one shared partial with the create screen, so its date inputs differ here too'),
-                new ScreenElement('existing image edit / delete', L::Two, S::Ported, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows the photo over a replacement input and a remove checkbox, as _formEditImage.php did'),
+                new ScreenElement('existing image edit / delete', L::Two, S::Partial, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows its photo and the remove checkbox, keyed by the slot number; OpenPNE 3 also swapped the photo in place from the same row, here that is a removal now and an upload into the freed slot'),
                 new ScreenElement('new image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_event_photo_N'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityEvent') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('delete-event box', L::Two, S::Ported, "op_include_parts('buttonBox', 'toDelete')", 'GET form to the delete confirm page'),

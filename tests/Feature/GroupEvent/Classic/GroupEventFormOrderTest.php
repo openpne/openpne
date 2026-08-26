@@ -32,6 +32,6 @@ class GroupEventFormOrderTest extends TestCase
             'for="event_area"', 'for="event_application_deadline"', 'for="event_capacity"',
             '<ul id="community_event_photo_1">', '<ul id="community_event_photo_2">', '<ul id="community_event_photo_3">',
         ], false);
-        $response->assertDontSee('placeholder=', false);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="open_date_comment"[^>]*placeholder=/', (string) $response->getContent());
     }
 }

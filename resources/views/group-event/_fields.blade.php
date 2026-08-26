@@ -13,7 +13,6 @@
         @error('body')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>
-@php($e = $event ?? null)
 @include('compose._format-toggle', ['format' => $e?->format])
 <tr>
     <th><label for="event_open_date">{{ __('Open date') }} <x-classic.required-mark /></label></th>
