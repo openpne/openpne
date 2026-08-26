@@ -48,6 +48,17 @@ class TimelinePost extends Model
         return $this->hasMany(self::class, 'in_reply_to_id')->orderBy('id');
     }
 
+    /**
+     * The same replies, newest first, so an eager load capped by `limit()` keeps the tail of the
+     * thread rather than its head (RecentReplies flips the loaded rows back to reading order).
+     *
+     * @return HasMany<TimelinePost, $this>
+     */
+    public function recentReplies(): HasMany
+    {
+        return $this->hasMany(self::class, 'in_reply_to_id')->orderByDesc('id');
+    }
+
     /** @return HasMany<TimelinePostImage, $this> The attached image (slot 1); empty for a reply. */
     public function images(): HasMany
     {

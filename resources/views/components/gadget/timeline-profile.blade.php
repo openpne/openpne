@@ -6,6 +6,7 @@
 @php($isOwn = $subject !== null && $subject->is(auth()->user()))
 @if ($posts->isNotEmpty() || $isOwn)
     @include('timeline._stylesheets')
+    @include('timeline._scripts')
     <div class="dparts profileTimeline"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
         <div class="partsHeading"><h3>{{ __("A member's %activity%") }}</h3></div>
         @if ($isOwn)

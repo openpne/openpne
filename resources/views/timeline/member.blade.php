@@ -6,6 +6,7 @@
 
 @section('content')
     @include('timeline._stylesheets')
+    @include('timeline._scripts')
     {{-- OpenPNE 3 streams the posts client-side from the API; the Classic adapter renders them
          server-side with a pager. The id is _timelineProfile.php's non-gadget branch, which suffixes
          the member id (the gadget branch suffixes the gadget id into the same prefix). --}}

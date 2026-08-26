@@ -2,7 +2,9 @@
 
 namespace App\View\Components\Gadget;
 
+use App\Features\Timeline\Queries\RecentReplies;
 use App\Models\TimelinePost;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
@@ -19,5 +21,17 @@ abstract class TimelineBox extends Component
     protected static function limit(array $config): int
     {
         return max(1, (int) ($config['limit'] ?? 20));
+    }
+
+    /**
+     * Give the rows their inline reply layer, as the timeline screens do — the gadgets render the
+     * same partial. Skipped when there are no rows: the empty case is a plain `collect()`, which is
+     * not the Eloquent collection an eager load runs on.
+     */
+    protected function attachInlineReplies(RecentReplies $recentReplies): void
+    {
+        if ($this->posts instanceof EloquentCollection) {
+            $recentReplies($this->posts);
+        }
     }
 }

@@ -6,6 +6,7 @@
 
 @section('content')
     @include('timeline._stylesheets')
+    @include('timeline._scripts')
     {{-- A reading page: the same OpenPNE 3 timeline shell as the home feed, without its compose box
          — nothing here says which tag a new post would carry. --}}
     <x-classic.parts id="homeAllTimeline" name="homeAllTimeline" :title="$title">
