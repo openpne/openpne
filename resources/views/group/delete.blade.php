@@ -3,8 +3,9 @@
 @section('title', __('Delete %community%'))
 
 @section('content')
-    {{-- OpenPNE 3 deleteSuccess.php's yesNo kind: a .block statement over one li per answer. Its
-         "no" was a second form; here it stays the link every other OpenPNE 4 confirm page uses. --}}
+    {{-- OpenPNE 3 deleteSuccess.php's yesNo kind (_partsYesNo.php): a .block statement over one
+         li per answer, each answer a form with a submit. Its "no" posted back to the delete URL,
+         which redirected home; this one goes home by GET. --}}
     <x-classic.parts id="deleteConfirmForm" name="yesNo" :title="__('Delete %community%')">
         <div class="block">{{ __('Delete :name? This cannot be undone.', ['name' => $group->name]) }}</div>
         <div class="operation">
@@ -12,10 +13,14 @@
                 <li>
                     <form method="POST" action="{{ route('group.delete', $group) }}">
                         @csrf
-                        <input type="submit" class="input_submit" value="{{ __('Delete %community%') }}">
+                        <input type="submit" class="input_submit" value="{{ __('Yes') }}">
                     </form>
                 </li>
-                <li><a href="{{ route('group.show', $group) }}">{{ __('Cancel') }}</a></li>
+                <li>
+                    <form method="get" action="{{ route('group.show', $group) }}">
+                        <input type="submit" class="input_submit" value="{{ __('No') }}">
+                    </form>
+                </li>
             </ul>
         </div>
     </x-classic.parts>

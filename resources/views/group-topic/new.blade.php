@@ -7,6 +7,7 @@
     <x-classic.parts id="formCommunityTopic" name="form" :title="__('Post a new %topic%')">
         <form method="POST" action="{{ route('group.topics.store', $group) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 @include('group-topic._fields')
                 @include('group-topic._image_fields')

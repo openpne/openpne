@@ -62,13 +62,13 @@ class BlockRouteParity extends RouteParity
             'add' => [
                 new ScreenElement('confirmation box', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php <div class="dparts box"><div class="block">', 'the hand-written OpenPNE 3 confirm shape: .block, deliberately not .body, so the body renders unpadded'),
                 new ScreenElement('confirmation question naming the target', L::Two, S::Ported, 'member_config.yml accessBlock.access_block (IsConfirm: false)', 'OpenPNE 3 blocked straight from the settings form, with no confirm step and no name — only the id the member typed'),
-                new ScreenElement('submit + Cancel row', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php div.operation > ul.moreInfo.button', 'the Cancel link is the OpenPNE 4 shape every confirm screen uses; OpenPNE 3 confirms carried the submit alone'),
+                new ScreenElement('submit + Cancel row', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php div.operation > ul.moreInfo.button', 'the Cancel link is the OpenPNE 4 shape its form-kind confirms use; OpenPNE 3 confirms carried the submit alone'),
             ],
             // block/remove.blade.php — same, for clearing a block
             'remove' => [
                 new ScreenElement('confirmation box', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php <div class="dparts box"><div class="block">', 'the hand-written OpenPNE 3 confirm shape: .block, deliberately not .body, so the body renders unpadded'),
                 new ScreenElement('confirmation question naming the target', L::Two, S::Ported, 'member_config.yml accessBlock.access_block (IsConfirm: false)', 'OpenPNE 3 unblocked by emptying the id\'s input and saving, with no confirm step'),
-                new ScreenElement('submit + Cancel row', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php div.operation > ul.moreInfo.button', 'the Cancel link is the OpenPNE 4 shape every confirm screen uses; OpenPNE 3 confirms carried the submit alone'),
+                new ScreenElement('submit + Cancel row', L::Two, S::Ported, 'diary/deleteConfirmSuccess.php div.operation > ul.moreInfo.button', 'the Cancel link is the OpenPNE 4 shape its form-kind confirms use; OpenPNE 3 confirms carried the submit alone'),
             ],
         ];
     }

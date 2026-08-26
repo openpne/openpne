@@ -191,7 +191,7 @@ class GroupRouteParity extends RouteParity
             // deleteSuccess.php → community/delete.blade.php
             'delete' => [
                 new ScreenElement('delete confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'deleteConfirmForm')", 'OpenPNE 4 adds the .block statement OpenPNE 3 left to the box title'),
-                new ScreenElement('negative answer as a second form', L::Three, S::Partial, '_partsYesNo.php no_form / no_url', 'a Cancel link back to the community, the shape every OpenPNE 4 confirm uses'),
+                new ScreenElement('negative answer as a second form', L::Three, S::Partial, '_partsYesNo.php no_form / no_url', 'a GET form home; OpenPNE 3 posted back to the delete URL, which redirected home'),
             ],
             // memberManageSuccess.php → community/manage.blade.php, plus the OpenPNE 4-native
             // approval queue that borrows this body id (community/pending.blade.php)
@@ -213,12 +213,12 @@ class GroupRouteParity extends RouteParity
             // removeSubAdminInput.php → community/member-action.blade.php (yesNo kind)
             'removeSubAdmin' => [
                 new ScreenElement('demote confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'removeSubAdminConfirmForm', body)"),
-                new ScreenElement('negative answer as a second form', L::Three, S::Partial, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a Cancel link back to the roster, the shape every OpenPNE 4 confirm uses'),
+                new ScreenElement('negative answer as a second form', L::Three, S::Ported, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a GET form whose submit returns where no_url pointed'),
             ],
             // dropMemberInput.php → community/member-action.blade.php (yesNo kind)
             'dropMember' => [
                 new ScreenElement('drop confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'dropMemberConfirmForm', body)"),
-                new ScreenElement('negative answer as a second form', L::Three, S::Partial, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a Cancel link back to the roster, the shape every OpenPNE 4 confirm uses'),
+                new ScreenElement('negative answer as a second form', L::Three, S::Ported, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a GET form whose submit returns where no_url pointed'),
             ],
             // changeAdminRequestInput.php → community/member-action.blade.php (form kind)
             'changeAdminRequest' => [

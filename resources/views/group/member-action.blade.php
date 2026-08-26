@@ -4,8 +4,9 @@
 
 @section('content')
     {{-- One blade for four confirmations, so the kind and id come from the controller: OpenPNE 3
-         asked the drop / demote questions with the yesNo kind (statement, then one li per answer)
-         and the appoint / take-over ones with the form kind (the question is the form's .block). --}}
+         asked the drop / demote questions with the yesNo kind (statement, then one li per answer,
+         the "no" a GET form back to the roster) and the appoint / take-over ones with the form
+         kind (the question is the form's .block). --}}
     <x-classic.parts :id="$boxId" :name="$boxKind" :title="$title">
         @if ($boxKind === 'yesNo')
             <div class="block">{{ $message }}</div>
@@ -19,7 +20,11 @@
                             <input type="submit" class="input_submit" value="{{ $submitLabel }}">
                         </form>
                     </li>
-                    <li><a href="{{ route('group.members.manage', $group) }}">{{ __('Cancel') }}</a></li>
+                    <li>
+                        <form method="get" action="{{ route('group.members.manage', $group) }}">
+                            <input type="submit" class="input_submit" value="{{ __('No') }}">
+                        </form>
+                    </li>
                 </ul>
             </div>
         @else

@@ -82,9 +82,10 @@
         <x-classic.parts id="formCommunityTopicComment" name="form" :title="__('Post a comment')">
             <form method="POST" action="{{ route('group.topics.comment.store', $topic) }}" enctype="multipart/form-data">
                 @csrf
+                <x-classic.required-notice />
                 <table>
                     <tr>
-                        <th><label for="comment_body">{{ __('Comment') }}</label></th>
+                        <th><label for="comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
                         <td>
                             <textarea id="comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
                             @error('body')<p class="error">{{ $message }}</p>@enderror
