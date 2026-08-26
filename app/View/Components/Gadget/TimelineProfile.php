@@ -3,6 +3,7 @@
 namespace App\View\Components\Gadget;
 
 use App\Features\Timeline\Queries\MemberTimeline;
+use App\Features\Timeline\Queries\RecentReplies;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
 
@@ -15,6 +16,7 @@ class TimelineProfile extends TimelineBox
     /** @param array<string, mixed> $config */
     public function __construct(
         MemberTimeline $query,
+        RecentReplies $recentReplies,
         public ?Member $subject = null,
         public array $config = [],
         public ?string $partId = null,
@@ -24,6 +26,7 @@ class TimelineProfile extends TimelineBox
         $this->posts = ($viewer !== null && $subject !== null)
             ? $query->take($viewer, $subject, self::LIMIT)
             : collect();
+        $this->attachInlineReplies($recentReplies);
     }
 
     public function render(): View

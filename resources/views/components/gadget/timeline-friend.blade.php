@@ -2,6 +2,7 @@
      timeline's server-rendered _post rows; only the wrapper id/class is kept as the custom-CSS seam.
      Like diaryMyList, the frame and post link always render — the box is never empty for a member. --}}
 @include('timeline._stylesheets')
+@include('timeline._scripts')
 <div class="dparts homeFriendTimeline"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
     <div class="partsHeading"><h3>{{ __('%Activity% of %Friend%') }}</h3></div>
     {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}

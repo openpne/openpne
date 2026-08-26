@@ -12,6 +12,7 @@ use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\MentionCandidates;
+use App\Features\Timeline\Queries\RecentReplies;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Queries\TagFeed;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
@@ -24,9 +25,12 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -35,7 +39,7 @@ class TimelineController extends Controller
 {
     use RespondsWithSurface;
 
-    public function index(Request $request, HomeFeed $query): View|InertiaResponse
+    public function index(Request $request, HomeFeed $query, RecentReplies $recentReplies): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $posts = $query($viewer);
@@ -43,7 +47,7 @@ class TimelineController extends Controller
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.index', [
                 'viewer' => $viewer,
-                'posts' => $posts,
+                'posts' => $this->withInlineReplies($posts, $recentReplies),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
@@ -52,7 +56,7 @@ class TimelineController extends Controller
         ]);
     }
 
-    public function member(Request $request, MemberTimeline $query, Member $member): View|InertiaResponse
+    public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $owner = $this->memberSubject($member);
@@ -61,7 +65,7 @@ class TimelineController extends Controller
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.member', [
                 'owner' => $owner,
-                'posts' => $posts,
+                'posts' => $this->withInlineReplies($posts, $recentReplies),
             ]),
             SurfaceResolver::MODERN => function () use ($owner, $viewer, $posts) {
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
@@ -82,7 +86,7 @@ class TimelineController extends Controller
      * query, so `#Tag` and `#ＴＡＧ` reach the same page; the normalized form is what the page shows,
      * since that is the topic the reader is actually on.
      */
-    public function tag(Request $request, string $tag, TagFeed $query): View|InertiaResponse
+    public function tag(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $normalized = HashtagParser::normalize($tag);
@@ -92,7 +96,7 @@ class TimelineController extends Controller
             SurfaceResolver::CLASSIC => fn () => view('timeline.tag', [
                 'viewer' => $viewer,
                 'tag' => $normalized,
-                'posts' => $posts,
+                'posts' => $this->withInlineReplies($posts, $recentReplies),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/tag', [
                 'viewerId' => $viewer->getKey(),
@@ -143,10 +147,7 @@ class TimelineController extends Controller
         );
 
         return $this->respondWith($request, 'timeline', [
-            SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
-                'post' => $post,
-                'viewer' => $viewer,
-            ]),
+            SurfaceResolver::CLASSIC => fn () => view('timeline.show', ['post' => $post]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
                 'post' => TimelinePostSerializer::entry($post, $viewer),
                 'replies' => array_map(fn (TimelinePost $reply): array => TimelinePostSerializer::entry($reply, $viewer), $post->replies->all()),
@@ -202,18 +203,44 @@ class TimelineController extends Controller
             ->with('status', __('Posted.'));
     }
 
-    public function storeReply(StoreReplyRequest $request, int $timelinePost, ShowTimelinePost $query, CreateReply $action): RedirectResponse
+    public function storeReply(StoreReplyRequest $request, int $timelinePost, ShowTimelinePost $query, CreateReply $action): JsonResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         // Replying requires viewing the thread; ShowTimelinePost re-centers to the root and applies
         // the same clearance/block gate, so a reply always attaches to a viewable top-level post.
         $root = $query($viewer, $timelinePost);
         abort_if($root === null, 404);
-        $action($viewer, $root, $request->validated('body'), $request->toMentions());
+        $reply = $action($viewer, $root, $request->validated('body'), $request->toMentions());
+
+        // The Classic row's inline form: the answer is the row to put where the form is, so the
+        // page never has to guess what the server made of what was typed.
+        if ($request->wantsJson()) {
+            $reply->load(RecentReplies::WITH);
+
+            return response()->json(['html' => view('timeline._reply', ['reply' => $reply])->render()], 201);
+        }
 
         return redirect()
             ->route('timeline.show', ['timelinePost' => $root->getKey()])
             ->with('status', __('Reply posted.'));
+    }
+
+    /**
+     * One root's whole reply list, as the rows the page would have drawn. Asked for when a reader
+     * opens the earlier comments a row's tail left out; the thread page is the no-JS answer, so the
+     * fragment carries no chrome and is never cached.
+     */
+    public function replies(int $timelinePost, ShowTimelinePost $query): Response
+    {
+        $post = $query($this->viewer(), $timelinePost);
+        // A reply's id addresses no list of its own: ShowTimelinePost would re-center it to the
+        // root, and answering with the root's list would leak which thread that id belongs to.
+        abort_if($post === null || $post->getKey() !== $timelinePost, 404);
+        $post->load(['replies.member.avatar.file', 'replies.mentions', 'replies.tags', 'replies.linkCard.image']);
+
+        return response()
+            ->view('timeline._replies', ['replies' => $post->replies])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function showDelete(Request $request, TimelinePost $timelinePost): View|RedirectResponse
@@ -246,6 +273,22 @@ class TimelineController extends Controller
         return redirect()
             ->route('timeline.member', ['member' => $viewer->getKey()])
             ->with('status', __('Post deleted.'));
+    }
+
+    /**
+     * Attach each row's inline reply layer. Classic only — Modern's feed carries a reply count, not
+     * the replies — so it hangs off the surface closure rather than the feed queries.
+     *
+     * @param  LengthAwarePaginator<int, TimelinePost>  $posts
+     * @return LengthAwarePaginator<int, TimelinePost>
+     */
+    private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
+    {
+        // items(), not getCollection(): only the former is on the contract the feed queries return.
+        // Both hand back the same model instances, so the rows the view walks gain the relation.
+        $recentReplies(new EloquentCollection($posts->items()));
+
+        return $posts;
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */

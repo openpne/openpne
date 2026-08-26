@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Timeline\Classic;
 
+use App\Features\Timeline\Queries\RecentReplies;
 use App\Models\Gadget;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -88,6 +89,97 @@ class TimelineRowParityTest extends TestCase
                 '<div class="timeline-post" data-timeline-id="'.$post->getKey().'">',
                 'id="timeline-reply-form"',
             ], false);
+    }
+
+    public function test_the_row_carries_the_op3_inline_comment_block(): void
+    {
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        TimelinePost::factory()->replyTo($post)->create(['member_id' => $member->getKey(), 'body' => 'An inline answer']);
+
+        $response = $this->actingAs($member)->get(route('timeline.index'))->assertOk();
+
+        // timelineTemplate's comment block, in its order: the reply rows, then the form the script
+        // reveals, then OpenPNE 3's loader and error seams.
+        $response->assertSeeInOrder([
+            '<div class="timeline-post-comments" id="commentlist-'.$post->getKey().'">',
+            '<div class="timeline-post-comment" data-timeline-id=',
+            'An inline answer',
+            '<form method="POST" action="'.route('timeline.reply.store', $post).'"',
+            'id="timeline-post-comment-form-'.$post->getKey().'" class="timeline-post-comment-form"',
+            'id="comment-textarea-'.$post->getKey().'"',
+            'id="timeline-post-comment-form-loader-'.$post->getKey().'"',
+            'id="timeline-post-comment-form-error-'.$post->getKey().'"',
+        ], false);
+        // The form posts for real, and the script that enhances it loads once from the page.
+        $response->assertSee('data-timeline-reply', false);
+        $response->assertSee('js/classic-timeline-replies.js', false);
+    }
+
+    public function test_the_load_more_control_renders_only_past_the_tail_and_carries_its_url(): void
+    {
+        $member = Member::factory()->create();
+        $short = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        TimelinePost::factory()->count(RecentReplies::LIMIT)->replyTo($short)->create(['member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get(route('timeline.index'))->assertOk()
+            ->assertDontSee('timeline-comment-loadmore', false);
+
+        TimelinePost::factory()->replyTo($short)->create(['member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get(route('timeline.index'))->assertOk()
+            ->assertSee('id="timeline-comment-loadmore-'.$short->getKey().'"', false)
+            ->assertSee('data-replies-url="'.route('timeline.replies', $short).'"', false)
+            ->assertSee('id="timeline-comment-loader-'.$short->getKey().'"', false)
+            // OpenPNE 3 left it a bare anchor; ours goes to the thread, which is the same list.
+            ->assertSee('class="timeline-comment-loadmore" href="'.route('timeline.show', $short).'"', false);
+    }
+
+    public function test_the_thread_row_holds_the_whole_thread_and_no_inline_form(): void
+    {
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        foreach (range(1, RecentReplies::LIMIT + 2) as $i) {
+            TimelinePost::factory()->replyTo($post)->create(['member_id' => $member->getKey(), 'body' => "Answer {$i}"]);
+        }
+
+        $response = $this->actingAs($member)->get(route('timeline.show', $post))->assertOk();
+
+        // Every reply, including the ones a feed row's tail leaves out — so there is nothing to
+        // load more of, and the page's own reply form is the one place to write.
+        $this->assertSame(
+            RecentReplies::LIMIT + 2,
+            substr_count($response->getContent(), '<div class="timeline-post-comment" data-timeline-id=')
+        );
+        $response->assertSee('Answer 1');
+        $response->assertDontSee('data-timeline-reply', false);
+        $response->assertDontSee('timeline-comment-loadmore', false);
+        // The OpenPNE-4-only list this replaced is gone.
+        $response->assertDontSee('<ul class="timeline-comment-list">', false);
+    }
+
+    public function test_a_reply_row_follows_the_op3_comment_template(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        // Someone else's thread, so the only delete control on the page is the viewer's own reply.
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
+        $own = TimelinePost::factory()->replyTo($post)->create(['member_id' => $viewer->getKey()]);
+        TimelinePost::factory()->replyTo($post)->create(['member_id' => $author->getKey()]);
+
+        $response = $this->actingAs($viewer)->get(route('timeline.show', $post))->assertOk();
+
+        // timelineCommentTemplate: a 36px avatar block, then the name and body inline, then the
+        // control line — delete on the viewer's own reply only.
+        $response->assertSeeInOrder([
+            '<div class="timeline-post-comment-member-image">',
+            'width="36" height="36"',
+            '<div class="timeline-post-comment-content">',
+            '<div class="timeline-post-comment-name-and-body">',
+            '<span class="timeline-post-comment-body">',
+            '<div class="timeline-post-comment-control">',
+        ], false);
+        $response->assertSee('href="'.route('timeline.delete.show', $own).'"', false);
+        $this->assertSame(1, substr_count($response->getContent(), 'timeline-post-delete-confirm-link'));
     }
 
     public function test_the_profile_gadget_pushes_css_only_when_it_renders(): void

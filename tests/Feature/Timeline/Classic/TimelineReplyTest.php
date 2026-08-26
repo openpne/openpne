@@ -93,6 +93,92 @@ class TimelineReplyTest extends TestCase
             ->assertSee('name="mentions[0][offset]" value="136"', false);
     }
 
+    public function test_an_inline_reply_answers_with_the_row_to_insert(): void
+    {
+        [$author, $viewer] = Member::factory()->count(2)->create()->all();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+
+        $response = $this->actingAs($viewer)
+            ->postJson("/timeline/{$post->getKey()}/reply", ['body' => 'Answered in place'])
+            ->assertStatus(201);
+
+        $reply = TimelinePost::query()->where('in_reply_to_id', $post->getKey())->sole();
+        $html = $response->json('html');
+        $this->assertStringContainsString('<div class="timeline-post-comment" data-timeline-id="'.$reply->getKey().'"', $html);
+        $this->assertStringContainsString('Answered in place', $html);
+        // The row the fragment would have drawn, and nothing that only a page may ship.
+        $this->assertStringNotContainsString('<script', $html);
+    }
+
+    public function test_a_refused_inline_reply_answers_with_the_validator_line(): void
+    {
+        $author = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+
+        $this->actingAs($author)
+            ->postJson("/timeline/{$post->getKey()}/reply", ['body' => str_repeat('あ', 141)])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('body');
+        $this->actingAs($author)
+            ->postJson("/timeline/{$post->getKey()}/reply", ['body' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('body');
+
+        $this->assertDatabaseCount('timeline_posts', 1);
+    }
+
+    public function test_the_inline_reply_inherits_the_posting_rate_limit(): void
+    {
+        // Lower the per-member limit; keep the per-IP limb loose so the member cap is what trips.
+        config(['openpne.throttle.posting' => 1, 'openpne.throttle.posting_ip' => 1000]);
+        $author = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+
+        $this->actingAs($author)->postJson("/timeline/{$post->getKey()}/reply", ['body' => 'One'])->assertStatus(201);
+        $this->actingAs($author)->postJson("/timeline/{$post->getKey()}/reply", ['body' => 'Two'])->assertStatus(429);
+    }
+
+    public function test_the_replies_fragment_serves_the_thread_uncached_and_bare(): void
+    {
+        $author = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+        TimelinePost::factory()->replyTo($post)->create(['member_id' => $author->getKey(), 'body' => 'The earlier one']);
+
+        $response = $this->actingAs($author)->get(route('timeline.replies', $post))->assertOk();
+
+        $response->assertHeader('Cache-Control', 'no-store, private'); // Symfony normalizes the order
+        // The script refuses anything that is not this: a session that expired answers with a page.
+        $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+        $response->assertSee('The earlier one');
+        $response->assertSee('<div class="timeline-post-comment" data-timeline-id=', false);
+        // Rows only: the resident scripts live on the page, and insertAdjacentHTML would not run
+        // one that arrived here anyway.
+        $response->assertDontSee('<script', false);
+        $response->assertDontSee('<dialog', false);
+        $response->assertDontSee('timeline-post-comment-form', false);
+    }
+
+    public function test_the_replies_fragment_is_gated_like_the_thread_page(): void
+    {
+        [$author, $stranger] = Member::factory()->count(2)->create()->all();
+        $post = TimelinePost::factory()->private()->create(['member_id' => $author->getKey()]);
+
+        $this->get(route('timeline.replies', $post))->assertRedirect('/login');
+        $this->actingAs($stranger)->get(route('timeline.replies', $post))->assertNotFound();
+        $this->actingAs($author)->get(route('timeline.replies', $post))->assertOk();
+    }
+
+    public function test_the_replies_fragment_answers_for_a_root_only(): void
+    {
+        // A reply's id would re-center to its root; answering there would say which thread it is on.
+        $author = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+        $reply = TimelinePost::factory()->replyTo($post)->create(['member_id' => $author->getKey()]);
+
+        $this->actingAs($author)->get(route('timeline.replies', $reply))->assertNotFound();
+        $this->actingAs($author)->get('/timeline/'.($post->getKey() + 1000).'/replies')->assertNotFound();
+    }
+
     public function test_reply_permalink_re_centers_to_the_thread_root(): void
     {
         // OpenPNE 3 opens the thread at the top-level post; a reply's permalink redirects there.

@@ -6,6 +6,7 @@
 
 @section('content')
     @include('timeline._stylesheets')
+    @include('timeline._scripts')
     {{-- OpenPNE 3 streams posts client-side from the API; the Classic adapter renders them
          server-side with a pager. It served this feed only as the homeAllTimeline gadget, whose id
          carries a gadget suffix; the standalone page keeps the bare kind name as its id. --}}
