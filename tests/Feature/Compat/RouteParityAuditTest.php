@@ -96,7 +96,7 @@ class RouteParityAuditTest extends TestCase
             $getReachable = [];
             foreach ($parity->maps() as $map) {
                 if ($map->op3Route === null
-                    || ! $inventory->isUrlCompatible($parity->module(), $map->op3Route)) {
+                    || ! $inventory->isUrlCompatible($parity->openpne3Module(), $map->op3Route)) {
                     continue;
                 }
 
@@ -146,7 +146,7 @@ class RouteParityAuditTest extends TestCase
                     continue; // no named OpenPNE 3 route (fallback-reached or OpenPNE 4-native)
                 }
 
-                $this->assertSame($inventory->url($parity->module(), $map->op3Route), $map->op3Url,
+                $this->assertSame($inventory->url($parity->openpne3Module(), $map->op3Route), $map->op3Url,
                     "{$parity->module()}: route `{$map->op3Route}` declares {$map->op3Url} but the inventory differs");
             }
         }
