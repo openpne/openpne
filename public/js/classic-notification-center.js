@@ -168,4 +168,55 @@
             trigger.focus();
         }
     });
+
+    /**
+     * Redraw the badges from what the server counts now. A badge is absent at zero, as the server
+     * draws it, so a count creates or removes the span rather than writing "0".
+     */
+    function applyBadges(badges) {
+        var container = document.getElementById('notificationCenter');
+        Object.keys(badges).forEach(function (id) {
+            var badge = document.getElementById(id);
+            var count = badges[id];
+            if (count > 0) {
+                if (!badge && container) {
+                    badge = document.createElement('span');
+                    badge.id = id;
+                    container.appendChild(badge);
+                }
+                if (badge) badge.textContent = String(count);
+            } else if (badge && badge.parentNode) {
+                badge.parentNode.removeChild(badge);
+            }
+        });
+    }
+
+    // A page restored from the browser's back/forward cache shows the counts it left with; the
+    // rows it fetched are as old. Ask again, and let the panel fetch again when next opened.
+    window.addEventListener('pageshow', function (event) {
+        var url = trigger.getAttribute('data-notification-center-counts-url');
+        if (!event.persisted || !url) {
+            return;
+        }
+        loaded = false;
+        close();
+        fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                var type = response.headers.get('Content-Type') || '';
+                if (!response.ok || response.redirected || type.indexOf('application/json') !== 0) {
+                    throw new Error('not the counts');
+                }
+
+                return response.json();
+            })
+            .then(function (data) {
+                if (data && data.badges) applyBadges(data.badges);
+            })
+            .catch(function () {
+                // The badges stay as they were: the next full load draws them fresh.
+            });
+    });
 })();
