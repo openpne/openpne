@@ -37,7 +37,7 @@ class FriendRouteParity extends RouteParity
             // listSuccess.php: a roster as one photoTable parts; listError.php when it is empty.
             'list' => [
                 new ScreenElement('photoTable band, id friendList', L::One, S::Ported, "listSuccess.php op_include_parts('photoTable', 'friendList')"),
-                new ScreenElement('band title', L::Three, S::Partial, "listSuccess.php title __('%friend% List')", "OpenPNE 4 prints '%Friends%' on your own roster and \":name's %friends%\" on another member's, where OpenPNE 3 printed one title for both"),
+                new ScreenElement('band title', L::Three, S::Partial, "listSuccess.php title '%friend% List'", "OpenPNE 4 prints '%Friends%' on your own roster and \":name's %friends%\" on another member's, where OpenPNE 3 printed one title for both"),
                 new ScreenElement('5-column bands: 76×76 photo row then name row, short rows padded with empty td', L::One, S::Ported, '_partsPhotoTable.php col=5, tr.photo / tr.text', 'x-classic.photo-table'),
                 new ScreenElement('both cells link to the member profile', L::One, S::Ported, "_partsPhotoTable.php op_link_to_member(..., '@obj_member_profile') under use_op_link_to_member"),
                 new ScreenElement('name shown as "name (%friend% count)"', L::Two, S::Ported, "Member::getNameAndCount('%s (%d)')", "withCount('friendships'); OpenPNE 3 drops the count when enable_friend_link is off, where OpenPNE 4 removes the screen with the %friend% unit"),

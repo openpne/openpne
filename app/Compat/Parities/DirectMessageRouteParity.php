@@ -156,7 +156,7 @@ class DirectMessageRouteParity extends RouteParity
             // deleteListConfirmSuccess.php renders from the list action, so it is inventoried there.
             'deleteConfirm' => [
                 new ScreenElement('delete confirmation form', L::One, S::Ported, '$form->renderFormTag(url_for($deleteButton)) + Delete submit', "POST message.trash.purge; purge revokes the viewer's copy only"),
-                new ScreenElement('heading + question paragraph', L::Two, S::Ported, "__('Delete this message') / __('Do you delete this message?')"),
+                new ScreenElement('heading + question paragraph', L::Two, S::Ported, "'Delete this message' / 'Do you delete this message?'"),
                 new ScreenElement('formMessageDelete box', L::Two, S::Ported, '<div id="formMessageDelete" class="dparts box">'),
                 new ScreenElement('layoutC single column', L::Two, S::Ported, "decorate_with('layoutC')", 'no box sidemenu, unlike the list and show screens'),
                 new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Cancel link to the trash box instead of the JavaScript line box'),
