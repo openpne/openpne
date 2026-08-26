@@ -84,7 +84,7 @@ class GroupTopicRoutesTest extends TestCase
 
         // One dl per topic: the last-activity datetime in the dt, the "name(count)" link in the dd.
         $response->assertSee('<dt>2026年06月04日 13:44</dt>', false);
-        $response->assertSee('<dd><a href="'.route('group.topics.show', $topic).'">A thread(0)</a> (Tess)</dd>', false);
+        $response->assertSee('<dd><a href="'.route('group.topics.show', $topic).'">A thread(0)</a></dd>', false);
         // The pager brackets the list, as op_include_pager_navigation does above and below it.
         $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
     }

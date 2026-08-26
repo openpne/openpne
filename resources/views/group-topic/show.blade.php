@@ -3,28 +3,44 @@
 @section('title', $topic->name)
 
 @section('content')
-    {{-- OpenPNE 3 showSuccess.php hand-writes the article as a topicDetailBox with no id, so the
-         kind is restored and OpenPNE 4's id kept. --}}
-    <x-classic.parts id="communityTopic_show" name="topicDetailBox" :title="$topic->name">
-        <p class="topicMeta">
-            @if ($topic->member)
-                <a href="{{ route('member.profile.show', $topic->member) }}">{{ $topic->member->name }}</a><x-classic.ai-mark :is-ai="$topic->member->isAiAccount()" />
-            @else
-                {{ __('Withdrawn member') }}
-            @endif
-            &mdash; {{ \App\Support\LocalizedDate::dateTime($topic->created_at) }}
-        </p>
-        <div class="topicBody">
-            @include('group-topic._images', ['images' => $topic->images])
-            <x-user-text :value="$topic->body" :format="$topic->format" />
-            <x-link-card :record="$topic" />
-        </div>
-
+    {{-- OpenPNE 3 showSuccess.php hand-writes the article as a topicDetailBox with no id (the id is
+         OpenPNE 4's): one dl whose dt is the stacked datetime and whose dd holds the title, name
+         and body blocks, then the Edit button; deletion is reached from the edit screen. --}}
+    <x-classic.parts id="communityTopic_show" name="topicDetailBox" :title="'['.$topic->group->name.'] '.__('%Topic%')">
+        <dl>
+            <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($topic->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
+            <dd>
+                <div class="title">
+                    <p>{{ $topic->name }}</p>
+                </div>
+                <div class="name">
+                    <p>
+                        @if ($topic->member)
+                            <a href="{{ route('member.profile.show', $topic->member) }}">{{ $topic->member->name }}</a><x-classic.ai-mark :is-ai="$topic->member->isAiAccount()" />
+                        @else
+                            {{ __('Withdrawn member') }}
+                        @endif
+                    </p>
+                </div>
+                <div class="body">
+                    @include('group-topic._images', ['images' => $topic->images])
+                    @if ($topic->format === \App\Support\BodyFormat::Markdown)
+                        <x-user-text :value="$topic->body" :format="$topic->format" />
+                    @else
+                        <p class="text"><x-user-text :value="$topic->body" :format="$topic->format" /></p>
+                    @endif
+                    <x-link-card :record="$topic" />
+                </div>
+            </dd>
+        </dl>
         @if ($canEdit)
-            <p>
-                <a href="{{ route('group.topics.edit', $topic) }}">{{ __('Edit') }}</a>
-                <a href="{{ route('group.topics.delete.show', $topic) }}">{{ __('Delete') }}</a>
-            </p>
+            <div class="operation">
+                <form action="{{ route('group.topics.edit', $topic) }}" method="get">
+                    <ul class="moreInfo button">
+                        <li><input class="input_submit" type="submit" value="{{ __('Edit') }}"></li>
+                    </ul>
+                </form>
+            </div>
         @endif
     </x-classic.parts>
 
@@ -112,6 +128,6 @@
 
     {{-- OpenPNE 3 closes the page with this line box, linking to the community top page. --}}
     <x-classic.parts id="linkLine" name="line">
-        <a href="{{ route('group.topics.index', $topic->group) }}">{{ $topic->group->name }}</a>
+        <a href="{{ route('group.show', $topic->group) }}">[{{ $topic->group->name }}] {{ __('%Community% Top Page') }}</a>
     </x-classic.parts>
 @endsection
