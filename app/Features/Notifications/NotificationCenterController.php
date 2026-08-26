@@ -35,6 +35,20 @@ class NotificationCenterController extends Controller
             ->header('Cache-Control', 'private, no-store');
     }
 
+    /**
+     * The header badges as the page would draw them now, keyed by badge id: what the script redraws
+     * when a page comes back from the browser's cache with counts from before it left.
+     */
+    public function counts(NotificationCenterCounts $counts): JsonResponse
+    {
+        $badges = [];
+        foreach ($counts->for($this->viewer()) as $category => $count) {
+            $badges[NotificationCenterCategory::from($category)->badgeId()] = $count;
+        }
+
+        return response()->json(['badges' => $badges])->header('Cache-Control', 'private, no-store');
+    }
+
     public function acceptFriend(string $notification, AcceptFriendRequest $accept): JsonResponse
     {
         return $this->decide($notification, fn (Member $viewer, Member $requester) => $accept($viewer, $requester),

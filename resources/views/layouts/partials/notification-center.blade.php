@@ -33,7 +33,8 @@
     <div id="notificationCenter">
         <a href="{{ route('notifications.index') }}" class="ncbuttonLink" aria-label="{{ __('Notification Center') }}"
            aria-expanded="false" aria-controls="notificationCenterDetail"
-           data-notification-center-url="{{ route('notifications.center') }}">
+           data-notification-center-url="{{ route('notifications.center') }}"
+           data-notification-center-counts-url="{{ route('notifications.center.counts') }}">
             <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="">
         </a>
         <div id="notificationCenterDetail">

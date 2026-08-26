@@ -56,7 +56,8 @@ class NotificationFeedListTest extends TestCase
     /**
      * Opening a row marks it read and leaves, so the page the browser keeps for back is stale the
      * moment it is kept. The feed loads the restore refresh for that; the rest of Classic does not,
-     * since what that script costs a screen is the instant back the cache was giving it.
+     * since what that script costs a screen is the instant back the cache was giving it — there the
+     * header re-asks the badge counts instead (classic-notification-center.js).
      */
     public function test_only_the_feed_refreshes_itself_after_a_back_forward_restore(): void
     {

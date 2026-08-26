@@ -430,6 +430,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // leaving the page.
     Route::prefix('notifications/center')->controller(NotificationCenterController::class)->group(function () {
         Route::get('/', 'panel')->name('notifications.center');
+        Route::get('/counts', 'counts')->name('notifications.center.counts');
         // Friend decisions taken from the panel: friend-owned endpoints outside the /friend prefix,
         // so they carry the feature gate individually (the panel itself is not friend-owned).
         Route::post('/{notification}/friend-accept', 'acceptFriend')->whereUuid('notification')

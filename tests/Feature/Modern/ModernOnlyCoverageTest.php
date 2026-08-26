@@ -50,7 +50,7 @@ class ModernOnlyCoverageTest extends TestCase
      * nothing here for modern_only to get wrong.
      */
     private const FRAGMENTS = [
-        'notifications.center',
+        'notifications.center', 'notifications.center.counts',
         'unread.counts',
         'timeline.mention_candidates',
         'timeline.index.rows', 'timeline.member.rows', 'timeline.tag.rows',
