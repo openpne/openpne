@@ -10,6 +10,9 @@
 @php($thread ??= false)
 <div class="timeline-post" data-timeline-id="{{ $post->getKey() }}">
     <a name="timeline-{{ $post->getKey() }}"></a>
+    @if ($post->member->is(auth()->user()))
+        @include('timeline._delete-dialog', ['post' => $post, 'ajaxDelete' => ! $thread])
+    @endif
     <div class="timeline-post-member-image">
         <a href="{{ route('member.profile.show', $post->member) }}" title="{{ $post->member->name }}"><x-classic.image :file="$post->member->avatar?->file" :size="48" :alt="$post->member->name" /></a>
     </div>
@@ -21,7 +24,8 @@
         <x-link-card :record="$post" />
         @foreach ($post->images as $image)
             @if ($image->file)
-                <img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
+                {{-- OpenPNE 3's lightbox link around the thumbnail; the href is the full-size file. --}}
+                <a href="{{ $image->file->url() }}" rel="lightbox"><div><img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt=""></div></a>
             @endif
         @endforeach
         <div class="timeline-post-control">
@@ -35,9 +39,9 @@
                  is what admits replying to it. --}}
             <a class="timeline-comment-link" href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
             @if ($post->member->is(auth()->user()))
-                | <a class="timeline-post-delete-confirm-link" href="{{ route('timeline.delete.show', $post) }}">{{ __('Delete') }}</a>
+                | <a class="timeline-post-delete-confirm-link" href="{{ route('timeline.delete.show', $post) }}" data-dialog="timeline-post-delete-confirm-{{ $post->getKey() }}">{{ __('Delete') }}</a>
             @endif
-            | <a href="{{ route('timeline.show', $post) }}"><span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($post->created_at) }}</span></a>
+            | <a href="{{ route('timeline.show', $post) }}"><x-timeline-timestamp :date="$post->created_at" /></a>
 
             @if (! $thread && $post->replies_count > \App\Features\Timeline\Queries\RecentReplies::LIMIT)
                 <a id="timeline-comment-loadmore-{{ $post->getKey() }}" class="timeline-comment-loadmore" href="{{ route('timeline.show', $post) }}"

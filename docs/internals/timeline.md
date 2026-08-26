@@ -171,6 +171,23 @@ timelineFriend has no page of its own to fetch from). Paging is by offset where 
 box (its standalone page without the script); a site whose home draws no timeline gadget links to no
 Classic way to post, as OpenPNE 3 linked none — the standalone page stays routable.
 
+Three more things the row does in place, each a working link without the script:
+
+- **Delete.** An own row carries OpenPNE 3's confirm block in a `<dialog>`; confirmed, it posts as
+  JSON (`POST timeline.delete`, `wantsJson()` → `{ok: true}`) and every element drawn with that
+  `data-timeline-id` leaves the page — two home gadgets can both hold it. The thread root on its own
+  page posts as the page, since the page is what goes. A fetch that got no answer at all falls back
+  to the plain submit; a refusal stays in the dialog, in words.
+- **Timeago.** The stamp is `span.timestamp.timeago` with the absolute datetime as text and title
+  and `data-datetime` (ISO 8601) for [`classic-timeago.js`](../../public/js/classic-timeago.js) —
+  see [datetime](datetime.md#how-long-ago) for why this surface keeps OpenPNE 3's ladder.
+- **Lightbox.** An attached thumbnail sits in OpenPNE 3's `rel="lightbox"` link to the full-size
+  file (FilePolicy-gated); the page's one `dialog[data-timeline-lightbox]` shows it.
+
+Every script is resident from `timeline/_scripts.blade.php` on the screens and the gadget wrappers;
+a fragment never carries one, and what a fragment inserts announces itself with the
+`classic-timeline:inserted` event the resident handlers listen for.
+
 Both are gated exactly as the thread page is (`ShowTimelinePost`), and the fragment answers for a
 **root id only** — a reply's id would re-center, and answering there would say which thread it is on.
 

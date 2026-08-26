@@ -4,3 +4,60 @@
 [data-timeline-loadmore-box][hidden] {
     display: none;
 }
+
+/* OpenPNE 3 confirmed a deletion in a colorbox over timelineTemplate's hidden block; here the same
+   block sits in a <dialog>, so the vendored display:none lifts only while the dialog is open. */
+dialog.timeline-post-delete-dialog {
+    width: 610px;
+    max-width: 90vw;
+    padding: 0;
+    border: 1px solid #ccc;
+}
+
+dialog.timeline-post-delete-dialog[open] > .timeline-post-delete-confirm {
+    display: block;
+}
+
+dialog.timeline-post-delete-dialog .timeline-post-delete,
+dialog.timeline-post-delete-dialog .timeline-post-delete-loading {
+    text-align: center;
+}
+
+dialog.timeline-post-delete-dialog .timeline-post-delete form {
+    display: inline-block;
+    margin: 0 4px;
+}
+
+.timeline-post-delete-loading[hidden],
+.timeline-post-delete-error:empty {
+    display: none;
+}
+
+.timeline-post-delete-error {
+    padding: 5px;
+    color: #e00;
+    text-align: center;
+}
+
+dialog.timeline-post-delete-dialog::backdrop,
+dialog.timeline-lightbox::backdrop {
+    background: rgba(0, 0, 0, .8);
+}
+
+/* The attached-image lightbox: one dialog per page, the picture at the size the viewport allows. */
+dialog.timeline-lightbox {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+dialog.timeline-lightbox img {
+    display: block;
+    max-width: 90vw;
+    max-height: 85vh;
+}
+
+dialog.timeline-lightbox form {
+    text-align: center;
+    margin-top: 8px;
+}

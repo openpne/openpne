@@ -86,6 +86,15 @@ class TimelineComposeTest extends TestCase
 
         $this->assertSame(2, substr_count($html, 'data-timeline-reply'));
         $this->assertSame(1, substr_count($html, 'js/classic-timeline-replies.js'));
+        $this->assertSame(1, substr_count($html, 'js/classic-timeago.js'));
+        $this->assertSame(1, substr_count($html, 'js/classic-timeline-dialogs.js'));
+        $this->assertSame(1, substr_count($html, 'id="classic-timeago-strings"'));
+        // Every rung has its words, or the script would leave that rung's stamp absolute for good.
+        preg_match('#<script type="application/json" id="classic-timeago-strings">(.*?)</script>#s', $html, $m);
+        $strings = json_decode($m[1], true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame(['minute', 'minutes', 'hour', 'hours', 'day', 'days', 'month', 'months', 'year', 'years'], array_keys($strings));
+        $this->assertSame([], array_filter($strings, fn (string $words): bool => $words === ''));
+        $this->assertSame(1, substr_count($html, 'data-timeline-lightbox'));
     }
 
     public function test_the_home_gadgets_share_one_mention_script(): void

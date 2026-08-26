@@ -249,6 +249,13 @@ the HTML/CSS hooks are present and a server-rendered or lightweight alternative
 keeps existing customizations working, the difference is acceptable and recorded
 as a gap (below).
 
+Where Classic does ship a script of its own — the notification center, the
+timeline's inline replies, load-more, timeago and dialogs — it follows one rule:
+every control is a working link or form first, the script keeps the reader on
+the page, lists arrive as HTML fragments and mutations answer JSON, and a
+fragment carries no script. The timeline's contracts are in
+[timeline](timeline.md#classic-inline-replies).
+
 ## Design-customization compatibility
 
 OpenPNE 3 admin design customizations are reproduced in Classic as far as

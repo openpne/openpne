@@ -9,7 +9,9 @@ use App\Models\Gadget;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\TimelinePost;
+use App\Models\TimelinePostImage;
 use App\Services\GadgetService;
+use App\Support\LocalizedDate;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -193,6 +195,52 @@ class TimelineRowParityTest extends TestCase
         $this->assertSame(1, preg_match('#/cache/img/\w+/(w\d+_h\d+_sq)/#', $response->getContent(), $m));
         $this->assertSame('w48_h48_sq', $m[1]);
         $this->assertNotNull(ImageTransform::fromGeometry($m[1]));
+    }
+
+    public function test_own_rows_carry_the_delete_dialog_and_only_the_thread_root_posts_as_a_page(): void
+    {
+        $viewer = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $viewer->getKey()]);
+        $reply = TimelinePost::factory()->replyTo($post)->create(['member_id' => $viewer->getKey()]);
+
+        $feed = $this->actingAs($viewer)->get(route('timeline.index'))->assertOk();
+        $feed->assertSee('data-dialog="timeline-post-delete-confirm-'.$post->getKey().'"', false);
+        $feed->assertSee('<dialog class="timeline-post-delete-dialog" id="timeline-post-delete-confirm-'.$post->getKey().'"', false);
+        $feed->assertSee('<dialog class="timeline-post-delete-dialog" id="timeline-post-delete-confirm-'.$reply->getKey().'"', false);
+        // The feed row and its reply both leave the page on the JSON answer.
+        $this->assertSame(2, substr_count($feed->getContent(), ' data-timeline-delete '));
+
+        // On its own page the thread root posts as the page: the page is what goes.
+        $show = $this->actingAs($viewer)->get(route('timeline.show', $post))->assertOk();
+        $show->assertSee('id="timeline-post-delete-confirm-'.$post->getKey().'"', false);
+        $this->assertSame(1, substr_count($show->getContent(), ' data-timeline-delete '));
+        $this->assertSame(1, preg_match('#id="timeline-post-delete-confirm-'.$reply->getKey().'".*?data-timeline-delete#s', $show->getContent()));
+        $this->assertSame(0, preg_match('#action="'.preg_quote(route('timeline.delete', $post), '#').'" data-timeline-delete#', $show->getContent()));
+
+        // Someone else's row carries neither the link nor the dialog.
+        $other = Member::factory()->create();
+        $this->actingAs($other)->get(route('timeline.index'))->assertOk()
+            ->assertDontSee('timeline-post-delete-dialog', false);
+    }
+
+    public function test_the_timestamp_carries_the_machine_value_and_the_words_it_shows(): void
+    {
+        $viewer = Member::factory()->create(['locale' => 'ja']);
+        $post = TimelinePost::factory()->create(['member_id' => $viewer->getKey(), 'created_at' => '2026-06-04 13:44:00']);
+
+        $absolute = LocalizedDate::dateTime($post->created_at);
+        $this->actingAs($viewer)->get(route('timeline.index'))->assertOk()
+            ->assertSee('<span class="timestamp timeago" title="'.$absolute.'" data-datetime="'.$post->created_at->toIso8601String().'">'.$absolute.'</span>', false);
+    }
+
+    public function test_an_attached_image_sits_in_the_lightbox_link_to_its_file(): void
+    {
+        $viewer = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $viewer->getKey()]);
+        $image = TimelinePostImage::factory()->create(['timeline_post_id' => $post->getKey()]);
+
+        $this->actingAs($viewer)->get(route('timeline.index'))->assertOk()
+            ->assertSee('<a href="'.$image->file->url().'" rel="lightbox"><div><img class="timeline-post-image" src="'.$image->file->thumbnailUrl(120, 120, square: true).'" alt=""></div></a>', false);
     }
 
     public function test_the_profile_gadget_pushes_css_only_when_it_renders(): void

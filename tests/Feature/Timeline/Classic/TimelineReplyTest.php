@@ -155,8 +155,24 @@ class TimelineReplyTest extends TestCase
         // Rows only: the resident scripts live on the page, and insertAdjacentHTML would not run
         // one that arrived here anyway.
         $response->assertDontSee('<script', false);
-        $response->assertDontSee('<dialog', false);
+        $response->assertDontSee('data-timeline-lightbox', false); // the page's own dialog; a row's delete dialog travels with the row
         $response->assertDontSee('timeline-post-comment-form', false);
+    }
+
+    public function test_a_json_delete_answers_ok_and_uncached(): void
+    {
+        $author = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
+        $reply = TimelinePost::factory()->replyTo($post)->create(['member_id' => $author->getKey()]);
+
+        $this->actingAs($author)->postJson(route('timeline.delete', $reply))
+            ->assertOk()
+            ->assertExactJson(['ok' => true])
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->assertDatabaseMissing('timeline_posts', ['id' => $reply->getKey()]);
+
+        $stranger = Member::factory()->create();
+        $this->actingAs($stranger)->postJson(route('timeline.delete', $post))->assertNotFound();
     }
 
     public function test_the_replies_fragment_is_gated_like_the_thread_page(): void
