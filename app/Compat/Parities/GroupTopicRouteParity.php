@@ -109,7 +109,7 @@ class GroupTopicRouteParity extends RouteParity
             'new' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput'),
                 new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
-                new ScreenElement('image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm, ul#community_topic_photo_N', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row inside a ul#community_topic_photo_N'),
+                new ScreenElement('image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm, ul#community_topic_photo_N', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_topic_photo_N'),
                 new ScreenElement('post button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
             ],
@@ -117,8 +117,8 @@ class GroupTopicRouteParity extends RouteParity
             'edit' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput'),
                 new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
-                new ScreenElement('existing image edit / delete', L::Two, S::Partial, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'a current-images list with remove_images[] checkboxes; OpenPNE 3 let each slot be replaced in place'),
-                new ScreenElement('new image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row'),
+                new ScreenElement('existing image edit / delete', L::Two, S::Partial, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows its photo and the remove checkbox, keyed by the slot number; OpenPNE 3 also swapped the photo in place from the same row, here that is a removal now and an upload into the freed slot'),
+                new ScreenElement('new image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_topic_photo_N'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('delete-topic box', L::Two, S::Ported, "op_include_parts('buttonBox', 'toDelete')", 'GET form to the delete confirm page'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
