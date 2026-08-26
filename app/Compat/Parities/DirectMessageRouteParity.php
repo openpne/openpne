@@ -110,7 +110,7 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('draft box: subject opens the edit form', L::One, S::Ported, "\$detail_url = 'message/edit?id='.\$message->getId()", 'a draft has no show page: the trash/receive/send show routes resolve no draft'),
                 new ScreenElement('draft box: unaddressed draft row is unlinked', L::Two, S::Partial, "if (\$messageType == 'draft' && !\$sender->getId()): echo \$detail_title", 'OpenPNE 4 links every draft row; its edit form then opens with no recipient row and refuses the send'),
                 new ScreenElement('draft box: send from the edit form', L::One, S::Ported, "executeEdit setTemplate('sendToFriend') + SendMessageForm Send", 'message.draft.update action=send materializes the receipt and clears draft_recipient_id'),
-                new ScreenElement('draft box: save-as-draft submit', L::Three, S::Ported, '_sendDraftButton.php input name="is_draft"', 'no pc template includes this partial (only mobile sendToFriendInput renders it); OpenPNE 4 puts it on the draft edit form as action=draft'),
+                new ScreenElement('draft box: save-as-draft submit', L::Three, S::Ported, '_sendDraftButton.php input name="is_draft", injected under the compose form by view.yml (sendToFriendInput customize formMessage / formBottom)', 'a Save as draft button beside Send on the compose and draft edit forms'),
                 // Trash box (@dustList).
                 new ScreenElement('trash box: both sides in one list', L::One, S::Ported, 'DeletedMessageTable::getDeletedMessagePager (message_id and message_send_list_id rows)', 'UNION of senderTrashed messages and recipientTrashed receipts'),
                 new ScreenElement('trash box: row icon names the box the row came from', L::Two, S::Ported, 'PluginDeletedMessage::getIcon / getIconAlt', 'Sent / Drafts / Inbox, not a read state'),
@@ -145,12 +145,33 @@ class DirectMessageRouteParity extends RouteParity
             ],
             // sendToFriendInput.php (PluginSendMessageDataForm) → message/compose.blade.php + edit.blade.php
             'sendToFriend' => [
-                new ScreenElement('recipient (To) + photo', L::Two, S::Ported, '$sendMember name/photo'),
+                new ScreenElement('recipient (To) + photo', L::Two, S::Partial, 'sendToFriendInput.php firstRow: Photo row (76×76) + To row, both linking to the profile', 'the To row only; the photo row is not drawn'),
                 new ScreenElement('subject input', L::One, S::Ported, 'sfWidgetFormInput subject (required)'),
                 new ScreenElement('body textarea', L::One, S::Ported, 'body (required)'),
                 new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_message_is_upload_images + MessageFileForm x3', 'PostImages; edit manages existing slots'),
-                new ScreenElement('send + save-as-draft buttons', L::One, S::Ported, 'Send button + is_draft'),
+                new ScreenElement('send + save-as-draft buttons', L::One, S::Ported, "op_include_form button 'Send' + view.yml sendToFriendInput customize _sendDraftButton.php (is_draft)"),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
+            ],
+            // executeReply re-renders sendToFriendInput.php (setTemplate('sendToFriend')) for the
+            // received message's sender → message/compose.blade.php.
+            'reply' => [
+                new ScreenElement('compose form under id formMessage', L::Two, S::Ported, "executeReply setTemplate('sendToFriend') → op_include_form('formMessage')"),
+                new ScreenElement('recipient fixed to the original sender (photo + To rows)', L::One, S::Partial, 'SendMessageForm send_member_id = $message->getMemberId(); sendToFriendInput.php firstRow', 'the To row only; the photo row is not drawn'),
+                new ScreenElement('subject prefilled with Re:', L::Three, S::Ported, "SendMessageForm default subject 'Re:'.subject"),
+                new ScreenElement('body quoted line by line', L::Three, S::Ported, "SendMessageForm default body '> ' per line"),
+                new ScreenElement('return / thread linkage carried by the form', L::Two, S::Ported, 'SendMessageData setReturnMessageId + setThreadMessageId', 'hidden parent_id / thread_id'),
+                new ScreenElement('receiver-only: anyone else gets a 404', L::Two, S::Ported, 'forward404unless $message->getIsReceiver(memberId)', 'a trashed or purged receipt and a withdrawn sender 404 as well'),
+                new ScreenElement('friend localNav for the recipient', L::Two, S::Missing, 'executeReply setFriendNav($this->sendMember->getId())', 'the compose screens keep the default localNav'),
+            ],
+            // executeEdit re-renders sendToFriendInput.php for an unsent draft → message/edit.blade.php.
+            'edit' => [
+                new ScreenElement('compose form under id formMessage', L::Two, S::Ported, "executeEdit setTemplate('sendToFriend') → op_include_form('formMessage')"),
+                new ScreenElement('recipient row from the draft', L::One, S::Partial, 'send_member_id = $send_list[0]->getMember()->getId(); forward404Unless($send_list)', 'a draft whose recipient is gone opens without the row and fails at send, where OpenPNE 3 answered 404'),
+                new ScreenElement('subject and body prefilled from the draft', L::One, S::Ported, 'SendMessageForm($this->message)'),
+                new ScreenElement('existing images with delete + new upload slots', L::Three, S::Partial, 'MessageFileForm x3 + _formEditImage.php (thumbnail + %input% + %delete%)', 'a current-images list with remove_images[] checkboxes; OpenPNE 3 replaced each slot in place'),
+                new ScreenElement('Send + Draft buttons', L::One, S::Ported, "op_include_form button 'Send' + view.yml customize _sendDraftButton.php (is_draft)"),
+                new ScreenElement('owner-only and not-yet-sent guard', L::Two, S::Ported, 'forward404If getIsSend + forward404Unless isDraftOwner'),
+                new ScreenElement('friend localNav for the recipient', L::Two, S::Missing, 'executeEdit setFriendNav($this->sendMember->getId())', 'the compose screens keep the default localNav'),
             ],
             // deleteConfirmSuccess.php (layoutC) → message/purge_confirm.blade.php. Its bulk sibling
             // deleteListConfirmSuccess.php renders from the list action, so it is inventoried there.

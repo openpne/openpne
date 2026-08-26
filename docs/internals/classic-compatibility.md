@@ -333,13 +333,16 @@ Classic compatibility is not eyeballed. Two machine-checked axes exist. The **ro
 [`App\Compat\Parities`](../../app/Compat/Parities) classes, which the test suite binds to the
 real routes (a renamed/removed route fails CI) and to the OpenPNE 3 route inventory (an un-ported
 route surfaces rather than being silently dropped). The **screen parity**: `php artisan
-openpne:screen-parity` renders each screen's surface elements — every rendered field, link,
-widget or behavior of the OpenPNE 3 template — with its port status (`ported` / `partial` /
-`missing` / `deferred`) from the same classes' `screens()`; a screen key is the OpenPNE 3 action
-(`module/action` when the action belongs to another OpenPNE 3 module, or a Laravel route name
-when several routes share one), each element names the OpenPNE 3 template it comes from, and
-anything short of a faithful port must record why. HTML-skeleton parity, asset parity, and
-customization smoke are added as the Classic surface grows.
+openpne:screen-parity` renders, per Classic screen, the surface elements its inventory names —
+fields, links, widgets and behaviors of the OpenPNE 3 template, at the granularity each screen's
+entry chose — with a port status (`ported` / `partial` / `missing` / `deferred`) from the same
+classes' `screens()`. A screen key is the OpenPNE 3 action (`module/action` when the action
+belongs to another OpenPNE 3 module, or a Laravel route name when several routes share one);
+each element names the OpenPNE 3 template it comes from, and anything short of a faithful port
+must record why. Every GET route that renders a Classic screen must carry an inventory — the audit
+test enumerates them and exempts OpenPNE 4-native screens by name — but an inventory's element
+list is as complete as its author made it, not a guarantee that nothing else is on the template.
+HTML-skeleton parity, asset parity, and customization smoke are added as the Classic surface grows.
 
 Some red flags are grep-able and belong in review or a static check:
 

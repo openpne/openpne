@@ -51,21 +51,31 @@ abstract class RouteParity
      * declaration order: the OpenPNE 3 action alone (`deleteConfirm`) resolves within this
      * parity's own module; `module/action` (`diaryComment/deleteConfirm`) names a route whose
      * action lives in another OpenPNE 3 module (op3Module) and would otherwise collide with the
-     * same-named action here; a Laravel route name (`group.members.pending`) pins one route when
-     * several share an action within one module. A bare action that this module does not have
-     * still reaches an op3Module route of that name (`history` → diaryComment), so a key only
-     * needs the module prefix when the action exists on both sides.
+     * same-named action here; a Laravel route name (`diary.comment.delete.show`) pins one route
+     * when several share an action within one module. A route name is tried first, so a dotless
+     * one (`home`, `login`) still resolves as a route. A bare action that this module does not
+     * have still reaches an op3Module route of that name (`history` → diaryComment), so a key
+     * only needs the module prefix when the action exists on both sides. Only GET maps qualify:
+     * a POST submit may carry an op3Action for the page it renders on failure, but it is not
+     * the screen.
      */
     public function screenMap(string $key): ?RouteMap
     {
-        if (str_contains($key, '.')) {
-            return $this->renderedMap($key);
+        $screens = array_values(array_filter(
+            $this->maps(),
+            static fn (RouteMap $map): bool => $map->method === 'GET' && $map->op3Action !== null,
+        ));
+
+        foreach ($screens as $map) {
+            if ($map->laravelRoute === $key) {
+                return $map;
+            }
         }
 
         [$module, $action] = str_contains($key, '/') ? explode('/', $key, 2) : [null, $key];
 
         foreach ([$module ?? $this->module, $module] as $wanted) {
-            foreach ($this->maps() as $map) {
+            foreach ($screens as $map) {
                 if ($map->op3Action === $action && ($wanted === null || $this->moduleOf($map) === $wanted)) {
                     return $map;
                 }

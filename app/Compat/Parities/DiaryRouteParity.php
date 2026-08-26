@@ -154,7 +154,7 @@ class DiaryRouteParity extends RouteParity
             ],
             // deleteConfirmSuccess.php → diary/delete.blade.php
             'deleteConfirm' => [
-                new ScreenElement('formDiaryDelete box + "Delete the %diary%" heading', L::One, S::Ported, 'deleteConfirmSuccess.php div#formDiaryDelete.dparts.box + partsHeading h3', 'Classic only — a Modern viewer is sent back to the entry, which confirms inline'),
+                new ScreenElement('formDiaryDelete box + "Delete the diary" heading', L::One, S::Ported, 'deleteConfirmSuccess.php div#formDiaryDelete.dparts.box + partsHeading h3 (no term expansion)', 'headed "Delete %diary%"; Classic only — a Modern viewer is sent back to the entry, which confirms inline'),
                 new ScreenElement('confirm prompt', L::Three, S::Partial, "'Do you really delete this diary?'", 'OpenPNE 4 names the entry instead (Delete ":title"?)'),
                 new ScreenElement('POST form with the CSRF token', L::One, S::Ported, "form action url_for('@diary_delete?id=') + \$form[getCSRFFieldName()]"),
                 new ScreenElement('Delete submit in ul.moreInfo.button', L::One, S::Ported, 'div.operation > ul.moreInfo.button > input.input_submit'),

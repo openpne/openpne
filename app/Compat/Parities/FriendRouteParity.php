@@ -56,6 +56,13 @@ class FriendRouteParity extends RouteParity
                 new ScreenElement('pager above and below', L::Two, S::Ported, 'op_include_pager_navigation ×2 in _partsManageList.php'),
                 new ScreenElement('empty state box + history-back line', L::Two, S::Ported, "manageError.php op_include_box('manageFriendWarning') + backLink link_to_function history.back()", 'x-classic.history-back: href fallback to friend/list, history.back() when the script attaches'),
             ],
+            // linkInput.php: the friend-request form, a form parts with the target member as its first rows.
+            'link' => [
+                new ScreenElement('form box id friendLink (form kind)', L::Two, S::Ported, "op_include_form('friendLink', \$form, title 'Add %my_friend%')"),
+                new ScreenElement("box title 'Add %my_friend%'", L::Three, S::Partial, "linkInput.php 'Add %my_friend%'", "headed 'Send a %friend% request'"),
+                new ScreenElement('target member rows (76×76 photo + %nickname%, linking to the profile)', L::Two, S::Missing, "linkInput.php firstRow: Photo row op_image_tag_sf_image 76x76 + %nickname% row link_to('@member_profile')", 'the question sentence sits in a div.block instead; no table rows and no photo'),
+                new ScreenElement('submit-only form (FriendLinkForm has no fields)', L::One, S::Ported, 'FriendLinkForm::configure() name format friend_link[%s] + submit', 'POST friend.link with the target id in a hidden input; a Cancel link back to the roster is an OpenPNE 4 addition'),
+            ],
             // unlinkInput.php: the yesNo confirm.
             'unlink' => [
                 new ScreenElement('yesNo confirm with the member linked in the heading', L::One, S::Ported, "op_include_parts('yesNo','unlinkConfirmForm')"),
