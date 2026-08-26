@@ -23,7 +23,7 @@
             <span id="timeline-upload-photo-button" class="btn"><i class="icon-camera"></i></span>
             <span id="photo-remove"><span class="icon-remove"></span></span><span id="photo-file-name"></span>
             <span id="counter"></span>
-            <select id="timeline-public-flag" name="visibility">
+            <select id="timeline-public-flag" name="visibility" aria-label="{{ __('Visibility') }}">
                 @foreach (\App\Features\Timeline\TimelineVisibility::options() as $option)
                     <option value="{{ $option->value }}" @selected(old('visibility', \App\Support\Visibility::Members->value) == $option->value)>{{ __($option->label()) }}</option>
                 @endforeach

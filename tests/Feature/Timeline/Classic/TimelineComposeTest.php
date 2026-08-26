@@ -42,6 +42,7 @@ class TimelineComposeTest extends TestCase
         $this->assertGreaterThan(strpos($html, 'opTimelinePlugin/css/timeline.css'), strpos($html, 'opTimelinePlugin/css/counter.css'));
         // The compose box leads OpenPNE 3's .timeline shell.
         $response->assertSeeInOrder(['<div class="timeline" data-timeline-container>', 'data-timeline-compose', '<div id="timeline-list">'], false);
+        $response->assertSee('<select id="timeline-public-flag" name="visibility" aria-label="Visibility">', false);
     }
 
     public function test_the_home_gadgets_share_one_script_and_one_counter_css(): void
