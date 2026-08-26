@@ -15,7 +15,7 @@
                 'url' => route('member.profile.show', $member),
                 'file' => $member->avatar?->file,
                 'name' => $member->name,
-                'count' => $member->friendships_count,
+                'count' => \App\Support\Feature::Friend->enabled() ? $member->friendships_count : null,
             ])->all();
         @endphp
 

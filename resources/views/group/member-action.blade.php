@@ -32,8 +32,19 @@
                 @csrf
                 <input type="hidden" name="id" value="{{ $group->getKey() }}">
                 <input type="hidden" name="member_id" value="{{ $target->getKey() }}">
-                {{-- OpenPNE 3's appoint/take-over forms pass no body option (no .block); the
-                     question is an OpenPNE 4 addition. --}}
+                {{-- OpenPNE 3's appoint/take-over forms: the nominee as the table's firstRow (photo +
+                     nickname, both linking to the profile). They pass no body option (no .block);
+                     the question is an OpenPNE 4 addition. --}}
+                <table>
+                    <tr>
+                        <th>{{ __('Photo') }}</th>
+                        <td><a href="{{ route('member.profile.show', $target) }}"><x-classic.image :file="$target->avatar?->file" :size="76" :alt="$target->name" /></a> </td>
+                    </tr>
+                    <tr>
+                        <th>{{ __('%Nickname%') }}</th>
+                        <td><a href="{{ route('member.profile.show', $target) }}">{{ $target->name }}</a></td>
+                    </tr>
+                </table>
                 <p>{{ $message }}</p>
                 <div class="operation">
                     <ul class="moreInfo button">

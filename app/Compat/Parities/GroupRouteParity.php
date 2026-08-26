@@ -122,8 +122,8 @@ class GroupRouteParity extends RouteParity
             // homeSuccess.php (layoutA) + the six view.yml customizes opCommunityTopicPlugin and
             // opTimelinePlugin inject into it → community/show.blade.php + x-group.sidemenu
             'home' => [
-                new ScreenElement('community image box (photo + name)', L::Two, S::Partial, "op_include_parts('memberImageBox', 'communityImageBox')", 'x-group.sidemenu; 180×180 thumbnail and the getNameAndCount() caption, but OpenPNE 4 links the photo to the full-size image where OpenPNE 3 rendered it bare'),
-                new ScreenElement('member grid (3×3, admin crown)', L::Two, S::Partial, "op_include_parts('nineTable', 'friendList', crownIds)", 'x-gadget.nine-table; the name cell drops getNameAndCount()\'s friend count. The id friendList is OpenPNE 3\'s own copy-paste name for the community grid, restored verbatim'),
+                new ScreenElement('community image box (photo + name)', L::Two, S::Ported, "op_include_parts('memberImageBox', 'communityImageBox')", 'x-group.sidemenu: 180×180 photo, bare, over the getNameAndCount() caption'),
+                new ScreenElement('member grid (3×3, admin crown)', L::Two, S::Ported, "op_include_parts('nineTable', 'friendList', crownIds)", 'x-gadget.nine-table; the name cell carries the friend count while the friend unit is on. The id friendList is OpenPNE 3\'s own copy-paste name for the community grid, restored verbatim'),
                 new ScreenElement('roster links (Show all(N), Management member)', L::Two, S::Ported, "op_include_parts('nineTable', … 'moreInfo')"),
                 new ScreenElement('pending-approval notice', L::Two, S::Ported, "op_include_parts('descriptionBox', 'informationAboutCommunity')"),
                 new ScreenElement('community details listBox (name, category, created, member count)', L::One, S::Ported, "op_include_parts('listBox', 'communityHome')"),
@@ -168,10 +168,10 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('name input', L::Two, S::Ported, 'CommunityForm name (opValidatorString max_length 64)'),
                 new ScreenElement('category choice', L::Two, S::Ported, 'CommunityForm community_category_id sfWidgetFormChoice'),
                 new ScreenElement('description textarea', L::Two, S::Ported, 'community_config.yml description (FormType textarea)'),
-                new ScreenElement('register policy choice', L::Two, S::Partial, 'community_config.yml register_policy (FormType radio)', 'rendered as a select, so the OpenPNE 3 radio group and its input_radio class are gone'),
+                new ScreenElement('register policy choice', L::Two, S::Ported, 'community_config.yml register_policy (FormType radio)', 'ul.radio_list of input.input_radio + label with OpenPNE 3\'s ids, as the radio widget drew it; the captions are JoinPolicy::label()\'s, not OpenPNE 3\'s'),
                 new ScreenElement('topic read authority (public_flag)', L::Two, S::Ported, 'opCommunityTopicPlugin community_config.yml public_flag', 'radio pair with the OpenPNE 3 choice captions, shared with the community home display'),
                 new ScreenElement('topic create authority (topic_authority)', L::Two, S::Ported, 'opCommunityTopicPlugin community_config.yml topic_authority', 'radio pair with the OpenPNE 3 choice captions, shared with the community home display'),
-                new ScreenElement('join-notification mail choice', L::Two, S::Partial, 'CommunityConfigForm is_send_pc_joinCommunity_mail (Receive / Don\'t Receive + help line)', 'a single checkbox instead of the two-option radio, with the help line folded into the label'),
+                new ScreenElement('join-notification mail choice', L::Two, S::Ported, 'CommunityConfigForm is_send_pc_joinCommunity_mail (Receive / Don\'t Receive + help line)', 'the two-option radio list with the help line below it'),
                 new ScreenElement('photo upload + remove', L::Two, S::Ported, 'CommunityFileForm file (sfWidgetFormInputFileEditable, with_delete)'),
                 new ScreenElement('delete-community box', L::Two, S::Ported, "op_include_parts('buttonBox', 'deleteForm')", 'GET form to the delete confirm page, administrator only (a sub-admin may edit but not delete)'),
                 new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
@@ -180,13 +180,13 @@ class GroupRouteParity extends RouteParity
             'join' => [
                 new ScreenElement('join confirmation form', L::One, S::Ported, "op_include_form('communityJoining', \$form, body + title)", 'OpenPNE 4 words the question per register policy and adds a Cancel link'),
                 new ScreenElement('community preview rows (photo 76×76 + name link)', L::Two, S::Ported, 'joinInput.php firstRow slot'),
-                new ScreenElement('already-joined error page', L::Three, S::Missing, 'joinError.php', 'OpenPNE 4 redirects a member or pending applicant back to the community home instead of rendering the error box'),
+                new ScreenElement('already-joined error page', L::Three, S::Ported, 'joinError.php', 'group/error.blade.php: the error box + the history-back line; Modern still returns to the community'),
             ],
             // quitSuccess.php / quitError.php → community/quit.blade.php
             'quit' => [
                 new ScreenElement('leave confirmation form', L::One, S::Ported, "op_include_form('communityQuiting', \$form, body + title)", 'OpenPNE 4 adds a Cancel link'),
                 new ScreenElement('community preview rows (photo 76×76 + name link)', L::Two, S::Ported, 'quitSuccess.php firstRow slot'),
-                new ScreenElement('administrator error page', L::Three, S::Missing, 'quitError.php', 'OpenPNE 4 redirects the administrator, who must hand the community over first, back to the community home'),
+                new ScreenElement('administrator error page', L::Three, S::Ported, 'quitError.php', 'group/error.blade.php: the error box + the history-back line; Modern still returns to the community'),
             ],
             // deleteSuccess.php → community/delete.blade.php
             'delete' => [
@@ -208,7 +208,7 @@ class GroupRouteParity extends RouteParity
             // subAdminRequestInput.php → community/member-action.blade.php (form kind)
             'subAdminRequest' => [
                 new ScreenElement('appointment request form', L::One, S::Ported, "op_include_form('communitySubAdminRequest', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the title, plus a Cancel link'),
-                new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Missing, 'subAdminRequestInput.php firstRow slot', 'the shared confirm blade renders no preview table; the join / leave confirms have theirs'),
+                new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Ported, 'subAdminRequestInput.php firstRow slot', 'the confirm form opens with the photo and %nickname% rows, both linking to the profile'),
             ],
             // removeSubAdminInput.php → community/member-action.blade.php (yesNo kind)
             'removeSubAdmin' => [
@@ -223,7 +223,7 @@ class GroupRouteParity extends RouteParity
             // changeAdminRequestInput.php → community/member-action.blade.php (form kind)
             'changeAdminRequest' => [
                 new ScreenElement('take-over request form', L::One, S::Ported, "op_include_form('communityAdminRequest', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the title, plus a Cancel link'),
-                new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Missing, 'changeAdminRequestInput.php firstRow slot', 'the shared confirm blade renders no preview table; the join / leave confirms have theirs'),
+                new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Ported, 'changeAdminRequestInput.php firstRow slot', 'the confirm form opens with the photo and %nickname% rows, both linking to the profile'),
             ],
         ];
     }

@@ -20,6 +20,18 @@ enum TopicPostAuthority: int
     case AdminsOnly = 2;
 
     /** String slug for serialization. Never pass the raw int to the frontend. */
+    /**
+     * OpenPNE 3's stored community_config value, the seam the Classic edit form's radio ids keep
+     * (`community_config_{field}_{value}`) so a site's CSS and scripts still find them.
+     */
+    public function op3Value(): string
+    {
+        return match ($this) {
+            self::Members => 'public',
+            self::AdminsOnly => 'admin_only',
+        };
+    }
+
     public function slug(): string
     {
         return match ($this) {

@@ -5,22 +5,20 @@
     @php($image = $group->image)
     <div class="sortHandle">
         <p class="photo">
-            @if ($image)
-                {{-- The link opens the full-size image; the no_image fallback has none, so it renders bare. --}}
-                <a href="{{ $image->url() }}" target="_blank" rel="noopener"><x-classic.image :file="$image" :size="180" :alt="$group->name" /></a>
-            @else
-                <x-classic.image :file="null" :size="180" :alt="$group->name" />
-            @endif
+            {{-- Bare, as _partsMemberImageBox.php drew it: the photo is not a link. --}}
+            <x-classic.image :file="$image" :size="180" :alt="$group->name" />
         </p>
         {{-- OpenPNE 3 getNameAndCount(): the caption carries the member count. --}}
         <p class="text">{{ $group->name }} ({{ $group->members_count }})</p>
     </div>
 </x-classic.parts>
 
+{{-- getNameAndCount(): the caption carries the friend count while the friend unit is on. --}}
+@php($friendCounts = \App\Support\Feature::Friend->enabled())
 @php($items = collect($members)->map(fn ($membership) => [
     'url' => route('member.profile.show', $membership->member),
     'imageUrl' => $membership->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
-    'name' => $membership->member->name,
+    'name' => $membership->member->name.($friendCounts && isset($membership->member->friendships_count) ? ' ('.$membership->member->friendships_count.')' : ''),
     'crown' => $membership->role === \App\Features\Group\GroupRole::Admin,
 ])->all())
 @if (count($items))
