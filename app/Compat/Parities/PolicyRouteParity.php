@@ -9,16 +9,10 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * The two site policy screens OpenPNE 3 served from its `default` module, whose OpenPNE 3 URLs are
- * preserved by compatRedirects() rather than served in place: the canonical pair moved to /terms and
- * /privacy.
- *
- * openpne3Module() is null for a reason that is a debt, not a fact: OpenPNE 3 did name these routes
- * (global_user_agreement / global_privacy_policy), but the route inventory carries no `default`
- * module, and adding one means accounting for every other route in it (global_search, url_for,
- * no_symfony…). Until it does, these are native maps — they derive the body id from
- * op3Module/op3Action without binding to an inventory entry — and the redirects are held by
- * Tests\Feature\Policy\PolicyPageTest instead of the inventory URL audit.
+ * OpenPNE 3's `default` module: the two site policy screens, served in place at /terms and /privacy
+ * with every OpenPNE 3 URL for them preserved by redirect (compatRedirects()); the customizing
+ * stylesheet, served at its OpenPNE 3 URL; and the module's helper and error catch-alls, which are
+ * gaps. The native maps come first so a screens() key resolves to the page, not to a redirect.
  */
 class PolicyRouteParity extends RouteParity
 {
@@ -26,7 +20,7 @@ class PolicyRouteParity extends RouteParity
 
     public function openpne3Module(): ?string
     {
-        return null;
+        return 'default';
     }
 
     public function maps(): array
@@ -34,6 +28,24 @@ class PolicyRouteParity extends RouteParity
         return [
             new RouteMap(null, null, 'policy.terms', 'GET', op3Action: 'userAgreement', op3Module: 'default'),
             new RouteMap(null, null, 'policy.privacy', 'GET', op3Action: 'privacyPolicy', op3Module: 'default'),
+            // The OpenPNE 3 URLs answer with a permanent redirect to the pair above.
+            new RouteMap('global_user_agreement', '/userAgreement', 'policy.terms_compat', 'GET', op3Action: 'userAgreement', op3Module: 'default'),
+            new RouteMap('user_agreement', '/default/userAgreement', 'policy.terms.default_compat', 'GET', op3Action: 'userAgreement', op3Module: 'default'),
+            new RouteMap('global_privacy_policy', '/privacyPolicy', 'policy.privacy_compat', 'GET', op3Action: 'privacyPolicy', op3Module: 'default'),
+            new RouteMap('privacy_policy', '/default/privacyPolicy', 'policy.privacy.default_compat', 'GET', op3Action: 'privacyPolicy', op3Module: 'default'),
+            new RouteMap('customizing_css', '/cache/css/customizing.:sf_format', 'design.customizing_css', 'GET', op3Action: 'customizingCss', op3Module: 'default'),
+        ];
+    }
+
+    public function gaps(): array
+    {
+        return [
+            'global_search' => 'Not ported: /search?search_module=X only forwarded to X/search, and each search keeps its own URL.',
+            'url_for' => 'Not ported: urlFor.txt resolved route names for OpenPNE 3\'s own scripts, which are not ported.',
+            'error' => 'Not ported: an error catch-all; the fallback route answers 404 in the Classic error shell.',
+            'no_default' => 'Not ported: an error catch-all; the fallback route answers 404 in the Classic error shell.',
+            'no_symfony' => 'Not ported: an error catch-all; the fallback route answers 404 in the Classic error shell.',
+            'member_profile_no_default' => 'Not ported: an error catch-all; /member/profile/* answers 404 in the Classic error shell.',
         ];
     }
 
@@ -54,6 +66,10 @@ class PolicyRouteParity extends RouteParity
             // userAgreementSuccess.php / privacyPolicySuccess.php: one box, no heading, body only.
             'userAgreement' => $this->policyScreen('user_agreement', 'userAgreement'),
             'privacyPolicy' => $this->policyScreen('privacy_policy', 'privacyPolicy'),
+            // customizingCssAction: no page, the stored stylesheet as text/css.
+            'customizingCss' => [
+                new ScreenElement('stylesheet body', L::One, S::Ported, "customizingCssAction \$op_config['customizing_css'] as text/css", 'the same setting (SnsSettingKey::CustomCss) served at the OpenPNE 3 URL'),
+            ],
         ];
     }
 
