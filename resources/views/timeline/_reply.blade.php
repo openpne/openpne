@@ -3,7 +3,7 @@
      is looking, and pushes no @once asset of its own. --}}
 <div class="timeline-post-comment" data-timeline-id="{{ $reply->getKey() }}">
     <div class="timeline-post-comment-member-image">
-        <a href="{{ route('member.profile.show', $reply->member) }}" title="{{ $reply->member->name }}"><x-classic.image :file="$reply->member->avatar?->file" :size="36" :alt="$reply->member->name" /></a>
+        <a href="{{ route('member.profile.show', $reply->member) }}" title="{{ $reply->member->name }}"><x-classic.image :file="$reply->member->avatar?->file" :size="48" :display="36" :alt="$reply->member->name" /></a>
     </div>
     <div class="timeline-post-comment-content">
         <div class="timeline-post-comment-name-and-body">

@@ -152,7 +152,8 @@ A Classic feed row carries the **last ten replies by id** and a box to add one, 
 which also decides whether the row offers to fetch the rest — one number, or a row draws a control
 over a list that is already complete. The tail is one query for the page (`limit()` on an
 eager-loaded `HasMany` compiles to a window-function partition), attached by the Classic responders
-and the three gadget components: Modern's feed carries a reply count, not the replies.
+and the three gadget components: Modern's feed carries a reply count, not the replies. A reply row's
+avatar is the 48px thumbnail drawn at 36, as OpenPNE 3 did — 36 is not an [allowed size](images.md).
 
 Two contracts, because they fail differently:
 

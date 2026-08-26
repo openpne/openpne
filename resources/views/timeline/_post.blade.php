@@ -41,7 +41,7 @@
 
             @if (! $thread && $post->replies_count > \App\Features\Timeline\Queries\RecentReplies::LIMIT)
                 <a id="timeline-comment-loadmore-{{ $post->getKey() }}" class="timeline-comment-loadmore" href="{{ route('timeline.show', $post) }}"
-                   data-timeline-id="{{ $post->getKey() }}" data-replies-url="{{ route('timeline.replies', $post) }}"><i class="icon-comment"></i>&nbsp;{{ __('See earlier comments') }}<span id="timeline-comment-loader-{{ $post->getKey() }}" class="timeline-comment-loader"></span></a>
+                   data-timeline-id="{{ $post->getKey() }}" data-replies-url="{{ route('timeline.replies', $post) }}"><i class="icon-comment"></i>&nbsp;{{ __('See earlier comments') }}<span id="timeline-comment-loader-{{ $post->getKey() }}" class="timeline-comment-loader"><img src="{{ asset('images/ajax-loader.gif') }}" alt=""></span></a>
             @endif
 
             <div class="timeline-post-comments" id="commentlist-{{ $post->getKey() }}">
@@ -55,7 +55,7 @@
                         <input type="text" name="body" class="timeline-post-comment-form-input" id="comment-textarea-{{ $post->getKey() }}" data-timeline-id="{{ $post->getKey() }}" aria-label="{{ __('Post comment') }}">
                         <button type="submit" class="btn btn-primary btn-mini timeline-comment-button">{{ __('Post') }}</button>
                     </form>
-                    <div id="timeline-post-comment-form-loader-{{ $post->getKey() }}" class="timeline-post-comment-form-loader" role="status"></div>
+                    <div id="timeline-post-comment-form-loader-{{ $post->getKey() }}" class="timeline-post-comment-form-loader" role="status"><img src="{{ asset('images/ajax-loader.gif') }}" alt="{{ __('Sending') }}"></div>
                     <div id="timeline-post-comment-form-error-{{ $post->getKey() }}" class="timeline-post-comment-form-loader" role="alert"></div>
                 @endunless
             </div>

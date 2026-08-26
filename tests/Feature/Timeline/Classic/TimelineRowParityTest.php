@@ -3,8 +3,11 @@
 namespace Tests\Feature\Timeline\Classic;
 
 use App\Features\Timeline\Queries\RecentReplies;
+use App\Files\ImageTransform;
+use App\Models\File;
 use App\Models\Gadget;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Services\GadgetService;
 use App\Support\Visibility;
@@ -161,6 +164,10 @@ class TimelineRowParityTest extends TestCase
     public function test_a_reply_row_follows_the_op3_comment_template(): void
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        MemberImage::factory()->create([
+            'member_id' => $viewer->getKey(),
+            'file_id' => File::factory()->create(['type' => 'image/png', 'width' => 200, 'height' => 200])->getKey(),
+        ]);
         // Someone else's thread, so the only delete control on the page is the viewer's own reply.
         $post = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
         $own = TimelinePost::factory()->replyTo($post)->create(['member_id' => $viewer->getKey()]);
@@ -180,6 +187,12 @@ class TimelineRowParityTest extends TestCase
         ], false);
         $response->assertSee('href="'.route('timeline.delete.show', $own).'"', false);
         $this->assertSame(1, substr_count($response->getContent(), 'timeline-post-delete-confirm-link'));
+
+        // OpenPNE 3 served the 48px thumbnail and drew it at 36: 36 is not a thumbnail size, and a
+        // request for one is a 404 behind a broken image on every row with an avatar.
+        $this->assertSame(1, preg_match('#/cache/img/\w+/(w\d+_h\d+_sq)/#', $response->getContent(), $m));
+        $this->assertSame('w48_h48_sq', $m[1]);
+        $this->assertNotNull(ImageTransform::fromGeometry($m[1]));
     }
 
     public function test_the_profile_gadget_pushes_css_only_when_it_renders(): void
