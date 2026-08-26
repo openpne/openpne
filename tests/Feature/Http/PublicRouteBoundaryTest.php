@@ -28,6 +28,7 @@ class PublicRouteBoundaryTest extends TestCase
     public static function publicMemberRoutes(): array
     {
         return [
+            'home' => ['home'],
             'profile' => ['member.profile.show'],
             'profile raw alias' => ['member.profile.raw_compat'],
             'file bytes' => ['file.show'],
