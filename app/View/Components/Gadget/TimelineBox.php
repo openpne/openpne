@@ -17,10 +17,25 @@ abstract class TimelineBox extends Component
     /** @var Collection<int, TimelinePost> */
     public Collection $posts;
 
+    /** Whether a page past these rows exists — read from one row past the limit, not a count. */
+    public bool $hasMore = false;
+
     /** @param array<string, mixed> $config */
     protected static function limit(array $config): int
     {
         return max(1, (int) ($config['limit'] ?? 20));
+    }
+
+    /**
+     * Keep $limit rows of a fetch that asked for one more, and remember whether that one came:
+     * exactly $limit rows would otherwise offer a load-more that fetches nothing.
+     *
+     * @param  Collection<int, TimelinePost>  $rows
+     */
+    protected function keep(Collection $rows, int $limit): void
+    {
+        $this->hasMore = $rows->count() > $limit;
+        $this->posts = $rows->take($limit);
     }
 
     /**

@@ -8,27 +8,27 @@
     @include('timeline._stylesheets')
     @include('timeline._scripts')
     {{-- OpenPNE 3 streams the posts client-side from the API; the Classic adapter renders them
-         server-side with a pager. The id is _timelineProfile.php's non-gadget branch, which suffixes
-         the member id (the gadget branch suffixes the gadget id into the same prefix). --}}
+         server-side. The id is _timelineProfile.php's non-gadget branch, which suffixes the member
+         id (the gadget branch suffixes the gadget id into the same prefix). No compose path here,
+         as OpenPNE 3 had none: posting is the home gadget's box. --}}
     <x-classic.parts :id="'profileTimeline_'.$owner->getKey()" name="profileTimeline" :title="$title">
-        @if ($owner->is(auth()->user()))
-            <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
-        @endif
-
         @if ($posts->isEmpty())
             <p>{{ __('No %activity% posts to show.') }}</p>
         @else
-            {{-- OpenPNE 3's div.timeline > div#timeline-list shell; the load-more button becomes a
-                 server pager, the Classic list idiom. --}}
-            <div class="timeline">
+            {{-- OpenPNE 3's div.timeline > div#timeline-list shell with the load-more control; the
+                 server pager beside it is the way on without the script. --}}
+            <div class="timeline" data-timeline-container>
                 <div id="timeline-list">
                     @foreach ($posts as $post)
                         @include('timeline._post', ['post' => $post])
                     @endforeach
                 </div>
+                @if ($posts->hasMorePages())
+                    @include('timeline._loadmore', ['nextUrl' => route('timeline.member.rows', ['member' => $owner, 'page' => $posts->currentPage() + 1])])
+                @endif
             </div>
 
-            <x-classic.pager :paginator="$posts" />
+            <div data-timeline-pager><x-classic.pager :paginator="$posts" /></div>
         @endif
     </x-classic.parts>
 @endsection

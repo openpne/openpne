@@ -232,6 +232,32 @@ class TimelineController extends Controller
      * opens the earlier comments a row's tail left out; the thread page is the no-JS answer, so the
      * fragment carries no chrome and is never cached.
      */
+    /** The next page of the home feed, as rows for the Classic load-more to append. */
+    public function indexRows(Request $request, HomeFeed $query, RecentReplies $recentReplies): Response
+    {
+        $perPage = $this->rowsPerPage($request);
+        $posts = $this->withInlineReplies($query($this->viewer(), $perPage), $recentReplies);
+
+        return $this->rows($posts, 'timeline.index.rows', ['per_page' => $perPage]);
+    }
+
+    public function memberRows(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): Response
+    {
+        $perPage = $this->rowsPerPage($request);
+        $owner = $this->memberSubject($member);
+        $posts = $this->withInlineReplies($query($this->viewer(), $owner, $perPage), $recentReplies);
+
+        return $this->rows($posts, 'timeline.member.rows', ['member' => $owner, 'per_page' => $perPage]);
+    }
+
+    public function tagRows(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): Response
+    {
+        $perPage = $this->rowsPerPage($request);
+        $posts = $this->withInlineReplies($query($this->viewer(), $tag, $perPage), $recentReplies);
+
+        return $this->rows($posts, 'timeline.tag.rows', ['tag' => HashtagParser::normalize($tag), 'per_page' => $perPage]);
+    }
+
     public function replies(int $timelinePost, ShowTimelinePost $query): Response
     {
         $post = $query($this->viewer(), $timelinePost);
@@ -284,6 +310,38 @@ class TimelineController extends Controller
      * @param  LengthAwarePaginator<int, TimelinePost>  $posts
      * @return LengthAwarePaginator<int, TimelinePost>
      */
+    /**
+     * A page of rows as a fragment, naming the page after it in a Link header. The URL is built by
+     * route name rather than nextPageUrl(): the paginator's drops the query the request carried,
+     * and a gadget's per_page has to survive to its third page.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function rows(LengthAwarePaginator $posts, string $route, array $params): Response
+    {
+        $response = response()
+            ->view('timeline._rows', ['posts' => $posts])
+            ->header('Cache-Control', 'private, no-store');
+
+        if ($posts->hasMorePages()) {
+            $next = route($route, [...$params, 'page' => $posts->currentPage() + 1]);
+            $response->header('Link', "<{$next}>; rel=\"next\"");
+        }
+
+        return $response;
+    }
+
+    /** The page size a rows request asks for; the feed's own default when it names none. */
+    private function rowsPerPage(Request $request): int
+    {
+        $validated = $request->validate([
+            'page' => ['integer', 'min:1'],
+            'per_page' => ['integer', 'min:1', 'max:50'],
+        ]);
+
+        return (int) ($validated['per_page'] ?? 20);
+    }
+
     private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
     {
         // items(), not getCollection(): only the former is on the contract the feed queries return.
