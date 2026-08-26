@@ -290,7 +290,7 @@ modern_only install, where the operator never sees Classic and the copy must
 not mention surfaces at all:
 
 ```text
-classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings
+classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings / the topic and event comment reply link
 modern only:   Modern logo / color / header image / modern layout / login screen message
 both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```

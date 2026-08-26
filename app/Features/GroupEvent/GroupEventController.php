@@ -22,6 +22,8 @@ use App\Http\Requests\GroupEvent\UpdateEventRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,6 +88,7 @@ class GroupEventController extends Controller
                 $linkCards->ensureAll($thread->comments);
 
                 return view('group-event.show', [
+                    'commentReplyLink' => (bool) app(SnsSettingService::class)->get(SnsSettingKey::GroupEventCommentReply),
                     'event' => $found,
                     'thread' => $thread,
                     'canComment' => GroupEventAccess::canComment($found, $viewer),

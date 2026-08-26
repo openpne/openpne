@@ -21,6 +21,8 @@ use App\Http\Requests\GroupTopic\UpdateTopicRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupTopic;
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,6 +89,7 @@ class GroupTopicController extends Controller
                 $linkCards->ensureAll($thread->comments);
 
                 return view('group-topic.show', [
+                    'commentReplyLink' => (bool) app(SnsSettingService::class)->get(SnsSettingKey::GroupTopicCommentReply),
                     'topic' => $found,
                     'thread' => $thread,
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),

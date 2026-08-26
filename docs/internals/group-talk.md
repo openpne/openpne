@@ -439,7 +439,7 @@ configurable mail template.
 **`group_talk_mention`** — sent by every site, in-request, to the members a message named.
 
 **`group_talk_new_message`** — one notification per message to the whole room, sent only where an
-administrator asked for it: `group_talk_notify_default` (**Talk settings**, read through
+administrator asked for it: `group_talk_notify_default` (**Group settings**, read through
 [`GroupTalkNotifyDefault`](../../app/Features/GroupTalk/GroupTalkNotifyDefault.php)) is the kind's
 **web** default, and its mail default is off whatever the site says. A member's own row overrides
 both, and for this kind a row is an override rather than a copy of the default

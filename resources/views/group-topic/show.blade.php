@@ -65,6 +65,9 @@
                                 @if (\App\Features\GroupTopic\GroupTopicAccess::canDeleteComment($comment, auth()->user()))
                                     <a href="{{ route('group.topics.comment.delete.show', $comment) }}">{{ __('Delete') }}</a>
                                 @endif
+                                @if ($commentReplyLink && $canComment)
+                                    <a class="reply" href="#formCommunityTopicComment" data-comment-reply="#comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('Withdrawn member') }}">{{ __('Reply') }}</a>
+                                @endif
                             </p>
                         </div>
                         <div class="body">
@@ -76,6 +79,11 @@
                 </dl>
             @endforeach
         </x-classic.parts>
+    @endif
+    @if ($commentReplyLink && $canComment)
+        @once
+            <script src="{{ asset('js/classic-comment-reply.js') }}" defer></script>
+        @endonce
     @endif
 
     @if ($canComment)
