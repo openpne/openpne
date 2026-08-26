@@ -40,7 +40,10 @@ document covers the delivery model around it.
    member just opened was marked read. Modern re-reads every restored page, this one included
    ([`revalidate-on-restore.ts`](../../resources/js/lib/revalidate-on-restore.ts)); on Classic —
    full documents, where revalidating means a whole re-request — only this screen reloads
-   ([`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js)). Modern reports the
+   ([`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js)); every other
+   Classic page keeps its restored document and has its header ask `GET /notifications/center/counts`
+   for the badges again ([`classic-notification-center.js`](../../public/js/classic-notification-center.js)),
+   with the panel fetching its rows afresh when next opened. Modern reports the
    unread-row count (via `UnreadCounts`, alongside the layer-1 numbers) in the nav badge and the
    phone bottom bar's notifications tab. Both read the shared `unread` prop, so they cannot
    disagree.

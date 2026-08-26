@@ -34,6 +34,28 @@ class NotificationCenterPanelTest extends TestCase
             ->assertSee('name="_token"', false);
     }
 
+    /**
+     * The badges as JSON, keyed by the span ids the skin positions, so a page restored from the
+     * back/forward cache can redraw them without a reload.
+     */
+    public function test_the_counts_answer_the_badges_by_id_and_uncached(): void
+    {
+        $this->get(route('notifications.center.counts'))->assertRedirect('/login'); // before actingAs: it persists
+
+        [$viewer, $actor, $requester] = Member::factory()->count(3)->create()->all();
+        $this->seedDiaryComment($viewer, $actor);
+        $this->seedFriendRequest($viewer, $requester);
+
+        $this->actingAs($viewer)->getJson(route('notifications.center.counts'))
+            ->assertOk()
+            ->assertExactJson(['badges' => ['nc_icon1' => 0, 'nc_icon2' => 1, 'nc_icon3' => 1]])
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        // The header hands the script the URL, next to the panel's.
+        $this->actingAs($viewer)->get('/')->assertOk()
+            ->assertSee('data-notification-center-counts-url="'.e(route('notifications.center.counts')).'"', false);
+    }
+
     public function test_a_read_row_is_marked_as_such_for_the_skin(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
@@ -188,7 +210,7 @@ class NotificationCenterPanelTest extends TestCase
      */
     public function test_the_decisions_sit_behind_the_web_groups_forgery_and_session_checks(): void
     {
-        foreach (['notifications.center', 'notifications.center.friendAccept', 'notifications.center.friendReject'] as $name) {
+        foreach (['notifications.center', 'notifications.center.counts', 'notifications.center.friendAccept', 'notifications.center.friendReject'] as $name) {
             $middleware = app('router')->getRoutes()->getByName($name)->gatherMiddleware();
 
             $this->assertContains('web', $middleware, "route [{$name}] left the web group");
