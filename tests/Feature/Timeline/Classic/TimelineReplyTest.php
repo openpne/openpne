@@ -100,7 +100,8 @@ class TimelineReplyTest extends TestCase
 
         $response = $this->actingAs($viewer)
             ->postJson("/timeline/{$post->getKey()}/reply", ['body' => 'Answered in place'])
-            ->assertStatus(201);
+            ->assertStatus(201)
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         $reply = TimelinePost::query()->where('in_reply_to_id', $post->getKey())->sole();
         $html = $response->json('html');

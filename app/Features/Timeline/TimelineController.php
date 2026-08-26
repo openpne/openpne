@@ -217,7 +217,9 @@ class TimelineController extends Controller
         if ($request->wantsJson()) {
             $reply->load(RecentReplies::WITH);
 
-            return response()->json(['html' => view('timeline._reply', ['reply' => $reply])->render()], 201);
+            return response()
+                ->json(['html' => view('timeline._reply', ['reply' => $reply])->render()], 201)
+                ->header('Cache-Control', 'private, no-store');
         }
 
         return redirect()

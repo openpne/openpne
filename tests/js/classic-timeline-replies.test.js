@@ -19,7 +19,7 @@ const load = (path) => {
     return script.exports;
 };
 
-const { bodyLength, canSubmit, errorText } = load('public/js/classic-timeline-replies.js');
+const { bodyLength, canSubmit, errorText, clearsBox } = load('public/js/classic-timeline-replies.js');
 const compose = load('public/js/classic-timeline-compose.js');
 
 const GRIN = '\u{1F600}';
@@ -59,4 +59,10 @@ test('every other refusal shows the page\'s own words, never the framework messa
     assert.equal(errorText(0, undefined, 'fallback'), 'fallback');
     // An `errors` payload on any other status is not the validator's.
     assert.equal(errorText(403, { errors: { body: ['leaked'] } }, 'fallback'), 'fallback');
+});
+
+test('a landed post empties the box only while it still holds what was sent', () => {
+    assert.equal(clearsBox('hello', 'hello'), true);
+    assert.equal(clearsBox('hello', 'hello and more'), false);
+    assert.equal(clearsBox('hello', ''), false);
 });

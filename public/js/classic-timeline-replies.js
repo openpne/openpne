@@ -27,6 +27,15 @@
     }
 
     /**
+     * Whether the box may be emptied once the post landed: only when it still holds what was sent.
+     * The box stays editable while the reply is in flight, so a next draft typed on a slow line
+     * is the member's, not the server's to discard.
+     */
+    function clearsBox(sent, current) {
+        return sent === current;
+    }
+
+    /**
      * What to tell the member when a reply is refused. Only the validator's line is taken from the
      * payload: `message` is a framework literal, in English whatever the site's language, for the
      * expired session and the rate limiter alike.
@@ -41,7 +50,7 @@
 
     // `node --test` evaluates this file with a `module` in scope and takes the pure half alone.
     if (typeof module !== 'undefined') {
-        module.exports = { bodyLength: bodyLength, canSubmit: canSubmit, errorText: errorText };
+        module.exports = { bodyLength: bodyLength, canSubmit: canSubmit, errorText: errorText, clearsBox: clearsBox };
 
         return;
     }
@@ -72,6 +81,19 @@
 
     function announceInserted(root) {
         document.dispatchEvent(new CustomEvent(INSERTED, { detail: { root: root } }));
+    }
+
+    /**
+     * Each list counts its own changes. A reply posted while the earlier comments were still on
+     * their way bumps the count, and the older list that then arrives is thrown away rather than
+     * drawn over the reply that just landed.
+     */
+    function generation(comments) {
+        return parseInt(comments.getAttribute('data-generation') || '0', 10);
+    }
+
+    function bumpGeneration(comments) {
+        comments.setAttribute('data-generation', String(generation(comments) + 1));
     }
 
     /** The comment box of the row an element sits in, or null when that row has none. */
@@ -166,6 +188,7 @@
             error.style.display = 'none';
         }
 
+        var sent = input.value;
         var status = 0;
         fetch(form.getAttribute('action'), {
             method: 'POST',
@@ -176,12 +199,17 @@
                 Accept: 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'body=' + encodeURIComponent(input.value),
+            body: 'body=' + encodeURIComponent(sent),
         })
             .then(function (response) {
                 status = response.status;
+                // A refusal answers with JSON too; a session that expired answers with a page,
+                // and a page is not a row to insert whatever its status.
+                var type = response.headers.get('Content-Type') || '';
+                if (response.redirected || type.indexOf('application/json') !== 0) {
+                    return null;
+                }
 
-                // A refusal answers with JSON too; a session that expired answers with a page.
                 return response.json().catch(function () {
                     return null;
                 });
@@ -191,7 +219,10 @@
                     throw errorText(status, data, form.getAttribute('data-error-text'));
                 }
                 form.insertAdjacentHTML('beforebegin', data.html);
-                input.value = '';
+                bumpGeneration(comments);
+                if (clearsBox(sent, input.value)) {
+                    input.value = '';
+                }
                 announceInserted(comments);
             })
             .catch(function (reason) {
@@ -217,10 +248,16 @@
         var row = link.closest('.timeline-post');
         var comments = row ? row.querySelector('.timeline-post-comments') : null;
         var url = link.getAttribute('data-replies-url');
-        if (!comments || !url) {
-            return; // the href is the thread page
+        // No list, no url, or the last try failed: the href is the thread page, and it goes there.
+        if (!comments || !url || link.getAttribute('data-failed') === 'true') {
+            return;
         }
         event.preventDefault();
+        if (link.getAttribute('data-pending') === 'true') {
+            return; // one fetch per control
+        }
+        link.setAttribute('data-pending', 'true');
+        var asked = generation(comments);
         var loader = link.querySelector('.timeline-comment-loader');
         if (loader) loader.style.display = 'inline';
         comments.setAttribute('aria-busy', 'true');
@@ -240,6 +277,12 @@
                 return response.text();
             })
             .then(function (html) {
+                link.removeAttribute('data-pending');
+                if (loader) loader.style.display = 'none';
+                comments.setAttribute('aria-busy', 'false');
+                if (generation(comments) !== asked) {
+                    return; // a reply landed meanwhile; this list is older than what is shown
+                }
                 var rows = comments.querySelectorAll('.timeline-post-comment');
                 var form = comments.querySelector('[data-timeline-reply]');
                 var i;
@@ -251,13 +294,14 @@
                 } else {
                     comments.insertAdjacentHTML('beforeend', html);
                 }
-                comments.setAttribute('aria-busy', 'false');
                 link.style.display = 'none';
                 announceInserted(comments);
             })
             .catch(function () {
-                // The control stays where it was, so the reader can try again — or follow it to the
-                // thread, which is the same list on a page of its own.
+                // The control stays, and its next click is the link it always was: the thread page
+                // holds the same list, and a second fetch would only fail the same way.
+                link.removeAttribute('data-pending');
+                link.setAttribute('data-failed', 'true');
                 if (loader) loader.style.display = 'none';
                 comments.setAttribute('aria-busy', 'false');
             });
