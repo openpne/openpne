@@ -56,6 +56,9 @@ enum SettingGroup
     /** Which UI layout the Modern surface renders and, later, which ones members may pick. */
     case Look;
 
-    /** How much of a group's talk the site notifies about by default, edited on the talk settings page. */
+    /** How much of a group's talk the site notifies about by default, edited on the group settings page. */
     case GroupTalk;
+
+    /** The topic and event boards' shared policy (the reply link on comments), edited on the group settings page. */
+    case GroupBoard;
 }

@@ -197,6 +197,15 @@ enum SnsSettingKey: string
     case GroupTalkNotifyDefault = 'group_talk_notify_default';
 
     /**
+     * Whether a %topic% / event comment offers a Reply link that quotes `>>N name` into the comment
+     * box (OpenPNE 3 op_community_topic_plugin_community_topic_comment_reply /
+     * community_event_comment_reply, off by default there too).
+     */
+    case GroupTopicCommentReply = 'group_topic_comment_reply';
+
+    case GroupEventCommentReply = 'group_event_comment_reply';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -226,6 +235,7 @@ enum SnsSettingKey: string
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
             self::DefaultLook, self::SelectableLooks => SettingGroup::Look,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
         };
     }
 
@@ -283,6 +293,8 @@ enum SnsSettingKey: string
             self::DefaultLook, self::SelectableLooks => null,
             // OpenPNE 4-native: OpenPNE 3 had no group chat to notify about.
             self::GroupTalkNotifyDefault => null,
+            self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
+            self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
         };
     }
 
@@ -297,7 +309,7 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
-            SettingGroup::Diary, SettingGroup::SitePolicy => $this->op3SourceName() !== null,
+            SettingGroup::Diary, SettingGroup::SitePolicy, SettingGroup::GroupBoard => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
             // Link cards have no OpenPNE 3 ancestor, and enabling outbound requests is a decision for
             // the operator of this site rather than something inherited from a migrated one. AI
@@ -373,6 +385,7 @@ enum SnsSettingKey: string
             // The quiet end: an OSS site notifies about being named and nothing else until an
             // operator asks for more.
             self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => false,
         };
     }
 
@@ -389,7 +402,7 @@ enum SnsSettingKey: string
 
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
-            self::DiaryAllowWebPublic,
+            self::DiaryAllowWebPublic, self::GroupTopicCommentReply, self::GroupEventCommentReply,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
@@ -413,7 +426,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
-            self::DiaryAllowWebPublic,
+            self::DiaryAllowWebPublic, self::GroupTopicCommentReply, self::GroupEventCommentReply,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
@@ -454,7 +467,8 @@ enum SnsSettingKey: string
             // on-by-default install fallback is untouched — unreadable is corruption, not consent.
             self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
             // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
-            self::LinkCardEnabled, self::AiAccountsEnabled => $value === '1',
+            self::LinkCardEnabled, self::AiAccountsEnabled,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => $value === '1',
             // The one integer key. A stored value that is not a number is corruption rather than a
             // decision, so it reads as the shipped cap; a negative one clamps to 0 (create nothing)
             // rather than inverting the comparison it feeds.
@@ -515,6 +529,8 @@ enum SnsSettingKey: string
             self::UserAgreement => __('Terms of service'),
             self::PrivacyPolicy => __('Privacy policy'),
             self::GroupTalkNotifyDefault => __('Talk notification default'),
+            self::GroupTopicCommentReply => __('Reply link on %topic% comments'),
+            self::GroupEventCommentReply => __('Reply link on event comments'),
             self::DefaultLook => __('Default UI layout'),
             self::SelectableLooks => __('Selectable UI layouts'),
         };
@@ -535,7 +551,7 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
-            self::GroupTalkNotifyDefault => false,
+            self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply => false,
         };
     }
 

@@ -204,4 +204,24 @@ class SnsSettingKeyTest extends TestCase
             $this->assertSame('#0088aa', $key->decode('#0088aa'), $key->value);
         }
     }
+
+    public function test_board_comment_reply_links_are_off_by_default_and_upgrade_from_op3(): void
+    {
+        foreach ([
+            [SnsSettingKey::GroupTopicCommentReply, 'op_community_topic_plugin_community_topic_comment_reply'],
+            [SnsSettingKey::GroupEventCommentReply, 'op_community_topic_plugin_community_event_comment_reply'],
+        ] as [$key, $source]) {
+            $this->assertFalse($key->default());
+            $this->assertSame(SettingGroup::GroupBoard, $key->group());
+            $this->assertSame($source, $key->op3SourceName());
+            $this->assertTrue($key->isMigratedFromOp3());
+            $this->assertTrue($key->coerce('1'));
+            $this->assertFalse($key->coerce('0'));
+            $this->assertSame('1', $key->encode(true));
+            // A stored row decodes to a typed bool, and only an explicit '1' switches the link on.
+            $this->assertSame(true, $key->decode('1'));
+            $this->assertSame(false, $key->decode('0'));
+            $this->assertSame(false, $key->decode('yes'));
+        }
+    }
 }
