@@ -3,36 +3,41 @@
 @section('title', $group->name)
 
 @section('content')
-    {{-- OpenPNE 3 listCommunitySuccess.php lists the board in a recentList box (no id) and puts the
-         create entry point in a buttonBox above it; OpenPNE 4 folds that button in here. --}}
-    <x-classic.parts id="communityTopic_board" name="recentList" :title="$group->name">
-        @if ($canPost)
+    {{-- OpenPNE 3 listCommunitySuccess.php: a buttonBox (id communityTopicList) with the Create
+         button above a recentList box (no id; the id is OpenPNE 4's) headed "List of topics", one dl
+         per topic, the pager above and below. --}}
+    @if ($canPost)
+        <x-classic.parts id="communityTopicList" name="buttonBox" :title="__('Create a new %topic%')">
             <div class="operation">
                 <ul class="moreInfo button">
-                    <li><a href="{{ route('group.topics.new', $group) }}">{{ __('Post a new %topic%') }}</a></li>
+                    <li>
+                        <form action="{{ route('group.topics.new', $group) }}" method="get">
+                            <input type="submit" class="input_submit" value="{{ __('Create') }}">
+                        </form>
+                    </li>
                 </ul>
             </div>
-        @endif
+        </x-classic.parts>
+    @endif
 
+    <x-classic.parts id="communityTopic_board" name="recentList" :title="__('List of %topics%')">
         @if ($topics->isEmpty())
             <p>{{ __('No %topics% to show.') }}</p>
         @else
             {{-- One dl per topic: last-activity datetime in the dt, and the link labelled
-                 "name(count)" — no space, untruncated, unlike the diary feed's label. The author is
-                 OpenPNE 4's own addition, trailing the link the way _topicCommentSnsListBox.php
-                 trails its group name. --}}
+                 "name(count)" — no space, untruncated, unlike the diary feed's label. --}}
             <x-classic.pager :paginator="$topics->withQueryString()" />
             @foreach ($topics as $topic)
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($topic->updated_at) }}</dt>
-                    <dd><a href="{{ route('group.topics.show', $topic) }}">{{ $topic->name }}({{ $topic->comments_count }})</a>@if ($topic->member) ({{ $topic->member->name }})@endif</dd>
+                    <dd><a href="{{ route('group.topics.show', $topic) }}">{{ $topic->name }}({{ $topic->comments_count }})</a></dd>
                 </dl>
             @endforeach
             <x-classic.pager :paginator="$topics->withQueryString()" />
         @endif
     </x-classic.parts>
 
-    <x-classic.parts name="line">
-        <a href="{{ route('group.show', $group) }}">{{ $group->name }}</a>
+    <x-classic.parts id="linkLine" name="line">
+        <a href="{{ route('group.show', $group) }}">[{{ $group->name }}] {{ __('%Community% Top Page') }}</a>
     </x-classic.parts>
 @endsection
