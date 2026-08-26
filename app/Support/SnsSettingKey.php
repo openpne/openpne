@@ -19,9 +19,24 @@ use App\Features\GroupTalk\GroupTalkNotifyMode;
  * return a fixed fail-closed constant, so a missing row can never open registration or drop a check.
  *
  * Deliberately NOT ported from OpenPNE 3's sns_config (obsolete or superseded in OpenPNE 4):
- *   - enable_pc / enable_mobile — single responsive surface (App\Support\SurfaceResolver), no
- *     PC-vs-mobile split;
- *   - enable_cmd / enable_language — always-on or handled by other mechanisms.
+ *   - enable_pc / enable_mobile / op_auth_*_plugin_enable_pc — single responsive surface
+ *     (App\Support\SurfaceResolver), no PC-vs-mobile split;
+ *   - enable_cmd / enable_language — always-on or handled by other mechanisms;
+ *   - is_check_mobile_ip / retrieve_uid — the feature-phone frontend is not in scope;
+ *   - enable_openid / enable_connection / enable_jsonapi / external_pc_login_url /
+ *     google_maps_api_key — the OpenID provider, external-service connections, the legacy JSON
+ *     API, the external login page and the Google Maps module are not ported;
+ *   - daily_news_day — the daily-news digest is not in scope;
+ *   - ignored_sns_config — member config has no per-category hiding;
+ *   - nickname_of_member_who_does_not_have_credentials — a withdrawn member is deleted, not shown
+ *     under a placeholder name;
+ *   - richtextarea_* — the OpenPNE 3 rich-text editor is frozen (docs/internals/body-text.md);
+ *   - Theme_used — opSkinThemePlugin themes; Classic ships its one skin plus custom CSS;
+ *   - op_timeline_plugin_timeline_comment_reply — the @name-prefixing reply link; the composer
+ *     resolves a mention instead.
+ * Not ported yet, not dropped: is_allow_post_activity, is_allow_config_public_flag_profile_page,
+ * image_max_filesize, pc_home_information, op_diary_plugin_search_*, op_timeline_plugin_view_photo,
+ * and the op_*_plugin_update_activity pair (waiting on the auto-generated-activity decision).
  *
  * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
  * for the keys `isMigratedFromOp3()` allows (the security keys are excluded so an OpenPNE 3 value
@@ -241,10 +256,10 @@ enum SnsSettingKey: string
 
     /**
      * The OpenPNE 3 `sns_config.name` this setting upgrades from, or null when there is no single
-     * source column. RegistrationMode is composed from OpenPNE 3's `invite_mode` (auth.yml) and
-     * `enable_registration` (sns_config) together — `enable_registration=0` is the global suspend
-     * while `invite_mode` picks open vs invite — so its upgrade is a dedicated composite step, not a
-     * 1:1 column copy.
+     * source column. RegistrationMode has none: OpenPNE 3 composed it from `invite_mode` (auth.yml)
+     * and `enable_registration` (sns_config) — `enable_registration=0` the global suspend,
+     * `invite_mode` open vs invite — and no upgrade step reads either; a security key keeps its
+     * fail-closed default until the operator sets it.
      */
     public function op3SourceName(): ?string
     {
