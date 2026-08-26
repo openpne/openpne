@@ -154,6 +154,23 @@ class NavigationUpgradeSqlTest extends TestCase
         DB::statement(SourceSchema::default()->createStatement('navigation_translation', withoutForeignKeys: true));
     }
 
+    public function test_resolves_the_policy_tokens_to_their_canonical_pages(): void
+    {
+        // OpenPNE 3 named the policy pages four ways; all four moved to /terms and /privacy, and a
+        // nav row links there rather than through the permanent redirects the old URLs became.
+        $this->seedNav(11, 'secure_global', '@global_user_agreement');
+        $this->seedNav(12, 'secure_global', '@user_agreement');
+        $this->seedNav(13, 'secure_global', '@global_privacy_policy');
+        $this->seedNav(14, 'secure_global', '@privacy_policy');
+        $this->runUpgrade();
+        $rows = DB::table('navigations')->whereIn('id', [11, 12, 13, 14])->get()->keyBy('id');
+        $this->assertSame('/terms', $rows[11]->uri);
+        $this->assertSame('/terms', $rows[12]->uri);
+        $this->assertSame('/privacy', $rows[13]->uri);
+        $this->assertSame('/privacy', $rows[14]->uri);
+        $this->assertSame('@global_user_agreement', $rows[11]->source_uri);
+    }
+
     public function test_maps_the_community_type_and_tokens_into_the_group_space(): void
     {
         $this->seedNav(1, 'community', '@community_search');
