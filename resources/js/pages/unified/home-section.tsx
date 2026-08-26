@@ -24,7 +24,9 @@ export function HomeSection({
     children,
     bodyClassName,
 }: {
-    title: string;
+    /** ReactNode, not a string: a section whose `right` carries a count puts the words for it in
+     *  here as `sr-only`, since the pill beside the heading names nothing (components/count-pill.tsx). */
+    title: ReactNode;
     icon?: LucideIcon;
     /** Attention the heading itself carries — an unread pill, not a control. */
     right?: ReactNode;
