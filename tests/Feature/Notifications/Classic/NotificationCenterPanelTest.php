@@ -210,7 +210,7 @@ class NotificationCenterPanelTest extends TestCase
      */
     public function test_the_decisions_sit_behind_the_web_groups_forgery_and_session_checks(): void
     {
-        foreach (['notifications.center', 'notifications.center.friendAccept', 'notifications.center.friendReject'] as $name) {
+        foreach (['notifications.center', 'notifications.center.counts', 'notifications.center.friendAccept', 'notifications.center.friendReject'] as $name) {
             $middleware = app('router')->getRoutes()->getByName($name)->gatherMiddleware();
 
             $this->assertContains('web', $middleware, "route [{$name}] left the web group");

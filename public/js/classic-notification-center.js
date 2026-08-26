@@ -40,6 +40,11 @@
             return; // as OpenPNE 3 did: fetched once, reopened for free
         }
         loaded = true;
+        // The rows of an earlier load go before the new ones arrive: a page restored from the
+        // back/forward cache asks again with the old rows still in the panel.
+        panel.querySelectorAll('.push').forEach(function (row) {
+            row.parentNode.removeChild(row);
+        });
 
         // Back to waiting, so a retry after a failure does not sit under the last attempt's
         // "nothing here" while its rows are on the way.
