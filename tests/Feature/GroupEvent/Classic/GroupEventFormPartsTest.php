@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * OpenPNE 3's form parts (`_partsForm.php`) starred every required label and printed
  * "* is required field." above the table; the hand-written event comment form printed the same
- * line above its table and starred nothing.
+ * line above its table, its label starred by the form class instead of the parts.
  */
 class GroupEventFormPartsTest extends TestCase
 {
@@ -57,7 +57,7 @@ class GroupEventFormPartsTest extends TestCase
         }
     }
 
-    public function test_comment_form_on_the_event_page_prints_the_notice_above_its_table_without_stars(): void
+    public function test_comment_form_on_the_event_page_prints_the_notice_above_its_table_and_stars_the_label(): void
     {
         $group = Group::factory()->create();
         $member = $this->joined($group);
@@ -66,7 +66,6 @@ class GroupEventFormPartsTest extends TestCase
         $response = $this->actingAs($member)->get(route('group.events.show', $event));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['id="communityEvent_comment_form"', self::NOTICE, '<table>'], false);
-        $response->assertDontSee('Comment <strong>*</strong>', false);
+        $response->assertSeeInOrder(['id="communityEvent_comment_form"', self::NOTICE, '<table>', 'Comment <strong>*</strong>'], false);
     }
 }

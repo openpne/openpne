@@ -105,7 +105,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Missing, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'the link that prepends ">>N name" into the comment textarea is not ported'),
                 new ScreenElement('RSVP buttons in the comment form', L::One, S::Ported, 'showSuccess.php input name=participate / cancel / comment, gated by isClosed, isExpired, isEventMember, isAtCapacity'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, 'showSuccess.php hand-written <form> around a lone .parts.form', 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
-                new ScreenElement('required-field notice', L::Three, S::Ported, 'showSuccess.php hand-written "%0% is required field." line', 'x-classic.required-notice above the table, as the hand-written form printed it'),
+                new ScreenElement('required-field notice', L::Three, S::Ported, 'showSuccess.php hand-written "%0% is required field." line', 'x-classic.required-notice above the table; the label carries its star from the form class (PluginCommunityEventCommentForm), as OpenPNE 3 did'),
                 new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the event board, not the community home, and drops the "[name] %Community% Top Page" label'),
             ],
             // newSuccess.php (PluginCommunityEventForm) → group-event/new.blade.php

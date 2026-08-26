@@ -1,10 +1,7 @@
 {
     "(and :count more errors)": "(and :count more error)|(and :count more errors)|(and :count more errors)",
-    ":mark is required field.": ":mark is required field.",
-    "No": "No",
     "Read (adjective)": "Read",
     "Show next": "Next",
     "Show previous": "Previous",
-    "Showing :first - :last of :total": ":first - :last of :total",
-    "Yes": "Yes"
+    "Showing :first - :last of :total": ":first - :last of :total"
 }
