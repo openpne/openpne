@@ -26,6 +26,7 @@
                 @endif
                 @include('group-event._image_fields')
             </table>
+            <x-classic.required-notice />
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>

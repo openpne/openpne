@@ -120,6 +120,7 @@
         <form method="POST" action="{{ route('group.events.comment.store', $event) }}" enctype="multipart/form-data">
             @csrf
             <x-classic.parts id="communityEvent_comment_form" name="form" :single="true" :title="__('Post a new event comment')">
+                <x-classic.required-notice />
                 <table>
                     <tr>
                         <th><label for="comment_body">{{ __('Comment') }}</label></th>

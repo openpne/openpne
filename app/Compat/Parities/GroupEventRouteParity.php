@@ -105,7 +105,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Missing, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'the link that prepends ">>N name" into the comment textarea is not ported'),
                 new ScreenElement('RSVP buttons in the comment form', L::One, S::Ported, 'showSuccess.php input name=participate / cancel / comment, gated by isClosed, isExpired, isEventMember, isAtCapacity'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, 'showSuccess.php hand-written <form> around a lone .parts.form', 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
-                new ScreenElement('required-field notice', L::Three, S::Missing, 'showSuccess.php hand-written "%0% is required field." line', 'the hand-written OpenPNE 3 comment form prints the notice without per-label markers; OpenPNE 4 drops it and marks the inputs HTML required'),
+                new ScreenElement('required-field notice', L::Three, S::Ported, 'showSuccess.php hand-written "%0% is required field." line', 'x-classic.required-notice above the table, as the hand-written form printed it'),
                 new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the event board, not the community home, and drops the "[name] %Community% Top Page" label'),
             ],
             // newSuccess.php (PluginCommunityEventForm) → group-event/new.blade.php
@@ -120,7 +120,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm, ul#community_event_photo_N', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row inside a ul#community_event_photo_N'),
                 new ScreenElement('field order', L::Three, S::Partial, 'PluginCommunityEventForm setup() order: title, body, open date, supplement, area, deadline, capacity', 'OpenPNE 4 orders title, open date, area, body, deadline, capacity'),
                 new ScreenElement('post button', L::Two, S::Ported, "op_include_form('formCommunityEvent') button", 'relabelled from Send, with a Cancel link beside it'),
-                new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
+                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice below the table'),
             ],
             // editSuccess.php (same form as new) → group-event/edit.blade.php
             'edit' => [
@@ -129,7 +129,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('new image upload (×3)', L::Two, S::Partial, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'one Images row with MAX_IMAGES file inputs; OpenPNE 3 gave each photo its own labelled row'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityEvent') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('delete-event box', L::Two, S::Ported, "op_include_parts('buttonBox', 'toDelete')", 'GET form to the delete confirm page'),
-                new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
+                new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice below the table'),
             ],
             // deleteConfirmSuccess.php → group-event/delete.blade.php
             'deleteConfirm' => [

@@ -11,6 +11,7 @@
                 @include('group-topic._fields')
                 @include('group-topic._image_fields')
             </table>
+            <x-classic.required-notice />
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Post') }}"></li>
