@@ -96,6 +96,15 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
                         item.checked = false;
                         const checkboxIndex = item.tokens.findIndex((child) => child.type === 'checkbox');
                         if (checkboxIndex === -1) {
+                            // marked >= 18.0.10 puts a loose item's checkbox inside the first block's
+                            // inline tokens rather than beside it, so there is nothing to fold — swap it
+                            // for the marker where it sits, in place for the same reason as below.
+                            const first = item.tokens[0] as Tokens.Paragraph | Tokens.Text | undefined;
+                            const inline = first && Array.isArray(first.tokens) ? first.tokens : undefined;
+                            const nested = inline?.findIndex((child) => child.type === 'checkbox') ?? -1;
+                            if (inline && nested !== -1) {
+                                inline.splice(nested, 1, marker);
+                            }
                             continue;
                         }
                         // Fold the marker into the first text/paragraph block after the checkbox by
