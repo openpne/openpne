@@ -10,7 +10,8 @@
     @once
         <style>
             /* A detail box rules off every div inside its dd; this is an addition within one. */
-            .diaryDetailBox dd div.linkCard { border-top: none; }
+            .diaryDetailBox dd div.linkCard,
+            .topicDetailBox dd div.linkCard { border-top: none; }
             .linkCard { margin: 0.8em 0; border: 1px solid #DDDDDD; border-radius: 4px; overflow: hidden; background: #FFFFFF; }
             /* fixed, with a declared image column: a title with no break opportunity would otherwise
                set the table's min-content width and push the card past its container. */

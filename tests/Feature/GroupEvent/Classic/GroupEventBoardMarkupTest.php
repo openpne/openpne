@@ -12,8 +12,9 @@ use Tests\TestCase;
 
 /**
  * OpenPNE 3's listCommunitySuccess.php / showSuccess.php shapes: the Create button in a buttonBox
- * of its own, the board headed by its own title, the record's box headed "[community] kind" with
- * the Edit button as a GET form, and the closing line box naming the community top page.
+ * of its own, the board headed by its own title and closed by nothing, the record's box headed
+ * "[community] kind" with the Edit button as a GET form and closed by the line naming the
+ * community top page.
  */
 class GroupEventBoardMarkupTest extends TestCase
 {
@@ -31,7 +32,7 @@ class GroupEventBoardMarkupTest extends TestCase
         return $member;
     }
 
-    public function test_board_puts_the_create_button_in_its_own_box_and_names_the_top_page(): void
+    public function test_board_puts_the_create_button_in_its_own_box_and_ends_with_the_list(): void
     {
         $group = Group::factory()->create(['name' => 'Hikers']);
         $member = $this->joined($group);
@@ -47,10 +48,8 @@ class GroupEventBoardMarkupTest extends TestCase
             'id="communityEvent_board"',
             '<h3>List of events</h3>',
             'First(0)</a></dd>',
-            'id="linkLine"',
-            '<a href="'.e(route('group.show', $group)).'">[Hikers] ',
-            'Top Page</a>',
         ], false);
+        $response->assertDontSee('id="linkLine"', false);
     }
 
     public function test_record_box_is_headed_by_the_community_and_edits_through_a_get_form(): void

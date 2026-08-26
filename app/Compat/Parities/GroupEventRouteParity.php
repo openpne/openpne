@@ -79,7 +79,7 @@ class GroupEventRouteParity extends RouteParity
         return [
             // listCommunitySuccess.php → group-event/index.blade.php
             'listCommunity' => [
-                new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'OpenPNE 4 trails the link with the open date, prints an empty-state message where OpenPNE 3 dropped the whole box, and closes the page with a line box back to the community'),
+                new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-activity datetime in the dt, the name(count) link alone in the dd'),
                 new ScreenElement('create-event entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityEventList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityEvent_list_community')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of events</h3>', 'List of events'),
@@ -96,7 +96,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('application deadline row', L::Two, S::Ported, "\$list['Application deadline'] op_format_date('D')"),
                 new ScreenElement('capacity row', L::Two, S::Ported, "\$list['Capacity'] = \$communityEvent->getCapacity()"),
                 new ScreenElement('participant count row + member-list link', L::Two, S::Ported, "\$list['Count of Member'] + link_to('@communityEvent_memberList')"),
-                new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button; deletion is reached from the edit screen'),
+                new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button after the box, as showSuccess.php placed it; deletion is reached from the edit screen'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityEventComment', 'list')"),
                 new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'GroupEventCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),

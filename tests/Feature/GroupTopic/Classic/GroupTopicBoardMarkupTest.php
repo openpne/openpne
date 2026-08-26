@@ -31,7 +31,7 @@ class GroupTopicBoardMarkupTest extends TestCase
         return $member;
     }
 
-    public function test_board_puts_the_create_button_in_its_own_box_and_names_the_top_page(): void
+    public function test_board_puts_the_create_button_in_its_own_box_and_ends_with_the_list(): void
     {
         $group = Group::factory()->create(['name' => 'Hikers']);
         $member = $this->joined($group);
@@ -47,10 +47,8 @@ class GroupTopicBoardMarkupTest extends TestCase
             'id="communityTopic_board"',
             '<h3>List of topics</h3>',
             'First(0)</a></dd>',
-            'id="linkLine"',
-            '<a href="'.e(route('group.show', $group)).'">[Hikers] ',
-            'Top Page</a>',
         ], false);
+        $response->assertDontSee('id="linkLine"', false);
     }
 
     public function test_record_box_is_headed_by_the_community_and_edits_through_a_get_form(): void
