@@ -2,6 +2,10 @@
 
 namespace Tests\Feature\Compat;
 
+use App\Compat\Parities\DiaryRouteParity;
+use App\Compat\Parities\MemberRouteParity;
+use App\Compat\RouteMap;
+use App\Compat\RouteParity;
 use App\Compat\RouteParityRegistry;
 use App\Compat\ScreenStatus;
 use Illuminate\Support\Facades\Route;
@@ -15,20 +19,16 @@ use Tests\TestCase;
  */
 class ScreenParityAuditTest extends TestCase
 {
-    public function test_each_screen_action_is_a_mapped_route_that_exists(): void
+    public function test_each_screen_key_resolves_to_a_map_that_derives_a_body_id(): void
     {
         foreach (RouteParityRegistry::all() as $parity) {
-            foreach (array_keys($parity->screens()) as $action) {
-                $actions = array_map(static fn ($map) => $map->op3Action, $parity->maps());
-                $this->assertContains($action, $actions,
-                    "{$parity->module()}: screen `{$action}` has no route map with that op3Action");
+            foreach (array_keys($parity->screens()) as $key) {
+                $map = $parity->screenMap((string) $key);
+                $this->assertNotNull($map,
+                    "{$parity->module()}: screen `{$key}` resolves to no route map (action / module/action / Laravel route)");
 
-                $route = $parity->bodyId(
-                    // resolve the action's Laravel route via the matching map
-                    collect($parity->maps())->firstWhere('op3Action', $action)->laravelRoute,
-                );
-                $this->assertNotNull($route,
-                    "{$parity->module()}: screen `{$action}` does not derive a body id");
+                $this->assertNotNull($parity->bodyId($map->laravelRoute),
+                    "{$parity->module()}: screen `{$key}` does not derive a body id");
             }
         }
     }
@@ -36,10 +36,83 @@ class ScreenParityAuditTest extends TestCase
     public function test_screen_routes_are_registered(): void
     {
         foreach (RouteParityRegistry::all() as $parity) {
-            foreach (array_keys($parity->screens()) as $action) {
-                $map = collect($parity->maps())->firstWhere('op3Action', $action);
+            foreach (array_keys($parity->screens()) as $key) {
+                $map = $parity->screenMap((string) $key);
                 $this->assertNotNull(Route::getRoutes()->getByName($map->laravelRoute),
-                    "{$parity->module()}: screen `{$action}` route `{$map->laravelRoute}` is not registered");
+                    "{$parity->module()}: screen `{$key}` route `{$map->laravelRoute}` is not registered");
+            }
+        }
+    }
+
+    public function test_screen_keys_resolve_by_module_not_declaration_order(): void
+    {
+        // diary declares its own deleteConfirm before the diaryComment one: a bare action must
+        // stay within the parity's module, and module/action must reach the op3Module route.
+        $diary = new DiaryRouteParity;
+        $this->assertSame('diary.delete.show', $diary->screenMap('deleteConfirm')?->laravelRoute);
+        $this->assertSame('diary.comment.delete.show', $diary->screenMap('diaryComment/deleteConfirm')?->laravelRoute);
+        $this->assertSame('diary.comment.delete.show', $diary->screenMap('diary.comment.delete.show')?->laravelRoute);
+        $this->assertNull($diary->screenMap('diaryComment/show'));
+
+        // A route name needs no dot to be one.
+        $this->assertSame('login', (new MemberRouteParity)->screenMap('login')?->laravelRoute);
+    }
+
+    public function test_screen_keys_never_resolve_to_a_post_submit(): void
+    {
+        // A submit may carry the op3Action of the page it re-renders (message.bulk → list), and
+        // declaring it first must not make it the screen.
+        $parity = new class extends RouteParity
+        {
+            protected string $module = 'message';
+
+            public function maps(): array
+            {
+                return [
+                    new RouteMap(null, null, 'message.bulk', 'POST', op3Action: 'list'),
+                    new RouteMap('receiveList', '/message/receiveList', 'message.receive', 'GET', op3Action: 'list'),
+                ];
+            }
+        };
+
+        $this->assertSame('message.receive', $parity->screenMap('list')?->laravelRoute);
+        $this->assertNull($parity->screenMap('message.bulk'));
+
+        foreach (RouteParityRegistry::all() as $live) {
+            foreach (array_keys($live->screens()) as $key) {
+                $this->assertSame('GET', $live->screenMap((string) $key)?->method,
+                    "{$live->module()}: screen `{$key}` resolves to a non-GET map");
+            }
+        }
+    }
+
+    /**
+     * The inventory's completeness claim, held in the other direction: every GET map that renders
+     * a Classic screen (an op3Action and a registered route) has a screens() entry for its body id.
+     * OpenPNE 4-native screens with no OpenPNE 3 template are exempted here by name, with the reason.
+     */
+    public function test_every_classic_get_screen_has_an_inventory(): void
+    {
+        $native = [
+            'page_friend_requests' => 'the pending-request queues; OpenPNE 3 answered requests from the notification center',
+        ];
+
+        foreach (RouteParityRegistry::all() as $parity) {
+            $inventoried = [];
+            foreach (array_keys($parity->screens()) as $key) {
+                $inventoried[$parity->bodyId($parity->screenMap((string) $key)->laravelRoute)] = true;
+            }
+
+            foreach ($parity->maps() as $map) {
+                if ($map->method !== 'GET' || $map->op3Action === null || Route::getRoutes()->getByName($map->laravelRoute) === null) {
+                    continue;
+                }
+                $bodyId = $parity->bodyId($map->laravelRoute);
+                if (isset($native[$bodyId])) {
+                    continue;
+                }
+                $this->assertArrayHasKey($bodyId, $inventoried,
+                    "{$parity->module()}: `{$map->laravelRoute}` renders `{$bodyId}` but no screens() key inventories it");
             }
         }
     }

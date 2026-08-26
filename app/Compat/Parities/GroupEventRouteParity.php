@@ -85,8 +85,6 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('box heading', L::Three, S::Partial, 'listCommunitySuccess.php <h3>List of events</h3>', 'headed with the community name instead'),
             ],
             // showSuccess.php + communityEventComment/_list.php → group-event/show.blade.php.
-            // The comment delete confirm shares this action key (op3Module communityEventComment),
-            // so its elements live at the end of the comment group below.
             'show' => [
                 new ScreenElement('event listBox', L::One, S::Ported, "op_include_parts('listBox', 'communityEvent')", 'the bare id communityEvent is OpenPNE 3\'s own, restored verbatim'),
                 new ScreenElement('box heading "[community] Event"', L::Three, S::Partial, "showSuccess.php '['.\$group->getName().'] '.__('Event')", 'headed with the event name, so the owning community is no longer named there'),
@@ -108,7 +106,6 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('RSVP buttons in the comment form', L::One, S::Ported, 'showSuccess.php input name=participate / cancel / comment, gated by isClosed, isExpired, isEventMember, isAtCapacity'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, 'showSuccess.php hand-written <form> around a lone .parts.form', 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
                 new ScreenElement('required-field notice', L::Three, S::Missing, 'showSuccess.php hand-written "%0% is required field." line', 'the hand-written OpenPNE 3 comment form prints the notice without per-label markers; OpenPNE 4 drops it and marks the inputs HTML required'),
-                new ScreenElement('comment delete confirmation', L::Two, S::Ported, "communityEventComment/deleteConfirmSuccess.php op_include_form('deleteConfirmForm')", 'a screen of its own, folded here because it shares the deleteConfirm action key. OpenPNE 4 adds the question line and a blockquote.commentPreview, and replaces the history.back() line with a Back link'),
                 new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the event board, not the community home, and drops the "[name] %Community% Top Page" label'),
             ],
             // newSuccess.php (PluginCommunityEventForm) → group-event/new.blade.php
@@ -145,6 +142,16 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'photoTable pager + link_to_pager'),
                 new ScreenElement('empty-list box', L::Three, S::Ported, "memberListError.php op_include_box('noMembers', 'Nobody joins this event.')"),
                 new ScreenElement('back-to-previous line', L::Three, S::Partial, "memberListError.php op_include_line('backLink', link_to_function(history.back()))", 'a line box linking back to the event, on both the populated and the empty state; OpenPNE 3 had the JavaScript line on the empty state only'),
+            ],
+            // communityEventComment/deleteConfirmSuccess.php → group-event/comment-delete.blade.php
+            'communityEventComment/deleteConfirm' => [
+                new ScreenElement('delete confirmation form', L::One, S::Ported, "communityEventComment/deleteConfirmSuccess.php op_include_form('deleteConfirmForm', \$form, url_for('communityEvent_comment_delete'))", 'the same dparts#deleteConfirmForm box, posting to group.events.comment.delete; OpenPNE 4 adds the question paragraph and a blockquote.commentPreview of the comment'),
+                new ScreenElement('box heading (the question)', L::Three, S::Partial, "deleteConfirmSuccess.php title => 'Do you really delete this comment?'", 'headed "Delete the comment", with the question moved into a paragraph inside the box'),
+                new ScreenElement('delete submit button', L::Two, S::Ported, '_partsForm.php div.operation > ul.moreInfo.button > li > input.input_submit', 'same markup and Delete label; the CSRF hidden field sits under the form tag rather than inside the button li'),
+                new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Back link to the event in a second button li, so the div#backLink line box is not rendered'),
+                new ScreenElement('form table', L::Three, S::Missing, '_partsForm.php <table> (the confirm binds a bare sfForm, so the table holds no field row)', 'no table is rendered, so a skin rule on #deleteConfirmForm table matches nothing'),
+                new ScreenElement('deletable gate', L::Two, S::Ported, 'executeDeleteConfirm forward404Unless CommunityEventComment::isDeletable (author, or CommunityEvent::isEditable)', 'GroupEventAccess::canDeleteComment; a Modern viewer is sent back to the event, which confirms deletion inline'),
+                new ScreenElement('post-delete redirect + flash', L::Two, S::Ported, "opCommunityTopicPluginEventCommentActions::executeDelete redirect @communityEvent_show + flash 'The comment was deleted successfully.'", 'back to the event with a status flash, reworded; deleting a comment leaves the RSVP roster untouched, as in OpenPNE 3'),
             ],
         ];
     }

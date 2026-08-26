@@ -218,7 +218,9 @@ to switch to); the notification center's badges count unread notification rows r
 3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
 hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
-no per-entry comment read state).
+no per-entry comment read state); and the group talk that replaced the OpenPNE 3 community timeline
+is Modern-only ([group-talk.md](group-talk.md)) — the Classic group home offers it as a link box,
+and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Classic viewer.
 
 ### Error screens
 
@@ -326,13 +328,21 @@ gap promotes to Level 2 if a real theme or customization is found to depend on i
 
 ## Audit
 
-Classic compatibility is not eyeballed. The machine-checked check that exists today
-is the **route parity**: `php artisan openpne:route-parity` renders the OpenPNE 3 ↔
-Laravel route mapping from the typed [`App\Compat\Parities`](../../app/Compat/Parities)
-classes, which the test suite binds to the real routes (a renamed/removed route
-fails CI) and to the OpenPNE 3 route inventory (an un-ported route surfaces rather
-than being silently dropped). Feature parity, HTML-skeleton parity, asset parity,
-and customization smoke are added as the Classic surface grows.
+Classic compatibility is not eyeballed. Two machine-checked axes exist. The **route parity**:
+`php artisan openpne:route-parity` renders the OpenPNE 3 ↔ Laravel route mapping from the typed
+[`App\Compat\Parities`](../../app/Compat/Parities) classes, which the test suite binds to the
+real routes (a renamed/removed route fails CI) and to the OpenPNE 3 route inventory (an un-ported
+route surfaces rather than being silently dropped). The **screen parity**: `php artisan
+openpne:screen-parity` renders, per Classic screen, the surface elements its inventory names —
+fields, links, widgets and behaviors of the OpenPNE 3 template, at the granularity each screen's
+entry chose — with a port status (`ported` / `partial` / `missing` / `deferred`) from the same
+classes' `screens()`. A screen key is the OpenPNE 3 action (`module/action` when the action
+belongs to another OpenPNE 3 module, or a Laravel route name when several routes share one);
+each element names the OpenPNE 3 template it comes from, and anything short of a faithful port
+must record why. Every GET route that renders a Classic screen must carry an inventory — the audit
+test enumerates them and exempts OpenPNE 4-native screens by name — but an inventory's element
+list is as complete as its author made it, not a guarantee that nothing else is on the template.
+HTML-skeleton parity, asset parity, and customization smoke are added as the Classic surface grows.
 
 Some red flags are grep-able and belong in review or a static check:
 

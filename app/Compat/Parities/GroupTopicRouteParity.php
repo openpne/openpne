@@ -86,8 +86,6 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('box heading', L::Three, S::Partial, 'listCommunitySuccess.php <h3>List of topics</h3>', 'headed with the community name instead'),
             ],
             // showSuccess.php + communityTopicComment/_list.php → group-topic/show.blade.php.
-            // The comment delete confirm shares this action key (op3Module communityTopicComment),
-            // so its elements live at the end of the comment group below.
             'show' => [
                 new ScreenElement('topicDetailBox article box', L::Two, S::Ported, 'showSuccess.php <div class="dparts topicDetailBox">'),
                 new ScreenElement('article dl / dt / dd structure', L::Two, S::Missing, 'showSuccess.php dl > dt(datetime) + dd > div.title / div.name / div.body', 'rendered as p.topicMeta + div.topicBody, so opCommunityTopicPlugin\'s `.topicDetailBox dl/dt/dd` rules — the article frame and its datetime column — match nothing'),
@@ -104,7 +102,6 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Missing, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'the link that prepends ">>N name" into the comment textarea is not ported'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
-                new ScreenElement('comment delete confirmation', L::Two, S::Ported, "communityTopicComment/deleteConfirmSuccess.php op_include_form('deleteConfirmForm')", 'a screen of its own, folded here because it shares the deleteConfirm action key. OpenPNE 4 adds the question line and a blockquote.commentPreview, and replaces the history.back() line with a Back link'),
                 new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
                 new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the topic board, not the community home, and drops the "[name] %Community% Top Page" label'),
             ],
@@ -130,6 +127,16 @@ class GroupTopicRouteParity extends RouteParity
             'deleteConfirm' => [
                 new ScreenElement('delete confirmation form', L::One, S::Ported, "op_include_form('deleteConfirmForm', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the box title'),
                 new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Cancel link to the topic instead of the JavaScript line box'),
+            ],
+            // communityTopicComment/deleteConfirmSuccess.php → group-topic/comment-delete.blade.php
+            'communityTopicComment/deleteConfirm' => [
+                new ScreenElement('delete confirmation form', L::One, S::Ported, "communityTopicComment/deleteConfirmSuccess.php op_include_form('deleteConfirmForm', \$form, url_for('communityTopic_comment_delete'))", 'the same dparts#deleteConfirmForm box, posting to group.topics.comment.delete; OpenPNE 4 adds the question paragraph and a blockquote.commentPreview of the comment'),
+                new ScreenElement('box heading (the question)', L::Three, S::Partial, "deleteConfirmSuccess.php title => 'Do you really delete this comment?'", 'headed "Delete the comment", with the question moved into a paragraph inside the box'),
+                new ScreenElement('delete submit button', L::Two, S::Ported, '_partsForm.php div.operation > ul.moreInfo.button > li > input.input_submit', 'same markup and Delete label; the CSRF hidden field sits under the form tag rather than inside the button li'),
+                new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Back link to the topic in a second button li, so the div#backLink line box is not rendered'),
+                new ScreenElement('form table', L::Three, S::Missing, '_partsForm.php <table> (the confirm binds a bare sfForm, so the table holds no field row)', 'no table is rendered, so a skin rule on #deleteConfirmForm table matches nothing'),
+                new ScreenElement('deletable gate', L::Two, S::Ported, 'executeDeleteConfirm forward404Unless CommunityTopicComment::isDeletable (author, or CommunityTopic::isEditable)', 'GroupTopicAccess::canDeleteComment; a Modern viewer is sent back to the topic, which confirms deletion inline'),
+                new ScreenElement('post-delete redirect + flash', L::Two, S::Ported, "opCommunityTopicPluginTopicCommentActions::executeDelete redirect @communityTopic_show + flash 'The comment was deleted successfully.'", 'back to the topic with a status flash, reworded'),
             ],
         ];
     }
