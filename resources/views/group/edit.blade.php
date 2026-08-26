@@ -59,6 +59,8 @@
                         </ul>
                     </td>
                 </tr>
+                {{-- CommunityConfigForm offered the choice only while the join-notice mail was enabled site-wide. --}}
+                @if (app(\App\Mail\Template\MailTemplateService::class)->isEnabled(\App\Mail\Template\MailTemplate::GroupJoinNotice))
                 <tr>
                     <th>{{ __('Receive a notice mail when member joined') }}</th>
                     <td>
@@ -73,6 +75,7 @@
                         <div class="help">{{ __('Send a notice mail to administrator when new member joined the %community%.') }}</div>
                     </td>
                 </tr>
+                @endif
                 <tr>
                     <th>{{ __('Category') }}</th>
                     <td>

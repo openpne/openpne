@@ -168,7 +168,7 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('name input', L::Two, S::Ported, 'CommunityForm name (opValidatorString max_length 64)'),
                 new ScreenElement('category choice', L::Two, S::Ported, 'CommunityForm community_category_id sfWidgetFormChoice'),
                 new ScreenElement('description textarea', L::Two, S::Ported, 'community_config.yml description (FormType textarea)'),
-                new ScreenElement('register policy choice', L::Two, S::Ported, 'community_config.yml register_policy (FormType radio)', 'ul.radio_list of input.input_radio + label, as the radio widget drew it'),
+                new ScreenElement('register policy choice', L::Two, S::Ported, 'community_config.yml register_policy (FormType radio)', 'ul.radio_list of input.input_radio + label with OpenPNE 3\'s ids, as the radio widget drew it; the captions are JoinPolicy::label()\'s, not OpenPNE 3\'s'),
                 new ScreenElement('topic read authority (public_flag)', L::Two, S::Ported, 'opCommunityTopicPlugin community_config.yml public_flag', 'radio pair with the OpenPNE 3 choice captions, shared with the community home display'),
                 new ScreenElement('topic create authority (topic_authority)', L::Two, S::Ported, 'opCommunityTopicPlugin community_config.yml topic_authority', 'radio pair with the OpenPNE 3 choice captions, shared with the community home display'),
                 new ScreenElement('join-notification mail choice', L::Two, S::Ported, 'CommunityConfigForm is_send_pc_joinCommunity_mail (Receive / Don\'t Receive + help line)', 'the two-option radio list with the help line below it'),

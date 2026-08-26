@@ -3,6 +3,7 @@
 namespace Tests\Feature\Group\Classic;
 
 use App\Features\Group\GroupRole;
+use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -112,7 +113,7 @@ class GroupAdminScreensParityTest extends TestCase
 
     public function test_the_home_sidemenu_draws_the_photo_bare_and_counts_friends_in_the_member_names(): void
     {
-        $group = Group::factory()->create();
+        $group = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
         $member = $this->joined($group);
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
@@ -123,8 +124,11 @@ class GroupAdminScreensParityTest extends TestCase
         $response = $this->actingAs($member)->get(route('group.show', $group));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['id="communityImageBox"', '<p class="photo">', '<img', '<p class="text">'], false);
-        $response->assertDontSee('<p class="photo">'."\n".'                <a href=', false);
+        $content = (string) $response->getContent();
+        // The photo itself, straight under p.photo — no link around it.
+        $this->assertMatchesRegularExpression('/<p class="photo">\s*<img /', $content);
+        $this->assertSame(1, preg_match('/id="communityImageBox".*?<p class="text">/s', $content, $box));
+        $this->assertStringNotContainsString('<a ', $box[0]);
         $response->assertSee('>'.e($member->name).' (1)</a>', false);
 
         $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);

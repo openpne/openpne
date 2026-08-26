@@ -296,12 +296,12 @@ class GroupRoutesTest extends TestCase
         $group = Group::factory()->create(['is_join_notification_enabled' => true]);
         $admin = $this->memberWithRole($group, GroupRole::Admin);
 
-        // The hidden 0 + checkbox 1 pair renders, so the value is always submitted.
+        // Both radios render, so one value is always submitted.
         $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]))
             ->assertOk()
             ->assertSee('name="is_join_notification_enabled" value="0" id="community_config_is_send_pc_joinCommunity_mail_0" class="input_radio"', false);
 
-        // Unchecking submits the hidden 0, turning it off.
+        // Choosing "Don't Receive" submits 0, turning it off.
         $this->actingAs($admin)->post('/groups/edit?'.http_build_query(['id' => $group->getKey()]), [
             'name' => $group->name,
             'register_policy' => $group->register_policy->slug(),
@@ -319,7 +319,7 @@ class GroupRoutesTest extends TestCase
         $admin = $this->memberWithRole($group, GroupRole::Admin);
         $editUrl = route('group.edit', ['id' => $group->getKey()]);
 
-        // Uncheck (hidden 0) but trip validation with a blank name.
+        // Choose "Don't Receive" (0) but trip validation with a blank name.
         $this->actingAs($admin)->from($editUrl)->post('/groups/edit?'.http_build_query(['id' => $group->getKey()]), [
             'name' => '',
             'register_policy' => $group->register_policy->slug(),
