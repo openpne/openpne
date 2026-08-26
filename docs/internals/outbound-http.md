@@ -106,7 +106,9 @@ plainly:
   exactly what turns a validated https host into a request elsewhere. Those two are set by the
   factory after the options `config/webpush.php` supplies, so those two survive a site deleting them
   — an absent `proxy` is the environment's, not a neutral default. Nothing else in that array is
-  pinned. The client is built here at all because the channel package would otherwise build it in a
+  pinned, and the pin is on those two option names rather than on the outcome: Guzzle applies a
+  `curl` sub-array after everything else, so a site can say the same things in `CURLOPT_` terms and
+  get them. The client is built here at all because the channel package would otherwise build it in a
   way that drops the option bag entirely, and every guarantee here would be config that no longer
   applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,

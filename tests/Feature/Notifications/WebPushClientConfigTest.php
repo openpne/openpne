@@ -48,18 +48,23 @@ class WebPushClientConfigTest extends TestCase
     }
 
     /**
-     * The two options that decide where a request can land are not the config's to relax.
+     * The two options that decide where a request can land outlast a config that says otherwise.
      *
      * Both are read from a file an operator edits, and an empty or absent `proxy` is the difference
      * between ignoring HTTPS_PROXY and honouring it. So the factory applies them after whatever it
-     * was handed, and a site that deletes them keeps them.
+     * was handed, and a site that deletes them keeps them. Said the other way round — through the
+     * `curl` sub-array, which Guzzle applies last of all — the same site can still open both; that
+     * is why this says these options and not the config as a whole.
+     *
+     * The timeout here is deliberately not the factory's own fallback: identical values would let
+     * this pass while the two were swapped for each other.
      */
-    public function test_the_destination_options_cannot_be_loosened_by_config(): void
+    public function test_the_destination_options_outlast_config_that_states_otherwise(): void
     {
         $client = (new PushClientFactory)->make([
             'allow_redirects' => true,
             'proxy' => 'http://proxy.example.com:3128',
-            'timeout' => 5,
+            'timeout' => 7,
         ]);
 
         $config = (new ReflectionProperty(Client::class, 'config'))->getValue($client);
@@ -67,7 +72,7 @@ class WebPushClientConfigTest extends TestCase
         $this->assertFalse($config['allow_redirects']);
         $this->assertSame('', $config['proxy']);
         // What the config does own still lands.
-        $this->assertSame(5, $config['timeout']);
+        $this->assertSame(7, $config['timeout']);
     }
 
     /** @return array<string, mixed> */
