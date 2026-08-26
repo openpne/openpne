@@ -255,26 +255,29 @@ test('every heading that shows a pill also says the count', () => {
             return /\.tsx$/.test(e.name) && !/\.test\.tsx$/.test(e.name) ? [full] : [];
         });
 
-    const PILL_IN_HEADER = /right=\{<CountPill/;
+    const PILL_IN_HEADER = /right=\{<CountPill/g;
     const SECTION = /<(?:Panel|HomeSection)\b/g;
 
-    const headers = pages(root).filter((file) => PILL_IN_HEADER.test(readFileSync(file, 'utf8')));
-    // Two pages use this shape today; a scan finding none would pass on an empty set.
-    expect(headers).toHaveLength(2);
-
-    const bare = headers.filter((file) => {
+    // Every such heading, not one per file: counting files would leave a second one in the same page
+    // unexamined, and the count below would not move.
+    const sites = pages(root).flatMap((file) => {
         const code = readFileSync(file, 'utf8');
-        const pill = code.search(PILL_IN_HEADER);
-        // Only the section the pill is in, from its opening tag: a check for "an sr-only somewhere
-        // near a title" is satisfied by any other section's sr-only, so removing this heading's
-        // phrase and adding an unrelated one elsewhere in the file would leave it green.
-        const opens = [...code.slice(0, pill).matchAll(SECTION)];
-        const start = opens.length > 0 ? (opens.at(-1)?.index ?? 0) : 0;
 
-        // And the phrase has to be the count, not any sr-only that happens to live there.
-        return !/sr-only[\s\S]*?:count/.test(code.slice(start, pill));
+        return [...code.matchAll(PILL_IN_HEADER)].map((m) => ({ file, code, at: m.index ?? 0 }));
     });
-    expect(bare.map((f) => path.relative(root, f))).toEqual([]);
+    // Two headings use this shape today; a scan finding none would pass on an empty set.
+    expect(sites).toHaveLength(2);
+
+    const bare = sites.filter(({ code, at }) => {
+        // Only the section this pill is in, from its own opening tag. "An sr-only somewhere near a
+        // title" is satisfied by any other section's, so removing this heading's phrase and adding
+        // an unrelated one elsewhere would leave it green — and the phrase has to be the count, not
+        // whatever sr-only happens to live in the same band.
+        const opens = [...code.slice(0, at).matchAll(SECTION)];
+
+        return !/sr-only[\s\S]*?:count/.test(code.slice(opens.at(-1)?.index ?? 0, at));
+    });
+    expect(bare.map(({ file }) => path.relative(root, file))).toEqual([]);
 });
 
 /*
