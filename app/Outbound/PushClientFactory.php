@@ -23,8 +23,9 @@ use Psr\Http\Client\ClientInterface;
  *
  * The timeout is the config's to set too, but its fallback is not a free choice: it is what applies
  * on a site that deleted the key, and the transport sends one device after another, so a generous
- * default silently multiplies into a job that outlives the queue's reservation. It is therefore the
- * same value config/webpush.php ships, and WebPushTimeoutBudgetTest holds this one too.
+ * default silently multiplies into a job that outlives the queue's reservation. It has to satisfy
+ * the same bound the configured value does, and WebPushTimeoutBudgetTest builds a client to check
+ * the value that actually applies rather than the constant behind it.
  *
  * This is not SafeHttpFetcher's client: no address is validated and no connection is pinned, which
  * is the documented weakness of this seam (docs/internals/outbound-http.md). CurlClientFactory is
@@ -39,7 +40,7 @@ use Psr\Http\Client\ClientInterface;
 final class PushClientFactory
 {
     /** Applies when `webpush.client_options` states none; see the note above on why it is not 30. */
-    public const FALLBACK_TIMEOUT = 5;
+    private const FALLBACK_TIMEOUT = 5;
 
     /** @param  array<string, mixed>  $options */
     public function make(array $options): ClientInterface

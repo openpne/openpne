@@ -7,6 +7,8 @@ namespace Tests\Feature\Notifications;
 use App\Features\Notifications\PushSubscriptionController;
 use App\Notifications\Push\WebPushNudge;
 use App\Outbound\PushClientFactory;
+use GuzzleHttp\Client;
+use ReflectionProperty;
 use Tests\TestCase;
 
 /**
@@ -47,10 +49,17 @@ class WebPushTimeoutBudgetTest extends TestCase
     /**
      * A site that deletes the timeout from its config gets the factory's, and that one has to hold
      * the same bound — it is the value that applies exactly when nobody is looking at this file.
+     *
+     * Read off a client the factory actually built, not off the constant it is written with: the
+     * two are only the same while one line says so, and that line is the one a bound like this
+     * gets undone by.
      */
     public function test_the_transports_own_default_holds_the_same_bound(): void
     {
-        $worst = PushSubscriptionController::MAX_DEVICES * PushClientFactory::FALLBACK_TIMEOUT;
+        $client = (new PushClientFactory)->make([]);
+        $config = (new ReflectionProperty(Client::class, 'config'))->getValue($client);
+
+        $worst = PushSubscriptionController::MAX_DEVICES * $config['timeout'];
 
         $this->assertLessThanOrEqual((new WebPushNudge(null, null, null))->timeout, $worst);
     }

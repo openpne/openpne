@@ -14,8 +14,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * likes, and the send happens in a queue worker against a client that validates no address and pins
  * no connection — so this is where the destination shape is fixed: https on the default port, a
  * fully-qualified host, no embedded credentials. An address literal or a single-label host
- * (`intranet`) is refused —
- * every real push service is a dotted name, and both are shapes an internal target hides behind.
+ * (`intranet`) is refused — every real push service is a dotted name, and both are shapes an
+ * internal target hides behind.
  *
  * Shape control only: it cannot stop a name that resolves inward (docs/internals/outbound-http.md).
  * The transport's no-redirect, no-proxy configuration is the other half.
