@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Compat\RouteMap;
 use App\Compat\RouteParity;
 use App\Compat\RouteParityRegistry;
 use App\Compat\ScreenElement;
@@ -31,8 +30,8 @@ class ScreenParityCommand extends Command
             $this->line("## `{$parity->module()}`");
             $this->line('');
 
-            foreach ($parity->screens() as $action => $elements) {
-                $this->renderScreen($parity, (string) $action, $elements);
+            foreach ($parity->screens() as $key => $elements) {
+                $this->renderScreen($parity, (string) $key, $elements);
             }
         }
 
@@ -40,15 +39,15 @@ class ScreenParityCommand extends Command
     }
 
     /** @param list<ScreenElement> $elements */
-    private function renderScreen(RouteParity $parity, string $action, array $elements): void
+    private function renderScreen(RouteParity $parity, string $key, array $elements): void
     {
-        $map = $this->mapForAction($parity, $action);
+        $map = $parity->screenMap($key);
         $route = $map?->laravelRoute;
         $uri = $route !== null ? Route::getRoutes()->getByName($route)?->uri() : null;
         $url = $uri !== null ? '/'.ltrim($uri, '/') : '(missing)';
         $bodyId = $route !== null ? $parity->bodyId($route) : null;
 
-        $heading = $bodyId !== null ? "`{$bodyId}`" : "`{$parity->module()}` / `{$action}`";
+        $heading = $bodyId !== null ? "`{$bodyId}`" : "`{$parity->module()}` / `{$key}`";
         $this->line("### {$heading} — `{$route}` `{$url}`");
         $this->line('');
         $this->line('| status | element | level | OpenPNE 3 source | note |');
@@ -62,17 +61,6 @@ class ScreenParityCommand extends Command
         $this->line('');
         $this->line('Coverage: '.$this->coverage($elements));
         $this->line('');
-    }
-
-    private function mapForAction(RouteParity $parity, string $action): ?RouteMap
-    {
-        foreach ($parity->maps() as $map) {
-            if ($map->op3Action === $action) {
-                return $map;
-            }
-        }
-
-        return null;
     }
 
     /** @param list<ScreenElement> $elements */

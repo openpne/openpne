@@ -36,14 +36,53 @@ abstract class RouteParity
      * Per-screen surface-element inventory: the third parity axis (intra-screen content),
      * keyed by the OpenPNE 3 action whose template defines the screen. route parity says the
      * URL resolves; this says how much of that screen's content the Classic adapter renders.
-     * Empty for a module not inventoried yet. The action must be one this parity maps(), so the
-     * command can resolve its Laravel route and body id.
+     * Empty for a module not inventoried yet. A key must resolve through screenMap(), so the
+     * command can render the screen's Laravel route and body id.
      *
-     * @return array<string, list<ScreenElement>> op3Action => surface elements
+     * @return array<string, list<ScreenElement>> screen key (see screenMap()) => surface elements
      */
     public function screens(): array
     {
         return [];
+    }
+
+    /**
+     * The map a screens() key names. Three key shapes, so a screen never depends on maps()
+     * declaration order: the OpenPNE 3 action alone (`deleteConfirm`) resolves within this
+     * parity's own module; `module/action` (`diaryComment/deleteConfirm`) names a route whose
+     * action lives in another OpenPNE 3 module (op3Module) and would otherwise collide with the
+     * same-named action here; a Laravel route name (`diary.comment.delete.show`) pins one route
+     * when several share an action within one module. A route name is tried first, so a dotless
+     * one (`home`, `login`) still resolves as a route. A bare action that this module does not
+     * have still reaches an op3Module route of that name (`history` → diaryComment), so a key
+     * only needs the module prefix when the action exists on both sides. Only GET maps qualify:
+     * a POST submit may carry an op3Action for the page it renders on failure, but it is not
+     * the screen.
+     */
+    public function screenMap(string $key): ?RouteMap
+    {
+        $screens = array_values(array_filter(
+            $this->maps(),
+            static fn (RouteMap $map): bool => $map->method === 'GET' && $map->op3Action !== null,
+        ));
+
+        foreach ($screens as $map) {
+            if ($map->laravelRoute === $key) {
+                return $map;
+            }
+        }
+
+        [$module, $action] = str_contains($key, '/') ? explode('/', $key, 2) : [null, $key];
+
+        foreach ([$module ?? $this->module, $module] as $wanted) {
+            foreach ($screens as $map) {
+                if ($map->op3Action === $action && ($wanted === null || $this->moduleOf($map) === $wanted)) {
+                    return $map;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
