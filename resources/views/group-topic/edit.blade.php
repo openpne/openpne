@@ -6,6 +6,7 @@
     <x-classic.parts id="formCommunityTopic" name="form" :title="__('Edit %topic%')">
         <form method="POST" action="{{ route('group.topics.update', $topic) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 @include('group-topic._fields', ['name' => $topic->name, 'body' => $topic->body, 'format' => $topic->format])
                 @if ($topic->images->isNotEmpty())

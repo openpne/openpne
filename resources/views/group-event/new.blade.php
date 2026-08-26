@@ -7,6 +7,7 @@
     <x-classic.parts id="formCommunityEvent" name="form" :title="__('Post a new event')">
         <form method="POST" action="{{ route('group.events.store', $group) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 @include('group-event._fields')
                 @include('group-event._image_fields')

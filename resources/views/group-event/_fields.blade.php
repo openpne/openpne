@@ -1,13 +1,13 @@
 @php($e = $event ?? null)
 <tr>
-    <th><label for="event_name">{{ __('Title') }}</label></th>
+    <th><label for="event_name">{{ __('Title') }} <x-classic.required-mark /></label></th>
     <td>
         <input type="text" class="input_text" id="event_name" name="name" value="{{ old('name', $e?->name) }}" required>
         @error('name')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>
 <tr>
-    <th><label for="event_open_date">{{ __('Open date') }}</label></th>
+    <th><label for="event_open_date">{{ __('Open date') }} <x-classic.required-mark /></label></th>
     <td>
         <input type="date" class="input_text" id="event_open_date" name="open_date" value="{{ old('open_date', $e?->open_date?->format('Y-m-d')) }}" required>
         <input type="text" class="input_text" id="event_open_date_comment" name="open_date_comment" value="{{ old('open_date_comment', $e?->open_date_comment) }}" placeholder="{{ __('e.g. 19:00 start') }}">
@@ -16,14 +16,14 @@
     </td>
 </tr>
 <tr>
-    <th><label for="event_area">{{ __('Area') }}</label></th>
+    <th><label for="event_area">{{ __('Area') }} <x-classic.required-mark /></label></th>
     <td>
         <input type="text" class="input_text" id="event_area" name="area" value="{{ old('area', $e?->area) }}" required>
         @error('area')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>
 <tr>
-    <th><label for="event_body">{{ __('Body') }}</label></th>
+    <th><label for="event_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
     <td>
         <textarea id="event_body" name="body" required>{{ old('body', $e?->body) }}</textarea>
         @error('body')<p class="error">{{ $message }}</p>@enderror
