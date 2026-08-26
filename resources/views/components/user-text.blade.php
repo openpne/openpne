@@ -11,6 +11,7 @@
             {{-- Outranks diary.css's `.diaryDetailBox dd div` (0-1-2): a bare .markdownBody
                  (0-1-0) loses on specificity regardless of source order. --}}
             .diaryDetailBox dd div.markdownBody { border-top: none; }
+            .topicDetailBox dd div.markdownBody { border-top: none; }
             .markdownBody p { margin: 0 0 0.75em; }
             .markdownBody strong { font-weight: bold; }
             .markdownBody em { font-style: italic; }

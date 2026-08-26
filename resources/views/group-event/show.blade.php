@@ -4,9 +4,11 @@
 
 @section('content')
     {{-- OpenPNE 3 showSuccess.php renders the event as a listBox whose id is the bare
-         "communityEvent"; skins target it, so it is restored verbatim. --}}
-    <x-classic.parts id="communityEvent" name="listBox" :title="$event->name">
-        <table class="eventDetail">
+         "communityEvent" (skins target it), headed "[community] Event", one th/td row per field
+         with the body — images and text — as a row of its own; deletion is reached from the edit
+         screen. --}}
+    <x-classic.parts id="communityEvent" name="listBox" :title="'['.$event->group->name.'] '.__('Event')">
+        <table>
             <tr>
                 <th>{{ __('Writer') }}</th>
                 <td>
@@ -16,6 +18,10 @@
                         {{ __('Withdrawn member') }}
                     @endif
                 </td>
+            </tr>
+            <tr>
+                <th>{{ __('Name') }}</th>
+                <td>{{ $event->name }}</td>
             </tr>
             <tr>
                 <th>{{ __('Open date') }}</th>
@@ -32,12 +38,20 @@
                 <td><x-user-text :value="$event->area" /></td>
             </tr>
             <tr>
+                <th>{{ __('Body') }}</th>
+                <td>
+                    @include('group-event._images', ['images' => $event->images])
+                    <x-user-text :value="$event->body" :format="$event->format" />
+                    <x-link-card :record="$event" />
+                </td>
+            </tr>
+            <tr>
                 <th>{{ __('Application deadline') }}</th>
-                <td>{{ $event->application_deadline ? \App\Support\LocalizedDate::date($event->application_deadline) : '—' }}</td>
+                <td>{{ $event->application_deadline ? \App\Support\LocalizedDate::date($event->application_deadline) : '' }}</td>
             </tr>
             <tr>
                 <th>{{ __('Capacity') }}</th>
-                <td>{{ $event->capacity ?? '—' }}</td>
+                <td>{{ $event->capacity ?? '' }}</td>
             </tr>
             <tr>
                 <th>{{ __('Count of Member') }}</th>
@@ -49,20 +63,17 @@
                 </td>
             </tr>
         </table>
-
-        <div class="eventBody">
-            @include('group-event._images', ['images' => $event->images])
-            <x-user-text :value="$event->body" :format="$event->format" />
-            <x-link-card :record="$event" />
-        </div>
-
-        @if ($canEdit)
-            <p>
-                <a href="{{ route('group.events.edit', $event) }}">{{ __('Edit') }}</a>
-                <a href="{{ route('group.events.delete.show', $event) }}">{{ __('Delete') }}</a>
-            </p>
-        @endif
     </x-classic.parts>
+    {{-- showSuccess.php puts the Edit button after the box, not inside it. --}}
+    @if ($canEdit)
+        <div class="operation">
+            <form action="{{ route('group.events.edit', $event) }}" method="get">
+                <ul class="moreInfo button">
+                    <li><input class="input_submit" type="submit" value="{{ __('Edit') }}"></li>
+                </ul>
+            </form>
+        </div>
+    @endif
 
     @if ($thread->total > 0)
         <x-classic.parts id="communityEvent_comment_list" name="commentList" :title="__('Comments')">
@@ -160,6 +171,6 @@
 
     {{-- OpenPNE 3 closes the page with this line box, linking to the community top page. --}}
     <x-classic.parts id="linkLine" name="line">
-        <a href="{{ route('group.events.index', $event->group) }}">{{ $event->group->name }}</a>
+        <a href="{{ route('group.show', $event->group) }}">[{{ $event->group->name }}] {{ __('%Community% Top Page') }}</a>
     </x-classic.parts>
 @endsection

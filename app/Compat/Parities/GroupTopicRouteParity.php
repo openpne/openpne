@@ -80,21 +80,21 @@ class GroupTopicRouteParity extends RouteParity
         return [
             // listCommunitySuccess.php → group-topic/index.blade.php
             'listCommunity' => [
-                new ScreenElement('topic list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'OpenPNE 4 trails the link with the author name, prints an empty-state message where OpenPNE 3 dropped the whole box, and closes the page with a line box back to the community'),
-                new ScreenElement('create-topic entry', L::Two, S::Partial, "op_include_parts('buttonBox', 'communityTopicList', button Create)", 'folded into the board box as a moreInfo link; OpenPNE 3 gave it its own box with a submit button'),
+                new ScreenElement('topic list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-activity datetime in the dt, the name(count) link alone in the dd'),
+                new ScreenElement('create-topic entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityTopicList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityTopic_list_community')"),
-                new ScreenElement('box heading', L::Three, S::Partial, 'listCommunitySuccess.php <h3>List of topics</h3>', 'headed with the community name instead'),
+                new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of topics</h3>', 'List of %topics%'),
             ],
             // showSuccess.php + communityTopicComment/_list.php → group-topic/show.blade.php.
             'show' => [
                 new ScreenElement('topicDetailBox article box', L::Two, S::Ported, 'showSuccess.php <div class="dparts topicDetailBox">'),
-                new ScreenElement('article dl / dt / dd structure', L::Two, S::Missing, 'showSuccess.php dl > dt(datetime) + dd > div.title / div.name / div.body', 'rendered as p.topicMeta + div.topicBody, so opCommunityTopicPlugin\'s `.topicDetailBox dl/dt/dd` rules — the article frame and its datetime column — match nothing'),
-                new ScreenElement('box heading "[community] %topic%"', L::Three, S::Partial, "showSuccess.php <h3>'['.\$group->getName().'] '.\$topicLabel</h3>", 'headed with the topic name, so the owning community is no longer named there'),
+                new ScreenElement('article dl / dt / dd structure', L::Two, S::Ported, 'showSuccess.php dl > dt(datetime) + dd > div.title / div.name / div.body', 'dl > dt (stacked datetime) + dd > div.title / div.name / div.body > ul.photo + p.text (a Markdown body renders its own block instead of p.text)'),
+                new ScreenElement('box heading "[community] %topic%"', L::Three, S::Ported, "showSuccess.php <h3>'['.\$group->getName().'] '.\$topicLabel</h3>", '[group name] %Topic%'),
                 new ScreenElement('author link', L::Two, S::Ported, 'op_community_topic_link_to_member($communityTopic->getMember())'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
                 new ScreenElement('article images (ul.photo, 120×120 linking to full size)', L::Two, S::Ported, '$communityTopic->getImages() ul.photo', 'the shared _images partial; each fetch is FilePolicy-gated by the board visibility'),
                 new ScreenElement('article body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br($communityTopic->getBody()))', 'x-user-text (BodyText)'),
-                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centered submit button and reached deletion from the edit screen only'),
+                new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button; deletion is reached from the edit screen'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityTopicComment', 'list')"),
                 new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'GroupTopicCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
@@ -103,7 +103,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Ported, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'a.reply on each comment while the viewer may comment, gated by the upgraded SnsSettingKey; classic-comment-reply.js appends >>N name to the box, the bare link jumps to the form'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
-                new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the topic board, not the community home, and drops the "[name] %Community% Top Page" label'),
+                new ScreenElement('community top-page line link', L::Two, S::Ported, "op_include_line('linkLine', link_to('community/home'))", '#linkLine to the community home, labelled [name] %Community% Top Page'),
             ],
             // newSuccess.php (PluginCommunityTopicForm) → group-topic/new.blade.php
             'new' => [
