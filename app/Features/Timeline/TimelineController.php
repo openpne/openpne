@@ -284,7 +284,7 @@ class TimelineController extends Controller
         return $this->classic('timeline.delete', ['post' => $timelinePost]);
     }
 
-    public function delete(Request $request, TimelinePost $timelinePost, DeleteTimelinePost $action): RedirectResponse
+    public function delete(Request $request, TimelinePost $timelinePost, DeleteTimelinePost $action): JsonResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         abort_unless($viewer->is($timelinePost->member), 404);
@@ -292,6 +292,11 @@ class TimelineController extends Controller
         // deleting a top-level post returns to the author's timeline.
         $parentId = $timelinePost->in_reply_to_id;
         $action($timelinePost);
+
+        // The Classic dialog takes the row off the page itself; it has nowhere to be sent.
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true])->header('Cache-Control', 'private, no-store');
+        }
 
         if ($parentId !== null) {
             return redirect()

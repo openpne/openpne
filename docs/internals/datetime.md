@@ -81,6 +81,11 @@ Two things about that are deliberate:
 A week is where it stops. Past that the reader is no longer placing the row against now, and a count of
 days becomes work to decode rather than a shortcut.
 
+The Classic timeline is the one exception, because it keeps what OpenPNE 3 showed: `jquery.timeago`'s
+ladder and words (1分前 … N年前, no cap), counted in the browser by
+[`classic-timeago.js`](../../public/js/classic-timeago.js) from a `data-datetime` and counted again
+each minute. Without the script the absolute datetime stands — it is the span's text and its title.
+
 **That title is a convenience with no contract on it.** `title` on a non-interactive element reaches
 neither the keyboard nor assistive technology, so nothing may depend on it.
 
