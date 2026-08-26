@@ -47,13 +47,21 @@ return [
     | Push service transport
     |--------------------------------------------------------------------------
     |
-    | Guzzle options for the requests Minishlink\WebPush makes. This is a second
-    | egress seam beside App\Outbound, over a member-supplied endpoint URL, so
-    | the shape App\Rules\PushEndpoint accepts on store has to hold at send time
-    | too: a 30x is the one move that turns a validated https endpoint into a
-    | request somewhere else, and the proxy environment variables Guzzle honours
-    | by default would resolve the destination elsewhere again. The timeouts
-    | bound a queue worker parked on an unresponsive service.
+    | Options for the requests Minishlink\WebPush makes, on a client built by
+    | App\Outbound\PushClientFactory. This is a second egress seam, over a
+    | member-supplied endpoint URL, so the shape App\Rules\PushEndpoint accepts
+    | on store has to hold at send time too. `allow_redirects` and `proxy` are
+    | therefore fixed in the factory and cannot be loosened from here: a 30x is
+    | the one move that turns a validated https endpoint into a request
+    | somewhere else, and the proxy environment variables Guzzle honours by
+    | default would resolve the destination elsewhere again.
+    |
+    | `timeout` bounds one request, and the library sends a member's devices one
+    | after another, so what bounds the job is timeout x MAX_DEVICES. That
+    | product has to stay under WebPushNudge::$timeout, which in turn stays
+    | under the queue's retry_after — past it the job is reserved a second time
+    | while the first is still sending, and every reachable device is pushed
+    | twice. WebPushTimeoutBudgetTest holds the arithmetic.
     | See docs/internals/outbound-http.md.
     |
     */
@@ -61,8 +69,8 @@ return [
     'client_options' => [
         'allow_redirects' => false,
         'proxy' => '',
-        'connect_timeout' => 5,
-        'timeout' => 10,
+        'connect_timeout' => 3,
+        'timeout' => 5,
     ],
 
     /*

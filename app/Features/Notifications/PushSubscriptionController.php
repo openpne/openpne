@@ -23,8 +23,11 @@ class PushSubscriptionController extends Controller
      * Devices kept per member. A browser hands out a fresh endpoint whenever its subscription is
      * recreated, so an unbounded store grows with every reinstall — and is writable by anyone
      * signed in. Past the cap the oldest rows go, which also retires devices the member replaced.
+     *
+     * Public because it is also how long a push job can run: the transport sends these one at a
+     * time, so this multiplies the per-request timeout (WebPushTimeoutBudgetTest).
      */
-    private const MAX_DEVICES = 10;
+    public const MAX_DEVICES = 10;
 
     public function store(StorePushSubscriptionRequest $request): Response
     {

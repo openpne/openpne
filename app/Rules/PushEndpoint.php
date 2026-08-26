@@ -11,8 +11,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * A push service endpoint the site is willing to POST to later.
  *
  * The URL arrives from the member's browser, but nothing stops a client from sending any URL it
- * likes, and the send happens in a queue worker against a Guzzle client outside App\Outbound — so
- * this is where the destination shape is fixed: https on the default port, a fully-qualified host,
+ * likes, and the send happens in a queue worker against a client that validates no address and pins
+ * no connection — so this is where the destination shape is fixed: https on the default port, a
+ * fully-qualified host,
  * no embedded credentials. An address literal or a single-label host (`intranet`) is refused —
  * every real push service is a dotted name, and both are shapes an internal target hides behind.
  *

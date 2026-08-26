@@ -293,7 +293,8 @@ a transient outage must not unsubscribe a member's own device. Failing to *obtai
 handle is a no-op, not a fail-close — nothing is bound, so nothing is shed; likewise a member who never
 opted in has no subscription to rebind, and this never subscribes a fresh browser.
 
-That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
+That endpoint is a URL the site later POSTs to, on a client that neither validates the destination
+nor pins the connection — see
 [outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.
 
 ## Key invariants

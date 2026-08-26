@@ -31,6 +31,15 @@ final class WebPushNudge extends Notification implements ShouldQueue
     /** Collapses the previous nudge on the device — the payload only ever says "there is something new". */
     private const TAG = 'openpne-notifications';
 
+    /**
+     * A ceiling on the whole send, since the transport sends a member's devices one at a time and
+     * per-request timeouts only bound each one. Stated here rather than left to the worker's own
+     * default, which a deployment sets on the command line and this class cannot see. It has to
+     * stay under the queue's retry_after: past that the job is handed out again while it is still
+     * sending, and every device that did answer is pushed twice. WebPushTimeoutBudgetTest.
+     */
+    public int $timeout = 60;
+
     public function __construct(
         private readonly ?string $kind,
         private readonly ?string $reason,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Outbound\PushClientFactory;
 use GuzzleHttp\Client;
 use Minishlink\WebPush\WebPush;
 use NotificationChannels\WebPush\WebPushChannel;
@@ -11,10 +12,19 @@ use ReflectionProperty;
 use Tests\TestCase;
 
 /**
- * The push transport is a Guzzle client this app does not build, reached only through the package's
- * config. Everything that keeps a validated endpoint from becoming a request somewhere else lives in
- * that one array, so it is asserted where it lands — on the client the channel would actually use —
- * rather than by reading the config back.
+ * Everything that keeps a validated push endpoint from becoming a request somewhere else is a
+ * property of one client, so it is asserted on the client the channel would actually send on rather
+ * than on the config it was built from.
+ *
+ * Going through the channel is the point. The package registers a binding for the same client and
+ * builds it in a way that drops these options, so what is being pinned here is that this app's
+ * provider is the one that won. A test of PushClientFactory alone would stay green while every push
+ * went out on the package's client.
+ *
+ * `allow_redirects` is asserted for completeness, not because this client decides it: the only
+ * method the library calls is Guzzle's PSR-18 sendRequest(), which sets allow_redirects false per
+ * request whatever the client was built with. Remove it from the factory and this assertion fails
+ * while behaviour does not — the teeth here are `proxy` and the two timeouts.
  */
 class WebPushClientConfigTest extends TestCase
 {
@@ -32,9 +42,32 @@ class WebPushClientConfigTest extends TestCase
     {
         $config = $this->clientConfig();
 
-        $this->assertSame(5, $config['connect_timeout']);
-        // Set explicitly, so the package's 30s default does not park a queue worker on a dead service.
-        $this->assertSame(10, $config['timeout']);
+        $this->assertSame(config('webpush.client_options.connect_timeout'), $config['connect_timeout']);
+        // Set explicitly, so the library's 30s default does not park a queue worker on a dead service.
+        $this->assertSame(config('webpush.client_options.timeout'), $config['timeout']);
+    }
+
+    /**
+     * The two options that decide where a request can land are not the config's to relax.
+     *
+     * Both are read from a file an operator edits, and an empty or absent `proxy` is the difference
+     * between ignoring HTTPS_PROXY and honouring it. So the factory applies them after whatever it
+     * was handed, and a site that deletes them keeps them.
+     */
+    public function test_the_destination_options_cannot_be_loosened_by_config(): void
+    {
+        $client = (new PushClientFactory)->make([
+            'allow_redirects' => true,
+            'proxy' => 'http://proxy.example.com:3128',
+            'timeout' => 5,
+        ]);
+
+        $config = (new ReflectionProperty(Client::class, 'config'))->getValue($client);
+
+        $this->assertFalse($config['allow_redirects']);
+        $this->assertSame('', $config['proxy']);
+        // What the config does own still lands.
+        $this->assertSame(5, $config['timeout']);
     }
 
     /** @return array<string, mixed> */
@@ -43,6 +76,8 @@ class WebPushClientConfigTest extends TestCase
         $channel = $this->app->make(WebPushChannel::class);
         $webPush = (new ReflectionProperty(WebPushChannel::class, 'webPush'))->getValue($channel);
         $client = (new ReflectionProperty(WebPush::class, 'client'))->getValue($webPush);
+
+        $this->assertInstanceOf(Client::class, $client);
 
         return (new ReflectionProperty(Client::class, 'config'))->getValue($client);
     }
