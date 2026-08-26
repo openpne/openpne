@@ -256,13 +256,24 @@ test('every heading that shows a pill also says the count', () => {
         });
 
     const PILL_IN_HEADER = /right=\{<CountPill/;
-    const COUNTED_TITLE = /title=\{[\s\S]{0,400}?sr-only/;
+    const SECTION = /<(?:Panel|HomeSection)\b/g;
 
     const headers = pages(root).filter((file) => PILL_IN_HEADER.test(readFileSync(file, 'utf8')));
     // Two pages use this shape today; a scan finding none would pass on an empty set.
     expect(headers).toHaveLength(2);
 
-    const bare = headers.filter((file) => !COUNTED_TITLE.test(readFileSync(file, 'utf8')));
+    const bare = headers.filter((file) => {
+        const code = readFileSync(file, 'utf8');
+        const pill = code.search(PILL_IN_HEADER);
+        // Only the section the pill is in, from its opening tag: a check for "an sr-only somewhere
+        // near a title" is satisfied by any other section's sr-only, so removing this heading's
+        // phrase and adding an unrelated one elsewhere in the file would leave it green.
+        const opens = [...code.slice(0, pill).matchAll(SECTION)];
+        const start = opens.length > 0 ? (opens.at(-1)?.index ?? 0) : 0;
+
+        // And the phrase has to be the count, not any sr-only that happens to live there.
+        return !/sr-only[\s\S]*?:count/.test(code.slice(start, pill));
+    });
     expect(bare.map((f) => path.relative(root, f))).toEqual([]);
 });
 
