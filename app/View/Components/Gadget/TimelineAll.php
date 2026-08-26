@@ -17,8 +17,13 @@ class TimelineAll extends TimelineBox
         public ?Member $subject = null,
         public array $config = [],
         public ?string $partId = null,
+        public int $limit = 0,
     ) {
-        $this->posts = $subject !== null ? $feed->take($subject, self::limit($config)) : collect();
+        $this->limit = self::limit($config);
+        $this->posts = collect();
+        if ($subject !== null) {
+            $this->keep($feed->take($subject, $this->limit + 1), $this->limit);
+        }
         $this->attachInlineReplies($recentReplies);
     }
 

@@ -28,7 +28,7 @@ class ClassicProfileTimelineGadgetTest extends TestCase
         return TimelinePost::factory()->create(['member_id' => $member->getKey(), 'visibility' => $visibility, 'body' => $body]);
     }
 
-    public function test_own_profile_renders_the_timeline_with_a_post_link(): void
+    public function test_own_profile_renders_the_timeline_without_a_post_link(): void
     {
         $viewer = Member::factory()->create();
         $this->postFor($viewer, Visibility::Private, 'MyOwnProfileBody');
@@ -39,7 +39,7 @@ class ClassicProfileTimelineGadgetTest extends TestCase
             ->assertSee('id="profileTimeline_'.$gadget->id.'"', false)
             ->assertSee('class="dparts profileTimeline"', false)
             ->assertSee("A member's timeline")           // h3 (en term rendering)
-            ->assertSee('/timeline/new', false)          // post link on own profile
+            ->assertDontSee('/timeline/new', false)      // no post link: OpenPNE 3 had none here
             ->assertSee('class="timeline-post"', false)  // _post partial reused
             ->assertSee('MyOwnProfileBody');             // own private post is visible to self
     }
@@ -70,7 +70,7 @@ class ClassicProfileTimelineGadgetTest extends TestCase
             ->assertDontSee('profileTimeline', false);
     }
 
-    public function test_own_empty_profile_keeps_the_frame_and_post_link(): void
+    public function test_own_empty_profile_keeps_the_frame_with_the_empty_line(): void
     {
         $viewer = Member::factory()->create();
         $gadget = $this->makeGadget();
@@ -78,7 +78,8 @@ class ClassicProfileTimelineGadgetTest extends TestCase
         $this->actingAs($viewer)->get("/member/{$viewer->getKey()}")
             ->assertOk()
             ->assertSee('id="profileTimeline_'.$gadget->id.'"', false)
-            ->assertSee('/timeline/new', false)
+            ->assertSee('posts to show.')
+            ->assertDontSee('/timeline/new', false)
             ->assertDontSee('class="timeline-post"', false);
     }
 

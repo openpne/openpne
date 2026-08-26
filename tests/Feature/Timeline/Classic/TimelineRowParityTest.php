@@ -38,7 +38,7 @@ class TimelineRowParityTest extends TestCase
         $response = $this->actingAs($member)->get("/member/{$member->getKey()}/timeline")->assertOk();
 
         // OpenPNE 3's shell: div.timeline > div#timeline-list holding div rows (not a ul).
-        $response->assertSeeInOrder(['<div class="timeline">', '<div id="timeline-list">'], false);
+        $response->assertSeeInOrder(['<div class="timeline" data-timeline-container>', '<div id="timeline-list">'], false);
         $response->assertDontSee('<ul class="timeline-list">', false);
         // The row: fragment anchor, 48px avatar block (title on the link), content block, body id.
         $response->assertSeeInOrder([

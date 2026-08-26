@@ -494,12 +494,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // single-post permalink. Literal-prefix routes precede the {timelinePost} wildcard.
     Route::controller(TimelineController::class)->middleware(EnsureFeatureEnabled::class.':timeline')->group(function () {
         Route::get('/timeline', 'index')->name('timeline.index');
+        Route::get('/timeline/rows', 'indexRows')->name('timeline.index.rows');
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
+        Route::get('/member/{member}/timeline/rows', 'memberRows')->whereNumber('member')->name('timeline.member.rows');
         Route::get('/timeline/new', 'new')->name('timeline.new');
         // What the compose form's @mention picker reads (JSON), on a keystroke-rate limiter like the preview's.
         Route::get('/timeline/mention-candidates', 'mentionCandidates')->middleware('throttle:mention-search')->name('timeline.mention_candidates');
         // One hashtag's posts. The tag is percent-encoded in the URL and reaches the action decoded.
         Route::get('/timeline/tag/{tag}', 'tag')->name('timeline.tag');
+        Route::get('/timeline/tag/{tag}/rows', 'tagRows')->name('timeline.tag.rows');
         Route::post('/timeline/create', 'store')->middleware('throttle:posting')->name('timeline.store');
         Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
         Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');

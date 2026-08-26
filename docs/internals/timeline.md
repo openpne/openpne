@@ -161,6 +161,15 @@ Two contracts, because they fail differently:
 |---|---|---|
 | the whole reply list | `GET timeline.replies`, HTML fragment, `private, no-store` | the rows the page would have drawn, so the script inserts server markup rather than assembling any |
 | posting a reply | `POST timeline.reply.store`, `wantsJson()` → `201 {html}` | 422 / 419 / 429 then arrive as Laravel's own JSON, and the answer is the row to insert |
+| the next page of rows | `GET timeline.{index,member,tag}.rows`, HTML fragment, `private, no-store`, next page in `Link: <…>; rel="next"` | the もっと読む button appends what the pager's next page would have drawn; the script follows a `Link` only on its own origin |
+
+Without the script the Classic pager stands in for もっと読む, and it comes back when a fetch fails.
+The gadgets fetch one row past their limit to know whether to offer the button (timelineAll → the
+home feed's rows at the gadget's own `per_page`, timelineProfile → the member's at the default 20;
+timelineFriend has no page of its own to fetch from). Paging is by offset where OpenPNE 3 keyed on
+`max_id`: a post made meanwhile shifts the next page by one. Classic posts from the home gadget's
+box (its standalone page without the script); a site whose home draws no timeline gadget links to no
+Classic way to post, as OpenPNE 3 linked none — the standalone page stays routable.
 
 Both are gated exactly as the thread page is (`ShowTimelinePost`), and the fragment answers for a
 **root id only** — a reply's id would re-center, and answering there would say which thread it is on.

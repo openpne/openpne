@@ -5,4 +5,5 @@
      the server. --}}
 @once
     <script src="{{ asset('js/classic-timeline-replies.js') }}" defer></script>
+    <script src="{{ asset('js/classic-timeline-more.js') }}" defer></script>
 @endonce
