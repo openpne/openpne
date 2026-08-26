@@ -18,11 +18,12 @@ use App\Models\Member;
  * by any member and writable only by its own: open to read, joined to speak, not a broadcast.
  *
  * Talk history applies NO per-row filter, and that is a contract rather than an omission. The
- * community timeline this replaces hid a row whose author had since left the group, and a row whose
- * author had blocked the viewer. Talk hides neither: a conversation with holes in it is not the
- * conversation that happened, and the group boards it sits beside — topic and event comments —
- * have never filtered either. Blocking still does its work where a block is about people rather
- * than about a room: mention eligibility, mention candidates, and member pages.
+ * community timeline this replaces hid a row whose author had since left the group, and — alone
+ * among OpenPNE 3's timelines — skipped the block filter the others applied (opActivityQueryBuilder:
+ * notIncludeBlocked() on the community target). Talk hides neither: a conversation with holes in it
+ * is not the conversation that happened, and the group boards it sits beside — topic and event
+ * comments — have never filtered either. Blocking still does its work where a block is about people
+ * rather than about a room: mention eligibility, mention candidates, and member pages.
  */
 class GroupTalkAccess
 {

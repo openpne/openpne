@@ -204,10 +204,11 @@ What survives is the URL lineage, because members and OpenPNE 3 mail hold these 
 timeline unit switched off must still honour them. The compose and POST routes are simply gone — a
 redirect that dropped a member's draft would be worse than a 404.
 
-`timeline_new_post_community` stays registered as a **dormant** kind (`isWired: false`). Talk sends
-no per-message broadcast at all — its unread badge does that job — so there is no successor to
-migrate the preference to, and the imported rows are kept because a member's stored choice is a
-record rather than a value to discard.
+`timeline_new_post_community` stays registered as a **dormant** kind (`isWired: false`). Talk's own
+per-message kind, [`group_talk_new_message`](group-talk.md#what-talk-notifies), is not read as its
+successor — it is an administrator-defaulted kind about a room, and an OpenPNE 3 choice about
+community timeline posts is not migrated into it — and the imported rows are kept because a member's
+stored choice is a record rather than a value to discard.
 
 ### Why `linkableTags()` still exists
 
