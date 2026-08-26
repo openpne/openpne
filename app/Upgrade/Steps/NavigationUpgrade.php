@@ -30,8 +30,9 @@ use App\Upgrade\UpgradeStep;
  *
  * The source type `community` lands as `group` (SOURCE_TYPES / typeExpr): the OpenPNE 3 word is
  * what the filter and the type-aware uri CASE read, the OpenPNE 4 word is what is stored. A route
- * whose OpenPNE 4 canonical moved with that rename is carried across by RENAMED_URLS, so an
- * upgraded nav row links to the canonical instead of permanently through a compatibility redirect.
+ * whose OpenPNE 4 canonical moved — with that rename, or on its own like the policy pages — is
+ * carried across by RENAMED_URLS, so an upgraded nav row links to the canonical instead of
+ * permanently through a compatibility redirect.
  */
 class NavigationUpgrade extends UpgradeStep
 {
@@ -48,6 +49,10 @@ class NavigationUpgrade extends UpgradeStep
      * context id in — OpenPNE 3 spelled some of these as a bare path plus `?id=`.
      */
     private const RENAMED_URLS = [
+        '/userAgreement' => '/terms',
+        '/default/userAgreement' => '/terms',
+        '/privacyPolicy' => '/privacy',
+        '/default/privacyPolicy' => '/privacy',
         '/community/:id' => '/groups/:id',
         '/community/search' => '/groups',
         '/community/joinList' => '/groups/mine',
