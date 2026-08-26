@@ -10,7 +10,7 @@
             <x-classic.required-notice />
             <table>
                 @include('group-event._fields')
-                @include('group-event._image_fields')
+                <x-classic.photo-rows kind="event" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">
