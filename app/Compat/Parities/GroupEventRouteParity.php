@@ -80,23 +80,23 @@ class GroupEventRouteParity extends RouteParity
             // listCommunitySuccess.php → group-event/index.blade.php
             'listCommunity' => [
                 new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'OpenPNE 4 trails the link with the open date, prints an empty-state message where OpenPNE 3 dropped the whole box, and closes the page with a line box back to the community'),
-                new ScreenElement('create-event entry', L::Two, S::Partial, "op_include_parts('buttonBox', 'communityEventList', button Create)", 'folded into the board box as a moreInfo link; OpenPNE 3 gave it its own box with a submit button'),
+                new ScreenElement('create-event entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityEventList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityEvent_list_community')"),
-                new ScreenElement('box heading', L::Three, S::Partial, 'listCommunitySuccess.php <h3>List of events</h3>', 'headed with the community name instead'),
+                new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of events</h3>', 'List of events'),
             ],
             // showSuccess.php + communityEventComment/_list.php → group-event/show.blade.php.
             'show' => [
                 new ScreenElement('event listBox', L::One, S::Ported, "op_include_parts('listBox', 'communityEvent')", 'the bare id communityEvent is OpenPNE 3\'s own, restored verbatim'),
-                new ScreenElement('box heading "[community] Event"', L::Three, S::Partial, "showSuccess.php '['.\$group->getName().'] '.__('Event')", 'headed with the event name, so the owning community is no longer named there'),
+                new ScreenElement('box heading "[community] Event"', L::Three, S::Ported, "showSuccess.php '['.\$group->getName().'] '.__('Event')", '[group name] Event'),
                 new ScreenElement('writer row', L::Two, S::Ported, "\$list['Writer'] op_community_topic_link_to_member"),
-                new ScreenElement('name row', L::Two, S::Missing, "\$list['Name'] = \$communityEvent->getName()", 'the name moved into the box heading, so the detail table has no Name row'),
+                new ScreenElement('name row', L::Two, S::Ported, "\$list['Name'] = \$communityEvent->getName()", 'the Name row follows Writer'),
                 new ScreenElement('open date + supplement row', L::Two, S::Ported, "\$list['Open date'] op_format_date('D') . getOpenDateComment()"),
                 new ScreenElement('area row (auto-link)', L::Two, S::Ported, "\$list['Area'] op_url_cmd(\$communityEvent->getArea())", 'x-user-text (BodyText), so a bare venue URL still autolinks'),
-                new ScreenElement('body row (images + line breaks + auto-link)', L::Two, S::Partial, "\$list['Body'] ul.photo + nl2br(\$communityEvent->getBody())", 'rendered as a div.eventBody after the table, so opCommunityTopicPlugin\'s `#communityEvent table ul.photo` rules match nothing'),
+                new ScreenElement('body row (images + line breaks + auto-link)', L::Two, S::Ported, "\$list['Body'] ul.photo + nl2br(\$communityEvent->getBody())", 'a Body row in the table: ul.photo + the text'),
                 new ScreenElement('application deadline row', L::Two, S::Ported, "\$list['Application deadline'] op_format_date('D')"),
                 new ScreenElement('capacity row', L::Two, S::Ported, "\$list['Capacity'] = \$communityEvent->getCapacity()"),
                 new ScreenElement('participant count row + member-list link', L::Two, S::Ported, "\$list['Count of Member'] + link_to('@communityEvent_memberList')"),
-                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centered submit button and reached deletion from the edit screen only'),
+                new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button; deletion is reached from the edit screen'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityEventComment', 'list')"),
                 new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'GroupEventCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
@@ -106,7 +106,7 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('RSVP buttons in the comment form', L::One, S::Ported, 'showSuccess.php input name=participate / cancel / comment, gated by isClosed, isExpired, isEventMember, isAtCapacity'),
                 new ScreenElement('comment post form + image upload', L::One, S::Ported, 'showSuccess.php hand-written <form> around a lone .parts.form', 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
                 new ScreenElement('required-field notice', L::Three, S::Ported, 'showSuccess.php hand-written "%0% is required field." line', 'x-classic.required-notice above the table; the label carries its star from the form class (PluginCommunityEventCommentForm), as OpenPNE 3 did'),
-                new ScreenElement('community top-page line link', L::Two, S::Partial, "op_include_line('linkLine', link_to('community/home'))", 'links to the event board, not the community home, and drops the "[name] %Community% Top Page" label'),
+                new ScreenElement('community top-page line link', L::Two, S::Ported, "op_include_line('linkLine', link_to('community/home'))", '#linkLine to the community home, labelled [name] %Community% Top Page'),
             ],
             // newSuccess.php (PluginCommunityEventForm) → group-event/new.blade.php
             'new' => [
