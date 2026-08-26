@@ -31,8 +31,9 @@ type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidd
 export type BadgeCount = keyof UnreadCounts;
 
 /**
- * A count from the shared `unread` props plus the phrase naming it — the pill's aria-label replaces
- * the bare digits, so the carrying link announces the number exactly once, in words.
+ * A count from the shared `unread` props plus the phrase naming it. The pill prints the digits and
+ * hides them; this phrase is what joins the carrying link's name, so the number is announced exactly
+ * once, in words (components/count-pill.tsx).
  */
 export interface CountBadge {
     count: BadgeCount;

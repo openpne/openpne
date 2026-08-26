@@ -153,9 +153,16 @@ export default function UnifiedGroup() {
                 group whose talk has not started is exactly the one that needs a way in. */}
             {canViewTalk && (
                 <HomeSection
-                    title={t('Talk')}
+                    title={
+                        <>
+                            {t('Talk')}
+                            {/* The pill in `right` is beside the heading, not inside a control, so
+                                its number would belong to nothing. The heading is what it is about. */}
+                            {talkUnread > 0 && <span className="sr-only"> {t(':count unread messages', { count: talkUnread })}</span>}
+                        </>
+                    }
                     icon={MessagesSquare}
-                    right={<CountPill count={talkUnread} label={t(':count unread messages', { count: talkUnread })} />}
+                    right={<CountPill count={talkUnread} />}
                 >
                     <Link
                         href={`/groups/${group.id}/talk`}

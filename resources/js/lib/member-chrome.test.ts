@@ -146,8 +146,8 @@ test('the joined tab carries the unread-talk count', () => {
         tabs.map((tab) => tab.badge?.count),
         ['groupTalks', undefined, undefined],
     );
-    // The pill's aria-label is this phrase with the live count — the link's only announcement
-    // of the number, so it must exist and must be the nav's own wording.
+    // This phrase, with the live count, is the link's only announcement of the number — the digits
+    // the pill prints are hidden — so it must exist and must be the nav's own wording.
     assert.equal(tabs[0]?.badge?.label.key, ':count %communities% with new messages');
 });
 
