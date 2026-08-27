@@ -90,19 +90,38 @@ resolver's own timeout, outside the budget.
 ## The push endpoint seam
 
 Web push is the one outbound path that does not go through `SafeHttpFetcher`. The requests are made
-by `minishlink/web-push` on a Guzzle client it builds itself, handed to the notification channel by
-the package; short of reimplementing the payload encryption there is nowhere to inject the fetcher.
-The boundary test above still holds — nothing in `app/` constructs that client — so this is a second
-seam, and it is weaker. What it is, plainly:
+by `minishlink/web-push`, which encrypts the payload and hands it to an HTTP client; short of
+reimplementing that encryption there is nowhere to inject the fetcher. The client itself is built by
+[`PushClientFactory`](../../app/Outbound/PushClientFactory.php), so the boundary test above still
+holds — an HTTP client is still only constructed inside `App\Outbound` — but what it builds does not
+validate a destination or pin a connection. This is a second seam, and it is weaker. What it is,
+plainly:
 
 - **The URL is not prose a member typed** but the `endpoint` a browser's push service issued, so its
   shape is knowable in advance and is fixed on store by
   [`PushEndpoint`](../../app/Rules/PushEndpoint.php): https, port 443, a named host, no userinfo,
   bounded length. An address literal is refused — a real push service is always a name.
-- **The transport is closed to the moves that leave that shape behind** (`config/webpush.php`):
-  redirects are not followed and the proxy environment variables Guzzle otherwise honours are
-  disabled. A 30x or a proxy is exactly what turns a validated https host into a request elsewhere.
-  Timeouts bound a worker parked on an unresponsive service.
+- **The transport is closed to the moves that leave that shape behind**: redirects are not followed
+  and the proxy environment variables Guzzle otherwise honours are disabled. A 30x or a proxy is
+  exactly what turns a validated https host into a request elsewhere. Those two are set by the
+  factory after the options `config/webpush.php` supplies, so those two survive a site deleting them
+  — an absent `proxy` is the environment's, not a neutral default. Nothing else in that array is
+  pinned, and the pin is on those two option names rather than on the outcome: Guzzle applies a
+  `curl` sub-array after everything else, so a site can say the same things in `CURLOPT_` terms and
+  get them. The client is built here at all because the channel package would otherwise build it in a
+  way that drops the option bag entirely, and every guarantee here would be config that no longer
+  applies.
+- **The job is bounded, not just the request.** The library sends a member's devices one at a time,
+  so the per-request timeout multiplies by the device cap. That product stays under the notification's
+  own `$timeout`, which stays under the queue's `retry_after` — past it the job is handed out again
+  mid-send and every reachable device is pushed twice. `WebPushTimeoutBudgetTest` holds the relation
+  between the three numbers. It cannot hold it for SQS, where that window is the queue's visibility
+  timeout in AWS: a deployment on that driver has to raise it past the job's `$timeout` itself. Nor
+  is there a job to bound on an inline queue — there the send runs in the request of whoever caused
+  the notification, and the per-request timeout times the device cap is all of it.
+
+This app does not take the channel package's route of sending through Laravel's HTTP client, so
+global HTTP middleware, request logging and `Http::fake()` do not see push requests.
 
 What is not covered: the host is judged as a **name**, never as an address, so a name that resolves
 to a private address is not caught, and there is no connection pin — DNS may answer differently at
@@ -112,8 +131,10 @@ to anyone** — the channel consumes status codes only, to expire dead subscript
 
 ## Key invariants
 
-- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy client; that is
-  a weaker guarantee than the fetcher's, and it is the only outbound path allowed to be.
+- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy client this app
+  builds; that is a weaker guarantee than the fetcher's, and it is the only outbound path allowed to
+  be. The client is reachable only from the push seam, by test — the directory allowlist below would
+  not otherwise stop anything in `App\Outbound` from fetching on it.
 - `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact

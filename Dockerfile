@@ -22,7 +22,9 @@ RUN apt-get update \
 # ProfileModifier throws NotSupported, so a wide-gamut photo keeps its numbers and loses its
 # profile, and is then read as sRGB.
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-RUN install-php-extensions intl bcmath zip curl exif gd imagick pdo_mysql pdo_sqlite opcache
+# pcntl is what makes a queue worker's job timeout real: without it the worker never arms the alarm
+# it would interrupt a long send with, and WebPushNudge::$timeout is a number nothing enforces.
+RUN install-php-extensions intl bcmath zip curl exif gd imagick pdo_mysql pdo_sqlite opcache pcntl
 
 # composer
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer

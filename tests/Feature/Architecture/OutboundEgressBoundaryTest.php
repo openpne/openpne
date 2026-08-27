@@ -335,6 +335,43 @@ class OutboundEgressBoundaryTest extends TestCase
         $this->assertSame([], $this->streamWrapperCalls('<?php Foo\file($url);'));
     }
 
+    /**
+     * The push client is not the fetcher, and only the seam that needs it may reach it.
+     *
+     * PushClientFactory sits in the allowlisted directory because that is where an HTTP client is
+     * allowed to be constructed — not because what it builds is safe to send anything on. It
+     * validates no address and pins no connection; it is the weaker seam the docs describe, and it
+     * is only that because the endpoint behind it was shape-checked at ingress and the response is
+     * never read. Anything else picking it up would be an unguarded fetch wearing an approved name,
+     * and the directory allowlist above would not say a word about it.
+     */
+    public function test_the_push_client_is_reachable_only_from_the_push_seam(): void
+    {
+        $allowed = [
+            'Outbound/PushClientFactory.php',
+            'Providers/WebPushServiceProvider.php',
+        ];
+
+        $offenders = [];
+
+        foreach ($this->appFiles() as $file) {
+            $relative = str_replace(app_path().'/', '', $file);
+
+            if (in_array($relative, $allowed, true)) {
+                continue;
+            }
+
+            if (str_contains((string) file_get_contents($file), 'PushClientFactory')) {
+                $offenders[] = 'app/'.$relative;
+            }
+        }
+
+        $this->assertSame([], $offenders, sprintf(
+            "These files reach the push client. It validates nothing and pins nothing — send through App\\Outbound\\SafeHttpFetcher instead.\n%s",
+            implode("\n", $offenders),
+        ));
+    }
+
     /** @return list<string> */
     private function appFiles(): array
     {
