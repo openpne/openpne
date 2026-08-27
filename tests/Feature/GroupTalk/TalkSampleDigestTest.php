@@ -102,18 +102,21 @@ class TalkSampleDigestTest extends TestCase
 
     // --- what a window is ---
 
-    /** Both edges belong to the period that names them; a second either side does not. */
-    public function test_the_window_holds_the_messages_on_its_own_edges(): void
+    /**
+     * (since, until]: the start instant belongs to the window that ended on it, the end instant to
+     * this one — so two consecutive windows never count the same message twice.
+     */
+    public function test_the_window_is_open_at_its_start_and_closed_at_its_end(): void
     {
         $author = $this->member();
-        $this->said($author, $this->start->subSecond());
-        $onSince = $this->said($author, $this->start);
+        $this->said($author, $this->start);
+        $justAfter = $this->said($author, $this->start->addSecond());
         $inside = $this->said($author, $this->start->addMinutes(30));
         $onUntil = $this->said($author, $this->until);
         $this->said($author, $this->until->addSecond());
 
         $this->assertSame(
-            [$onSince->getKey(), $inside->getKey(), $onUntil->getKey()],
+            [$justAfter->getKey(), $inside->getKey(), $onUntil->getKey()],
             $this->ids($this->digest->sampleBetween($this->group, $this->start, $this->until)),
         );
     }
@@ -163,10 +166,10 @@ class TalkSampleDigestTest extends TestCase
     public function test_the_count_is_the_whole_window_however_bounded_the_sample_is(): void
     {
         $author = $this->member();
-        foreach (range(0, TalkSampleDigest::SAMPLE + 9) as $second) {
+        foreach (range(1, TalkSampleDigest::SAMPLE + 10) as $second) {
             $this->said($author, $this->start->addSeconds($second));
         }
-        $this->said($author, $this->start->subSecond());
+        $this->said($author, $this->start);
         $this->said($author, $this->until->addSecond());
 
         $this->assertSame(TalkSampleDigest::SAMPLE + 10, $this->digest->countBetween($this->group, $this->start, $this->until));
@@ -188,6 +191,7 @@ class TalkSampleDigestTest extends TestCase
         $first->delete();
 
         $this->assertTrue($this->digest->firstBetween($this->group, $this->start, $this->until)?->is($later));
+        $this->assertSame(1, $this->digest->countBetween($this->group, $this->start, $this->until));
     }
 
     public function test_an_emptied_window_has_no_anchor_and_nothing_to_count(): void
@@ -211,7 +215,7 @@ class TalkSampleDigestTest extends TestCase
     {
         $quiet = $this->member();
         $loud = $this->member();
-        $this->said($quiet, $this->start);
+        $this->said($quiet, $this->start->addSecond());
         foreach (range(1, 3) as $minute) {
             $this->said($loud, $this->start->addMinutes($minute));
         }
@@ -229,7 +233,7 @@ class TalkSampleDigestTest extends TestCase
     {
         $first = $this->member();
         $second = $this->member();
-        $this->said($first, $this->start);
+        $this->said($first, $this->start->addSecond());
         $this->said($second, $this->start->addMinutes(1));
         $this->said($second, $this->start->addMinutes(2));
         $this->said($first, $this->start->addMinutes(3));
@@ -257,7 +261,7 @@ class TalkSampleDigestTest extends TestCase
     public function test_a_withdrawn_author_brings_no_face_however_much_they_said(): void
     {
         $author = $this->member();
-        $this->said($author, $this->start);
+        $this->said($author, $this->start->addSecond());
         foreach (range(1, 3) as $minute) {
             $at = $this->start->addMinutes($minute);
             GroupMessage::factory()->withdrawnAuthor()->create([
@@ -281,7 +285,7 @@ class TalkSampleDigestTest extends TestCase
     {
         $viewer = $this->member();
         $author = $this->member();
-        $refused = $this->attach($this->said($author, $this->start));
+        $refused = $this->attach($this->said($author, $this->start->addSecond()));
         $served = $this->attach($this->said($author, $this->start->addMinutes(1)));
 
         Gate::before(function (?Member $user, string $ability, array $arguments) use ($refused): ?bool {

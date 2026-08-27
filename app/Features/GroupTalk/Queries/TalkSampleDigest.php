@@ -56,8 +56,9 @@ final class TalkSampleDigest
     /**
      * The window's first $limit messages, oldest first.
      *
-     * Both edges are inclusive: a period is named by the instants at its ends, and a message written
-     * exactly on one of them belongs to the period that names it.
+     * The window is (since, until]: open at the start, closed at the end. Consecutive windows share
+     * their boundary instant — one window's end is the next one's start — and a message written
+     * exactly on it must land in one of them, not both. It goes with the window that closes on it.
      *
      * @return Collection<int, GroupMessage>
      */
@@ -209,7 +210,8 @@ final class TalkSampleDigest
     {
         return GroupMessage::query()
             ->where('group_id', $group->getKey())
-            ->whereBetween('group_messages.created_at', [$since, $until])
+            ->where('group_messages.created_at', '>', $since)
+            ->where('group_messages.created_at', '<=', $until)
             ->orderBy('created_at')
             ->orderBy('id');
     }
