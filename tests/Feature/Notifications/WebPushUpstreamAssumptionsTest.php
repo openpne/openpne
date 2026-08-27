@@ -71,6 +71,10 @@ class WebPushUpstreamAssumptionsTest extends TestCase
      *
      * The config is emptied before the provider boots because the binding closes over a config
      * array read at boot time; setting it afterwards changes nothing.
+     *
+     * Registering the provider by hand means this one says nothing about it being listed in
+     * bootstrap/providers.php. WebPushClientConfigTest resolves through the boot the app did — keep
+     * it that way, or nothing is left watching that it is registered at all.
      */
     public function test_the_channel_sends_on_the_client_this_app_built(): void
     {
@@ -84,7 +88,11 @@ class WebPushUpstreamAssumptionsTest extends TestCase
             'Push is going out on a client App\Outbound\PushClientFactory did not build, so nothing is applying the seam\'s no-redirect and no-proxy pins. The package reaches its own builder again — see docs/internals/outbound-http.md, "The push endpoint seam".',
         );
 
-        $this->assertSame('', $config['proxy'] ?? null);
+        $this->assertSame(
+            '',
+            $config['proxy'] ?? null,
+            'The push client no longer refuses a proxy, so the environment decides where a validated endpoint is dialled.',
+        );
     }
 
     /**

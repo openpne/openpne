@@ -126,8 +126,8 @@ plainly:
 
 None of the three assumptions those rest on — that the client this app builds is the one the channel
 sends on, that no async client is discoverable, that devices are sent one at a time — belong to this
-app, and each was last changed by a dependency bump whose release notes said something else.
-`WebPushUpstreamAssumptionsTest` asserts them, so the bump is what goes red.
+app. The last upgrade broke the first and third and introduced the second, and its release notes
+named none of them. `WebPushUpstreamAssumptionsTest` asserts all three, so the bump is what goes red.
 
 This app does not take the channel package's route of sending through Laravel's HTTP client, so
 global HTTP middleware, request logging and `Http::fake()` do not see push requests.
