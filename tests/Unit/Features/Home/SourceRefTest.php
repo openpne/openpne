@@ -52,6 +52,8 @@ class SourceRefTest extends TestCase
             'two separators' => ['diary:1:2'],
             'padded' => [' diary:1'],
             'newline past the anchor' => ["diary:1\nbannerImage:1"],
+            // `$` would let a trailing newline through; only an absolute end anchor refuses it.
+            'trailing newline' => ["diary:1\n"],
             // Would cast to PHP_INT_MAX and quietly name a row nobody wrote.
             'past the integer range' => ['diary:99999999999999999999'],
         ];

@@ -24,7 +24,7 @@ final readonly class SourceRef
      */
     public static function tryParse(string $text): ?self
     {
-        if (preg_match('/^([a-zA-Z]+):([1-9]\d*)$/', $text, $matches) !== 1) {
+        if (preg_match('/^([a-zA-Z]+):([1-9]\d*)\z/', $text, $matches) !== 1) {
             return null;
         }
 
