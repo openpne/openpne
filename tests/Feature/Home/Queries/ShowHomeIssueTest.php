@@ -148,6 +148,22 @@ class ShowHomeIssueTest extends TestCase
     }
 
     /**
+     * A reply is not a story, and nothing about the record itself says so: it carries its root's
+     * audience, so every other question asked of it answers yes. An issue that led with one would
+     * quote half a conversation.
+     */
+    public function test_a_reply_is_never_a_story(): void
+    {
+        $root = TimelinePost::factory()->create();
+        $reply = TimelinePost::factory()->replyTo($root)->create();
+
+        $this->feature(HomeIssueSection::Stories, $reply, rank: 1);
+        $this->feature(HomeIssueSection::Stories, $root, rank: 2);
+
+        $this->assertSame([$this->ref($root)], $this->refs(HomeIssueSection::Stories));
+    }
+
+    /**
      * "Every member may read it" is the predicate, so a members-only group's board drops for a
      * member of that group too — the reader in front of it is not who the rule is about.
      */

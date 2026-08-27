@@ -102,10 +102,18 @@ class HomeIssueRoutesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get('/home/2026/08/26')->assertNotFound();
     }
 
-    /** A well-formed URL naming a day that never happened reads as nothing, not as an error. */
+    /**
+     * A well-formed URL naming a day that never happened reads as nothing, not as an error — and
+     * never as the day it would roll over into: February 30th is March 2nd to a date constructor,
+     * and the issue published on the 2nd answers to its own URL only.
+     */
     public function test_a_day_that_does_not_exist_is_not_a_page(): void
     {
-        $this->actingAs(Member::factory()->create())->get('/home/2026/02/30')->assertNotFound();
+        $this->publishOn('2026-03-02');
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/2026/02/30')->assertNotFound();
+        $this->actingAs($member)->get('/home/2026/03/02')->assertOk();
     }
 
     public function test_a_month_or_day_out_of_range_is_not_a_route_at_all(): void
@@ -124,16 +132,51 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/issues'));
     }
 
+    /**
+     * The pager reads the run by day: the issue either side, and nothing past either end.
+     *
+     * Through the route rather than against the query, because the neighbours are what the page is
+     * handed — a pager pointing at the wrong day is the same bug whichever half produced it.
+     */
+    public function test_the_pager_points_at_the_issues_either_side(): void
+    {
+        $this->publishOn('2026-08-25');
+        $this->publishOn('2026-08-26');
+        $this->publishOn('2026-08-27');
+
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/2026/08/26')->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('prev.href', '/home/2026/08/25')
+                ->where('next.href', '/home/2026/08/27'));
+
+        $this->actingAs($member)->get('/home/2026/08/25')->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('prev', null)
+                ->where('next.href', '/home/2026/08/26'));
+
+        $this->actingAs($member)->get('/home/2026/08/27')->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('prev.href', '/home/2026/08/26')
+                ->where('next', null));
+    }
+
     /** One issue dated on the frozen clock, with one story in it. */
     private function publish(): HomeIssue
     {
-        $now = CarbonImmutable::parse(self::NOW);
+        return $this->publishOn(self::NOW);
+    }
+
+    /** One issue covering $date, with one story in it. */
+    private function publishOn(string $date): HomeIssue
+    {
+        $day = CarbonImmutable::parse($date);
 
         $issue = HomeIssue::factory()->create([
-            'number' => 1,
-            'issue_date' => $now->toDateString(),
-            'window_start' => $now->subDay(),
-            'published_at' => $now,
+            'issue_date' => $day->toDateString(),
+            'window_start' => $day->subDay(),
+            'published_at' => $day->setTime(6, 0),
         ]);
 
         HomeIssueItem::factory()->forSource(Diary::factory()->create())->create([
