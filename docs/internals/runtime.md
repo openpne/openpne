@@ -118,7 +118,10 @@ Currently that is the daily prune of expired pending tokens — registration,
 email-change and MFA-reset links — and the weekly prune of unreferenced link
 cards and the image each holds
 ([`routes/console.php`](../../routes/console.php)); without the scheduler those
-rows accumulate. `php artisan schedule:list` shows what is registered.
+rows accumulate. The daily 06:00 home issue runs here too, and its absence is
+visible rather than silent: no scheduler means no front page
+([home-issues.md](home-issues.md)). `php artisan schedule:list` shows what is
+registered.
 
 Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
