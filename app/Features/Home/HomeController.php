@@ -10,14 +10,12 @@ use App\Features\Group\Queries\PendingJoinRequestCounts;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\Home\Queries\JoinedGroupActivity;
 use App\Features\Home\Serializers\HomeSerializer;
-use App\Features\Home\Serializers\UnifiedHomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\Feature;
-use App\Support\LookResolver;
 use App\Support\SurfaceResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -67,9 +65,9 @@ class HomeController extends Controller
     }
 
     /**
-     * The Modern-only landing (root redirects here under a Modern surface): a digest of the
-     * viewer's conversations, the all-members diary feed, the timeline, their joined-community
-     * activity, and their own recent diaries.
+     * The Modern-only landing (root redirects here under a Modern surface), and the same digest under
+     * every look: the viewer's conversations, the all-members diary feed, the timeline, their
+     * joined-community activity, and their own recent diaries.
      */
     public function dashboard(
         Request $request,
@@ -80,13 +78,6 @@ class HomeController extends Controller
     ): Response {
         /** @var Member $viewer */
         $viewer = $request->user();
-
-        // The look swaps the page, not the route or the data sources. Both render calls stay string
-        // literals: ChromeContextCoverageTest reads them to check every routed component is
-        // classified.
-        if (LookResolver::resolve($request)->usesUnifiedPages()) {
-            return Inertia::render('unified/home', UnifiedHomeSerializer::page($viewer));
-        }
 
         // Each digest belongs to a unit, so a switched-off one contributes an empty section and runs
         // no query — hiding it on the client would still ship the rows. JoinedGroupActivity

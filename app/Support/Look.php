@@ -16,14 +16,14 @@ enum Look: string
     /** The Modern layout as shipped. */
     case Standard = 'standard';
 
-    /** The experiment that renders home, member pages and group tops in one shared shape. */
+    /** The experiment that renders member pages and group tops in one shared shape. */
     case Unified = 'unified';
 
     /** The experiment that moves finding your way into one breadcrumb header, with no back button. */
     case Tabbed = 'tabbed';
 
     /**
-     * Whether the three swapped routes render the unified page components instead of the shipped ones.
+     * Whether the two swapped routes render the unified page components instead of the shipped ones.
      *
      * A bool rather than a page-format id: every look that deviates from standard so far renders the
      * same unified page components, differing only in the chrome around them. A third page format is
@@ -52,7 +52,7 @@ enum Look: string
     {
         return match ($this) {
             self::Standard => 'The Modern layout as it has always been.',
-            self::Unified => 'The experimental layout that renders home, profiles and %communities% in one shared shape.',
+            self::Unified => 'The experimental layout that renders profiles and %communities% in one shared shape.',
             self::Tabbed => 'The experimental layout where the site mark and a breadcrumb up top say where you are.',
         };
     }

@@ -131,7 +131,7 @@ test('a screen that is nowhere in particular falls back to home', () => {
 });
 
 test('the unified bar says how many notifications are waiting, in words', () => {
-    const chrome = arrive('unified/home', '/dashboard', {
+    const chrome = arrive('dashboard', '/dashboard', {
         look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 2, groupTalks: 0 },
     });
@@ -142,7 +142,7 @@ test('the unified bar says how many notifications are waiting, in words', () => 
 });
 
 test('the tabbed row marks the notification tab alone, and with a dot rather than a number', () => {
-    const chrome = arrive('unified/home', '/dashboard', {
+    const chrome = arrive('dashboard', '/dashboard', {
         look: 'tabbed',
         unread: { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 },
     });

@@ -93,7 +93,7 @@ test('the shipped home keeps the brand bar', () => {
 });
 
 test('the unified layout puts the two places in the bar instead of the brand', () => {
-    const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
+    const chrome = arrive('dashboard', '/dashboard', { look: 'unified' });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
@@ -116,7 +116,7 @@ test('a hub in the unified layout takes the same bar, with the group tab current
 });
 
 test('the group tab goes with its unit', () => {
-    const chrome = arrive('unified/home', '/dashboard', { look: 'unified', enabledFeatures: { ...allOn, group: false } });
+    const chrome = arrive('dashboard', '/dashboard', { look: 'unified', enabledFeatures: { ...allOn, group: false } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
@@ -125,7 +125,7 @@ test('the group tab goes with its unit', () => {
 });
 
 test('the bell says how many are waiting, in words', () => {
-    const chrome = arrive('unified/home', '/dashboard', {
+    const chrome = arrive('dashboard', '/dashboard', {
         look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
@@ -137,7 +137,7 @@ test('the bell says how many are waiting, in words', () => {
 });
 
 test('the bell is named plainly while nothing is waiting', () => {
-    const chrome = arrive('unified/home', '/dashboard', { look: 'unified' });
+    const chrome = arrive('dashboard', '/dashboard', { look: 'unified' });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
@@ -177,7 +177,7 @@ test("a guest's bar is the same with the switch on", () => {
  * account control and no tab pair, the four labelled tabs below having taken the moving about.
  */
 test('the tabbed home is the site mark and its name, and nothing else', () => {
-    const chrome = arrive('unified/home', '/dashboard', {
+    const chrome = arrive('dashboard', '/dashboard', {
         look: 'tabbed',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
@@ -279,7 +279,7 @@ test('a tabbed compose screen keeps the sheet header', () => {
  * answer, not the bar's.
  */
 test('the unified bar carries no account menu and prints no count', () => {
-    const chrome = arrive('unified/home', '/dashboard', {
+    const chrome = arrive('dashboard', '/dashboard', {
         look: 'unified',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });

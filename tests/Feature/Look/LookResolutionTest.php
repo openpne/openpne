@@ -118,13 +118,18 @@ class LookResolutionTest extends TestCase
         $viewer = Member::factory()->create();
         $this->offerBoth();
 
-        $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->component('dashboard'));
+        $this->actingAs($viewer)->get("/member/{$viewer->getKey()}")
+            ->assertInertia(fn ($page) => $page->component('member/show'));
 
         $viewer->setPreferredLook(Look::Unified);
         $this->freshRequestState();
 
+        $this->actingAs($viewer)->get("/member/{$viewer->getKey()}")
+            ->assertInertia(fn ($page) => $page->component('unified/member'));
+
+        // Home is not among the swapped routes: the digest is what /dashboard renders under every
+        // look.
         $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->component('unified/home'));
+            ->assertInertia(fn ($page) => $page->component('dashboard'));
     }
 }
