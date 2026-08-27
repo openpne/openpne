@@ -30,6 +30,12 @@ const storyKey = (story: IssueStory): string => `${story.kind}-${story.item.id}`
  * cannot be read across.
  */
 function IssueStories({ issue }: { issue: Issue }) {
+    // Every story it featured has since gone: the day's talk, faces and calendar are still an issue,
+    // and this band is simply not one of the things it has.
+    if (!issue.topStory) {
+        return null;
+    }
+
     if (issue.features) {
         const stories = [issue.topStory, ...issue.features];
 

@@ -158,9 +158,50 @@ site, published every day there is something to say.
 
 ## Rendering
 
-*To be completed when the page lands.* The shape it must keep: every item is re-resolved through its
-source's own gate for the member reading it, an item that does not resolve is dropped in silence, and
-the unit map above is consulted again at render.
+Reading an issue is the ledger asked again. [`ShowHomeIssue`](../../app/Features/Home/Queries/ShowHomeIssue.php)
+loads the rows, resolves the sources one read per table, and puts every row through
+[`HomeItemGate`](../../app/Features/Home/HomeItemGate.php) — the source's own rule, for the member in
+front of it. A row that does not answer is **dropped in silence**: no placeholder, no gap, and no
+count of what was withheld, because any of those would report the existence of something the reader
+may not know exists.
+
+| Dropped when | Because |
+|---|---|
+| the section does not hold the row's alias | a bad row is a bug in whatever wrote it, and the front page is not where to raise it — [`unit()`](../../app/Features/Home/HomeIssueSection.php) would throw on the pair |
+| the source is gone | the row outlives it by design (above); a dangling reference renders as nothing |
+| the unit is off | the same map, read a second time |
+| a post is a reply, or is above `Members` | it is not what the section promised |
+| a diary is above `Members` | same |
+| the author blocks the reader | `TimelineAccess` / `DiaryAccess`, which is the half the publisher could not apply |
+| a board's group is no longer `Everyone` | "every member may read it" — so it drops for a member of that group too |
+| a newcomer blocks the reader | [`MemberPolicy::access`](../../app/Policies/MemberPolicy.php), 404-shaped everywhere else |
+| a burst's group is no longer `Everyone` | the one gate: an Everyone group's talk is readable by any member ([`GroupTalkAccess`](../../app/Features/GroupTalk/GroupTalkAccess.php)), so nothing follows it |
+| a burst has no surviving message | the stretch is what the row is about, and an empty one is nothing to report |
+
+**A withdrawn author is not a refusal.** The record stands and both serializers already draw the
+byline as a withdrawn member; among a burst's faces the author is skipped instead, because a blank
+face in a row of faces reads as somebody rather than as nobody. **A past event stays** on a back
+issue's calendar: an issue is a snapshot of the morning it went out, and one that quietly shed its
+calendar as the week went by would misreport that morning.
+
+**A burst is resolved live, and only its window is remembered.** The count is the stretch's current
+count; the way in is `?m=` on the first message still there, which is also the instant the card says
+it started; the faces and pictures come from the **last day** of the stretch rather than its start —
+the first issue ever reaches back a week, and a week-old glimpse of a room talking today is worse
+than no glimpse.
+
+The count-adaptive shape is decided **after** the gate, from what survived: one story is a lead
+drawn whole, two or three stand abreast, four or more become a lead over rows. An issue of eight
+that lost seven is an issue of one, and drawing it as a lead over an empty list would report the
+seven. Every optional section key is absent rather than empty, so nothing on the page has to decide
+what `[]` means.
+
+## Routes
+
+`/home/issues` is the run of them and `/home/{y}/{m}/{d}` is one day's, both Modern-only: OpenPNE 3
+had no such page, so they render Inertia whatever surface the reader is on. The day is validated
+before it is looked for — a route pattern admits `2026/02/30`, and a day that never happened must
+read as nothing rather than as a query. `/` still lands on the dashboard; the cutover follows.
 
 ## Later
 
