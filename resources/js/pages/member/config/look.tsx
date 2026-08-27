@@ -23,7 +23,7 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
         dimension: 'Page structure',
         cells: {
             standard: 'The Modern layout as it has been.',
-            unified: 'An experiment: home, member pages and %community% pages all take the same three parts (profile → latest → actions).',
+            unified: 'An experiment: member pages and %community% pages take the same two parts (profile → latest).',
             tabbed: 'The same page structure as Unified. Only the frame around it — the header and the navigation — differs.',
         },
     },
@@ -31,8 +31,8 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
         dimension: 'Home',
         cells: {
             standard: 'A digest: lists of notices, talk and %diaries%.',
-            unified: 'Tiles, and the faces of who is around.',
-            tabbed: 'The same as Unified.',
+            unified: 'The same as Standard.',
+            tabbed: 'The same as Standard.',
         },
     },
     {

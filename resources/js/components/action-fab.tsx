@@ -16,9 +16,8 @@ export function ActionFab({ chrome, extended }: { chrome: Chrome; extended: bool
     const { props } = usePage<PageProps>();
 
     // The frame's gate verbatim: the heading-row button and this are one action at two widths, and a
-    // guest (a web-public profile is reachable signed out) gets neither. The unified home goes
-    // without in the registry, not here: its design draws no floating action, so its chrome
-    // carries none.
+    // guest (a web-public profile is reachable signed out) gets neither. A screen that draws no
+    // floating action says so in the registry, not here.
     if (!chrome.action || !props.auth.user) {
         return null;
     }

@@ -26,16 +26,16 @@ standard.
 The looks today:
 
 - **`standard`** — the layout the site has always shipped. Deviates in nothing.
-- **`unified`** — the experiment: `/dashboard` renders `unified/home` instead of
-  `dashboard`, `/member/{id}` renders `unified/member` instead of `member/show`, and
-  `/groups/{group}` renders `unified/group` instead of `community/show`; the bars become
-  the persistent header plus dive row, the shell paints the unified ground, and the right
-  rail is dropped.
+- **`unified`** — the experiment: `/member/{id}` renders `unified/member` instead of
+  `member/show`, and `/groups/{group}` renders `unified/group` instead of
+  `community/show`; the bars become the persistent header plus dive row, the shell paints
+  the unified ground, and the right rail is dropped. `/dashboard` is the digest under
+  every look.
 - **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
-  the site name on the three pages that ARE a place (home, a member's, a group's — the
-  three-page symmetry extends to the header, and each place's own hero names it directly
-  below), `[mark] › section` on a hub, `[mark] › place` on screens *inside* one, with the
+  the site name on the three pages that ARE a place (home, a member's, a group's — a
+  member's and a group's name themselves again in their own hero directly below),
+  `[mark] › section` on a hub, `[mark] › place` on screens *inside* one, with the
   site color as a 4px line atop the row. The tab row under the page is the shipped one,
   marked its own way: a dot on the notifications tab and nothing on the rest of the row,
   where the shipped look prints each count — a dot can be answered by emptying one

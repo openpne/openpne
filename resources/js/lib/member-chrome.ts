@@ -342,12 +342,11 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], exact: true, icon: House, label: t('Home') };
 
 /**
- * The components the home route renders — the digest dashboard, or the unified look's home. The
- * brand's own screen either way: the mobile bar shows the brand row rather than a back control,
- * since there is nothing above home to go back to.
+ * The component the home route renders. The brand's own screen: the mobile bar shows the brand row
+ * rather than a back control, since there is nothing above home to go back to.
  */
 export function isHomeComponent(component: string): boolean {
-    return component === 'dashboard' || component === 'unified/home';
+    return component === 'dashboard';
 }
 
 /**
@@ -487,11 +486,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
     // FAB — the diary shortcut the diary-forward home is the place for.
     'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
-    // The unified look's home: the dashboard's screen minus
-    // its action — the design draws no floating button on home, so writing starts from the diary
-    // tile's list, where the FAB stands. Home is the one screen that gives the FAB up: everywhere
-    // else the registry action floats as usual, since a phone has no other write affordance.
-    'unified/home': () => ({}),
     // The run of issues has exactly one parent — the front page it is the history of — so it takes a
     // contextual title rather than a section of its own: it is a way back into the issues, not a
     // place in the nav.
@@ -775,7 +769,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
-    'unified/home',
     // The current issue is the front page itself: there is nothing above it to go back to.
     'home/issue',
     'diary/feed',

@@ -27,9 +27,9 @@ interface UnifiedMemberProps extends PageProps {
 }
 
 /**
- * The unified member page (Look::Unified): the unified home's grammar turned on
- * somebody else — who they are, who they are here with, what they have posted lately. Read
- * vertically, like the home, so a member moving between the two reads one surface rather than two.
+ * The unified member page (Look::Unified): who a member is, who they are here with, what they have
+ * posted lately, read vertically — the grammar the unified group page speaks about a group, turned
+ * on a person, so a member moving between the two reads one surface rather than two.
  *
  * Every deep link carries the owner's id, since these lists are theirs and not the viewer's.
  */
