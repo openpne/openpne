@@ -65,10 +65,10 @@ use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Modern surface redirects to
-// the Inertia dashboard, Classic renders the OpenPNE 3 gadget home. Guest-reachable, so it carries
-// auth.session on its own: Classic serves member content here, and a session whose password hash
-// is stale must not keep reading it (PublicRouteBoundaryTest).
+// Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Modern surface renders the
+// latest issue, Classic the OpenPNE 3 gadget home. Guest-reachable, so it carries auth.session on
+// its own: both surfaces serve member content here, and a session whose password hash is stale must
+// not keep reading it (PublicRouteBoundaryTest).
 Route::get('/', [HomeController::class, 'index'])->middleware('auth.session')->name('home');
 
 // OpenPNE 3 member_index alias (/member) for the same member/home portal.

@@ -96,12 +96,12 @@ export type BackTarget = { type: 'history' } | { type: 'href'; href: string };
 
 /**
  * Where back goes: the session's own history when there is any, else the structural parent — the
- * nearest crumb, or the dashboard for a page that carries no crumbs.
+ * nearest crumb, or home for a page that carries no crumbs.
  */
 export function backTarget(hasInAppHistory: boolean, context?: readonly { href: string }[]): BackTarget {
     if (hasInAppHistory) {
         return { type: 'history' };
     }
 
-    return { type: 'href', href: context?.at(-1)?.href ?? '/dashboard' };
+    return { type: 'href', href: context?.at(-1)?.href ?? '/' };
 }

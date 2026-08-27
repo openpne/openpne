@@ -84,7 +84,7 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
 }
 
 test('the shipped home keeps the brand bar', () => {
-    const chrome = arrive('dashboard', '/dashboard');
+    const chrome = arrive('home/issue', '/');
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
@@ -92,14 +92,39 @@ test('the shipped home keeps the brand bar', () => {
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
 });
 
+/**
+ * What's new is a hub now, so each look draws its title where that look draws a hub's: the shipped
+ * and tabbed bars carry it, and the unified bar is the tab pair — there the frame's page heading is
+ * what says it (member-frame.tsx), which is why this bar must not repeat it.
+ */
+test.each([
+    ['standard', true],
+    ['tabbed', true],
+    ['unified', false],
+] as const)("%s puts the What's new title where that look puts a hub's", (look, inBar) => {
+    const chrome = arrive('dashboard', '/dashboard', { look });
+
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(container.textContent?.includes("What's new")).toBe(inBar);
+});
+
+test('the shipped hub bar spends the row on the section rather than the brand', () => {
+    const chrome = arrive('dashboard', '/dashboard');
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.queryByText('Test SNS')).toBeNull();
+});
+
 test('the unified layout puts the two places in the bar instead of the brand', () => {
-    const chrome = arrive('dashboard', '/dashboard', { look: 'unified' });
+    const chrome = arrive('home/issue', '/', { look: 'unified' });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
     // The brand is what the tab pair replaces: it named a page the member was already on.
     expect(screen.queryByText('Test SNS')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.getByRole('link', { name: '%Communities%' }).getAttribute('href')).toBe('/groups/mine');
     // Only the one the member is standing on is the current page.
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
@@ -177,14 +202,14 @@ test("a guest's bar is the same with the switch on", () => {
  * account control and no tab pair, the four labelled tabs below having taken the moving about.
  */
 test('the tabbed home is the site mark and its name, and nothing else', () => {
-    const chrome = arrive('dashboard', '/dashboard', {
+    const chrome = arrive('home/issue', '/', {
         look: 'tabbed',
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
     // And named by that alone — a word spelled over a name the reader can see says something else.
     expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Notifications' })).toBeNull();
@@ -201,7 +226,7 @@ test('a tabbed hub is the mark and the section it stands on', () => {
     const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     // The mark alone, so it is named rather than left to a site name that is not beside it.
-    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.queryByText('Test SNS')).toBeNull();
     expect(container.textContent).toContain('%Communities%');
     // The section title is a label, not a way to somewhere: the hub is the page being read.
@@ -216,7 +241,7 @@ test('a tabbed deep page carries the place it is inside, as something to press',
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
     // No back control: swipe, the browser and the mark are the ways out under this look.
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();
@@ -247,7 +272,7 @@ test('a tabbed form names where it sits without offering a way out of itself', (
     expect(container.textContent).toContain('Settings');
     // The invariant the pill must not reverse: no link stands beside an unsaved form.
     expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
-    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/']);
 });
 
 test('a tabbed page that is nowhere leaves the mark standing alone', () => {
@@ -255,7 +280,7 @@ test('a tabbed page that is nowhere leaves the mark standing alone', () => {
 
     const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/dashboard']);
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/']);
     expect(container.textContent).not.toContain('›');
     // BrandMark is aria-hidden in both its arms, so a mark standing alone has whatever name is put
     // on the link and no other. The site's name is not it: nothing spells it here to read.

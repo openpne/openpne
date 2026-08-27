@@ -200,7 +200,7 @@ export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
 function UnifiedBar({ hidden }: { hidden?: boolean }) {
     const t = useT();
     const { url, props } = usePage<PageProps>();
-    // Query and hash off first: the Home tab matches its whole path (NavSection.exact).
+    // Query and hash off first: the Home tab is matched against the whole path.
     const path = url.replace(/[?#].*$/, '');
     const notifications = props.unread?.notifications ?? 0;
 
@@ -295,7 +295,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 // over it — announced or floated — would say something else. Carrying the name, this
                 // is the element that gives way, so an unbounded site name truncates instead of
                 // running under the menu.
-                <Link href="/dashboard" className="flex min-h-12 min-w-0 items-center gap-2">
+                <Link href="/" className="flex min-h-12 min-w-0 items-center gap-2">
                     <BrandMark size="sm" />
                     {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
                     <BrandName className="truncate" />
@@ -304,7 +304,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 // The mark alone, and BrandMark is aria-hidden in both its arms, so without this the
                 // link has no name at all. Holding its size here: the crumb beside it is what shortens.
                 <Tip label={t('Home')}>
-                    <Link href="/dashboard" className="flex min-h-12 shrink-0 items-center gap-2">
+                    <Link href="/" className="flex min-h-12 shrink-0 items-center gap-2">
                         <BrandMark size="sm" />
                     </Link>
                 </Tip>
@@ -338,7 +338,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
 }
 
 /**
- * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard,
+ * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the front page,
  * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
  * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
  * its width on where the page sits. A compose screen replaces that with the sheet header: close plus
@@ -361,7 +361,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // Guest only: a guest lands from outside, where logo-left-goes-home is the web convention, and
     // has neither the bottom nav nor the drawer — this link is their one way home.
     const brand = (
-        <Link href="/dashboard" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
+        <Link href="/" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
             <BrandName className="truncate" />
         </Link>
@@ -488,7 +488,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // The dashboard's brand is a label, not a link: it would only point at the page it is on, and
+    // Home's brand is a label, not a link: it would only point at the page it is on, and
     // "center with no ›" meaning not-tappable is the grammar the other bars rely on. Home from
     // elsewhere is the bottom nav's job.
     return (

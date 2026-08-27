@@ -67,7 +67,7 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                 )}
                 <DialogTitle asChild>
                     <Link
-                        href="/dashboard"
+                        href="/"
                         onClick={() => setOpen(false)}
                         className={
                             labeled
