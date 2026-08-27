@@ -177,6 +177,36 @@ test('the unified home is the dashboard screen without its floating action', () 
     assert.ok(!isHomeComponent('diary/feed'));
 });
 
+test('the current issue takes the bare frame: its masthead is the page', () => {
+    // No registry entry at all — the frame's defaults, and no heading of the chrome's own, because
+    // the issue's masthead is the h1.
+    assert.deepEqual(resolveChrome('home/issue', {}), { mode: 'embedded', width: 'standard', gap: '4' });
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
+});
+
+test('a dated issue crumbs back to the run of them, still without a chrome heading', () => {
+    const archive = resolveChrome('home/archive', {});
+
+    assert.equal(archive.mode, 'embedded');
+    assert.deepEqual(
+        (archive.context ?? []).map((item) => item.href),
+        ['/home/issues'],
+    );
+});
+
+test('the run of issues is titled by the same words the crumb into it uses', () => {
+    const list = resolveChrome('home/issues', {});
+    const crumb = resolveChrome('home/archive', {}).context?.[0];
+
+    assert.equal(list.mode, 'contextual');
+    assert.deepEqual(list.title, crumb?.label);
+    // Its own one parent is the front page.
+    assert.deepEqual(
+        (list.context ?? []).map((item) => item.href),
+        ['/'],
+    );
+});
+
 test('the unified member page is the same screen as the profile it replaces', () => {
     // Same route, same chrome: the experiment switch must not change what the frame draws.
     assert.deepEqual(chrome('unified/member', {}), chrome('member/show', {}));
