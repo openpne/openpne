@@ -139,6 +139,24 @@ class TalkSampleDigestTest extends TestCase
         );
     }
 
+    /**
+     * Two messages written in the same second come back in id order on any driver only because the
+     * query says so — a fixture cannot show the tiebreak on SQLite, whose rowid order already is id
+     * order, so the ORDER BY itself is what is pinned.
+     */
+    public function test_the_order_is_asked_of_the_database_not_left_to_it(): void
+    {
+        DB::enableQueryLog();
+        $this->digest->sampleBetween($this->group, $this->start, $this->until);
+        $this->digest->firstBetween($this->group, $this->start, $this->until);
+        $log = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        foreach ($log as $entry) {
+            $this->assertStringContainsString('order by "created_at" asc, "id" asc', $entry['query']);
+        }
+    }
+
     public function test_the_sample_stops_at_its_limit_and_brings_its_authors_with_it(): void
     {
         $author = $this->member();
@@ -315,5 +333,51 @@ class TalkSampleDigestTest extends TestCase
         $sample = $this->digest->sampleBetween($this->group, $this->start, $this->until);
 
         $this->assertSame([$mine->url()], array_column($this->digest->thumbnails($viewer, $sample), 'url'));
+    }
+
+    /** A file filed under some other kind of parent is not this message's picture, whatever id it names. */
+    public function test_a_file_owned_by_another_kind_of_parent_is_left_out(): void
+    {
+        $viewer = $this->member();
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addSecond());
+        $foreign = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'diary',
+            'related_entity_id' => $message->getKey(),
+        ]);
+        GroupMessageImage::query()->create(['group_message_id' => $message->getKey(), 'file_id' => $foreign->getKey(), 'number' => 1]);
+        $mine = $this->attach($message, number: 2);
+
+        // The policy would serve it — the ownership check has to be the one that refuses.
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($foreign): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            return $ability === 'view' && $subject instanceof File && $subject->is($foreign) ? true : null;
+        });
+
+        $sample = $this->digest->sampleBetween($this->group, $this->start, $this->until);
+
+        $this->assertSame([$mine->url()], array_column($this->digest->thumbnails($viewer, $sample), 'url'));
+    }
+
+    /** The pictures are bounded twice: the rows read as candidates, and the pictures shown from them. */
+    public function test_the_pictures_are_bounded_by_contract(): void
+    {
+        $viewer = $this->member();
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addSecond());
+        foreach (range(1, TalkSampleDigest::THUMBNAIL_CANDIDATES + 3) as $number) {
+            $this->attach($message, number: $number);
+        }
+
+        $sample = $this->digest->sampleBetween($this->group, $this->start, $this->until);
+        DB::enableQueryLog();
+        $shown = $this->digest->thumbnails($viewer, $sample);
+        $log = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertCount(TalkSampleDigest::THUMBNAILS, $shown);
+        $this->assertStringContainsString('limit '.TalkSampleDigest::THUMBNAIL_CANDIDATES, $log[0]['query']);
     }
 }
