@@ -37,7 +37,7 @@ a missed migration.
 
 | variant | size | used by |
 |---|---|---|
-| `display` | 24px | the one headline a screen leads with, above its page title |
+| `display` | 24px | the one headline a screen leads with, one rank above `page` |
 | `page` | 20px | page titles |
 | `pageCompose` | 18px, 20px from `lg` | compose screens, where the sheet header sits right above the title |
 | `group` | 18px | a heading that stands outside the cards it groups — the settings page's groups |
