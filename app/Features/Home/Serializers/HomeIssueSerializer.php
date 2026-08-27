@@ -7,7 +7,6 @@ namespace App\Features\Home\Serializers;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
-use App\Features\Home\Actions\PublishHomeIssue;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
 use App\Features\Home\HomeIssueSection;
@@ -44,7 +43,7 @@ final class HomeIssueSerializer
     private const FEATURES = 2;
 
     /**
-     * @return array{issue: array|null, prev: array|null, next: array|null, publishTime: string}
+     * @return array{issue: array|null, prev: array|null, next: array|null}
      */
     public static function page(
         ?HomeIssue $issue,
@@ -58,7 +57,6 @@ final class HomeIssueSerializer
             'issue' => $issue === null || $hydrated === null ? null : self::issue($issue, $hydrated, $viewer, $today),
             'prev' => self::ref($previous),
             'next' => self::ref($next),
-            'publishTime' => PublishHomeIssue::TIME,
         ];
     }
 

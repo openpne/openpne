@@ -91,8 +91,6 @@ export interface IssuePageProps extends PageProps {
     prev: IssueRef | null;
     /** Always null on the current issue — there is nothing after it yet. */
     next: IssueRef | null;
-    /** The site's daily publication time, `H:i`. */
-    publishTime: string;
 }
 
 export interface IssuesPageProps extends PageProps {

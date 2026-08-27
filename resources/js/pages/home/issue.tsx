@@ -19,15 +19,14 @@ import { WelcomePanel } from './welcome';
 const storyKey = (story: IssueStory): string => `${story.kind}-${story.item.id}`;
 
 /**
- * How much of the issue there is decides how it is laid out, and the payload already says so: an
- * issue with one item has neither `features` nor `briefs`, one with two or three has `features`, and
- * one with four or more has `briefs`. So this is a switch over the shape rather than over a mode —
- * there is no state in which the wrong branch can be taken.
+ * How much of the day there is decides how it is laid out, and the payload already says so: a day
+ * with one item has neither `features` nor `briefs`, one with two or three has `features`, and one
+ * with four or more has `briefs`. So this is a switch over the shape rather than over a mode — there
+ * is no state in which the wrong branch can be taken.
  *
- * One item is printed whole, because an issue with a single story is that story. Two or three stand
- * abreast as equals: ranking them past the first would be a claim the day's traffic does not support.
- * Past three, the lead keeps its card and the rest become rows — a fourth card is a column that
- * cannot be read across.
+ * One item is printed whole, because a day with a single story is that story. Past that the lead
+ * takes the full width and what follows it runs two abreast, then becomes rows once there are more
+ * than three — a card narrower than half the frame cannot be read across.
  */
 function IssueStories({ issue }: { issue: Issue }) {
     // Every story it featured has since gone: the day's talk, faces and calendar are still an issue,
@@ -37,14 +36,18 @@ function IssueStories({ issue }: { issue: Issue }) {
     }
 
     if (issue.features) {
-        const stories = [issue.topStory, ...issue.features];
-
         return (
-            <div className={cn('grid gap-4', stories.length > 2 ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}>
-                {stories.map((story) => (
-                    <StoryCard key={storyKey(story)} story={story} />
-                ))}
-            </div>
+            <>
+                <StoryCard story={issue.topStory} />
+                {/* Two abreast at most: a third column leaves a card too narrow for its headline to
+                    be read across, and a lone follow-up sitting in half a row reads as a gap where
+                    another card should be. */}
+                <div className={cn('grid gap-4', issue.features.length > 1 && 'sm:grid-cols-2')}>
+                    {issue.features.map((story) => (
+                        <StoryCard key={storyKey(story)} story={story} />
+                    ))}
+                </div>
+            </>
         );
     }
 
@@ -74,27 +77,28 @@ function IssueStories({ issue }: { issue: Issue }) {
  */
 export default function HomeIssue() {
     const t = useT();
-    const { issue, prev, next, publishTime, auth, enabledFeatures } = usePage<IssuePageProps>().props;
+    const { issue, prev, next, auth, enabledFeatures } = usePage<IssuePageProps>().props;
     const date = useDateFormat();
 
     if (issue === null) {
         return (
             <>
-                <Head title={t('Home')} />
-                {/* Today's dateline with no number: there is no issue to number yet, and the site
-                    still has a front page — it just has nothing on it. */}
+                <Head title={t('What happened')} />
+                {/* Today's dateline over nothing: the site still has a front page, it just has
+                    nothing on it yet. */}
                 <Masthead date={date.siteDay(new Date().toISOString()) ?? ''} />
                 {auth.user && <WelcomePanel name={auth.user.name} enabledFeatures={enabledFeatures} />}
-                <p className="text-sm text-muted-foreground">{t('The first post will run in the next issue.')}</p>
-                <Colophon publishTime={publishTime} stale={false} />
+                <p className="text-sm text-muted-foreground">{t('The first post will appear here the next morning.')}</p>
+                {/* Nothing has been put together, so there is no instant to stamp it with. */}
+                <Colophon publishedAt={null} stale={false} />
             </>
         );
     }
 
     return (
         <>
-            <Head title={t('No. :number', { number: issue.number })} />
-            <Masthead date={issue.date} number={issue.number} />
+            <Head title={t('What happened')} />
+            <Masthead date={issue.date} />
 
             <IssueStories issue={issue} />
 
@@ -123,7 +127,7 @@ export default function HomeIssue() {
             )}
 
             <IssueNav prev={prev} next={next} />
-            <Colophon publishTime={publishTime} stale={!issue.isCurrent} />
+            <Colophon publishedAt={issue.publishedAt} stale={!issue.isCurrent} />
         </>
     );
 }

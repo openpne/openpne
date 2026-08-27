@@ -250,7 +250,7 @@ const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
 // The run of front-page issues: the title of the list screen and the crumb every dated issue takes
 // back to it, which have to be the same words or the way back names a place the reader never saw.
-const BACK_ISSUES = t('Back issues');
+const PAST_HAPPENINGS = t('Past happenings');
 
 export type PolicyKind = 'terms' | 'privacy';
 
@@ -499,7 +499,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // The run of issues has exactly one parent — the front page it is the history of — so it takes a
     // contextual title rather than a section of its own: it is a way back into the issues, not a
     // place in the nav.
-    'home/issues': () => ({ mode: 'contextual', title: BACK_ISSUES, context: [{ href: '/', label: HOME_SECTION.label }] }),
+    'home/issues': () => ({ mode: 'contextual', title: PAST_HAPPENINGS, context: [{ href: '/', label: HOME_SECTION.label }] }),
     // One component serves both policy pages, so which one the server rendered picks the heading.
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
@@ -737,7 +737,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     // A dated issue crumbs back to the run it belongs to. Embedded, so the frame draws no heading:
     // the issue's own masthead is the page's h1, and a chrome title over it would name the screen
     // twice with two different words for it.
-    'home/archive': { context: [{ href: '/home/issues', label: BACK_ISSUES }] },
+    'home/archive': { context: [{ href: '/home/issues', label: PAST_HAPPENINGS }] },
     'block/add': { width: 'narrow', form: true },
     'block/remove': { width: 'narrow', form: true },
     'friend/link': { width: 'narrow', form: true },

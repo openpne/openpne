@@ -185,6 +185,19 @@ test('a page below the top level keeps its own bar with the switch on', () => {
     expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
 });
 
+/**
+ * A guest lands from outside with neither the bottom nav nor the drawer, so the lockup is their one
+ * way home — and home is the front page, not the digest that used to stand there.
+ */
+test("the guest bar's brand is their way to the front page", () => {
+    const chrome = arrive('member/show', '/member/9', { auth: { user: null } });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    // Named by the site name alone: BrandMark is aria-hidden in both its arms.
+    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
+});
+
 test("a guest's bar is the same with the switch on", () => {
     // The switch never reaches a guest (HandleInertiaRequests), and the bar does not read it either:
     // a signed-out visitor has no member nav to carry.

@@ -139,9 +139,12 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
     }
     bylineMeta.push(...counts);
 
+    // The byline holds a line's height whatever it happens to carry, and the row aligns to its top
+    // (`items-start` below), so the content line sits the same distance from the row top in every
+    // row of a list — including one whose neighbours have a photo strip and it has none.
     const textColumn = (
         <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-h-5 min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm text-foreground">{subjectName}</span>
                 <AiChip isAi={author?.isAi ?? false} />
                 {bylineMeta.length > 0 && (
