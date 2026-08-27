@@ -46,7 +46,7 @@ export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
             </div>
 
             <Heading as="h2" variant="group">
-                {t(':count messages in :name', { count: burst.count, name: burst.group.name })}
+                {t(':count messages', { count: burst.count })}
             </Heading>
 
             <div>

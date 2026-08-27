@@ -78,7 +78,7 @@
     ":count members": ":count人のメンバー",
     ":count members added.": ":count人を追加しました。",
     ":count members found": ":count人のメンバーが見つかりました",
-    ":count messages in :name": ":name で:count件のメッセージ",
+    ":count messages": ":count件のメッセージ",
     ":count messages while you were away": "見ていない間に :count 件のメッセージ",
     ":count minutes ago": ":count分前",
     ":count months ago": ":countか月前",
