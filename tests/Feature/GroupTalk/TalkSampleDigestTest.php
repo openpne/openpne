@@ -307,7 +307,7 @@ class TalkSampleDigestTest extends TestCase
     {
         $viewer = $this->member();
         $author = $this->member();
-        $borrower = $this->said($author, $this->start);
+        $borrower = $this->said($author, $this->start->addSecond());
         $lender = $this->said($author, $this->start->addMinutes(1));
         $this->attach($borrower, owner: $lender);
         $mine = $this->attach($this->said($author, $this->start->addMinutes(2)));
