@@ -6,8 +6,10 @@ namespace Tests\Feature\Notifications;
 
 use App\Models\Member;
 use App\Notifications\Push\WebPushNudge;
+use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Minishlink\WebPush\VAPID;
@@ -45,8 +47,9 @@ class WebPushEncryptionIntegrationTest extends TestCase
                     'privateKey' => $vapid['privateKey'],
                 ]],
                 [],
-                30,
-                ['handler' => HandlerStack::create($mock)],
+                new Client(['handler' => HandlerStack::create($mock)]),
+                new HttpFactory,
+                new HttpFactory,
             ));
 
         $member = Member::factory()->create();

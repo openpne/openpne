@@ -47,13 +47,30 @@ return [
     | Push service transport
     |--------------------------------------------------------------------------
     |
-    | Guzzle options for the requests Minishlink\WebPush makes. This is a second
-    | egress seam beside App\Outbound, over a member-supplied endpoint URL, so
-    | the shape App\Rules\PushEndpoint accepts on store has to hold at send time
-    | too: a 30x is the one move that turns a validated https endpoint into a
-    | request somewhere else, and the proxy environment variables Guzzle honours
-    | by default would resolve the destination elsewhere again. The timeouts
-    | bound a queue worker parked on an unresponsive service.
+    | Options for the requests Minishlink\WebPush makes, on a client built by
+    | App\Outbound\PushClientFactory. This is a second egress seam, over a
+    | member-supplied endpoint URL, so the shape App\Rules\PushEndpoint accepts
+    | on store has to hold at send time too. `allow_redirects` and `proxy` are
+    | therefore fixed in the factory and are not loosened by anything set here,
+    | short of the `curl` escape hatch, which Guzzle applies last and which can
+    | say the same thing in CURLOPT_ terms: a 30x is the one move that turns a
+    | validated https endpoint into a request somewhere else, and the proxy
+    | environment variables Guzzle honours by default would resolve the
+    | destination elsewhere again.
+    |
+    | `timeout` bounds one request, and the library sends a member's devices one
+    | after another, so what bounds the job is timeout x MAX_DEVICES. That
+    | product has to stay under WebPushNudge::$timeout, which in turn stays
+    | under the queue's retry_after — past it the job is reserved a second time
+    | while the first is still sending, and every reachable device is pushed
+    | twice. WebPushTimeoutBudgetTest holds the arithmetic. On SQS that window
+    | is the queue's visibility timeout in AWS, which this app cannot read and
+    | which defaults below the ceiling: raise it past WebPushNudge::$timeout.
+    |
+    | On an inline queue (sync and friends) there is no job to time out at all:
+    | the send runs in the request of whoever caused the notification, and this
+    | product is the whole of what bounds it. Keep it small enough to be an
+    | acceptable answer on its own, not merely under the ceiling.
     | See docs/internals/outbound-http.md.
     |
     */
@@ -61,8 +78,8 @@ return [
     'client_options' => [
         'allow_redirects' => false,
         'proxy' => '',
-        'connect_timeout' => 5,
-        'timeout' => 10,
+        'connect_timeout' => 3,
+        'timeout' => 5,
     ],
 
     /*
