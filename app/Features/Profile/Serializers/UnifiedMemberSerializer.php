@@ -14,10 +14,9 @@ use App\Support\Feature;
 use Illuminate\Support\Collection;
 
 /**
- * The unified member page (Look::Unified): the same grammar as the unified home,
- * about somebody else. Viewer and owner are separate parameters here — that is the whole difference
- * from its home sibling, and why every source below is a query that takes both and resolves the
- * owner's rows at the viewer's clearance rather than at the owner's.
+ * The unified member page (Look::Unified): the same grammar as the unified group page,
+ * about a member. Viewer and owner are separate parameters, so every source below is a query that
+ * takes both and resolves the owner's rows at the viewer's clearance rather than at the owner's.
  *
  * The gates that decide whether this page may be drawn at all (the owner→viewer block, the
  * guest/web-public rule) and the profile fields' own visibility are the controller's, already applied:

@@ -164,17 +164,11 @@ test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });
 
-test('the unified home is the dashboard screen without its floating action', () => {
-    // Same route, same frame — minus the action: the design draws no floating button on home, so
-    // writing starts from the diary tile's list, where the FAB stands.
-    const { action, ...dashboard } = chrome('dashboard', {});
-    assert.ok(action);
-    assert.deepEqual(chrome('unified/home', {}), dashboard);
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/home'));
-    // Both take the mobile brand bar, not a back control — home has nothing above it.
+test('home takes the mobile brand bar rather than a back control', () => {
+    // Nothing stands above home, so its bar carries the brand row and crumbs to nowhere.
     assert.ok(isHomeComponent('dashboard'));
-    assert.ok(isHomeComponent('unified/home'));
     assert.ok(!isHomeComponent('diary/feed'));
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('dashboard'));
 });
 
 test('the current issue takes the bare frame: its masthead is the page', () => {
@@ -534,7 +528,6 @@ const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place:
     // Nowhere in particular: a hub, an errand, the viewer's own lists — and the withdrawn bucket,
     // whose counterpart has no page left to stand on.
     { component: 'dashboard', props: {}, place: HOME_PLACE },
-    { component: 'unified/home', props: {}, place: HOME_PLACE },
     { component: 'diary/feed', props: { variant: 'recent' }, place: HOME_PLACE },
     { component: 'community/search', props: {}, place: HOME_PLACE },
     { component: 'message/conversations/index', props: {}, place: HOME_PLACE },
@@ -615,7 +608,6 @@ test("a form's crumb is static text, whatever it would otherwise have been", () 
 test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
     // Home included: the mark expands to the site name there rather than pointing at a second thing.
     assert.equal(crumb('dashboard', {}), null);
-    assert.equal(crumb('unified/home', {}), null);
     assert.equal(crumb('block/list', {}), null);
 });
 
