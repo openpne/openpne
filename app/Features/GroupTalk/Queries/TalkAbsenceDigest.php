@@ -5,15 +5,11 @@ namespace App\Features\GroupTalk\Queries;
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTalk\UnreadTalkScope;
-use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Group;
 use App\Models\GroupMessage;
-use App\Models\GroupMessageImage;
 use App\Models\Member;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * What a member missed while they were away, for the catch-up card the talk page draws at the unread
@@ -25,32 +21,26 @@ use Illuminate\Support\Facades\Gate;
  *
  * The count is the snapshot's, never a recount: the card and the divider beside it name the same
  * backlog, and a second count taken a moment later would disagree with the line the reader opened on.
+ *
+ * Only the sample is this class's own — an unread backlog is bounded by a cursor rather than by a
+ * period, so {@see TalkSampleDigest} cannot read it. What is said ABOUT the sample is that class's.
  */
 class TalkAbsenceDigest
 {
     /** The backlog at which scrolling stops being the answer, and the card appears. */
     public const THRESHOLD = 10;
 
-    /**
-     * How many unread messages the card is described FROM, however many are waiting. A digest of an
-     * unbounded backlog would read the whole of a room a member has been away from for a month.
-     */
-    public const SAMPLE = 50;
+    // The caps the card is drawn under are enforced by TalkSampleDigest, and named here too so the
+    // card's contract stays readable from the class that ships the card.
+    public const SAMPLE = TalkSampleDigest::SAMPLE;
 
-    /** Faces on the card. */
-    public const PARTICIPANTS = 5;
+    public const PARTICIPANTS = TalkSampleDigest::PARTICIPANTS;
 
-    /** Pictures on the card. */
-    public const THUMBNAILS = 3;
+    public const THUMBNAILS = TalkSampleDigest::THUMBNAILS;
 
-    /**
-     * Attachment rows read as thumbnail candidates. The sample bounds the parents, but a parent does
-     * not bound its attachments (a migrated message may carry any number), so the pictures get a cap
-     * of their own — with headroom past {@see THUMBNAILS} so a refused candidate can be refilled. If
-     * every candidate is refused, the card shows fewer than three: bounded by contract, not refilled
-     * from an unbounded read.
-     */
-    public const THUMBNAIL_CANDIDATES = 12;
+    public const THUMBNAIL_CANDIDATES = TalkSampleDigest::THUMBNAIL_CANDIDATES;
+
+    public function __construct(private readonly TalkSampleDigest $digest) {}
 
     /**
      * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot  the boundary the page rendered with
@@ -68,8 +58,8 @@ class TalkAbsenceDigest
         return [
             'count' => $snapshot['count'],
             'since' => GroupMessageSerializer::instant($snapshot['at']),
-            'participants' => $this->participants($sample),
-            'thumbnails' => $this->thumbnails($viewer, $sample),
+            'participants' => $this->digest->participants($sample),
+            'thumbnails' => $this->digest->thumbnails($viewer, $sample),
         ];
     }
 
@@ -99,115 +89,5 @@ class TalkAbsenceDigest
             ->orderBy('id')
             ->limit(self::SAMPLE)
             ->get();
-    }
-
-    /**
-     * Who did the talking, busiest first, ties broken by who spoke first — grouped here rather than
-     * in SQL because the rows are already in hand and a GROUP BY would have to read past the sample
-     * to be worth its own query.
-     *
-     * A withdrawn author is skipped: there is no member to draw a face for, and a blank one in a row
-     * of faces reads as somebody rather than as nobody.
-     *
-     * @param  Collection<int, GroupMessage>  $sample
-     * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>
-     */
-    private function participants(Collection $sample): array
-    {
-        /** @var array<int, array{author: Member, said: int}> $spoke keyed by member id, in first-appearance order */
-        $spoke = [];
-
-        foreach ($sample as $message) {
-            $author = $message->author;
-
-            if ($author === null) {
-                continue;
-            }
-
-            $id = (int) $author->getKey();
-            $spoke[$id] ??= ['author' => $author, 'said' => 0];
-            $spoke[$id]['said']++;
-        }
-
-        // PHP's sorts have been stable since 8.0, so equal counts keep the insertion order above —
-        // which is first appearance. That is the tie-break, not an accident of it.
-        uasort($spoke, fn (array $a, array $b): int => $b['said'] <=> $a['said']);
-
-        return array_map(
-            fn (array $entry): array => MemberRefSerializer::ref($entry['author']),
-            array_slice(array_values($spoke), 0, self::PARTICIPANTS),
-        );
-    }
-
-    /**
-     * A glimpse of what was posted: the first {@see THUMBNAILS} pictures of the sample, in message
-     * order and slot order within a message.
-     *
-     * Every candidate passes two gates. The join row names a file, but only the file names its owner,
-     * so a row whose file belongs to some other parent is refused as not this message's picture —
-     * it might well pass the policy on its own owner's terms. Then the policy that guards the bytes
-     * (FilePolicy) is asked per file, the same one the delivery route asks. A refusal, or a file that
-     * is no longer there, is skipped in silence: no placeholder, no gap, nothing in the payload
-     * saying a picture was left out.
-     *
-     * The read is bounded on its own terms: the first {@see THUMBNAIL_CANDIDATES} attachment rows of
-     * the sampled messages, in the stream's own (created_at, id, slot) order, with the file
-     * eager-loaded once. The gates then run over those candidates only, so neither the row count nor
-     * the policy calls can grow with how many pictures a message carries.
-     *
-     * @param  Collection<int, GroupMessage>  $sample
-     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>
-     */
-    private function thumbnails(Member $viewer, Collection $sample): array
-    {
-        if ($sample->isEmpty()) {
-            return [];
-        }
-
-        $parents = $sample->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
-
-        // Ordered by the parent's (created_at, id) — talk's total order (UnreadTalkScope), which a
-        // migrated room's ids do not necessarily follow — so "the first pictures of the sample"
-        // means the same thing here as it does in the stream. The join is bounded by the sampled ids.
-        $candidates = GroupMessageImage::query()
-            ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
-            ->whereIn('group_message_images.group_message_id', $parents->keys())
-            ->with('file')
-            ->orderBy('group_messages.created_at')
-            ->orderBy('group_messages.id')
-            ->orderBy('group_message_images.number')
-            ->limit(self::THUMBNAIL_CANDIDATES)
-            ->select('group_message_images.*')
-            ->get();
-
-        $shown = [];
-
-        foreach ($candidates as $image) {
-            /** @var GroupMessage $message */
-            $message = $parents[(int) $image->group_message_id];
-            $file = $image->file;
-
-            if ($file === null || (int) $file->related_entity_id !== (int) $message->getKey()) {
-                continue;
-            }
-
-            // instanceof rather than a string match, so the legacy morph aliases resolve too.
-            $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
-            if ($ownerClass === null || ! $message instanceof $ownerClass) {
-                continue;
-            }
-
-            if (! Gate::forUser($viewer)->allows('view', $file)) {
-                continue;
-            }
-
-            $shown[] = GroupMessageSerializer::image($image);
-
-            if (count($shown) === self::THUMBNAILS) {
-                return $shown;
-            }
-        }
-
-        return $shown;
     }
 }
