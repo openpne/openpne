@@ -253,6 +253,11 @@ Authorization is part of the feature contract, not a view concern.
   row check, not in the controller: images and other bytes are fetched by URL through
   [`FilePolicy`](../../app/Policies/FilePolicy.php), which no page mediates, so a
   controller-only gate would leave a published URL readable after the switch went off.
+- **A read with no viewer at all** tightens the rule rather than relaxing it. The daily home issue
+  is one page for the whole membership, so its candidate queries carry only what **every** member
+  may read and drop the per-viewer half of each feature's scope — the block filter has no viewer to
+  apply for, and the page reapplies it when it resolves each row
+  ([home-issues.md](home-issues.md)).
 
 A relation lookup exposed as a feature primitive is **named by direction and
 use**, because a block is one-directional. [`BlockLookup`](../../app/Features/Block/BlockLookup.php)

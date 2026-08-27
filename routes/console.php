@@ -1,5 +1,6 @@
 <?php
 
+use App\Features\Home\Actions\PublishHomeIssue;
 use App\Models\EmailChangeRequest;
 use App\Models\MfaResetRequest;
 use App\Models\RegistrationToken;
@@ -22,3 +23,10 @@ Schedule::command('model:prune', ['--model' => [RegistrationToken::class, EmailC
 // per-minute systemd timer skips rather than queues while the last unit is still running, so the
 // daily sweeps would go missing with it.
 Schedule::command('openpne:prune-link-cards')->weeklyOn(0, '3:10')->runInBackground();
+
+// The day's home issue, on the site's clock. In the foreground, unlike the prune above: this is a
+// handful of capped reads and one insert, so it costs `schedule:run` seconds rather than minutes and
+// a per-minute timer's next tick is never at risk. Nothing guards a double run either — a second run
+// the same day finds the issue and writes nothing, and the unique on `issue_date` is what makes that
+// true even when two runs overlap (App\Features\Home\Actions\PublishHomeIssue).
+Schedule::command('openpne:publish-home-issue')->dailyAt(PublishHomeIssue::TIME);
