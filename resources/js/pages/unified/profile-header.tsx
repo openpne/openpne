@@ -103,7 +103,7 @@ export function ProfileHeader({
                 {/* The name is stored inside the curve — its row sits between the dome's apex and
                     the photo's side bottoms, so the picture still shows either side of it. */}
                 <div className="absolute inset-x-[16%] bottom-14 flex min-w-0 items-center justify-center gap-2">
-                    <Heading as={as} variant="page" className="min-w-0 truncate text-2xl">
+                    <Heading as={as} variant="display" className="min-w-0 truncate">
                         {profile.name}
                     </Heading>
                     <AiChip isAi={profile.isAi} />

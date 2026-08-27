@@ -37,6 +37,7 @@ a missed migration.
 
 | variant | size | used by |
 |---|---|---|
+| `display` | 24px | the one headline a screen leads with, one rank above `page` |
 | `page` | 20px | page titles |
 | `pageCompose` | 18px, 20px from `lg` | compose screens, where the sheet header sits right above the title |
 | `group` | 18px | a heading that stands outside the cards it groups — the settings page's groups |
@@ -45,14 +46,14 @@ a missed migration.
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the top bar's centered label and its scope name (chrome, outside the content ranks) |
 
-Five content ranks rather than three, because that is what the screens use: the notification settings
+Six content ranks rather than three, because that is what the screens use: the notification settings
 page runs page title over section over nested heading, and collapsing the middle rank would leave two
 of them on the same size with only a rule between. Weight is 600 at every rank — it says "this names
 a region" — and the rank is the size.
 
-`page` carries `break-words` so a long member or community name cannot clip. Color lives on each
-variant rather than the base, so `label` can be muted without leaving two color utilities on one
-element for the stylesheet's order to resolve.
+`display` and `page` carry `break-words` so a long member or community name cannot clip. Color lives
+on each variant rather than the base, so `label` can be muted without leaving two color utilities on
+one element for the stylesheet's order to resolve.
 
 ## What the rule does not cover
 
