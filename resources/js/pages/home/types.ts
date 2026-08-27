@@ -71,7 +71,9 @@ export interface Issue extends IssueRef {
     publishedAt: string;
     /** Whether `date` is the site's today: a stale issue says so in the colophon. */
     isCurrent: boolean;
-    topStory: IssueStory;
+    /** Absent once every story the issue featured has been taken down or narrowed — the rest of the
+     *  issue still stands, so it is a missing key rather than a missing issue. */
+    topStory?: IssueStory;
     /** Ranks 2–3, present only when the issue has 2–3 content items. */
     features?: IssueStory[];
     /** Ranks 2–8, present only when the issue has 4 or more. */

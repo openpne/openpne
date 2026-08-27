@@ -20,6 +20,7 @@ use App\Features\GroupTalk\GroupTalkReactionController;
 use App\Features\GroupTopic\GroupTopicCommentController;
 use App\Features\GroupTopic\GroupTopicController;
 use App\Features\Home\HomeController;
+use App\Features\Home\HomeIssueController;
 use App\Features\Home\UnreadCountsController;
 use App\Features\Member\EmailChangeLinkController;
 use App\Features\Member\InviteController;
@@ -399,6 +400,16 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // The shared `unread` badge counts alone (JSON), polled by an open Modern tab. Shell-wide, not
     // notification-owned: it carries the layer-1 counts too. See docs/internals/notifications.md.
     Route::get('/unread-counts', [UnreadCountsController::class, 'show'])->name('unread.counts');
+
+    // The published issues (docs/internals/home-issues.md). Modern-only — OpenPNE 3 had no such
+    // page — and no unit owns them: an issue is the site's own front page, and each band inside it
+    // is gated by its own unit as it renders. `/` follows once the cutover lands.
+    // The literal precedes the dated wildcard, and the day pattern is the diary archive's, so a
+    // month or a day out of range is not a route rather than a page saying so.
+    Route::get('/home/issues', [HomeIssueController::class, 'index'])->name('home.issues');
+    Route::get('/home/{year}/{month}/{day}', [HomeIssueController::class, 'show'])
+        ->where(['year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
+        ->name('home.issue');
 
     // Server-side Markdown preview for the compose forms (diary / topic / event), rendered by the
     // same sanitized pipeline as a stored body. Throttled on its own limiter — a keystroke-driven
