@@ -119,6 +119,15 @@ plainly:
   timeout in AWS: a deployment on that driver has to raise it past the job's `$timeout` itself. Nor
   is there a job to bound on an inline queue — there the send runs in the request of whoever caused
   the notification, and the per-request timeout times the device cap is all of it.
+- **There is a second transport, and it is unguarded.** `flushPooled()` sends on an async client the
+  library discovers from whatever is installed, with no options at all. Nothing implements the
+  interface it looks for, so it throws instead — that is the only reason none of the above can be
+  bypassed, and a transitive dependency is all it would take to change.
+
+None of the three assumptions those rest on — that the client this app builds is the one the channel
+sends on, that no async client is discoverable, that devices are sent one at a time — belong to this
+app, and each was last changed by a dependency bump whose release notes said something else.
+`WebPushUpstreamAssumptionsTest` asserts them, so the bump is what goes red.
 
 This app does not take the channel package's route of sending through Laravel's HTTP client, so
 global HTTP middleware, request logging and `Http::fake()` do not see push requests.
