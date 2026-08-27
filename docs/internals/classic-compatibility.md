@@ -57,8 +57,8 @@ Under `modern_only` the Classic surface is never served, so its operator configu
 are hidden — no one is shown a Classic option they cannot use.
 
 The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver renders the
-Classic home or redirects to the Modern dashboard, and it is where login and registration
-land. `/member` aliases it. Both are recorded in the [member route
+Classic home or the Modern front page ([home-issues.md](home-issues.md)), and it is where
+login and registration land. `/member` aliases it. Both are recorded in the [member route
 parity](../../app/Compat/Parities/MemberRouteParity.php).
 
 ## Rendering compatibility

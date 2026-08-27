@@ -40,7 +40,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
         return null;
     }
 
-    // Exact pathname match (strip query/hash) for the tabs that ask for one; see NavSection.exact.
+    // Query and hash off first: a tab is matched against the pathname alone.
     const path = url.replace(/[?#].*$/, '');
     const { bottomBar, tabMark } = lookSpec(props.look);
 

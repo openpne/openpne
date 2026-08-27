@@ -28,14 +28,6 @@ const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
         },
     },
     {
-        dimension: 'Home',
-        cells: {
-            standard: 'A digest: lists of notices, talk and %diaries%.',
-            unified: 'The same as Standard.',
-            tabbed: 'The same as Standard.',
-        },
-    },
-    {
         dimension: 'Header on a phone',
         cells: {
             standard: 'Varies by screen: a title on a list, back plus the name on a detail page.',

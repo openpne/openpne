@@ -62,7 +62,9 @@ test('the groups section lands on the joined list, where the badge it carries is
 test('the untoggleable sections survive every unit being off', () => {
     const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
-    assert.deepEqual(hrefs(allOff), ['/notifications', '/member/search', '/member/config']);
+    // What's new leads the list with every unit off too: no unit owns it, and with nothing to
+    // digest it still stands its welcome panel.
+    assert.deepEqual(hrefs(allOff), ['/dashboard', '/notifications', '/member/search', '/member/config']);
 });
 
 test('the groups section stays while only a board is off', () => {
@@ -75,12 +77,12 @@ const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(
 test('the bottom bar is Home and three sections, and messages is not one of them', () => {
     // A word under each icon is what costs the fifth tab, and messages is the one dropped: the
     // drawer entry that already carries its count is where the number stays.
-    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications']);
+    assert.deepEqual(bottomHrefs(allOn), ['/', '/groups/mine', '/diary/list', '/notifications']);
 });
 
 test('a bottom tab goes with its unit', () => {
-    assert.deepEqual(bottomHrefs({ ...allOn, group: false }), ['/dashboard', '/diary/list', '/notifications']);
-    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/dashboard', '/groups/mine', '/notifications']);
+    assert.deepEqual(bottomHrefs({ ...allOn, group: false }), ['/', '/diary/list', '/notifications']);
+    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/', '/groups/mine', '/notifications']);
     // Switching messages off changes nothing here, the row never having carried it.
     assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), bottomHrefs(allOn));
 });
@@ -88,15 +90,21 @@ test('a bottom tab goes with its unit', () => {
 test('Home and notifications survive every unit being off', () => {
     const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
-    assert.deepEqual(bottomHrefs(allOff), ['/dashboard', '/notifications']);
+    assert.deepEqual(bottomHrefs(allOff), ['/', '/notifications']);
 });
 
-test('the Home tab matches its own path only', () => {
-    // Prefix matching would light Home up on anything nested under /dashboard.
-    const home = bottomNavSections(allOn).find((section) => section.href === '/dashboard');
+test('the Home tab covers the front page and the issues, and nothing else', () => {
+    const home = bottomNavSections(allOn).find((section) => section.href === '/');
 
-    assert.deepEqual(home?.match, ['/dashboard']);
-    assert.equal(home?.exact, true);
+    assert.ok(home);
+    for (const path of ['/', '/home/issues', '/home/2026/08/27']) {
+        assert.equal(isSectionActive(home, path), true, path);
+    }
+    // The root is compared whole, so it claims neither a sibling section nor a path that merely
+    // starts with the same letters.
+    for (const path of ['/dashboard', '/diary/list', '/homex']) {
+        assert.equal(isSectionActive(home, path), false, path);
+    }
 });
 
 const tabHrefs = (component: string, enabledFeatures: Record<FeatureKey, boolean>, props: Record<string, unknown>) =>
@@ -151,13 +159,16 @@ test('the joined tab carries the unread-talk count', () => {
     assert.equal(tabs[0]?.badge?.label.key, ':count %communities% with new messages');
 });
 
-test('the dashboard carries the diary action without becoming a hub', () => {
+test("What's new is a hub headed by the words its own nav entry carries", () => {
     const dashboard = chrome('dashboard', {});
+    const entry = NAV_SECTIONS.find((section) => section.href === '/dashboard');
 
+    assert.equal(dashboard.mode, 'section');
+    assert.deepEqual(dashboard.title, { key: "What's new", replacements: undefined });
+    // The h1 = nav label invariant, read off the registry rather than restated.
+    assert.deepEqual(dashboard.title, entry?.label);
+    // The diary shortcut it carried before it was a hub is still its action.
     assert.equal(dashboard.action?.href, '/diary/new');
-    // 'embedded' keeps the frame from drawing a heading row: the action is the mobile FAB alone.
-    assert.equal(dashboard.mode, 'embedded');
-    assert.equal(dashboard.title, undefined);
 });
 
 test('the dashboard action goes with the diary unit', () => {
@@ -165,10 +176,13 @@ test('the dashboard action goes with the diary unit', () => {
 });
 
 test('home takes the mobile brand bar rather than a back control', () => {
-    // Nothing stands above home, so its bar carries the brand row and crumbs to nowhere.
-    assert.ok(isHomeComponent('dashboard'));
+    // Nothing stands above the current issue, so its bar carries the brand row and crumbs to
+    // nowhere. A dated issue is somewhere below the run of them, and What's new is a hub.
+    assert.ok(isHomeComponent('home/issue'));
+    assert.ok(!isHomeComponent('home/archive'));
+    assert.ok(!isHomeComponent('dashboard'));
     assert.ok(!isHomeComponent('diary/feed'));
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('dashboard'));
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
 test('the current issue takes the bare frame: its masthead is the page', () => {
@@ -194,11 +208,8 @@ test('the run of issues is titled by the same words the crumb into it uses', () 
 
     assert.equal(list.mode, 'contextual');
     assert.deepEqual(list.title, crumb?.label);
-    // Its own one parent is the front page.
-    assert.deepEqual(
-        (list.context ?? []).map((item) => item.href),
-        ['/'],
-    );
+    // Its own one parent is the front page, named by the same word the Home tab wears.
+    assert.deepEqual(list.context, [{ href: '/', label: { key: 'Home', replacements: undefined } }]);
 });
 
 test('the unified member page is the same screen as the profile it replaces', () => {
@@ -476,8 +487,8 @@ test('every look answers every question the shell asks', () => {
 });
 
 test('the unified bar offers home and the groups, and the groups tab goes with its unit', () => {
-    assert.deepEqual(unifiedTabs(allOn).map((tab) => tab.href), ['/dashboard', '/groups/mine']);
-    assert.deepEqual(unifiedTabs({ ...allOn, group: false }).map((tab) => tab.href), ['/dashboard']);
+    assert.deepEqual(unifiedTabs(allOn).map((tab) => tab.href), ['/', '/groups/mine']);
+    assert.deepEqual(unifiedTabs({ ...allOn, group: false }).map((tab) => tab.href), ['/']);
     // Nav entries, not a parallel list: the drawer's label and the tab's are the same object.
     assert.deepEqual(unifiedTabs(allOn)[1], NAV_SECTIONS.find((section) => section.href === '/groups/mine'));
 });
@@ -485,19 +496,21 @@ test('the unified bar offers home and the groups, and the groups tab goes with i
 test('the unified tabs light up on the paths their sections own', () => {
     const current = (path: string) => unifiedTabs(allOn).filter((tab) => isSectionActive(tab, path)).map((tab) => tab.href);
 
-    // Home stands for one screen; the groups tab answers for every group space.
-    assert.deepEqual(current('/dashboard'), ['/dashboard']);
-    assert.deepEqual(current('/dashboard/anything'), []);
+    // Home stands for the front page and the issues; the groups tab for every group space.
+    assert.deepEqual(current('/'), ['/']);
+    assert.deepEqual(current('/home/issues'), ['/']);
     for (const path of ['/groups', '/groups/mine', '/groups/7', '/topics/3', '/events/1']) {
         assert.deepEqual(current(path), ['/groups/mine'], path);
     }
-    // Neither tab claims a screen that is in neither place.
+    // Neither tab claims a screen that is in neither place — What's new is a drawer section now,
+    // and the root matching whole is what keeps Home off it.
+    assert.deepEqual(current('/dashboard'), []);
     assert.deepEqual(current('/diary/list'), []);
 });
 
 const CYCLISTS_PLACE: DivePlace = { label: 'Cyclists', href: '/groups/7' };
 const OWNER_PLACE: DivePlace = { label: 'Owner', href: '/member/1' };
-const HOME_PLACE: DivePlace = { label: { key: 'Home', replacements: undefined }, href: '/dashboard' };
+const HOME_PLACE: DivePlace = { label: { key: 'Home', replacements: undefined }, href: '/' };
 
 /**
  * Where the unified bottom bar says the member is standing, per screen. Enumerated rather than
@@ -526,7 +539,11 @@ const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place:
     { component: 'timeline/member', props: { owner, isOwner: false }, place: OWNER_PLACE },
     { component: 'message/conversation/index', props: { counterpart: owner }, place: OWNER_PLACE },
     // Nowhere in particular: a hub, an errand, the viewer's own lists — and the withdrawn bucket,
-    // whose counterpart has no page left to stand on.
+    // whose counterpart has no page left to stand on. The issue screens are home itself and the
+    // run behind it, which is the one place they are all a way back up to.
+    { component: 'home/issue', props: {}, place: HOME_PLACE },
+    { component: 'home/archive', props: {}, place: HOME_PLACE },
+    { component: 'home/issues', props: {}, place: HOME_PLACE },
     { component: 'dashboard', props: {}, place: HOME_PLACE },
     { component: 'diary/feed', props: { variant: 'recent' }, place: HOME_PLACE },
     { component: 'community/search', props: {}, place: HOME_PLACE },
@@ -607,7 +624,7 @@ test("a form's crumb is static text, whatever it would otherwise have been", () 
 
 test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
     // Home included: the mark expands to the site name there rather than pointing at a second thing.
-    assert.equal(crumb('dashboard', {}), null);
+    assert.equal(crumb('home/issue', {}), null);
     assert.equal(crumb('block/list', {}), null);
 });
 

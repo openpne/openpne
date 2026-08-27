@@ -8,7 +8,11 @@ use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
 use App\Features\Group\Queries\PendingJoinRequestCounts;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
+use App\Features\Home\Queries\AdjacentHomeIssues;
 use App\Features\Home\Queries\JoinedGroupActivity;
+use App\Features\Home\Queries\LatestHomeIssue;
+use App\Features\Home\Queries\ShowHomeIssue;
+use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
@@ -17,6 +21,7 @@ use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\Feature;
 use App\Support\SurfaceResolver;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +30,8 @@ use Inertia\Response;
 
 /**
  * The OpenPNE 3 member/home portal lives at the canonical root (/). It resolves by surface:
- * a Modern-default install lands on the Inertia dashboard, a Classic-default one on the Classic
+ * a Modern-default install renders the latest issue — the site's front page
+ * ([home-issues.md](../../../docs/internals/home-issues.md)) — and a Classic-default one the Classic
  * home, which renders the admin-configured gadgets (the viewer is the home gadgets' subject).
  */
 class HomeController extends Controller
@@ -33,15 +39,40 @@ class HomeController extends Controller
     /** Items shown per digest section on the Modern dashboard. */
     private const PREVIEW = 5;
 
-    public function index(Request $request, GadgetService $gadgets, UnreadCounts $unread, CountUnreadDirectMessages $unreadMessages): View|RedirectResponse
-    {
+    public function index(
+        Request $request,
+        GadgetService $gadgets,
+        UnreadCounts $unread,
+        CountUnreadDirectMessages $unreadMessages,
+        LatestHomeIssue $latest,
+        ShowHomeIssue $show,
+        AdjacentHomeIssues $adjacent,
+    ): View|RedirectResponse|Response {
+        /** @var Member|null $viewer */
         $viewer = $request->user();
         if ($viewer === null) {
             return redirect('/login');
         }
 
         if (SurfaceResolver::resolve($request, 'home') === SurfaceResolver::MODERN) {
-            return redirect('/dashboard');
+            $issue = $latest();
+
+            // Nothing published yet is not an absence to report: the site has a front page from its
+            // first day, and that one simply has nothing on it.
+            $page = $issue === null
+                ? HomeIssueSerializer::page(null, null, $viewer, null, null, CarbonImmutable::now())
+                : HomeIssueSerializer::page(
+                    $issue,
+                    $show($viewer, $issue),
+                    $viewer,
+                    $adjacent($issue)['previous'],
+                    // The latest issue is what this page IS, so nothing stands forward of it
+                    // however the run happens to be dated.
+                    null,
+                    CarbonImmutable::now(),
+                );
+
+            return Inertia::render('home/issue', $page);
         }
 
         return view('home.index', [
@@ -65,9 +96,9 @@ class HomeController extends Controller
     }
 
     /**
-     * The Modern-only landing (root redirects here under a Modern surface), and the same digest under
-     * every look: the viewer's conversations, the all-members diary feed, the timeline, their
-     * joined-community activity, and their own recent diaries.
+     * What's new: a Modern-only nav section, and the same digest under every look — the viewer's
+     * conversations, the all-members diary feed, the timeline, their joined-community activity, and
+     * their own recent diaries.
      */
     public function dashboard(
         Request $request,

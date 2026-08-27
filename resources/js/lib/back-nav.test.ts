@@ -102,11 +102,11 @@ test('back goes to the session history when there is any', () => {
     assert.deepEqual(backTarget(true, [{ href: '/community/1' }]), { type: 'history' });
 });
 
-test('back falls back to the nearest crumb, then to the dashboard', () => {
+test('back falls back to the nearest crumb, then to home', () => {
     assert.deepEqual(backTarget(false, [{ href: '/community/1' }, { href: '/community/1/topic' }]), {
         type: 'href',
         href: '/community/1/topic',
     });
-    assert.deepEqual(backTarget(false, []), { type: 'href', href: '/dashboard' });
-    assert.deepEqual(backTarget(false), { type: 'href', href: '/dashboard' });
+    assert.deepEqual(backTarget(false, []), { type: 'href', href: '/' });
+    assert.deepEqual(backTarget(false), { type: 'href', href: '/' });
 });

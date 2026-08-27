@@ -198,10 +198,11 @@ what `[]` means.
 
 ## Routes
 
-`/home/issues` is the run of them and `/home/{y}/{m}/{d}` is one day's, both Modern-only: OpenPNE 3
-had no such page, so they render Inertia whatever surface the reader is on. The day is validated
-before it is looked for — a route pattern admits `2026/02/30`, and a day that never happened must
-read as nothing rather than as a query. `/` still lands on the dashboard; the cutover follows.
+`/` is the latest issue under a Modern surface — the front page is the newest one, whatever day it
+covers, and its pager only goes back. `/home/issues` is the run of them and `/home/{y}/{m}/{d}` is
+one day's, both Modern-only: OpenPNE 3 had no such page, so they render Inertia whatever surface the
+reader is on. The day is validated before it is looked for — a route pattern admits `2026/02/30`,
+and a day that never happened must read as nothing rather than as a query.
 
 ## Later
 

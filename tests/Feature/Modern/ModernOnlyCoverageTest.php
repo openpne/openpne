@@ -127,7 +127,7 @@ class ModernOnlyCoverageTest extends TestCase
     public static function memberPages(): array
     {
         return [
-            'home (redirects to dashboard)' => ['/'],
+            'home' => ['/'],
             'dashboard' => ['/dashboard'],
             'back issues' => ['/home/issues'],
             'diary list' => ['/diary/list'],

@@ -123,7 +123,6 @@ function arrive(props: Record<string, unknown>) {
             issue: null,
             prev: null,
             next: null,
-            publishTime: '06:00',
             ...props,
         },
     };
@@ -177,7 +176,7 @@ test('a post headlined by its first line keeps the mention in it a link', () => 
     expect(screen.getByText('Walked down to the river and back.')).toBeTruthy();
 });
 
-test('two or three stories stand abreast as cards, and a card restates no link', () => {
+test('the lead takes the width and the rest run two abreast, restating no link', () => {
     const { container } = arrive({
         issue: issueOf({
             features: [
@@ -187,14 +186,26 @@ test('two or three stories stand abreast as cards, and a card restates no link',
         }),
     });
 
-    // The lead is a card like the others: past one story, ranking them is a claim the day's traffic
-    // does not support.
+    // The lead is a card like the others, and it stands alone above them: past one story, ranking
+    // the rest would be a claim the day's traffic does not support.
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Morning walk', 'Second story', 'Third story']);
     headings.forEach((heading) => expect(heading.className).toContain('text-lg'));
 
+    // Two columns and never three — a third leaves a card too narrow to read a headline across.
+    const grid = container.querySelector('div.grid');
+    expect(grid?.className).toContain('sm:grid-cols-2');
+    expect(grid?.className).not.toContain('grid-cols-3');
+    expect(grid?.children.length).toBe(2);
+
     // A preview does not restate a link out of a body it is not showing.
     expect(container.querySelector('a[href="https://www.example.com/article"]')).toBeNull();
+});
+
+test('a lone follow-up takes the width too rather than sitting in half a row', () => {
+    const { container } = arrive({ issue: issueOf({ features: [diaryStory({ id: 12, title: 'Second story' })] }) });
+
+    expect(container.querySelector('div.grid')?.className).not.toContain('grid-cols-2');
 });
 
 const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => ({
@@ -279,8 +290,14 @@ test('an issue whose stories have all gone is still the day around them', () => 
         issue: issueOf({ topStory: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });
 
-    expect(screen.getByRole('heading', { level: 2, name: '7 messages in Room 61' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
+
+    // A glimpse of the run is a picture, not a marker beside the faces: drawn from the fit ladder,
+    // at the resolution the cell it lands in asks for.
+    const glimpse = container.querySelector('img[srcset]');
+    expect(glimpse?.getAttribute('srcset')).toBe('/f/9/w640 640w');
+    expect(glimpse?.getAttribute('sizes')).toBe('(min-width: 64rem) 13rem, 30vw');
     expect(screen.getByText('New members')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
 
@@ -292,24 +309,25 @@ test('an issue whose stories have all gone is still the day around them', () => 
 
 test('a stale issue says it is one, and the current issue does not', () => {
     arrive({ issue: issueOf({ isCurrent: false }) });
-    expect(screen.getByText('No new issue today — the next post will make the next one.')).toBeTruthy();
+    expect(screen.getByText('Nothing new today yet — the next post starts a new day here.')).toBeTruthy();
 
     cleanup();
 
     arrive({ issue: issueOf() });
-    expect(screen.queryByText('No new issue today — the next post will make the next one.')).toBeNull();
-    // The rest of the colophon is unconditional: when the next issue runs, and what leaves one.
-    expect(screen.getByText('Published daily at 06:00')).toBeTruthy();
+    expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
+    // The stamp is the instant this day was last put together, not a timetable it did not keep to.
+    expect(screen.getByText('Updated August 27, 2026 at 06:00')).toBeTruthy();
+    expect(screen.getByText('Posts deleted or made private since are not shown here.')).toBeTruthy();
 });
 
 test('a site with nothing published yet offers the way to fill it', () => {
     arrive({ issue: null });
 
     expect(screen.getByText('Welcome, Viewer.')).toBeTruthy();
-    expect(screen.getByText('The first post will run in the next issue.')).toBeTruthy();
-    // No issue means no number and nothing to page through.
-    expect(screen.queryByText(/^No\. /)).toBeNull();
-    expect(screen.queryByText('Back issues')).toBeNull();
+    expect(screen.getByText('The first post will appear here the next morning.')).toBeTruthy();
+    // Nothing has been put together, so there is no instant to stamp and nothing to page through.
+    expect(screen.queryByText(/^Updated /)).toBeNull();
+    expect(screen.queryByText('Past happenings')).toBeNull();
 });
 
 test('the pager offers only the directions there is an issue in', () => {
@@ -319,14 +337,14 @@ test('the pager offers only the directions there is an issue in', () => {
         next: { date: '2026-08-28', number: 13, href: '/home/2026/08/28' },
     });
 
-    expect(screen.getByText('Previous issue')).toBeTruthy();
-    expect(screen.getByText('Next issue')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Back issues' }).getAttribute('href')).toBe('/home/issues');
+    expect(screen.getByText('Earlier day')).toBeTruthy();
+    expect(screen.getByText('Later day')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Past happenings' }).getAttribute('href')).toBe('/home/issues');
 
     cleanup();
 
     arrive({ issue: issueOf() });
 
-    expect(screen.queryByText('Previous issue')).toBeNull();
-    expect(screen.queryByText('Next issue')).toBeNull();
+    expect(screen.queryByText('Earlier day')).toBeNull();
+    expect(screen.queryByText('Later day')).toBeNull();
 });

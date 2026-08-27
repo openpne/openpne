@@ -38,13 +38,14 @@ function arrive(data: IssueRef[], meta: { currentPage: number; lastPage: number 
     return renderWithProviders(<HomeIssues />);
 }
 
-test('each row is named by the issue and dated by the day it covers', () => {
+test('each row is the day it covers, and links to it', () => {
     arrive([ref(12, '2026-08-27'), ref(11, '2026-08-26')], { currentPage: 1, lastPage: 2 });
 
-    const latest = screen.getByRole('link', { name: 'No. 12' });
+    // The date is the only name a day has here, so it is the line and the link both.
+    const latest = screen.getByRole('link', { name: 'Thu, August 27, 2026' });
     expect(latest.getAttribute('href')).toBe('/home/2026/08/27');
-    expect(screen.getByText('Thu, August 27, 2026')).toBeTruthy();
-    expect(screen.getAllByRole('link', { name: /^No\. / })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'Wed, August 26, 2026' }).getAttribute('href')).toBe('/home/2026/08/26');
+    expect(screen.queryByText(/^No\. /)).toBeNull();
 });
 
 test('the run pages when there is more of it than one page', () => {
@@ -64,6 +65,6 @@ test('the run pages when there is more of it than one page', () => {
 test('a run with nothing in it says so instead of drawing an empty list', () => {
     arrive([], { currentPage: 1, lastPage: 1 });
 
-    expect(screen.getByText('No issues yet.')).toBeTruthy();
+    expect(screen.getByText('Nothing yet.')).toBeTruthy();
     expect(screen.queryByRole('list')).toBeNull();
 });

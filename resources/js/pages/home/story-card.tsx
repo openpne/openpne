@@ -10,12 +10,12 @@ import { splitLead } from './lead';
 import type { IssueStory } from './types';
 
 /**
- * What the card is about to paint. The cards run one per column below `lg` and two or three across
- * above it, inside the frame's 42rem, so the widest a card's picture is ever drawn is the frame
- * itself; 20rem covers the two-column case and over-declares the three-column one by about a rung,
- * which is the direction to err in (docs/internals/images.md).
+ * What the card is about to paint. The lead card takes the whole frame at every width and the cards
+ * under it run two across from `sm`, so the frame's 42rem is the widest either is drawn — declared
+ * for both, which over-declares the half-width ones by a rung. That is the direction to err in
+ * (docs/internals/images.md).
  */
-const CARD_HERO_SIZES = '(min-width: 64rem) 20rem, (min-width: 40rem) 37.5rem, 92vw';
+const CARD_HERO_SIZES = '(min-width: 40rem) 37.5rem, 92vw';
 
 /** Where the story is read in full, and what it is called there. */
 export function storyTarget(story: IssueStory): { href: string; headline: string } {
@@ -53,23 +53,25 @@ export function StoryCard({ story }: { story: IssueStory }) {
 
     return (
         <Panel className="h-full">
+            <Heading as="h2" variant="group" className="break-words">
+                <Link href={href} className="hover:underline">
+                    {headline}
+                </Link>
+            </Heading>
             {hero && (
-                // Decorative: the headline under it is the link's own text.
+                // Decorative: the headline above it is the link's own text. The picture sits under
+                // the headline rather than over it so that cards standing abreast — one with a
+                // picture, one without — still open on the same line.
                 <img
                     src={fitFallbackUrl(hero.fitSources) ?? ''}
                     srcSet={fitSrcSet(hero.fitSources, hero.width, hero.height) ?? undefined}
                     sizes={CARD_HERO_SIZES}
                     alt=""
                     loading="lazy"
-                    className="mb-3 aspect-[4/3] w-full rounded-lg bg-muted object-cover"
+                    className="mt-3 aspect-[4/3] w-full rounded-lg bg-muted object-cover"
                 />
             )}
-            <Heading as="h2" variant="group" className="break-words">
-                <Link href={href} className="hover:underline">
-                    {headline}
-                </Link>
-            </Heading>
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 <Avatar
                     id={author?.id ?? 0}
                     name={name}
@@ -84,7 +86,9 @@ export function StoryCard({ story }: { story: IssueStory }) {
                 {group && <span className="truncate">{group.name}</span>}
                 <Timestamp at={item.createdAt} preset="listStamp" />
             </div>
-            {item.excerpt !== '' && <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{item.excerpt}</p>}
+            {/* `break-words`, or an unbroken run — a bare URL — sets the paragraph's width from its
+                own length and the clamp cuts it mid-word with no ellipsis to say so. */}
+            {item.excerpt !== '' && <p className="mt-2 line-clamp-4 break-words text-sm text-muted-foreground">{item.excerpt}</p>}
         </Panel>
     );
 }

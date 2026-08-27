@@ -55,19 +55,29 @@ const placeLink = (): HTMLElement => {
 };
 
 test('the shipped bar is four labelled section tabs and names no place', () => {
-    const chrome = arrive('dashboard', '/dashboard');
+    const chrome = arrive('home/issue', '/');
 
     render(<BottomNav chrome={chrome} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-        '/dashboard',
+        '/',
         '/groups/mine',
         '/diary/list',
         '/notifications',
     ]);
     // The word is on screen, not only in the accessible name an icon-only row would have to lean on.
     expect(screen.getByRole('link', { name: 'Home' }).textContent).toBe('Home');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
     expect(document.querySelector('[data-dive-place]')).toBeNull();
+});
+
+/** The issues are under home, so reading one keeps the tab the reader arrived through lit. */
+test('a dated issue still stands on the Home tab', () => {
+    const chrome = arrive('home/archive', '/home/2026/08/20');
+
+    render(<BottomNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
 });
 
 test('the shipped row prints every count it carries, each said in words as well', () => {
@@ -127,7 +137,7 @@ test('a screen that is nowhere in particular falls back to home', () => {
     render(<BottomNav chrome={chrome} />);
 
     expect(placeLink().textContent).toBe('Home');
-    expect(placeLink().getAttribute('href')).toBe('/dashboard');
+    expect(placeLink().getAttribute('href')).toBe('/');
 });
 
 test('the unified bar says how many notifications are waiting, in words', () => {

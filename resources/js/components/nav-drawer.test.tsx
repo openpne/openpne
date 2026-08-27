@@ -66,6 +66,22 @@ test.each([
     expect(screen.queryByRole('button', { name: 'Sign out' }) !== null).toBe(rows);
 });
 
+/**
+ * The drawer's title is the lockup, and it is a way home — the front page, not the digest that used
+ * to stand there. Reached through the dialog's own naming rather than by the link's text, so the two
+ * facts it carries (it names the sheet, and it goes somewhere) are checked as one.
+ */
+test('the drawer is named by a brand link to the front page', () => {
+    arrive('standard');
+    openDrawer();
+
+    const named = screen.getByRole('dialog').getAttribute('aria-labelledby');
+    const title = named === null ? null : document.getElementById(named);
+
+    expect(title?.tagName).toBe('A');
+    expect(title?.getAttribute('href')).toBe('/');
+});
+
 test('the labeled trigger opens the sheet from its own side, close control staying at the right', () => {
     arrive('tabbed');
     openDrawer(true);

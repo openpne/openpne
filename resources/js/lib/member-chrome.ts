@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Rss, Search, Settings, UserCircle2, Users } from 'lucide-react';
 import type { FeatureKey, UnreadCounts } from '@/types';
 
 /**
@@ -62,7 +62,7 @@ export interface Chrome {
     /**
      * section = hub header (h1 = nav label) from the registry; contextual = frame header with a
      * page-specific title; embedded = no frame header — the page body carries its own heading
-     * (details, forms, the dashboard's sr-only h1, member/show's in-panel h1).
+     * (details, forms, the issue's masthead, member/show's in-panel h1).
      */
     mode: 'section' | 'contextual' | 'embedded';
     title?: ChromeLabel;
@@ -230,8 +230,6 @@ export interface NavSection {
     href: string;
     /** URL prefixes marking this section active — several when a section spans more than one space. */
     match: string[];
-    /** Match the whole path instead of the prefix: Home stands for one screen, not for what nests under it. */
-    exact?: boolean;
     icon: Icon;
     label: ChromeLabel;
     badge?: CountBadge;
@@ -240,6 +238,8 @@ export interface NavSection {
 }
 
 // Section labels shared between the nav and the hub headers (the h1 = nav label invariant).
+const HOME = t('Home');
+const WHATS_NEW = t("What's new");
 const DIARIES = t('%Diaries%');
 const COMMUNITIES = t('%Communities%');
 const ACTIVITY = t('%Activity%');
@@ -250,7 +250,7 @@ const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
 // The run of front-page issues: the title of the list screen and the crumb every dated issue takes
 // back to it, which have to be the same words or the way back names a place the reader never saw.
-const BACK_ISSUES = t('Back issues');
+const PAST_HAPPENINGS = t('Past happenings');
 
 export type PolicyKind = 'terms' | 'privacy';
 
@@ -295,6 +295,9 @@ export const MEMBER_SEARCH_SECTION: NavSection = {
 
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
+    // What has happened since — the running digest the front page's once-a-day issue is not. No
+    // unit owns it: with every one switched off it still stands its welcome panel.
+    { href: '/dashboard', match: ['/dashboard'], icon: Rss, label: WHATS_NEW },
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
     GROUPS_SECTION,
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
@@ -322,9 +325,10 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: '/member/config', match: ['/member/config'], icon: Settings, label: SETTINGS },
 ];
 
-/** Whether a path (query and hash already stripped) is inside a section — see NavSection.exact. */
+/** Whether a path (query and hash already stripped) is inside a section. */
 export function isSectionActive(section: NavSection, path: string): boolean {
-    return section.exact ? section.match.includes(path) : section.match.some((prefix) => path.startsWith(prefix));
+    // The root is compared whole — as a prefix it would claim every path.
+    return section.match.some((match) => (match === '/' ? path === '/' : path.startsWith(match)));
 }
 
 /**
@@ -339,14 +343,15 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 }
 
 /** Home is the brand row in the nav lists, so it exists only for the bottom bar, which has no brand. */
-const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], exact: true, icon: House, label: t('Home') };
+const HOME_SECTION: NavSection = { href: '/', match: ['/', '/home/'], icon: House, label: HOME };
 
 /**
- * The component the home route renders. The brand's own screen: the mobile bar shows the brand row
- * rather than a back control, since there is nothing above home to go back to.
+ * The component the home route renders. The current issue is the brand's own screen: the mobile bar
+ * shows the brand row rather than a back control, since there is nothing above it to go back to. A
+ * dated issue is a different component for that reason — it has a parent, the run it belongs to.
  */
 export function isHomeComponent(component: string): boolean {
-    return component === 'dashboard';
+    return component === 'home/issue';
 }
 
 /**
@@ -371,8 +376,9 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSect
 
 /**
  * The unified layout's top-bar tab pair: the two places it moves a member between. Nav entries, so
- * which paths light a tab up is the nav's own answer (Home its exact path, the group tab every group
- * space) and the group tab goes with its unit the way the drawer's entry does.
+ * which paths light a tab up is the nav's own answer (Home the front page and the issues under it,
+ * the group tab every group space) and the group tab goes with its unit the way the drawer's entry
+ * does.
  */
 export function unifiedTabs(enabled: Record<FeatureKey, boolean>): NavSection[] {
     return enabled.group ? [HOME_SECTION, GROUPS_SECTION] : [HOME_SECTION];
@@ -482,14 +488,18 @@ const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =
  * title, no tabs/action).
  */
 const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
-    // The dashboard carries an action without being a hub: it stays 'embedded' (the page owns its
-    // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
-    // FAB — the diary shortcut the diary-forward home is the place for.
-    'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
+    // A hub like the others now that the front page is the root: its h1 is the words its drawer
+    // entry carries. The action stays the diary shortcut a digest of what people wrote is the place
+    // for, and below lg it is the FAB (the desktop sidebar already stands the same pill).
+    'dashboard': (props) => ({
+        mode: 'section',
+        title: WHATS_NEW,
+        action: enabled(props, 'diary') ? WRITE_DIARY : undefined,
+    }),
     // The run of issues has exactly one parent — the front page it is the history of — so it takes a
     // contextual title rather than a section of its own: it is a way back into the issues, not a
     // place in the nav.
-    'home/issues': () => ({ mode: 'contextual', title: BACK_ISSUES, context: [{ href: '/', label: HOME_SECTION.label }] }),
+    'home/issues': () => ({ mode: 'contextual', title: PAST_HAPPENINGS, context: [{ href: '/', label: HOME_SECTION.label }] }),
     // One component serves both policy pages, so which one the server rendered picks the heading.
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
@@ -727,7 +737,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     // A dated issue crumbs back to the run it belongs to. Embedded, so the frame draws no heading:
     // the issue's own masthead is the page's h1, and a chrome title over it would name the screen
     // twice with two different words for it.
-    'home/archive': { context: [{ href: '/home/issues', label: BACK_ISSUES }] },
+    'home/archive': { context: [{ href: '/home/issues', label: PAST_HAPPENINGS }] },
     'block/add': { width: 'narrow', form: true },
     'block/remove': { width: 'narrow', form: true },
     'friend/link': { width: 'narrow', form: true },

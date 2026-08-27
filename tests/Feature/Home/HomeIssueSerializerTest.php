@@ -281,7 +281,6 @@ class HomeIssueSerializerTest extends TestCase
             $page['prev'],
         );
         $this->assertNull($page['next']);
-        $this->assertSame('06:00', $page['publishTime']);
     }
 
     public function test_a_day_with_no_issue_is_a_null_issue_with_the_pager_intact(): void

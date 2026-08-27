@@ -14,16 +14,18 @@ use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The two issue URLs.
+ * The front page and the two issue URLs it is the head of.
  *
- * Modern-only, like `/groups/recent`: there is no OpenPNE 3 screen to be compatible with, so both
- * render Inertia whatever surface the site or the member is on, and the look swaps the page rather
- * than the route.
+ * `/home/issues` and `/home/{y}/{m}/{d}` are Modern-only, like `/groups/recent`: there is no
+ * OpenPNE 3 screen to be compatible with, so both render Inertia whatever surface the site or the
+ * member is on, and the look swaps the page rather than the route. `/` is the OpenPNE 3 home and so
+ * resolves by surface — the Modern arm is the latest issue, and Classic is still the gadget home.
  */
 class HomeIssueRoutesTest extends TestCase
 {
@@ -160,6 +162,108 @@ class HomeIssueRoutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('prev.href', '/home/2026/08/26')
                 ->where('next', null));
+    }
+
+    /** The front page is the newest issue there is, under either Modern surface. */
+    #[DataProvider('modernSurfaceModes')]
+    public function test_the_root_is_the_latest_issue(string $mode): void
+    {
+        config(['openpne.surface_mode' => $mode]);
+        $issue = $this->publish();
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('home/issue')
+                ->where('issue.number', (int) $issue->number)
+                ->where('issue.isCurrent', true));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function modernSurfaceModes(): array
+    {
+        return [
+            'modern only' => ['modern_only'],
+            'modern default' => ['modern_default'],
+        ];
+    }
+
+    public function test_the_unified_look_still_renders_the_front_page(): void
+    {
+        $this->publish();
+        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
+        $this->freshRequestState();
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/issue'));
+    }
+
+    /** Backwards only: the newest issue is what the front page IS, so nothing stands forward of it. */
+    public function test_the_front_page_pager_only_goes_back(): void
+    {
+        $this->publishOn('2026-08-26');
+        $this->publishOn('2026-08-27');
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('prev.href', '/home/2026/08/26')
+                ->where('next', null));
+    }
+
+    /**
+     * A day that produced nothing publishes no issue, so the latest one is regularly not today's —
+     * and a reader arriving the morning after must still find it, dated as the day it covers.
+     */
+    public function test_the_latest_issue_stands_after_its_own_day_has_passed(): void
+    {
+        $issue = $this->publish();
+        Carbon::setTestNow('2026-08-28 03:00:00');
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('issue.number', (int) $issue->number)
+                ->where('issue.isCurrent', false));
+    }
+
+    public function test_a_site_that_has_published_nothing_still_has_a_front_page(): void
+    {
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('home/issue')->where('issue', null));
+    }
+
+    /** The cutover is the Modern arm's alone: Classic still serves the OpenPNE 3 gadget home. */
+    public function test_the_classic_root_is_still_the_gadget_home(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default']);
+        $this->publish();
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertSee('id="page_member_home"', false);
+    }
+
+    public function test_the_member_alias_still_lands_on_the_front_page(): void
+    {
+        $this->actingAs(Member::factory()->create())->get('/member')->assertRedirect('/');
+    }
+
+    /**
+     * The root is guest-reachable and carries `auth.session` on its own, which is what ends a
+     * session whose stored password hash has gone stale. PublicRouteBoundaryTest pins that on the
+     * Classic arm; the Modern arm serves member content here too.
+     */
+    public function test_a_stale_session_is_ended_on_the_modern_front_page(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')->assertOk();
+        // Another device changes the password; this session's stored hash is now stale.
+        $member->forceFill(['password' => Hash::make('changed-elsewhere')])->save();
+
+        $this->get('/')->assertRedirect('/login');
     }
 
     /** One issue dated on the frozen clock, with one story in it. */
