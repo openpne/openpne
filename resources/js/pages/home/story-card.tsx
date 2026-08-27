@@ -24,8 +24,8 @@ export function storyTarget(story: IssueStory): { href: string; headline: string
             return { href: `/diary/${story.item.id}`, headline: story.item.title };
         case 'timeline':
             // A post has no title, so the line its author opened with stands in for one. Plain text
-            // here, unlike the lead article: the whole card is one link, and a mention drawn as a
-            // link of its own inside it would nest two anchors.
+            // here, unlike the lead article: the headline is the card's link, and a mention drawn as
+            // a link of its own inside it would nest two anchors.
             return { href: `/timeline/${story.item.id}`, headline: splitLead(story.item.body).lead };
         case 'topic':
             return { href: `/topics/${story.item.id}`, headline: story.item.name };
