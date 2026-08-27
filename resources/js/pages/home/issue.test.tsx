@@ -290,7 +290,7 @@ test('an issue whose stories have all gone is still the day around them', () => 
         issue: issueOf({ topStory: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });
 
-    expect(screen.getByRole('heading', { level: 2, name: '7 messages in Room 61' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
 
     // A glimpse of the run is a picture, not a marker beside the faces: drawn from the fit ladder,
