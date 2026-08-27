@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 export const headingVariants = cva('font-semibold', {
     variants: {
         variant: {
-            /** The one headline a screen leads with, above its page title. */
+            /** The one headline a screen leads with, one rank above `page`. */
             display: 'text-2xl break-words text-foreground',
             /** Page title. */
             page: 'text-xl break-words text-foreground',
