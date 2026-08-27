@@ -7,10 +7,10 @@ import { renderWithProviders } from '@/lib/test-render';
 
 const inertia = vi.hoisted(() => ({ page: {} as { props: Record<string, unknown> } }));
 
-// The real dictionaries, not `fakeT`: what this is about is that the dateline reads as a date and an
-// issue number in the site's language, and a stub returning the English key would assert nothing
-// about either. Keys are English source text, so `en` resolves through the fallback the app relies
-// on; replacements are substituted the way Laravel does.
+// The real dictionaries, not `fakeT`: what this is about is that the dateline reads as a sentence
+// about a day in the site's language, and a stub returning the English key would assert nothing
+// about it. Keys are English source text, so `en` resolves through the fallback the app relies on;
+// replacements are substituted the way Laravel does.
 const dictionaries: Record<string, Record<string, string>> = { en, ja };
 const translate = (key: string, replacements: Record<string, string | number> = {}): string =>
     Object.entries(replacements).reduce(
@@ -28,38 +28,27 @@ function inLocale(locale: string) {
     inertia.page = { props: { locale, timezone: 'Asia/Tokyo' } };
 }
 
-test('the ja dateline names the day, the weekday and the issue', () => {
+test('the ja dateline says what the page is: the day, its weekday, and what happened on it', () => {
     inLocale('ja');
-    const { container } = renderWithProviders(<Masthead date="2026-08-27" number={12} />);
+    const { container } = renderWithProviders(<Masthead date="2026-08-27" />);
 
-    expect(screen.getByText('2026年8月27日(木)')).toBeTruthy();
-    expect(screen.getByText('第12号')).toBeTruthy();
+    const time = container.querySelector('time');
+    expect(time?.textContent).toBe('2026年8月27日(木)のできごと');
     // The machine-readable value is the civil date itself — no instant, so no timezone can shift it.
-    expect(container.querySelector('time')?.getAttribute('datetime')).toBe('2026-08-27');
+    expect(time?.getAttribute('datetime')).toBe('2026-08-27');
 });
 
 test('the en dateline carries the weekday too', () => {
     inLocale('en');
-    renderWithProviders(<Masthead date="2026-08-27" number={12} />);
-
-    expect(screen.getByText('Thu, August 27, 2026')).toBeTruthy();
-    expect(screen.getByText('No. 12')).toBeTruthy();
-});
-
-test('a site with no issue yet gets the date alone', () => {
-    // Nothing has been published, so there is no number to print — and printing a zero would name an
-    // issue that does not exist.
-    inLocale('ja');
     renderWithProviders(<Masthead date="2026-08-27" />);
 
-    expect(screen.getByText('2026年8月27日(木)')).toBeTruthy();
-    expect(screen.queryByText(/号$/)).toBeNull();
+    expect(screen.getByText('What happened on Thu, August 27, 2026')).toBeTruthy();
 });
 
 test('the dateline is the page heading', () => {
     inLocale('ja');
-    renderWithProviders(<Masthead date="2026-08-27" number={12} />);
+    renderWithProviders(<Masthead date="2026-08-27" />);
 
-    // The issue is what the screen is, so the nameplate is the h1 — the chrome draws none for it.
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('第12号');
+    // The day is what the screen is, so the nameplate is the h1 — the chrome draws none for it.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('2026年8月27日(木)のできごと');
 });

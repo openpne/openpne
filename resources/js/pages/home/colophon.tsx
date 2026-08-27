@@ -1,22 +1,27 @@
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 
 /**
- * The foot of the page: when the next issue runs, and the two things about an issue a reader would
- * otherwise have to guess.
+ * The foot of the page: when this day was last put together, and the two things about it a reader
+ * would otherwise have to guess.
  *
- * An issue is a snapshot taken once, so a post taken down or narrowed after publication leaves the
- * issue rather than being rewritten out of it — a reader who followed a link into nothing is owed
- * that sentence. And a day nobody posted produces no issue at all: the page then shows the last one
- * there was, which without a word would read as today's front page and misdate everything on it.
+ * A day is a snapshot taken once, so a post taken down or narrowed afterwards leaves it rather than
+ * being rewritten out of it — a reader who followed a link into nothing is owed that sentence. And a
+ * day nobody posted produces nothing at all: the page then shows the last day there was, which
+ * without a word would read as today and misdate everything on it.
+ *
+ * The time is the instant this page is about, not a schedule: a day put together by hand did not
+ * arrive at the hour a timetable would claim (docs/internals/datetime.md).
  */
-export function Colophon({ publishTime, stale }: { publishTime: string; stale: boolean }) {
+export function Colophon({ publishedAt, stale }: { publishedAt: string | null; stale: boolean }) {
     const t = useT();
+    const { absolute } = useDateFormat();
 
     return (
         <footer className="space-y-1 text-xs text-muted-foreground">
-            <p>{t('Published daily at :time', { time: publishTime })}</p>
-            <p>{t('Posts withdrawn or made private after publication are dropped from the issue.')}</p>
-            {stale && <p>{t('No new issue today — the next post will make the next one.')}</p>}
+            {publishedAt !== null && <p>{t('Updated :time', { time: absolute(publishedAt) })}</p>}
+            <p>{t('Posts deleted or made private since are not shown here.')}</p>
+            {stale && <p>{t('Nothing new today yet — the next post starts a new day here.')}</p>}
         </footer>
     );
 }

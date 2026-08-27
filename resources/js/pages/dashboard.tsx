@@ -115,8 +115,7 @@ export default function Dashboard() {
 
     return (
         <>
-            <Head title={t('Home')} />
-            <h1 className="sr-only">{t('Home')}</h1>
+            <Head title={t("What's new")} />
 
             <AnnouncementsPanel announcements={announcements} />
 

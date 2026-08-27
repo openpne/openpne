@@ -20,7 +20,7 @@ export function LeftNav() {
         // sit under the status bar / home indicator without the insets.
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 border-r border-border px-2 py-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] lg:flex">
             <Link
-                href="/dashboard"
+                href="/"
                 className="flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
             >
                 <BrandMark size="md" />

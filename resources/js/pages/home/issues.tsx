@@ -6,9 +6,8 @@ import { useT } from '@/lib/i18n';
 import type { IssuesPageProps } from './types';
 
 /**
- * The run of issues, newest first. The number is what an issue is called, so it is the line and the
- * link; the day it covers rides beside it, since that is what a reader looking for a particular
- * morning actually remembers.
+ * The run of days, newest first. A day is called by its date, so the date is the line and the link:
+ * that is what a reader looking for a particular morning remembers, and it is the only name one has.
  */
 export default function HomeIssues() {
     const t = useT();
@@ -16,11 +15,11 @@ export default function HomeIssues() {
 
     return (
         <>
-            <Head title={t('Back issues')} />
+            <Head title={t('Past happenings')} />
 
             {issues.data.length === 0 ? (
                 <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No issues yet.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
                 </Panel>
             ) : (
                 <Panel flush>
@@ -29,11 +28,8 @@ export default function HomeIssues() {
                             <ListRow key={issue.date} rowLink chevron>
                                 <span className="min-w-0 flex-1 text-sm text-foreground">
                                     <Link href={issue.href} className={stretchedLink}>
-                                        {t('No. :number', { number: issue.number })}
+                                        <CivilDate value={issue.date} weekday />
                                     </Link>
-                                </span>
-                                <span className="shrink-0 text-xs text-muted-foreground">
-                                    <CivilDate value={issue.date} weekday />
                                 </span>
                             </ListRow>
                         ))}

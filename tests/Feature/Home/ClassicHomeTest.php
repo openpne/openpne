@@ -2,15 +2,20 @@
 
 namespace Tests\Feature\Home;
 
+use App\Features\Home\HomeIssueSection;
+use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Gadget;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\HomeIssue;
+use App\Models\HomeIssueItem;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class ClassicHomeTest extends TestCase
@@ -33,12 +38,32 @@ class ClassicHomeTest extends TestCase
         $this->get('/')->assertRedirect('/login');
     }
 
-    public function test_root_redirects_to_the_dashboard_when_the_default_surface_is_modern(): void
+    public function test_root_is_the_front_page_when_the_default_surface_is_modern(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/')->assertRedirect('/dashboard');
+        // Nothing has ever been published, and the front page is still a page.
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('home/issue')->where('issue', null));
+    }
+
+    public function test_the_modern_front_page_carries_the_issue_that_was_published_last(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $issue = HomeIssue::factory()->create();
+        HomeIssueItem::factory()->forSource(Diary::factory()->create())->create([
+            'home_issue_id' => $issue->getKey(),
+            'section' => HomeIssueSection::Stories,
+            'rank' => 1,
+        ]);
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('home/issue')
+                ->where('issue.number', (int) $issue->number));
     }
 
     public function test_member_index_alias_redirects_to_root(): void
