@@ -16,10 +16,11 @@ use Tests\TestCase;
  * property of one client, so it is asserted on the client the channel would actually send on rather
  * than on the config it was built from.
  *
- * Going through the channel is the point. The package registers a binding for the same client and
- * builds it in a way that drops these options, so what is being pinned here is that this app's
- * provider is the one that won. A test of PushClientFactory alone would stay green while every push
- * went out on the package's client.
+ * Going through the channel is the point: the package registers a binding for the same client, and
+ * on this Laravel version builds it in a way that drops these options. What this does not settle is
+ * whose client it is — the package has another branch that would pass the same config straight to
+ * Guzzle and satisfy every assertion below. WebPushUpstreamAssumptionsTest is what separates the
+ * two, by emptying the config first.
  *
  * `allow_redirects` is asserted for completeness, not because this client decides it: the only
  * method the library calls is Guzzle's PSR-18 sendRequest(), which sets allow_redirects false per

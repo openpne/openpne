@@ -35,7 +35,8 @@ use Psr\Http\Client\ClientInterface;
  *
  * Only WebPush::flush() runs on this client. flushPooled() takes a separate async client that the
  * library discovers on its own — with no options at all — and no HTTPlug adapter is installed, so
- * today it throws instead. Installing one would grow an egress path with none of the above.
+ * today it throws instead. Installing one would grow an egress path with none of the above, which
+ * is why WebPushUpstreamAssumptionsTest fails the moment one becomes discoverable.
  */
 final class PushClientFactory
 {
