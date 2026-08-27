@@ -272,6 +272,24 @@ test('a section the issue does not have is absent, not empty', () => {
     expect(screen.queryByText('0')).toBeNull();
 });
 
+test('an issue whose stories have all gone is still the day around them', () => {
+    // Every story was taken down after publication, so the payload carries no `topStory` at all. The
+    // talk and the faces are still an issue; the story band is simply not one of the things it has.
+    const { container } = arrive({
+        issue: issueOf({ topStory: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: '7 messages in Room 61' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
+    expect(screen.getByText('New members')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
+
+    // Nothing stands where the stories were: no lead, no card, and no count of what is missing.
+    expect(container.querySelector('.rich-body')).toBeNull();
+    expect(screen.queryByText('Morning walk')).toBeNull();
+    expect(screen.queryByText('0')).toBeNull();
+});
+
 test('a stale issue says it is one, and the current issue does not', () => {
     arrive({ issue: issueOf({ isCurrent: false }) });
     expect(screen.getByText('No new issue today — the next post will make the next one.')).toBeTruthy();
