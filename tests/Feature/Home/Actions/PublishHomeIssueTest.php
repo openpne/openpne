@@ -276,11 +276,12 @@ class PublishHomeIssueTest extends TestCase
     public function test_a_score_tie_breaks_on_the_newer_story_even_when_it_carries_the_lower_id(): void
     {
         // Two kinds, because the tiebreak only decides anything in the merge — inside one kind the
-        // query has already ordered by the same keys. The newer story is made second but starts its
-        // own table's ids, so the id tiebreak cannot stand in for the instant under test.
+        // query has already ordered by the same keys. The newer story is given an id no higher than
+        // the older one's explicitly: on MySQL the counters keep running across tests, so leaving it
+        // to the sequence would make the masking depend on what ran before.
         $older = $this->at($this->now()->subHours(3), fn (): TimelinePost => $this->postWithReplies(2));
-        $newer = $this->at($this->now()->subHours(2), function (): Diary {
-            $diary = Diary::factory()->create();
+        $newer = $this->at($this->now()->subHours(2), function () use ($older): Diary {
+            $diary = Diary::factory()->create(['id' => max(1, (int) $older->getKey() - 1)]);
             DiaryComment::factory()->count(2)->for($diary)->create();
 
             return $diary;

@@ -56,6 +56,9 @@ final class PublishHomeIssue
      * $pin forces one story to the top; it is held to the same eligibility as any candidate and
      * quietly dropped if it fails, which the plan reports rather than throwing. Nothing wires a pin
      * yet — the parameter is the seam the admin setting will arrive on.
+     *
+     * Meant to run as the top-level transaction: nested inside another, the framework answers a
+     * concurrency error with a DeadlockException that the catch below does not see.
      */
     public function __invoke(CarbonImmutable $now, ?SourceRef $pin = null): ?HomeIssue
     {
