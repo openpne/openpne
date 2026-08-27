@@ -1,7 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { EntryRow } from '@/components/entry-row';
-import { Timestamp } from '@/components/timestamp';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -10,6 +8,8 @@ import { RoomRow } from './community/room-row';
 import type { TalkRoomRow } from './community/types';
 import { DiaryRow } from './diary/diary-row';
 import type { DiarySummary } from './diary/types';
+import { WelcomePanel } from './home/welcome';
+import { TimelineRow } from './timeline/timeline-row';
 import type { TimelinePostEntry } from './timeline/types';
 
 interface Announcements {
@@ -101,19 +101,6 @@ function DigestSection({ title, viewAllHref, extra, children }: { title: string;
     );
 }
 
-function TimelineRow({ post }: { post: TimelinePostEntry }) {
-    return (
-        <EntryRow
-            href={`/timeline/${post.id}`}
-            author={post.author}
-            content={post.body}
-            contentLines={2}
-            date={<Timestamp at={post.createdAt} preset="relative" />}
-            replyCount={post.replyCount}
-        />
-    );
-}
-
 export default function Dashboard() {
     const t = useT();
     const { auth, announcements, talkRooms, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
@@ -145,38 +132,7 @@ export default function Dashboard() {
             )}
 
             {everythingEmpty ? (
-                <Panel title={t('Welcome, :name.', { name: user.name })}>
-                    <p className="text-sm text-muted-foreground">{t('Find people and places to fill your home.')}</p>
-                    <div className="mt-4">
-                        <List>
-                            <ListRow rowLink chevron>
-                                <span className="min-w-0 flex-1 text-sm text-foreground">
-                                    <Link href="/member/search" className={stretchedLink}>
-                                        {t('Search members')}
-                                    </Link>
-                                </span>
-                            </ListRow>
-                            {enabledFeatures.group && (
-                                <ListRow rowLink chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">
-                                        <Link href="/groups" className={stretchedLink}>
-                                            {t('Search %communities%')}
-                                        </Link>
-                                    </span>
-                                </ListRow>
-                            )}
-                            {enabledFeatures.diary && (
-                                <ListRow rowLink chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">
-                                        <Link href="/diary/new" className={stretchedLink}>
-                                            {t('Post %diary%')}
-                                        </Link>
-                                    </span>
-                                </ListRow>
-                            )}
-                        </List>
-                    </div>
-                </Panel>
+                <WelcomePanel name={user.name} enabledFeatures={enabledFeatures} />
             ) : (
                 <>
                     {/* A section's rows arrive empty once its unit is switched off; the check keeps
