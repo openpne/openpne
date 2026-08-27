@@ -25,10 +25,15 @@ use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Database\ConcurrencyErrorDetector;
+use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
+use Throwable;
 
 /**
  * The publisher deciding what an issue holds, and committing that decision once.
@@ -41,6 +46,9 @@ class PublishHomeIssueTest extends TestCase
     use RefreshDatabase;
 
     private const NOW = '2026-08-27 06:00:00';
+
+    /** Whether {@see raceInARivalIssue} actually fired — an assertion, not bookkeeping. */
+    private bool $raced = false;
 
     public function test_the_first_issue_reaches_back_seven_days(): void
     {
@@ -181,6 +189,33 @@ class PublishHomeIssueTest extends TestCase
         $this->assertSame([$this->ref($event)], $this->refs($issue, HomeIssueSection::UpcomingEvents));
     }
 
+    public function test_the_calendar_runs_from_the_publish_days_own_midnight_to_seven_days_out(): void
+    {
+        // `open_date` is a date, so the day's own events sit at midnight — six hours behind the
+        // publishing instant. A calendar bounded by that instant would drop the one event a reader
+        // can still act on today.
+        [$yesterday, $today, $tomorrow, $lastDay, $justPast] = $this->at(
+            $this->now()->subDays(30),
+            fn (): array => array_map(
+                fn (int $days): GroupEvent => GroupEvent::factory()->create([
+                    'open_date' => $this->now()->addDays($days)->startOfDay(),
+                ]),
+                [-1, 0, 1, 7, 8],
+            ),
+        );
+
+        // The calendar never triggers an issue, so something else has to carry this one.
+        $this->at($this->now()->subHour(), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $refs = $this->refs($issue, HomeIssueSection::UpcomingEvents);
+        $this->assertSame([$this->ref($today), $this->ref($tomorrow), $this->ref($lastDay)], $refs);
+        $this->assertNotContains($this->ref($yesterday), $refs);
+        $this->assertNotContains($this->ref($justPast), $refs);
+    }
+
     public function test_the_never_again_memory_is_scoped_to_the_section(): void
     {
         // A group featured for being new is still news for what was said in it: the two bands ask
@@ -236,6 +271,44 @@ class PublishHomeIssueTest extends TestCase
             [$this->ref($newer), $this->ref($older), $this->ref($quiet)],
             $this->refs($issue, HomeIssueSection::Stories),
         );
+    }
+
+    public function test_a_score_tie_breaks_on_the_newer_story_even_when_it_carries_the_lower_id(): void
+    {
+        // Two kinds, because the tiebreak only decides anything in the merge — inside one kind the
+        // query has already ordered by the same keys. The newer story is made second but starts its
+        // own table's ids, so the id tiebreak cannot stand in for the instant under test.
+        $older = $this->at($this->now()->subHours(3), fn (): TimelinePost => $this->postWithReplies(2));
+        $newer = $this->at($this->now()->subHours(2), function (): Diary {
+            $diary = Diary::factory()->create();
+            DiaryComment::factory()->count(2)->for($diary)->create();
+
+            return $diary;
+        });
+
+        $this->assertLessThanOrEqual(
+            (int) $older->getKey(),
+            (int) $newer->getKey(),
+            'the newer story must not also be the higher id, or the tiebreak is masked',
+        );
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $this->assertSame([$this->ref($newer), $this->ref($older)], $this->refs($issue, HomeIssueSection::Stories));
+    }
+
+    public function test_stories_tied_on_score_and_instant_lead_with_the_higher_id(): void
+    {
+        [$first, $second] = $this->at($this->now()->subHours(2), fn (): array => [
+            TimelinePost::factory()->create(),
+            TimelinePost::factory()->create(),
+        ]);
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $this->assertSame([$this->ref($second), $this->ref($first)], $this->refs($issue, HomeIssueSection::Stories));
     }
 
     public function test_the_lead_is_rank_one_across_the_four_story_kinds(): void
@@ -295,6 +368,33 @@ class PublishHomeIssueTest extends TestCase
         $this->assertSame(3, $item->stats['reactions']);
         $this->assertSame($this->now()->subDays(7)->toIso8601String(), $item->stats['since']);
         $this->assertSame($this->now()->toIso8601String(), $item->stats['until']);
+    }
+
+    public function test_the_talk_band_cuts_to_the_cap_by_score(): void
+    {
+        // Four rooms saying the same amount, one author each, so only reactions separate them — and
+        // reactions run down as the ids run up, so neither the recency nor the id tiebreak can
+        // produce this order on its own.
+        $groups = $this->at($this->now()->subDays(30), fn (): array => Group::factory()->count(4)->create()->all());
+        $author = $this->at($this->now()->subDays(30), fn (): Member => Member::factory()->create());
+
+        foreach ($groups as $index => $group) {
+            $messages = $this->at($this->now()->subHour(), fn (): array => GroupMessage::factory()
+                ->count(3)
+                ->for($group)
+                ->create(['member_id' => $author->id])
+                ->all());
+
+            $this->react($messages[0], 3 - $index);
+        }
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $this->assertSame(
+            [$this->ref($groups[0]), $this->ref($groups[1]), $this->ref($groups[2])],
+            $this->refs($issue, HomeIssueSection::Talk),
+        );
     }
 
     public function test_a_reaction_on_a_message_outside_the_window_is_not_the_bursts(): void
@@ -571,34 +671,48 @@ class PublishHomeIssueTest extends TestCase
     {
         $this->at($this->now()->subHour(), fn (): Member => Member::factory()->create());
 
-        // Insert the rival row while the plan is still reading — after the "is it published?" check
-        // and before the transaction, which is the only window the DB unique has to cover. Done from
-        // inside the run because the suite has one connection: a row written after the transaction
-        // opened would roll back with it and prove nothing.
-        $raced = false;
-        Member::retrieved(function () use (&$raced): void {
-            if ($raced) {
-                return;
-            }
-            $raced = true;
-            DB::table('home_issues')->insert([
-                'number' => 999,
-                // Written the way the model writes it, so the unique sees one value and not two
-                // spellings of a day (see PublishHomeIssue::publishedOn).
-                'issue_date' => $this->now()->startOfDay(),
-                'window_start' => $this->now()->subDay(),
-                'published_at' => $this->now(),
-                'created_at' => $this->now(),
-                'updated_at' => $this->now(),
-            ]);
-        });
+        $this->raceInARivalIssue();
 
         $issue = $this->publish();
 
-        $this->assertTrue($raced, 'the rival insert has to have interleaved for this test to mean anything');
+        $this->assertTrue($this->raced, 'the rival insert has to have interleaved for this test to mean anything');
         $this->assertNotNull($issue);
         $this->assertSame(999, $issue->number);
         $this->assertDatabaseCount('home_issues', 1);
+        $this->assertDatabaseCount('home_issue_items', 0);
+    }
+
+    public function test_a_write_that_fails_on_anything_but_the_unique_still_reports_the_winner(): void
+    {
+        $this->at($this->now()->subHour(), fn (): Member => Member::factory()->create());
+
+        $this->concurrencyDetectionOff();
+        $this->raceInARivalIssue(fn () => $this->failTheWrite());
+
+        $issue = $this->publish();
+
+        $this->assertTrue($this->raced, 'the rival insert has to have interleaved for this test to mean anything');
+        $this->assertNotNull($issue);
+        $this->assertSame(999, $issue->number);
+        $this->assertDatabaseCount('home_issues', 1);
+        $this->assertDatabaseCount('home_issue_items', 0);
+    }
+
+    public function test_a_failed_write_with_no_issue_for_the_day_stays_loud(): void
+    {
+        $this->at($this->now()->subHour(), fn (): Member => Member::factory()->create());
+
+        $this->concurrencyDetectionOff();
+        $this->failTheWrite();
+
+        try {
+            $this->publish();
+            $this->fail('a failed write was swallowed with no issue to report');
+        } catch (QueryException $e) {
+            $this->assertStringContainsString('database is locked', $e->getMessage());
+        }
+
+        $this->assertDatabaseCount('home_issues', 0);
         $this->assertDatabaseCount('home_issue_items', 0);
     }
 
@@ -722,6 +836,84 @@ class PublishHomeIssueTest extends TestCase
     private function burst(Group $group, CarbonImmutable $when, int $count = 3): void
     {
         $this->at($when, fn () => GroupMessage::factory()->count($count)->for($group)->create());
+    }
+
+    /**
+     * Publish a rival issue for the day while the run is still reading — after its "is it published?"
+     * check and before its transaction, which is the only window the DB unique has to cover. Driven
+     * from inside the run because the suite has one connection: a row written after the transaction
+     * opened would roll back with it and prove nothing.
+     *
+     * @param  (callable(): void)|null  $then  runs once the rival is in, for a test that also wants
+     *                                         to break the write that follows
+     */
+    private function raceInARivalIssue(?callable $then = null): void
+    {
+        $this->raced = false;
+
+        Member::retrieved(function () use ($then): void {
+            if ($this->raced) {
+                return;
+            }
+            $this->raced = true;
+
+            DB::table('home_issues')->insert([
+                'number' => 999,
+                // Written the way the model writes it, so the unique sees one value and not two
+                // spellings of a day (see PublishHomeIssue::publishedOn).
+                'issue_date' => $this->now()->startOfDay(),
+                'window_start' => $this->now()->subDay(),
+                'published_at' => $this->now(),
+                'created_at' => $this->now(),
+                'updated_at' => $this->now(),
+            ]);
+
+            if ($then !== null) {
+                $then();
+            }
+        });
+    }
+
+    /** Refuse the run's insert into `home_issues` the way SQLite refuses a writer it cannot serialize. */
+    private function failTheWrite(): void
+    {
+        $thrown = false;
+
+        DB::beforeExecuting(function (string $query, array $bindings, Connection $connection) use (&$thrown): void {
+            if ($thrown || ! str_contains($query, 'insert into') || ! str_contains($query, 'home_issues')) {
+                return;
+            }
+            $thrown = true;
+
+            throw new QueryException(
+                $connection->getName(),
+                $query,
+                $bindings,
+                new PDOException('SQLSTATE[HY000]: General error: 5 database is locked'),
+            );
+        });
+    }
+
+    /**
+     * Stop the connection recognising a concurrency error, so a busy database can be simulated here
+     * at all.
+     *
+     * RefreshDatabase runs each test inside a transaction, which makes the publisher's a nested one —
+     * and the framework answers a concurrency error in a nested transaction with a DeadlockException
+     * instead of retrying it (ManagesTransactions::handleTransactionException). Switched off, the
+     * connection takes the path an unnested one reaches once its last attempt has failed: roll back,
+     * and rethrow the QueryException the driver raised. What the retry itself does is the framework's
+     * to test.
+     */
+    private function concurrencyDetectionOff(): void
+    {
+        $this->app->instance(ConcurrencyErrorDetector::class, new class implements ConcurrencyErrorDetector
+        {
+            public function causedByConcurrencyError(Throwable $e): bool
+            {
+                return false;
+            }
+        });
     }
 
     private function react(GroupMessage $message, int $count): void

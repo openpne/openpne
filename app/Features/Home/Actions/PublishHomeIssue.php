@@ -21,7 +21,7 @@ use App\Features\Home\Queries\TopicStoryCandidates;
 use App\Features\Home\Queries\UpcomingEventCandidates;
 use App\Models\HomeIssue;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -70,12 +70,17 @@ final class PublishHomeIssue
         }
 
         try {
-            return DB::transaction(fn (): HomeIssue => $this->write($plan));
-        } catch (UniqueConstraintViolationException $e) {
-            // Another run took this date between the check above and the insert. The unique on
-            // issue_date is the guarantee — the loser has nothing to unwind and reports what the
-            // winner wrote. A violation with no issue to report is a different fault (the unique on
-            // `number`), and stays loud.
+            // Retried, because MySQL and SQLite lose the race differently: MySQL's loser reaches the
+            // insert and violates the unique, while SQLite compiles lockForUpdate away and refuses
+            // the write itself with SQLITE_BUSY. A retry re-reads the maximum and turns the second
+            // shape into the first.
+            return DB::transaction(fn (): HomeIssue => $this->write($plan), attempts: 3);
+        } catch (QueryException $e) {
+            // Another run took this date between the check above and the insert — as a unique
+            // violation, or as a busy database that stayed busy for every attempt. The unique on
+            // issue_date is the guarantee either way: the loser has nothing to unwind and reports
+            // what the winner wrote. A failure with no issue to report is a different fault (the
+            // unique on `number`, a broken write), and stays loud.
             return $this->publishedOn($now) ?? throw $e;
         }
     }
@@ -168,8 +173,8 @@ final class PublishHomeIssue
      *
      * The read is locking so two runs cannot read the same maximum, which is the whole of the
      * serialization: MySQL holds it to the end of the enclosing transaction, SQLite compiles the
-     * clause away and serializes writes anyway. Called outside a transaction it is a prediction —
-     * which is all a dry run needs.
+     * clause away and refuses the loser's write instead ({@see __invoke} retries). Called outside a
+     * transaction it is a prediction — which is all a dry run needs.
      */
     public function nextNumber(): int
     {

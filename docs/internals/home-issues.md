@@ -95,7 +95,11 @@ Stories are four separate queries merged into one band. Each kind is asked for t
 the merged top-8 is exact; asking for a share each would cap a quiet kind's best story out to make
 room for a busier kind's eighth. The merged order is **score descending, then the newer one, then the
 higher id**, and rank 1 is the lead. Newcomers and new groups are newest-first and carry no score.
-The calendar is soonest-first.
+
+The calendar is soonest-first and runs from the **publish day's own midnight** to seven days out.
+`open_date` is a date, not an instant, so bounding it at the 06:00 publishing time would drop the
+day's own events — and an event today is still ahead of the reader, whose join window runs to the day
+after it ([`GroupEvent::isClosed`](../../app/Models/GroupEvent.php)).
 
 An operator may **pin** one story to the lead. A pin ignores the window and the ledger — that is what
 pinning is for — but not eligibility: it must exist, its unit must be on, and every member must be
@@ -134,9 +138,15 @@ reads and one insert, seconds rather than minutes.
 
 Nothing guards a double run but the database. `home_issues.issue_date` is unique, and that uniqueness
 **is** the guarantee: a second run the same day finds the issue and writes nothing, and two runs that
-overlap resolve by one of them failing its insert and reporting what the other wrote. There is no
-lock to hold, no job to deduplicate, and nothing to unwind. The issue and its whole ledger go in one
+overlap resolve by one of them failing its write and reporting what the other wrote. There is no lock
+to hold, no job to deduplicate, and nothing to unwind. The issue and its whole ledger go in one
 transaction, because an issue with half a ledger is not an issue.
+
+The two engines lose that race differently. MySQL's loser reaches the insert and violates the unique;
+SQLite compiles `lockForUpdate` away, serializes the writers itself, and refuses the loser with
+`SQLITE_BUSY` — so the write is retried, which re-reads the number and turns the second shape into the
+first. Whichever arrives, the loser answers with the issue the winner published, and a failed write
+with no issue for the day stays loud.
 
 **There is no `--date`.** A window chains from the previous issue's `published_at`, so an issue dated
 into the past would either overlap the one after it or claim a stretch that has already been

@@ -34,7 +34,10 @@ final class UpcomingEventCandidates
     {
         return GroupEvent::query()
             ->whereHas('group', fn (Builder $group) => $group->where('topic_read_access', TopicReadAccess::Everyone))
-            ->where('group_events.open_date', '>=', $now)
+            // From the publish day's own midnight, not from the publishing instant: `open_date` is a
+            // date (StoreEventRequest) and an event today is still ahead of the reader — the join
+            // window runs to the day after it (GroupEvent::isClosed).
+            ->where('group_events.open_date', '>=', $now->startOfDay())
             ->where('group_events.open_date', '<=', $now->addDays($days))
             ->withCount(['comments', 'participants'])
             ->orderBy('group_events.open_date')

@@ -38,8 +38,8 @@ final class TalkBurstCandidates
     {
         // Correlated rather than a second pass over the winning groups, because the reaction count
         // is part of the score: a second pass would have to rank before it knew the numbers it ranks
-        // by. Bounded by the group's own (group_id, created_at, id) index, then one keyed probe per
-        // message into the reactions unique.
+        // by. Nothing bounds the window but the range itself — no index leads with created_at — so
+        // this reads a day's messages across every group, which is what once a day affords.
         $reactions = DB::table('reactions')
             ->selectRaw('count(*)')
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')
