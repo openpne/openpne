@@ -15,13 +15,13 @@ import { cn } from '@/lib/utils';
  * bar's label is a span, and dialog titles are Radix primitives. Those consume `headingVariants`
  * directly; document headings use {@link Heading}.
  *
- * The ranks are five sizes, 20 down to 12, because that is what the screens actually use: the
+ * The ranks are six sizes, 24 down to 12, because that is what the screens actually use: the
  * notification settings page runs page title over section over nested heading, and collapsing the
  * middle one would put two ranks on the same size with only a rule between them. Weight is 600 at
  * every rank — it says "this names a region", and the rank is the size.
  *
- * `page` carries `break-words` so a long member or group name can never clip the way it did
- * before #311 — a caller cannot forget it. Smaller ranks are left to wrap or truncate as their
+ * `display` and `page` carry `break-words` so a long member or group name can never clip the way it
+ * did before #311 — a caller cannot forget it. Smaller ranks are left to wrap or truncate as their
  * container decides. Flex children still need their own `min-w-0`, which depends on the parent.
  */
 // Color belongs to the variant, not the base: `label` is the one rank that is muted, and a base
@@ -31,6 +31,8 @@ import { cn } from '@/lib/utils';
 export const headingVariants = cva('font-semibold', {
     variants: {
         variant: {
+            /** The one headline a screen leads with, above its page title. */
+            display: 'text-2xl break-words text-foreground',
             /** Page title. */
             page: 'text-xl break-words text-foreground',
             /** Page title on a compose screen: smaller on the phone, where the sheet header sits right above it (#521). */
