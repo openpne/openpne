@@ -153,7 +153,8 @@ class TalkSampleDigestTest extends TestCase
         DB::disableQueryLog();
 
         foreach ($log as $entry) {
-            $this->assertStringContainsString('order by "created_at" asc, "id" asc', $entry['query']);
+            // Identifier quoting differs per driver; the order does not.
+            $this->assertStringContainsString('order by created_at asc, id asc', preg_replace('/[`"]/', '', $entry['query']));
         }
     }
 
