@@ -46,6 +46,15 @@ somewhere else; it is not this case, so the association goes rather than the tex
 The child's own `aria-describedby` is untouched — it may point at an error or a hint that has nothing
 to do with the tooltip.
 
+## Why focus alone does not raise it
+
+Radix opens the panel on any focus it did not see a pointer press for, and focus moves on its own
+more often than a keyboard moves it: a dialog focuses its close control as it opens and its trigger
+as it shuts. After a tap that meant "Close" floating in the nav sheet and "Menu" floating once it was
+gone. So a focus raises the panel only when the browser draws a ring for it — `:focus-visible` — which
+is the keyboard's focus and not a dialog's. The trigger's `onFocus` calls `preventDefault` otherwise,
+the flag Radix's composed handler checks before opening.
+
 ## What is deliberately not covered
 
 - **Touch.** No tooltip is raised by a finger, on any platform. This is why `label` lands on the
@@ -68,6 +77,8 @@ to do with the tooltip.
   makes the second of two neighbouring icons open instantly.
 - **The accessible name does not depend on the panel ever opening.** `tooltip.test.tsx` pins the name
   and the absent description in both states.
+- **Only a visible focus raises the panel.** `tooltip.test.tsx` pins both arms: a `:focus-visible`
+  focus opens it, one the browser draws no ring for does not.
 - **Not machine-enforced.** "Icon-only" is not decidable from source: a glyph, a truncating label and
   a word are all children. A lint on new `title=` would be decidable but would fire on the truncation
   case above. So this is a review question, and the dev throw covers the one part of it that is

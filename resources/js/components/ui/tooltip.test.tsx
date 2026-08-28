@@ -135,6 +135,7 @@ test('a silent Tip names the control and floats nothing', () => {
     expect(screen.queryByRole('tooltip')).toBeNull();
 });
 
+/** A focus the browser draws a ring for: in happy-dom every focused element is `:focus-visible`. */
 test('the keyboard raises it too, and lets it go', () => {
     renderWithProviders(
         <Tip label="Reply">
@@ -144,12 +145,33 @@ test('the keyboard raises it too, and lets it go', () => {
     const button = screen.getByRole('button');
 
     act(() => {
-        fireEvent.focus(button);
+        button.focus();
     });
     expect(screen.getByRole('tooltip').textContent).toBe('Reply');
 
     act(() => {
-        fireEvent.blur(button);
+        button.blur();
     });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+/**
+ * What a dialog does to its trigger as it shuts, and to its close control as it opens: focus that
+ * moved by itself, on an element the browser draws no ring for. After a tap, that is the only kind
+ * there is — so nothing floats.
+ */
+test('a focus that moved by itself raises nothing', () => {
+    renderWithProviders(
+        <Tip label="Reply">
+            <button type="button" />
+        </Tip>,
+    );
+    const button = screen.getByRole('button');
+    vi.spyOn(button, 'matches').mockImplementation((selector) => selector !== ':focus-visible');
+
+    act(() => {
+        button.focus();
+    });
+
     expect(screen.queryByRole('tooltip')).toBeNull();
 });
