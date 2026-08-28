@@ -113,7 +113,7 @@ test('the tabbed look shows its words, so nothing floats over them', () => {
 
     const raise = (control: HTMLElement) => {
         fireEvent.pointerMove(control, { pointerType: 'mouse' });
-        fireEvent.focus(control);
+        control.focus();
         act(() => {
             vi.advanceTimersByTime(1000);
         });
@@ -139,7 +139,7 @@ test('the bare hamburger says what it is instead', () => {
     renderWithProviders(<NavDrawer />);
 
     act(() => {
-        fireEvent.focus(screen.getByRole('button', { name: 'Menu' }));
+        screen.getByRole('button', { name: 'Menu' }).focus();
     });
 
     expect(screen.getByRole('tooltip').textContent).toBe('Menu');

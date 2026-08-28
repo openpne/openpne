@@ -1,4 +1,4 @@
-import { cloneElement, type ComponentProps, type ReactElement } from 'react';
+import { cloneElement, type ComponentProps, type FocusEvent, type ReactElement } from 'react';
 import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,13 @@ export function TooltipContent({
             />
         </TooltipPrimitive.Portal>
     );
+}
+
+/** `preventDefault` is the flag Radix's composed handler reads before it opens on focus. */
+function holdUnlessFocusVisible(event: FocusEvent<HTMLElement>) {
+    if (!event.currentTarget.matches(':focus-visible')) {
+        event.preventDefault();
+    }
 }
 
 /**
@@ -60,6 +67,12 @@ export function TooltipContent({
  * and which survives is spread order. Trigger styling therefore keys on `aria-expanded`, never
  * `data-[state=…]` — the choice ROW_ACTIONS already made.
  *
+ * Radix raises the panel on every focus it did not see a pointer press for, and a dialog moves focus
+ * on its own: into its close control as it opens, back onto the trigger as it shuts. After a tap that
+ * is a tooltip nobody asked for — "Close" floating in the sheet, "Menu" floating once it is gone. So
+ * focus raises the panel only when the browser draws a ring for it (`:focus-visible`): the keyboard's
+ * tooltip stays, the tap's goes, and a touch screen is back to never showing one.
+ *
  * `aria-describedby={undefined}` on the trigger drops the association Radix makes between the trigger
  * and the panel. Radix's own answer to the double announcement is the reverse — give `Content` an
  * `aria-label` and let the visible text stay a description — but that is for a trigger whose name
@@ -89,7 +102,7 @@ export function Tip({
 
     return (
         <Tooltip>
-            <TooltipTrigger asChild aria-describedby={undefined}>
+            <TooltipTrigger asChild aria-describedby={undefined} onFocus={holdUnlessFocusVisible}>
                 {cloneElement(children, { 'aria-label': label })}
             </TooltipTrigger>
             {!silent && <TooltipContent>{label}</TooltipContent>}
