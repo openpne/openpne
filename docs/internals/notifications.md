@@ -259,6 +259,23 @@ tag so a new nudge collapses the previous one on the device, and the unread coun
 for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
 and the send degrades to the withdrawn-member label instead of failing to restore.
 
+A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) **with
+messages, never by opening the destination itself**; the page routes
+([`lib/notification-open.ts`](../../resources/js/lib/notification-open.ts) on Modern,
+`push-reconcile.js` on Classic). With no window open, the app is opened at the scope root. Every open
+window is then offered the tap (`open-offer`, answered on its port) and the first to answer is
+focused and handed the destination (`open`) — a Classic login or admin page has no receiver, and one of
+those in front must not swallow the tap (Modern's auth pages answer, and the login's intended URL
+carries the destination through). The offer is repeated for a few seconds
+because a page still loading cannot answer: the container holds a worker's messages only until
+DOMContentLoaded and drops later ones nobody listens for, which is also why the receiver is registered
+from the entry module's top level (before that event), never from a component effect. When no page
+answers, the front window is shown, and `navigate()`d to the destination except on WebKit.
+`openWindow()` never gets a deeper URL: on an iOS home-screen web app that opens the URL in an
+embedded browser sheet over an app window left blank — the member is left on an empty page with a URL
+bar and no way back but restarting the app (reported since iOS 16.4) — and `navigate()` there was
+observed to do nothing.
+
 Three switches, at three scopes:
 
 - **The site**: a VAPID keypair (`OPENPNE_VAPID_*`, `config/webpush.php`). Absent, the feature does
@@ -321,3 +338,9 @@ its shape.
   state. The other way is the rule — reading (or answering) what a row is about marks the row read.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.
+- The worker answers a notification tap with messages and the page routes; the only URL that ever
+  reaches `openWindow()` is the scope root, and `navigate()` is the last resort for a window no page
+  claimed — never on WebKit.
+- The page's receiver for those messages is registered before DOMContentLoaded (the entry module's
+  top level; a deferred script on Classic). A listener added in a component effect never hears a
+  message sent to a page the worker just opened.

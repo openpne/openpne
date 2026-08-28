@@ -17,6 +17,11 @@
  * it; a 408/425/429/5xx or a dropped request is the server not answering, so keep the subscription and
  * retry on the next navigation — a transient outage must not unsubscribe a member's own device. Never
  * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
+ *
+ * Also the Classic receiver of a notification tap (public/sw.js): the worker's `open-offer` is answered
+ * on its port, and the `open` that follows names the destination — no router here, so the page goes
+ * there whole. This script is deferred, so the listener is in place before DOMContentLoaded, which is
+ * when the container stops holding a worker's messages for a page (lib/notification-open.ts).
  */
 (function () {
     'use strict';
@@ -24,6 +29,18 @@
     if (!('serviceWorker' in navigator) || !window.Notification || Notification.permission !== 'granted') {
         return;
     }
+
+    navigator.serviceWorker.addEventListener('message', function (event) {
+        var data = event.data;
+        if (!data) {
+            return;
+        }
+        if (data.type === 'open-offer' && event.ports[0]) {
+            event.ports[0].postMessage({ type: 'ack' });
+        } else if (data.type === 'open' && typeof data.url === 'string') {
+            window.location.assign(data.url);
+        }
+    });
 
     var BOUND_KEY = 'openpne-push-bound';
     var TTL_MS = 12 * 60 * 60 * 1000;
