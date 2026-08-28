@@ -43,10 +43,10 @@ class PublishHomeIssueCommand extends Command
             return self::FAILURE;
         }
 
-        // A backfilled issue is as of the morning it would have gone out: the calendar band looks
-        // forward from here, and looking forward from today would list gatherings that were already
-        // over by the day being reported.
-        $asOf = $date === null ? $now : $window->end;
+        // As of the morning the issue goes out — the boundary the window closes on, not the clock:
+        // the calendar band looks forward from here, and a run filling in a missed morning would
+        // otherwise list gatherings by the day it happened to run on.
+        $asOf = $window->end;
 
         $existing = $publish->publishedOn($window->lastDay());
         if ($existing !== null) {
