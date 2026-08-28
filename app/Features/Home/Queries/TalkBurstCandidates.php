@@ -15,7 +15,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Groups that got talking in the window.
+ * Groups that were talked in during the window.
+ *
+ * One message is enough. On a quiet site a single line is the day's news, and the band's job is to
+ * say a room was spoken in, not to grade how much — the score ranks rooms against each other, it does
+ * not admit them.
  *
  * The item is the stretch, not any message in it, so nothing about a message is stored: no anchor,
  * no id. The page re-resolves the burst live through {@see TalkSampleDigest}
@@ -25,16 +29,13 @@ use Illuminate\Support\Facades\DB;
  */
 final class TalkBurstCandidates
 {
-    /** Below this a room is not talking, it is exchanging a message. */
-    public const MIN_MESSAGES = 3;
-
     public function alias(): string
     {
         return (new Group)->getMorphClass();
     }
 
     /** @return Collection<int, PlannedItem> */
-    public function __invoke(HomeIssueWindow $window, int $limit, int $minMessages = self::MIN_MESSAGES): Collection
+    public function __invoke(HomeIssueWindow $window, int $limit): Collection
     {
         // Correlated rather than a second pass over the winning groups, because the reaction count
         // is part of the score: a second pass would have to rank before it knew the numbers it ranks
@@ -58,7 +59,6 @@ final class TalkBurstCandidates
             ->selectRaw('max(group_messages.created_at) as last_said')
             ->selectSub($reactions, 'reaction_count')
             ->groupBy('groups.id')
-            ->havingRaw('count(*) >= ?', [$minMessages])
             ->orderByRaw('message_count + author_count + reaction_count desc')
             ->orderByDesc('last_said')
             ->orderByDesc('groups.id')

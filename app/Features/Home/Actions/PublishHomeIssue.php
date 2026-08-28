@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\Home\Actions;
 
+use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\Data\HomeIssuePlan;
 use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\PlannedItem;
@@ -169,21 +170,24 @@ final class PublishHomeIssue
     }
 
     /**
-     * The stretch this issue covers: the previous issue's `published_at` (exclusive) to now
-     * (inclusive), so an issue that ran late still covers exactly what the one before it did not.
+     * The stretch this issue covers: the previous issue's `published_at` (exclusive) to the last
+     * 06:00 boundary at or before now (inclusive), so an issue that ran late still covers exactly
+     * what the one before it did not.
      *
-     * A run by hand mid-afternoon therefore takes that day's issue early, and the next window simply
-     * opens on the instant it closed. Nothing goes unreported: the run at the next 06:00 finds the
-     * day already published and writes nothing, and the one after it covers everything from the
-     * manual run onwards.
+     * Closed on the boundary, never on the clock. A scheduled run lands a second or two past 06:00,
+     * and an issue closed at 06:00:01 would be dated the day it went out ({@see HomeIssueWindow::lastDay()})
+     * and leave the next window a second short of a day. A run by hand mid-afternoon therefore
+     * publishes what the schedule would have — the day that closed this morning — and finds it
+     * already published if the schedule ran; what has happened since waits for the next issue.
      */
     public function window(CarbonImmutable $now): HomeIssueWindow
     {
         $previous = ($this->latestIssue)();
+        $end = HomeIssueDay::window(HomeIssueDay::latest($now))->end;
 
         return new HomeIssueWindow(
-            $previous === null ? $now->subDays(self::FIRST_WINDOW_DAYS) : CarbonImmutable::parse($previous->published_at),
-            $now,
+            $previous === null ? $end->subDays(self::FIRST_WINDOW_DAYS) : CarbonImmutable::parse($previous->published_at),
+            $end,
         );
     }
 
