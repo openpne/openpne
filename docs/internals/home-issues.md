@@ -30,7 +30,7 @@ is neither of them — the page applies the reader's blocks when it resolves the
 | [`Diary`](../../app/Models/Diary.php) | `visibility <= Members` — [`DiaryVisibilityScope::applyFeed`](../../app/Features/Diary/DiaryVisibilityScope.php) | comments |
 | [`GroupTopic`](../../app/Models/GroupTopic.php) | its group's `topic_read_access` is `Everyone` | comments |
 | [`GroupEvent`](../../app/Models/GroupEvent.php) | same | comments + RSVPs |
-| talk burst | the group's `topic_read_access` is `Everyone`, and at least three messages in the window | messages + authors + reactions |
+| talk burst | the group's `topic_read_access` is `Everyone`, and a message in the window — one is enough, the score ranks rooms rather than admitting them | messages + authors + reactions |
 | [`Member`](../../app/Models/Member.php) | joined in the window | — |
 | [`Group`](../../app/Models/Group.php) | founded in the window | — |
 
@@ -65,16 +65,20 @@ days `of(start)` … `of(end − 1s)`.
 
 **`issue_date` is the last day the window covers**, which is what the page is titled and addressed
 by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
-27th's issue**; a run by hand at 18:00 on the 28th covers `(28th 06:00, 28th 18:00]` and is the
-28th's; the first issue ever spans seven days and takes the last of them. Dating any of these by the
-day the run happened would headline yesterday evening's posts with today's date, which is the one
-thing a dateline may not do.
+27th's issue**; the first issue ever spans seven days and takes the last of them. Dating either by
+the day the run happened would headline yesterday evening's posts with today's date, which is the
+one thing a dateline may not do.
+
+**A window closes on a boundary, never on the clock.** The scheduled run lands a second or two past
+06:00, and an issue closed at 06:00:01 would be dated the day it went out and leave the next window a
+second short of a day; so the scheduled window closes on the last 06:00 at or before the run
+([`PublishHomeIssue::window`](../../app/Features/Home/Actions/PublishHomeIssue.php)), and
+`published_at` is always a boundary. A run by hand at 18:00 therefore publishes the same issue the
+schedule would have — the day that closed at 06:00 — and finds it already published if the schedule
+ran; what has happened since waits for the next issue.
 
 Idempotency is unchanged and still reads "one issue per `issue_date`": the publisher looks for that
-day before planning, and the unique settles a race. A manual afternoon run therefore takes the day's
-issue early — the next 06:00 run finds the day published and writes nothing, and the one after it
-covers everything from the manual run onwards. Nothing goes unreported; one issue simply spans a
-longer stretch than a day.
+day before planning, and the unique settles a race.
 
 The page reads the same rule twice more. Its masthead names the days the window covers — one day
 usually, a range when it reached further back — and its colophon states the two instants behind
@@ -85,11 +89,11 @@ every front page announce itself as stale.
 
 ## The window, and 休刊
 
-An issue covers **`(previous issue's published_at, now]`** — open at the start, closed at the end.
-Consecutive issues share their boundary instant, and a row written exactly on it belongs to the issue
-that closed on it, not to both. The lower bound is read from the stored row rather than assumed from
-the schedule, so an issue that ran late still covers exactly what the one before it did not, and the
-first issue ever reaches back seven days because there is no row to read.
+An issue covers **`(previous issue's published_at, the last 06:00 boundary]`** — open at the start,
+closed at the end. Consecutive issues share their boundary instant, and a row written exactly on it
+belongs to the issue that closed on it, not to both. The lower bound is read from the stored row
+rather than assumed from the schedule, so an issue that ran late still covers exactly what the one
+before it did not, and the first issue ever reaches back seven days because there is no row to read.
 
 What is eligible is what was **born** in the window: the source's own `created_at`. An old post that
 drew comments this week is not news again — the comments are, and they are not what the ledger
@@ -186,6 +190,20 @@ one a week. `--dry-run` reports what an issue would hold without writing it, wit
 
 Backfilling an archive therefore runs **oldest day first, on an empty ledger**: the never-again rule
 is not date-aware, so a day filled in after a later one can only feature what that later one left.
+
+[`openpne:rebuild-home-issues`](../../app/Console/Commands/RebuildHomeIssuesCommand.php) is that
+backfill applied to days already published, for when what qualifies has changed: an issue is a ledger
+of what the rules admitted on the day it was written, and it does not re-read them. From `--from`
+(by default the day the earliest issue's window opens in) to the last day that has closed, it drops
+every issue and republishes each day over its own window, oldest first, so the ledger is rebuilt in
+the order it would have been written and the numbers count on from the issues left standing — a day
+that was blank and now is not takes the number its date falls on, and every later issue moves up
+one. A chained issue inside the stretch becomes one issue per day; an issue reaching back past
+`--from` is refused with the day to name instead — which, for an archive whose issues closed off the
+boundary (published before windows snapped to it), is every day back to the first: rebuild such an
+archive whole. The whole rebuild is one transaction, which is what makes `--dry-run` exact: it runs
+the rebuild, numbers included, and rolls it back. Nothing locks out the schedule, so run it away
+from 06:00.
 
 This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
 chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
