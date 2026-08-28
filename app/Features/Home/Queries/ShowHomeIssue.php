@@ -59,8 +59,7 @@ final class ShowHomeIssue
      *
      * Per table and not per (section, table): a group is featured both for being new and for what
      * was said in it, and reading it twice would buy nothing but a second query. The eager loads are
-     * therefore the union of what the serializers of either section ask for — and of both story
-     * shapes, since which one the page takes is decided from what survives this pass.
+     * therefore the union of what the serializers of either section ask for.
      *
      * @param  EloquentCollection<int, HomeIssueItem>  $items
      * @return array<string, Collection<int, Model>> keyed by morph alias, then by id

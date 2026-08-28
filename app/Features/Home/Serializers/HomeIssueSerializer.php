@@ -7,6 +7,8 @@ namespace App\Features\Home\Serializers;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
+use App\Features\Home\Data\HomeIssueDay;
+use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
 use App\Features\Home\HomeIssueSection;
@@ -27,21 +29,16 @@ use Illuminate\Support\Collection;
 /**
  * The issue page's payload.
  *
- * **The layout is stated, not described.** How much of an issue there is decides how it is drawn,
- * and rather than ship a mode for the page to interpret, the shape says it: one story is a
- * `topStory` alone, two or three add `features`, four or more add `briefs`. Every optional key is
- * absent when its section is empty — never `[]` — so nothing on the page has to decide what an
- * empty list means on screen.
+ * **Every story travels whole.** The page is for reading, not for indexing: each story carries its
+ * body, its pictures and its counts in rank order, and how much of a body is shown is the page's
+ * business rather than the payload's. Every optional key is absent when its section is empty —
+ * never `[]` — so nothing on the page has to decide what an empty list means on screen.
  *
- * The count is taken from what SURVIVED the gate, not from what was published: an issue of eight
- * stories seven of which have since been taken down is an issue of one, and drawing it as a lead
- * over a list of nothing would report the seven.
+ * What is there is what SURVIVED the gate, not what was published: an issue of eight stories seven
+ * of which have since been taken down is an issue of one.
  */
 final class HomeIssueSerializer
 {
-    /** Stories past the lead that still stand abreast of it, rather than becoming a list. */
-    private const FEATURES = 2;
-
     /**
      * @return array{issue: array|null, prev: array|null, next: array|null}
      */
@@ -51,10 +48,10 @@ final class HomeIssueSerializer
         Member $viewer,
         ?HomeIssue $previous,
         ?HomeIssue $next,
-        CarbonImmutable $today,
+        CarbonImmutable $now,
     ): array {
         return [
-            'issue' => $issue === null || $hydrated === null ? null : self::issue($issue, $hydrated, $viewer, $today),
+            'issue' => $issue === null || $hydrated === null ? null : self::issue($issue, $hydrated, $viewer, $now),
             'prev' => self::ref($previous),
             'next' => self::ref($next),
         ];
@@ -106,15 +103,34 @@ final class HomeIssueSerializer
         ];
     }
 
-    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, Member $viewer, CarbonImmutable $today): array
+    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, Member $viewer, CarbonImmutable $now): array
     {
+        $window = new HomeIssueWindow(
+            CarbonImmutable::parse($issue->window_start),
+            CarbonImmutable::parse($issue->published_at),
+        );
+
         return [
             ...self::linkTo($issue),
             'publishedAt' => CarbonImmutable::parse($issue->published_at)->toIso8601String(),
-            // The site's own day, not the reader's: an issue is one page for everybody, and its
-            // colophon says whether it is today's.
-            'isCurrent' => CarbonImmutable::parse($issue->issue_date)->format('Y-m-d') === $today->format('Y-m-d'),
-            ...self::stories($hydrated->items(HomeIssueSection::Stories), $viewer),
+            // Which days the issue is ABOUT, which is not the same as its stretch: a day of
+            // happenings runs 06:00 to 06:00 (HomeIssueDay), so the masthead names days and the
+            // colophon names the instants they were drawn from.
+            'days' => [
+                'from' => $window->firstDay()->format('Y-m-d'),
+                'to' => $window->lastDay()->format('Y-m-d'),
+            ],
+            'window' => [
+                'from' => $window->start->toIso8601String(),
+                'to' => $window->end->toIso8601String(),
+            ],
+            // Whether the page is showing what there is. Not "is it dated today": the issue a reader
+            // is handed all day covers the day before, and comparing it to the calendar would make
+            // every fresh front page announce itself as stale.
+            'isCurrent' => CarbonImmutable::parse($issue->issue_date)->startOfDay()
+                ->greaterThanOrEqualTo(HomeIssueDay::latest($now)),
+            ...self::section('stories', $hydrated->items(HomeIssueSection::Stories),
+                fn (array $items): array => array_map(fn (HydratedItem $item): array => self::story($item, $viewer), $items)),
             ...self::section('talkBursts', $hydrated->items(HomeIssueSection::Talk),
                 fn (array $items): array => array_map(self::burst(...), $items)),
             ...self::section('newcomers', $hydrated->items(HomeIssueSection::Newcomers),
@@ -124,34 +140,6 @@ final class HomeIssueSerializer
             ...self::section('upcomingEvents', $hydrated->items(HomeIssueSection::UpcomingEvents),
                 fn (array $items): array => array_map(self::upcomingEvent(...), $items)),
         ];
-    }
-
-    /**
-     * The lead and what follows it, in whichever of the three shapes the surviving count picks.
-     *
-     * @param  list<HydratedItem>  $stories
-     */
-    private static function stories(array $stories, Member $viewer): array
-    {
-        $lead = array_shift($stories);
-
-        // Every story this issue featured has since gone. The rest of it still stands, so the key is
-        // absent rather than the issue being nothing.
-        if ($lead === null) {
-            return [];
-        }
-
-        $payload = ['topStory' => self::story($lead, $viewer)];
-
-        if ($stories === []) {
-            return $payload;
-        }
-
-        // Two or three stand abreast as equals and are drawn whole; past that the lead keeps its
-        // card and the rest become rows, which read at a glance in the shape their own lists use.
-        return count($stories) <= self::FEATURES
-            ? [...$payload, 'features' => array_map(fn (HydratedItem $item): array => self::story($item, $viewer), $stories)]
-            : [...$payload, 'briefs' => array_map(fn (HydratedItem $item): array => self::brief($item, $viewer), $stories)];
     }
 
     /**
@@ -186,21 +174,8 @@ final class HomeIssueSerializer
         };
     }
 
-    /** One story below the lead, in the row shape the rest of the surface already lists it with. */
-    private static function brief(HydratedItem $hydrated, Member $viewer): array
-    {
-        $source = $hydrated->source;
-
-        return match (true) {
-            $source instanceof Diary => ['kind' => 'diary', 'item' => DiarySerializer::summary($source)],
-            $source instanceof TimelinePost => ['kind' => 'timeline', 'item' => TimelinePostSerializer::entry($source, $viewer)],
-            $source instanceof GroupTopic => ['kind' => 'topic', 'item' => HomeSerializer::activityEntry($source)],
-            $source instanceof GroupEvent => ['kind' => 'event', 'item' => HomeSerializer::activityEntry($source)],
-        };
-    }
-
     /**
-     * A run of talk: the live numbers the gate resolved, under the group they were said in.
+     * A run of talk: how much was said, the end of it to read, and the group it was said in.
      *
      * Nothing here comes from the row's frozen stats — those record why it was chosen, and are never
      * re-read as current truth ([home-issues.md](../../../../docs/internals/home-issues.md)).
@@ -214,9 +189,7 @@ final class HomeIssueSerializer
         return [
             'group' => self::scope($group),
             'count' => $burst['count'],
-            'since' => $burst['since']->toIso8601String(),
-            'participants' => $burst['participants'],
-            'thumbnails' => $burst['thumbnails'],
+            'messages' => $burst['messages'],
             'href' => $burst['href'],
         ];
     }

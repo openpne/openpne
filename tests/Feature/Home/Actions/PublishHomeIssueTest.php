@@ -6,7 +6,9 @@ namespace Tests\Feature\Home\Actions;
 
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Home\Actions\PublishHomeIssue;
+use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\Data\HomeIssuePlan;
+use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\PlannedItem;
 use App\Features\Home\Data\SourceRef;
 use App\Features\Home\HomeIssueSection;
@@ -49,6 +51,91 @@ class PublishHomeIssueTest extends TestCase
 
     /** Whether {@see raceInARivalIssue} actually fired — an assertion, not bookkeeping. */
     private bool $raced = false;
+
+    // --- which day an issue is ---
+
+    /**
+     * The 06:00 run reports the day that has just ended, not the day it is standing in.
+     *
+     * A day of happenings runs 06:00 to 06:00 (HomeIssueDay), so the issue a reader is handed on the
+     * morning of the 28th is the 27th's — everything in it happened on the 27th, and dating it by
+     * the run would put the whole page under a date none of it belongs to.
+     */
+    public function test_the_scheduled_run_dates_the_issue_to_the_day_that_just_ended(): void
+    {
+        $this->previousIssue($this->now()->subDay());
+        $this->at($this->now()->subHours(8), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $this->assertSame('2026-08-26', $issue->issue_date->toDateString());
+        $this->assertTrue($this->now()->equalTo($issue->published_at), 'published_at is not the window end');
+    }
+
+    /**
+     * A run by hand mid-afternoon takes the day it is in, and the next window opens where it closed.
+     * Nothing is lost: the 06:00 run that follows finds the day published and writes nothing, and
+     * the one after that covers everything from the manual run onwards.
+     */
+    public function test_a_run_by_hand_takes_the_day_it_is_in_and_the_next_run_continues_from_it(): void
+    {
+        $this->previousIssue($this->now());
+        $afternoon = $this->now()->addHours(9);
+        $this->at($afternoon->subHour(), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $byHand = $this->publish($afternoon);
+
+        $this->assertNotNull($byHand);
+        $this->assertSame('2026-08-27', $byHand->issue_date->toDateString());
+        $this->assertTrue($afternoon->equalTo($byHand->published_at));
+
+        // The next morning's run would date to the 27th as well, and the 27th is taken.
+        $this->at($afternoon->addHours(3), fn (): TimelinePost => TimelinePost::factory()->create());
+        $next = $this->publish($this->now()->addDay());
+
+        $this->assertNotNull($next);
+        $this->assertTrue($byHand->is($next));
+        $this->assertDatabaseCount('home_issues', 2);
+
+        // The day after that covers the whole stretch since the manual run — nothing goes unreported.
+        $later = $this->publish($this->now()->addDays(2));
+
+        $this->assertNotNull($later);
+        $this->assertSame('2026-08-28', $later->issue_date->toDateString());
+        $this->assertTrue($afternoon->equalTo($later->window_start));
+    }
+
+    /** A window that spans days is dated by the last of them, seven-day first issue included. */
+    public function test_the_first_issue_is_dated_by_the_last_day_it_covers(): void
+    {
+        $this->at($this->now()->subDays(3), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $issue = $this->publish();
+
+        $this->assertNotNull($issue);
+        $this->assertSame('2026-08-26', $issue->issue_date->toDateString());
+        // Seven days back, so the stretch opens on the 20th's day and closes on the 26th's.
+        $this->assertSame('2026-08-20', $issue->window_start->toDateString());
+    }
+
+    /** A given window fixes both bounds and the date, whatever the clock says — this is `--date`. */
+    public function test_an_explicit_window_fixes_both_bounds_and_the_date(): void
+    {
+        $day = CarbonImmutable::parse('2026-08-20');
+        $window = HomeIssueDay::window($day);
+        $this->previousIssue($this->now());
+        $inside = $this->at($day->setTime(15, 0), fn (): TimelinePost => TimelinePost::factory()->create());
+        $this->at($day->subDay()->setTime(15, 0), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $issue = $this->publish(window: $window);
+
+        $this->assertNotNull($issue);
+        $this->assertSame('2026-08-20', $issue->issue_date->toDateString());
+        $this->assertTrue($window->start->equalTo($issue->window_start));
+        $this->assertTrue($window->end->equalTo($issue->published_at));
+        $this->assertSame([$this->ref($inside)], $this->refs($issue, HomeIssueSection::Stories));
+    }
 
     public function test_the_first_issue_reaches_back_seven_days(): void
     {
@@ -653,12 +740,8 @@ class PublishHomeIssueTest extends TestCase
 
     public function test_an_issue_already_in_the_table_is_never_rebuilt(): void
     {
-        $existing = HomeIssue::factory()->create([
-            'number' => 41,
-            'issue_date' => $this->now()->toDateString(),
-            'window_start' => $this->now()->subDay(),
-            'published_at' => $this->now()->subHours(2),
-        ]);
+        // Published two hours early by hand, and so already holding the day this run would date to.
+        $existing = $this->previousIssue($this->now()->subHours(2), number: 41);
         $this->at($this->now()->subMinutes(30), fn (): TimelinePost => TimelinePost::factory()->create());
 
         $issue = $this->publish();
@@ -798,9 +881,9 @@ class PublishHomeIssueTest extends TestCase
         return app(PublishHomeIssue::class);
     }
 
-    private function publish(?CarbonImmutable $now = null, ?SourceRef $pin = null): ?HomeIssue
+    private function publish(?CarbonImmutable $now = null, ?SourceRef $pin = null, ?HomeIssueWindow $window = null): ?HomeIssue
     {
-        return ($this->action())($now ?? $this->now(), $pin);
+        return ($this->action())($now ?? $this->now(), $pin, $window);
     }
 
     /** Run $make as if it were $when, so every row it writes is stamped there. */
@@ -815,11 +898,12 @@ class PublishHomeIssueTest extends TestCase
         }
     }
 
+    /** An issue that closed at $publishedAt, dated the way the publisher would have dated it. */
     private function previousIssue(CarbonImmutable $publishedAt, int $number = 1): HomeIssue
     {
         return HomeIssue::factory()->create([
             'number' => $number,
-            'issue_date' => $publishedAt->toDateString(),
+            'issue_date' => HomeIssueDay::of($publishedAt->subSecond())->toDateString(),
             'window_start' => $publishedAt->subDay(),
             'published_at' => $publishedAt,
         ]);
@@ -860,9 +944,10 @@ class PublishHomeIssueTest extends TestCase
 
             DB::table('home_issues')->insert([
                 'number' => 999,
-                // Written the way the model writes it, so the unique sees one value and not two
-                // spellings of a day (see PublishHomeIssue::publishedOn).
-                'issue_date' => $this->now()->startOfDay(),
+                // The day this run is about to date its issue to — the last one its window covers,
+                // never the day the run happens on — written the way the model writes it so the
+                // unique sees one value and not two spellings (see PublishHomeIssue::publishedOn).
+                'issue_date' => HomeIssueDay::of($this->now()->subSecond()),
                 'window_start' => $this->now()->subDay(),
                 'published_at' => $this->now(),
                 'created_at' => $this->now(),

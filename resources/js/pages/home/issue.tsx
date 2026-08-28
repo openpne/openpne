@@ -2,7 +2,6 @@ import { Head, usePage } from '@inertiajs/react';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
-import { cn } from '@/lib/utils';
 import { GroupGrid } from '../unified/group-grid';
 import { PeopleGrid } from '../unified/people-grid';
 import { Colophon } from './colophon';
@@ -10,58 +9,11 @@ import { UpcomingEventRow } from './event-row';
 import { FeatureArticle } from './feature-article';
 import { IssueNav } from './issue-nav';
 import { Masthead } from './masthead';
-import { StoryCard } from './story-card';
-import { StoryBriefs } from './story-list';
 import { TalkBurstCard } from './talk-burst';
-import type { Issue, IssuePageProps, IssueStory } from './types';
+import type { IssuePageProps, IssueStory } from './types';
 import { WelcomePanel } from './welcome';
 
 const storyKey = (story: IssueStory): string => `${story.kind}-${story.item.id}`;
-
-/**
- * How much of the day there is decides how it is laid out, and the payload already says so: a day
- * with one item has neither `features` nor `briefs`, one with two or three has `features`, and one
- * with four or more has `briefs`. So this is a switch over the shape rather than over a mode — there
- * is no state in which the wrong branch can be taken.
- *
- * One item is printed whole, because a day with a single story is that story. Past that the lead
- * takes the full width and what follows it runs two abreast, then becomes rows once there are more
- * than three — a card narrower than half the frame cannot be read across.
- */
-function IssueStories({ issue }: { issue: Issue }) {
-    // Every story it featured has since gone: the day's talk, faces and calendar are still an issue,
-    // and this band is simply not one of the things it has.
-    if (!issue.topStory) {
-        return null;
-    }
-
-    if (issue.features) {
-        return (
-            <>
-                <StoryCard story={issue.topStory} />
-                {/* Two abreast at most: a third column leaves a card too narrow for its headline to
-                    be read across, and a lone follow-up sitting in half a row reads as a gap where
-                    another card should be. */}
-                <div className={cn('grid gap-4', issue.features.length > 1 && 'sm:grid-cols-2')}>
-                    {issue.features.map((story) => (
-                        <StoryCard key={storyKey(story)} story={story} />
-                    ))}
-                </div>
-            </>
-        );
-    }
-
-    if (issue.briefs) {
-        return (
-            <>
-                <StoryCard story={issue.topStory} />
-                <StoryBriefs briefs={issue.briefs} />
-            </>
-        );
-    }
-
-    return <FeatureArticle story={issue.topStory} />;
-}
 
 /**
  * The site's front page: one issue (号), published once a day and the same for every member.
@@ -72,6 +24,9 @@ function IssueStories({ issue }: { issue: Issue }) {
  * differs, which is the point: a member linking someone a day's front page hands them the page they
  * read, not a rendering of it.
  *
+ * **Every story is an article.** The rank decides how much of it is printed — the lead whole, the
+ * rest cut off at a clamp — and nothing here is a row or a card standing in for something to read.
+ *
  * Every optional section is drawn exactly when its key is present. Nothing counts to zero and says
  * so — an empty section is a section the issue does not have.
  */
@@ -81,16 +36,18 @@ export default function HomeIssue() {
     const date = useDateFormat();
 
     if (issue === null) {
+        const today = date.siteDay(new Date().toISOString()) ?? '';
+
         return (
             <>
                 <Head title={t('What happened')} />
                 {/* Today's dateline over nothing: the site still has a front page, it just has
                     nothing on it yet. */}
-                <Masthead date={date.siteDay(new Date().toISOString()) ?? ''} />
+                <Masthead from={today} to={today} />
                 {auth.user && <WelcomePanel name={auth.user.name} enabledFeatures={enabledFeatures} />}
                 <p className="text-sm text-muted-foreground">{t('The first post will appear here the next morning.')}</p>
                 {/* Nothing has been put together, so there is no instant to stamp it with. */}
-                <Colophon publishedAt={null} stale={false} />
+                <Colophon publishedAt={null} window={null} stale={false} />
             </>
         );
     }
@@ -98,9 +55,9 @@ export default function HomeIssue() {
     return (
         <>
             <Head title={t('What happened')} />
-            <Masthead date={issue.date} />
+            <Masthead from={issue.days.from} to={issue.days.to} />
 
-            <IssueStories issue={issue} />
+            {issue.stories?.map((story, rank) => <FeatureArticle key={storyKey(story)} story={story} lead={rank === 0} />)}
 
             {issue.talkBursts?.map((burst) => <TalkBurstCard key={burst.group.id} burst={burst} />)}
 
@@ -127,7 +84,7 @@ export default function HomeIssue() {
             )}
 
             <IssueNav prev={prev} next={next} />
-            <Colophon publishedAt={issue.publishedAt} stale={!issue.isCurrent} />
+            <Colophon publishedAt={issue.publishedAt} window={issue.window} stale={!issue.isCurrent} />
         </>
     );
 }

@@ -30,7 +30,7 @@ function inLocale(locale: string) {
 
 test('the ja dateline says what the page is: the day, its weekday, and what happened on it', () => {
     inLocale('ja');
-    const { container } = renderWithProviders(<Masthead date="2026-08-27" />);
+    const { container } = renderWithProviders(<Masthead from="2026-08-27" to="2026-08-27" />);
 
     const time = container.querySelector('time');
     expect(time?.textContent).toBe('2026年8月27日(木)のできごと');
@@ -40,14 +40,32 @@ test('the ja dateline says what the page is: the day, its weekday, and what happ
 
 test('the en dateline carries the weekday too', () => {
     inLocale('en');
-    renderWithProviders(<Masthead date="2026-08-27" />);
+    renderWithProviders(<Masthead from="2026-08-27" to="2026-08-27" />);
 
     expect(screen.getByText('What happened on Thu, August 27, 2026')).toBeTruthy();
 });
 
+test('a stretch longer than a day is named as the range it is', () => {
+    // The first issue ever reaches back a week, and so does the one after a day that was missed.
+    inLocale('ja');
+    const { container } = renderWithProviders(<Masthead from="2026-08-21" to="2026-08-27" />);
+
+    expect(container.textContent).toBe('2026年8月21日〜2026年8月27日のできごと');
+    // HTML has no machine-readable range, and stamping the sentence with either end would name a
+    // day it is not about.
+    expect(container.querySelector('time')).toBeNull();
+
+    cleanup();
+
+    inLocale('en');
+    renderWithProviders(<Masthead from="2026-08-21" to="2026-08-27" />);
+
+    expect(screen.getByText('What happened from August 21, 2026 to August 27, 2026')).toBeTruthy();
+});
+
 test('the dateline is the page heading', () => {
     inLocale('ja');
-    renderWithProviders(<Masthead date="2026-08-27" />);
+    renderWithProviders(<Masthead from="2026-08-27" to="2026-08-27" />);
 
     // The day is what the screen is, so the nameplate is the h1 — the chrome draws none for it.
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('2026年8月27日(木)のできごと');

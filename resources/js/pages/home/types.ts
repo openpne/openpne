@@ -1,16 +1,16 @@
 import type { GridImage } from '@/components/image-grid';
+import type { MentionEntity } from '@/lib/entity-split';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
 import type { EventDetail, MemberRef, TopicDetail } from '../community/types';
-import type { DiaryDetail, DiarySummary } from '../diary/types';
+import type { DiaryDetail } from '../diary/types';
 import type { TimelinePostEntry } from '../timeline/types';
 import type { HomeGroup } from '../unified/group-grid';
 
 /**
  * The front page issue (号): one edition of the site, published once a day and identical for every
- * member. Its shape is what the layout is chosen from, so the payload states the layout rather than
- * carrying a mode: an issue with one content item has neither `features` nor `briefs`, one with two
- * or three has `features`, and one with four or more has `briefs`.
+ * member. **It is for reading**: every story travels whole, in rank order, and how much of a body
+ * is shown on screen is the page's decision rather than the payload's.
  *
  * Every optional section key is **absent** when it is empty, never `[]`. A section renders exactly
  * when its key is present, so nothing has to decide what an empty list means on screen.
@@ -32,8 +32,8 @@ export interface BoardScope {
 }
 
 /**
- * One content item at the top of an issue, carried whole: the story is drawn with its body, its
- * pictures and its link card, not as a preview of them.
+ * One story of an issue, carried whole: drawn with its body, its pictures and its counts rather
+ * than as a preview of them. `excerpt` rides along for the places a plain line is wanted.
  */
 export type IssueStory =
     | { kind: 'diary'; item: DiaryDetail }
@@ -41,22 +41,28 @@ export type IssueStory =
     | { kind: 'topic'; item: TopicDetail & { group: BoardScope; excerpt: string } }
     | { kind: 'event'; item: EventDetail & { group: BoardScope; excerpt: string } };
 
-/** One content item below the fold, in the shape the dashboard's rows already read. */
-export type IssueBrief =
-    | { kind: 'diary'; item: DiarySummary }
-    | { kind: 'timeline'; item: TimelinePostEntry }
-    | { kind: 'topic' | 'event'; item: CommunityActivityEntry };
+/**
+ * One message of a talk excerpt, in the stream's own shape minus what belongs to a live room: no
+ * cursor, no reactions, nothing about what the reader may do. `author` is null for a withdrawn
+ * member, drawn with the established label.
+ */
+export interface TalkExcerptMessage {
+    id: number;
+    author: MemberRef | null;
+    body: string;
+    /** @mention ranges over the body, ascending and non-overlapping — what EntityText walks. */
+    mentions: MentionEntity[];
+    createdAt: string;
+    /** What was posted with it, gated per file server-side. */
+    images: GridImage[];
+}
 
-/** A run of talk in one group during the issue's day: how much was said, by whom, and a glimpse. */
+/** A run of talk in one group during the issue's day: how much was said, and the end of it to read. */
 export interface TalkBurst {
     group: BoardScope;
     count: number;
-    /** Where the run starts, as an instant. */
-    since: string;
-    /** A bounded sample of who spoke, busiest first. */
-    participants: MemberRef[];
-    /** A glimpse of what was posted, oldest first. */
-    thumbnails: GridImage[];
+    /** The last messages of the run, oldest first — the excerpt, not a summary of it. */
+    messages: TalkExcerptMessage[];
     href: string;
 }
 
@@ -69,15 +75,15 @@ export interface UpcomingEvent extends CommunityActivityEntry {
 export interface Issue extends IssueRef {
     /** When the issue went out, as an instant. */
     publishedAt: string;
-    /** Whether `date` is the site's today: a stale issue says so in the colophon. */
+    /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
+    days: { from: string; to: string };
+    /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
+    window: { from: string; to: string };
+    /** Whether the page is showing the freshest issue there could be; a stale one says so below. */
     isCurrent: boolean;
-    /** Absent once every story the issue featured has been taken down or narrowed — the rest of the
-     *  issue still stands, so it is a missing key rather than a missing issue. */
-    topStory?: IssueStory;
-    /** Ranks 2–3, present only when the issue has 2–3 content items. */
-    features?: IssueStory[];
-    /** Ranks 2–8, present only when the issue has 4 or more. */
-    briefs?: IssueBrief[];
+    /** Ranks 1–8, in order. Absent once every story the issue featured has been taken down or
+     *  narrowed — the rest of the issue still stands, so it is a missing key, not a missing issue. */
+    stories?: IssueStory[];
     talkBursts?: TalkBurst[];
     newcomers?: NineTableItem[];
     newGroups?: HomeGroup[];
