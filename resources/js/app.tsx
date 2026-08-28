@@ -15,6 +15,7 @@ import { installHistoryRestore } from '@/lib/history-restore';
 import { installNotificationOpen } from '@/lib/notification-open';
 import { pageModules, pagePath } from '@/lib/page-modules';
 import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
+import { expectingReset, installScrollResetSettle } from '@/lib/scroll-reset-settle';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
@@ -36,6 +37,8 @@ const offFirstNavigate = router.on('navigate', () => {
     offFirstNavigate();
     notificationOpen.ready();
 });
+// Likewise before the first visit: it listens for the end of every one.
+const resetSettler = installScrollResetSettle(router);
 
 void createInertiaApp({
     // The unread prefix is applied here rather than by writing document.title, because the head
@@ -45,8 +48,10 @@ void createInertiaApp({
         withUnreadPrefix(title ? `${title} - ${appName}` : appName, (page.props as PageProps).unread?.notifications ?? 0),
     defaults: {
         // Asked for every visit, and the one place a destination can decline being scrolled by
-        // Inertia — see lib/chat/opening-scroll.ts for why a conversation has to.
-        visitOptions: (_href: string, options: { preserveScroll?: unknown }) => conversationVisitOptions(options),
+        // Inertia — see lib/chat/opening-scroll.ts for why a conversation has to — which makes it
+        // the one place that knows which arrivals Inertia will scroll (lib/scroll-reset-settle.ts).
+        visitOptions: (_href: string, options: { preserveScroll?: unknown }) =>
+            expectingReset(conversationVisitOptions(options), resetSettler),
     },
     resolve: (name) => resolvePageComponent<ResolvedComponent>(pagePath(name), pageModules),
     // Default layout for every non-auth page: nav chrome + the member page frame (single <main>,
