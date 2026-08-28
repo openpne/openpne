@@ -75,49 +75,65 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(Promise.all([badge, openInApp(url)]));
 });
 
-// The destination travels as a message and the page routes itself (unread-sync.tsx on Modern,
-// push-reconcile.js on Classic); the worker never opens it. On an iOS home-screen web app,
+// The destination travels as a message and the page routes itself (lib/notification-open.ts on
+// Modern, push-reconcile.js on Classic); the worker never opens it. On an iOS home-screen web app,
 // openWindow() with anything but the scope root opens that URL in an embedded browser sheet over an
 // app window that is left blank — an empty page with a URL bar the member cannot leave. So a window
-// is only ever opened at the root; a page opened here receives the message once it listens (the
-// container queues it).
+// is only ever opened at the root.
 //
-// Among open windows, the first (most recently focused) page that ACKs the offer is the one focused:
-// login, admin and guest pages have no receiver, and one of those sitting in front must not swallow
-// the tap. When no page takes it, navigate() moves the front window where it works. Not on Safari:
-// there it did nothing observable at best, and a home-screen web app that has been told to navigate
-// is the other way the blank sheet above has been seen to appear, so the front window is only shown.
-async function openInApp(url) {
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+// Two steps: every open window is offered the tap at once, and the first in focus order to answer is
+// focused and handed the destination — login, admin and guest pages have no receiver, and one of
+// those in front must not swallow the tap. A page still loading cannot answer yet (the container holds
+// a worker's message only until DOMContentLoaded, and a freshly opened window is offered at commit),
+// so the offer is repeated until one answers or the deadline passes. When none does, the front window
+// is shown, and moved there by navigate() except on WebKit, where it did nothing observable.
+const OFFER_MS = 500;
+const OPEN_DEADLINE_MS = 6000;
+
+async function openInApp(url, timing = { offerMs: OFFER_MS, deadlineMs: OPEN_DEADLINE_MS }) {
+    let windows = await openWindows();
     if (windows.length === 0) {
         const opened = await self.clients.openWindow(self.registration.scope);
-        if (opened) {
-            opened.postMessage({ type: 'open', url });
-        }
-        return;
+        windows = opened ? [opened] : [];
     }
-    for (const client of windows) {
-        if (await offerOpen(client, url)) {
-            await client.focus().catch(() => {});
+    const deadline = Date.now() + timing.deadlineMs;
+    while (windows.length > 0) {
+        const taker = await firstTaker(windows, timing.offerMs);
+        if (taker) {
+            await taker.focus().catch(() => {});
+            taker.postMessage({ type: 'open', url });
             return;
         }
+        if (Date.now() >= deadline) {
+            break;
+        }
+        windows = await openWindows();
+    }
+    if (windows.length === 0) {
+        return;
     }
     const front = (await windows[0].focus().catch(() => null)) || windows[0];
-    if (!isSafari()) {
+    if (!isWebKitBrowser()) {
         await front.navigate(url).catch(() => {});
     }
 }
 
-function isSafari() {
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-
-    return /AppleWebKit/.test(ua) && !/Chrome|Chromium|CriOS|Edg|Android/.test(ua);
+function openWindows() {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 }
 
-// Resolves true once the page ACKs on the port it was handed, false if it has not within the timeout
-// (no receiver, or a page not running). Without MessageChannel the offer cannot be confirmed, so the
-// worker assumes no one took it.
-function offerOpen(client, url) {
+// The first window, in the focus order matchAll gives, whose page answers the offer within the
+// timeout; null when none does (no receiver, a page still loading, or one suspended).
+async function firstTaker(windows, offerMs) {
+    const answers = await Promise.all(windows.map((client) => offerOpen(client, offerMs)));
+    const index = answers.indexOf(true);
+
+    return index === -1 ? null : windows[index];
+}
+
+// Resolves true once the page ACKs on the port it was handed, false if it has not within the timeout.
+// Without MessageChannel the offer cannot be confirmed, so the worker assumes no one took it.
+function offerOpen(client, offerMs) {
     if (typeof MessageChannel === 'undefined') {
         return Promise.resolve(false);
     }
@@ -128,8 +144,15 @@ function offerOpen(client, url) {
             channel.port1.close();
             resolve(taken);
         };
-        const timer = setTimeout(() => settle(false), 500);
+        const timer = setTimeout(() => settle(false), offerMs);
         channel.port1.onmessage = () => settle(true);
-        client.postMessage({ type: 'open', url }, [channel.port2]);
+        client.postMessage({ type: 'open-offer' }, [channel.port2]);
     });
+}
+
+// Safari and every iOS browser (all WebKit); Chromium and Android engines announce themselves.
+function isWebKitBrowser() {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+
+    return /AppleWebKit/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
 }

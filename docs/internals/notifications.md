@@ -259,16 +259,21 @@ tag so a new nudge collapses the previous one on the device, and the unread coun
 for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
 and the send degrades to the withdrawn-member label instead of failing to restore.
 
-A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) **with an
-`open` message naming the destination, never by opening the destination itself**: the page routes
-(`UnreadSync` on Modern, `push-reconcile.js` on Classic). With no window open, the app is opened at
-the scope root and told. With windows open, each is offered the destination in focus order and the
-first page that ACKs is focused — login, admin and guest pages have no receiver, and one of those in
-front must not swallow the tap; when none ACKs, the front window is shown, and `navigate()`d to the
-destination except on Safari. `openWindow()` never gets a deeper URL and Safari is never told to
-navigate: on an iOS home-screen web app both have been seen to leave the member on an empty page with
-a URL bar and no way back but restarting the app (a deeper URL opens in an embedded browser sheet over
-an app window left blank).
+A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) **with
+messages, never by opening the destination itself**; the page routes
+([`lib/notification-open.ts`](../../resources/js/lib/notification-open.ts) on Modern,
+`push-reconcile.js` on Classic). With no window open, the app is opened at the scope root. Every open
+window is then offered the tap (`open-offer`, answered on its port) and the first in focus order to
+answer is focused and handed the destination (`open`) — login, admin and guest pages have no
+receiver, and one of those in front must not swallow the tap. The offer is repeated for a few seconds
+because a page still loading cannot answer: the container holds a worker's messages only until
+DOMContentLoaded and drops later ones nobody listens for, which is also why the receiver is registered
+from the entry module's top level (before that event), never from a component effect. When no page
+answers, the front window is shown, and `navigate()`d to the destination except on WebKit.
+`openWindow()` never gets a deeper URL: on an iOS home-screen web app that opens the URL in an
+embedded browser sheet over an app window left blank — the member is left on an empty page with a URL
+bar and no way back but restarting the app (reported since iOS 16.4) — and `navigate()` there was
+observed to do nothing.
 
 Three switches, at three scopes:
 
@@ -332,6 +337,9 @@ its shape.
   state. The other way is the rule — reading (or answering) what a row is about marks the row read.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.
-- The worker answers a notification tap with an `open` message and the page routes; the only URL that
-  ever reaches `openWindow()` is the scope root, and `navigate()` is the last resort for a window no
-  page claimed — never on Safari.
+- The worker answers a notification tap with messages and the page routes; the only URL that ever
+  reaches `openWindow()` is the scope root, and `navigate()` is the last resort for a window no page
+  claimed — never on WebKit.
+- The page's receiver for those messages is registered before DOMContentLoaded (the entry module's
+  top level; a deferred script on Classic). A listener added in a component effect never hears a
+  message sent to a page the worker just opened.

@@ -18,9 +18,10 @@
  * retry on the next navigation — a transient outage must not unsubscribe a member's own device. Never
  * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
  *
- * Also the Classic receiver of the worker's answer to a notification tap: an `open` message naming
- * the destination, ACKed on its port before the page goes there whole — no router here
- * (public/sw.js says why the worker does not open the destination itself).
+ * Also the Classic receiver of a notification tap (public/sw.js): the worker's `open-offer` is answered
+ * on its port, and the `open` that follows names the destination — no router here, so the page goes
+ * there whole. This script is deferred, so the listener is in place before DOMContentLoaded, which is
+ * when the container stops holding a worker's messages for a page (lib/notification-open.ts).
  */
 (function () {
     'use strict';
@@ -30,11 +31,14 @@
     }
 
     navigator.serviceWorker.addEventListener('message', function (event) {
-        if (event.data && event.data.type === 'open' && typeof event.data.url === 'string') {
-            if (event.ports[0]) {
-                event.ports[0].postMessage({ type: 'ack' });
-            }
-            window.location.assign(event.data.url);
+        var data = event.data;
+        if (!data) {
+            return;
+        }
+        if (data.type === 'open-offer' && event.ports[0]) {
+            event.ports[0].postMessage({ type: 'ack' });
+        } else if (data.type === 'open' && typeof data.url === 'string') {
+            window.location.assign(data.url);
         }
     });
 
