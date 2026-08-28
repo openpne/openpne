@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Gate;
  *
  * The window reads apply no per-row viewer filter, because talk applies none: the whole conversation
  * is one audience, for the reasons in {@see GroupTalkAccess}. Pictures are the exception, and are
- * gated per file in {@see thumbnails}.
+ * gated per file in {@see shows}.
  */
 final class TalkSampleDigest
 {
@@ -54,6 +54,15 @@ final class TalkSampleDigest
     public const THUMBNAIL_CANDIDATES = 12;
 
     /**
+     * How much of a stretch an excerpt prints. Six turns is enough to read as a conversation and
+     * short enough that several of them still make a page.
+     */
+    public const EXCERPT = 6;
+
+    /** Pictures one excerpted message shows: a row of squares under a line, not an album. */
+    public const EXCERPT_PICTURES = 3;
+
+    /**
      * The window's first $limit messages, oldest first.
      *
      * The window is (since, until]: open at the start, closed at the end. Consecutive windows share
@@ -71,6 +80,81 @@ final class TalkSampleDigest
             ->with('author.avatar.file')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * The window's last $limit messages, oldest first — the tail of the stretch, as a page prints it.
+     *
+     * The tail and not the head, because an excerpt is read as where a conversation got to: the
+     * first issue ever reaches back a week, and its opening messages describe a room that has since
+     * moved on. Read descending and turned round here, since "the last N" has no ascending form.
+     *
+     * Pictures and mentions come with the rows: an excerpt draws each message the way the stream
+     * does, and without them that would be two queries per line. They are still gated per file —
+     * loading a row is not showing it ({@see imagesOf}).
+     *
+     * @return Collection<int, GroupMessage>
+     */
+    public function lastBetween(Group $group, CarbonImmutable $since, CarbonImmutable $until, int $limit = self::EXCERPT): Collection
+    {
+        return $this->window($group, $since, $until)
+            ->reorder()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->with(['author.avatar.file', 'images.file', 'mentions'])
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+    }
+
+    /**
+     * A stretch of messages in the shape a page draws them, which is the stream's own
+     * ({@see GroupMessageSerializer}) minus what belongs to a live room: no cursor, no reactions, no
+     * permissions. Nothing here is a claim about what the reader may do — only about what was said.
+     *
+     * @param  Collection<int, GroupMessage>  $messages
+     * @return list<array{id: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}>
+     */
+    public function excerpt(Member $viewer, Collection $messages): array
+    {
+        return $messages
+            ->map(fn (GroupMessage $message): array => [
+                'id' => (int) $message->getKey(),
+                // Null for a withdrawn author, which the client draws with the established label —
+                // the message stays, the person is gone.
+                'author' => $message->author === null ? null : MemberRefSerializer::ref($message->author),
+                'body' => (string) $message->body,
+                'mentions' => GroupMessageSerializer::mentions($message),
+                'createdAt' => GroupMessageSerializer::instant($message->created_at),
+                'images' => $this->imagesOf($viewer, $message),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * One message's pictures, in slot order: the ones this viewer may have, capped.
+     *
+     * The same two gates a summary's glimpse passes ({@see shows}), asked here per message rather
+     * than over a sample — an excerpt draws its pictures under the words they were posted with, so
+     * which message a file belongs to is part of the answer rather than a detail of it.
+     *
+     * The cap is on the slots LOOKED at, not on the pictures shown: a migrated message may carry any
+     * number of attachments, and the policy is a read of its own per file. So a message whose first
+     * three are refused shows none rather than reaching further down for replacements — bounded by
+     * contract, the stance {@see thumbnails} takes for the same reason.
+     *
+     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>
+     */
+    public function imagesOf(Member $viewer, GroupMessage $message): array
+    {
+        return $message->images
+            ->take(self::EXCERPT_PICTURES)
+            ->filter(fn (GroupMessageImage $image): bool => $this->shows($viewer, $message, $image))
+            ->map(fn (GroupMessageImage $image): array => GroupMessageSerializer::image($image))
+            ->values()
+            ->all();
     }
 
     /** How much was said in the window — all of it, which is the number a bounded sample cannot say. */
@@ -132,12 +216,7 @@ final class TalkSampleDigest
      * A glimpse of what was posted: the first {@see THUMBNAILS} pictures of the sample, in message
      * order and slot order within a message.
      *
-     * Every candidate passes two gates. The join row names a file, but only the file names its owner,
-     * so a row whose file belongs to some other parent is refused as not this message's picture —
-     * it might well pass the policy on its own owner's terms. Then the policy that guards the bytes
-     * (FilePolicy) is asked per file, the same one the delivery route asks. A refusal, or a file that
-     * is no longer there, is skipped in silence: no placeholder, no gap, nothing in the payload
-     * saying a picture was left out.
+     * Every candidate passes the two gates in {@see shows}.
      *
      * The read is bounded on its own terms: the first {@see THUMBNAIL_CANDIDATES} attachment rows of
      * the sampled messages, in the stream's own (created_at, id, slot) order, with the file
@@ -174,19 +253,8 @@ final class TalkSampleDigest
         foreach ($candidates as $image) {
             /** @var GroupMessage $message */
             $message = $parents[(int) $image->group_message_id];
-            $file = $image->file;
 
-            if ($file === null || (int) $file->related_entity_id !== (int) $message->getKey()) {
-                continue;
-            }
-
-            // instanceof rather than a string match, so the legacy morph aliases resolve too.
-            $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
-            if ($ownerClass === null || ! $message instanceof $ownerClass) {
-                continue;
-            }
-
-            if (! Gate::forUser($viewer)->allows('view', $file)) {
+            if (! $this->shows($viewer, $message, $image)) {
                 continue;
             }
 
@@ -198,6 +266,33 @@ final class TalkSampleDigest
         }
 
         return $shown;
+    }
+
+    /**
+     * Whether $image is $message's picture and whether $viewer may have its bytes: the two gates
+     * every attachment passes, wherever it is drawn.
+     *
+     * The join row names a file, but only the file names its owner, so a row whose file belongs to
+     * some other parent is refused as not this message's picture — it might well pass the policy on
+     * its own owner's terms. Then FilePolicy is asked per file, the same one the delivery route
+     * asks. A refusal, or a file that is no longer there, is skipped in silence by every caller: no
+     * placeholder, no gap, nothing in the payload saying a picture was left out.
+     */
+    private function shows(Member $viewer, GroupMessage $message, GroupMessageImage $image): bool
+    {
+        $file = $image->file;
+
+        if ($file === null || (int) $file->related_entity_id !== (int) $message->getKey()) {
+            return false;
+        }
+
+        // instanceof rather than a string match, so the legacy morph aliases resolve too.
+        $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
+        if ($ownerClass === null || ! $message instanceof $ownerClass) {
+            return false;
+        }
+
+        return Gate::forUser($viewer)->allows('view', $file);
     }
 
     /**

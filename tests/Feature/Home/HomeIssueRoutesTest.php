@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Home;
 
+use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\HomeIssueSection;
 use App\Models\Diary;
 use App\Models\HomeIssue;
@@ -31,7 +32,8 @@ class HomeIssueRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const NOW = '2026-08-27 06:00:00';
+    /** A 06:00 publication, whose issue covers the day that just ended (HomeIssueDay). */
+    private const NOW = '2026-08-28 06:00:00';
 
     protected function setUp(): void
     {
@@ -218,7 +220,8 @@ class HomeIssueRoutesTest extends TestCase
     public function test_the_latest_issue_stands_after_its_own_day_has_passed(): void
     {
         $issue = $this->publish();
-        Carbon::setTestNow('2026-08-28 03:00:00');
+        // Past the next boundary: the 28th's issue was due at 06:00 and nothing came out.
+        Carbon::setTestNow('2026-08-29 07:00:00');
 
         $this->actingAs(Member::factory()->create())->get('/')
             ->assertOk()
@@ -266,21 +269,22 @@ class HomeIssueRoutesTest extends TestCase
         $this->get('/')->assertRedirect('/login');
     }
 
-    /** One issue dated on the frozen clock, with one story in it. */
+    /** The issue the frozen clock has just published: the day before it, with one story in it. */
     private function publish(): HomeIssue
     {
-        return $this->publishOn(self::NOW);
+        return $this->publishOn(CarbonImmutable::parse(self::NOW)->subDay()->toDateString());
     }
 
-    /** One issue covering $date, with one story in it. */
+    /** One issue covering the day $date, over that day's own window, with one story in it. */
     private function publishOn(string $date): HomeIssue
     {
         $day = CarbonImmutable::parse($date);
+        $window = HomeIssueDay::window($day);
 
         $issue = HomeIssue::factory()->create([
             'issue_date' => $day->toDateString(),
-            'window_start' => $day->subDay(),
-            'published_at' => $day->setTime(6, 0),
+            'window_start' => $window->start,
+            'published_at' => $window->end,
         ]);
 
         HomeIssueItem::factory()->forSource(Diary::factory()->create())->create([

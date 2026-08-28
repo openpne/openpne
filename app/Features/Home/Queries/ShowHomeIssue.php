@@ -59,8 +59,8 @@ final class ShowHomeIssue
      *
      * Per table and not per (section, table): a group is featured both for being new and for what
      * was said in it, and reading it twice would buy nothing but a second query. The eager loads are
-     * therefore the union of what the serializers of either section ask for — and of both story
-     * shapes, since which one the page takes is decided from what survives this pass.
+     * therefore the union of what the serializers of either section ask for — an event's roster
+     * count is the calendar row's, not the story's.
      *
      * @param  EloquentCollection<int, HomeIssueItem>  $items
      * @return array<string, Collection<int, Model>> keyed by morph alias, then by id
@@ -98,16 +98,16 @@ final class ShowHomeIssue
     {
         return [
             (new TimelinePost)->getMorphClass() => fn (): Builder => TimelinePost::query()
-                ->with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions', 'tags'])
+                ->with(['member.avatar.file', 'images.file'])
                 ->withCount('replies'),
             (new Diary)->getMorphClass() => fn (): Builder => Diary::query()
-                ->with(['member.avatar.file', 'images.file', 'linkCard.image'])
-                ->withCount(['comments', 'images']),
+                ->with(['member.avatar.file', 'images.file'])
+                ->withCount('comments'),
             (new GroupTopic)->getMorphClass() => fn (): Builder => GroupTopic::query()
-                ->with(['member.avatar.file', 'group.image', 'images.file', 'linkCard.image'])
+                ->with(['member.avatar.file', 'group.image', 'images.file'])
                 ->withCount('comments'),
             (new GroupEvent)->getMorphClass() => fn (): Builder => GroupEvent::query()
-                ->with(['member.avatar.file', 'group.image', 'images.file', 'linkCard.image'])
+                ->with(['member.avatar.file', 'group.image', 'images.file'])
                 ->withCount(['comments', 'participants']),
             (new Member)->getMorphClass() => fn (): Builder => Member::query()->with('avatar.file'),
             (new Group)->getMorphClass() => fn (): Builder => Group::query()->with('image'),

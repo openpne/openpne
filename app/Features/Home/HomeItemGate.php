@@ -31,15 +31,12 @@ use Illuminate\Support\Facades\Gate;
  * placeholder and no count of what was withheld, because either would report the existence of
  * something the reader may not know exists.
  *
- * It answers with the item rather than with a boolean because the talk arm's last question — is
- * there anything left in the stretch — is the same read the burst is drawn from, and asking it twice
- * would cost a query to learn what was already in hand.
+ * It answers with the item rather than with a boolean because the talk arm cannot say whether a row
+ * still resolves without reading the room, and what that read returns is most of what the burst is
+ * drawn from — handing back only a yes would throw it away and buy it again.
  */
 final class HomeItemGate
 {
-    /** How far back the faces and pictures of a burst describe: the last day of its stretch. */
-    private const SAMPLE_HOURS = 24;
-
     public function __construct(private readonly TalkSampleDigest $talk) {}
 
     public function resolve(Member $viewer, HomeIssueItem $item, ?Model $source): ?HydratedItem
@@ -133,20 +130,16 @@ final class HomeItemGate
             return null;
         }
 
-        // Faces and pictures come from the LAST day of the stretch. The first issue ever reaches
-        // back a week, and a week-old glimpse of a room that is talking today is a worse answer than
-        // no glimpse at all.
-        $sample = $this->talk->sampleBetween($source, $since->max($until->subHours(self::SAMPLE_HOURS)), $until);
-
         return new HydratedItem($item, $source, [
             'count' => $this->talk->countBetween($source, $since, $until),
-            // Where the run starts NOW, which is the first surviving message rather than the
-            // instant the window opens on: an issue saying a room started talking at an hour whose
-            // messages have all gone would be reporting a stretch nobody can read.
-            'since' => CarbonImmutable::parse($first->created_at),
+            // The way in is the first surviving message rather than the instant the window opens on:
+            // an issue pointing at an hour whose messages have all gone would land the reader in a
+            // stretch nobody can read.
             'href' => "/groups/{$source->getKey()}/talk?m={$first->getKey()}",
-            'participants' => $this->talk->participants($sample),
-            'thumbnails' => $this->talk->thumbnails($viewer, $sample),
+            // The END of the stretch, printed rather than summarized: an excerpt is read as where
+            // the conversation got to, and the first issue ever reaches back a week — its opening
+            // lines describe a room that has since moved on. Pictures are gated per file inside.
+            'messages' => $this->talk->excerpt($viewer, $this->talk->lastBetween($source, $since, $until)),
         ]);
     }
 

@@ -1,16 +1,14 @@
 import type { GridImage } from '@/components/image-grid';
+import type { MentionEntity } from '@/lib/entity-split';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
-import type { EventDetail, MemberRef, TopicDetail } from '../community/types';
-import type { DiaryDetail, DiarySummary } from '../diary/types';
-import type { TimelinePostEntry } from '../timeline/types';
+import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '../unified/group-grid';
 
 /**
  * The front page issue (号): one edition of the site, published once a day and identical for every
- * member. Its shape is what the layout is chosen from, so the payload states the layout rather than
- * carrying a mode: an issue with one content item has neither `features` nor `briefs`, one with two
- * or three has `features`, and one with four or more has `briefs`.
+ * member. **It is a front page**: stories arrive in rank order as headline, dek and picture, and the
+ * page ranks them by how much room it gives each — never by printing more or less of a body.
  *
  * Every optional section key is **absent** when it is empty, never `[]`. A section renders exactly
  * when its key is present, so nothing has to decide what an empty list means on screen.
@@ -32,31 +30,56 @@ export interface BoardScope {
 }
 
 /**
- * One content item at the top of an issue, carried whole: the story is drawn with its body, its
- * pictures and its link card, not as a preview of them.
+ * One story as the front page prints it: what it is called, the line it opens with, and one picture.
+ * **Never a body** — the block is a way in, and the story is read on its own page.
+ *
+ * `kind` is the byline's grammar rather than a shape switch: a board entry names the group it was
+ * posted in, a post counts replies where the rest count comments, and every block draws the same
+ * fields either way.
  */
-export type IssueStory =
-    | { kind: 'diary'; item: DiaryDetail }
-    | { kind: 'timeline'; item: TimelinePostEntry & { excerpt: string } }
-    | { kind: 'topic'; item: TopicDetail & { group: BoardScope; excerpt: string } }
-    | { kind: 'event'; item: EventDetail & { group: BoardScope; excerpt: string } };
+export interface IssueStory {
+    kind: 'diary' | 'timeline' | 'topic' | 'event';
+    id: number;
+    /** Where it is read in full — what the whole block links to. */
+    href: string;
+    /** A post has no title, so this is the line its author opened with. */
+    headline: string;
+    /** The lead of the body, plain text and already cut; empty when there is nothing after the
+     *  headline. Not markup and not a link — a URL in it reads as the text it is. */
+    dek: string;
+    /** Null for a withdrawn member, drawn with the established label. */
+    author: MemberRef | null;
+    /** The group a board entry was posted in; null on a diary or a post. */
+    group: BoardScope | null;
+    createdAt: string;
+    /** Comments, or replies on a post — one number, whichever the kind counts. */
+    commentCount: number;
+    /** The first picture posted with it. Null is what decides the block's shape, not a missing key. */
+    image: GridImage | null;
+}
 
-/** One content item below the fold, in the shape the dashboard's rows already read. */
-export type IssueBrief =
-    | { kind: 'diary'; item: DiarySummary }
-    | { kind: 'timeline'; item: TimelinePostEntry }
-    | { kind: 'topic' | 'event'; item: CommunityActivityEntry };
+/**
+ * One message of a talk excerpt, in the stream's own shape minus what belongs to a live room: no
+ * cursor, no reactions, nothing about what the reader may do. `author` is null for a withdrawn
+ * member, drawn with the established label.
+ */
+export interface TalkExcerptMessage {
+    id: number;
+    author: MemberRef | null;
+    body: string;
+    /** @mention ranges over the body, ascending and non-overlapping — what EntityText walks. */
+    mentions: MentionEntity[];
+    createdAt: string;
+    /** What was posted with it, gated per file server-side. */
+    images: GridImage[];
+}
 
-/** A run of talk in one group during the issue's day: how much was said, by whom, and a glimpse. */
+/** A run of talk in one group during the issue's day: how much was said, and the end of it to read. */
 export interface TalkBurst {
     group: BoardScope;
     count: number;
-    /** Where the run starts, as an instant. */
-    since: string;
-    /** A bounded sample of who spoke, busiest first. */
-    participants: MemberRef[];
-    /** A glimpse of what was posted, oldest first. */
-    thumbnails: GridImage[];
+    /** The last messages of the run, oldest first — the excerpt, not a summary of it. */
+    messages: TalkExcerptMessage[];
     href: string;
 }
 
@@ -69,15 +92,16 @@ export interface UpcomingEvent extends CommunityActivityEntry {
 export interface Issue extends IssueRef {
     /** When the issue went out, as an instant. */
     publishedAt: string;
-    /** Whether `date` is the site's today: a stale issue says so in the colophon. */
+    /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
+    days: { from: string; to: string };
+    /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
+    window: { from: string; to: string };
+    /** Whether the page is showing the freshest issue there could be; a stale one says so below. */
     isCurrent: boolean;
-    /** Absent once every story the issue featured has been taken down or narrowed — the rest of the
-     *  issue still stands, so it is a missing key rather than a missing issue. */
-    topStory?: IssueStory;
-    /** Ranks 2–3, present only when the issue has 2–3 content items. */
-    features?: IssueStory[];
-    /** Ranks 2–8, present only when the issue has 4 or more. */
-    briefs?: IssueBrief[];
+    /** Ranks 1–8, in order: the lead, then the seconds, then the rest. Absent once every story the
+     *  issue featured has been taken down or narrowed — the rest of the issue still stands, so it is
+     *  a missing key, not a missing issue. */
+    stories?: IssueStory[];
     talkBursts?: TalkBurst[];
     newcomers?: NineTableItem[];
     newGroups?: HomeGroup[];

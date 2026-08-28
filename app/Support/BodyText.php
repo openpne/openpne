@@ -70,10 +70,12 @@ final class BodyText
      * cell wrapped it into three rows of 36; the Classic feed shows a single line. Blade escapes the
      * returned string. (The show page renders the full body, which carries the un-ported decoration as a
      * separate Partial; here the tags are only stripped, exactly as OpenPNE 3's excerpt does.)
+     *
+     * A caller that reads at another size passes its own `$width`; the default is the ported one.
      */
-    public static function excerpt(?string $text): string
+    public static function excerpt(?string $text, int $width = self::EXCERPT_WIDTH): string
     {
-        return self::truncateToRows(self::stripDecoration($text));
+        return self::truncateToRows(self::stripDecoration($text), $width);
     }
 
     /**
@@ -82,11 +84,11 @@ final class BodyText
      * caption/value row after the first, as the OpenPNE 3 partial does, over values that are not stored
      * bodies (a self-introduction, a community description).
      */
-    public static function truncateToRows(?string $text): string
+    public static function truncateToRows(?string $text, int $width = self::EXCERPT_WIDTH): string
     {
         $singleLine = strtr((string) $text, ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
 
-        return mb_strimwidth($singleLine, 0, self::EXCERPT_WIDTH, '');
+        return mb_strimwidth($singleLine, 0, $width, '');
     }
 
     /**

@@ -13,16 +13,24 @@ import { useDateFormat } from '@/lib/use-date-format';
  * `label` rank, not a page title: what the reader came for is the story below, and this is the
  * dateline over it. It is still the page's `h1` — the day is what the screen is — which is why the
  * rank comes from the recipe rather than from a `Heading` of a level that would misstate the
- * document. The sentence is wrapped in the `<time>` so the machine-readable civil date survives the
- * wording around it.
+ * document.
+ *
+ * Usually one day. It is a range when the issue reached further back than a day — the first one
+ * ever does, and so does the one after a run that was missed — and then there is no single day to
+ * mark up: the `<time>` is the one-day form only, since HTML has no machine-readable range and
+ * stamping the sentence with either end would name a day it is not about.
  */
-export function Masthead({ date }: { date: string }) {
+export function Masthead({ from, to }: { from: string; to: string }) {
     const t = useT();
     const { civilDate } = useDateFormat();
 
     return (
         <h1 className={`${headingVariants({ variant: 'label' })} border-b border-border pb-2`}>
-            <time dateTime={date}>{t('What happened on :date', { date: civilDate(date, true) })}</time>
+            {from === to ? (
+                <time dateTime={from}>{t('What happened on :date', { date: civilDate(from, true) })}</time>
+            ) : (
+                t('What happened from :from to :to', { from: civilDate(from), to: civilDate(to) })
+            )}
         </h1>
     );
 }

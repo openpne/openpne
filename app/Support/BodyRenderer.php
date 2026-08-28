@@ -41,12 +41,14 @@ final class BodyRenderer
     /**
      * A feed excerpt. Markdown flattens its rendered HTML to plain text (MarkdownText::excerpt);
      * Plain and Op3 share BodyText::excerpt, which strips <op:*> tags and collapses newlines.
+     *
+     * `$width` is a display width, not a character count: a fullwidth glyph spends two of it.
      */
-    public static function excerpt(?string $text, BodyFormat $format): string
+    public static function excerpt(?string $text, BodyFormat $format, int $width = BodyText::EXCERPT_WIDTH): string
     {
         return match ($format) {
-            BodyFormat::Markdown => MarkdownText::excerpt($text),
-            BodyFormat::Plain, BodyFormat::Op3 => BodyText::excerpt($text),
+            BodyFormat::Markdown => MarkdownText::excerpt($text, $width),
+            BodyFormat::Plain, BodyFormat::Op3 => BodyText::excerpt($text, $width),
         };
     }
 
