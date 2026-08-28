@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createResetSettler, expectingReset } from './scroll-reset-settle.ts';
 
-test('the navigate after an expected reset is held, and spends the record', () => {
+test('the arrival completing an expected reset is held, and spends the record', () => {
     const settler = createResetSettler();
 
     settler.expect();
@@ -14,11 +14,13 @@ test('an arrival nobody expected is left where it is', () => {
     assert.equal(createResetSettler().arrive(), false);
 });
 
-test('a new visit drops what the last one expected', () => {
+test('a record the visit finished without spending is not left for a later arrival', () => {
+    // The shape of a reset Inertia fires no navigate for (a same-URL visit replaces its entry): the
+    // visit still finishes, and the record must not survive to be spent by a history restore.
     const settler = createResetSettler();
 
     settler.expect();
-    settler.begin();
+    settler.finish();
     assert.equal(settler.arrive(), false);
 });
 

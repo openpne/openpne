@@ -13,31 +13,34 @@ import type { ArrivalPage } from '@/lib/chat/opening-scroll';
  * answered with the same scrollTo again. Answered in the event itself, which is before the
  * direction and seam hooks read the position on the next frame, so they never see the bounce. The
  * hold ends at the reader's first input — a touch, wheel or key makes the scroll theirs — at the
- * next visit, or after a short window. It never starts for an arrival that keeps its position:
- * a `preserveScroll` visit, a history restore, or a hash URL Inertia scrolls to the anchor of.
+ * next arrival, at a popstate (the restore it brings puts the page back where it was left, and a
+ * hold still running would undo that on the next frame), or after a short window. It never starts
+ * for an arrival that keeps its position: a `preserveScroll` visit, a history restore, or a hash
+ * URL Inertia scrolls to the anchor of.
  *
  * Which arrivals Inertia resets is known exactly where it asks: the `preserveScroll` callback the
  * visit defaults hand it (opening-scroll.ts), resolved against the page being arrived at right
- * before it is set. `expect()` is called from there, and the `navigate` after the reset spends it.
+ * before it is set. `expect()` is called from there, and the visit's `success` or `error` — both
+ * fired once the page is set and scrolled, and only by a visit — spends it. Not `navigate`: a
+ * same-URL visit replaces its history entry and fires none, and a restore fires one with no visit
+ * behind it, so a record left by the former would be spent by the latter and the hold would undo
+ * the restore. `finish` clears whatever a visit left unspent.
  */
 
 /** The arrivals Inertia scrolls to the top, one visit at a time. */
 export interface ResetSettler {
-    /** Inertia's `start`: whatever the last visit expected is stale. */
-    begin(): void;
     /** The visit being resolved will be scrolled to the top by Inertia. */
     expect(): void;
-    /** Inertia's `navigate`; true when it completes an expected reset. Spending the record clears it. */
+    /** The visit's `success` or `error`; true when it completes an expected reset. Spending the record clears it. */
     arrive(): boolean;
+    /** The visit's `finish`: a record it left unspent is nobody else's. */
+    finish(): void;
 }
 
 export function createResetSettler(): ResetSettler {
     let expected = false;
 
     return {
-        begin() {
-            expected = false;
-        },
         expect() {
             expected = true;
         },
@@ -48,6 +51,9 @@ export function createResetSettler(): ResetSettler {
             expected = false;
 
             return true;
+        },
+        finish() {
+            expected = false;
         },
     };
 }
@@ -84,9 +90,9 @@ const HOLD_MS = 1000;
 /** The reader taking over: from here the scroll is theirs. */
 const READER_INPUT = ['touchstart', 'pointerdown', 'wheel', 'keydown'] as const;
 
-/** Inertia's router, narrowed to the two events this needs. */
+/** Inertia's router, narrowed to the visit events this needs. */
 interface VisitEvents {
-    on(type: 'start' | 'navigate', callback: () => void): () => void;
+    on(type: 'success' | 'error' | 'finish', callback: () => void): () => void;
 }
 
 /**
@@ -119,17 +125,19 @@ export function installScrollResetSettle(router: VisitEvents): Pick<ResetSettler
         toTop();
     };
 
-    router.on('start', () => {
-        settler.begin();
-        end();
-    });
-    router.on('navigate', () => {
+    const arrive = () => {
         end();
         // A hash URL is one Inertia scrolls to the anchor of instead of the top.
         if (settler.arrive() && !window.location.hash) {
             hold();
         }
-    });
+    };
+    router.on('success', arrive);
+    router.on('error', arrive);
+    router.on('finish', () => settler.finish());
+    // Before Inertia's own popstate work, which restores on a later frame: registered after its
+    // listener, and the restore is scheduled from a promise either way.
+    window.addEventListener('popstate', end);
 
     return settler;
 }
