@@ -259,13 +259,15 @@ tag so a new nudge collapses the previous one on the device, and the unread coun
 for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
 and the send degrades to the withdrawn-member label instead of failing to restore.
 
-A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) with a
-**focus or an open at the scope root, plus an `open` message naming the destination**; the page
-routes itself (`UnreadSync` on Modern, `push-reconcile.js` on Classic). The worker never hands
-`openWindow()` a deeper URL and never calls `WindowClient.navigate()`: on an iOS home-screen web app
-the former opens that URL in an embedded browser sheet over an app window left blank — the member is
-left on an empty page with a URL bar and no way back but restarting the app — and the latter does
-nothing.
+A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) **with an
+`open` message naming the destination, never by opening the destination itself**: the page routes
+(`UnreadSync` on Modern, `push-reconcile.js` on Classic). With no window open, the app is opened at
+the scope root and told. With windows open, each is offered the destination in focus order and the
+first page that ACKs is focused — login, admin and guest pages have no receiver, and one of those in
+front must not swallow the tap; when none ACKs, the front window is `navigate()`d, which is a no-op on
+iOS and a move elsewhere. `openWindow()` never gets a deeper URL: on an iOS home-screen web app it
+opens that URL in an embedded browser sheet over an app window left blank — the member is left on an
+empty page with a URL bar and no way back but restarting the app.
 
 Three switches, at three scopes:
 
@@ -329,5 +331,6 @@ its shape.
   state. The other way is the rule — reading (or answering) what a row is about marks the row read.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.
-- The worker answers a notification tap with `focus()` or `openWindow(scope root)` and an `open`
-  message; the page routes. No other URL reaches `openWindow()`, and `navigate()` is never called.
+- The worker answers a notification tap with an `open` message and the page routes; the only URL that
+  ever reaches `openWindow()` is the scope root, and `navigate()` is the last resort for a window no
+  page claimed (a no-op on iOS by design).

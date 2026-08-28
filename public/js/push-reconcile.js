@@ -31,6 +31,9 @@
 
     navigator.serviceWorker.addEventListener('message', function (event) {
         if (event.data && event.data.type === 'open' && typeof event.data.url === 'string') {
+            if (event.ports[0]) {
+                event.ports[0].postMessage({ type: 'ack' });
+            }
             window.location.assign(event.data.url);
         }
     });

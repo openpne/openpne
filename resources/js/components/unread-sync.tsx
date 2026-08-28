@@ -116,13 +116,14 @@ export function UnreadSync() {
         // and the tab may have flipped hidden since the worker's matchAll — then ACK on the transferred
         // port so the worker knows a handler took responsibility and skips its own fallback badge write.
         const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
-        // A notification tap: the worker only focuses or opens the app at its root and names the
-        // destination here (see public/sw.js for why it never navigates itself).
+        // A notification tap: the worker offers the destination to open windows in turn and focuses
+        // the one that ACKs (see public/sw.js for why it never opens the destination itself).
         const onMessage = (event: MessageEvent) => {
             if (event.data?.type === 'refresh-unread') {
                 void fetchCounts();
                 event.ports[0]?.postMessage({ type: 'ack' });
             } else if (event.data?.type === 'open' && typeof event.data.url === 'string') {
+                event.ports[0]?.postMessage({ type: 'ack' });
                 router.visit(event.data.url);
             }
         };
