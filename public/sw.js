@@ -72,16 +72,26 @@ self.addEventListener('notificationclick', (event) => {
     // clearAppBadge is awaited inside waitUntil so the worker is not killed mid-write; a browser
     // without the Badging API just keeps whatever badge it had.
     const badge = 'clearAppBadge' in navigator ? navigator.clearAppBadge().catch(() => {}) : Promise.resolve();
-    event.waitUntil(Promise.all([badge, focusOrOpenWindow(url)]));
+    event.waitUntil(Promise.all([badge, openInApp(url)]));
 });
 
-async function focusOrOpenWindow(url) {
-    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of clients) {
+// The destination travels as a message and the page routes itself (unread-sync.tsx on Modern,
+// push-reconcile.js on Classic); the worker never navigates. On an iOS home-screen web app,
+// openWindow() with anything but the scope root opens that URL in an embedded browser sheet over an
+// app window that is left blank — an empty page with a URL bar the member cannot leave — and
+// WindowClient.navigate() is a no-op. A page opened here receives the message once it listens: the
+// container queues it.
+async function openInApp(url) {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    let client = windows[0] || null;
+    if (client) {
         if ('focus' in client) {
-            const focused = await client.focus();
-            return 'navigate' in focused ? focused.navigate(url) : undefined;
+            client = (await client.focus().catch(() => null)) || client;
         }
+    } else {
+        client = await self.clients.openWindow(self.registration.scope);
     }
-    return self.clients.openWindow(url);
+    if (client) {
+        client.postMessage({ type: 'open', url });
+    }
 }

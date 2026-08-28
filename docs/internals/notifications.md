@@ -259,6 +259,14 @@ tag so a new nudge collapses the previous one on the device, and the unread coun
 for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
 and the send degrades to the withdrawn-member label instead of failing to restore.
 
+A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) with a
+**focus or an open at the scope root, plus an `open` message naming the destination**; the page
+routes itself (`UnreadSync` on Modern, `push-reconcile.js` on Classic). The worker never hands
+`openWindow()` a deeper URL and never calls `WindowClient.navigate()`: on an iOS home-screen web app
+the former opens that URL in an embedded browser sheet over an app window left blank — the member is
+left on an empty page with a URL bar and no way back but restarting the app — and the latter does
+nothing.
+
 Three switches, at three scopes:
 
 - **The site**: a VAPID keypair (`OPENPNE_VAPID_*`, `config/webpush.php`). Absent, the feature does
@@ -321,3 +329,5 @@ its shape.
   state. The other way is the rule — reading (or answering) what a row is about marks the row read.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.
+- The worker answers a notification tap with `focus()` or `openWindow(scope root)` and an `open`
+  message; the page routes. No other URL reaches `openWindow()`, and `navigate()` is never called.
