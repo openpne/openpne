@@ -11,6 +11,7 @@ use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\File;
 use App\Models\Group;
@@ -154,6 +155,39 @@ class HomeIssueSerializerTest extends TestCase
     }
 
     /**
+     * A row whose File is gone is skipped rather than drawn as an empty box — and skipped, not
+     * fallen back on: the picture is the next one that still has bytes.
+     *
+     * The FK cascades a join row away with its file, so no stored row can reach that state; an
+     * unsaved row in the slot before a real one is how the guard gets exercised, as it is for every
+     * attachment serializer (AttachmentImageSerializationTest).
+     */
+    public function test_a_picture_whose_file_is_gone_is_skipped_for_the_next_one(): void
+    {
+        $diary = Diary::factory()->create();
+        $file = File::factory()->create(['type' => 'image/png']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => 2]);
+        $this->feature(HomeIssueSection::Stories, $diary);
+
+        $issue = $this->issue->fresh();
+        $hydrated = app(ShowHomeIssue::class)($this->viewer, $issue);
+        /** @var Diary $source */
+        $source = $hydrated->items(HomeIssueSection::Stories)[0]->source;
+        $source->setRelation('images', collect([new DiaryImage, ...$source->images->all()]));
+
+        $story = HomeIssueSerializer::page($issue, $hydrated, null, null, $this->now())['issue']['stories'][0];
+
+        $this->assertSame($file->url(), $story['image']['url']);
+
+        // And with nothing behind it to draw, no picture at all rather than an empty one.
+        $source->setRelation('images', collect([new DiaryImage]));
+
+        $story = HomeIssueSerializer::page($issue, $hydrated, null, null, $this->now())['issue']['stories'][0];
+
+        $this->assertNull($story['image']);
+    }
+
+    /**
      * The band is what survived, not what was published: an issue of four that lost three is an
      * issue of one.
      */
@@ -274,6 +308,44 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame('what the topic says', $story['dek']);
         $this->assertSame(3, $story['commentCount']);
         $this->assertSame("/topics/{$topic->getKey()}", $story['href']);
+    }
+
+    /**
+     * A withdrawn author is a byline the page has lost, not a story it drops: the board keeps the
+     * record (ShowHomeIssueTest), and the front page prints it with nobody's name on it.
+     */
+    public function test_a_story_whose_author_has_withdrawn_carries_no_byline(): void
+    {
+        $group = Group::factory()->create();
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => null,
+            'name' => 'Left behind',
+        ]);
+        $this->feature(HomeIssueSection::Stories, $topic);
+
+        $story = $this->page()['issue']['stories'][0];
+
+        $this->assertNull($story['author']);
+        $this->assertSame('Left behind', $story['headline']);
+        $this->assertSame($group->name, $story['group']['name']);
+    }
+
+    /** What a count counts is what can be read under the story: a post's replies, a diary's comments. */
+    public function test_a_storys_count_is_what_was_said_under_it(): void
+    {
+        $post = TimelinePost::factory()->create();
+        TimelinePost::factory()->count(3)->replyTo($post)->create();
+        $diary = Diary::factory()->create();
+        DiaryComment::factory()->count(2)->create(['diary_id' => $diary->getKey()]);
+
+        $this->feature(HomeIssueSection::Stories, $post, rank: 1);
+        $this->feature(HomeIssueSection::Stories, $diary, rank: 2);
+
+        $stories = $this->page()['issue']['stories'];
+
+        $this->assertSame([$post->getKey(), $diary->getKey()], array_column($stories, 'id'));
+        $this->assertSame([3, 2], array_column($stories, 'commentCount'));
     }
 
     public function test_an_event_story_reads_like_every_other_one(): void
