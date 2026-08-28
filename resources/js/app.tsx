@@ -12,6 +12,7 @@ import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
 import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
 import { installHistoryRestore } from '@/lib/history-restore';
+import { installNotificationOpen } from '@/lib/notification-open';
 import { pageModules, pagePath } from '@/lib/page-modules';
 import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
@@ -26,6 +27,15 @@ import type { PageProps } from '@/types';
 // per-site name like Classic. VITE_APP_NAME is only the pre-mount fallback; site name is
 // treated as site-invariant, so capturing the initial page's value is enough.
 let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
+
+// From this module's top level, before DOMContentLoaded — the module explains why a listener added
+// any later misses a notification tap. The router takes the visit once it has announced the initial
+// page.
+const notificationOpen = installNotificationOpen((url) => router.visit(url));
+const offFirstNavigate = router.on('navigate', () => {
+    offFirstNavigate();
+    notificationOpen.ready();
+});
 
 void createInertiaApp({
     // The unread prefix is applied here rather than by writing document.title, because the head
