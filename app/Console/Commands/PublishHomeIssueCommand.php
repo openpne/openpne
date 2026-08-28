@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReportsHomeIssues;
 use App\Features\Home\Actions\PublishHomeIssue;
 use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\HomeIssueSection;
 use App\Models\HomeIssue;
 use Carbon\CarbonImmutable;
-use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Console\Command;
 
 /**
@@ -22,6 +22,8 @@ use Illuminate\Console\Command;
  */
 class PublishHomeIssueCommand extends Command
 {
+    use ReportsHomeIssues;
+
     protected $signature = 'openpne:publish-home-issue
         {--date= : Publish a past day (YYYY-MM-DD) over its own window instead of chaining from the last issue}
         {--dry-run : Report what the issue would hold without publishing it}';
@@ -67,12 +69,12 @@ class PublishHomeIssueCommand extends Command
                 return self::SUCCESS;
             }
 
-            $this->info(sprintf(
-                'Would publish issue %s (No. %d): %s.',
+            $this->reportCounts(
+                'Would publish',
                 $plan->issueDate,
                 $publish->nextNumber(),
-                $this->summary(fn (HomeIssueSection $section): int => $plan->count($section)),
-            ));
+                fn (HomeIssueSection $section): int => $plan->count($section),
+            );
 
             return self::SUCCESS;
         }
@@ -91,14 +93,7 @@ class PublishHomeIssueCommand extends Command
             return self::SUCCESS;
         }
 
-        $counts = $issue->items->countBy(fn ($item): string => $item->section->value);
-
-        $this->info(sprintf(
-            'Published issue %s (No. %d): %s.',
-            $issue->issue_date->toDateString(),
-            $issue->number,
-            $this->summary(fn (HomeIssueSection $section): int => (int) $counts->get($section->value, 0)),
-        ));
+        $this->reportIssue('Published', $issue);
 
         return self::SUCCESS;
     }
@@ -168,59 +163,5 @@ class PublishHomeIssueCommand extends Command
         ));
 
         return false;
-    }
-
-    /**
-     * $date as a day on the site's clock, or null when it is not one.
-     *
-     * The round trip is the whole check: a date constructor rolls February 30th into March 2nd, so
-     * parsing alone would quietly publish an issue for a day that never happened.
-     */
-    private function calendarDay(string $date): ?CarbonImmutable
-    {
-        try {
-            $day = CarbonImmutable::createFromFormat('!Y-m-d', $date);
-        } catch (InvalidFormatException) {
-            return null;
-        }
-
-        return $day !== false && $day->format('Y-m-d') === $date ? $day : null;
-    }
-
-    private function alreadyPublished(HomeIssue $issue): void
-    {
-        $this->info(sprintf('Issue %s is already published (No. %d).', $issue->issue_date->toDateString(), $issue->number));
-    }
-
-    /** Named by the day it would have covered, never by "today": the two are not the same date. */
-    private function nothingQualified(HomeIssueWindow $window): void
-    {
-        $this->info(sprintf(
-            'No issue for %s: nothing qualified since %s.',
-            $window->lastDay()->toDateString(),
-            $window->start->toDateTimeString(),
-        ));
-    }
-
-    /**
-     * The one place the bands are named, so a dry run and a publish cannot describe the same issue
-     * differently.
-     *
-     * @param  callable(HomeIssueSection): int  $count
-     */
-    private function summary(callable $count): string
-    {
-        $bands = [
-            HomeIssueSection::Stories->value => 'stories',
-            HomeIssueSection::Talk->value => 'talk',
-            HomeIssueSection::Newcomers->value => 'newcomers',
-            HomeIssueSection::NewGroups->value => 'new groups',
-            HomeIssueSection::UpcomingEvents->value => 'upcoming events',
-        ];
-
-        return implode(', ', array_map(
-            fn (HomeIssueSection $section): string => $count($section).' '.$bands[$section->value],
-            HomeIssueSection::cases(),
-        ));
     }
 }

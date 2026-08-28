@@ -30,7 +30,7 @@ is neither of them — the page applies the reader's blocks when it resolves the
 | [`Diary`](../../app/Models/Diary.php) | `visibility <= Members` — [`DiaryVisibilityScope::applyFeed`](../../app/Features/Diary/DiaryVisibilityScope.php) | comments |
 | [`GroupTopic`](../../app/Models/GroupTopic.php) | its group's `topic_read_access` is `Everyone` | comments |
 | [`GroupEvent`](../../app/Models/GroupEvent.php) | same | comments + RSVPs |
-| talk burst | the group's `topic_read_access` is `Everyone`, and at least three messages in the window | messages + authors + reactions |
+| talk burst | the group's `topic_read_access` is `Everyone`, and a message in the window — one is enough, the score ranks rooms rather than admitting them | messages + authors + reactions |
 | [`Member`](../../app/Models/Member.php) | joined in the window | — |
 | [`Group`](../../app/Models/Group.php) | founded in the window | — |
 
@@ -186,6 +186,18 @@ one a week. `--dry-run` reports what an issue would hold without writing it, wit
 
 Backfilling an archive therefore runs **oldest day first, on an empty ledger**: the never-again rule
 is not date-aware, so a day filled in after a later one can only feature what that later one left.
+
+[`openpne:rebuild-home-issues`](../../app/Console/Commands/RebuildHomeIssuesCommand.php) is that
+backfill applied to days already published, for when what qualifies has changed: an issue is a ledger
+of what the rules admitted on the day it was written, and it does not re-read them. From `--from`
+(by default the day the earliest issue's window opens in) to the last day that has closed, it drops
+every issue and republishes each day over its own window, oldest first, so the ledger is rebuilt in
+the order it would have been written and the numbers count on from the issues left standing — a day
+that was blank and now is not takes the number its date falls on, and every later issue moves up
+one. A chained issue inside the stretch becomes one issue per day; an issue reaching back past
+`--from` is refused with the day to name instead. The whole rebuild is one transaction, which is what
+makes `--dry-run` exact: it runs the rebuild, numbers included, and rolls it back. Nothing locks out
+the schedule, so run it away from 06:00.
 
 This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
 chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the

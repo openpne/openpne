@@ -415,18 +415,24 @@ class PublishHomeIssueTest extends TestCase
         $this->assertSame([$this->ref($diary), $this->ref($post)], $this->refs($issue, HomeIssueSection::Stories));
     }
 
-    public function test_a_burst_needs_three_messages(): void
+    /** A single line is the day's news on a quiet site; a room nobody spoke in is not. */
+    public function test_a_single_message_is_a_burst(): void
     {
-        $quiet = $this->at($this->now()->subDays(30), fn (): Group => Group::factory()->create());
+        $silent = $this->at($this->now()->subDays(30), fn (): Group => Group::factory()->create());
         $talking = $this->at($this->now()->subDays(30), fn (): Group => Group::factory()->create());
 
-        $this->burst($quiet, $this->now()->subHour(), 2);
-        $this->burst($talking, $this->now()->subHour(), 3);
+        // Before the first window, which reaches back a week: a room last spoken in earlier than that.
+        $this->burst($silent, $this->now()->subDays(10), 1);
+        $this->burst($talking, $this->now()->subHour(), 1);
 
         $issue = $this->publish();
 
         $this->assertNotNull($issue);
         $this->assertSame([$this->ref($talking)], $this->refs($issue, HomeIssueSection::Talk));
+        $this->assertSame(
+            ['messages' => 1, 'authors' => 1, 'reactions' => 0],
+            array_intersect_key($issue->items->firstWhere('section', HomeIssueSection::Talk)->stats, array_flip(['messages', 'authors', 'reactions'])),
+        );
     }
 
     public function test_a_bursts_score_is_messages_plus_authors_plus_reactions(): void
