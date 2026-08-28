@@ -37,7 +37,7 @@ const offFirstNavigate = router.on('navigate', () => {
     offFirstNavigate();
     notificationOpen.ready();
 });
-// Likewise before the first visit: it listens for the start of every one.
+// Likewise before the first visit: it listens for the end of every one.
 const resetSettler = installScrollResetSettle(router);
 
 void createInertiaApp({

@@ -12,7 +12,7 @@ import type { ArrivalPage } from '@/lib/chat/opening-scroll';
  * So after an arrival Inertia placed at the top, a scroll event reporting the page off it is
  * answered with the same scrollTo again. Answered in the event itself, which is before the
  * direction and seam hooks read the position on the next frame, so they never see the bounce. The
- * hold ends at the reader's first input — a touch, wheel or key makes the scroll theirs — at the
+ * hold ends at the reader's first input — a touch, wheel, key or focus move makes the scroll theirs — at the
  * next arrival, at a popstate (the restore it brings puts the page back where it was left, and a
  * hold still running would undo that on the next frame), or after a short window. It never starts
  * for an arrival that keeps its position: a `preserveScroll` visit, a history restore, or a hash
@@ -87,8 +87,8 @@ export function expectingReset<T extends { preserveScroll?: PreserveScroll }>(op
 /** How long after the arrival a bounce is still answered. */
 const HOLD_MS = 1000;
 
-/** The reader taking over: from here the scroll is theirs. */
-const READER_INPUT = ['touchstart', 'pointerdown', 'wheel', 'keydown'] as const;
+/** The reader taking over: from here the scroll is theirs. Focus moving counts — assistive tech scrolls by it. */
+const READER_INPUT = ['touchstart', 'pointerdown', 'wheel', 'keydown', 'focusin'] as const;
 
 /** Inertia's router, narrowed to the visit events this needs. */
 interface VisitEvents {
@@ -135,8 +135,8 @@ export function installScrollResetSettle(router: VisitEvents): Pick<ResetSettler
     router.on('success', arrive);
     router.on('error', arrive);
     router.on('finish', () => settler.finish());
-    // Before Inertia's own popstate work, which restores on a later frame: registered after its
-    // listener, and the restore is scheduled from a promise either way.
+    // Order against Inertia's own popstate listener is immaterial: its restore is scheduled from a
+    // promise and lands on a later frame, so the hold is gone before it either way.
     window.addEventListener('popstate', end);
 
     return settler;
