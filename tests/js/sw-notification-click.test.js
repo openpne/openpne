@@ -148,6 +148,27 @@ test('an opened window matchAll does not list yet is still offered until it answ
     assert.deepEqual(calls.navigated, []);
 });
 
+test('openWindow handing back null is not "no window": the one that appears is offered until it answers', async () => {
+    const appeared = { current: null };
+    let refreshes = 0;
+    const { calls, openInApp } = boot(
+        (c) => (refreshes++ < 2 ? [] : [(appeared.current ??= aWindow(c, 'w'))]),
+        () => null,
+    );
+    await openInApp('/notifications', QUICK);
+    assert.equal(calls.openWindow.length, 1, 'opened once');
+    assert.deepEqual(sent(calls, 'open'), [['w', '/notifications']]);
+    assert.deepEqual(calls.navigated, []);
+});
+
+test('a page that answers is taken at once, without waiting out a receiver-less neighbour', async () => {
+    const { calls, openInApp } = boot((c) => [aWindow(c, 'admin', { receiver: false }), aWindow(c, 'member')]);
+    const started = Date.now();
+    await openInApp('/notifications', { offerMs: 400, deadlineMs: 2000 });
+    assert.ok(Date.now() - started < 300, `took ${Date.now() - started}ms`);
+    assert.deepEqual(sent(calls, 'open'), [['member', '/notifications']]);
+});
+
 test('no page answers by the deadline: the front window is shown and navigated, never a second window opened', async () => {
     const login = { current: null };
     const { calls, openInApp } = boot((c) => [(login.current ??= aWindow(c, 'login', { receiver: false }))]);

@@ -263,9 +263,10 @@ A tap on the notification is answered by the worker ([`public/sw.js`](../../publ
 messages, never by opening the destination itself**; the page routes
 ([`lib/notification-open.ts`](../../resources/js/lib/notification-open.ts) on Modern,
 `push-reconcile.js` on Classic). With no window open, the app is opened at the scope root. Every open
-window is then offered the tap (`open-offer`, answered on its port) and the first in focus order to
-answer is focused and handed the destination (`open`) — login, admin and guest pages have no
-receiver, and one of those in front must not swallow the tap. The offer is repeated for a few seconds
+window is then offered the tap (`open-offer`, answered on its port) and the first to answer is
+focused and handed the destination (`open`) — a Classic login or admin page has no receiver, and one of
+those in front must not swallow the tap (Modern's auth pages answer, and the login's intended URL
+carries the destination through). The offer is repeated for a few seconds
 because a page still loading cannot answer: the container holds a worker's messages only until
 DOMContentLoaded and drops later ones nobody listens for, which is also why the receiver is registered
 from the entry module's top level (before that event), never from a component effect. When no page

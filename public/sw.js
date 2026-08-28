@@ -81,27 +81,26 @@ self.addEventListener('notificationclick', (event) => {
 // app window that is left blank — an empty page with a URL bar the member cannot leave. So a window
 // is only ever opened at the root.
 //
-// Two steps: every open window is offered the tap at once, and the first in focus order to answer is
-// focused and handed the destination — login, admin and guest pages have no receiver, and one of
-// those in front must not swallow the tap. A page still loading cannot answer yet (the container holds
-// a worker's message only until DOMContentLoaded, and a freshly opened window is offered at commit),
-// so the offer is repeated until one answers or the deadline passes. When none does, the front window
-// is shown, and moved there by navigate() except on WebKit, where it did nothing observable.
+// Two steps: every open window is offered the tap at once, and the first to answer is focused and
+// handed the destination — a Classic login or admin page has no receiver, and one of those in front
+// must not swallow the tap. A page still loading cannot answer yet (the container holds a worker's
+// message only until DOMContentLoaded, and a freshly opened window is offered at commit), so the
+// offer is repeated until one answers or the deadline passes. When none does, the front window is
+// shown, and moved there by navigate() except on WebKit, where it did nothing observable.
 const OFFER_MS = 500;
 const OPEN_DEADLINE_MS = 6000;
 
 async function openInApp(url, timing = { offerMs: OFFER_MS, deadlineMs: OPEN_DEADLINE_MS }) {
     let windows = await openWindows();
     if (windows.length === 0) {
+        // Null is not "no window": an engine can decline to hand back the client of a window it did
+        // open, so the refresh below keeps looking for it.
         const opened = await self.clients.openWindow(self.registration.scope);
         windows = opened ? [opened] : [];
     }
-    if (windows.length === 0) {
-        return;
-    }
     const deadline = Date.now() + timing.deadlineMs;
     for (;;) {
-        const taker = await firstTaker(windows, timing.offerMs);
+        const taker = windows.length > 0 ? await firstTaker(windows, timing.offerMs) : await pause(timing.offerMs);
         if (taker) {
             await taker.focus().catch(() => {});
             taker.postMessage({ type: 'open', url });
@@ -117,6 +116,9 @@ async function openInApp(url, timing = { offerMs: OFFER_MS, deadlineMs: OPEN_DEA
             windows = refreshed;
         }
     }
+    if (windows.length === 0) {
+        return;
+    }
     const front = (await windows[0].focus().catch(() => null)) || windows[0];
     if (!isWebKitBrowser()) {
         await front.navigate(url).catch(() => {});
@@ -127,13 +129,25 @@ function openWindows() {
     return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 }
 
-// The first window, in the focus order matchAll gives, whose page answers the offer within the
-// timeout; null when none does (no receiver, a page still loading, or one suspended).
-async function firstTaker(windows, offerMs) {
-    const answers = await Promise.all(windows.map((client) => offerOpen(client, offerMs)));
-    const index = answers.indexOf(true);
+// The first window whose page answers the offer, as soon as it does; null once the timeout has
+// passed for all of them (no receiver, a page still loading, or one suspended).
+function firstTaker(windows, offerMs) {
+    return new Promise((resolve) => {
+        let unanswered = windows.length;
+        for (const client of windows) {
+            offerOpen(client, offerMs).then((taken) => {
+                if (taken) {
+                    resolve(client);
+                } else if ((unanswered -= 1) === 0) {
+                    resolve(null);
+                }
+            });
+        }
+    });
+}
 
-    return index === -1 ? null : windows[index];
+function pause(ms) {
+    return new Promise((resolve) => setTimeout(() => resolve(null), ms));
 }
 
 // Resolves true once the page ACKs on the port it was handed, false if it has not within the timeout.
