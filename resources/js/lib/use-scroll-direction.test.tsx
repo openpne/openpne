@@ -1,0 +1,69 @@
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
+import { useScrollDirection } from './use-scroll-direction';
+
+const inertia = { url: '/a' };
+vi.mock('@inertiajs/react', () => ({ usePage: () => ({ url: inertia.url }) }));
+
+function Probe() {
+    return <output>{useScrollDirection()}</output>;
+}
+
+let y = 0;
+Object.defineProperty(window, 'scrollY', { configurable: true, get: () => y });
+
+afterEach(() => {
+    cleanup();
+    y = 0;
+    inertia.url = '/a';
+});
+
+/** The browser (or the reader, once engaged) has scrolled the window to `to`. */
+const scrolled = async (to: number) => {
+    await act(async () => {
+        y = to;
+        window.dispatchEvent(new Event('scroll'));
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    });
+};
+
+const touched = () => act(() => window.dispatchEvent(new Event('touchstart')));
+
+const direction = () => screen.getByRole('status').textContent;
+
+test('a scroll the reader did not make leaves the chrome; the same scroll after a touch takes it', async () => {
+    render(<Probe />);
+
+    await scrolled(400);
+    expect(direction()).toBe('up');
+
+    await touched();
+    await scrolled(420);
+    expect(direction()).toBe('down');
+});
+
+test("the reader's travel is measured from where the page was when they took it", async () => {
+    render(<Probe />);
+
+    // The bounce: the page sits at 60 through nobody's doing.
+    await scrolled(60);
+    await touched();
+    // 4 more is under the threshold from 60, though far past it from the top.
+    await scrolled(64);
+    expect(direction()).toBe('up');
+    await scrolled(70);
+    expect(direction()).toBe('down');
+});
+
+test('a new page starts with no reader again', async () => {
+    const view = render(<Probe />);
+
+    await touched();
+    await scrolled(400);
+    expect(direction()).toBe('down');
+
+    inertia.url = '/b';
+    view.rerender(<Probe />);
+    await scrolled(400);
+    expect(direction()).toBe('up');
+});

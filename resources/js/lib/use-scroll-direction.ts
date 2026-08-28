@@ -69,7 +69,19 @@ export interface ScrollDirectionOptions extends Partial<ScrollThresholds> {
     enabled?: boolean;
 }
 
-/** Which way the reader is going, for chrome that recedes while they read. */
+/** What the reader does to take the scroll: a touch, wheel, key or focus move. Until one, a scroll is not theirs. */
+const READER_INPUT = ['touchstart', 'pointerdown', 'wheel', 'keydown', 'focusin'] as const;
+
+/**
+ * Which way the reader is going, for chrome that recedes while they read.
+ *
+ * Only the reader's own scrolling counts, and a page starts with none: a scroll that arrives before
+ * they have touched the page is the browser's — on iOS a standalone PWA was seen to report, after
+ * Inertia's scroll to the top, the position the previous page was left at, and the chrome read that
+ * as the reader scrolling down and left. Answering it with another scroll to the top was tried and
+ * withdrawn: a programmatic scroll on iOS leaves the fixed bars' hit-testing stale until the reader
+ * scrolls again, so the bar stood and took no taps. So the bounce is let stand, and the chrome waits.
+ */
 export function useScrollDirection({
     threshold = 8,
     // The shortest mobile bar's height (3rem); a taller bar (the labelled tabs' 58px) starts
@@ -91,11 +103,20 @@ export function useScrollDirection({
         arm('up');
         let scroll: ScrollState = { direction: 'up', anchorY: window.scrollY };
         let frame = 0;
+        let engaged = false;
+
+        // The anchor is taken at the first input rather than at mount, so a scroll the browser made
+        // in between (the bounce above, a restore) is where the reader's travel is measured from.
+        const engage = () => {
+            engaged = true;
+            scroll = { direction: 'up', anchorY: window.scrollY };
+            READER_INPUT.forEach((type) => window.removeEventListener(type, engage, { capture: true }));
+        };
 
         // One position read per frame: scroll fires far more often than the browser paints, and
         // reading scrollY forces layout.
         const onScroll = () => {
-            if (frame !== 0) {
+            if (!engaged || frame !== 0) {
                 return;
             }
             frame = requestAnimationFrame(() => {
@@ -105,12 +126,14 @@ export function useScrollDirection({
             });
         };
 
+        READER_INPUT.forEach((type) => window.addEventListener(type, engage, { capture: true, passive: true }));
         window.addEventListener('scroll', onScroll, { passive: true });
 
         return () => {
             if (frame !== 0) {
                 cancelAnimationFrame(frame);
             }
+            READER_INPUT.forEach((type) => window.removeEventListener(type, engage, { capture: true }));
             window.removeEventListener('scroll', onScroll);
         };
     }, [url, threshold, minDownY, enabled]);
