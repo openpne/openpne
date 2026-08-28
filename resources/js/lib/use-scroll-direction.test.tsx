@@ -100,6 +100,20 @@ test('an arrival at the same URL comes back under the gate', async () => {
     expect(direction()).toBe('up');
 });
 
+test('the reader can take the page again after it came back under the gate', async () => {
+    render(<Probe />);
+
+    await touched();
+    await scrolled(400);
+    await arrived(0);
+    await scrolled(400);
+    expect(direction()).toBe('up');
+
+    await touched();
+    await scrolled(420);
+    expect(direction()).toBe('down');
+});
+
 test('a reload landing while the reader is down the page keeps their travel', async () => {
     render(<Probe />);
 

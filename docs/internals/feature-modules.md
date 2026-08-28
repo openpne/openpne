@@ -162,7 +162,10 @@ desktop-only, and so is the heading row's action button: on mobile the registry'
 bottom bar. That mobile chrome recedes as a signed-in member reads: scrolling down
 slides both bars away and collapses the FAB (one shell-level listener,
 [`useScrollDirection`](../../resources/js/lib/use-scroll-direction.ts)), and one
-scroll up brings all of it back. A page the registry marks `form` keeps its chrome
+scroll up brings all of it back. Only the reader's own scrolling counts — a scroll
+the browser makes on its own (a history restore, iOS reporting a stale position
+after Inertia's scroll to the top) leaves both bars standing until the reader's
+first touch, wheel or key on the page. A page the registry marks `form` keeps its chrome
 throughout, which makes that flag a behavior contract — a full-page edit / create /
 settings / confirmation screen is a form; an inline comment box, a search row or a
 hub's instant-save controls are not.

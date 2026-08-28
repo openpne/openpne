@@ -117,8 +117,13 @@ export function useScrollDirection({
             READER_INPUT.forEach((type) => window.removeEventListener(type, engage, { capture: true }));
         };
 
-        // Under the gate: nothing is the reader's yet, and the chrome shows in full.
+        // Under the gate: nothing is the reader's yet, and the chrome shows in full. A read the
+        // reader's last scroll had booked would otherwise land after the gate and take the bounce.
         const gate = () => {
+            if (frame !== 0) {
+                cancelAnimationFrame(frame);
+                frame = 0;
+            }
             engaged = false;
             arm('up');
             READER_INPUT.forEach((type) => window.addEventListener(type, engage, { capture: true, passive: true }));
