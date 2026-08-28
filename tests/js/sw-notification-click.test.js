@@ -51,11 +51,16 @@ const aWindow = (calls, name, { receiver = true, answerFrom = 1, focus } = {}) =
     return client;
 };
 
-/** Boots the worker against `windows` (what matchAll returns) and `opened` (what openWindow returns). */
-function boot(windows, opened = (calls) => aWindow(calls, 'opened')) {
+/**
+ * Boots the worker against `windows` (what matchAll returns) and `opened` (what openWindow returns).
+ * `unlistedFor`: how many matchAll calls after openWindow still leave the opened window out, as an
+ * engine does until that page is ready.
+ */
+function boot(windows, opened = (calls) => aWindow(calls, 'opened'), { unlistedFor = 0 } = {}) {
     const handlers = {};
     const calls = { openWindow: [], messages: [], focused: [], navigated: [] };
     let openedWindow = null;
+    let unlisted = unlistedFor;
     globalThis.self = {
         addEventListener: (type, handler) => {
             handlers[type] = handler;
@@ -64,7 +69,13 @@ function boot(windows, opened = (calls) => aWindow(calls, 'opened')) {
         registration: { scope: SCOPE },
         clients: {
             claim: async () => {},
-            matchAll: async () => (openedWindow ? [openedWindow] : windows(calls)),
+            matchAll: async () => {
+                if (openedWindow && unlisted > 0) {
+                    unlisted -= 1;
+                    return [];
+                }
+                return openedWindow ? [openedWindow] : windows(calls);
+            },
             openWindow: async (url) => {
                 calls.openWindow.push(url);
                 openedWindow = opened(calls);
@@ -125,6 +136,15 @@ test('a page still loading is offered again until it answers', async () => {
     assert.equal(sent(calls, 'open-offer').length, 3);
     assert.deepEqual(calls.focused, ['opened']);
     assert.deepEqual(sent(calls, 'open'), [['opened', '/notifications']]);
+    assert.deepEqual(calls.navigated, []);
+});
+
+test('an opened window matchAll does not list yet is still offered until it answers', async () => {
+    const { calls, openInApp } = boot(() => [], (c) => aWindow(c, 'opened', { answerFrom: 3 }), { unlistedFor: 3 });
+    await openInApp('/notifications', QUICK);
+    assert.equal(sent(calls, 'open-offer').length, 3);
+    assert.deepEqual(sent(calls, 'open'), [['opened', '/notifications']]);
+    assert.deepEqual(calls.openWindow.length, 1, 'opened once');
     assert.deepEqual(calls.navigated, []);
 });
 

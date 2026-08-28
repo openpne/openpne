@@ -96,8 +96,11 @@ async function openInApp(url, timing = { offerMs: OFFER_MS, deadlineMs: OPEN_DEA
         const opened = await self.clients.openWindow(self.registration.scope);
         windows = opened ? [opened] : [];
     }
+    if (windows.length === 0) {
+        return;
+    }
     const deadline = Date.now() + timing.deadlineMs;
-    while (windows.length > 0) {
+    for (;;) {
         const taker = await firstTaker(windows, timing.offerMs);
         if (taker) {
             await taker.focus().catch(() => {});
@@ -107,10 +110,12 @@ async function openInApp(url, timing = { offerMs: OFFER_MS, deadlineMs: OPEN_DEA
         if (Date.now() >= deadline) {
             break;
         }
-        windows = await openWindows();
-    }
-    if (windows.length === 0) {
-        return;
+        // matchAll may not list a window it has just opened until that page is ready: an empty
+        // refresh is not "no windows", so the last set seen is offered again.
+        const refreshed = await openWindows();
+        if (refreshed.length > 0) {
+            windows = refreshed;
+        }
     }
     const front = (await windows[0].focus().catch(() => null)) || windows[0];
     if (!isWebKitBrowser()) {
