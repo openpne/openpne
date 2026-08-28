@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Home;
 
+use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\HomeIssue;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\TestCase;
 
 class RebuildHomeIssuesCommandTest extends TestCase
@@ -39,7 +43,7 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->story(CarbonImmutable::parse('2026-08-25 03:00:00'));
 
         $this->artisan('openpne:rebuild-home-issues')
-            ->expectsOutputToContain('Dropped 2 issues from 2026-08-23 on.')
+            ->expectsOutputToContain('Dropped 2 issues dated 2026-08-23 – 2026-08-25.')
             ->expectsOutputToContain('Published issue 2026-08-23 (No. 1): 1 stories, 0 talk, 0 newcomers, 0 new groups, 0 upcoming events.')
             ->expectsOutputToContain('Published issue 2026-08-24 (No. 2): 1 stories, 0 talk, 0 newcomers, 0 new groups, 0 upcoming events.')
             ->expectsOutputToContain('Published issue 2026-08-25 (No. 3): 1 stories, 0 talk, 0 newcomers, 0 new groups, 0 upcoming events.')
@@ -68,7 +72,7 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->story(CarbonImmutable::parse('2026-08-25 03:00:00'));
 
         $this->artisan('openpne:rebuild-home-issues --from=2026-08-25')
-            ->expectsOutputToContain('Dropped 1 issues from 2026-08-25 on.')
+            ->expectsOutputToContain('Dropped 1 issues dated 2026-08-25 – 2026-08-25.')
             ->expectsOutputToContain('Published issue 2026-08-25 (No. 2)')
             ->expectsOutputToContain('Rebuilt 2026-08-25 – 2026-08-26: 1 issues, 1 blank days.')
             ->assertSuccessful();
@@ -76,6 +80,107 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->assertSame(['2026-08-23' => 1, '2026-08-25' => 2], $this->numbersByDate());
         $this->assertTrue($kept->is(HomeIssue::query()->whereDate('issue_date', '2026-08-23')->firstOrFail()));
         // The 24th lies before --from, so the story that turned up in it is not reported.
+        $this->assertDatabaseCount('home_issue_items', 2);
+    }
+
+    /**
+     * Consecutive issues share their boundary instant, and the one that closed on it is not rebuilt
+     * by a --from that opens on it: the day after a kept issue is the natural place to start, and
+     * the last closed day is the latest.
+     */
+    public function test_from_the_day_after_a_kept_issue_leaves_it_whole(): void
+    {
+        $this->story(CarbonImmutable::parse('2026-08-25 03:00:00'));
+        $this->story(CarbonImmutable::parse('2026-08-26 03:00:00'));
+        $this->story(CarbonImmutable::parse('2026-08-26 12:00:00'));
+
+        foreach (['2026-08-24', '2026-08-25', '2026-08-26'] as $date) {
+            $this->artisan("openpne:publish-home-issue --date={$date}")->assertSuccessful();
+        }
+
+        $kept = HomeIssue::query()->whereDate('issue_date', '2026-08-24')->firstOrFail();
+
+        $this->artisan('openpne:rebuild-home-issues --from=2026-08-25')
+            ->expectsOutputToContain('Dropped 2 issues dated 2026-08-25 – 2026-08-26.')
+            ->expectsOutputToContain('Rebuilt 2026-08-25 – 2026-08-26: 2 issues, 0 blank days.')
+            ->assertSuccessful();
+
+        $this->assertTrue($kept->is(HomeIssue::query()->whereDate('issue_date', '2026-08-24')->firstOrFail()));
+        $this->assertSame(['2026-08-24' => 1, '2026-08-25' => 2, '2026-08-26' => 3], $this->numbersByDate());
+
+        $this->artisan('openpne:rebuild-home-issues --from=2026-08-26')
+            ->expectsOutputToContain('Dropped 1 issues dated 2026-08-26 – 2026-08-26.')
+            ->expectsOutputToContain('Rebuilt 2026-08-26 – 2026-08-26: 1 issues, 0 blank days.')
+            ->assertSuccessful();
+
+        $this->assertSame(['2026-08-24' => 1, '2026-08-25' => 2, '2026-08-26' => 3], $this->numbersByDate());
+        $this->assertDatabaseCount('home_issue_items', 3);
+    }
+
+    /**
+     * The scheduled run lands a second or two past 06:00, and the archive it writes must still take
+     * a --from: its windows close on the boundary, not on the clock (PublishHomeIssue::window).
+     */
+    public function test_an_archive_the_schedule_wrote_late_still_takes_a_from(): void
+    {
+        $this->story(CarbonImmutable::parse('2026-08-24 12:00:00'));
+        $this->story(CarbonImmutable::parse('2026-08-25 12:00:00'));
+        $this->story(CarbonImmutable::parse('2026-08-26 12:00:00'));
+
+        foreach (['2026-08-25', '2026-08-26', '2026-08-27'] as $morning) {
+            Carbon::setTestNow("{$morning} 06:00:02");
+            $this->artisan('openpne:publish-home-issue')->expectsOutputToContain('Published issue')->assertSuccessful();
+        }
+
+        Carbon::setTestNow('2026-08-27 06:00:02');
+        $this->assertSame(['2026-08-24' => 1, '2026-08-25' => 2, '2026-08-26' => 3], $this->numbersByDate());
+
+        $this->artisan('openpne:rebuild-home-issues --from=2026-08-26')
+            ->expectsOutputToContain('Dropped 1 issues dated 2026-08-26 – 2026-08-26.')
+            ->expectsOutputToContain('Published issue 2026-08-26 (No. 3): 1 stories')
+            ->assertSuccessful();
+
+        $this->assertSame(['2026-08-24' => 1, '2026-08-25' => 2, '2026-08-26' => 3], $this->numbersByDate());
+    }
+
+    /** A rebuilt day's calendar looks forward from its own morning, not from the day of the rebuild. */
+    public function test_a_rebuilt_day_lists_the_events_upcoming_from_its_own_morning(): void
+    {
+        $this->archive();
+
+        Carbon::setTestNow(CarbonImmutable::parse(self::NOW)->subDays(30));
+        GroupEvent::factory()->for(Group::factory())->create(['open_date' => '2026-08-25']);
+        Carbon::setTestNow(self::NOW);
+
+        $this->artisan('openpne:rebuild-home-issues')
+            ->expectsOutputToContain('Published issue 2026-08-23 (No. 1): 1 stories, 0 talk, 0 newcomers, 0 new groups, 1 upcoming events.')
+            ->expectsOutputToContain('Published issue 2026-08-25 (No. 2): 1 stories, 0 talk, 0 newcomers, 0 new groups, 0 upcoming events.')
+            ->assertSuccessful();
+    }
+
+    /** One transaction end to end: a write that fails halfway leaves the archive as it was. */
+    public function test_a_failed_write_leaves_the_archive_as_it_was(): void
+    {
+        $this->archive();
+        $before = HomeIssue::query()->pluck('number', 'id')->all();
+        $level = DB::transactionLevel();
+
+        $this->story(CarbonImmutable::parse('2026-08-25 03:00:00'));
+        HomeIssue::creating(function (HomeIssue $issue): void {
+            if ($issue->issue_date->toDateString() === '2026-08-25') {
+                throw new RuntimeException('the 25th will not write');
+            }
+        });
+
+        try {
+            $this->artisan('openpne:rebuild-home-issues')->run();
+            $this->fail('the failed write did not surface');
+        } catch (RuntimeException $e) {
+            $this->assertSame('the 25th will not write', $e->getMessage());
+        }
+
+        $this->assertSame($level, DB::transactionLevel());
+        $this->assertSame($before, HomeIssue::query()->pluck('number', 'id')->all());
         $this->assertDatabaseCount('home_issue_items', 2);
     }
 
@@ -88,7 +193,7 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->story(CarbonImmutable::parse('2026-08-25 03:00:00'));
 
         $this->artisan('openpne:rebuild-home-issues --dry-run')
-            ->expectsOutputToContain('Would drop 2 issues from 2026-08-23 on.')
+            ->expectsOutputToContain('Would drop 2 issues dated 2026-08-23 – 2026-08-25.')
             ->expectsOutputToContain('Would publish issue 2026-08-24 (No. 2): 1 stories')
             ->expectsOutputToContain('Would publish issue 2026-08-25 (No. 3): 1 stories')
             ->expectsOutputToContain('Dry run of 2026-08-23 – 2026-08-26: 3 issues, 1 blank days. Nothing was written.')
@@ -115,7 +220,7 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->assertDatabaseCount('home_issues', 1);
 
         $this->artisan('openpne:rebuild-home-issues --from=2026-08-20')
-            ->expectsOutputToContain('Dropped 1 issues from 2026-08-20 on.')
+            ->expectsOutputToContain('Dropped 1 issues dated 2026-08-26 – 2026-08-26.')
             ->expectsOutputToContain('Published issue 2026-08-26 (No. 1)')
             ->expectsOutputToContain('Rebuilt 2026-08-20 – 2026-08-26: 1 issues, 6 blank days.')
             ->assertSuccessful();
@@ -157,7 +262,7 @@ class RebuildHomeIssuesCommandTest extends TestCase
         $this->story(CarbonImmutable::parse('2026-08-26 03:00:00'));
 
         $this->artisan('openpne:rebuild-home-issues --from=2026-08-25')
-            ->expectsOutputToContain('Dropped 0 issues from 2026-08-25 on.')
+            ->expectsOutputToContain('Dropped 0 issues.')
             ->expectsOutputToContain('Published issue 2026-08-25 (No. 1)')
             ->assertSuccessful();
 

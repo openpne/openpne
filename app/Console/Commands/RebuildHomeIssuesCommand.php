@@ -99,9 +99,21 @@ class RebuildHomeIssuesCommand extends Command
     {
         // Every issue whose window ends after the boundary starts on or after it (the straddling
         // check above), so this is exactly the stretch being rebuilt. Items go with the cascade.
-        $dropped = HomeIssue::query()->where('published_at', '>', $boundary)->delete();
+        $dropping = HomeIssue::query()->where('published_at', '>', $boundary);
+        $dropped = $dropping->clone()->orderBy('issue_date')->pluck('issue_date');
+        $dropping->delete();
 
-        $this->info(sprintf('%s %d issues from %s on.', $dryRun ? 'Would drop' : 'Dropped', $dropped, $from->toDateString()));
+        // Dated, so an issue dropped from past the last closed day — one published by hand under an
+        // older rule, say — shows up as a date the rebuild below never reaches.
+        $this->info($dropped->isEmpty()
+            ? sprintf('%s 0 issues.', $dryRun ? 'Would drop' : 'Dropped')
+            : sprintf(
+                '%s %d issues dated %s – %s.',
+                $dryRun ? 'Would drop' : 'Dropped',
+                $dropped->count(),
+                $dropped->first()->toDateString(),
+                $dropped->last()->toDateString(),
+            ));
 
         $published = 0;
         $blank = 0;

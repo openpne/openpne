@@ -16,9 +16,10 @@ use Illuminate\Console\Command;
 /**
  * Publishes a day's home issue.
  *
- * Without `--date` the window chains from the previous issue and closes now, which is the scheduled
- * run. With one it is the named day's own stretch instead, for filling an archive in — oldest day
- * first, since the never-again ledger remembers whatever the runs before it featured.
+ * Without `--date` the window chains from the previous issue and closes on the last 06:00 boundary,
+ * which is the scheduled run. With one it is the named day's own stretch instead, for filling an
+ * archive in — oldest day first, since the never-again ledger remembers whatever the runs before it
+ * featured.
  */
 class PublishHomeIssueCommand extends Command
 {

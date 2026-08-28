@@ -74,36 +74,67 @@ class PublishHomeIssueTest extends TestCase
     }
 
     /**
-     * A run by hand mid-afternoon takes the day it is in, and the next window opens where it closed.
-     * Nothing is lost: the 06:00 run that follows finds the day published and writes nothing, and
-     * the one after that covers everything from the manual run onwards.
+     * A run by hand mid-afternoon publishes what the schedule would have — the day that closed this
+     * morning — and what has happened since waits for the next issue. Taking the afternoon as well
+     * would close a window off the boundary, which is what the test below refuses.
      */
-    public function test_a_run_by_hand_takes_the_day_it_is_in_and_the_next_run_continues_from_it(): void
+    public function test_a_run_by_hand_publishes_the_day_that_closed_this_morning(): void
     {
-        $this->previousIssue($this->now());
+        $this->previousIssue($this->now()->subDay());
+        $overnight = $this->at($this->now()->subHours(8), fn (): TimelinePost => TimelinePost::factory()->create());
         $afternoon = $this->now()->addHours(9);
-        $this->at($afternoon->subHour(), fn (): TimelinePost => TimelinePost::factory()->create());
+        $today = $this->at($afternoon->subHour(), fn (): TimelinePost => TimelinePost::factory()->create());
 
         $byHand = $this->publish($afternoon);
 
         $this->assertNotNull($byHand);
-        $this->assertSame('2026-08-27', $byHand->issue_date->toDateString());
-        $this->assertTrue($afternoon->equalTo($byHand->published_at));
+        $this->assertSame('2026-08-26', $byHand->issue_date->toDateString());
+        $this->assertTrue($this->now()->equalTo($byHand->published_at), 'published_at is not this morning\'s boundary');
+        $this->assertSame([$this->ref($overnight)], $this->refs($byHand, HomeIssueSection::Stories));
 
-        // The next morning's run would date to the 27th as well, and the 27th is taken.
-        $this->at($afternoon->addHours(3), fn (): TimelinePost => TimelinePost::factory()->create());
+        // A second run by hand the same day finds the day published and writes nothing.
+        $this->assertTrue($byHand->is($this->publish($afternoon->addHour())));
+        $this->assertDatabaseCount('home_issues', 2);
+
+        // The next morning's run takes the afternoon's post with the rest of the day.
         $next = $this->publish($this->now()->addDay());
 
         $this->assertNotNull($next);
-        $this->assertTrue($byHand->is($next));
-        $this->assertDatabaseCount('home_issues', 2);
+        $this->assertSame('2026-08-27', $next->issue_date->toDateString());
+        $this->assertTrue($this->now()->equalTo($next->window_start));
+        $this->assertSame([$this->ref($today)], $this->refs($next, HomeIssueSection::Stories));
+    }
 
-        // The day after that covers the whole stretch since the manual run — nothing goes unreported.
-        $later = $this->publish($this->now()->addDays(2));
+    /**
+     * The scheduled run lands a second or two past 06:00. Closed on the clock, its issue would be
+     * dated the day it went out (the window's last instant is past the boundary) and the next window
+     * would open a second late; closed on the boundary, neither happens.
+     */
+    public function test_a_scheduled_run_a_second_late_closes_on_the_boundary(): void
+    {
+        $this->previousIssue($this->now()->subDay());
+        $overnight = $this->at($this->now()->subHours(8), fn (): TimelinePost => TimelinePost::factory()->create());
+        $onTheSecond = $this->at($this->now()->addSecond(), fn (): TimelinePost => TimelinePost::factory()->create());
 
-        $this->assertNotNull($later);
-        $this->assertSame('2026-08-28', $later->issue_date->toDateString());
-        $this->assertTrue($afternoon->equalTo($later->window_start));
+        $issue = $this->publish($this->now()->addSeconds(2));
+
+        $this->assertNotNull($issue);
+        $this->assertSame('2026-08-26', $issue->issue_date->toDateString());
+        $this->assertTrue($this->now()->equalTo($issue->published_at));
+        $this->assertSame([$this->ref($overnight)], $this->refs($issue, HomeIssueSection::Stories));
+        $this->assertNotContains($this->ref($onTheSecond), $this->refs($issue, HomeIssueSection::Stories));
+    }
+
+    /** The first issue's reach is measured from the boundary too, so it opens on one. */
+    public function test_a_late_first_issue_reaches_back_from_the_boundary(): void
+    {
+        $this->at($this->now()->subDays(3), fn (): TimelinePost => TimelinePost::factory()->create());
+
+        $issue = $this->publish($this->now()->addSeconds(2));
+
+        $this->assertNotNull($issue);
+        $this->assertTrue($this->now()->subDays(7)->equalTo($issue->window_start));
+        $this->assertTrue($this->now()->equalTo($issue->published_at));
     }
 
     /** A window that spans days is dated by the last of them, seven-day first issue included. */
@@ -429,7 +460,8 @@ class PublishHomeIssueTest extends TestCase
 
         $this->assertNotNull($issue);
         $this->assertSame([$this->ref($talking)], $this->refs($issue, HomeIssueSection::Talk));
-        $this->assertSame(
+        // Equals, not same: MySQL hands JSON keys back in its own order.
+        $this->assertEquals(
             ['messages' => 1, 'authors' => 1, 'reactions' => 0],
             array_intersect_key($issue->items->firstWhere('section', HomeIssueSection::Talk)->stats, array_flip(['messages', 'authors', 'reactions'])),
         );
