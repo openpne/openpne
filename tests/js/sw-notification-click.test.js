@@ -100,6 +100,20 @@ test('no page takes it: the front window is focused and navigated, never a secon
     assert.deepEqual(calls.openWindow, []);
 });
 
+test('on Safari the unclaimed front window is shown but never navigated', async () => {
+    const IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+    Object.defineProperty(navigator, 'userAgent', { value: IOS, configurable: true });
+    try {
+        const { handlers, calls } = boot((c) => [aWindow(c, 'login', { receiver: false })]);
+        await tap(handlers, { url: '/notifications' });
+        assert.deepEqual(calls.focused, ['login']);
+        assert.deepEqual(calls.navigated, []);
+        assert.deepEqual(calls.openWindow, []);
+    } finally {
+        delete navigator.userAgent;
+    }
+});
+
 test('a refused focus does not lose the tap', async () => {
     const refuse = async () => {
         throw new Error('not allowed');

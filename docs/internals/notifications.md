@@ -264,10 +264,11 @@ A tap on the notification is answered by the worker ([`public/sw.js`](../../publ
 (`UnreadSync` on Modern, `push-reconcile.js` on Classic). With no window open, the app is opened at
 the scope root and told. With windows open, each is offered the destination in focus order and the
 first page that ACKs is focused — login, admin and guest pages have no receiver, and one of those in
-front must not swallow the tap; when none ACKs, the front window is `navigate()`d, which is a no-op on
-iOS and a move elsewhere. `openWindow()` never gets a deeper URL: on an iOS home-screen web app it
-opens that URL in an embedded browser sheet over an app window left blank — the member is left on an
-empty page with a URL bar and no way back but restarting the app.
+front must not swallow the tap; when none ACKs, the front window is shown, and `navigate()`d to the
+destination except on Safari. `openWindow()` never gets a deeper URL and Safari is never told to
+navigate: on an iOS home-screen web app both have been seen to leave the member on an empty page with
+a URL bar and no way back but restarting the app (a deeper URL opens in an embedded browser sheet over
+an app window left blank).
 
 Three switches, at three scopes:
 
@@ -333,4 +334,4 @@ its shape.
   listener never lets an exception escape into the job that wrote the row.
 - The worker answers a notification tap with an `open` message and the page routes; the only URL that
   ever reaches `openWindow()` is the scope root, and `navigate()` is the last resort for a window no
-  page claimed (a no-op on iOS by design).
+  page claimed — never on Safari.

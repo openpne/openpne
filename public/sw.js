@@ -84,8 +84,9 @@ self.addEventListener('notificationclick', (event) => {
 //
 // Among open windows, the first (most recently focused) page that ACKs the offer is the one focused:
 // login, admin and guest pages have no receiver, and one of those sitting in front must not swallow
-// the tap. When no page takes it, navigate() moves the front window where it works — it is a no-op on
-// iOS, which then simply shows that window.
+// the tap. When no page takes it, navigate() moves the front window where it works. Not on Safari:
+// there it did nothing observable at best, and a home-screen web app that has been told to navigate
+// is the other way the blank sheet above has been seen to appear, so the front window is only shown.
 async function openInApp(url) {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (windows.length === 0) {
@@ -102,7 +103,15 @@ async function openInApp(url) {
         }
     }
     const front = (await windows[0].focus().catch(() => null)) || windows[0];
-    await front.navigate(url).catch(() => {});
+    if (!isSafari()) {
+        await front.navigate(url).catch(() => {});
+    }
+}
+
+function isSafari() {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+
+    return /AppleWebKit/.test(ua) && !/Chrome|Chromium|CriOS|Edg|Android/.test(ua);
 }
 
 // Resolves true once the page ACKs on the port it was handed, false if it has not within the timeout
