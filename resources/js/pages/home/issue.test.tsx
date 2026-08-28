@@ -3,13 +3,10 @@ import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import HomeIssue from './issue';
 import type { GridImage } from '@/components/image-grid';
-import type { LinkCardData } from '@/components/link-card';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
 import type { AuthUser, FeatureKey, NineTableItem } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
-import type { DiaryDetail } from '../diary/types';
-import type { TimelinePostEntry } from '../timeline/types';
 import type { HomeGroup } from '../unified/group-grid';
 import type { Issue, IssueStory, TalkBurst, TalkExcerptMessage, UpcomingEvent } from './types';
 
@@ -49,53 +46,23 @@ const picture = (id: number): GridImage => ({
     height: 600,
 });
 
-const card: LinkCardData = {
-    url: 'https://www.example.com/article',
-    title: 'A title from the page',
-    description: 'What the page says it is about.',
-    siteName: 'Example',
-    domain: 'example.com',
-    layout: 'compact',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    fitSources: [],
-};
-
-const diary = (overrides: Partial<DiaryDetail> = {}): DiaryDetail => ({
+const story = (overrides: Partial<IssueStory> = {}): IssueStory => ({
+    kind: 'diary',
     id: 11,
-    title: 'Morning walk',
-    excerpt: 'Down to the river and back.',
-    visibility: 'open',
-    commentCount: 0,
-    hasImages: true,
-    thumbnails: [],
+    href: '/diary/11',
+    headline: 'Morning walk',
+    dek: 'Down to the river and back.',
     author,
+    group: null,
     createdAt: '2026-08-27T09:00:00+09:00',
-    body: 'Down to the river and back.',
-    format: 'op3',
-    bodyHtml: '<p>Down to the <strong>river</strong> and back.</p>',
-    linkCard: card,
-    images: [picture(1), picture(2)],
+    commentCount: 0,
+    image: picture(1),
     ...overrides,
 });
 
-const post = (overrides: Partial<TimelinePostEntry> = {}): TimelinePostEntry => ({
-    id: 21,
-    body: 'A one-line post',
-    visibility: 'open',
-    hasImages: false,
-    replyCount: 0,
-    images: [],
-    mentions: [],
-    tags: [],
-    linkCard: null,
-    author,
-    createdAt: '2026-08-27T10:00:00+09:00',
-    ...overrides,
-});
-
-const diaryStory = (overrides: Partial<DiaryDetail> = {}): IssueStory => ({ kind: 'diary', item: diary(overrides) });
+/** The links a block offers, which for a whole-block link is exactly one: the headline's. */
+const linksIn = (block: Element): string[] =>
+    Array.from(block.querySelectorAll('a')).map((link) => `${link.textContent} -> ${link.getAttribute('href')}`);
 
 const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     date: '2026-08-27',
@@ -105,7 +72,7 @@ const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     days: { from: '2026-08-27', to: '2026-08-27' },
     window: { from: '2026-08-27T06:00:00+09:00', to: '2026-08-28T06:00:00+09:00' },
     isCurrent: true,
-    stories: [diaryStory()],
+    stories: [story()],
     ...overrides,
 });
 
@@ -132,102 +99,111 @@ function arrive(props: Record<string, unknown>) {
     return renderWithProviders(<HomeIssue />);
 }
 
-const documentOrder = (container: HTMLElement) => Array.from(container.querySelectorAll('*'));
-
-test('a one-story issue is printed whole: rich body, its card, and the pictures above it', () => {
+test('the lead is one block: a hero over the headline, and nothing else in it to click', () => {
     const { container } = arrive({ issue: issueOf() });
 
-    // The server-rendered decoration, not the plain fallback.
-    const body = container.querySelector('.rich-body');
-    expect(body?.textContent).toBe('Down to the river and back.');
-    expect(body?.querySelector('strong')).toBeTruthy();
+    const card = container.querySelector('.rounded-card') as HTMLElement;
+    const hero = card.querySelector('img[srcset]');
 
-    // The lead is the one place a body is printed in full, and so the one place its card is drawn.
-    expect(container.querySelector('a[href="https://www.example.com/article"]')).toBeTruthy();
-    // Printed whole means nothing is cut off, and nothing offers to continue what it finished.
-    expect(container.querySelector('.max-h-\\[12rem\\]')).toBeNull();
-    expect(screen.queryByText('Continue reading')).toBeNull();
+    // The picture's own widths, and the box the placement paints, so the browser can pick before
+    // the layout is measured.
+    expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
+    expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
+    // The headline says what the story is; the picture is not a second name for it.
+    expect(hero?.getAttribute('alt')).toBe('');
 
     const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
     expect(headline.className).toContain('text-2xl');
 
-    // The pictures lead the article; the words follow them.
-    const order = documentOrder(container);
-    const hero = order.findIndex((el) => el.getAttribute('aria-label') === 'Image 1');
-    const words = order.findIndex((el) => el.classList.contains('rich-body'));
-    expect(hero).toBeGreaterThanOrEqual(0);
-    expect(hero).toBeLessThan(words);
+    // One link in the whole card, named by the headline and stretched over the block that positions it.
+    expect(linksIn(card)).toEqual(['Morning walk -> /diary/11']);
+    expect(within(headline).getByRole('link', { name: 'Morning walk' }).className).toContain('after:absolute');
+    expect(card.className).toContain('relative');
+
+    // What the story says, not the story: no body, no card under it, and nothing offering to continue.
+    expect(screen.getByText('Down to the river and back.')).toBeTruthy();
+    expect(container.querySelector('.rich-body')).toBeNull();
+    expect(container.querySelector('a[href^="http"]')).toBeNull();
+    expect(screen.queryByText('Continue reading')).toBeNull();
 });
 
-test('a post headlined by its first line keeps the mention in it a link', () => {
-    const story: IssueStory = {
-        kind: 'timeline',
-        item: {
-            ...post({
-                body: '@rin what a morning\nWalked down to the river and back.',
-                mentions: [{ offset: 0, length: 4, memberId: 3 }],
-            }),
-            excerpt: 'Walked down to the river and back.',
-        },
-    };
+test('a lead with no picture keeps its rank and reads a line longer', () => {
+    const { container } = arrive({ issue: issueOf({ stories: [story({ image: null })] }) });
 
-    arrive({ issue: issueOf({ stories: [story] }) });
-
-    const headline = screen.getByRole('heading', { level: 2 });
-    expect(headline.textContent).toBe('@rin what a morning');
-    expect(within(headline).getByRole('link', { name: '@rin' }).getAttribute('href')).toBe('/member/3');
-
-    // The rest of the post is the body; only the first line was spent on the headline.
-    expect(screen.getByText('Walked down to the river and back.')).toBeTruthy();
-    // A post's headline could not be made a link, so the article keeps a way to its own page.
-    expect(screen.getByRole('link', { name: 'Continue reading' }).getAttribute('href')).toBe('/timeline/21');
+    // No hero-shaped gap where there is no photograph: the lead's weight is its placement and size.
+    expect(container.querySelector('img[srcset]')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-2xl');
+    expect(screen.getByText('Down to the river and back.').className).toContain('line-clamp-4');
 });
 
-test('every rank is an article: the lead whole, the rest cut off with the way in', () => {
+test('the two after the lead are cards side by side, a rank down', () => {
     const { container } = arrive({
         issue: issueOf({
-            stories: [diaryStory(), diaryStory({ id: 12, title: 'Second story' }), diaryStory({ id: 13, title: 'Third story' })],
+            stories: [
+                story(),
+                story({ kind: 'topic', id: 12, href: '/topics/12', headline: 'Second story', group }),
+                story({ kind: 'event', id: 13, href: '/events/13', headline: 'Third story', group }),
+            ],
         }),
     });
 
-    // One heading rank down, and still a heading — a story below the lead is a smaller article, not
-    // a row standing in for one.
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Morning walk', 'Second story', 'Third story']);
     expect(headings.map((heading) => heading.className.includes('text-2xl'))).toEqual([true, false, false]);
     expect(headings.map((heading) => heading.className.includes('text-lg'))).toEqual([false, true, true]);
 
-    // Every one of them prints its body; the ones below the lead are clamped and say so.
-    expect(container.querySelectorAll('.rich-body')).toHaveLength(3);
-    expect(container.querySelectorAll('.max-h-\\[12rem\\]')).toHaveLength(2);
-    expect(screen.getAllByRole('link', { name: 'Continue reading' }).map((link) => link.getAttribute('href'))).toEqual([
-        '/diary/12',
-        '/diary/13',
+    const grid = container.querySelector('.sm\\:grid-cols-2') as HTMLElement;
+    expect(grid.children).toHaveLength(2);
+    // Each card is one link, and it is its headline's.
+    expect(Array.from(grid.children).map((card) => linksIn(card))).toEqual([
+        ['Second story -> /topics/12'],
+        ['Third story -> /events/13'],
     ]);
 
-    // A clamped body is a preview of a link the reader has not been shown, so no card is restated
-    // under it: exactly one is drawn, the lead's.
-    expect(container.querySelectorAll('a[href="https://www.example.com/article"]')).toHaveLength(1);
+    // A board entry's byline names the group it was posted in — as text, since the card is the link.
+    expect(within(grid).getAllByText('Book club')).toHaveLength(2);
+    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
 });
 
-test('a body that runs past the clamp fades out rather than stopping mid-sentence', () => {
-    // jsdom lays nothing out, so every element measures zero and no body ever overflows. The one
-    // thing this can ask is what the component does once something does.
-    const tall = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(999);
+test('a lone second takes the width rather than half of it', () => {
+    const { container } = arrive({
+        issue: issueOf({ stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })] }),
+    });
 
-    try {
-        const { container } = arrive({
-            issue: issueOf({ stories: [diaryStory(), diaryStory({ id: 12, title: 'Second story' })] }),
-        });
+    expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
+});
 
-        const scrims = container.querySelectorAll('.max-h-\\[12rem\\] > span[aria-hidden]');
+test('rank four and below are rows, with the picture beside the words where there is one', () => {
+    const { container } = arrive({
+        issue: issueOf({
+            stories: [
+                story(),
+                story({ id: 12, href: '/diary/12', headline: 'Second' }),
+                story({ id: 13, href: '/diary/13', headline: 'Third' }),
+                story({ id: 14, href: '/diary/14', headline: 'Fourth', dek: 'What the fourth says.' }),
+                story({ kind: 'timeline', id: 15, href: '/timeline/15', headline: 'Fifth', image: null, commentCount: 2 }),
+            ],
+        }),
+    });
 
-        expect(scrims).toHaveLength(1);
-        // Over the card's own token, so it fades into whatever the surface is painted in.
-        expect(Array.from(scrims).map((scrim) => scrim.className)).toEqual([expect.stringContaining('from-card')]);
-    } finally {
-        tall.mockRestore();
-    }
+    const [withPicture, withNone] = Array.from(container.querySelectorAll('li'));
+    const rows = [withPicture, withNone];
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+
+    // A row's headline is its content line, not a heading rank: only the lead and the two cards are.
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+        'Morning walk',
+        'Second',
+        'Third',
+    ]);
+
+    expect(withPicture?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('6rem');
+    expect(withNone?.querySelector('img')).toBeNull();
+
+    // One link per row, so anywhere in it opens the story.
+    expect(rows.map((row) => linksIn(row as Element))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
+    expect(screen.getByText('What the fourth says.').className).toContain('line-clamp-1');
 });
 
 const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => ({
@@ -264,7 +240,7 @@ const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' 
 test('the whole issue is one page of articles, bands and the day around them', () => {
     arrive({
         issue: issueOf({
-            stories: [diaryStory(), diaryStory({ id: 12, title: 'Second story' })],
+            stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })],
             talkBursts: [burst(61), burst(62)],
             newcomers: [newcomer],
             newGroups: [newGroup],

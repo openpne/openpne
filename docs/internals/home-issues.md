@@ -218,12 +218,22 @@ withdrawn member, a message in a talk excerpt included. **A past event stays** o
 issue's calendar: an issue is a snapshot of the morning it went out, and one that quietly shed its
 calendar as the week went by would misreport that morning.
 
-**Every story carries its body.** The page is for reading, so a story is an article rather than a
-row: rank 1 is printed whole — its pictures, its full body and, as the one place in an issue a body
-is drawn in full, its [link card](link-cards.md) — and every rank below it is the same article a
-heading rank down, with its pictures as a strip and its body cut off at a clamp that offers the way
-in. Nothing is a card standing in for something to read, so nothing has to decide between shapes:
-the payload is one ranked list.
+**A story is a headline, a dek and a picture — never a body.** A front page is where a reader
+chooses; the place to read a story is its own page. So nothing a body would need travels with a
+story: no rendered HTML, no entity ranges, and no [link card](link-cards.md), which previews a link
+the reader has not been shown and has no body here to be shown in. The dek is the body's opening as
+plain text, cut server-side to a display width of 180 — a URL in it reads as the text it is.
+
+What ranks a story is the **room it gets**, not how much of it is printed: rank 1 leads across the
+width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the rest are rows with the
+picture as a square beside the words. A story with no picture keeps its rank and reads a line
+further. The payload is still one ranked list in one shape — the placement is the page's decision.
+
+**Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
+and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
+navigates. A post has no title, so its opening line is the headline and the dek is what is left after
+it — and a post that opens on a blank line is headlined by its words instead, because a link named by
+nothing cannot be announced.
 
 **A burst is resolved live, and only its window is remembered.** The count is the stretch's current
 count and the way in is `?m=` on the first message still there. What is printed is the **last six

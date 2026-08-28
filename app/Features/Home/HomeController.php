@@ -60,11 +60,10 @@ class HomeController extends Controller
             // Nothing published yet is not an absence to report: the site has a front page from its
             // first day, and that one simply has nothing on it.
             $page = $issue === null
-                ? HomeIssueSerializer::page(null, null, $viewer, null, null, CarbonImmutable::now())
+                ? HomeIssueSerializer::page(null, null, null, null, CarbonImmutable::now())
                 : HomeIssueSerializer::page(
                     $issue,
                     $show($viewer, $issue),
-                    $viewer,
                     $adjacent($issue)['previous'],
                     // The latest issue is what this page IS, so nothing stands forward of it
                     // however the run happens to be dated.

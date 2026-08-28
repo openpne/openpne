@@ -39,8 +39,8 @@ class HomeIssueQueryBudgetTest extends TestCase
     private const NOW = '2026-08-27 06:00:00';
 
     /**
-     * Measured at 51 against the fixture below, with a little headroom for a relation an eager load
-     * skips here because the fixture leaves it null (an avatar's file, a link card).
+     * Measured at 47 against the fixture below, with a little headroom for a relation an eager load
+     * skips here because the fixture leaves it null (an avatar's file).
      *
      * The shape of it: one read for the ledger and one apiece for the blocks and the friendships;
      * one per source table and one per relation its eager loads name; three per burst — the anchor,
@@ -51,7 +51,7 @@ class HomeIssueQueryBudgetTest extends TestCase
      * BELOW the smallest per-item loop that could appear: the fixture fills every band to its cap,
      * and one read per story (8), per face (12) or per group (6) each puts it past this.
      */
-    private const CEILING = 55;
+    private const CEILING = 51;
 
     public function test_a_full_issue_costs_a_bounded_number_of_reads(): void
     {
@@ -109,7 +109,6 @@ class HomeIssueQueryBudgetTest extends TestCase
         $payload = HomeIssueSerializer::page(
             $issue,
             app(ShowHomeIssue::class)($viewer, $issue),
-            $viewer,
             null,
             null,
             $now,

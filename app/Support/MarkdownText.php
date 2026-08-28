@@ -72,13 +72,13 @@ final class MarkdownText
      * html_entity_decode so a raw-HTML fragment the user typed — which CommonMark escaped to entities,
      * not tags — reads back as they typed it (`<b>x</b>`) rather than being stripped as a tag.
      */
-    public static function excerpt(?string $text): string
+    public static function excerpt(?string $text, int $width = BodyText::EXCERPT_WIDTH): string
     {
         $plain = strip_tags(self::render($text)->toHtml());
         $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $plain = trim((string) preg_replace('/\s+/u', ' ', $plain));
 
-        return mb_strimwidth($plain, 0, BodyText::EXCERPT_WIDTH, '');
+        return mb_strimwidth($plain, 0, $width, '');
     }
 
     /**

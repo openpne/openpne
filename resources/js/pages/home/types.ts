@@ -2,15 +2,13 @@ import type { GridImage } from '@/components/image-grid';
 import type { MentionEntity } from '@/lib/entity-split';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
-import type { EventDetail, MemberRef, TopicDetail } from '../community/types';
-import type { DiaryDetail } from '../diary/types';
-import type { TimelinePostEntry } from '../timeline/types';
+import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '../unified/group-grid';
 
 /**
  * The front page issue (号): one edition of the site, published once a day and identical for every
- * member. **It is for reading**: every story travels whole, in rank order, and how much of a body
- * is shown on screen is the page's decision rather than the payload's.
+ * member. **It is a front page**: stories arrive in rank order as headline, dek and picture, and the
+ * page ranks them by how much room it gives each — never by printing more or less of a body.
  *
  * Every optional section key is **absent** when it is empty, never `[]`. A section renders exactly
  * when its key is present, so nothing has to decide what an empty list means on screen.
@@ -32,14 +30,33 @@ export interface BoardScope {
 }
 
 /**
- * One story of an issue, carried whole: drawn with its body, its pictures and its counts rather
- * than as a preview of them. `excerpt` rides along for the places a plain line is wanted.
+ * One story as the front page prints it: what it is called, the line it opens with, and one picture.
+ * **Never a body** — the block is a way in, and the story is read on its own page.
+ *
+ * `kind` is the byline's grammar rather than a shape switch: a board entry names the group it was
+ * posted in, a post counts replies where the rest count comments, and every block draws the same
+ * fields either way.
  */
-export type IssueStory =
-    | { kind: 'diary'; item: DiaryDetail }
-    | { kind: 'timeline'; item: TimelinePostEntry & { excerpt: string } }
-    | { kind: 'topic'; item: TopicDetail & { group: BoardScope; excerpt: string } }
-    | { kind: 'event'; item: EventDetail & { group: BoardScope; excerpt: string } };
+export interface IssueStory {
+    kind: 'diary' | 'timeline' | 'topic' | 'event';
+    id: number;
+    /** Where it is read in full — what the whole block links to. */
+    href: string;
+    /** A post has no title, so this is the line its author opened with. */
+    headline: string;
+    /** The lead of the body, plain text and already cut; empty when there is nothing after the
+     *  headline. Not markup and not a link — a URL in it reads as the text it is. */
+    dek: string;
+    /** Null for a withdrawn member, drawn with the established label. */
+    author: MemberRef | null;
+    /** The group a board entry was posted in; null on a diary or a post. */
+    group: BoardScope | null;
+    createdAt: string;
+    /** Comments, or replies on a post — one number, whichever the kind counts. */
+    commentCount: number;
+    /** The first picture posted with it. Null is what decides the block's shape, not a missing key. */
+    image: GridImage | null;
+}
 
 /**
  * One message of a talk excerpt, in the stream's own shape minus what belongs to a live room: no
@@ -81,8 +98,9 @@ export interface Issue extends IssueRef {
     window: { from: string; to: string };
     /** Whether the page is showing the freshest issue there could be; a stale one says so below. */
     isCurrent: boolean;
-    /** Ranks 1–8, in order. Absent once every story the issue featured has been taken down or
-     *  narrowed — the rest of the issue still stands, so it is a missing key, not a missing issue. */
+    /** Ranks 1–8, in order: the lead, then the seconds, then the rest. Absent once every story the
+     *  issue featured has been taken down or narrowed — the rest of the issue still stands, so it is
+     *  a missing key, not a missing issue. */
     stories?: IssueStory[];
     talkBursts?: TalkBurst[];
     newcomers?: NineTableItem[];
