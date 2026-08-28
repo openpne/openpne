@@ -68,7 +68,6 @@ const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     date: '2026-08-27',
     number: 12,
     href: '/home/2026/08/27',
-    publishedAt: '2026-08-28T06:00:00+09:00',
     days: { from: '2026-08-27', to: '2026-08-27' },
     window: { from: '2026-08-27T06:00:00+09:00', to: '2026-08-28T06:00:00+09:00' },
     isCurrent: true,
@@ -339,8 +338,6 @@ test('the foot of the page says which stretch it was drawn from, and whether it 
     expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
     // A day here runs 06:00 to 06:00, so the page states the two instants the masthead's day means.
     expect(screen.getByText('Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00')).toBeTruthy();
-    // The stamp is the instant this day was last put together, not a timetable it did not keep to.
-    expect(screen.getByText('Updated August 28, 2026 at 06:00')).toBeTruthy();
     expect(screen.getByText('Posts deleted or made private since are not shown here.')).toBeTruthy();
 });
 
@@ -349,8 +346,7 @@ test('a site with nothing published yet offers the way to fill it', () => {
 
     expect(screen.getByText('Welcome, Viewer.')).toBeTruthy();
     expect(screen.getByText('The first post will appear here the next morning.')).toBeTruthy();
-    // Nothing has been put together, so there is no instant to stamp and nothing to page through.
-    expect(screen.queryByText(/^Updated /)).toBeNull();
+    // Nothing has been put together, so there is no stretch to state and nothing to page through.
     expect(screen.queryByText(/^Posts from /)).toBeNull();
     expect(screen.queryByText('Past happenings')).toBeNull();
 });

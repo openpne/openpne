@@ -99,7 +99,7 @@ export default function HomeIssue() {
                 {auth.user && <WelcomePanel name={auth.user.name} enabledFeatures={enabledFeatures} />}
                 <p className="text-sm text-muted-foreground">{t('The first post will appear here the next morning.')}</p>
                 {/* Nothing has been put together, so there is no instant to stamp it with. */}
-                <Colophon publishedAt={null} window={null} stale={false} />
+                <Colophon window={null} stale={false} />
             </>
         );
     }
@@ -137,7 +137,7 @@ export default function HomeIssue() {
 
             <IssueNav prev={prev} next={next} />
             {/* Only the freshest page can be "nothing new yet": an archived day has a day after it. */}
-            <Colophon publishedAt={issue.publishedAt} window={issue.window} stale={next === null && !issue.isCurrent} />
+            <Colophon window={issue.window} stale={next === null && !issue.isCurrent} />
         </>
     );
 }

@@ -120,7 +120,6 @@ final class HomeIssueSerializer
 
         return [
             ...self::linkTo($issue),
-            'publishedAt' => CarbonImmutable::parse($issue->published_at)->toIso8601String(),
             // Which days the issue is ABOUT, which is not the same as its stretch: a day of
             // happenings runs 06:00 to 06:00 (HomeIssueDay), so the masthead names days and the
             // colophon names the instants they were drawn from.
