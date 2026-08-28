@@ -7,7 +7,7 @@ import { runInThisContext } from 'node:vm';
 /**
  * A notification tap on the real handler: with no window the app opens at its scope root — never at
  * the destination — and is told where to go; with windows, the first page that takes the offer is
- * focused, and when none does the front window is navigated (a no-op on iOS, by design).
+ * focused, and when none does the front window is shown and, except on Safari, navigated.
  */
 const source = readFileSync(fileURLToPath(new URL('../../public/sw.js', import.meta.url)), 'utf8');
 const SCOPE = 'https://sns.example/';

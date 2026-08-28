@@ -19,8 +19,8 @@
  * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
  *
  * Also the Classic receiver of the worker's answer to a notification tap: an `open` message naming
- * the destination (public/sw.js says why the worker never navigates). No router here, so the page
- * goes there whole.
+ * the destination, ACKed on its port before the page goes there whole — no router here
+ * (public/sw.js says why the worker does not open the destination itself).
  */
 (function () {
     'use strict';
