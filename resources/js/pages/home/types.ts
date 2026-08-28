@@ -91,7 +91,6 @@ export interface UpcomingEvent extends CommunityActivityEntry {
 
 export interface Issue extends IssueRef {
     /** When the issue went out, as an instant. */
-    publishedAt: string;
     /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
     days: { from: string; to: string };
     /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
