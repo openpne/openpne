@@ -179,8 +179,10 @@ with no issue for the day stays loud.
 `--date=YYYY-MM-DD` publishes a past day from **its own** window — `(D 06:00, D+1 06:00]`, with
 `published_at` at the end of it — rather than chaining from the last issue. It refuses a day that is
 not over (today included: today's 06:00 boundary lies ahead), a day that already has an issue, and a
-date that is not one, each with a non-zero exit so a script can read the answer. `--dry-run` reports
-what an issue would hold without writing it, with or without a date.
+date that is not one, each with a non-zero exit so a script can read the answer. It also refuses a day
+already inside a published issue's window: a backfill names every day it wants, so it cannot re-report
+a stretch an issue already covers — and a chained window is as long as the gap it closed, the first
+one a week. `--dry-run` reports what an issue would hold without writing it, with or without a date.
 
 Backfilling an archive therefore runs **oldest day first, on an empty ledger**: the never-again rule
 is not date-aware, so a day filled in after a later one can only feature what that later one left.

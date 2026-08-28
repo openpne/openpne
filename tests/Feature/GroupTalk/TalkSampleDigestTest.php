@@ -198,6 +198,12 @@ class TalkSampleDigestTest extends TestCase
 
     // --- the tail, for an excerpt ---
 
+    /** Six turns, spelled out: home-issues.md and the issue page both promise a reader six. */
+    public function test_an_excerpt_is_six_turns(): void
+    {
+        $this->assertSame(6, TalkSampleDigest::EXCERPT);
+    }
+
     /** (since, until] again, and the LAST of it: the end of a stretch is what an excerpt is. */
     public function test_the_excerpt_is_the_end_of_the_window_oldest_first(): void
     {

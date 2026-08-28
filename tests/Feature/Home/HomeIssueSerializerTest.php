@@ -170,6 +170,20 @@ class HomeIssueSerializerTest extends TestCase
         );
     }
 
+    /**
+     * The default fixture is a row the publisher could have written: dated by the last day of its
+     * own window. `number` is pinned only to stay off the one setUp already took.
+     */
+    public function test_a_factory_issue_is_dated_by_the_last_day_it_covers(): void
+    {
+        $this->issue = HomeIssue::factory()->create(['number' => 99]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $issue = $this->page()['issue'];
+
+        $this->assertSame($issue['date'], $issue['days']['to']);
+    }
+
     /** A longer stretch is a range of days, and still dated by the last of them. */
     public function test_a_stretch_of_several_days_reports_all_of_them(): void
     {

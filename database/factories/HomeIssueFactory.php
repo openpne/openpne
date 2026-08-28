@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Features\Home\Data\HomeIssueDay;
 use App\Models\HomeIssue;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -30,13 +31,16 @@ class HomeIssueFactory extends Factory
         // Walking forward from a fixed distance back keeps the whole run in the past — a published
         // issue dated tomorrow is a state the publisher cannot produce.
         $date = CarbonImmutable::today(config('app.timezone'))->subDays(365)->addDays($number - 1);
-        $published = $date->setTime(6, 0);
+
+        // The day's own stretch, so the row satisfies the invariant every reader of an issue leans
+        // on: an issue is dated by the last day its window covers, not the first.
+        $window = HomeIssueDay::window($date);
 
         return [
             'number' => $number,
             'issue_date' => $date,
-            'window_start' => $published->subDay(),
-            'published_at' => $published,
+            'window_start' => $window->start,
+            'published_at' => $window->end,
         ];
     }
 }

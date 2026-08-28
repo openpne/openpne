@@ -148,6 +148,37 @@ class PublishHomeIssueCommandTest extends TestCase
         $this->assertDatabaseCount('home_issues', 1);
     }
 
+    /**
+     * A day the first issue already reached back over. Its own date is free — the unique on
+     * `issue_date` would take it — but every happening in it has gone out once already.
+     */
+    public function test_a_day_inside_an_existing_issues_window_is_refused(): void
+    {
+        $this->story();
+        $this->artisan('openpne:publish-home-issue')->assertSuccessful();
+
+        $this->artisan('openpne:publish-home-issue --date=2026-08-22')
+            ->expectsOutputToContain('Issue 2026-08-22 overlaps issue 2026-08-26 (No. 1), which already covers 2026-08-20 06:00:00 – 2026-08-27 06:00:00.')
+            ->assertFailed();
+
+        $this->assertDatabaseCount('home_issues', 1);
+    }
+
+    /** The day before that reach ends where the first issue's window opens, and shares no instant. */
+    public function test_a_day_before_an_existing_issues_window_is_published(): void
+    {
+        $this->story();
+        $this->artisan('openpne:publish-home-issue')->assertSuccessful();
+
+        $this->story(CarbonImmutable::parse('2026-08-20 03:00:00'));
+
+        $this->artisan('openpne:publish-home-issue --date=2026-08-19')
+            ->expectsOutputToContain('Published issue 2026-08-19 (No. 2)')
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('home_issues', 2);
+    }
+
     /** A date constructor rolls February 30th into March; a publisher must not follow it there. */
     public function test_a_date_that_is_not_one_is_refused(): void
     {

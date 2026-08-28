@@ -353,6 +353,12 @@ test('the foot of the page says which stretch it was drawn from, and whether it 
 
     cleanup();
 
+    // An archived day is not stale — there is a day after it, so "nothing new yet" would be false.
+    arrive({ issue: issueOf({ isCurrent: false }), next: { date: '2026-08-28', number: 13, href: '/home/2026/08/28' } });
+    expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
+
+    cleanup();
+
     arrive({ issue: issueOf() });
     expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
     // A day here runs 06:00 to 06:00, so the page states the two instants the masthead's day means.

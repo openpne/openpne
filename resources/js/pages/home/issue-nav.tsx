@@ -22,8 +22,8 @@ export function IssueNav({ prev, next }: { prev: IssueRef | null; next: IssueRef
                     <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
                     <span className="min-w-0">
                         <span className="block text-xs text-muted-foreground">{t('Earlier day')}</span>
-                        <span className="block truncate text-sm text-link group-hover:underline">
-                            <CivilDate value={prev.date} weekday />
+                        <span className="block text-sm text-link group-hover:underline">
+                            <CivilDate value={prev.date} />
                         </span>
                     </span>
                 </Link>
@@ -39,8 +39,8 @@ export function IssueNav({ prev, next }: { prev: IssueRef | null; next: IssueRef
                 <Link href={next.href} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
                     <span className="min-w-0">
                         <span className="block text-xs text-muted-foreground">{t('Later day')}</span>
-                        <span className="block truncate text-sm text-link group-hover:underline">
-                            <CivilDate value={next.date} weekday />
+                        <span className="block text-sm text-link group-hover:underline">
+                            <CivilDate value={next.date} />
                         </span>
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />

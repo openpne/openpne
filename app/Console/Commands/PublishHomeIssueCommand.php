@@ -54,6 +54,10 @@ class PublishHomeIssueCommand extends Command
             return $date === null ? self::SUCCESS : self::FAILURE;
         }
 
+        if ($date !== null && ! $this->windowIsClear($date, $window)) {
+            return self::FAILURE;
+        }
+
         if ($this->option('dry-run')) {
             $plan = $publish->plan($asOf, null, $window);
 
@@ -129,6 +133,41 @@ class PublishHomeIssueCommand extends Command
         }
 
         return $window;
+    }
+
+    /**
+     * True when no published issue already reports part of $window, the reason printed when one does.
+     *
+     * A backfill names every day it wants, so two named days never share an instant — but a chained
+     * issue's window is as long as the gap it closed (the first one reaches back
+     * {@see PublishHomeIssue::FIRST_WINDOW_DAYS} days), and a day inside that stretch has already
+     * been reported. Publishing it again would print the same happenings twice under two datelines,
+     * which the unique on `issue_date` cannot see.
+     */
+    private function windowIsClear(string $date, HomeIssueWindow $window): bool
+    {
+        // Both bounds strict: consecutive issues share their boundary instant, and an issue that
+        // ends exactly where this window opens overlaps it by nothing.
+        $overlap = HomeIssue::query()
+            ->where('window_start', '<', $window->end)
+            ->where('published_at', '>', $window->start)
+            ->orderBy('window_start')
+            ->first();
+
+        if ($overlap === null) {
+            return true;
+        }
+
+        $this->error(sprintf(
+            'Issue %s overlaps issue %s (No. %d), which already covers %s – %s.',
+            $date,
+            $overlap->issue_date->toDateString(),
+            $overlap->number,
+            $overlap->window_start->toDateTimeString(),
+            $overlap->published_at->toDateTimeString(),
+        ));
+
+        return false;
     }
 
     /**

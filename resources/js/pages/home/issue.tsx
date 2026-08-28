@@ -84,7 +84,8 @@ export default function HomeIssue() {
             )}
 
             <IssueNav prev={prev} next={next} />
-            <Colophon publishedAt={issue.publishedAt} window={issue.window} stale={!issue.isCurrent} />
+            {/* Only the freshest page can be "nothing new yet": an archived day has a day after it. */}
+            <Colophon publishedAt={issue.publishedAt} window={issue.window} stale={next === null && !issue.isCurrent} />
         </>
     );
 }
