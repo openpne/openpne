@@ -2,8 +2,19 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { useScrollDirection } from './use-scroll-direction';
 
-const inertia = { url: '/a' };
-vi.mock('@inertiajs/react', () => ({ usePage: () => ({ url: inertia.url }) }));
+const inertia = vi.hoisted(() => ({ url: '/a', listeners: {} as Record<string, Array<() => void>> }));
+vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({ url: inertia.url }),
+    router: {
+        on: (type: string, callback: () => void) => {
+            (inertia.listeners[type] ??= []).push(callback);
+
+            return () => {
+                inertia.listeners[type] = inertia.listeners[type].filter((listener) => listener !== callback);
+            };
+        },
+    },
+}));
 
 function Probe() {
     return <output>{useScrollDirection()}</output>;
@@ -16,7 +27,14 @@ afterEach(() => {
     cleanup();
     y = 0;
     inertia.url = '/a';
+    inertia.listeners = {};
 });
+
+/** A visit has landed: Inertia has set the page and, for one that resets, scrolled it to the top. */
+const arrived = async (at: number) => {
+    await scrolled(at);
+    await act(() => inertia.listeners.success?.forEach((listener) => listener()));
+};
 
 /** The browser (or the reader, once engaged) has scrolled the window to `to`. */
 const scrolled = async (to: number) => {
@@ -67,3 +85,30 @@ test('a new page starts with no reader again', async () => {
     await scrolled(400);
     expect(direction()).toBe('up');
 });
+
+test('an arrival at the same URL comes back under the gate', async () => {
+    render(<Probe />);
+
+    await touched();
+    await scrolled(400);
+    expect(direction()).toBe('down');
+
+    // The active tab tapped again: Inertia resets the scroll and fires no navigate, and the URL is
+    // the same. The bounce that follows is not the reader's.
+    await arrived(0);
+    await scrolled(400);
+    expect(direction()).toBe('up');
+});
+
+test('a reload landing while the reader is down the page keeps their travel', async () => {
+    render(<Probe />);
+
+    await touched();
+    await scrolled(400);
+    await arrived(400);
+    expect(direction()).toBe('down');
+
+    await scrolled(380);
+    expect(direction()).toBe('up');
+});
+
