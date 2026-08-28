@@ -104,7 +104,7 @@ class GroupMessageSerializer
      *
      * @return list<array{memberId: int, offset: int, length: int}>
      */
-    private static function mentions(GroupMessage $message): array
+    public static function mentions(GroupMessage $message): array
     {
         return $message->mentions
             ->map(fn (GroupMessageMention $mention): array => [

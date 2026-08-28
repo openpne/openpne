@@ -4,22 +4,26 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Home;
 
+use App\Features\GroupTalk\Queries\TalkSampleDigest;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Home\Queries\ListHomeIssues;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Diary;
+use App\Models\DiaryComment;
+use App\Models\DiaryImage;
+use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use App\Models\TimelinePostMention;
 use App\Support\BodyFormat;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
@@ -38,7 +42,8 @@ class HomeIssueSerializerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const NOW = '2026-08-27 06:00:00';
+    /** A 06:00 publication, which dates its issue to the day that just ended (HomeIssueDay). */
+    private const NOW = '2026-08-28 06:00:00';
 
     private Member $viewer;
 
@@ -53,85 +58,140 @@ class HomeIssueSerializerTest extends TestCase
         $this->viewer = Member::factory()->create();
         $this->issue = HomeIssue::factory()->create([
             'number' => 7,
-            'issue_date' => $this->now()->toDateString(),
+            'issue_date' => $this->now()->subDay()->toDateString(),
             'window_start' => $this->now()->subDay(),
             'published_at' => $this->now(),
         ]);
     }
 
-    // --- the shape the count picks ---
+    // --- what a story is, on a front page ---
 
-    public function test_one_story_is_a_lead_and_nothing_else(): void
+    public function test_a_story_is_a_headline_a_dek_and_a_picture(): void
     {
         $diary = Diary::factory()->create([
+            'title' => 'Morning walk',
             'format' => BodyFormat::Markdown,
             'body' => "**bold**\n\nand more",
         ]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => File::factory(), 'number' => 1]);
         $this->feature(HomeIssueSection::Stories, $diary);
 
-        $issue = $this->page()['issue'];
+        $story = $this->page()['issue']['stories'][0];
 
-        $this->assertSame('diary', $issue['topStory']['kind']);
-        $this->assertArrayNotHasKey('features', $issue);
-        $this->assertArrayNotHasKey('briefs', $issue);
+        $this->assertSame('diary', $story['kind']);
+        $this->assertSame("/diary/{$diary->getKey()}", $story['href']);
+        $this->assertSame('Morning walk', $story['headline']);
+        // Plain text: the block prints the dek as words, so no markup travels for it to render.
+        $this->assertSame('bold and more', $story['dek']);
+        $this->assertNotNull($story['image']);
 
-        // The lead is drawn whole, so it carries what a show page carries — the rendered body a
-        // preview would have no use for.
-        $this->assertStringContainsString('<strong>bold</strong>', (string) $issue['topStory']['item']['bodyHtml']);
-        $this->assertSame($diary->body, $issue['topStory']['item']['body']);
-    }
-
-    public function test_a_leading_post_carries_the_ranges_its_body_is_drawn_with(): void
-    {
-        $mentioned = Member::factory()->create();
-        $post = TimelinePost::factory()->create(['body' => "hi @{$mentioned->name}\nrest of it"]);
-        TimelinePostMention::query()->create([
-            'timeline_post_id' => $post->getKey(),
-            'member_id' => $mentioned->getKey(),
-            'offset' => 3,
-            'length' => mb_strlen($mentioned->name) + 1,
-        ]);
-        $this->feature(HomeIssueSection::Stories, $post);
-
-        $item = $this->page()['issue']['topStory']['item'];
-
-        $this->assertSame([$mentioned->getKey()], array_column($item['mentions'], 'memberId'));
-    }
-
-    public function test_two_or_three_stories_stand_abreast_as_features(): void
-    {
-        foreach (range(1, 3) as $rank) {
-            $this->feature(HomeIssueSection::Stories, Diary::factory()->create(), rank: $rank);
+        // The page draws no body, so nothing that only a drawn body could use rides along with it.
+        foreach (['body', 'bodyHtml', 'format', 'linkCard', 'mentions', 'tags', 'images', 'excerpt'] as $key) {
+            $this->assertArrayNotHasKey($key, $story, "`{$key}` is still shipped to a page that cannot draw it");
         }
-
-        $issue = $this->page()['issue'];
-
-        $this->assertCount(2, $issue['features']);
-        $this->assertArrayNotHasKey('briefs', $issue);
-        // Features are drawn whole, like the lead.
-        $this->assertArrayHasKey('body', $issue['features'][0]['item']);
     }
 
-    public function test_four_or_more_stories_become_a_lead_over_briefs(): void
+    /** Every rank in the same shape: the page ranks by the room it gives, not by what it is handed. */
+    public function test_every_rank_arrives_in_the_same_shape_in_rank_order(): void
     {
+        $ranked = [];
+
         foreach (range(1, 4) as $rank) {
-            $this->feature(HomeIssueSection::Stories, Diary::factory()->create(), rank: $rank);
+            $ranked[] = $diary = Diary::factory()->create(['title' => "Story {$rank}"]);
+            $this->feature(HomeIssueSection::Stories, $diary, rank: $rank);
         }
 
-        $issue = $this->page()['issue'];
+        $stories = $this->page()['issue']['stories'];
 
-        $this->assertCount(3, $issue['briefs']);
-        $this->assertArrayNotHasKey('features', $issue);
-        // A brief is a row: the excerpt, not the body.
-        $this->assertArrayNotHasKey('body', $issue['briefs'][0]['item']);
-        $this->assertArrayHasKey('excerpt', $issue['briefs'][0]['item']);
+        $this->assertSame(
+            array_map(fn (Diary $diary): int => $diary->getKey(), $ranked),
+            array_column($stories, 'id'),
+        );
+
+        foreach ($stories as $story) {
+            $this->assertSame(
+                ['kind', 'id', 'href', 'headline', 'dek', 'author', 'group', 'createdAt', 'commentCount', 'image'],
+                array_keys($story),
+            );
+        }
+    }
+
+    /** A dek is a line or three of a card, not a body: it is cut server-side and arrives already cut. */
+    public function test_a_dek_is_cut_to_the_width_a_card_reads_at(): void
+    {
+        $diary = Diary::factory()->create(['body' => str_repeat('word ', 200)]);
+        $this->feature(HomeIssueSection::Stories, $diary);
+
+        $dek = $this->page()['issue']['stories'][0]['dek'];
+
+        $this->assertSame(180, mb_strwidth($dek));
+        $this->assertStringStartsWith($dek, $diary->body);
+    }
+
+    public function test_a_story_with_no_picture_says_so_rather_than_shipping_an_empty_one(): void
+    {
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $this->assertNull($this->page()['issue']['stories'][0]['image']);
+    }
+
+    /** One picture, and it is the first the author posted — the shape every grid picture travels in. */
+    public function test_a_storys_picture_is_the_first_of_them(): void
+    {
+        $diary = Diary::factory()->create();
+        $first = File::factory()->create(['type' => 'image/png']);
+        $second = File::factory()->create(['type' => 'image/png']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $second->getKey(), 'number' => 2]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $first->getKey(), 'number' => 1]);
+        $this->feature(HomeIssueSection::Stories, $diary);
+
+        $image = $this->page()['issue']['stories'][0]['image'];
+
+        $this->assertSame($first->url(), $image['url']);
+        $this->assertSame(
+            ['id', 'url', 'thumbnailUrl', 'fitSources', 'cropSources', 'width', 'height'],
+            array_keys($image),
+        );
     }
 
     /**
-     * The count is taken from what survived, not from what was published: an issue of four that lost
-     * three is an issue of one, and is drawn as one.
+     * A row whose File is gone is skipped rather than drawn as an empty box — and skipped, not
+     * fallen back on: the picture is the next one that still has bytes.
+     *
+     * The FK cascades a join row away with its file, so no stored row can reach that state; an
+     * unsaved row in the slot before a real one is how the guard gets exercised, as it is for every
+     * attachment serializer (AttachmentImageSerializationTest).
      */
-    public function test_the_shape_follows_the_survivors_not_the_ledger(): void
+    public function test_a_picture_whose_file_is_gone_is_skipped_for_the_next_one(): void
+    {
+        $diary = Diary::factory()->create();
+        $file = File::factory()->create(['type' => 'image/png']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => 2]);
+        $this->feature(HomeIssueSection::Stories, $diary);
+
+        $issue = $this->issue->fresh();
+        $hydrated = app(ShowHomeIssue::class)($this->viewer, $issue);
+        /** @var Diary $source */
+        $source = $hydrated->items(HomeIssueSection::Stories)[0]->source;
+        $source->setRelation('images', collect([new DiaryImage, ...$source->images->all()]));
+
+        $story = HomeIssueSerializer::page($issue, $hydrated, null, null, $this->now())['issue']['stories'][0];
+
+        $this->assertSame($file->url(), $story['image']['url']);
+
+        // And with nothing behind it to draw, no picture at all rather than an empty one.
+        $source->setRelation('images', collect([new DiaryImage]));
+
+        $story = HomeIssueSerializer::page($issue, $hydrated, null, null, $this->now())['issue']['stories'][0];
+
+        $this->assertNull($story['image']);
+    }
+
+    /**
+     * The band is what survived, not what was published: an issue of four that lost three is an
+     * issue of one.
+     */
+    public function test_the_band_follows_the_survivors_not_the_ledger(): void
     {
         $kept = Diary::factory()->create();
         $this->feature(HomeIssueSection::Stories, $kept, rank: 1);
@@ -148,53 +208,166 @@ class HomeIssueSerializerTest extends TestCase
 
         $issue = $this->page()['issue'];
 
-        $this->assertSame($kept->getKey(), $issue['topStory']['item']['id']);
-        $this->assertArrayNotHasKey('features', $issue);
-        $this->assertArrayNotHasKey('briefs', $issue);
+        $this->assertCount(1, $issue['stories']);
+        $this->assertSame($kept->getKey(), $issue['stories'][0]['id']);
+    }
+
+    // --- which days it is about ---
+
+    /**
+     * A day of happenings runs 06:00 to 06:00, so the page names days and the stretch they were
+     * drawn from separately: the URL day is the last of them.
+     */
+    public function test_an_issue_names_the_days_it_covers_and_the_stretch_behind_them(): void
+    {
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $issue = $this->page()['issue'];
+
+        $this->assertSame('2026-08-27', $issue['date']);
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $issue['days']);
+        $this->assertSame(
+            [$this->now()->subDay()->toIso8601String(), $this->now()->toIso8601String()],
+            [$issue['window']['from'], $issue['window']['to']],
+        );
+    }
+
+    /**
+     * The default fixture is a row the publisher could have written: dated by the last day of its
+     * own window. `number` is pinned only to stay off the one setUp already took.
+     */
+    public function test_a_factory_issue_is_dated_by_the_last_day_it_covers(): void
+    {
+        $this->issue = HomeIssue::factory()->create(['number' => 99]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $issue = $this->page()['issue'];
+
+        $this->assertSame($issue['date'], $issue['days']['to']);
+    }
+
+    /** A longer stretch is a range of days, and still dated by the last of them. */
+    public function test_a_stretch_of_several_days_reports_all_of_them(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $issue = $this->page()['issue'];
+
+        $this->assertSame(['from' => '2026-08-21', 'to' => '2026-08-27'], $issue['days']);
+        $this->assertSame('2026-08-27', $issue['date']);
     }
 
     // --- what a story carries that its record does not ---
 
-    /** The page headlines a post with its first line, so the excerpt must not print it again. */
-    public function test_a_posts_excerpt_is_what_is_left_after_its_first_line(): void
+    /**
+     * A post has no title, so the line it opens with is the headline and the dek is what is left —
+     * printing the opening line twice is what a naive excerpt would do.
+     */
+    public function test_a_post_is_headlined_by_the_line_it_opens_with(): void
     {
         $post = TimelinePost::factory()->create(['body' => "the headline\nthe rest\nand more"]);
         $single = TimelinePost::factory()->create(['body' => 'one line only']);
         $this->feature(HomeIssueSection::Stories, $post, rank: 1);
         $this->feature(HomeIssueSection::Stories, $single, rank: 2);
 
-        $issue = $this->page()['issue'];
+        $stories = $this->page()['issue']['stories'];
 
-        $this->assertSame("the rest\nand more", $issue['topStory']['item']['excerpt']);
-        $this->assertSame('', $issue['features'][0]['item']['excerpt']);
+        $this->assertSame(['the headline', 'the rest and more'], [$stories[0]['headline'], $stories[0]['dek']]);
+        $this->assertSame(['one line only', ''], [$stories[1]['headline'], $stories[1]['dek']]);
     }
 
-    public function test_a_board_story_carries_its_group_its_lead_and_its_comment_count(): void
+    /**
+     * The block is one link named by its headline, so a post with no opening line to be called by
+     * hands the words themselves over rather than leaving the link with no name at all.
+     */
+    public function test_a_post_that_opens_on_a_blank_line_is_headlined_by_its_words(): void
+    {
+        $this->feature(HomeIssueSection::Stories, TimelinePost::factory()->create(['body' => "\nwhat it says"]));
+
+        $story = $this->page()['issue']['stories'][0];
+
+        $this->assertSame(['what it says', ''], [$story['headline'], $story['dek']]);
+    }
+
+    public function test_a_board_story_names_the_group_it_was_posted_in(): void
     {
         $group = Group::factory()->create();
-        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'body' => 'what the topic says']);
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
+            'name' => 'What the topic is called',
+            'body' => 'what the topic says',
+        ]);
         GroupTopicComment::factory()->count(3)->create(['group_topic_id' => $topic->getKey()]);
         $this->feature(HomeIssueSection::Stories, $topic);
 
-        $item = $this->page()['issue']['topStory']['item'];
+        $story = $this->page()['issue']['stories'][0];
 
-        $this->assertSame($group->getKey(), $item['group']['id']);
-        $this->assertSame($group->name, $item['group']['name']);
-        $this->assertSame('what the topic says', $item['excerpt']);
-        // The detail shape has no comment count of its own; a story is read with one.
-        $this->assertSame(3, $item['commentCount']);
+        $this->assertSame(['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null], $story['group']);
+        $this->assertSame('What the topic is called', $story['headline']);
+        $this->assertSame('what the topic says', $story['dek']);
+        $this->assertSame(3, $story['commentCount']);
+        $this->assertSame("/topics/{$topic->getKey()}", $story['href']);
     }
 
-    public function test_an_event_story_carries_its_counts_too(): void
+    /**
+     * A withdrawn author is a byline the page has lost, not a story it drops: the board keeps the
+     * record (ShowHomeIssueTest), and the front page prints it with nobody's name on it.
+     */
+    public function test_a_story_whose_author_has_withdrawn_carries_no_byline(): void
     {
-        $event = GroupEvent::factory()->create(['body' => 'what the event says']);
+        $group = Group::factory()->create();
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => null,
+            'name' => 'Left behind',
+        ]);
+        $this->feature(HomeIssueSection::Stories, $topic);
+
+        $story = $this->page()['issue']['stories'][0];
+
+        $this->assertNull($story['author']);
+        $this->assertSame('Left behind', $story['headline']);
+        $this->assertSame($group->name, $story['group']['name']);
+    }
+
+    /** What a count counts is what can be read under the story: a post's replies, a diary's comments. */
+    public function test_a_storys_count_is_what_was_said_under_it(): void
+    {
+        $post = TimelinePost::factory()->create();
+        TimelinePost::factory()->count(3)->replyTo($post)->create();
+        $diary = Diary::factory()->create();
+        DiaryComment::factory()->count(2)->create(['diary_id' => $diary->getKey()]);
+
+        $this->feature(HomeIssueSection::Stories, $post, rank: 1);
+        $this->feature(HomeIssueSection::Stories, $diary, rank: 2);
+
+        $stories = $this->page()['issue']['stories'];
+
+        $this->assertSame([$post->getKey(), $diary->getKey()], array_column($stories, 'id'));
+        $this->assertSame([3, 2], array_column($stories, 'commentCount'));
+    }
+
+    public function test_an_event_story_reads_like_every_other_one(): void
+    {
+        $event = GroupEvent::factory()->create(['name' => 'The gathering', 'body' => 'what the event says']);
         $this->feature(HomeIssueSection::Stories, $event);
 
-        $item = $this->page()['issue']['topStory']['item'];
+        $story = $this->page()['issue']['stories'][0];
 
-        $this->assertSame(0, $item['commentCount']);
-        $this->assertSame(0, $item['participantCount']);
-        $this->assertSame($event->open_date->format('Y-m-d'), $item['openDate']);
+        $this->assertSame('event', $story['kind']);
+        $this->assertSame('The gathering', $story['headline']);
+        $this->assertSame("/events/{$event->getKey()}", $story['href']);
+        $this->assertSame(0, $story['commentCount']);
+        $this->assertSame($event->group->getKey(), $story['group']['id']);
+    }
+
+    /** A diary and a post have no group to name, and say so rather than leaving the key out. */
+    public function test_a_story_with_no_group_carries_a_null_one(): void
+    {
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $this->assertNull($this->page()['issue']['stories'][0]['group']);
     }
 
     // --- where everything points ---
@@ -228,6 +401,64 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame(1, $issue['talkBursts'][0]['count']);
     }
 
+    /**
+     * A burst is a conversation to read: the last turns of the stretch, oldest first, each in the
+     * shape the room's own stream ships them in — with the pictures the reader may have.
+     */
+    public function test_a_burst_carries_the_end_of_the_conversation(): void
+    {
+        $group = Group::factory()->create();
+        $author = Member::factory()->create();
+
+        $said = array_map(function (int $minute) use ($group, $author): GroupMessage {
+            $at = $this->now()->subHours(3)->addMinutes($minute);
+
+            return GroupMessage::factory()->create([
+                'group_id' => $group->getKey(),
+                'member_id' => $author->getKey(),
+                'body' => "turn {$minute}",
+                'created_at' => $at,
+                'updated_at' => $at,
+            ]);
+        }, range(1, TalkSampleDigest::EXCERPT + 2));
+
+        $picture = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $said[2]->getKey(),
+        ]);
+        GroupMessageImage::query()->create([
+            'group_message_id' => $said[2]->getKey(),
+            'file_id' => $picture->getKey(),
+            'number' => 1,
+        ]);
+
+        $this->feature(HomeIssueSection::Talk, $group, stats: [
+            'since' => $this->now()->subDay()->toIso8601String(),
+            'until' => $this->now()->toIso8601String(),
+        ]);
+
+        $burst = $this->page()['issue']['talkBursts'][0];
+
+        // How much was said is the whole stretch; what is printed is the end of it.
+        $this->assertSame(TalkSampleDigest::EXCERPT + 2, $burst['count']);
+        $this->assertSame(
+            array_map(fn (GroupMessage $message): int => $message->getKey(), array_slice($said, 2)),
+            array_column($burst['messages'], 'id'),
+        );
+
+        $this->assertSame(
+            ['id', 'author', 'body', 'mentions', 'createdAt', 'images'],
+            array_keys($burst['messages'][0]),
+        );
+        $this->assertSame($author->getKey(), $burst['messages'][0]['author']['id']);
+        $this->assertSame('turn 3', $burst['messages'][0]['body']);
+        $this->assertSame([$picture->url()], array_column($burst['messages'][0]['images'], 'url'));
+
+        // The faces and the pictures are the excerpt's; nothing is reported twice beside it.
+        $this->assertSame(['group', 'count', 'messages', 'href'], array_keys($burst));
+    }
+
     /** The faces grid's shape is a contract between the pages that draw it, not a detail of one. */
     public function test_a_newcomer_arrives_in_the_shape_every_faces_grid_reads(): void
     {
@@ -252,13 +483,19 @@ class HomeIssueSerializerTest extends TestCase
 
     // --- the colophon and the pager ---
 
-    public function test_an_issue_says_whether_it_is_todays(): void
+    /**
+     * "Current" is whether the page is showing what there is, not whether it is dated today: the
+     * issue a reader is handed all day covers the day before, and comparing it to the calendar
+     * would make every fresh front page announce itself as stale.
+     */
+    public function test_an_issue_says_whether_it_is_the_freshest_there_could_be(): void
     {
         $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
 
         $this->assertTrue($this->page()['issue']['isCurrent']);
 
-        $this->issue->update(['issue_date' => $this->now()->subDay()->toDateString()]);
+        // A day was missed: the 27th's issue is no longer the last one that could have come out.
+        $this->issue->update(['issue_date' => $this->now()->subDays(2)->toDateString()]);
 
         $this->assertFalse($this->page()['issue']['isCurrent']);
     }
@@ -269,7 +506,7 @@ class HomeIssueSerializerTest extends TestCase
 
         $previous = HomeIssue::factory()->create([
             'number' => 6,
-            'issue_date' => $this->now()->subDay()->toDateString(),
+            'issue_date' => $this->now()->subDays(2)->toDateString(),
             'window_start' => $this->now()->subDays(2),
             'published_at' => $this->now()->subDay(),
         ]);
@@ -285,7 +522,7 @@ class HomeIssueSerializerTest extends TestCase
 
     public function test_a_day_with_no_issue_is_a_null_issue_with_the_pager_intact(): void
     {
-        $page = HomeIssueSerializer::page(null, null, $this->viewer, null, null, $this->now());
+        $page = HomeIssueSerializer::page(null, null, null, null, $this->now());
 
         $this->assertNull($page['issue']);
         $this->assertNull($page['prev']);
@@ -300,7 +537,7 @@ class HomeIssueSerializerTest extends TestCase
 
         $issue = $this->page()['issue'];
 
-        foreach (['features', 'briefs', 'talkBursts', 'newcomers', 'newGroups', 'upcomingEvents'] as $key) {
+        foreach (['talkBursts', 'newcomers', 'newGroups', 'upcomingEvents'] as $key) {
             $this->assertFalse(array_key_exists($key, $issue), "`{$key}` was shipped as an empty section");
         }
     }
@@ -311,7 +548,7 @@ class HomeIssueSerializerTest extends TestCase
     {
         HomeIssue::factory()->create([
             'number' => 6,
-            'issue_date' => $this->now()->subDay()->toDateString(),
+            'issue_date' => $this->now()->subDays(2)->toDateString(),
             'window_start' => $this->now()->subDays(2),
             'published_at' => $this->now()->subDay(),
         ]);
@@ -372,7 +609,6 @@ class HomeIssueSerializerTest extends TestCase
         return HomeIssueSerializer::page(
             $issue,
             app(ShowHomeIssue::class)($this->viewer, $issue),
-            $this->viewer,
             $previous,
             $next,
             $this->now(),

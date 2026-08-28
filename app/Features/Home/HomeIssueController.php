@@ -59,7 +59,6 @@ class HomeIssueController extends Controller
         return Inertia::render('home/archive', HomeIssueSerializer::page(
             $issue,
             $show($viewer, $issue),
-            $viewer,
             $previous,
             $next,
             CarbonImmutable::now(),

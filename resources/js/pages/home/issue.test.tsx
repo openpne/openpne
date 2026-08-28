@@ -3,15 +3,12 @@ import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import HomeIssue from './issue';
 import type { GridImage } from '@/components/image-grid';
-import type { LinkCardData } from '@/components/link-card';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
 import type { AuthUser, FeatureKey, NineTableItem } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
-import type { DiaryDetail, DiarySummary } from '../diary/types';
-import type { TimelinePostEntry } from '../timeline/types';
 import type { HomeGroup } from '../unified/group-grid';
-import type { Issue, IssueStory, TalkBurst, UpcomingEvent } from './types';
+import type { Issue, IssueStory, TalkBurst, TalkExcerptMessage, UpcomingEvent } from './types';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
@@ -49,61 +46,33 @@ const picture = (id: number): GridImage => ({
     height: 600,
 });
 
-const card: LinkCardData = {
-    url: 'https://www.example.com/article',
-    title: 'A title from the page',
-    description: 'What the page says it is about.',
-    siteName: 'Example',
-    domain: 'example.com',
-    layout: 'compact',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    fitSources: [],
-};
-
-const diary = (overrides: Partial<DiaryDetail> = {}): DiaryDetail => ({
+const story = (overrides: Partial<IssueStory> = {}): IssueStory => ({
+    kind: 'diary',
     id: 11,
-    title: 'Morning walk',
-    excerpt: 'Down to the river and back.',
-    visibility: 'open',
-    commentCount: 0,
-    hasImages: true,
-    thumbnails: [],
+    href: '/diary/11',
+    headline: 'Morning walk',
+    dek: 'Down to the river and back.',
     author,
+    group: null,
     createdAt: '2026-08-27T09:00:00+09:00',
-    body: 'Down to the river and back.',
-    format: 'op3',
-    bodyHtml: '<p>Down to the <strong>river</strong> and back.</p>',
-    linkCard: card,
-    images: [picture(1), picture(2)],
+    commentCount: 0,
+    image: picture(1),
     ...overrides,
 });
 
-const post = (overrides: Partial<TimelinePostEntry> = {}): TimelinePostEntry => ({
-    id: 21,
-    body: 'A one-line post',
-    visibility: 'open',
-    hasImages: false,
-    replyCount: 0,
-    images: [],
-    mentions: [],
-    tags: [],
-    linkCard: null,
-    author,
-    createdAt: '2026-08-27T10:00:00+09:00',
-    ...overrides,
-});
-
-const diaryStory = (overrides: Partial<DiaryDetail> = {}): IssueStory => ({ kind: 'diary', item: diary(overrides) });
+/** The links a block offers, which for a whole-block link is exactly one: the headline's. */
+const linksIn = (block: Element): string[] =>
+    Array.from(block.querySelectorAll('a')).map((link) => `${link.textContent} -> ${link.getAttribute('href')}`);
 
 const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     date: '2026-08-27',
     number: 12,
     href: '/home/2026/08/27',
-    publishedAt: '2026-08-27T06:00:00+09:00',
+    publishedAt: '2026-08-28T06:00:00+09:00',
+    days: { from: '2026-08-27', to: '2026-08-27' },
+    window: { from: '2026-08-27T06:00:00+09:00', to: '2026-08-28T06:00:00+09:00' },
     isCurrent: true,
-    topStory: diaryStory(),
+    stories: [story()],
     ...overrides,
 });
 
@@ -130,82 +99,111 @@ function arrive(props: Record<string, unknown>) {
     return renderWithProviders(<HomeIssue />);
 }
 
-const documentOrder = (container: HTMLElement) => Array.from(container.querySelectorAll('*'));
-
-test('a one-story issue is printed whole: rich body, its card, and the pictures above it', () => {
+test('the lead is one block: a hero over the headline, and nothing else in it to click', () => {
     const { container } = arrive({ issue: issueOf() });
 
-    // The server-rendered decoration, not the plain fallback.
-    const body = container.querySelector('.rich-body');
-    expect(body?.textContent).toBe('Down to the river and back.');
-    expect(body?.querySelector('strong')).toBeTruthy();
+    const card = container.querySelector('.rounded-card') as HTMLElement;
+    const hero = card.querySelector('img[srcset]');
 
-    // The one place in an issue a body is printed is the one place its card is drawn.
-    expect(container.querySelector('a[href="https://www.example.com/article"]')).toBeTruthy();
+    // The picture's own widths, and the box the placement paints, so the browser can pick before
+    // the layout is measured.
+    expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
+    expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
+    // The headline says what the story is; the picture is not a second name for it.
+    expect(hero?.getAttribute('alt')).toBe('');
 
     const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
     expect(headline.className).toContain('text-2xl');
 
-    // The pictures lead the article; the words follow them.
-    const order = documentOrder(container);
-    const hero = order.findIndex((el) => el.getAttribute('aria-label') === 'Image 1');
-    const words = order.findIndex((el) => el.classList.contains('rich-body'));
-    expect(hero).toBeGreaterThanOrEqual(0);
-    expect(hero).toBeLessThan(words);
+    // One link in the whole card, named by the headline and stretched over the block that positions it.
+    expect(linksIn(card)).toEqual(['Morning walk -> /diary/11']);
+    expect(within(headline).getByRole('link', { name: 'Morning walk' }).className).toContain('after:absolute');
+    expect(card.className).toContain('relative');
+
+    // What the story says, not the story: no body, no card under it, and nothing offering to continue.
+    expect(screen.getByText('Down to the river and back.')).toBeTruthy();
+    expect(container.querySelector('.rich-body')).toBeNull();
+    expect(container.querySelector('a[href^="http"]')).toBeNull();
+    expect(screen.queryByText('Continue reading')).toBeNull();
 });
 
-test('a post headlined by its first line keeps the mention in it a link', () => {
-    const story: IssueStory = {
-        kind: 'timeline',
-        item: {
-            ...post({
-                body: '@rin what a morning\nWalked down to the river and back.',
-                mentions: [{ offset: 0, length: 4, memberId: 3 }],
-            }),
-            excerpt: 'Walked down to the river and back.',
-        },
-    };
+test('a lead with no picture keeps its rank and reads a line longer', () => {
+    const { container } = arrive({ issue: issueOf({ stories: [story({ image: null })] }) });
 
-    arrive({ issue: issueOf({ topStory: story }) });
-
-    const headline = screen.getByRole('heading', { level: 2 });
-    expect(headline.textContent).toBe('@rin what a morning');
-    expect(within(headline).getByRole('link', { name: '@rin' }).getAttribute('href')).toBe('/member/3');
-
-    // The rest of the post is the body; only the first line was spent on the headline.
-    expect(screen.getByText('Walked down to the river and back.')).toBeTruthy();
+    // No hero-shaped gap where there is no photograph: the lead's weight is its placement and size.
+    expect(container.querySelector('img[srcset]')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-2xl');
+    expect(screen.getByText('Down to the river and back.').className).toContain('line-clamp-4');
 });
 
-test('the lead takes the width and the rest run two abreast, restating no link', () => {
+test('the two after the lead are cards side by side, a rank down', () => {
     const { container } = arrive({
         issue: issueOf({
-            features: [
-                diaryStory({ id: 12, title: 'Second story' }),
-                diaryStory({ id: 13, title: 'Third story' }),
+            stories: [
+                story(),
+                story({ kind: 'topic', id: 12, href: '/topics/12', headline: 'Second story', group }),
+                story({ kind: 'event', id: 13, href: '/events/13', headline: 'Third story', group }),
             ],
         }),
     });
 
-    // The lead is a card like the others, and it stands alone above them: past one story, ranking
-    // the rest would be a claim the day's traffic does not support.
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Morning walk', 'Second story', 'Third story']);
-    headings.forEach((heading) => expect(heading.className).toContain('text-lg'));
+    expect(headings.map((heading) => heading.className.includes('text-2xl'))).toEqual([true, false, false]);
+    expect(headings.map((heading) => heading.className.includes('text-lg'))).toEqual([false, true, true]);
 
-    // Two columns and never three — a third leaves a card too narrow to read a headline across.
-    const grid = container.querySelector('div.grid');
-    expect(grid?.className).toContain('sm:grid-cols-2');
-    expect(grid?.className).not.toContain('grid-cols-3');
-    expect(grid?.children.length).toBe(2);
+    const grid = container.querySelector('.sm\\:grid-cols-2') as HTMLElement;
+    expect(grid.children).toHaveLength(2);
+    // Each card is one link, and it is its headline's.
+    expect(Array.from(grid.children).map((card) => linksIn(card))).toEqual([
+        ['Second story -> /topics/12'],
+        ['Third story -> /events/13'],
+    ]);
 
-    // A preview does not restate a link out of a body it is not showing.
-    expect(container.querySelector('a[href="https://www.example.com/article"]')).toBeNull();
+    // A board entry's byline names the group it was posted in — as text, since the card is the link.
+    expect(within(grid).getAllByText('Book club')).toHaveLength(2);
+    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
 });
 
-test('a lone follow-up takes the width too rather than sitting in half a row', () => {
-    const { container } = arrive({ issue: issueOf({ features: [diaryStory({ id: 12, title: 'Second story' })] }) });
+test('a lone second takes the width rather than half of it', () => {
+    const { container } = arrive({
+        issue: issueOf({ stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })] }),
+    });
 
-    expect(container.querySelector('div.grid')?.className).not.toContain('grid-cols-2');
+    expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
+});
+
+test('rank four and below are rows, with the picture beside the words where there is one', () => {
+    const { container } = arrive({
+        issue: issueOf({
+            stories: [
+                story(),
+                story({ id: 12, href: '/diary/12', headline: 'Second' }),
+                story({ id: 13, href: '/diary/13', headline: 'Third' }),
+                story({ id: 14, href: '/diary/14', headline: 'Fourth', dek: 'What the fourth says.' }),
+                story({ kind: 'timeline', id: 15, href: '/timeline/15', headline: 'Fifth', image: null, commentCount: 2 }),
+            ],
+        }),
+    });
+
+    const [withPicture, withNone] = Array.from(container.querySelectorAll('li'));
+    const rows = [withPicture, withNone];
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+
+    // A row's headline is its content line, not a heading rank: only the lead and the two cards are.
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+        'Morning walk',
+        'Second',
+        'Third',
+    ]);
+
+    expect(withPicture?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('6rem');
+    expect(withNone?.querySelector('img')).toBeNull();
+
+    // One link per row, so anywhere in it opens the story.
+    expect(rows.map((row) => linksIn(row as Element))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
+    expect(screen.getByText('What the fourth says.').className).toContain('line-clamp-1');
 });
 
 const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => ({
@@ -218,24 +216,20 @@ const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => (
     updatedAt: '2026-08-27T11:00:00+09:00',
 });
 
-const summary = (id: number): DiarySummary => ({
+const said = (id: number, overrides: Partial<TalkExcerptMessage> = {}): TalkExcerptMessage => ({
     id,
-    title: `Diary ${id}`,
-    excerpt: '',
-    visibility: 'open',
-    commentCount: 0,
-    hasImages: false,
-    thumbnails: [],
     author,
-    createdAt: '2026-08-27T08:00:00+09:00',
+    body: `turn ${id}`,
+    mentions: [],
+    createdAt: '2026-08-27T07:00:00+09:00',
+    images: [],
+    ...overrides,
 });
 
 const burst = (id: number): TalkBurst => ({
     group: { id, name: `Room ${id}`, imageUrl: null },
     count: 7,
-    since: '2026-08-27T07:00:00+09:00',
-    participants: [author],
-    thumbnails: [picture(9)],
+    messages: [1, 2, 3, 4, 5].map((n) => said(id * 100 + n)),
     href: `/groups/${id}/talk`,
 });
 
@@ -243,16 +237,10 @@ const newcomer: NineTableItem = { id: 31, name: 'Aki', imageUrl: null, avatarCol
 const newGroup: HomeGroup = { id: 41, name: 'Film club', imageUrl: null, href: '/groups/41' };
 const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' };
 
-test('past three stories the lead keeps its card and the rest become rows, under the day around them', () => {
-    const { container } = arrive({
+test('the whole issue is one page of articles, bands and the day around them', () => {
+    arrive({
         issue: issueOf({
-            briefs: [
-                { kind: 'diary', item: summary(101) },
-                { kind: 'timeline', item: post({ id: 102 }) },
-                { kind: 'topic', item: brief('topic', 103) },
-                { kind: 'event', item: brief('event', 104) },
-                { kind: 'diary', item: summary(105) },
-            ],
+            stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })],
             talkBursts: [burst(61), burst(62)],
             newcomers: [newcomer],
             newGroups: [newGroup],
@@ -260,15 +248,50 @@ test('past three stories the lead keeps its card and the rest become rows, under
         }),
     });
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-lg');
-
-    const lists = container.querySelectorAll('ul.divide-y');
-    expect(lists[0]?.children.length).toBe(5);
-
     expect(screen.getAllByRole('link', { name: 'Open talk' })).toHaveLength(2);
     expect(screen.getByText('New members')).toBeTruthy();
     expect(screen.getByText('New %communities%')).toBeTruthy();
     expect(screen.getByText('Upcoming events')).toBeTruthy();
+});
+
+test('a talk burst is the end of the conversation, printed', () => {
+    const { container } = arrive({
+        issue: issueOf({
+            stories: undefined,
+            talkBursts: [
+                {
+                    ...burst(61),
+                    messages: [
+                        said(1, { body: 'hello @rin', mentions: [{ offset: 6, length: 4, memberId: 3 }] }),
+                        said(2),
+                        said(3),
+                        said(4),
+                        said(5, { author: null, body: 'nobody is here any more' }),
+                        said(6, { images: [picture(9)] }),
+                    ],
+                },
+            ],
+        }),
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
+
+    // Six turns, read as a conversation: each one's words, under the name that said them.
+    ['hello @rin', 'turn 2', 'turn 3', 'turn 4', 'nobody is here any more', 'turn 6'].forEach((line) =>
+        expect(screen.getByText((_, el) => el?.textContent === line && el.tagName === 'P')).toBeTruthy(),
+    );
+    expect(screen.getAllByText('Rin')).toHaveLength(5);
+    // The message stays and the person is gone.
+    expect(screen.getByText('Withdrawn member')).toBeTruthy();
+    // A mention in a message is the link it is everywhere else.
+    expect(screen.getByRole('link', { name: '@rin' }).getAttribute('href')).toBe('/member/3');
+
+    // What was posted rides with the turn it was posted in, at the size a strip draws.
+    const glimpse = container.querySelector('img[srcset]');
+    expect(glimpse?.getAttribute('srcset')).toBe('/f/9/w640 640w');
+    expect(glimpse?.getAttribute('sizes')).toBe('6rem');
+
+    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
 });
 
 test('a section the issue does not have is absent, not empty', () => {
@@ -284,39 +307,40 @@ test('a section the issue does not have is absent, not empty', () => {
 });
 
 test('an issue whose stories have all gone is still the day around them', () => {
-    // Every story was taken down after publication, so the payload carries no `topStory` at all. The
+    // Every story was taken down after publication, so the payload carries no `stories` at all. The
     // talk and the faces are still an issue; the story band is simply not one of the things it has.
     const { container } = arrive({
-        issue: issueOf({ topStory: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
+        issue: issueOf({ stories: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });
 
     expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
-
-    // A glimpse of the run is a picture, not a marker beside the faces: drawn from the fit ladder,
-    // at the resolution the cell it lands in asks for.
-    const glimpse = container.querySelector('img[srcset]');
-    expect(glimpse?.getAttribute('srcset')).toBe('/f/9/w640 640w');
-    expect(glimpse?.getAttribute('sizes')).toBe('(min-width: 64rem) 13rem, 30vw');
     expect(screen.getByText('New members')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
 
-    // Nothing stands where the stories were: no lead, no card, and no count of what is missing.
+    // Nothing stands where the stories were: no article, no card, and no count of what is missing.
     expect(container.querySelector('.rich-body')).toBeNull();
     expect(screen.queryByText('Morning walk')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
 });
 
-test('a stale issue says it is one, and the current issue does not', () => {
+test('the foot of the page says which stretch it was drawn from, and whether it is stale', () => {
     arrive({ issue: issueOf({ isCurrent: false }) });
     expect(screen.getByText('Nothing new today yet — the next post starts a new day here.')).toBeTruthy();
 
     cleanup();
 
+    // An archived day is not stale — there is a day after it, so "nothing new yet" would be false.
+    arrive({ issue: issueOf({ isCurrent: false }), next: { date: '2026-08-28', number: 13, href: '/home/2026/08/28' } });
+    expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
+
+    cleanup();
+
     arrive({ issue: issueOf() });
     expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
+    // A day here runs 06:00 to 06:00, so the page states the two instants the masthead's day means.
+    expect(screen.getByText('Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00')).toBeTruthy();
     // The stamp is the instant this day was last put together, not a timetable it did not keep to.
-    expect(screen.getByText('Updated August 27, 2026 at 06:00')).toBeTruthy();
+    expect(screen.getByText('Updated August 28, 2026 at 06:00')).toBeTruthy();
     expect(screen.getByText('Posts deleted or made private since are not shown here.')).toBeTruthy();
 });
 
@@ -327,6 +351,7 @@ test('a site with nothing published yet offers the way to fill it', () => {
     expect(screen.getByText('The first post will appear here the next morning.')).toBeTruthy();
     // Nothing has been put together, so there is no instant to stamp and nothing to page through.
     expect(screen.queryByText(/^Updated /)).toBeNull();
+    expect(screen.queryByText(/^Posts from /)).toBeNull();
     expect(screen.queryByText('Past happenings')).toBeNull();
 });
 

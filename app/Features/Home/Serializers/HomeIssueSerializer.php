@@ -7,17 +7,20 @@ namespace App\Features\Home\Serializers;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
+use App\Features\Home\Data\HomeIssueDay;
+use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
 use App\Features\Home\HomeIssueSection;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\HomeIssue;
-use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -27,20 +30,23 @@ use Illuminate\Support\Collection;
 /**
  * The issue page's payload.
  *
- * **The layout is stated, not described.** How much of an issue there is decides how it is drawn,
- * and rather than ship a mode for the page to interpret, the shape says it: one story is a
- * `topStory` alone, two or three add `features`, four or more add `briefs`. Every optional key is
- * absent when its section is empty — never `[]` — so nothing on the page has to decide what an
- * empty list means on screen.
+ * **A story travels as a headline, a dek and a picture** — never a body. The front page is where a
+ * reader chooses what to read, and the place to read it is its own page, so nothing here carries
+ * words the block does not print: no rendered HTML, no link card, no entity ranges. Every optional
+ * key is absent when its section is empty — never `[]` — so nothing on the page has to decide what
+ * an empty list means on screen.
  *
- * The count is taken from what SURVIVED the gate, not from what was published: an issue of eight
- * stories seven of which have since been taken down is an issue of one, and drawing it as a lead
- * over a list of nothing would report the seven.
+ * What is there is what SURVIVED the gate, not what was published: an issue of eight stories seven
+ * of which have since been taken down is an issue of one.
  */
 final class HomeIssueSerializer
 {
-    /** Stories past the lead that still stand abreast of it, rather than becoming a list. */
-    private const FEATURES = 2;
+    /**
+     * How much of a body a dek carries, as a display width (a fullwidth glyph spends two of it).
+     * Wider than the feed's row-height cut: a dek is two or three lines of a card, not one line of
+     * a list, and it is the only thing on the page saying what a story is about.
+     */
+    private const DEK_WIDTH = 180;
 
     /**
      * @return array{issue: array|null, prev: array|null, next: array|null}
@@ -48,13 +54,12 @@ final class HomeIssueSerializer
     public static function page(
         ?HomeIssue $issue,
         ?HydratedIssue $hydrated,
-        Member $viewer,
         ?HomeIssue $previous,
         ?HomeIssue $next,
-        CarbonImmutable $today,
+        CarbonImmutable $now,
     ): array {
         return [
-            'issue' => $issue === null || $hydrated === null ? null : self::issue($issue, $hydrated, $viewer, $today),
+            'issue' => $issue === null || $hydrated === null ? null : self::issue($issue, $hydrated, $now),
             'prev' => self::ref($previous),
             'next' => self::ref($next),
         ];
@@ -106,15 +111,34 @@ final class HomeIssueSerializer
         ];
     }
 
-    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, Member $viewer, CarbonImmutable $today): array
+    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, CarbonImmutable $now): array
     {
+        $window = new HomeIssueWindow(
+            CarbonImmutable::parse($issue->window_start),
+            CarbonImmutable::parse($issue->published_at),
+        );
+
         return [
             ...self::linkTo($issue),
             'publishedAt' => CarbonImmutable::parse($issue->published_at)->toIso8601String(),
-            // The site's own day, not the reader's: an issue is one page for everybody, and its
-            // colophon says whether it is today's.
-            'isCurrent' => CarbonImmutable::parse($issue->issue_date)->format('Y-m-d') === $today->format('Y-m-d'),
-            ...self::stories($hydrated->items(HomeIssueSection::Stories), $viewer),
+            // Which days the issue is ABOUT, which is not the same as its stretch: a day of
+            // happenings runs 06:00 to 06:00 (HomeIssueDay), so the masthead names days and the
+            // colophon names the instants they were drawn from.
+            'days' => [
+                'from' => $window->firstDay()->format('Y-m-d'),
+                'to' => $window->lastDay()->format('Y-m-d'),
+            ],
+            'window' => [
+                'from' => $window->start->toIso8601String(),
+                'to' => $window->end->toIso8601String(),
+            ],
+            // Whether the page is showing what there is. Not "is it dated today": the issue a reader
+            // is handed all day covers the day before, and comparing it to the calendar would make
+            // every fresh front page announce itself as stale.
+            'isCurrent' => CarbonImmutable::parse($issue->issue_date)->startOfDay()
+                ->greaterThanOrEqualTo(HomeIssueDay::latest($now)),
+            ...self::section('stories', $hydrated->items(HomeIssueSection::Stories),
+                fn (array $items): array => array_map(self::story(...), $items)),
             ...self::section('talkBursts', $hydrated->items(HomeIssueSection::Talk),
                 fn (array $items): array => array_map(self::burst(...), $items)),
             ...self::section('newcomers', $hydrated->items(HomeIssueSection::Newcomers),
@@ -127,80 +151,119 @@ final class HomeIssueSerializer
     }
 
     /**
-     * The lead and what follows it, in whichever of the three shapes the surviving count picks.
+     * One story, as much of it as a front page prints: what it is called, the line it opens with,
+     * and one picture. A board entry adds the group it was posted in, which its byline names.
+     */
+    private static function story(HydratedItem $hydrated): array
+    {
+        $source = $hydrated->source;
+
+        return match (true) {
+            $source instanceof Diary => self::card(
+                'diary', $source, "/diary/{$source->getKey()}", $source->title,
+                self::dek($source->body, $source->format),
+                null,
+                self::countOf($source, 'comments'),
+                self::picture($source->images, DiarySerializer::image(...)),
+            ),
+            $source instanceof TimelinePost => self::post($source),
+            $source instanceof GroupTopic => self::card(
+                'topic', $source, "/topics/{$source->getKey()}", $source->name,
+                self::dek($source->body, $source->format),
+                self::scope($source->group),
+                self::countOf($source, 'comments'),
+                self::picture($source->images, GroupTopicSerializer::image(...)),
+            ),
+            $source instanceof GroupEvent => self::card(
+                'event', $source, "/events/{$source->getKey()}", $source->name,
+                self::dek($source->body, $source->format),
+                self::scope($source->group),
+                self::countOf($source, 'comments'),
+                self::picture($source->images, GroupEventSerializer::image(...)),
+            ),
+        };
+    }
+
+    /**
+     * A post has no title, so the line its author opened with stands in for one and the dek is what
+     * is left after it. A post opening on a blank line has no such line — and the block is one link
+     * named by its headline, which cannot then be nothing — so there the words themselves headline
+     * it and the dek stands down.
+     */
+    private static function post(TimelinePost $post): array
+    {
+        $lead = trim(self::firstLine($post->body));
+        $rest = self::dek(self::afterFirstLine($post->body), BodyFormat::Plain);
+
+        return self::card(
+            'timeline', $post, "/timeline/{$post->getKey()}",
+            $lead === '' ? $rest : $lead,
+            $lead === '' ? '' : $rest,
+            null,
+            self::countOf($post, 'replies'),
+            self::picture($post->images, TimelinePostSerializer::image(...)),
+        );
+    }
+
+    /**
+     * The fields every story has, whatever it is. `kind` is what the byline is written in, not a
+     * shape switch: one shape, and what a kind does not have is null rather than a key the page has
+     * to ask about — a diary has no group the way a story with no photograph has no picture.
+     */
+    private static function card(
+        string $kind,
+        Diary|TimelinePost|GroupTopic|GroupEvent $source,
+        string $href,
+        string $headline,
+        string $dek,
+        ?array $group,
+        int $commentCount,
+        ?array $image,
+    ): array {
+        return [
+            'kind' => $kind,
+            'id' => (int) $source->getKey(),
+            'href' => $href,
+            'headline' => $headline,
+            'dek' => $dek,
+            'author' => $source->member === null ? null : MemberRefSerializer::ref($source->member),
+            'group' => $group,
+            'createdAt' => $source->created_at->toIso8601String(),
+            'commentCount' => $commentCount,
+            'image' => $image,
+        ];
+    }
+
+    /** What a story says, in plain text, cut at the width a dek is read at. */
+    private static function dek(?string $body, BodyFormat $format): string
+    {
+        return BodyRenderer::excerpt($body, $format, self::DEK_WIDTH);
+    }
+
+    /**
+     * The one picture a block draws: the first posted with the story, in the shape every grid
+     * picture travels in. A row whose file is gone is skipped rather than drawn as an empty box.
      *
-     * @param  list<HydratedItem>  $stories
+     * @param  Collection<int, Model>  $images
+     * @param  callable(Model): array  $shape
      */
-    private static function stories(array $stories, Member $viewer): array
+    private static function picture(Collection $images, callable $shape): ?array
     {
-        $lead = array_shift($stories);
+        $first = $images->first(fn (Model $image): bool => $image->file !== null);
 
-        // Every story this issue featured has since gone. The rest of it still stands, so the key is
-        // absent rather than the issue being nothing.
-        if ($lead === null) {
-            return [];
-        }
+        return $first === null ? null : $shape($first);
+    }
 
-        $payload = ['topStory' => self::story($lead, $viewer)];
+    /** A count the eager load already made, or one asked for now rather than reported as zero. */
+    private static function countOf(Model $source, string $relation): int
+    {
+        $key = "{$relation}_count";
 
-        if ($stories === []) {
-            return $payload;
-        }
-
-        // Two or three stand abreast as equals and are drawn whole; past that the lead keeps its
-        // card and the rest become rows, which read at a glance in the shape their own lists use.
-        return count($stories) <= self::FEATURES
-            ? [...$payload, 'features' => array_map(fn (HydratedItem $item): array => self::story($item, $viewer), $stories)]
-            : [...$payload, 'briefs' => array_map(fn (HydratedItem $item): array => self::brief($item, $viewer), $stories)];
+        return (int) ($source->{$key} ?? $source->loadCount($relation)->{$key});
     }
 
     /**
-     * One story carried whole: the shape its own show page ships, plus what a headline needs that
-     * the record does not carry.
-     */
-    private static function story(HydratedItem $hydrated, Member $viewer): array
-    {
-        $source = $hydrated->source;
-
-        return match (true) {
-            $source instanceof Diary => ['kind' => 'diary', 'item' => DiarySerializer::detail($source, $viewer)],
-            $source instanceof TimelinePost => ['kind' => 'timeline', 'item' => [
-                ...TimelinePostSerializer::entry($source, $viewer),
-                // A post has no title, so the page headlines it with the line its author opened
-                // with. The excerpt is therefore what is left AFTER that line — repeating it would
-                // print the headline twice — and a one-line post has nothing left to show.
-                'excerpt' => self::afterFirstLine($source->body),
-            ]],
-            $source instanceof GroupTopic => ['kind' => 'topic', 'item' => [
-                ...GroupTopicSerializer::detail($source, $viewer),
-                'group' => self::scope($source->group),
-                'excerpt' => BodyRenderer::excerpt($source->body, $source->format),
-                'commentCount' => (int) ($source->comments_count ?? $source->loadCount('comments')->comments_count),
-            ]],
-            $source instanceof GroupEvent => ['kind' => 'event', 'item' => [
-                ...GroupEventSerializer::detail($source, $viewer),
-                'group' => self::scope($source->group),
-                'excerpt' => BodyRenderer::excerpt($source->body, $source->format),
-                'commentCount' => (int) ($source->comments_count ?? $source->loadCount('comments')->comments_count),
-            ]],
-        };
-    }
-
-    /** One story below the lead, in the row shape the rest of the surface already lists it with. */
-    private static function brief(HydratedItem $hydrated, Member $viewer): array
-    {
-        $source = $hydrated->source;
-
-        return match (true) {
-            $source instanceof Diary => ['kind' => 'diary', 'item' => DiarySerializer::summary($source)],
-            $source instanceof TimelinePost => ['kind' => 'timeline', 'item' => TimelinePostSerializer::entry($source, $viewer)],
-            $source instanceof GroupTopic => ['kind' => 'topic', 'item' => HomeSerializer::activityEntry($source)],
-            $source instanceof GroupEvent => ['kind' => 'event', 'item' => HomeSerializer::activityEntry($source)],
-        };
-    }
-
-    /**
-     * A run of talk: the live numbers the gate resolved, under the group they were said in.
+     * A run of talk: how much was said, the end of it to read, and the group it was said in.
      *
      * Nothing here comes from the row's frozen stats — those record why it was chosen, and are never
      * re-read as current truth ([home-issues.md](../../../../docs/internals/home-issues.md)).
@@ -214,9 +277,7 @@ final class HomeIssueSerializer
         return [
             'group' => self::scope($group),
             'count' => $burst['count'],
-            'since' => $burst['since']->toIso8601String(),
-            'participants' => $burst['participants'],
-            'thumbnails' => $burst['thumbnails'],
+            'messages' => $burst['messages'],
             'href' => $burst['href'],
         ];
     }
@@ -269,10 +330,15 @@ final class HomeIssueSerializer
         ];
     }
 
-    /**
-     * A body with its first line taken off, counted in code points — the unit the client splits the
-     * same body in (resources/js/pages/home/lead.ts), so the two cuts fall in the same place.
-     */
+    /** A body's first line, counted in code points so no astral character is cut in half. */
+    private static function firstLine(?string $body): string
+    {
+        $break = mb_strpos((string) $body, "\n");
+
+        return $break === false ? (string) $body : mb_substr((string) $body, 0, $break);
+    }
+
+    /** The same body with that line taken off; empty when there was no break to take it at. */
     private static function afterFirstLine(?string $body): string
     {
         $break = mb_strpos((string) $body, "\n");

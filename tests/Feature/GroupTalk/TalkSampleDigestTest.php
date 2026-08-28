@@ -10,6 +10,7 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
+use App\Models\GroupMessageMention;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
@@ -193,6 +194,168 @@ class TalkSampleDigestTest extends TestCase
 
         $this->assertSame(TalkSampleDigest::SAMPLE + 10, $this->digest->countBetween($this->group, $this->start, $this->until));
         $this->assertCount(TalkSampleDigest::SAMPLE, $this->digest->sampleBetween($this->group, $this->start, $this->until));
+    }
+
+    // --- the tail, for an excerpt ---
+
+    /** Six turns, spelled out: home-issues.md and the issue page both promise a reader six. */
+    public function test_an_excerpt_is_six_turns(): void
+    {
+        $this->assertSame(6, TalkSampleDigest::EXCERPT);
+    }
+
+    /** (since, until] again, and the LAST of it: the end of a stretch is what an excerpt is. */
+    public function test_the_excerpt_is_the_end_of_the_window_oldest_first(): void
+    {
+        $author = $this->member();
+        $this->said($author, $this->start);
+        $first = $this->said($author, $this->start->addSecond());
+        $middle = $this->said($author, $this->start->addMinutes(30));
+        $onUntil = $this->said($author, $this->until);
+        $this->said($author, $this->until->addSecond());
+
+        $this->assertSame(
+            [$first->getKey(), $middle->getKey(), $onUntil->getKey()],
+            $this->ids($this->digest->lastBetween($this->group, $this->start, $this->until)),
+        );
+
+        // Bounded, and it is the newest turns that survive the bound — read backwards, handed back
+        // in reading order.
+        $this->assertSame(
+            [$middle->getKey(), $onUntil->getKey()],
+            $this->ids($this->digest->lastBetween($this->group, $this->start, $this->until, limit: 2)),
+        );
+    }
+
+    /** Everything an excerpt draws comes with the rows: a line must not cost a query to print. */
+    public function test_the_excerpt_brings_its_authors_pictures_and_mentions_with_it(): void
+    {
+        $viewer = $this->member();
+        $author = $this->member();
+        $first = $this->said($author, $this->start->addSecond());
+
+        DB::enableQueryLog();
+        $one = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+        $lineCost = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        // Three more lines by three more people, so nothing about them is already in memory.
+        foreach (range(1, 3) as $minute) {
+            $this->said($this->member(), $this->start->addMinutes($minute));
+        }
+        DB::flushQueryLog();
+        $four = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+        $fourLinesCost = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertCount(1, $one);
+        $this->assertCount(4, $four);
+        // Four lines and four authors for the reads one line took: the rows carry it all. (Pictures
+        // are the exception by design — the file policy is a read per file, bounded per message.)
+        $this->assertSame($lineCost, $fourLinesCost, 'drawing an excerpt costs a query per line');
+
+        $file = $this->attach($first);
+        GroupMessageMention::query()->create([
+            'group_message_id' => $first->getKey(),
+            'member_id' => $author->getKey(),
+            'offset' => 0,
+            'length' => 4,
+        ]);
+        $excerpt = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+
+        $this->assertSame($author->getKey(), $excerpt[0]['author']['id']);
+        $this->assertSame($first->body, $excerpt[0]['body']);
+        // The ranges EntityText splits the body on, in the shape the stream ships them.
+        $this->assertSame([['memberId' => $author->getKey(), 'offset' => 0, 'length' => 4]], $excerpt[0]['mentions']);
+        $this->assertSame([$file->url()], array_column($excerpt[0]['images'], 'url'));
+    }
+
+    /** The message stays and the person is gone — the turn keeps its place with no author on it. */
+    public function test_a_withdrawn_author_keeps_their_turn_in_an_excerpt(): void
+    {
+        $at = $this->start->addSecond();
+        GroupMessage::factory()->withdrawnAuthor()->create([
+            'group_id' => $this->group->getKey(),
+            'body' => 'gone',
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
+
+        $excerpt = $this->digest->excerpt(
+            $this->member(),
+            $this->digest->lastBetween($this->group, $this->start, $this->until),
+        );
+
+        $this->assertCount(1, $excerpt);
+        $this->assertNull($excerpt[0]['author']);
+        $this->assertSame('gone', $excerpt[0]['body']);
+    }
+
+    /** A picture the reader may not have leaves nothing behind: no placeholder, no gap, no count. */
+    public function test_a_refused_picture_is_skipped_in_an_excerpt_too(): void
+    {
+        $viewer = $this->member();
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addSecond());
+        $refused = $this->attach($message, number: 1);
+        $served = $this->attach($message, number: 2);
+
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($refused): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            return $ability === 'view' && $subject instanceof File && $subject->is($refused) ? false : null;
+        });
+
+        $excerpt = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+
+        $this->assertSame([$served->url()], array_column($excerpt[0]['images'], 'url'));
+    }
+
+    /** A borrowed file is not this message's picture, wherever the picture is being drawn. */
+    public function test_an_excerpt_leaves_out_a_file_owned_by_another_message(): void
+    {
+        $viewer = $this->member();
+        $author = $this->member();
+        $lender = $this->said($author, $this->start->addSecond());
+        $borrower = $this->said($author, $this->start->addMinutes(1));
+        $this->attach($borrower, owner: $lender);
+        $mine = $this->attach($borrower, number: 2);
+
+        $excerpt = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+
+        $this->assertSame([$mine->url()], array_column($excerpt[1]['images'], 'url'));
+    }
+
+    /**
+     * A row of squares under a line is a glimpse, not an album — and the cap is on the slots looked
+     * at, so a message whose first pictures are refused shows fewer rather than reaching further
+     * down for replacements.
+     */
+    public function test_an_excerpts_pictures_stop_at_the_cap(): void
+    {
+        $viewer = $this->member();
+        $message = $this->said($this->member(), $this->start->addSecond());
+        $attached = array_map(
+            fn (int $number): File => $this->attach($message, number: $number),
+            range(1, TalkSampleDigest::EXCERPT_PICTURES + 2),
+        );
+
+        $excerpt = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+
+        $this->assertCount(TalkSampleDigest::EXCERPT_PICTURES, $excerpt[0]['images']);
+
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($attached): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            return $ability === 'view' && $subject instanceof File && $subject->is($attached[0]) ? false : null;
+        });
+
+        $refused = $this->digest->excerpt($viewer, $this->digest->lastBetween($this->group, $this->start, $this->until));
+
+        $this->assertSame(
+            [$attached[1]->url(), $attached[2]->url()],
+            array_column($refused[0]['images'], 'url'),
+        );
     }
 
     // --- the anchor ---

@@ -55,6 +55,34 @@ seen ([`RandomMembers`](../../app/Features/Member/Queries/RandomMembers.php)). `
 is nullable, and a null instant is in no window, so a row from before the column was stamped stays
 out on the range alone.
 
+## A day runs 06:00 → 06:00
+
+**A day of happenings is not a calendar day.** It starts when the issue goes out and runs to the
+next one, so what a reader is handed at 06:00 is everything since 06:00 the morning before.
+[`HomeIssueDay::of()`](../../app/Features/Home/Data/HomeIssueDay.php) is that rule as arithmetic —
+the instant, less the publishing hour, to its own midnight — and a window `(start, end]` covers the
+days `of(start)` … `of(end − 1s)`.
+
+**`issue_date` is the last day the window covers**, which is what the page is titled and addressed
+by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
+27th's issue**; a run by hand at 18:00 on the 28th covers `(28th 06:00, 28th 18:00]` and is the
+28th's; the first issue ever spans seven days and takes the last of them. Dating any of these by the
+day the run happened would headline yesterday evening's posts with today's date, which is the one
+thing a dateline may not do.
+
+Idempotency is unchanged and still reads "one issue per `issue_date`": the publisher looks for that
+day before planning, and the unique settles a race. A manual afternoon run therefore takes the day's
+issue early — the next 06:00 run finds the day published and writes nothing, and the one after it
+covers everything from the manual run onwards. Nothing goes unreported; one issue simply spans a
+longer stretch than a day.
+
+The page reads the same rule twice more. Its masthead names the days the window covers — one day
+usually, a range when it reached further back — and its colophon states the two instants behind
+them, because a reader seeing last evening under yesterday's date needs to see where the day was
+cut. And "current" means the issue is the last one that could have come out (`HomeIssueDay::latest`),
+not that it is dated today: no fresh issue ever is, and comparing against the calendar would have
+every front page announce itself as stale.
+
 ## The window, and 休刊
 
 An issue covers **`(previous issue's published_at, now]`** — open at the start, closed at the end.
@@ -148,9 +176,16 @@ SQLite compiles `lockForUpdate` away, serializes the writers itself, and refuses
 first. Whichever arrives, the loser answers with the issue the winner published, and a failed write
 with no issue for the day stays loud.
 
-**There is no `--date`.** A window chains from the previous issue's `published_at`, so an issue dated
-into the past would either overlap the one after it or claim a stretch that has already been
-reported. `--dry-run` reports what an issue would hold without writing it.
+`--date=YYYY-MM-DD` publishes a past day from **its own** window — `(D 06:00, D+1 06:00]`, with
+`published_at` at the end of it — rather than chaining from the last issue. It refuses a day that is
+not over (today included: today's 06:00 boundary lies ahead), a day that already has an issue, and a
+date that is not one, each with a non-zero exit so a script can read the answer. It also refuses a day
+already inside a published issue's window: a backfill names every day it wants, so it cannot re-report
+a stretch an issue already covers — and a chained window is as long as the gap it closed, the first
+one a week. `--dry-run` reports what an issue would hold without writing it, with or without a date.
+
+Backfilling an archive therefore runs **oldest day first, on an empty ledger**: the never-again rule
+is not date-aware, so a day filled in after a later one can only feature what that later one left.
 
 This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
 chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
@@ -178,23 +213,38 @@ may not know exists.
 | a burst's group is no longer `Everyone` | the one gate: an Everyone group's talk is readable by any member ([`GroupTalkAccess`](../../app/Features/GroupTalk/GroupTalkAccess.php)), so nothing follows it |
 | a burst has no surviving message | the stretch is what the row is about, and an empty one is nothing to report |
 
-**A withdrawn author is not a refusal.** The record stands and both serializers already draw the
-byline as a withdrawn member; among a burst's faces the author is skipped instead, because a blank
-face in a row of faces reads as somebody rather than as nobody. **A past event stays** on a back
+**A withdrawn author is not a refusal.** The record stands and every shape here draws the byline as a
+withdrawn member, a message in a talk excerpt included. **A past event stays** on a back
 issue's calendar: an issue is a snapshot of the morning it went out, and one that quietly shed its
 calendar as the week went by would misreport that morning.
 
-**A burst is resolved live, and only its window is remembered.** The count is the stretch's current
-count; the way in is `?m=` on the first message still there, which is also the instant the card says
-it started; the faces and pictures come from the **last day** of the stretch rather than its start —
-the first issue ever reaches back a week, and a week-old glimpse of a room talking today is worse
-than no glimpse.
+**A story is a headline, a dek and a picture — never a body.** A front page is where a reader
+chooses; the place to read a story is its own page. So nothing a body would need travels with a
+story: no rendered HTML, no entity ranges, and no [link card](link-cards.md), which previews a link
+the reader has not been shown and has no body here to be shown in. The dek is the body's opening as
+plain text, cut server-side to a display width of 180 — a URL in it reads as the text it is.
 
-The count-adaptive shape is decided **after** the gate, from what survived: one story is a lead
-drawn whole, two or three stand abreast, four or more become a lead over rows. An issue of eight
-that lost seven is an issue of one, and drawing it as a lead over an empty list would report the
-seven. Every optional section key is absent rather than empty, so nothing on the page has to decide
-what `[]` means.
+What ranks a story is the **room it gets**, not how much of it is printed: rank 1 leads across the
+width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the rest are rows with the
+picture as a square beside the words. A story with no picture keeps its rank and reads a line
+further. The payload is still one ranked list in one shape — the placement is the page's decision.
+
+**Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
+and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
+navigates. A post has no title, so its opening line is the headline and the dek is what is left after
+it — and a post that opens on a blank line is headlined by its words instead, because a link named by
+nothing cannot be announced.
+
+**A burst is resolved live, and only its window is remembered.** The count is the stretch's current
+count and the way in is `?m=` on the first message still there. What is printed is the **last six
+messages of the window**, oldest first, each drawn as the room draws it — author, time, body with
+its mentions, and the pictures the reader may have, gated per file the same way a glimpse is
+([`TalkSampleDigest`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)). The tail and not
+the head: the first issue ever reaches back a week, and a week-old opening describes a room that has
+since moved on. There is no separate row of faces and no picture grid — an excerpt carries both.
+
+Every optional section key is absent rather than empty, so nothing on the page has to decide what
+`[]` means, and an issue of eight stories that lost seven is simply an issue of one.
 
 ## Routes
 

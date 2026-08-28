@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Home\Queries;
 
+use App\Features\GroupTalk\Queries\TalkSampleDigest;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
@@ -377,15 +378,19 @@ class ShowHomeIssueTest extends TestCase
         $burst = $this->only(HomeIssueSection::Talk)->extra;
 
         $this->assertSame(2, $burst['count']);
+        // The way in is the surviving first message, and the excerpt is what is left of the stretch.
         $this->assertSame("/groups/{$group->getKey()}/talk?m={$messages[1]->getKey()}", $burst['href']);
-        $this->assertTrue($this->now()->subHours(4)->equalTo($burst['since']), 'since is not the surviving first message');
+        $this->assertSame(
+            [$messages[1]->getKey(), $messages[2]->getKey()],
+            array_column($burst['messages'], 'id'),
+        );
     }
 
     /**
-     * The faces describe the last day of the stretch, not its start. The first issue ever reaches
-     * back a week, and a week-old glimpse of a room talking today is the wrong answer.
+     * The excerpt is the END of the stretch, not its start. The first issue ever reaches back a
+     * week, and a week-old opening describes a room that has since moved on.
      */
-    public function test_the_faces_come_from_the_last_day_of_the_stretch(): void
+    public function test_the_excerpt_is_the_tail_of_the_stretch(): void
     {
         $group = Group::factory()->create();
         $longAgo = Member::factory()->create();
@@ -413,14 +418,27 @@ class ShowHomeIssueTest extends TestCase
         $burst = $this->only(HomeIssueSection::Talk)->extra;
 
         // Both messages are counted and the anchor is the week-old one — the stretch is the whole
-        // window. Only the faces are cut to the last day.
+        // window; the excerpt is bounded, so it ends on the newest.
         $this->assertSame(2, $burst['count']);
         $this->assertSame("/groups/{$group->getKey()}/talk?m={$first->getKey()}", $burst['href']);
-        $this->assertSame([$lately->getKey()], array_column($burst['participants'], 'id'));
+        $this->assertSame($lately->getKey(), $burst['messages'][1]['author']['id']);
+        $this->assertSame($longAgo->getKey(), $burst['messages'][0]['author']['id']);
+
+        // Bounded: only the last few turns are printed, however long the stretch.
+        foreach (range(1, TalkSampleDigest::EXCERPT + 2) as $minute) {
+            GroupMessage::factory()->create([
+                'group_id' => $group->getKey(),
+                'member_id' => $lately->getKey(),
+                'created_at' => $this->now()->subMinutes($minute),
+                'updated_at' => $this->now()->subMinutes($minute),
+            ]);
+        }
+
+        $this->assertCount(TalkSampleDigest::EXCERPT, $this->only(HomeIssueSection::Talk)->extra['messages']);
     }
 
-    /** A blank face in a row of faces reads as somebody rather than as nobody. */
-    public function test_a_withdrawn_author_is_not_drawn_among_the_faces(): void
+    /** The message stays and the person is gone: the excerpt keeps the turn with no author on it. */
+    public function test_a_withdrawn_author_keeps_their_turn_in_the_excerpt(): void
     {
         $group = Group::factory()->create();
         $speaker = Member::factory()->create();
@@ -442,7 +460,8 @@ class ShowHomeIssueTest extends TestCase
         $burst = $this->only(HomeIssueSection::Talk)->extra;
 
         $this->assertSame(2, $burst['count']);
-        $this->assertSame([$speaker->getKey()], array_column($burst['participants'], 'id'));
+        $this->assertNull($burst['messages'][0]['author']);
+        $this->assertSame($speaker->getKey(), $burst['messages'][1]['author']['id']);
     }
 
     public function test_a_refused_picture_is_skipped_in_silence(): void
@@ -461,7 +480,12 @@ class ShowHomeIssueTest extends TestCase
 
         $burst = $this->only(HomeIssueSection::Talk)->extra;
 
-        $this->assertSame([$served->url()], array_column($burst['thumbnails'], 'url'));
+        // No placeholder and no gap: the message the refused picture hung on is still there, with
+        // nothing in it saying a picture was left out.
+        $this->assertSame([[], [$served->url()]], array_map(
+            fn (array $message): array => array_column($message['images'], 'url'),
+            $burst['messages'],
+        ));
     }
 
     // --- helpers ---
