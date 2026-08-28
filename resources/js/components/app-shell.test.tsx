@@ -20,7 +20,7 @@ vi.mock('@inertiajs/react', () => ({
             {children}
         </a>
     ),
-    router: { visit: () => {}, post: () => {} },
+    router: { visit: () => {}, post: () => {}, on: () => () => {} },
 }));
 
 // The shell's other furniture. None of it is what these tests are about, and each brings its own
