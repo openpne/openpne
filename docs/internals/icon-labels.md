@@ -51,9 +51,10 @@ to do with the tooltip.
 Radix opens the panel on any focus it did not see a pointer press for, and focus moves on its own
 more often than a keyboard moves it: a dialog focuses its close control as it opens and its trigger
 as it shuts. After a tap that meant "Close" floating in the nav sheet and "Menu" floating once it was
-gone. So a focus raises the panel only when the browser draws a ring for it — `:focus-visible` — which
-is the keyboard's focus and not a dialog's. The trigger's `onFocus` calls `preventDefault` otherwise,
-the flag Radix's composed handler checks before opening.
+gone. So a focus raises the panel only when the browser draws a ring for it — `:focus-visible`. A focus a
+script moves inherits the modality of the last input, so a dialog's focus is visible after a keypress
+and not after a tap — the keyboard's tooltip stays, the tap's goes. The trigger's `onFocus` calls
+`preventDefault` otherwise, the flag Radix's composed handler checks before opening.
 
 ## What is deliberately not covered
 
