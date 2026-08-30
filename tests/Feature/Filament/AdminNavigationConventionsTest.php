@@ -106,6 +106,12 @@ class AdminNavigationConventionsTest extends TestCase
             foreach ($this->navigableScreens() as $screen) {
                 $label = $screen::getNavigationLabel();
 
+                $this->assertStringNotContainsString(
+                    '%',
+                    $label,
+                    "{$screen} renders the {$locale} label \"{$label}\": a placeholder that is not a registered term survives rendering.",
+                );
+
                 $this->assertArrayNotHasKey(
                     $label,
                     $seen,

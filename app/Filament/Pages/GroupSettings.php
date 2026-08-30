@@ -55,12 +55,12 @@ class GroupSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('%Group% settings');
+        return __('%Community% settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('%Group% settings');
+        return __('%Community% settings');
     }
 
     public function mount(): void
