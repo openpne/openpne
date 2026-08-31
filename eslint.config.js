@@ -29,16 +29,21 @@ const JSX_LINE_COMMENT_RESTRICTION = {
 // checks. Rather than name the spellings that reach pages/ (`./**`, a `base` option, a bracket in
 // the path), allow exactly the other glob the app has, the dictionaries, and refuse every other
 // pattern: an array, a template, or any string that is not a /lang/*.json path. A dynamic import
-// with a non-literal specifier is Vite's other glob — it emits a chunk per matching file, tests
-// included — so it is refused the same way. The page map carries an eslint-disable naming this rule;
-// a new legitimate glob does the same, with its reason.
+// whose specifier holds an expression is one Vite may turn into a glob — it then emits a chunk per
+// matching file, tests included — so it is refused too; a template with no expression is a plain
+// import to Vite and stays allowed. The page map carries an eslint-disable naming this rule; a new
+// legitimate glob does the same, with its reason.
 const GLOB_MESSAGE =
     'A glob over modules here can ship test modules. The page map is lib/page-modules.ts; only the /lang/*.json dictionaries are globbed elsewhere.';
 const GLOB_CALL = "CallExpression[callee.object.type='MetaProperty'][callee.property.name='glob']";
 const GLOB_RESTRICTIONS = [
     { selector: `${GLOB_CALL}[arguments.0.type!='Literal']`, message: GLOB_MESSAGE },
     { selector: `${GLOB_CALL}[arguments.0.type='Literal'][arguments.0.value!=/^\\/lang\\/[^/]*\\.json$/]`, message: GLOB_MESSAGE },
-    { selector: "ImportExpression[source.type!='Literal']", message: GLOB_MESSAGE },
+    {
+        selector: "ImportExpression[source.type!='Literal']:not([source.expressions.length=0])",
+        message:
+            'A dynamic import with an expression in its specifier is a glob to Vite, and can ship test modules. Import a literal path, or map names to literal imports.',
+    },
 ];
 
 const DATE_FORMATTING_RESTRICTIONS = [

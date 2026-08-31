@@ -27,8 +27,6 @@ test('the entry refuses every module glob, in every spelling, and lets the dicti
         "import.meta.glob('./page[s]/**/*.tsx');",
         "import.meta.glob('./Pages/**/*.tsx');",
         "import.meta.glob(['/lang/*.json', './pages/**/*.tsx']);",
-        // Vite's other glob: a dynamic import with a variable in its specifier.
-        'const load = (n) => import(`./pages/${n}.tsx`);',
     ];
 
     for (const spelling of spellings) {
@@ -36,11 +34,17 @@ test('the entry refuses every module glob, in every spelling, and lets the dicti
         assert.ok(found.some((m) => m.startsWith(REFUSED)), spelling);
     }
 
+    // A dynamic import Vite may turn into a glob: an expression in the specifier.
+    for (const spelling of ['const load = (n) => import(`./pages/${n}.tsx`);', 'const load = (p) => import(p);']) {
+        const found = await messages(spelling, 'resources/js/app.tsx');
+        assert.ok(found.some((m) => m.startsWith('A dynamic import with an expression')), spelling);
+    }
+
     const allowed = await messages(
-        "import.meta.glob('/lang/*.json', { eager: true });\nconst one = () => import('./pages/timeline/index.tsx');",
+        "import.meta.glob('/lang/*.json', { eager: true });\nconst one = () => import('./pages/timeline/index.tsx');\nconst two = () => import(`./pages/timeline/index.tsx`);",
         'resources/js/app.tsx',
     );
-    assert.equal(allowed.filter((m) => m.startsWith(REFUSED)).length, 0);
+    assert.deepEqual(allowed.filter((m) => m.startsWith(REFUSED) || m.startsWith('A dynamic import')), []);
 });
 
 test('a module outside the entry is refused the same glob, and the page map is not', async () => {
