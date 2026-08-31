@@ -5,11 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileStorage;
+use App\Files\FileUploader;
+use App\Models\BannerImage;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Tests\TestCase;
 
 /**
@@ -43,6 +50,41 @@ class PreviousUrlTest extends TestCase
         return "/file/public/{$file->name}";
     }
 
+    private function bannerImageUrl(): string
+    {
+        $banner = BannerImage::factory()->create();
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'bannerImage',
+            'related_entity_id' => $banner->getKey(),
+            'byte_size' => 7,
+        ]);
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, 'PNGDATA');
+        rewind($stream);
+        app(FileStorage::class)->writeStream($file, $stream);
+        fclose($stream);
+
+        return route('banner.image', ['file' => $file->name]);
+    }
+
+    /**
+     * What Inertia's client sends on a visit. The version has to match: without it the answer is a
+     * 409 asking for a full load, which is no page — the full load that follows is what gets recorded.
+     * Read after a request has run: the middleware is what sets the version the factory reports.
+     *
+     * @return array<string, string>
+     */
+    private function inertiaVisitHeaders(): array
+    {
+        return [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => (string) Inertia::getVersion(),
+            'X-Requested-With' => 'XMLHttpRequest',
+        ];
+    }
+
     private function previousUrl(): ?string
     {
         return session()->previousUrl();
@@ -66,14 +108,10 @@ class PreviousUrlTest extends TestCase
     {
         // Inertia's client sends X-Requested-With alongside X-Inertia, so the framework's XHR
         // exclusion covers the very case this must record. Livewire's navigate fetch does not.
-        $visits = [
-            'inertia' => ['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'],
-            'livewire' => ['X-Livewire-Navigate' => ''],
-        ];
-
-        foreach ($visits as $client => $headers) {
+        foreach (['inertia', 'livewire'] as $client) {
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login');
 
+            $headers = $client === 'inertia' ? $this->inertiaVisitHeaders() : ['X-Livewire-Navigate' => ''];
             $this->withHeaders($headers + ['Sec-Fetch-Dest' => 'empty'])->get('/forgot-password');
 
             $this->assertSame(url('/forgot-password'), $this->previousUrl(), $client);
@@ -93,8 +131,7 @@ class PreviousUrlTest extends TestCase
     public function test_a_validation_error_returns_to_the_page_a_client_side_visit_reached(): void
     {
         $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
-        $this->withHeaders(['Sec-Fetch-Dest' => 'empty', 'X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
-            ->get('/forgot-password');
+        $this->withHeaders($this->inertiaVisitHeaders() + ['Sec-Fetch-Dest' => 'empty'])->get('/forgot-password');
 
         $this->post('/forgot-password', ['email' => ''])
             ->assertRedirect('/forgot-password')
@@ -111,6 +148,67 @@ class PreviousUrlTest extends TestCase
 
             $this->assertSame(url('/login'), $this->previousUrl(), $dest);
         }
+    }
+
+    public function test_a_response_that_is_not_a_page_is_not_recorded_whatever_the_request_headers(): void
+    {
+        Storage::fake('image_cache');
+        $owner = Member::factory()->create();
+        $avatar = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 40, 40), 'member', (int) $owner->getKey());
+
+        $urls = [
+            'file.public' => $this->brandMarkUrl(),
+            'image.show' => $avatar->thumbnailUrl(120, 120, square: true),
+            'banner.image' => $this->bannerImageUrl(),
+            'webmanifest' => route('webmanifest'),
+            'design.customizing_css' => route('design.customizing_css'),
+        ];
+
+        foreach ($urls as $name => $url) {
+            // The URL must reach the named route and answer with its bytes: an unmatched URL or an
+            // error would satisfy the assertions below for the wrong reason.
+            $this->assertSame($name, Route::getRoutes()->match(Request::create($url))->getName());
+            $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+            // No Fetch Metadata — the framework's rule would record this plain GET. withHeader()
+            // persists for the test, so the header has to be taken off again.
+            $bytes = $this->withoutHeader('Sec-Fetch-Dest')->get($url);
+            $bytes->assertOk();
+            $this->assertStringStartsNotWith('text/html', (string) $bytes->headers->get('Content-Type'), $name);
+            $this->assertSame(url('/login'), $this->previousUrl(), "{$name} without Fetch Metadata");
+
+            // And the header a browser sends when it shows the resource in a tab of its own: bytes
+            // are never a form to return to.
+            $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
+            $this->assertSame(url('/login'), $this->previousUrl(), "{$name} as a document");
+        }
+    }
+
+    public function test_an_error_page_is_not_recorded_whatever_surface_renders_it(): void
+    {
+        // A stale icon token answers 404. On the Modern surface that is an HTML page, so the
+        // content type alone would call it a page; the status is what rules it out.
+        config()->set('openpne.surface_mode', 'modern_only');
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+        $error = $this->withoutHeader('Sec-Fetch-Dest')->get(route('app_icon', ['token' => 'stale', 'size' => 180]));
+        $error->assertNotFound();
+        $this->assertStringStartsWith('text/html', (string) $error->headers->get('Content-Type'));
+
+        $this->assertSame(url('/login'), $this->previousUrl());
+    }
+
+    public function test_a_json_poll_from_a_client_without_fetch_metadata_is_not_recorded(): void
+    {
+        // The Modern shell polls this with a plain fetch() — no X-Requested-With — every minute, so
+        // on a client without Fetch Metadata the framework's rule would make it the back target of
+        // every page within a minute of arriving.
+        $this->actingAs(Member::factory()->create());
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/timeline')->assertOk();
+
+        $this->withoutHeader('Sec-Fetch-Dest')->get('/unread-counts')->assertOk();
+
+        $this->assertSame(url('/timeline'), $this->previousUrl());
     }
 
     public function test_a_background_fetch_does_not_replace_the_previous_url(): void
@@ -131,7 +229,8 @@ class PreviousUrlTest extends TestCase
 
         // No Fetch Metadata at all — a probe or a tool, the case headers cannot rule out (Chrome
         // DevTools asks every page for /.well-known/appspecific/com.chrome.devtools.json).
-        $this->get('/.well-known/appspecific/com.chrome.devtools.json')->assertNotFound();
+        // withHeader() persists for the test, so the header has to be taken off again.
+        $this->withoutHeader('Sec-Fetch-Dest')->get('/.well-known/appspecific/com.chrome.devtools.json')->assertNotFound();
 
         $this->assertSame(url('/login'), $this->previousUrl());
     }

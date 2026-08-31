@@ -61,22 +61,36 @@ every routed GET that is not an XHR, which gets this wrong both ways:
   then reach past them for whatever full page load came before.
 
 [`App\Http\Middleware\StartSession`](../../app/Http/Middleware/StartSession.php)
-asks instead whether the request is a page the visitor is on:
+asks instead whether the request is a page the visitor is on — a question with a
+request half and a response half. The request has to be a navigation:
 
-| `Sec-Fetch-Dest` | Recorded |
+| `Sec-Fetch-Dest` | Navigation |
 |---|---|
 | `document` | yes — an ordinary navigation |
 | `empty` with `X-Inertia` / `X-Livewire-Navigate` | yes — a client-side visit |
 | `empty` otherwise, `image`, `style`, `script`, `font`, `manifest`, … | no |
 | absent | the framework's rule: yes unless the request is an XHR |
 
+And the response has to be a page: a successful (2xx) answer that is
+`text/html`, or an Inertia page response (`X-Inertia`). A client without Fetch
+Metadata passes the first test with an image, a stylesheet, the manifest or a
+JSON poll; none passes the second, so none can become the back target. Nor can
+an error page — a 404 for a stale icon URL is HTML on the Modern surface, and
+the framework's fallback 404 for an unmatched URL is the same case: neither is
+somewhere to send a visitor back to. A redirect is not recorded either; the page
+it leads to is. The one thing the response half cannot tell apart is an HTML
+fragment (the Classic timeline's rows and replies): those are 2xx `text/html`,
+and stay out only because their scripts send `X-Requested-With` — a fragment
+endpoint fetched without it would be recorded for a client without Fetch
+Metadata.
+
 The framework's other guards stand (GET, a matched route, not a prefetch, not
-precognitive), and a fallback match is never recorded whatever its headers: it
-answers 404, so it is not somewhere to send a visitor back to.
+precognitive).
 
 It is swapped in by container binding (`AppServiceProvider`), not by replacing the
 class in the `web` group, so the middleware priority list still finds the session
-middleware under the framework's name.
+middleware under the framework's name. The framework does not hand the response
+to the store, so the request is wrapped to keep it.
 
 ## Key invariants
 
