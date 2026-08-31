@@ -66,7 +66,7 @@ export default function GroupTopicEdit() {
             </ComposeSheetAction>
             <Heading variant="pageCompose">{title}</Heading>
 
-            <Panel overflow="visible" sheet>
+            <Panel overflow="visible" chrome="sheet">
                 <form id={COMPOSE_FORM_ID} onSubmit={submit} className="space-y-4">
                     <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
                         <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
