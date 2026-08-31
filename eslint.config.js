@@ -24,6 +24,20 @@ const JSX_LINE_COMMENT_RESTRICTION = {
     message: 'This is a JSX text node, not a comment — it renders on screen. Use {/* … */}.',
 };
 
+// A glob over modules can put test files into the bundle: lib/page-modules.ts is the one that walks
+// pages/, excludes them, and is checked against disk by its test — and that map is all the test
+// checks. Rather than name the spellings that reach pages/ (`./**`, a `base` option, a bracket in
+// the path), allow exactly the other glob the app has, the dictionaries, and refuse every other
+// pattern: an array, a template, or any string that is not a /lang/*.json path. The page map carries
+// an eslint-disable naming this rule; a new legitimate glob does the same, with its reason.
+const GLOB_MESSAGE =
+    'import.meta.glob here can ship test modules. The page map is lib/page-modules.ts; only the /lang/*.json dictionaries are globbed elsewhere.';
+const GLOB_CALL = "CallExpression[callee.object.type='MetaProperty'][callee.property.name='glob']";
+const GLOB_RESTRICTIONS = [
+    { selector: `${GLOB_CALL}[arguments.0.type!='Literal']`, message: GLOB_MESSAGE },
+    { selector: `${GLOB_CALL}[arguments.0.type='Literal'][arguments.0.value!=/^\\/lang\\/[^/]*\\.json$/]`, message: GLOB_MESSAGE },
+];
+
 const DATE_FORMATTING_RESTRICTIONS = [
     {
         // The member access, not the call: `Intl.DateTimeFormat(...)` is valid without `new`, and
@@ -54,7 +68,9 @@ export default tseslint.config(
     {
         files: ['resources/js/**/*.{ts,tsx}'],
         ignores: ['resources/js/lib/date.ts'],
-        rules: { 'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION] },
+        rules: {
+            'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS],
+        },
     },
     {
         // The raw formatters take an explicit locale + timezone, so a caller can pass the wrong pair.
@@ -129,17 +145,10 @@ export default tseslint.config(
                     message:
                         'The Inertia entry is a side-effect-only module — no class definitions. Put them in their own module.',
                 },
-                {
-                    // The page glob is lib/page-modules.ts, whose test checks the resolved map against
-                    // disk. That map is all it checks: a second glob over pages/ written here would
-                    // put the test chunks back into the build with nothing in CI to see it. Any
-                    // literal naming pages/ — one string, an array of them, a template — is refused;
-                    // Vite takes only literals here, so there is no other way to spell one.
-                    selector:
-                        "CallExpression[callee.object.type='MetaProperty'][callee.property.name='glob']:has(Literal[value=/pages\\//], TemplateElement[value.raw=/pages\\//])",
-                    message: 'Do not glob pages/ from the entry — the page map is lib/page-modules.ts, whose test checks it against disk.',
-                },
+                // Restated: this block replaces the general one's options rather than adding to them.
                 ...DATE_FORMATTING_RESTRICTIONS,
+                JSX_LINE_COMMENT_RESTRICTION,
+                ...GLOB_RESTRICTIONS,
             ],
         },
     },

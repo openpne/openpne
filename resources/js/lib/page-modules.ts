@@ -13,6 +13,7 @@ import type { ResolvedComponent } from '@inertiajs/react';
  * Both patterns have to keep the same `../pages` base: the negation is resolved against the base the
  * affirmative one establishes, so narrowing the include alone silently stops excluding anything.
  */
+// eslint-disable-next-line no-restricted-syntax -- the one glob over modules; every other is refused (eslint.config.js)
 export const pageModules = import.meta.glob<ResolvedComponent>(['../pages/**/*.tsx', '!../pages/**/*.test.tsx']);
 
 /** Keys are relative to this module, not to the caller, so no caller builds one itself. */
