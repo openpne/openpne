@@ -17,6 +17,10 @@ class FilesServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Whether EXIF Orientation can be read is a host fact, but the variant key reads it from
+        // config so that a test can take either branch and so that every SAPI sees one value.
+        config(['openpne.images.exif' => extension_loaded('exif')]);
+
         // Bound (not singleton) so each resolution reflects the current
         // openpne.files.disk; the implementations are stateless and cheap to build.
         $this->app->bind(FileStorage::class, function (): FileStorage {

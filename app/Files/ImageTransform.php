@@ -67,14 +67,15 @@ final class ImageTransform
      * is passed through unencoded, so its key carries no encoder segment.
      *
      * The encoder segment carries what changes the bytes without a code change: the two env knobs,
-     * and whether ext-exif is present (without it a rotated photo is not turned upright). Each is a
+     * and whether ext-exif is present (`openpne.images.exif`, set by FilesServiceProvider; without
+     * it a rotated photo is not turned upright). Each is a
      * different variant, not a stale one — for the disk cache and for the ETag derived from this key
      * alike. What it does not carry is library and host versions; those are GENERATION's.
      */
     public function cacheKey(string $name, string $format): string
     {
         $suffix = $this->square ? '_sq' : '';
-        $encoder = $this->isRaw() ? '' : '/'.config('openpne.images.driver').'-q'.config('openpne.images.quality').(extension_loaded('exif') ? '' : '-noexif');
+        $encoder = $this->isRaw() ? '' : '/'.config('openpne.images.driver').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 
         return "{$name}/g".self::GENERATION."{$encoder}/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }
