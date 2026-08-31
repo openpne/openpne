@@ -56,7 +56,7 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
         $migration->down();
         $this->insert('https://push.example.com/kept');
         $this->insert('https://push.example.com/送信');
-        $this->insert("https://push.example.com/with space");
+        $this->insert('https://push.example.com/with space');
 
         $migration->up();
 
