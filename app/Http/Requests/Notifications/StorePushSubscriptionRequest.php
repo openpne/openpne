@@ -41,7 +41,7 @@ class StorePushSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'endpoint' => ['required', 'string', 'max:'.PushEndpoint::MAX_LENGTH, new PushEndpoint],
+            'endpoint' => ['required', 'string', new PushEndpoint],
             'keys' => ['required', 'array'],
             'keys.p256dh' => ['required', 'string', $this->p256dhPoint()],
             'keys.auth' => ['required', 'string', $this->base64UrlBytes(self::AUTH_BYTES)],

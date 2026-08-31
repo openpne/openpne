@@ -51,7 +51,9 @@ class PushSubscriptionController extends Controller
     {
         abort_unless(WebPushConfig::configured(), 404);
 
-        $request->validate(['endpoint' => ['required', 'string', 'max:'.PushEndpoint::MAX_LENGTH]]);
+        // The same shape the store takes: the column is ascii, and a value it could not hold is not a
+        // no-op lookup on MySQL but a collation error.
+        $request->validate(['endpoint' => ['required', 'string', new PushEndpoint]]);
 
         // Owner-scoped by the relation: an endpoint belonging to someone else is not this member's
         // to drop, and unsubscribing a device it does not hold is a no-op either way.

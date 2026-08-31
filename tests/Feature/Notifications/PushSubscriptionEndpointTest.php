@@ -165,6 +165,15 @@ class PushSubscriptionEndpointTest extends TestCase
         $this->assertSame(0, $member->pushSubscriptions()->count());
     }
 
+    /** The unsubscribe takes the store's shape too: a value the ascii column cannot hold is a 422, not a query error. */
+    #[DataProvider('rejectedEndpoints')]
+    public function test_the_unsubscribe_rejects_what_the_store_rejects(string $endpoint): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/push/subscriptions/delete', ['endpoint' => $endpoint])->assertInvalid('endpoint');
+    }
+
     /** @return array<string, array{string, string}> */
     public static function rejectedKeys(): array
     {
