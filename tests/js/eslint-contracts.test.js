@@ -27,6 +27,9 @@ test('the entry refuses every module glob, in every spelling, and lets the dicti
         "import.meta.glob('./page[s]/**/*.tsx');",
         "import.meta.glob('./Pages/**/*.tsx');",
         "import.meta.glob(['/lang/*.json', './pages/**/*.tsx']);",
+        // The allowlist is the /lang/*.json path, not the extension.
+        "import.meta.glob('./x/y.json');",
+        "import.meta.glob('/lang/ja/*.json');",
     ];
 
     for (const spelling of spellings) {
@@ -45,6 +48,13 @@ test('the entry refuses every module glob, in every spelling, and lets the dicti
         'resources/js/app.tsx',
     );
     assert.deepEqual(allowed.filter((m) => m.startsWith(REFUSED) || m.startsWith('A dynamic import')), []);
+});
+
+test('a module outside the entry keeps the JSX text-node and date rules', async () => {
+    const found = await messages('new Intl.DateTimeFormat();\nconst j = <b>\n// drawn on screen\n</b>;\n', 'resources/js/components/x.tsx');
+
+    assert.ok(found.some((m) => m.startsWith('Format dates through')));
+    assert.ok(found.some((m) => m.startsWith('This is a JSX text node')));
 });
 
 test('a module outside the entry is refused the same glob, and the page map is not', async () => {
