@@ -112,8 +112,8 @@ plainly:
   Nothing else in that array is pinned, and each pin is on an option rather than on the outcome:
   Guzzle applies a `curl` sub-array after everything else, so a site can say the same things in
   `CURLOPT_` terms and get them (`CURLOPT_WRITEFUNCTION` included). The client is built here at
-  all because the channel package would otherwise build it in a
-  way that drops the option bag entirely, and every guarantee here would be config that no longer
+  all because the channel package would otherwise build it in a way that drops the option bag
+  entirely, and every guarantee here would be config that no longer
   applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
@@ -142,8 +142,8 @@ send time than it did at store time. Two things bound that residue rather than c
 row takes a signed-in member and survives a per-member cap, and **no response body is ever read back
 to anyone** — the channel consumes status codes only, to expire dead subscriptions, and the client
 keeps at most `PushClientFactory::MAX_RESPONSE_BYTES` of a body before aborting the transfer, so an
-endpoint that answers at length costs the worker no more than that (response headers are libcurl's
-own 300 KiB to bound).
+endpoint that answers at length costs the worker no more than that (response headers are not
+bounded here beyond libcurl's own limits).
 
 ## Key invariants
 

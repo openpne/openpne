@@ -66,7 +66,8 @@ final class PushClientFactory
     {
         $handler = $options['handler'] ?? null;
         // Cloned, not pushed onto: the channel's provider builds a client per resolve from one
-        // captured option bag, and a shared stack would gain a copy of this handler each time.
+        // captured option bag, and a shared stack would gain a copy of this handler each time. The
+        // caller's stack is left as it was, so a later push onto it does not reach this client.
         $stack = $handler instanceof HandlerStack ? clone $handler : HandlerStack::create($handler);
         $stack->push(self::boundResponseBody(), 'bound_response_body');
 
