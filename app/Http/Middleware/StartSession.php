@@ -20,9 +20,11 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Two things have to hold. The request has to be a navigation: Fetch Metadata (`Sec-Fetch-Dest`)
  * says so, and a client that does not send it keeps the framework's rule. And the response has to
- * be a page — HTML, or an Inertia page response. The second is what a client without Fetch Metadata
- * cannot get wrong: an image, a stylesheet, the manifest or a JSON poll is not a page whatever
- * headers asked for it, so none of them can become the back target.
+ * be a page — a successful one that is HTML, or an Inertia page response. The second is what a
+ * client without Fetch Metadata cannot get wrong: an image, a stylesheet, the manifest or a JSON
+ * poll is not a page whatever headers asked for it, and neither is an error page — a 404 for a
+ * stale icon URL renders as HTML on the Modern surface, and is no more somewhere to send a visitor
+ * back to than the unmatched URL the framework answers the same way.
  */
 class StartSession extends FrameworkStartSession
 {
@@ -47,12 +49,9 @@ class StartSession extends FrameworkStartSession
         $route = $request->route();
         $response = $request->attributes->get(self::RESPONSE);
 
-        // The framework's own guards, minus the XHR one that isPageNavigation now decides. A
-        // fallback match is an unmatched URL — a stale link, a probe — answered with a 404, so it is
-        // never somewhere to send a visitor back to, whatever it answered with.
+        // The framework's own guards, minus the XHR one that isPageNavigation now decides.
         if (! $request->isMethod('GET')
             || ! $route instanceof Route
-            || $route->isFallback
             || $request->prefetch()
             || $request->isPrecognitive()
             || ! $this->isPageNavigation($request)
@@ -80,10 +79,15 @@ class StartSession extends FrameworkStartSession
         };
     }
 
-    /** HTML, or the JSON an Inertia client-side visit swaps the page for — the response says which it is. */
+    /**
+     * A successful answer that is HTML, or the JSON an Inertia client-side visit swaps the page for.
+     * Status first: an error page is HTML too, on the surface that renders one, and the framework's
+     * fallback 404 for an unmatched URL is the same case.
+     */
     private function isPage(Response $response): bool
     {
-        return $response->headers->has('X-Inertia')
-            || str_starts_with((string) $response->headers->get('Content-Type'), 'text/html');
+        return $response->isSuccessful()
+            && ($response->headers->has('X-Inertia')
+                || str_starts_with((string) $response->headers->get('Content-Type'), 'text/html'));
     }
 }

@@ -162,26 +162,40 @@ class PreviousUrlTest extends TestCase
             'banner.image' => $this->bannerImageUrl(),
             'webmanifest' => route('webmanifest'),
             'design.customizing_css' => route('design.customizing_css'),
-            // A stale token answers 404 — which the framework would record all the same.
-            'app_icon' => route('app_icon', ['token' => 'stale', 'size' => 180]),
         ];
 
         foreach ($urls as $name => $url) {
-            // The URL must reach the named route: an unmatched one is left alone as a fallback, which
-            // would satisfy the assertions below for the wrong reason.
+            // The URL must reach the named route and answer with its bytes: an unmatched URL or an
+            // error would satisfy the assertions below for the wrong reason.
             $this->assertSame($name, Route::getRoutes()->match(Request::create($url))->getName());
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
 
             // No Fetch Metadata — the framework's rule would record this plain GET. withHeader()
             // persists for the test, so the header has to be taken off again.
-            $this->withoutHeader('Sec-Fetch-Dest')->get($url);
+            $bytes = $this->withoutHeader('Sec-Fetch-Dest')->get($url);
+            $bytes->assertOk();
+            $this->assertStringStartsNotWith('text/html', (string) $bytes->headers->get('Content-Type'), $name);
             $this->assertSame(url('/login'), $this->previousUrl(), "{$name} without Fetch Metadata");
 
             // And the header a browser sends when it shows the resource in a tab of its own: bytes
             // are never a form to return to.
-            $this->withHeader('Sec-Fetch-Dest', 'document')->get($url);
+            $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
             $this->assertSame(url('/login'), $this->previousUrl(), "{$name} as a document");
         }
+    }
+
+    public function test_an_error_page_is_not_recorded_whatever_surface_renders_it(): void
+    {
+        // A stale icon token answers 404. On the Modern surface that is an HTML page, so the
+        // content type alone would call it a page; the status is what rules it out.
+        config()->set('openpne.surface_mode', 'modern_only');
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+        $error = $this->withoutHeader('Sec-Fetch-Dest')->get(route('app_icon', ['token' => 'stale', 'size' => 180]));
+        $error->assertNotFound();
+        $this->assertStringStartsWith('text/html', (string) $error->headers->get('Content-Type'));
+
+        $this->assertSame(url('/login'), $this->previousUrl());
     }
 
     public function test_a_json_poll_from_a_client_without_fetch_metadata_is_not_recorded(): void
