@@ -138,6 +138,19 @@ class ConditionalDeliveryTest extends TestCase
         $this->assertSame('PNGDATA', $stale->streamedContent());
     }
 
+    public function test_a_file_whose_bytes_are_gone_is_404_on_the_raw_route_even_with_the_tag(): void
+    {
+        // The existence check sits ahead of the 304 too: a row without bytes must not have a browser
+        // keep drawing what the server no longer holds.
+        $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->mock(FileStorage::class)->shouldReceive('exists')->andReturn(false);
+
+        $this->withHeader('If-None-Match', '"'.$file->name.'"')
+            ->get(route('admin.file.raw', ['file' => $file->name]))
+            ->assertNotFound();
+    }
+
     public function test_a_non_admin_holding_the_tag_is_answered_404_not_304_on_the_raw_route(): void
     {
         // The route bypasses FilePolicy, so its own gate has to sit ahead of the 304: otherwise a
