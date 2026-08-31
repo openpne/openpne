@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * token case would collide on the unique index and one device would overwrite another's row; the
  * column is forced to utf8mb4_bin there. SQLite TEXT is already BINARY, and rejects that collation
  * name, so it stays on the SQLite lane's default. 500 chars keeps the unique index inside MySQL's
- * 3072-byte key limit on utf8mb4.
+ * 3072-byte key limit on utf8mb4 (widened to 1024 on ascii by a later migration).
  */
 return new class extends Migration
 {

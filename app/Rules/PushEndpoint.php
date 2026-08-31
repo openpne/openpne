@@ -22,6 +22,12 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 final class PushEndpoint implements ValidationRule
 {
+    /**
+     * The column's width. The store and the unsubscribe both bound the field to it, so an endpoint
+     * past it is refused as a 422 rather than failing on insert.
+     */
+    public const MAX_LENGTH = 1024;
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || ! $this->isPushService($value)) {
@@ -31,6 +37,11 @@ final class PushEndpoint implements ValidationRule
 
     private function isPushService(string $url): bool
     {
+        // A URL is printable ASCII (RFC 3986); anything else is not one, and the column is ascii.
+        if (preg_match('/^[\x21-\x7e]+$/', $url) !== 1) {
+            return false;
+        }
+
         $parts = parse_url($url);
 
         if ($parts === false || ($parts['scheme'] ?? null) !== 'https') {

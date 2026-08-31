@@ -131,7 +131,8 @@ class PushSubscriptionEndpointTest extends TestCase
             'non-default port' => ['https://push.example.com:8443/s'],
             'no host' => ['https:///s'],
             'not a URL' => ['nonsense'],
-            'over the length bound' => ['https://push.example.com/'.str_repeat('x', 500)],
+            'non-ASCII path' => ['https://push.example.com/送信'],
+            'over the length bound' => ['https://push.example.com/'.str_repeat('x', 1000)],
         ];
     }
 
@@ -144,6 +145,23 @@ class PushSubscriptionEndpointTest extends TestCase
             ->post('/push/subscriptions', $this->payload($endpoint))
             ->assertInvalid('endpoint');
 
+        $this->assertSame(0, $member->pushSubscriptions()->count());
+    }
+
+    /**
+     * Real push services issue endpoints past 500 characters. The bound is the column's width, on
+     * every engine: a stored endpoint reads back whole, and the unsubscribe takes the same length.
+     */
+    public function test_an_endpoint_at_the_length_bound_registers_and_unsubscribes(): void
+    {
+        $member = Member::factory()->create();
+        $endpoint = str_pad('https://push.example.com/', 1024, 'x');
+        $this->assertSame(1024, strlen($endpoint));
+
+        $this->actingAs($member)->post('/push/subscriptions', $this->payload($endpoint))->assertNoContent();
+        $this->assertSame($endpoint, $member->pushSubscriptions()->sole()->endpoint);
+
+        $this->actingAs($member)->post('/push/subscriptions/delete', ['endpoint' => $endpoint])->assertNoContent();
         $this->assertSame(0, $member->pushSubscriptions()->count());
     }
 
