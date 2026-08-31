@@ -24,6 +24,28 @@ const JSX_LINE_COMMENT_RESTRICTION = {
     message: 'This is a JSX text node, not a comment — it renders on screen. Use {/* … */}.',
 };
 
+// A glob over modules can put test files into the bundle: lib/page-modules.ts is the one that walks
+// pages/, excludes them, and is checked against disk by its test — and that map is all the test
+// checks. Rather than name the spellings that reach pages/ (`./**`, a `base` option, a bracket in
+// the path), allow exactly the other glob the app has, the dictionaries, and refuse every other
+// pattern: an array, a template, or any string that is not a /lang/*.json path. A dynamic import
+// whose specifier holds an expression is one Vite may turn into a glob — it then emits a chunk per
+// matching file, tests included — so it is refused too; a template with no expression is a plain
+// import to Vite and stays allowed. The page map carries an eslint-disable naming this rule; a new
+// legitimate glob does the same, with its reason.
+const GLOB_MESSAGE =
+    'A glob over modules here can ship test modules. The page map is lib/page-modules.ts; only the /lang/*.json dictionaries are globbed elsewhere.';
+const GLOB_CALL = "CallExpression[callee.object.type='MetaProperty'][callee.property.name='glob']";
+const GLOB_RESTRICTIONS = [
+    { selector: `${GLOB_CALL}[arguments.0.type!='Literal']`, message: GLOB_MESSAGE },
+    { selector: `${GLOB_CALL}[arguments.0.type='Literal'][arguments.0.value!=/^\\/lang\\/[^/]*\\.json$/]`, message: GLOB_MESSAGE },
+    {
+        selector: "ImportExpression[source.type!='Literal']:not([source.expressions.length=0])",
+        message:
+            'A dynamic import with an expression in its specifier is a glob to Vite, and can ship test modules. Import a literal path, or map names to literal imports.',
+    },
+];
+
 const DATE_FORMATTING_RESTRICTIONS = [
     {
         // The member access, not the call: `Intl.DateTimeFormat(...)` is valid without `new`, and
@@ -54,7 +76,15 @@ export default tseslint.config(
     {
         files: ['resources/js/**/*.{ts,tsx}'],
         ignores: ['resources/js/lib/date.ts'],
-        rules: { 'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION] },
+        rules: {
+            'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS],
+        },
+    },
+    {
+        // date.ts is the one place Intl belongs; `ignores` takes a file out of the whole block, so the
+        // other two restrictions have to be said again for it.
+        files: ['resources/js/lib/date.ts'],
+        rules: { 'no-restricted-syntax': ['error', JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS] },
     },
     {
         // The raw formatters take an explicit locale + timezone, so a caller can pass the wrong pair.
@@ -129,7 +159,10 @@ export default tseslint.config(
                     message:
                         'The Inertia entry is a side-effect-only module — no class definitions. Put them in their own module.',
                 },
+                // Restated: this block replaces the general one's options rather than adding to them.
                 ...DATE_FORMATTING_RESTRICTIONS,
+                JSX_LINE_COMMENT_RESTRICTION,
+                ...GLOB_RESTRICTIONS,
             ],
         },
     },
