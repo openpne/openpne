@@ -18,7 +18,8 @@ class FilesServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Whether EXIF Orientation can be read is a host fact, but the variant key reads it from
-        // config so that a test can take either branch and so that every SAPI sees one value.
+        // config so that a test can take either branch. Set unconditionally: config:cache runs this
+        // too and would otherwise freeze the build host's answer for every request.
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
         // Bound (not singleton) so each resolution reflects the current
