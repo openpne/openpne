@@ -129,6 +129,16 @@ export default tseslint.config(
                     message:
                         'The Inertia entry is a side-effect-only module — no class definitions. Put them in their own module.',
                 },
+                {
+                    // The page glob is lib/page-modules.ts, whose test checks the resolved map against
+                    // disk. That map is all it checks: a second glob over pages/ written here would
+                    // put the test chunks back into the build with nothing in CI to see it. Any
+                    // literal naming pages/ — one string, an array of them, a template — is refused;
+                    // Vite takes only literals here, so there is no other way to spell one.
+                    selector:
+                        "CallExpression[callee.object.type='MetaProperty'][callee.property.name='glob']:has(Literal[value=/pages\\//], TemplateElement[value.raw=/pages\\//])",
+                    message: 'Do not glob pages/ from the entry — the page map is lib/page-modules.ts, whose test checks it against disk.',
+                },
                 ...DATE_FORMATTING_RESTRICTIONS,
             ],
         },
