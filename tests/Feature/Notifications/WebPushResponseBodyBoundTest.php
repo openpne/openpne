@@ -83,6 +83,19 @@ class WebPushResponseBodyBoundTest extends TestCase
         $client->sendRequest(new Request('POST', 'https://push.example.com/s'));
     }
 
+    public function test_a_transfer_cut_short_for_any_other_reason_stays_a_failure(): void
+    {
+        // A partial transfer (CURLE_PARTIAL_FILE, a reset) also arrives as a RequestException carrying
+        // the response built so far. Only the sink's own cut is recovered — this one wrote nothing.
+        $handler = fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(
+            new RequestException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response(410)),
+        );
+        $client = (new PushClientFactory)->make(['handler' => HandlerStack::create($handler)]);
+
+        $this->expectException(RequestException::class);
+        $client->sendRequest(new Request('POST', 'https://push.example.com/s'));
+    }
+
     public function test_an_expired_device_answering_at_length_is_still_retired(): void
     {
         $vapid = VAPID::createVapidKeys();
