@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Database;
 
+use App\Rules\PushEndpoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -30,25 +31,32 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
     {
         $migration = $this->migration();
 
-        // RefreshDatabase has already run up().
+        // RefreshDatabase has already run up(). The width is the rule's bound: widening one without
+        // the other turns a 422 into a 1406.
         $this->assertContains(self::UNIQUE, $this->indexNames());
-        $this->assertEndpointColumn(1024, 'ascii_bin');
+        $this->assertEndpointColumn(PushEndpoint::MAX_LENGTH, 'ascii_bin');
 
-        $migration->down();
-        $this->assertContains(self::UNIQUE, $this->indexNames());
-        $this->assertEndpointColumn(500, 'utf8mb4_bin');
+        try {
+            $migration->down();
+            $this->assertContains(self::UNIQUE, $this->indexNames());
+            $this->assertEndpointColumn(500, 'utf8mb4_bin');
+        } finally {
+            // Always back to up(): DDL commits, so a failure here would otherwise leave the process's
+            // remaining tests on the old column.
+            $migration->up();
+        }
 
-        $migration->up();
         $this->assertContains(self::UNIQUE, $this->indexNames());
-        $this->assertEndpointColumn(1024, 'ascii_bin');
+        $this->assertEndpointColumn(PushEndpoint::MAX_LENGTH, 'ascii_bin');
     }
 
-    public function test_a_row_the_ascii_column_cannot_hold_goes_before_the_column_changes(): void
+    public function test_a_row_the_rule_refuses_goes_before_the_column_changes(): void
     {
         $migration = $this->migration();
         $migration->down();
         $this->insert('https://push.example.com/kept');
         $this->insert('https://push.example.com/送信');
+        $this->insert("https://push.example.com/with space");
 
         $migration->up();
 
@@ -59,12 +67,14 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
     {
         $migration = $this->migration();
         $this->insert('https://push.example.com/kept');
-        $this->insert(str_pad('https://push.example.com/', 1024, 'x'));
+        $this->insert(str_pad('https://push.example.com/', PushEndpoint::MAX_LENGTH, 'x'));
 
-        $migration->down();
-        $this->assertSame(['https://push.example.com/kept'], DB::table('push_subscriptions')->pluck('endpoint')->all());
-
-        $migration->up();
+        try {
+            $migration->down();
+            $this->assertSame(['https://push.example.com/kept'], DB::table('push_subscriptions')->pluck('endpoint')->all());
+        } finally {
+            $migration->up();
+        }
     }
 
     private function migration(): object

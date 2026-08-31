@@ -82,7 +82,7 @@ class StorePushSubscriptionRequest extends FormRequest
     /** The raw bytes of a base64url value of exactly $bytes, or null if it is neither. */
     private function decodeToBytes(mixed $value, int $bytes): ?string
     {
-        $decoded = is_string($value) && preg_match('/^[A-Za-z0-9_-]+={0,2}$/', $value) === 1
+        $decoded = is_string($value) && preg_match('/\A[A-Za-z0-9_-]+={0,2}\z/', $value) === 1
             ? base64_decode(strtr($value, '-_', '+/'), true)
             : false;
 
