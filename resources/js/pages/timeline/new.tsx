@@ -41,7 +41,7 @@ export default function TimelineNew({
             <Heading variant="pageCompose">{t('%Post_activity%')}</Heading>
 
             {/* The mention popup hangs out of the body field's row. */}
-            <Panel overflow="visible" sheet>
+            <Panel overflow="visible" variant="sheet">
                 <form
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {

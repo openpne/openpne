@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Card } from '@/components/card';
+import { Card, type CardVariant } from '@/components/card';
 import { Heading } from '@/components/ui/heading';
 import { cn } from '@/lib/utils';
 
@@ -30,10 +30,11 @@ type PanelProps = {
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
     overflow?: 'hidden' | 'visible';
-    /** Forwarded to {@link Card}: drops the card chrome below lg, for the compose sheet's one surface. */
-    sheet?: boolean;
-    /** Forwarded to {@link Card}: keeps the surface, drops the inset below lg. For a conversation. */
-    bleed?: boolean;
+    /**
+     * Forwarded to {@link Card}. `sheet` drops the card chrome below lg, for the compose sheet's one
+     * surface; `bleed` keeps the surface and drops the inset, for a conversation.
+     */
+    variant?: CardVariant;
 };
 
 /**
@@ -41,9 +42,9 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow, sheet, bleed }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, variant }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow} sheet={sheet} bleed={bleed}>
+        <Card className={className} overflow={overflow} variant={variant}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
                 take a bite out of the same line, and 20px here was the widest of the three.
@@ -53,7 +54,7 @@ export function Panel({ title, right, children, className, bodyClassName, flush,
                 Swapped, not appended — twMerge
                 cannot resolve `px-1 lg:px-5` against `px-4 sm:px-5`. The formatting toolbar's band is
                 keyed to this value (rich-text-editor.tsx). */}
-            <div className={cn(flush ? undefined : sheet ? 'px-1 py-4 lg:px-5' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
+            <div className={cn(flush ? undefined : variant === 'sheet' ? 'px-1 py-4 lg:px-5' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         </Card>
     );
 }
