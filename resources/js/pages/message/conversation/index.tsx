@@ -303,7 +303,7 @@ export default function MessageConversation() {
             {/* With no composer standing on the page's foot, the list takes back both that rhythm and
                 the home-indicator strip the shell leaves the composer, rather than ending the page on
                 the screen's edge. */}
-            {/* The conversation keeps the card's surface and loses its inset below lg — `chrome="bleed"`,
+            {/* The conversation keeps the card's surface and loses its inset below lg — `variant="bleed"`,
                 and the reason it is allowed, in components/card.tsx. Both edges come from there: the
                 composer under this list is not a Card, and imports the same constant so the two
                 cannot end on different lines. */}
@@ -315,7 +315,7 @@ export default function MessageConversation() {
                 which is what silenced this rule until it was measured.) */}
             <Panel
                 flush
-                chrome="bleed"
+                variant="bleed"
                 className={cn('mb-0 lg:mb-4', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
             >
                 {stream.hasOlder && (

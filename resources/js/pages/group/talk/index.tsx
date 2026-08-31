@@ -472,7 +472,7 @@ export default function GroupTalkIndex() {
                 the reason it is allowed, in components/card.tsx. Both edges come from there: the
                 composer under this list is not a Card, and imports the same constant so the two
                 cannot end on different lines. */}
-            <Panel flush chrome="bleed" className="mb-0 lg:mb-4">
+            <Panel flush variant="bleed" className="mb-0 lg:mb-4">
                 {stream.hasOlder && (
                     // The band is the button, not a pill standing inside it. A control alone between
                     // two full-width rules reads as a label that happens to be centred; the whole

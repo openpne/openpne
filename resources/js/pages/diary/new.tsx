@@ -41,7 +41,7 @@ export default function DiaryNew({
             </ComposeSheetAction>
             <Heading variant="pageCompose">{t('Write a %diary%')}</Heading>
 
-            <Panel overflow="visible" chrome="sheet">
+            <Panel overflow="visible" variant="sheet">
                 <form
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {

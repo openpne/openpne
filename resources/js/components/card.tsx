@@ -24,7 +24,7 @@ export const BLEED_EDGES = '-mx-3 sm:-mx-4 lg:mx-0';
  * lying on the page rather than as the page itself. Tested on device, that flattened every screen into
  * one field of card color divided by lines. The width comes from tighter padding instead.
  *
- * Two screens ask for something else, and they ask for different things — `chrome` names which, and
+ * Two screens ask for something else, and they ask for different things — `variant` names which, and
  * being one prop rather than two flags, a card cannot ask for both:
  *
  * - `sheet` **drops the surface**: the compose sheet below lg is one screen with one job, and its
@@ -41,26 +41,24 @@ export const BLEED_EDGES = '-mx-3 sm:-mx-4 lg:mx-0';
  * So the device finding is not overturned by `bleed`: it was about losing the *surface*, which `bleed`
  * does not do.
  */
-export type CardChrome = 'sheet' | 'bleed';
+export type CardVariant = 'sheet' | 'bleed';
 
 export function Card({
     children,
     className,
     overflow = 'hidden',
-    chrome,
-}: Props & { overflow?: 'hidden' | 'visible'; chrome?: CardChrome }) {
+    variant,
+}: Props & { overflow?: 'hidden' | 'visible'; variant?: CardVariant }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                // Swapped rather than overridden: `rounded-card` is a custom token, which twMerge does
-                // not treat as the same utility as the class that would undo it.
                 // Three strings rather than classes layered over each other: `rounded-card` is a custom
                 // token and the borders differ per side, neither of which twMerge can resolve against
                 // a later override.
-                chrome === 'sheet'
+                variant === 'sheet'
                     ? 'text-card-foreground lg:rounded-card lg:border lg:border-border lg:bg-card lg:shadow-card'
-                    : chrome === 'bleed'
+                    : variant === 'bleed'
                       ? `${BLEED_EDGES} border-t border-border bg-card text-card-foreground lg:rounded-card lg:border lg:shadow-card`
                       : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
                 className,

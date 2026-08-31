@@ -54,7 +54,7 @@ export default function DiaryEdit() {
             </ComposeSheetAction>
             <Heading variant="pageCompose">{t('Edit %diary%')}</Heading>
 
-            <Panel overflow="visible" chrome="sheet">
+            <Panel overflow="visible" variant="sheet">
                 <form
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
