@@ -26,7 +26,8 @@ class StartSession extends FrameworkStartSession
 {
     /**
      * Generated site assets a page's <head> pulls in. Not stored bytes, so not delivery routes —
-     * the cookie scrub does not cover them — but no more a page than those are.
+     * whether their `public` declaration should also go cookie-free is a separate decision, and
+     * listing them there would make it — but no more a page than those are.
      */
     public const ASSET_ROUTES = ['app_icon', 'webmanifest', 'design.customizing_css'];
 

@@ -76,8 +76,8 @@ none is somewhere to send a visitor back to: a fallback match, which answers
 404; a file delivery route
 ([`FileDeliveryRoutes`](../../app/Support/FileDeliveryRoutes.php)); and the
 generated site assets a page's `<head>` pulls in (`StartSession::ASSET_ROUTES` —
-the app icon, the manifest, the custom CSS). All answer with bytes, so a client
-without Fetch Metadata cannot leave one as the back target either.
+the app icon, the manifest, the custom CSS). The last two answer with bytes, so
+a client without Fetch Metadata cannot leave one as the back target either.
 
 It is swapped in by container binding (`AppServiceProvider`), not by replacing the
 class in the `web` group, so the middleware priority list still finds the session

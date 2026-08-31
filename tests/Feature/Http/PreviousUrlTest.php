@@ -11,7 +11,9 @@ use App\Models\File;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -154,6 +156,9 @@ class PreviousUrlTest extends TestCase
         ];
 
         foreach ($urls as $name => $url) {
+            // The URL must reach the named route: an unmatched one is left alone as a fallback, which
+            // would satisfy the assertions below for the wrong reason.
+            $this->assertSame($name, Route::getRoutes()->match(Request::create($url))->getName());
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
 
             // No Fetch Metadata — the framework's rule would record this plain GET. withHeader()
