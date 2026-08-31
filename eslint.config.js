@@ -73,6 +73,12 @@ export default tseslint.config(
         },
     },
     {
+        // date.ts is the one place Intl belongs; `ignores` takes a file out of the whole block, so the
+        // other two restrictions have to be said again for it.
+        files: ['resources/js/lib/date.ts'],
+        rules: { 'no-restricted-syntax': ['error', JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS] },
+    },
+    {
         // The raw formatters take an explicit locale + timezone, so a caller can pass the wrong pair.
         // Components reach them through <Timestamp> / <CivilDate>, which bind the site's; the hook is
         // for the values that are not a timestamp (a month label, the current year).

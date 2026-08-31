@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 
-// The entry and page-glob rules are `no-restricted-syntax` options, which a later config block for
-// the same files replaces wholesale rather than extends — so a green lint says nothing about whether
-// they still apply. Lint the offending spellings through the real config and expect each refusal.
+// The restrictions below are `no-restricted-syntax` options, which a later config block for the same
+// files replaces wholesale rather than extends — so a green lint says nothing about whether they
+// still apply. Lint the offending spellings through the real config and expect each refusal.
 
-const eslint = new ESLint({ cwd: new URL('../../', import.meta.url).pathname });
+const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../', import.meta.url)) });
 
 async function messages(code, filePath) {
     const [result] = await eslint.lintText(code, { filePath });
@@ -38,8 +39,10 @@ test('the entry refuses every module glob, in every spelling, and lets the dicti
 });
 
 test('a module outside the entry is refused the same glob, and the page map is not', async () => {
-    const found = await messages("export const m = import.meta.glob('../pages/**/*.tsx');", 'resources/js/lib/prefetch.ts');
-    assert.ok(found.some((m) => m.startsWith(REFUSED)));
+    for (const file of ['resources/js/lib/prefetch.ts', 'resources/js/lib/date.ts', 'resources/js/components/x.test.tsx']) {
+        const found = await messages("export const m = import.meta.glob('../pages/**/*.tsx');", file);
+        assert.ok(found.some((m) => m.startsWith(REFUSED)), file);
+    }
 
     const pageMap = await messages(
         "// eslint-disable-next-line no-restricted-syntax -- the one glob over modules\nexport const m = import.meta.glob(['../pages/**/*.tsx', '!../pages/**/*.test.tsx']);",
@@ -48,8 +51,14 @@ test('a module outside the entry is refused the same glob, and the page map is n
     assert.deepEqual(pageMap, []);
 });
 
-test('the entry refuses an export and a class', async () => {
-    const found = await messages('export const x = 1;\nclass Y {}\n', 'resources/js/app.tsx');
+test('the entry keeps every restriction its block restates', async () => {
+    const found = await messages(
+        'export const x = 1;\nclass Y {}\nnew Intl.DateTimeFormat();\nconst j = <b>\n// drawn on screen\n</b>;\n',
+        'resources/js/app.tsx',
+    );
+
     assert.ok(found.some((m) => m.includes('no exports')));
     assert.ok(found.some((m) => m.includes('no class definitions')));
+    assert.ok(found.some((m) => m.startsWith('Format dates through')));
+    assert.ok(found.some((m) => m.startsWith('This is a JSX text node')));
 });
