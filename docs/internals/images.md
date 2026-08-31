@@ -104,3 +104,7 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
+- A variant response's `ETag` is its cache key hashed (`ImageTransform::etag`), so the generation
+  bump that abandons the disk cache abandons every browser's copy too; an original's is the file
+  token, whose bytes never change. Both are checked after the policy and before any bytes are read.
+  `max-age` is not shortened for it — revalidating every image would cost a PHP request each.

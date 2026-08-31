@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Files\ImageCache;
 use App\Files\ImageTransform;
 use App\Models\File;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Gate;
  */
 class ImageController extends Controller
 {
-    public function show(string $format, string $geometry, string $name, string $ext, ImageCache $cache): Response
+    public function show(Request $request, string $format, string $geometry, string $name, string $ext, ImageCache $cache): Response
     {
         // The OpenPNE 3 URL repeats the format in the directory and the extension.
         abort_unless($format === $ext, 404);
@@ -32,12 +33,19 @@ class ImageController extends Controller
         $transform = ImageTransform::fromGeometry($geometry);
         abort_unless($transform !== null, 404);
 
-        $bytes = $cache->bytes($file, $transform, $imageFormat);
-
-        return response($bytes, 200, [
+        // Validated before anything is read: the tag needs no bytes and a 304 sends none. After the
+        // policy, so a viewer who may no longer see the file is answered 404, never "unchanged".
+        $response = response('', 200, [
             'Content-Type' => $file->type,
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=86400',
+            'ETag' => $transform->etag($file->name, $imageFormat),
         ]);
+
+        if ($response->isNotModified($request)) {
+            return $response;
+        }
+
+        return $response->setContent($cache->bytes($file, $transform, $imageFormat));
     }
 }

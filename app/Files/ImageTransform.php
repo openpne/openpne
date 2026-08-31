@@ -66,4 +66,15 @@ final class ImageTransform
 
         return "{$name}/g".self::GENERATION."/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }
+
+    /**
+     * Validator for a response serving this transform of the file named $name: the cache key, hashed.
+     * The key names everything the bytes depend on — the token (whose bytes never change), the
+     * geometry, the format and GENERATION — so a browser's copy is revalidated without reading
+     * anything, and the generation bump that abandons the disk cache abandons every browser's copy too.
+     */
+    public function etag(string $name, string $format): string
+    {
+        return '"'.hash('sha1', $this->cacheKey($name, $format)).'"';
+    }
 }
