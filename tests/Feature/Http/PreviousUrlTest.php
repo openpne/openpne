@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileStorage;
+use App\Files\FileUploader;
+use App\Models\BannerImage;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -41,6 +45,25 @@ class PreviousUrlTest extends TestCase
         fclose($stream);
 
         return "/file/public/{$file->name}";
+    }
+
+    private function bannerImageUrl(): string
+    {
+        $banner = BannerImage::factory()->create();
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'bannerImage',
+            'related_entity_id' => $banner->getKey(),
+            'byte_size' => 7,
+        ]);
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, 'PNGDATA');
+        rewind($stream);
+        app(FileStorage::class)->writeStream($file, $stream);
+        fclose($stream);
+
+        return route('banner.image', ['file' => $file->name]);
     }
 
     private function previousUrl(): ?string
@@ -113,19 +136,36 @@ class PreviousUrlTest extends TestCase
         }
     }
 
-    public function test_a_file_delivery_route_is_never_recorded_whatever_its_headers(): void
+    public function test_a_route_that_never_answers_with_a_page_is_not_recorded_whatever_its_headers(): void
     {
-        $image = $this->brandMarkUrl();
-        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        Storage::fake('image_cache');
+        $owner = Member::factory()->create();
+        $avatar = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 40, 40), 'member', (int) $owner->getKey());
 
-        // No Fetch Metadata — the framework's rule would record this plain GET — and the header a
-        // browser sends when it shows the image in a tab of its own. Bytes are never a form to
-        // return to, so the route decides, not the headers.
-        $this->get($image)->assertOk();
-        $this->assertSame(url('/login'), $this->previousUrl(), 'no Fetch Metadata');
+        $urls = [
+            'file.public' => $this->brandMarkUrl(),
+            'image.show' => $avatar->thumbnailUrl(120, 120, square: true),
+            'banner.image' => $this->bannerImageUrl(),
+            'webmanifest' => route('webmanifest'),
+            'design.customizing_css' => route('design.customizing_css'),
+            // A stale token answers 404 — which the framework would record all the same; the route
+            // decides, not the status.
+            'app_icon' => route('app_icon', ['token' => 'stale', 'size' => 180]),
+        ];
 
-        $this->withHeader('Sec-Fetch-Dest', 'document')->get($image)->assertOk();
-        $this->assertSame(url('/login'), $this->previousUrl(), 'document');
+        foreach ($urls as $name => $url) {
+            $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+            // No Fetch Metadata — the framework's rule would record this plain GET. withHeader()
+            // persists for the test, so the header has to be taken off again.
+            $this->withoutHeader('Sec-Fetch-Dest')->get($url);
+            $this->assertSame(url('/login'), $this->previousUrl(), "{$name} without Fetch Metadata");
+
+            // And the header a browser sends when it shows the resource in a tab of its own: bytes
+            // are never a form to return to.
+            $this->withHeader('Sec-Fetch-Dest', 'document')->get($url);
+            $this->assertSame(url('/login'), $this->previousUrl(), "{$name} as a document");
+        }
     }
 
     public function test_a_background_fetch_does_not_replace_the_previous_url(): void
@@ -146,7 +186,8 @@ class PreviousUrlTest extends TestCase
 
         // No Fetch Metadata at all — a probe or a tool, the case headers cannot rule out (Chrome
         // DevTools asks every page for /.well-known/appspecific/com.chrome.devtools.json).
-        $this->get('/.well-known/appspecific/com.chrome.devtools.json')->assertNotFound();
+        // withHeader() persists for the test, so the header has to be taken off again.
+        $this->withoutHeader('Sec-Fetch-Dest')->get('/.well-known/appspecific/com.chrome.devtools.json')->assertNotFound();
 
         $this->assertSame(url('/login'), $this->previousUrl());
     }
