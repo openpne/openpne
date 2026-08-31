@@ -13,8 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
  * (a failed login, a validation error) lands on that raw-JSON endpoint — navigating the Classic page
  * to JSON and feeding the Inertia client a non-Inertia response.
  *
- * App\Http\Middleware\StartSession rules out non-navigation requests generally; this stays for the
- * clients it cannot classify (no Fetch Metadata), and is not the pattern to reach for per route.
+ * App\Http\Middleware\StartSession rules out non-page responses generally — a JSON answer is never
+ * recorded, whatever the client sent — so this marker is redundant for the endpoint below; it stays
+ * as the request-side statement of the same fact, and is not the pattern to reach for per route.
  */
 class AsBackgroundFetch
 {
