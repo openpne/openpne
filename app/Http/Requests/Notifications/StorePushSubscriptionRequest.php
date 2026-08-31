@@ -41,7 +41,7 @@ class StorePushSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'endpoint' => ['required', 'string', 'max:500', new PushEndpoint],
+            'endpoint' => ['required', 'string', new PushEndpoint],
             'keys' => ['required', 'array'],
             'keys.p256dh' => ['required', 'string', $this->p256dhPoint()],
             'keys.auth' => ['required', 'string', $this->base64UrlBytes(self::AUTH_BYTES)],
@@ -82,7 +82,7 @@ class StorePushSubscriptionRequest extends FormRequest
     /** The raw bytes of a base64url value of exactly $bytes, or null if it is neither. */
     private function decodeToBytes(mixed $value, int $bytes): ?string
     {
-        $decoded = is_string($value) && preg_match('/^[A-Za-z0-9_-]+={0,2}$/', $value) === 1
+        $decoded = is_string($value) && preg_match('/\A[A-Za-z0-9_-]+={0,2}\z/', $value) === 1
             ? base64_decode(strtr($value, '-_', '+/'), true)
             : false;
 

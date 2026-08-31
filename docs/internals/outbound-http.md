@@ -100,7 +100,8 @@ plainly:
 - **The URL is not prose a member typed** but the `endpoint` a browser's push service issued, so its
   shape is knowable in advance and is fixed on store by
   [`PushEndpoint`](../../app/Rules/PushEndpoint.php): https, port 443, a named host, no userinfo,
-  bounded length. An address literal is refused — a real push service is always a name.
+  printable ASCII within the column's width (the store's charset is ascii, so this is also what it
+  can hold). An address literal is refused — a real push service is always a name.
 - **The transport is closed to the moves that leave that shape behind**: redirects are not followed
   and the proxy environment variables Guzzle otherwise honours are disabled. A 30x or a proxy is
   exactly what turns a validated https host into a request elsewhere. Those two are set by the
