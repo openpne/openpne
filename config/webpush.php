@@ -56,7 +56,8 @@ return [
     | say the same thing in CURLOPT_ terms: a 30x is the one move that turns a
     | validated https endpoint into a request somewhere else, and the proxy
     | environment variables Guzzle honours by default would resolve the
-    | destination elsewhere again.
+    | destination elsewhere again. The response body is bounded by the factory
+    | too (a `sink` set here is overridden); the channel reads only the status.
     |
     | `timeout` bounds one request, and the library sends a member's devices one
     | after another, so what bounds the job is timeout x MAX_DEVICES. That

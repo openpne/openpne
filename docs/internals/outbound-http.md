@@ -105,11 +105,15 @@ plainly:
   and the proxy environment variables Guzzle otherwise honours are disabled. A 30x or a proxy is
   exactly what turns a validated https host into a request elsewhere. Those two are set by the
   factory after the options `config/webpush.php` supplies, so those two survive a site deleting them
-  — an absent `proxy` is the environment's, not a neutral default. Nothing else in that array is
-  pinned, and the pin is on those two option names rather than on the outcome: Guzzle applies a
-  `curl` sub-array after everything else, so a site can say the same things in `CURLOPT_` terms and
-  get them. The client is built here at all because the channel package would otherwise build it in a
-  way that drops the option bag entirely, and every guarantee here would be config that no longer
+  — an absent `proxy` is the environment's, not a neutral default. The response sink is the third
+  pin, set by the innermost handler rather than in the option bag (a `sink` there is overridden):
+  at most `PushClientFactory::MAX_RESPONSE_BYTES` of a body is kept, the transfer is aborted past
+  it, and the status of an aborted answer is handed on so a 404/410 still retires the device.
+  Nothing else in that array is pinned, and each pin is on an option rather than on the outcome:
+  Guzzle applies a `curl` sub-array after everything else, so a site can say the same things in
+  `CURLOPT_` terms and get them (`CURLOPT_WRITEFUNCTION` included). The client is built here at
+  all because the channel package would otherwise build it in a way that drops the option bag
+  entirely, and every guarantee here would be config that no longer
   applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
@@ -136,14 +140,18 @@ What is not covered: the host is judged as a **name**, never as an address, so a
 to a private address is not caught, and there is no connection pin — DNS may answer differently at
 send time than it did at store time. Two things bound that residue rather than close it: writing a
 row takes a signed-in member and survives a per-member cap, and **no response body is ever read back
-to anyone** — the channel consumes status codes only, to expire dead subscriptions.
+to anyone** — the channel consumes status codes only, to expire dead subscriptions, and the client
+keeps at most `PushClientFactory::MAX_RESPONSE_BYTES` of a body before aborting the transfer, so an
+endpoint that answers at length costs the worker no more than that (response headers are not
+bounded here beyond libcurl's own limits).
 
 ## Key invariants
 
-- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy client this app
-  builds; that is a weaker guarantee than the fetcher's, and it is the only outbound path allowed to
-  be. The client is reachable only from the push seam, by test — the directory allowlist below would
-  not otherwise stop anything in `App\Outbound` from fetching on it.
+- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy,
+  bounded-response client this app builds; that is a weaker guarantee than the fetcher's, and it is
+  the only outbound path allowed to be. The client is reachable only from the push seam, by test —
+  the directory allowlist below would not otherwise stop anything in `App\Outbound` from fetching
+  on it.
 - `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact
