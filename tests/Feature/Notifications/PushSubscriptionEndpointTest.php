@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Models\Member;
+use App\Rules\PushEndpoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Minishlink\WebPush\VAPID;
@@ -155,8 +156,8 @@ class PushSubscriptionEndpointTest extends TestCase
     public function test_an_endpoint_at_the_length_bound_registers_and_unsubscribes(): void
     {
         $member = Member::factory()->create();
-        $endpoint = str_pad('https://push.example.com/', 1024, 'x');
-        $this->assertSame(1024, strlen($endpoint));
+        $endpoint = str_pad('https://push.example.com/', PushEndpoint::MAX_LENGTH, 'x');
+        $this->assertSame(PushEndpoint::MAX_LENGTH, strlen($endpoint));
 
         $this->actingAs($member)->post('/push/subscriptions', $this->payload($endpoint))->assertNoContent();
         $this->assertSame($endpoint, $member->pushSubscriptions()->sole()->endpoint);

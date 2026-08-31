@@ -53,12 +53,15 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
     public function test_a_row_the_rule_refuses_goes_before_the_column_changes(): void
     {
         $migration = $this->migration();
-        $migration->down();
-        $this->insert('https://push.example.com/kept');
-        $this->insert('https://push.example.com/送信');
-        $this->insert('https://push.example.com/with space');
 
-        $migration->up();
+        try {
+            $migration->down();
+            $this->insert('https://push.example.com/kept');
+            $this->insert('https://push.example.com/送信');
+            $this->insert('https://push.example.com/with space');
+        } finally {
+            $migration->up();
+        }
 
         $this->assertSame(['https://push.example.com/kept'], DB::table('push_subscriptions')->pluck('endpoint')->all());
     }

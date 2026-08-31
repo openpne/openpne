@@ -24,8 +24,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // The rule's own character class and bound, so the stored set satisfies what the store and the
-        // unsubscribe now demand — a row the column could hold but the rule refuses could never be dropped.
+        // A frozen copy of the rule's character class and bound as of this migration, so the stored set
+        // satisfies what the store and the unsubscribe demand — a row the column could hold but the
+        // rule refuses could never be dropped.
         $this->deleteWhere(fn (string $endpoint): bool => preg_match('/\A[\x21-\x7e]{1,1024}\z/', $endpoint) !== 1);
         $this->resize(1024, 'ascii', 'ascii_bin');
     }
