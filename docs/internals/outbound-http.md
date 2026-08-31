@@ -136,13 +136,15 @@ What is not covered: the host is judged as a **name**, never as an address, so a
 to a private address is not caught, and there is no connection pin — DNS may answer differently at
 send time than it did at store time. Two things bound that residue rather than close it: writing a
 row takes a signed-in member and survives a per-member cap, and **no response body is ever read back
-to anyone** — the channel consumes status codes only, to expire dead subscriptions.
+to anyone** — the channel consumes status codes only, to expire dead subscriptions, and the client
+keeps at most `PushClientFactory::MAX_RESPONSE_BYTES` of one before aborting the transfer, so an
+endpoint that answers at length costs the worker no more than that.
 
 ## Key invariants
 
-- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy client this app
-  builds; that is a weaker guarantee than the fetcher's, and it is the only outbound path allowed to
-  be. The client is reachable only from the push seam, by test — the directory allowlist below would
+- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy,
+  bounded-response client this app builds; that is a weaker guarantee than the fetcher's, and it is
+  the only outbound path allowed to be. The client is reachable only from the push seam, by test — the directory allowlist below would
   not otherwise stop anything in `App\Outbound` from fetching on it.
 - `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
