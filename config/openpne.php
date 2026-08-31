@@ -34,6 +34,7 @@ return [
     */
 
     'images' => [
+        // `exif` (whether ext-exif is loaded) is set at runtime by FilesServiceProvider, not here.
         'driver' => env('OPENPNE_IMAGE_DRIVER', 'gd'), // gd (default) | imagick
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
