@@ -71,7 +71,7 @@ export default function MessageEdit() {
 
             <Heading variant="pageCompose">{t('Edit draft')}</Heading>
 
-            <Panel sheet>
+            <Panel variant="sheet">
                 <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">
                     {draft.recipient && (
                         <div className="flex items-center gap-2 text-sm">
