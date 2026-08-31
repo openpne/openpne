@@ -2,10 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use App\Support\FileDeliveryRoutes;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Records the session's previous URL only for a request that is a page the visitor is actually on.
@@ -17,31 +18,46 @@ use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
  * And it drops client-side page visits, which are XHRs that *are* navigations, so on those pages
  * back() reaches for whatever full page load came before.
  *
- * Fetch Metadata (`Sec-Fetch-Dest`) is what separates the two. A client that does not send it keeps
- * the framework's rule, so no client loses back-navigation it had — except on a route that never
- * answers with a page (isNeverAPage): those are ruled out by route, so the icon or image a
- * header-less client loads for a page cannot become the back target either.
+ * Two things have to hold. The request has to be a navigation: Fetch Metadata (`Sec-Fetch-Dest`)
+ * says so, and a client that does not send it keeps the framework's rule. And the response has to
+ * be a page — HTML, or an Inertia page response. The second is what a client without Fetch Metadata
+ * cannot get wrong: an image, a stylesheet, the manifest or a JSON poll is not a page whatever
+ * headers asked for it, so none of them can become the back target.
  */
 class StartSession extends FrameworkStartSession
 {
+    private const RESPONSE = 'app.start_session.response';
+
     /**
-     * Generated site assets a page's <head> pulls in. Not stored bytes, so not delivery routes —
-     * whether their `public` declaration should also go cookie-free is a separate decision, and
-     * listing them there would make it — but no more a page than those are.
+     * The framework calls storeCurrentUrl once the response exists but does not hand it over; it is
+     * kept on the request so the store can ask what was answered.
      */
-    public const ASSET_ROUTES = ['app_icon', 'webmanifest', 'design.customizing_css'];
+    protected function handleStatefulRequest(Request $request, $session, Closure $next)
+    {
+        return parent::handleStatefulRequest($request, $session, function (Request $request) use ($next) {
+            $response = $next($request);
+            $request->attributes->set(self::RESPONSE, $response);
+
+            return $response;
+        });
+    }
 
     protected function storeCurrentUrl(Request $request, $session)
     {
         $route = $request->route();
+        $response = $request->attributes->get(self::RESPONSE);
 
-        // The framework's own guards, minus the XHR one that isPageNavigation now decides.
+        // The framework's own guards, minus the XHR one that isPageNavigation now decides. A
+        // fallback match is an unmatched URL — a stale link, a probe — answered with a 404, so it is
+        // never somewhere to send a visitor back to, whatever it answered with.
         if (! $request->isMethod('GET')
             || ! $route instanceof Route
-            || $this->isNeverAPage($route)
+            || $route->isFallback
             || $request->prefetch()
             || $request->isPrecognitive()
-            || ! $this->isPageNavigation($request)) {
+            || ! $this->isPageNavigation($request)
+            || ! $response instanceof Response
+            || ! $this->isPage($response)) {
             return;
         }
 
@@ -50,18 +66,6 @@ class StartSession extends FrameworkStartSession
         if (method_exists($session, 'setPreviousRoute')) {
             $session->setPreviousRoute($route->getName());
         }
-    }
-
-    /**
-     * Nowhere to send a visitor back to, whatever headers the request carried: a fallback match is an
-     * unmatched URL — a stale link, a probe — answered with a 404; a delivery route and a site asset
-     * answer with bytes.
-     */
-    private function isNeverAPage(Route $route): bool
-    {
-        return $route->isFallback
-            || FileDeliveryRoutes::matches($route)
-            || in_array($route->getName(), self::ASSET_ROUTES, true);
     }
 
     private function isPageNavigation(Request $request): bool
@@ -74,5 +78,12 @@ class StartSession extends FrameworkStartSession
             'empty' => $request->hasHeader('X-Inertia') || $request->hasHeader('X-Livewire-Navigate'),
             default => false,            // image, style, script, font, manifest, iframe, …
         };
+    }
+
+    /** HTML, or the JSON an Inertia client-side visit swaps the page for — the response says which it is. */
+    private function isPage(Response $response): bool
+    {
+        return $response->headers->has('X-Inertia')
+            || str_starts_with((string) $response->headers->get('Content-Type'), 'text/html');
     }
 }

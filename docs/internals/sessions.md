@@ -61,27 +61,29 @@ every routed GET that is not an XHR, which gets this wrong both ways:
   then reach past them for whatever full page load came before.
 
 [`App\Http\Middleware\StartSession`](../../app/Http/Middleware/StartSession.php)
-asks instead whether the request is a page the visitor is on:
+asks instead whether the request is a page the visitor is on — a question with a
+request half and a response half. The request has to be a navigation:
 
-| `Sec-Fetch-Dest` | Recorded |
+| `Sec-Fetch-Dest` | Navigation |
 |---|---|
 | `document` | yes — an ordinary navigation |
 | `empty` with `X-Inertia` / `X-Livewire-Navigate` | yes — a client-side visit |
 | `empty` otherwise, `image`, `style`, `script`, `font`, `manifest`, … | no |
 | absent | the framework's rule: yes unless the request is an XHR |
 
+And the response has to be a page: `text/html`, or an Inertia page response
+(`X-Inertia`). A client without Fetch Metadata passes the first test with an
+image, a stylesheet, the manifest or a JSON poll; none passes the second, so
+none can become the back target.
+
 The framework's other guards stand (GET, a matched route, not a prefetch, not
-precognitive). Some routes are never recorded whatever their headers, because
-none is somewhere to send a visitor back to: a fallback match, which answers
-404; a file delivery route
-([`FileDeliveryRoutes`](../../app/Support/FileDeliveryRoutes.php)); and the
-generated site assets a page's `<head>` pulls in (`StartSession::ASSET_ROUTES` —
-the app icon, the manifest, the custom CSS). The last two answer with bytes, so
-a client without Fetch Metadata cannot leave one as the back target either.
+precognitive), and a fallback match is never recorded whatever it answered: it
+is a 404 for an unmatched URL, so it is not somewhere to send a visitor back to.
 
 It is swapped in by container binding (`AppServiceProvider`), not by replacing the
 class in the `web` group, so the middleware priority list still finds the session
-middleware under the framework's name.
+middleware under the framework's name. The framework does not hand the response
+to the store, so the request is wrapped to keep it.
 
 ## Key invariants
 

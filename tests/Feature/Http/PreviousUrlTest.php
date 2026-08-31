@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Tests\TestCase;
 
 /**
@@ -68,6 +69,22 @@ class PreviousUrlTest extends TestCase
         return route('banner.image', ['file' => $file->name]);
     }
 
+    /**
+     * What Inertia's client sends on a visit. The version has to match: without it the answer is a
+     * 409 asking for a full load, which is no page — the full load that follows is what gets recorded.
+     * Read after a request has run: the middleware is what sets the version the factory reports.
+     *
+     * @return array<string, string>
+     */
+    private function inertiaVisitHeaders(): array
+    {
+        return [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => (string) Inertia::getVersion(),
+            'X-Requested-With' => 'XMLHttpRequest',
+        ];
+    }
+
     private function previousUrl(): ?string
     {
         return session()->previousUrl();
@@ -91,14 +108,10 @@ class PreviousUrlTest extends TestCase
     {
         // Inertia's client sends X-Requested-With alongside X-Inertia, so the framework's XHR
         // exclusion covers the very case this must record. Livewire's navigate fetch does not.
-        $visits = [
-            'inertia' => ['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'],
-            'livewire' => ['X-Livewire-Navigate' => ''],
-        ];
-
-        foreach ($visits as $client => $headers) {
+        foreach (['inertia', 'livewire'] as $client) {
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login');
 
+            $headers = $client === 'inertia' ? $this->inertiaVisitHeaders() : ['X-Livewire-Navigate' => ''];
             $this->withHeaders($headers + ['Sec-Fetch-Dest' => 'empty'])->get('/forgot-password');
 
             $this->assertSame(url('/forgot-password'), $this->previousUrl(), $client);
@@ -118,8 +131,7 @@ class PreviousUrlTest extends TestCase
     public function test_a_validation_error_returns_to_the_page_a_client_side_visit_reached(): void
     {
         $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
-        $this->withHeaders(['Sec-Fetch-Dest' => 'empty', 'X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
-            ->get('/forgot-password');
+        $this->withHeaders($this->inertiaVisitHeaders() + ['Sec-Fetch-Dest' => 'empty'])->get('/forgot-password');
 
         $this->post('/forgot-password', ['email' => ''])
             ->assertRedirect('/forgot-password')
@@ -138,7 +150,7 @@ class PreviousUrlTest extends TestCase
         }
     }
 
-    public function test_a_route_that_never_answers_with_a_page_is_not_recorded_whatever_its_headers(): void
+    public function test_a_response_that_is_not_a_page_is_not_recorded_whatever_the_request_headers(): void
     {
         Storage::fake('image_cache');
         $owner = Member::factory()->create();
@@ -150,8 +162,7 @@ class PreviousUrlTest extends TestCase
             'banner.image' => $this->bannerImageUrl(),
             'webmanifest' => route('webmanifest'),
             'design.customizing_css' => route('design.customizing_css'),
-            // A stale token answers 404 — which the framework would record all the same; the route
-            // decides, not the status.
+            // A stale token answers 404 — which the framework would record all the same.
             'app_icon' => route('app_icon', ['token' => 'stale', 'size' => 180]),
         ];
 
@@ -171,6 +182,19 @@ class PreviousUrlTest extends TestCase
             $this->withHeader('Sec-Fetch-Dest', 'document')->get($url);
             $this->assertSame(url('/login'), $this->previousUrl(), "{$name} as a document");
         }
+    }
+
+    public function test_a_json_poll_from_a_client_without_fetch_metadata_is_not_recorded(): void
+    {
+        // The Modern shell polls this with a plain fetch() — no X-Requested-With — every minute, so
+        // on a client without Fetch Metadata the framework's rule would make it the back target of
+        // every page within a minute of arriving.
+        $this->actingAs(Member::factory()->create());
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/timeline')->assertOk();
+
+        $this->withoutHeader('Sec-Fetch-Dest')->get('/unread-counts')->assertOk();
+
+        $this->assertSame(url('/timeline'), $this->previousUrl());
     }
 
     public function test_a_background_fetch_does_not_replace_the_previous_url(): void

@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Support\FileDeliveryRoutes;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,6 +25,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RemoveCookiesFromPublicFileResponses
 {
+    /** The delivery routes. Named rather than sniffed so a new route is an explicit decision. */
+    private const ROUTES = ['file.show', 'image.show', 'banner.image', 'file.public'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
@@ -33,7 +35,7 @@ class RemoveCookiesFromPublicFileResponses
         // The response's own directive is the authority, not the route: the same route serves
         // both private and publicly cacheable files, and only the controller knows which.
         if ($response->headers->hasCacheControlDirective('public')
-            && FileDeliveryRoutes::matches($request->route())) {
+            && in_array($request->route()?->getName(), self::ROUTES, true)) {
             $response->headers->remove('Set-Cookie');
         }
 
