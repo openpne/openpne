@@ -106,7 +106,9 @@ changing it moves the layout. Classic keeps its 120px square.
   permitting or not.
 - A variant's cache key names everything its bytes depend on — token, geometry, format,
   generation, and the encoder (`driver`, `quality`) — so an env change is a new variant, not a
-  stale one. **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry
+  stale one. Adding a segment to the key is itself such a change: every variant regenerates on its
+  next request, and the superseded files stay on the cache disk until their File is deleted (nothing
+  prunes them). **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry
   that key hashed as their `ETag` (`ImageTransform::etag`), so a code change that alters the bytes
   has to bump `GENERATION`. `/file/{name}` and the admin raw route carry the file token, whose
   bytes never change. Each is checked after the policy and before any bytes are read, and

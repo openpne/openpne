@@ -62,8 +62,8 @@ class ConditionalDeliveryTest extends TestCase
         $owner = Member::factory()->create();
         $file = $this->avatar($owner);
 
-        $square = $this->actingAs($owner)->get($file->thumbnailUrl(120, 120, square: true))->headers->get('ETag');
-        $fit = $this->get($file->thumbnailUrl(120, 120))->headers->get('ETag');
+        $square = $this->actingAs($owner)->get($file->thumbnailUrl(120, 120, square: true))->assertOk()->headers->get('ETag');
+        $fit = $this->get($file->thumbnailUrl(120, 120))->assertOk()->headers->get('ETag');
 
         $this->assertNotSame($square, $fit);
     }
@@ -88,6 +88,11 @@ class ConditionalDeliveryTest extends TestCase
         $this->assertSame('', $again->getContent());
         $this->assertSame($etag, $again->headers->get('ETag'));
         $this->assertCacheControl($again, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
+        $this->forgetMock(FileStorage::class);
+
+        $stale = $this->withHeader('If-None-Match', '"stale"')->get($url);
+        $stale->assertOk();
+        $this->assertSame('PNGDATA', $stale->streamedContent());
     }
 
     public function test_a_denied_viewer_holding_the_tag_is_answered_404_not_304(): void
@@ -126,6 +131,22 @@ class ConditionalDeliveryTest extends TestCase
         $again->assertStatus(304);
         $this->assertSame('', $again->getContent());
         $this->assertCacheControl($again, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
+        $this->forgetMock(FileStorage::class);
+
+        $stale = $this->withHeader('If-None-Match', '"stale"')->get($url);
+        $stale->assertOk();
+        $this->assertSame('PNGDATA', $stale->streamedContent());
+    }
+
+    public function test_a_non_admin_holding_the_tag_is_answered_404_not_304_on_the_raw_route(): void
+    {
+        // The route bypasses FilePolicy, so its own gate has to sit ahead of the 304: otherwise a
+        // guest with a token could tell an existing file (304) from a missing one (404).
+        $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
+
+        $this->withHeader('If-None-Match', '"'.$file->name.'"')
+            ->get(route('admin.file.raw', ['file' => $file->name]))
+            ->assertNotFound();
     }
 
     /** @param  array<string, string|true>  $directives */
