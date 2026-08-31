@@ -113,6 +113,21 @@ class PreviousUrlTest extends TestCase
         }
     }
 
+    public function test_a_file_delivery_route_is_never_recorded_whatever_its_headers(): void
+    {
+        $image = $this->brandMarkUrl();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+        // No Fetch Metadata — the framework's rule would record this plain GET — and the header a
+        // browser sends when it shows the image in a tab of its own. Bytes are never a form to
+        // return to, so the route decides, not the headers.
+        $this->get($image)->assertOk();
+        $this->assertSame(url('/login'), $this->previousUrl(), 'no Fetch Metadata');
+
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($image)->assertOk();
+        $this->assertSame(url('/login'), $this->previousUrl(), 'document');
+    }
+
     public function test_a_background_fetch_does_not_replace_the_previous_url(): void
     {
         $image = $this->brandMarkUrl();

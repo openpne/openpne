@@ -71,8 +71,12 @@ asks instead whether the request is a page the visitor is on:
 | absent | the framework's rule: yes unless the request is an XHR |
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
-precognitive), and a fallback match is never recorded whatever its headers: it
-answers 404, so it is not somewhere to send a visitor back to.
+precognitive). Two kinds of route are never recorded whatever their headers,
+because neither is somewhere to send a visitor back to: a fallback match, which
+answers 404, and a file delivery route
+([`FileDeliveryRoutes`](../../app/Support/FileDeliveryRoutes.php)), which answers
+with bytes — so a client without Fetch Metadata cannot leave an image as the
+back target either.
 
 It is swapped in by container binding (`AppServiceProvider`), not by replacing the
 class in the `web` group, so the middleware priority list still finds the session

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\FileDeliveryRoutes;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
@@ -17,7 +18,9 @@ use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
  * back() reaches for whatever full page load came before.
  *
  * Fetch Metadata (`Sec-Fetch-Dest`) is what separates the two. A client that does not send it keeps
- * the framework's rule, so no client loses back-navigation it had.
+ * the framework's rule, so no client loses back-navigation it had — except on a file delivery route,
+ * which serves bytes and never a form: those are ruled out by route, so the image a header-less
+ * client loads cannot become the back target either.
  */
 class StartSession extends FrameworkStartSession
 {
@@ -26,11 +29,13 @@ class StartSession extends FrameworkStartSession
         $route = $request->route();
 
         // The framework's own guards, minus the XHR one that isPageNavigation now decides. A
-        // fallback match is an unmatched URL — a stale link, a probe — answered with a 404, so it is
-        // never somewhere to send a visitor back to, whatever headers it arrived with.
+        // fallback match is an unmatched URL — a stale link, a probe — answered with a 404, and a
+        // delivery route answers with bytes; neither is somewhere to send a visitor back to,
+        // whatever headers it arrived with.
         if (! $request->isMethod('GET')
             || ! $route instanceof Route
             || $route->isFallback
+            || FileDeliveryRoutes::matches($route)
             || $request->prefetch()
             || $request->isPrecognitive()
             || ! $this->isPageNavigation($request)) {
