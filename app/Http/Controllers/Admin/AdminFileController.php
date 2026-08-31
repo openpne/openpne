@@ -8,7 +8,7 @@ use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\HeaderUtils;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Serves stored file bytes to the admin file monitor (thumbnail preview + download).
@@ -27,7 +27,7 @@ class AdminFileController extends Controller
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-    public function show(Request $request, File $file, FileStorage $storage): StreamedResponse
+    public function show(Request $request, File $file, FileStorage $storage): Response
     {
         // 404 (not 403) for non-admins so the endpoint does not confirm a file exists.
         abort_unless(Auth::guard('admin')->check(), 404);
@@ -38,12 +38,7 @@ class AdminFileController extends Controller
         // non-raster is always an attachment.
         $inline = $raster && ! $request->boolean('download');
 
-        $stream = $storage->readStream($file);
-
-        return response()->stream(function () use ($stream): void {
-            fpassthru($stream);
-            fclose($stream);
-        }, 200, [
+        $headers = [
             'Content-Type' => $raster ? $file->type : 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
             'Content-Disposition' => HeaderUtils::makeDisposition(
@@ -53,6 +48,20 @@ class AdminFileController extends Controller
             ),
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
-        ]);
+            // The token names one immutable byte string, as on FileController.
+            'ETag' => '"'.$file->name.'"',
+        ];
+
+        $unchanged = response('', 200, $headers);
+        if ($unchanged->isNotModified($request)) {
+            return $unchanged;
+        }
+
+        $stream = $storage->readStream($file);
+
+        return response()->stream(function () use ($stream): void {
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, $headers);
     }
 }

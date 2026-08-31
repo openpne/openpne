@@ -4,7 +4,9 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageCache;
 use App\Files\ImageTransform;
+use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,11 +43,14 @@ class ConditionalDeliveryTest extends TestCase
         $this->assertSame(ImageTransform::fromGeometry('w120_h120_sq')->etag($file->name, 'png'), $etag);
         $this->assertCacheControl($first, ['private' => true, 'max-age' => '86400']);
 
+        // Nothing is read for a match: the tag is computed, not derived from the bytes.
+        $this->mock(ImageCache::class)->shouldNotReceive('bytes');
         $again = $this->withHeader('If-None-Match', $etag)->get($url);
         $again->assertStatus(304);
         $this->assertSame('', $again->getContent());
         $this->assertSame($etag, $again->headers->get('ETag'));
         $this->assertCacheControl($again, ['private' => true, 'max-age' => '86400']);
+        $this->forgetMock(ImageCache::class);
 
         $stale = $this->withHeader('If-None-Match', '"stale"')->get($url);
         $stale->assertOk();
@@ -76,6 +81,8 @@ class ConditionalDeliveryTest extends TestCase
         $this->assertSame('"'.$file->name.'"', $etag);
         $this->assertCacheControl($first, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
 
+        // The store is not opened for a match.
+        $this->mock(FileStorage::class)->shouldNotReceive('readStream');
         $again = $this->withHeader('If-None-Match', $etag)->get($url);
         $again->assertStatus(304);
         $this->assertSame('', $again->getContent());
@@ -96,9 +103,29 @@ class ConditionalDeliveryTest extends TestCase
             ->get($thumbnail->thumbnailUrl(120, 120, square: true))
             ->assertNotFound();
 
-        $this->withHeader('If-None-Match', '"'.$original->name.'"')
+        $this->actingAs($viewer)
+            ->withHeader('If-None-Match', '"'.$original->name.'"')
             ->get(route('file.show', $original->name))
             ->assertNotFound();
+    }
+
+    public function test_the_admin_raw_route_answers_a_matching_tag_with_304_without_opening_the_store(): void
+    {
+        $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
+        $url = route('admin.file.raw', ['file' => $file->name]);
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+
+        $first = $this->get($url);
+        $first->assertOk();
+        $this->assertSame('"'.$file->name.'"', $first->headers->get('ETag'));
+
+        $storage = $this->mock(FileStorage::class);
+        $storage->shouldReceive('exists')->andReturn(true);
+        $storage->shouldNotReceive('readStream');
+        $again = $this->withHeader('If-None-Match', '"'.$file->name.'"')->get($url);
+        $again->assertStatus(304);
+        $this->assertSame('', $again->getContent());
+        $this->assertCacheControl($again, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
     }
 
     /** @param  array<string, string|true>  $directives */

@@ -59,19 +59,27 @@ final class ImageTransform
      */
     private const GENERATION = 2;
 
-    /** Cache path for $file's bytes under this transform: `{name}/g{N}/w{W}_h{H}[_sq].{format}`. */
+    /**
+     * Cache path for $file's bytes under this transform:
+     * `{name}/g{N}/{driver}-q{quality}/w{W}_h{H}[_sq].{format}`.
+     *
+     * The key names everything the bytes depend on. The encoder segment carries the two env knobs
+     * that change them without a code change: a different driver or quality is a different variant,
+     * not a stale one — for the disk cache and for the ETag derived from this key alike.
+     */
     public function cacheKey(string $name, string $format): string
     {
         $suffix = $this->square ? '_sq' : '';
+        $encoder = config('openpne.images.driver').'-q'.config('openpne.images.quality');
 
-        return "{$name}/g".self::GENERATION."/w{$this->width}_h{$this->height}{$suffix}.{$format}";
+        return "{$name}/g".self::GENERATION."/{$encoder}/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }
 
     /**
      * Validator for a response serving this transform of the file named $name: the cache key, hashed.
-     * The key names everything the bytes depend on — the token (whose bytes never change), the
-     * geometry, the format and GENERATION — so a browser's copy is revalidated without reading
-     * anything, and the generation bump that abandons the disk cache abandons every browser's copy too.
+     * A browser's copy is revalidated without reading anything, and whatever makes a new disk variant
+     * — a generation bump, an encoder change — makes every browser's copy stale with it. Clearing
+     * the cache disk alone does not: a code change that alters the bytes has to bump GENERATION.
      */
     public function etag(string $name, string $format): string
     {

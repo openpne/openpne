@@ -104,7 +104,12 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
-- A variant response's `ETag` is its cache key hashed (`ImageTransform::etag`), so the generation
-  bump that abandons the disk cache abandons every browser's copy too; an original's is the file
-  token, whose bytes never change. Both are checked after the policy and before any bytes are read.
+- A variant's cache key names everything its bytes depend on — token, geometry, format,
+  generation, and the encoder (`driver`, `quality`) — so an env change is a new variant, not a
+  stale one. **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry
+  that key hashed as their `ETag` (`ImageTransform::etag`), so a code change that alters the bytes
+  has to bump `GENERATION`. `/file/{name}` and the admin raw route carry the file token, whose
+  bytes never change. Each is checked after the policy and before any bytes are read, and
   `max-age` is not shortened for it — revalidating every image would cost a PHP request each.
+  The public asset, banner and link-card image routes carry no validator (the last is `no-store`
+  by design).
