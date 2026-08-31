@@ -77,7 +77,12 @@ Metadata passes the first test with an image, a stylesheet, the manifest or a
 JSON poll; none passes the second, so none can become the back target. Nor can
 an error page — a 404 for a stale icon URL is HTML on the Modern surface, and
 the framework's fallback 404 for an unmatched URL is the same case: neither is
-somewhere to send a visitor back to.
+somewhere to send a visitor back to. A redirect is not recorded either; the page
+it leads to is. The one thing the response half cannot tell apart is an HTML
+fragment (the Classic timeline's rows and replies): those are 2xx `text/html`,
+and stay out only because their scripts send `X-Requested-With` — a fragment
+endpoint fetched without it would be recorded for a client without Fetch
+Metadata.
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).
