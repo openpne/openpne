@@ -1,8 +1,8 @@
 # A named stage (not COPY --from=image) so dependabot's docker ecosystem, which
 # only reads FROM lines, keeps this pin updated too.
-FROM composer:2.10.2 AS composer
+FROM composer:2.10.3 AS composer
 
-FROM php:8.5.9-fpm-bookworm
+FROM php:8.5.10-fpm-bookworm
 
 # git + unzip let `composer install` fall back to a git source checkout (and extract dist
 # archives) when GitHub's dist zipballs are temporarily unavailable (504). The slim php-fpm
