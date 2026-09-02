@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\LinkCard;
 
-use GuzzleHttp\Psr7\Exception\MalformedUriException;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 
@@ -122,7 +121,9 @@ final class LinkUrl
 
         try {
             $resolved = UriResolver::resolve(new Uri($base), new Uri(trim($reference)));
-        } catch (MalformedUriException) {
+        } catch (\InvalidArgumentException) {
+            // MalformedUriException from the parser, or the bare InvalidArgumentException it extends
+            // from the URI mutators resolution goes through.
             return null;
         }
 

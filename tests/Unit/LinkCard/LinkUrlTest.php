@@ -137,6 +137,10 @@ class LinkUrlTest extends TestCase
             'data uri' => ['data:image/png;base64,AAAA', $base, null],
             'javascript' => ['javascript:alert(1)', $base, null],
             'empty' => ['', $base, null],
+            // The URI parser's refusals are the same answer as a scheme this app does not carry.
+            'malformed percent-encoding in host' => ['https://ex%zz.example/i.png', $base, null],
+            // An IPv6 literal comes back in its RFC 5952 form, which is what the fetcher will pin.
+            'ipv6 literal is canonicalised' => ['https://[2606:2800:0220:0001:0248:1893:25c8:1946]/i.png', $base, 'https://[2606:2800:220:1:248:1893:25c8:1946]/i.png'],
         ];
     }
 }

@@ -8,7 +8,7 @@ use App\Outbound\HostResolver;
 use App\Outbound\PublicIpGuard;
 use App\Outbound\SafeHttpFetcher;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Response;
@@ -74,6 +74,12 @@ trait FakesOutboundTransport
             [$response, $connectedTo] = array_shift($this->fakeResponses) ?? [new Response(404, [], ''), null];
 
             if ($response instanceof \Throwable) {
+                // Guzzle reports a failed transfer through on_stats before rejecting.
+                if (isset($options['on_stats'])) {
+                    $partial = $response instanceof ResponseException ? $response->getResponse() : null;
+                    $options['on_stats'](new TransferStats($request, $partial, 0.0, null, []));
+                }
+
                 return Create::rejectionFor($response);
             }
 
@@ -91,15 +97,11 @@ trait FakesOutboundTransport
                 ]));
             }
 
-            // libcurl aborts on a short write, which Guzzle surfaces as a RequestException carrying
+            // libcurl aborts on a short write, which Guzzle surfaces as a ResponseException carrying
             // the response it had already built. Modelling that is what exercises the fetcher's
             // truncation path rather than a happy one.
             if ($capped) {
-                return Create::rejectionFor(new RequestException(
-                    'cURL error 23: Failed writing body',
-                    $request,
-                    $response,
-                ));
+                return Create::rejectionFor(new ResponseException('Unable to write to stream', $request, $response));
             }
 
             return Create::promiseFor($response);

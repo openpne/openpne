@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Outbound;
 
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Psr7\Exception\MalformedUriException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
@@ -35,12 +33,17 @@ use ReflectionClass;
  *   - redirects are not followed by libcurl. Each Location re-enters validation from the top, with
  *     its own resolution and its own pin;
  *   - no proxy, ever. A proxy resolves the destination itself, which is exactly the step the pin
- *     exists to control, so the environment variables libcurl would honour are disabled explicitly.
+ *     exists to control, so the `proxy` option is fixed to '' — Guzzle's final decision, which its
+ *     curl handler pins as CURLOPT_PROXY itself, with no fallback to the environment variables
+ *     libcurl would otherwise honour.
  *
  * The pin only works with the curl handler: with Guzzle's PHP stream fallback every CURLOPT_* is
  * ignored and requests would go wherever the system resolver points. The client is therefore built
  * on an explicit CurlHandler (OutboundServiceProvider) and composer.json requires ext-curl, so an
- * install without it fails loudly instead of running with the guard silently disarmed.
+ * install without it fails loudly instead of running with the guard silently disarmed. The pin is
+ * also the only raw curl option the handler accepts from this class: Guzzle 8 refuses proxy,
+ * redirect, sink, timeout and credential options in that array, so those are set through their
+ * first-class options and cannot be undone from it.
  *
  * Requests carry no cookies, no credentials and no Referer, and TLS verification is not
  * configurable off. See docs/internals/outbound-http.md.
@@ -103,24 +106,21 @@ final class SafeHttpFetcher
     /**
      * Describe a transport failure without quoting the underlying exception.
      *
-     * Guzzle's own message is not safe to repeat: its curl handler appends the request URI — query
-     * string and all — to the cURL error text, so sanitising only the URL this class supplies leaks
-     * the secret straight back in through the concatenated half. The previous exception is dropped
-     * for the same reason, since a logged exception prints its whole chain.
+     * Guzzle 8 redacts the request URI in its own messages, but this class does not lean on that:
+     * the wording is upstream's to change (Guzzle 7 appended the URI, query string and all), and a
+     * logged exception prints its whole chain. So the message is never repeated and the previous
+     * exception is dropped.
      *
-     * What survives is the part that is diagnostic without being sensitive: the exception class and,
-     * where Guzzle exposes it, the curl errno — enough to tell a DNS failure from a TLS one.
+     * What survives is the part that is diagnostic without being sensitive: the exception class and
+     * the curl errno the transfer reported through on_stats — enough to tell a DNS failure from a
+     * TLS one.
      */
-    private static function transportFailure(ValidatedUrl $target, GuzzleException $e): OutboundException
+    private static function transportFailure(ValidatedUrl $target, GuzzleException $e, ?int $errno): OutboundException
     {
         $reason = (new ReflectionClass($e))->getShortName();
 
-        if ($e instanceof RequestException || $e instanceof ConnectException) {
-            $errno = $e->getHandlerContext()['errno'] ?? null;
-
-            if (is_int($errno) && $errno !== 0) {
-                $reason .= ", curl errno {$errno}";
-            }
+        if ($errno !== null && $errno !== 0) {
+            $reason .= ", curl errno {$errno}";
         }
 
         return OutboundException::failed(sprintf('Request to [%s] failed (%s).', self::describe($target->url), $reason));
@@ -185,16 +185,28 @@ final class SafeHttpFetcher
         }
 
         $host = $this->canonicalHost($parts['host']);
-        $addresses = $this->addressesFor($host);
 
         // The URL is rewritten to carry the canonical host, because CURLOPT_CONNECT_TO matches on the
         // host as it appears in the request URL. Leave a Unicode or trailing-dot host in place and the
         // pin quietly fails to match, dropping the request back to whatever the system resolver says
         // — the guard would still have run, but on an address nobody dialled.
         // An IPv6 literal goes back in bracketed; the bare form is not a valid URI host.
-        $canonical = (string) (new Uri($url))->withHost(str_contains($host, ':') ? "[{$host}]" : $host);
+        //
+        // Built before the host is resolved, so a URL the URI parser refuses is refused here as
+        // malformed rather than handed to the resolver. The constructor wraps its refusal in
+        // MalformedUriException; withHost() throws the bare InvalidArgumentException it extends.
+        try {
+            $uri = (new Uri($url))->withHost(str_contains($host, ':') ? "[{$host}]" : $host);
+        } catch (\InvalidArgumentException) {
+            throw OutboundException::blocked('Malformed URL: ['.self::describe($url).'].');
+        }
 
-        return new ValidatedUrl($canonical, $host, $port, $addresses[0], $addresses);
+        // The host as the URI now spells it — an IPv6 literal in its canonical form — so the pin
+        // entry names the same string the request URL carries.
+        $host = trim($uri->getHost(), '[]');
+        $addresses = $this->addressesFor($host);
+
+        return new ValidatedUrl((string) $uri, $host, $port, $addresses[0], $addresses);
     }
 
     /**
@@ -275,12 +287,15 @@ final class SafeHttpFetcher
     {
         $remaining = $deadline - microtime(true);
 
-        if ($remaining <= 0) {
+        // Below a millisecond Guzzle rejects the timeout as invalid rather than treating it as none,
+        // and either way the request could not complete: report it as the time having run out.
+        if ($remaining < 0.001) {
             throw OutboundException::failed('Ran out of time before the request could be sent.');
         }
 
         $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $maxBytes);
         $connected = null;
+        $errno = null;
 
         try {
             $response = $this->client->request('GET', $target->url, [
@@ -288,43 +303,46 @@ final class SafeHttpFetcher
                 RequestOptions::HTTP_ERRORS => false,
                 RequestOptions::COOKIES => false,
                 RequestOptions::VERIFY => true,
+                // Final: Guzzle pins CURLOPT_PROXY to '' itself, so libcurl never reads
+                // http_proxy/HTTPS_PROXY/ALL_PROXY. A proxy resolves the destination itself, which
+                // would silently undo the pin.
+                RequestOptions::PROXY => '',
                 RequestOptions::SINK => $sink,
                 RequestOptions::CONNECT_TIMEOUT => min($this->connectTimeout, $remaining),
                 RequestOptions::TIMEOUT => min($this->requestTimeout, $remaining),
-                RequestOptions::ON_STATS => function (TransferStats $stats) use (&$connected): void {
+                RequestOptions::ON_STATS => function (TransferStats $stats) use (&$connected, &$errno): void {
                     $ip = $stats->getHandlerStats()['primary_ip'] ?? null;
                     $connected = is_string($ip) && $ip !== '' ? $ip : null;
+                    // The curl errno of a failed transfer: Guzzle reports it here, before rejecting.
+                    $data = $stats->getHandlerErrorData();
+                    $errno = is_int($data) ? $data : null;
                 },
                 RequestOptions::HEADERS => [
                     'User-Agent' => $this->userAgent,
                     'Accept' => 'text/html,application/xhtml+xml,application/json;q=0.9,image/*;q=0.8,*/*;q=0.5',
                 ],
+                // The pin, and nothing else: Guzzle 8's curl handler refuses every other option the
+                // seam needs (proxy, redirects, sink, credentials) from this array, so they are the
+                // first-class options above and cannot be undone here.
                 'curl' => [
                     CURLOPT_CONNECT_TO => [$target->connectTo()],
-                    // libcurl reads http_proxy/HTTPS_PROXY/ALL_PROXY from the environment on its own.
-                    // A proxy resolves the destination itself, so it would silently undo the pin.
-                    CURLOPT_PROXY => '',
-                    CURLOPT_NOPROXY => '*',
-                    // Nothing outbound should ever present credentials, from a URL or from ~/.netrc.
-                    CURLOPT_NETRC => CURL_NETRC_IGNORED,
-                    CURLOPT_UNRESTRICTED_AUTH => false,
                 ],
             ]);
-        } catch (RequestException $e) {
-            // A capped body aborts the transfer (CappedStream), which surfaces here as a write error.
-            // The bytes already collected are the ones worth having, so that is not a failure — and
-            // Guzzle attaches the response it had already built, so the real status and Content-Type
+        } catch (ResponseException $e) {
+            // A capped body aborts the transfer (CappedStream), which surfaces here as a write error
+            // carrying the response Guzzle had already built. The bytes already collected are the
+            // ones worth having, so that is not a failure — and the real status and Content-Type
             // survive rather than being replaced by a synthetic 200 the caller would misread.
-            if ($sink->wasCapped() && $e->getResponse() !== null) {
+            if ($sink->wasCapped()) {
                 $this->assertConnectedAsPinned($target, $connected);
                 $sink->rewind();
 
                 return [$e->getResponse()->withBody($sink), true];
             }
 
-            throw self::transportFailure($target, $e);
+            throw self::transportFailure($target, $e, $errno);
         } catch (GuzzleException $e) {
-            throw self::transportFailure($target, $e);
+            throw self::transportFailure($target, $e, $errno);
         }
 
         $this->assertConnectedAsPinned($target, $connected);
@@ -378,9 +396,11 @@ final class SafeHttpFetcher
 
         try {
             return (string) UriResolver::resolve(new Uri($from->url), new Uri($location));
-        } catch (MalformedUriException) {
+        } catch (\InvalidArgumentException) {
             // A Location this app cannot parse is not followed. Reported as blocked rather than
-            // escaping as a Guzzle type, so OutboundException stays this class's whole contract.
+            // escaping as a Guzzle type (MalformedUriException from the parser, or the bare
+            // InvalidArgumentException it extends from the URI mutators), so OutboundException stays
+            // this class's whole contract.
             throw OutboundException::blocked('Redirect from ['.self::describe($from->url).'] carries a malformed Location.');
         }
     }

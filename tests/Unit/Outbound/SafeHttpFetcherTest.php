@@ -11,7 +11,8 @@ use App\Outbound\SafeHttpFetcher;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
+use GuzzleHttp\Exception\ResponseTransferException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Request;
@@ -34,6 +35,9 @@ class SafeHttpFetcherTest extends TestCase
     /** @var array<string, list<string>> */
     private array $dns = [];
 
+    /** @var list<string> hosts the fetcher asked the resolver about, in order */
+    private array $resolved = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,6 +45,7 @@ class SafeHttpFetcherTest extends TestCase
         $this->sent = [];
         $this->queue = [];
         $this->dns = [];
+        $this->resolved = [];
     }
 
     public function test_it_fetches_a_public_url(): void
@@ -64,12 +69,29 @@ class SafeHttpFetcherTest extends TestCase
 
         $this->fetcher()->get('https://example.com/page', 1024);
 
-        $curl = $this->sent[0]['options']['curl'];
+        $options = $this->sent[0]['options'];
 
-        $this->assertSame(['example.com:443:93.184.216.34:443'], $curl[CURLOPT_CONNECT_TO]);
-        $this->assertSame('', $curl[CURLOPT_PROXY], 'An environment proxy would resolve the host itself and bypass the pin.');
-        $this->assertSame('*', $curl[CURLOPT_NOPROXY]);
-        $this->assertFalse($this->sent[0]['options']['allow_redirects']);
+        $this->assertSame(['example.com:443:93.184.216.34:443'], $options['curl'][CURLOPT_CONNECT_TO]);
+        // Guzzle's curl handler allow-lists raw curl options and refuses a request carrying any other;
+        // the pin is the one entry it needs, and everything else is a first-class option.
+        $this->assertSame([CURLOPT_CONNECT_TO], array_keys($options['curl']));
+        $this->assertSame('', $options['proxy'], 'An environment proxy would resolve the host itself and bypass the pin.');
+        $this->assertFalse($options['allow_redirects']);
+    }
+
+    public function test_an_ipv6_literal_is_pinned_in_the_spelling_the_request_url_carries(): void
+    {
+        // The URI rewrites an IPv6 literal into its canonical form, and CURLOPT_CONNECT_TO matches on
+        // the host as the request URL spells it — so the pin entry has to use that spelling too.
+        $this->respondsWith(new Response(200, [], 'ok'));
+
+        $this->fetcher()->get('https://[2606:2800:0220:0001:0248:1893:25c8:1946]/page', 1024);
+
+        $this->assertSame('[2606:2800:220:1:248:1893:25c8:1946]', $this->sent[0]['request']->getUri()->getHost());
+        $this->assertSame(
+            ['[2606:2800:220:1:248:1893:25c8:1946]:443:[2606:2800:220:1:248:1893:25c8:1946]:443'],
+            $this->sent[0]['options']['curl'][CURLOPT_CONNECT_TO],
+        );
     }
 
     public function test_a_redirect_to_a_private_address_is_refused(): void
@@ -218,6 +240,24 @@ class SafeHttpFetcherTest extends TestCase
         $this->fetcher()->get('https://example.com/'.str_repeat('a', 4096), 1024);
     }
 
+    public function test_a_url_the_uri_parser_refuses_is_blocked_before_it_is_resolved(): void
+    {
+        // parse_url() accepts this host; Guzzle's URI parser does not. The refusal is a policy answer
+        // (nothing about it changes on retry), and it comes before the resolver sees the host.
+        $this->resolves('ex%zz.example', ['93.184.216.34']);
+
+        try {
+            $this->fetcher()->get('https://ex%zz.example/page', 1024);
+            $this->fail('Expected an OutboundException.');
+        } catch (OutboundException $e) {
+            $this->assertTrue($e->isBlocked());
+            $this->assertStringContainsString('Malformed URL', $e->getMessage());
+        }
+
+        $this->assertSame([], $this->resolved, 'A malformed URL must not reach the resolver.');
+        $this->assertSame([], $this->sent);
+    }
+
     public function test_a_trailing_dot_host_is_canonicalised_so_the_pin_matches(): void
     {
         // "example.com." resolves the same but compares unequal, which would leave CURLOPT_CONNECT_TO
@@ -268,7 +308,10 @@ class SafeHttpFetcherTest extends TestCase
         $this->assertFalse($request->hasHeader('Referer'));
         $this->assertFalse($options['cookies']);
         $this->assertTrue($options['verify'], 'TLS verification is not something this fetcher may turn off.');
-        $this->assertSame(CURL_NETRC_IGNORED, $options['curl'][CURLOPT_NETRC]);
+        $this->assertArrayNotHasKey('auth', $options);
+        // ~/.netrc stays unread by libcurl's default; OutboundTransportTest pins that the option bag
+        // cannot turn it on, so nothing here needs to turn it off.
+        $this->assertSame([CURLOPT_CONNECT_TO], array_keys($options['curl']));
         $this->assertStringStartsWith('OpenPNE/4', $request->getHeaderLine('User-Agent'));
     }
 
@@ -341,18 +384,15 @@ class SafeHttpFetcherTest extends TestCase
         // A pasted URL carries its secrets in the query — a signed link, a one-time token — and an
         // exception from a queued job reaches the log verbatim.
         //
-        // The Guzzle message below is shaped like a real one: its curl handler appends the request
-        // URI, query and all, to the cURL error text. Sanitising only the URL this class supplies
-        // would leak the secret straight back in through the concatenated half, so the underlying
-        // message is not repeated at all.
+        // The Guzzle message below is shaped like Guzzle 7's, which appended the request URI, query
+        // and all, to the cURL error text. Guzzle 8 redacts it, but the wording is upstream's to
+        // change, so the underlying message is not repeated at all rather than trusted.
         $url = 'https://example.com/doc?token=s3cr3t-value';
         $this->resolves('example.com', ['93.184.216.34']);
-        $this->queue[] = [new ConnectException(
+        $this->failsWith(new ConnectException(
             "cURL error 6: Could not resolve host (see https://curl.se/libcurl/c/libcurl-errors.html) for {$url}",
             new Request('GET', $url),
-            null,
-            ['errno' => 6],
-        ), null];
+        ), errno: 6);
 
         try {
             $this->fetcher()->get($url, 1024);
@@ -364,6 +404,29 @@ class SafeHttpFetcherTest extends TestCase
             // Still diagnostic enough to tell a DNS failure from a TLS one.
             $this->assertStringContainsString('curl errno 6', $e->getMessage());
             $this->assertNull($e->getPrevious(), 'A retained previous exception would print the full URL when logged.');
+        }
+    }
+
+    public function test_a_transfer_that_fails_after_the_response_headers_is_still_a_failure(): void
+    {
+        // A response-aware failure — the body cut off by a reset, say — arrives as a ResponseException
+        // like a capped transfer does. Only the sink's own cut is recovered; this one is a failure,
+        // reported with the same diagnostics as a failure before any response.
+        $url = 'https://example.com/doc?token=s3cr3t-value';
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->failsWith(new ResponseTransferException(
+            'cURL error 18: transfer closed with outstanding read data remaining',
+            new Request('GET', $url),
+            new Response(200, ['Content-Type' => 'text/html'], 'partial'),
+        ), errno: 18);
+
+        try {
+            $this->fetcher()->get($url, 1024);
+            $this->fail('Expected an OutboundException.');
+        } catch (OutboundException $e) {
+            $this->assertFalse($e->isBlocked(), 'A transport failure is transient, not a policy refusal.');
+            $this->assertStringContainsString('ResponseTransferException, curl errno 18', $e->getMessage());
+            $this->assertStringNotContainsString('s3cr3t-value', $e->getMessage());
         }
     }
 
@@ -414,12 +477,23 @@ class SafeHttpFetcherTest extends TestCase
     /**
      * Queue a response whose body overruns the sink, as libcurl aborting on a short write does.
      *
-     * Guzzle's curl handler raises a RequestException with the response it had already built
+     * Guzzle's curl handler raises a ResponseException with the response it had already built
      * attached (CurlFactory::createRejection), which is what lets the real status survive.
      */
     private function queueWriteAbort(Response $response): void
     {
         $this->queue[] = [$response, null, true];
+    }
+
+    /**
+     * Queue a transport failure.
+     *
+     * @param  int|null  $errno  The curl errno libcurl reported. Guzzle hands it to on_stats as the
+     *                           handler error data before rejecting, which is where the fetcher reads it.
+     */
+    private function failsWith(GuzzleException $failure, ?int $errno = null): void
+    {
+        $this->queue[] = [$failure, $errno];
     }
 
     private function fetcher(): SafeHttpFetcher
@@ -430,6 +504,11 @@ class SafeHttpFetcherTest extends TestCase
             $queued = array_shift($this->queue) ?? [new Response(200, [], ''), null];
 
             if ($queued[0] instanceof GuzzleException) {
+                if (isset($options['on_stats'])) {
+                    $partial = $queued[0] instanceof ResponseException ? $queued[0]->getResponse() : null;
+                    $options['on_stats'](new TransferStats($request, $partial, 0.0, $queued[1], []));
+                }
+
                 return Create::rejectionFor($queued[0]);
             }
 
@@ -455,11 +534,7 @@ class SafeHttpFetcherTest extends TestCase
             }
 
             if ($abortOnCap && $options['sink']->wasCapped()) {
-                return Create::rejectionFor(new RequestException(
-                    'cURL error 23: Failed writing body',
-                    $request,
-                    $response,
-                ));
+                return Create::rejectionFor(new ResponseException('Unable to write to stream', $request, $response));
             }
 
             return Create::promiseFor($response);
@@ -467,13 +542,13 @@ class SafeHttpFetcherTest extends TestCase
 
         return new SafeHttpFetcher(
             client: new Client(['handler' => HandlerStack::create($handler)]),
-            resolver: new class($this->dns) implements HostResolver
+            resolver: new class(fn (string $host): array => $this->lookup($host)) implements HostResolver
             {
-                public function __construct(private readonly array $dns) {}
+                public function __construct(private readonly \Closure $lookup) {}
 
                 public function resolve(string $host): array
                 {
-                    return $this->dns[$host] ?? [];
+                    return ($this->lookup)($host);
                 }
             },
             guard: new PublicIpGuard,
@@ -483,6 +558,14 @@ class SafeHttpFetcherTest extends TestCase
             fetchTimeout: 10,
             maxRedirects: 3,
         );
+    }
+
+    /** @return list<string> */
+    private function lookup(string $host): array
+    {
+        $this->resolved[] = $host;
+
+        return $this->dns[$host] ?? [];
     }
 
     /** The address CURLOPT_CONNECT_TO named, read back out of the option the fetcher set. */
