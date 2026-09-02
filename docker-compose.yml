@@ -35,7 +35,7 @@ services:
       - mailpit
 
   nginx:
-    image: nginx:1.31.4-alpine
+    image: nginx:1.31.5-alpine
     ports:
       - "${OPENPNE_HTTP_PORT:-8080}:80"
     volumes:
@@ -46,7 +46,7 @@ services:
       - app
 
   vite:
-    image: node:26.7.0-bookworm-slim
+    image: node:26.8.1-bookworm-slim
     user: "${OPENPNE_UID:-1000}:${OPENPNE_GID:-1000}"
     working_dir: /var/www/html
     environment:
