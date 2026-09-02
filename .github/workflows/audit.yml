@@ -78,6 +78,9 @@ jobs:
       - name: Full Composer audit (committed lock)
         id: composer
         continue-on-error: true
+        # Explicit `shell: bash` enables pipefail; the default `bash -e` lets
+        # tee mask a non-zero audit exit, so findings never reach the issue step.
+        shell: bash
         run: composer audit --locked 2>&1 | tee composer-audit.txt
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -87,6 +90,7 @@ jobs:
       - name: Full npm audit
         id: npm
         continue-on-error: true
+        shell: bash
         run: npm audit 2>&1 | tee npm-audit.txt
 
       - name: File or update the dependency-audit issue
