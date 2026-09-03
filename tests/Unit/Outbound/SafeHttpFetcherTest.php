@@ -29,7 +29,13 @@ class SafeHttpFetcherTest extends TestCase
     /** @var list<array{request: RequestInterface, options: array<mixed>}> */
     private array $sent = [];
 
-    /** @var list<Response> */
+    /**
+     * What the fake transport answers next, one entry per request, in one of three shapes:
+     * `[Response, connectedTo]` (respondsWith), `[Response, null, true]` (queueWriteAbort) or
+     * `[GuzzleException, errno]` (failsWith). The first element decides which.
+     *
+     * @var list<array{0: Response|GuzzleException, 1: string|int|null, 2?: bool}>
+     */
     private array $queue = [];
 
     /** @var array<string, list<string>> */
@@ -456,6 +462,22 @@ class SafeHttpFetcherTest extends TestCase
 
         // A job budget shared across page + oEmbed + image: once it is spent, no further request goes out.
         $this->fetcher()->get('https://example.com/page', 1024, microtime(true) - 1);
+    }
+
+    public function test_it_gives_up_when_less_than_a_millisecond_of_the_deadline_is_left(): void
+    {
+        // Guzzle rejects a timeout in (0, 0.001) seconds as invalid rather than treating it as none,
+        // so the remainder is reported as the time having run out before it reaches the transport.
+        // The fake transport has no such validation: if the guard let this through, the fetch would
+        // succeed. (On a machine slow enough to burn the whole window before the check, the older
+        // "already past" guard fires instead — the test then proves nothing, but does not fail.)
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->respondsWith(new Response(200, [], 'ok'));
+
+        $this->expectException(OutboundException::class);
+        $this->expectExceptionMessage('Ran out of time');
+
+        $this->fetcher()->get('https://example.com/page', 1024, microtime(true) + 0.0009);
     }
 
     private function resolves(string $host, array $addresses): void

@@ -147,6 +147,12 @@ final class LinkUrl
             return null;
         }
 
+        // An IPv6 literal in its RFC 5952 form, which is also what resolve() returns for one, so a
+        // pasted URL and a reference found inside a page do not mint two cards for one address.
+        if (str_contains($host, ':') && ($packed = @inet_pton($host)) !== false) {
+            $host = inet_ntop($packed);
+        }
+
         if (preg_match('/[^\x20-\x7e]/', $host) === 1) {
             $ascii = idn_to_ascii($host, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46);
 

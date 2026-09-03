@@ -41,9 +41,9 @@ use ReflectionClass;
  * ignored and requests would go wherever the system resolver points. The client is therefore built
  * on an explicit CurlHandler (OutboundServiceProvider) and composer.json requires ext-curl, so an
  * install without it fails loudly instead of running with the guard silently disarmed. The pin is
- * also the only raw curl option the handler accepts from this class: Guzzle 8 refuses proxy,
- * redirect, sink, timeout and credential options in that array, so those are set through their
- * first-class options and cannot be undone from it.
+ * also the only raw curl option this class sends: Guzzle 8 refuses the proxy, redirect, sink and
+ * timeout options in that array (and the netrc and redirect-auth options this class used to set
+ * there), so those are set through their first-class options and cannot be undone from it.
  *
  * Requests carry no cookies, no credentials and no Referer, and TLS verification is not
  * configurable off. See docs/internals/outbound-http.md.
@@ -321,9 +321,9 @@ final class SafeHttpFetcher
                     'User-Agent' => $this->userAgent,
                     'Accept' => 'text/html,application/xhtml+xml,application/json;q=0.9,image/*;q=0.8,*/*;q=0.5',
                 ],
-                // The pin, and nothing else: Guzzle 8's curl handler refuses every other option the
-                // seam needs (proxy, redirects, sink, credentials) from this array, so they are the
-                // first-class options above and cannot be undone here.
+                // The pin, and nothing else: Guzzle 8's curl handler refuses the proxy, redirect,
+                // sink and timeout options from this array (and the netrc and redirect-auth options
+                // once set here), so they are the first-class options above and cannot be undone here.
                 'curl' => [
                     CURLOPT_CONNECT_TO => [$target->connectTo()],
                 ],

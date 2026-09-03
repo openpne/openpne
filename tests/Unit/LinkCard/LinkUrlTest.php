@@ -30,6 +30,8 @@ class LinkUrlTest extends TestCase
             'trailing dot host' => ['https://example.com./a', 'https://example.com/a'],
             'fragment' => ['https://example.com/a#section', 'https://example.com/a'],
             'idn host' => ['https://例え.テスト/a', 'https://xn--r8jz45g.xn--zckzah/a'],
+            // The same form resolve() returns, so a pasted literal and a page reference share a card.
+            'ipv6 literal' => ['https://[2606:2800:0220:0001:0248:1893:25C8:1946]/a', 'https://[2606:2800:220:1:248:1893:25c8:1946]/a'],
 
             // Kept: these do change it.
             'path case' => ['https://example.com/Article/One', 'https://example.com/Article/One'],

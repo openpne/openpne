@@ -136,8 +136,9 @@ class OutboundTransportTest extends TestCase
         $easy = $factory->create($request, $options);
         $factory->release($easy);
 
+        // Only the proxy pin is asserted here: sendRequest() forces allow_redirects off itself, so
+        // that one is held by WebPushClientConfigTest on the client config instead.
         $this->assertSame('', $easy->options['proxy']);
-        $this->assertFalse($easy->options['allow_redirects']);
     }
 
     /**
