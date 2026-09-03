@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LinkCard;
 
-use GuzzleHttp\Psr7\Exception\MalformedUriException;
+use GuzzleHttp\Psr7\Rfc3986;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 
@@ -122,7 +122,9 @@ final class LinkUrl
 
         try {
             $resolved = UriResolver::resolve(new Uri($base), new Uri(trim($reference)));
-        } catch (MalformedUriException) {
+        } catch (\InvalidArgumentException) {
+            // MalformedUriException from the parser, or the bare InvalidArgumentException it extends
+            // from the URI mutators resolution goes through.
             return null;
         }
 
@@ -144,6 +146,18 @@ final class LinkUrl
 
         if ($host === '') {
             return null;
+        }
+
+        // An IPv6 literal in its RFC 5952 form, by the same parser resolve() goes through, so a
+        // pasted URL and a reference found inside a page do not mint two cards for one address —
+        // and the key does not depend on what the platform's inet_pton() accepts. A literal the
+        // canonicaliser refuses (a zone id, an IPvFuture form) gets no card.
+        if (str_contains($host, ':')) {
+            try {
+                $host = Rfc3986::canonicalizeIpv6($host);
+            } catch (\InvalidArgumentException) {
+                return null;
+            }
         }
 
         if (preg_match('/[^\x20-\x7e]/', $host) === 1) {

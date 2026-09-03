@@ -36,8 +36,9 @@ call is unavailable.
    silence: the request just succeeds, aimed wherever DNS pointed. A transport that reports no peer
    is in the same evidential position as a wrong one, so it is refused rather than waved through.
 
-Requests carry no cookies, no credentials (`CURLOPT_NETRC` ignored) and no `Referer`, and TLS
-verification is not configurable off.
+Requests carry no cookies, no credentials and no `Referer`, and TLS verification is not
+configurable off. Nothing reads `~/.netrc`: libcurl's default ignores it, Guzzle never sets
+`CURLOPT_NETRC`, and its curl handler refuses the raw option from the `curl` sub-array.
 
 ### IPv6 addresses that embed an IPv4 one
 
@@ -54,8 +55,13 @@ recognised from the address alone. An install behind one must list it in `outbou
 An HTTP or SOCKS proxy resolves the destination host itself, which is the exact step the pin exists
 to control — configuring one silently reverts the guard to trusting DNS. Supporting a proxy means
 making the proxy a trusted enforcement point, a different contract than a config value. So there is
-no setting, and the environment variables libcurl would otherwise honour are disabled explicitly
-(`CURLOPT_PROXY`, `CURLOPT_NOPROXY`).
+no setting: the `proxy` option is fixed to `''` on the client and on every request, which Guzzle
+treats as a final decision — its curl handler pins `CURLOPT_PROXY` to `''` itself, with no fallback
+to the environment variables libcurl would otherwise honour — and the raw `CURLOPT_PROXY` /
+`CURLOPT_NOPROXY` options are refused from the `curl` sub-array. That array carries exactly one
+entry, `CURLOPT_CONNECT_TO`. [`OutboundTransportTest`](../../tests/Feature/Outbound/OutboundTransportTest.php)
+puts the whole option bag through Guzzle's real curl handler configuration, so an option the handler
+refuses fails the build rather than every fetch.
 
 ## Why ext-curl is required
 
@@ -74,7 +80,7 @@ inflates a gzip response before the write callback sees it, so a `Content-Length
 small compressed body expand without bound. Past the cap the sink returns a short write, which is
 libcurl's signal to abort the transfer rather than download the rest. The bytes already collected
 are kept — for HTML they are the useful ones, since `<head>` comes first — along with the real
-status and `Content-Type`, which Guzzle attaches to the write-error exception. `FetchedResponse`
+status and `Content-Type`, which Guzzle attaches to the write-error `ResponseException`. `FetchedResponse`
 carries `truncated` from the sink rather than from the body length, because a complete response that
 happens to be exactly cap-sized is not a truncated one.
 
@@ -110,11 +116,13 @@ plainly:
   pin, set by the innermost handler rather than in the option bag (a `sink` there is overridden):
   at most `PushClientFactory::MAX_RESPONSE_BYTES` of a body is kept, the transfer is aborted past
   it, and the status of an aborted answer is handed on so a 404/410 still retires the device.
-  Nothing else in that array is pinned, and each pin is on an option rather than on the outcome:
-  Guzzle applies a `curl` sub-array after everything else, so a site can say the same things in
-  `CURLOPT_` terms and get them (`CURLOPT_WRITEFUNCTION` included). The client is built here at
-  all because the channel package would otherwise build it in a way that drops the option bag
-  entirely, and every guarantee here would be config that no longer
+  Nothing else in that array is pinned. The three cannot be undone from a `curl` sub-array either:
+  Guzzle's curl handler refuses the raw proxy, redirect and write-callback options there, and
+  `OutboundTransportTest` pins that refusal. That array is still operator config with real reach —
+  `CURLOPT_RESOLVE` or `CURLOPT_UNIX_SOCKET_PATH` re-aims the connection and `CURLOPT_USERPWD`
+  attaches credentials — which is the same trust the rest of `config/webpush.php` already carries.
+  The client is built here at all because the channel package would otherwise build it in a way
+  that drops the option bag entirely, and every guarantee here would be config that no longer
   applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
@@ -171,6 +179,6 @@ bounded here beyond libcurl's own limits).
   malformed range is an error rather than a skipped entry.
 - Byte caps count decoded bytes, not `Content-Length`.
 - Failures name the URL without its query, and never quote the underlying Guzzle message or keep it
-  as a previous exception — its curl handler appends the full request URI to the error text, so
-  repeating it would undo the sanitising. A pasted URL carries its secrets in the query, and an
-  exception from a queued job reaches the log verbatim.
+  as a previous exception. Guzzle 8 redacts the URI in its own messages, but the wording is
+  upstream's to change (Guzzle 7 appended the full request URI), so it is not relied on. A pasted
+  URL carries its secrets in the query, and an exception from a queued job reaches the log verbatim.

@@ -52,12 +52,15 @@ return [
     | member-supplied endpoint URL, so the shape App\Rules\PushEndpoint accepts
     | on store has to hold at send time too. `allow_redirects` and `proxy` are
     | therefore fixed in the factory and are not loosened by anything set here,
-    | short of the `curl` escape hatch, which Guzzle applies last and which can
-    | say the same thing in CURLOPT_ terms: a 30x is the one move that turns a
-    | validated https endpoint into a request somewhere else, and the proxy
-    | environment variables Guzzle honours by default would resolve the
-    | destination elsewhere again. The response body is bounded by the factory
-    | too (a `sink` set here is overridden); the channel reads only the status.
+    | their raw CURLOPT_ forms included (Guzzle refuses those from a `curl`
+    | sub-array): a 30x is the one move that turns a validated https endpoint
+    | into a request somewhere else, and the proxy environment variables Guzzle
+    | honours by default would resolve the destination elsewhere again. A `curl`
+    | sub-array can still re-aim a connection (CURLOPT_RESOLVE,
+    | CURLOPT_UNIX_SOCKET_PATH) or attach credentials (CURLOPT_USERPWD) — it is
+    | operator config, and what it says goes. The response body is bounded by
+    | the factory too (a `sink` set here is overridden); the channel reads only
+    | the status.
     |
     | `timeout` bounds one request, and the library sends a member's devices one
     | after another, so what bounds the job is timeout x MAX_DEVICES. That

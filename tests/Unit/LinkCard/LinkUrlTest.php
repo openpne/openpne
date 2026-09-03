@@ -30,6 +30,8 @@ class LinkUrlTest extends TestCase
             'trailing dot host' => ['https://example.com./a', 'https://example.com/a'],
             'fragment' => ['https://example.com/a#section', 'https://example.com/a'],
             'idn host' => ['https://例え.テスト/a', 'https://xn--r8jz45g.xn--zckzah/a'],
+            // The same form resolve() returns, so a pasted literal and a page reference share a card.
+            'ipv6 literal' => ['https://[2606:2800:0220:0001:0248:1893:25C8:1946]/a', 'https://[2606:2800:220:1:248:1893:25c8:1946]/a'],
 
             // Kept: these do change it.
             'path case' => ['https://example.com/Article/One', 'https://example.com/Article/One'],
@@ -58,6 +60,8 @@ class LinkUrlTest extends TestCase
     {
         return [
             'empty' => [''],
+            // The URI parser refuses a zone id, so the fetcher would too; no card for it.
+            'ipv6 literal with a zone id' => ['https://[fe80::1%25eth0]/a'],
             'relative' => ['/just/a/path'],
             'scheme relative' => ['//example.com/a'],
             'no host' => ['https:///a'],
@@ -137,6 +141,10 @@ class LinkUrlTest extends TestCase
             'data uri' => ['data:image/png;base64,AAAA', $base, null],
             'javascript' => ['javascript:alert(1)', $base, null],
             'empty' => ['', $base, null],
+            // The URI parser's refusals are the same answer as a scheme this app does not carry.
+            'malformed percent-encoding in host' => ['https://ex%zz.example/i.png', $base, null],
+            // An IPv6 literal comes back in its RFC 5952 form, which is what the fetcher will pin.
+            'ipv6 literal is canonicalised' => ['https://[2606:2800:0220:0001:0248:1893:25c8:1946]/i.png', $base, 'https://[2606:2800:220:1:248:1893:25c8:1946]/i.png'],
         ];
     }
 }

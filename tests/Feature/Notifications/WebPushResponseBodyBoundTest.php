@@ -9,7 +9,8 @@ use App\Notifications\Push\WebPushNudge;
 use App\Outbound\CappedStream;
 use App\Outbound\PushClientFactory;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
+use GuzzleHttp\Exception\ResponseTransferException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -31,9 +32,9 @@ use Tests\TestCase;
  * acts on still arrives when the bound cuts a transfer short.
  *
  * The cut is played by a handler shaped like Guzzle's curl handler on a write error: it writes what
- * it can into the request's sink and rejects with a RequestException that carries the response
- * (CurlFactory::finishError). A MockHandler cannot stand in — it copies the body into the sink and
- * hands the response on whole, so nothing about the bound would be exercised.
+ * it can into the request's sink and rejects with a ResponseException that carries the response
+ * (CurlFactory::createRejection). A MockHandler cannot stand in — it copies the body into the sink
+ * and hands the response on whole, so nothing about the bound would be exercised.
  */
 class WebPushResponseBodyBoundTest extends TestCase
 {
@@ -85,14 +86,15 @@ class WebPushResponseBodyBoundTest extends TestCase
 
     public function test_a_transfer_cut_short_for_any_other_reason_stays_a_failure(): void
     {
-        // A partial transfer (CURLE_PARTIAL_FILE, a reset) also arrives as a RequestException carrying
-        // the response built so far. Only the sink's own cut is recovered — this one wrote nothing.
+        // A partial transfer (CURLE_PARTIAL_FILE, a reset) also arrives as a ResponseException — the
+        // response-transfer kind — carrying the response built so far. Only the sink's own cut is
+        // recovered; this one wrote nothing.
         $handler = fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(
-            new RequestException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response(410)),
+            new ResponseTransferException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response(410)),
         );
         $client = (new PushClientFactory)->make(['handler' => HandlerStack::create($handler)]);
 
-        $this->expectException(RequestException::class);
+        $this->expectException(ResponseException::class);
         $client->sendRequest(new Request('POST', 'https://push.example.com/s'));
     }
 
@@ -137,14 +139,14 @@ class WebPushResponseBodyBoundTest extends TestCase
 
     /**
      * Guzzle's curl handler on a write error: as much of a body far past the cap as the sink takes,
-     * then a RequestException carrying the response it had built.
+     * then a ResponseException carrying the response it had built.
      */
     private function cutShortAt(int $status): callable
     {
         return function (RequestInterface $request, array $options) use ($status): PromiseInterface {
             $options[RequestOptions::SINK]->write(str_repeat('x', 1024 * 1024));
 
-            return Create::rejectionFor(new RequestException('cURL error 23: Failed writing body', $request, new Response($status)));
+            return Create::rejectionFor(new ResponseException('Unable to write to stream', $request, new Response($status)));
         };
     }
 }
