@@ -285,10 +285,6 @@ class GroupController extends Controller
                     'isOwner' => $isOwner,
                     'view' => 'grid',
                     'groups' => GroupSerializer::paginator($groups()),
-                    // What is left here holds no unread of the viewer's: another member's list, or a
-                    // site with talk off. The prop keeps its shape (an object, so the client never
-                    // indexes a list by group id) rather than disappearing under one of the two.
-                    'talkUnread' => (object) [],
                 ]);
             },
         ]);
