@@ -20,6 +20,11 @@ class AllMemberActivityBoxGadget extends GadgetKind
         return 'allMemberActivityBox';
     }
 
+    public function label(): string
+    {
+        return __('All Member Activity Box');
+    }
+
     public function description(): string
     {
         return __('Recent %activity% posts from every member across the SNS.');

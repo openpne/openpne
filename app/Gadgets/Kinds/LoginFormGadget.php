@@ -18,6 +18,11 @@ class LoginFormGadget extends GadgetKind
         return 'loginForm';
     }
 
+    public function label(): string
+    {
+        return __('Login Form');
+    }
+
     public function description(): string
     {
         return __('The login form, shown to logged-out visitors.');

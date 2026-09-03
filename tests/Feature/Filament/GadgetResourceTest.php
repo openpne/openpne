@@ -127,6 +127,7 @@ class GadgetResourceTest extends TestCase
 
     public function test_placements_groups_by_zone_with_nulls_last(): void
     {
+        app()->setLocale('en');
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => null]);
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 5]);
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'rssBox', 'sort_order' => 0]); // unregistered
@@ -148,6 +149,17 @@ class GadgetResourceTest extends TestCase
             ->assertSee('Information Box')   // existing gadget chip
             ->assertSee(__('Top'))           // the home page's zones are drawn
             ->assertSee(__('Main area'));
+    }
+
+    public function test_kind_labels_read_in_japanese(): void
+    {
+        app()->setLocale('ja');
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home'])
+            ->assertSee('フリーエリア')
+            ->assertSee('インフォメーションボックス');
     }
 
     public function test_zone_picker_marks_zones_the_current_layout_hides(): void

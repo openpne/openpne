@@ -18,6 +18,11 @@ class BirthdayBoxGadget extends GadgetKind
         return 'birthdayBox';
     }
 
+    public function label(): string
+    {
+        return __('Birthday Box');
+    }
+
     public function description(): string
     {
         return __('A birthday greeting shown on the birthday (and, on a profile, the days just before).');

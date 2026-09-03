@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Gadgets;
 
 use App\Support\Feature;
-use Illuminate\Support\Str;
 
 /**
  * A gadget kind — what a `gadgets.name` value renders as (component, config schema,
@@ -32,11 +31,8 @@ abstract class GadgetKind
     /** The Blade dynamic-component name the renderer resolves to this kind's view. */
     abstract public function component(): string;
 
-    /** Human label for the admin (add-gadget list, table). */
-    public function label(): string
-    {
-        return Str::headline($this->name());
-    }
+    /** Human label for the admin (add-gadget list, table): a `__()` key, so it translates. */
+    abstract public function label(): string;
 
     /** A one-line "what this shows" for the admin Gadget picker; each kind overrides, empty by default. */
     public function description(): string

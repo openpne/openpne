@@ -12,6 +12,11 @@ class TimelineAllGadget extends TimelineListGadget
         return 'timelineAll';
     }
 
+    public function label(): string
+    {
+        return __('%Activity% All');
+    }
+
     public function description(): string
     {
         return __('Recent %activity% posts from every member.');
