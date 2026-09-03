@@ -150,8 +150,8 @@ final class LinkUrl
 
         // An IPv6 literal in its RFC 5952 form, by the same parser resolve() goes through, so a
         // pasted URL and a reference found inside a page do not mint two cards for one address —
-        // and the key does not depend on what the platform's inet_pton() accepts. A literal that
-        // parser refuses is one the fetcher would refuse too, so no card is minted for it.
+        // and the key does not depend on what the platform's inet_pton() accepts. A literal the
+        // canonicaliser refuses (a zone id, an IPvFuture form) gets no card.
         if (str_contains($host, ':')) {
             try {
                 $host = Rfc3986::canonicalizeIpv6($host);
