@@ -5,6 +5,7 @@ import { CountPill } from '@/components/count-pill';
 import { CivilDate, Timestamp } from '@/components/timestamp';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
+import { unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityRoleSlug, EventSummary, TopicSummary } from '../community/types';
@@ -158,7 +159,7 @@ export default function UnifiedGroup() {
                             {t('Talk')}
                             {/* The pill in `right` is beside the heading, not inside a control, so
                                 its number would belong to nothing. The heading is what it is about. */}
-                            {talkUnread > 0 && <span className="sr-only"> {t(':count unread messages', { count: talkUnread })}</span>}
+                            {talkUnread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, talkUnread)}</span>}
                         </>
                     }
                     icon={MessagesSquare}

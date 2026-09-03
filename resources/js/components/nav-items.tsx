@@ -3,6 +3,7 @@ import { BellOff } from 'lucide-react';
 import { CommunityImage } from '@/components/community-image';
 import { CountPill } from '@/components/count-pill';
 import { TALK_ROOMS_HREF, visibleNavSections } from '@/lib/member-chrome';
+import { badgePhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps, TalkNavRooms } from '@/types';
@@ -50,7 +51,7 @@ export function NavItems({ onNavigate, rooms }: { onNavigate?: () => void; rooms
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />
                             <span className="flex-1 truncate">{t(label.key, label.replacements)}</span>
-                            {badge && <CountPill count={count} label={t(badge.label.key, { count })} />}
+                            {badge && <CountPill count={count} label={badgePhrase(t, badge, count)} />}
                         </Link>
                         {href === TALK_ROOMS_HREF && rooms && rooms.rooms.length > 0 && (
                             <TalkRooms rooms={rooms} url={url} />
@@ -96,7 +97,7 @@ function TalkRooms({ rooms: { rooms, hasMore }, url }: { rooms: TalkNavRooms; ur
                                 up the pill's insistence, as its row on the joined list does. */}
                             <CountPill
                                 count={room.unread}
-                                label={t(':count unread messages', { count: room.unread })}
+                                label={unreadMessagesPhrase(t, room.unread)}
                                 className={cn(room.muted && 'bg-muted text-muted-foreground')}
                             />
                         </Link>
