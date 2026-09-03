@@ -21,6 +21,11 @@ class ActivityBoxGadget extends GadgetKind
         return 'activityBox';
     }
 
+    public function label(): string
+    {
+        return __('Activity Box');
+    }
+
     public function description(): string
     {
         return __("Recent %activity% posts from you and your %friends% (or a member's own on a profile).");

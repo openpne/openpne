@@ -15,6 +15,11 @@ class InformationBoxGadget extends GadgetKind
         return 'informationBox';
     }
 
+    public function label(): string
+    {
+        return __('Information Box');
+    }
+
     public function description(): string
     {
         return __('Announcements from the site.');

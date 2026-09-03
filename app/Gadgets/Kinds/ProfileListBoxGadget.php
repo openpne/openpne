@@ -14,6 +14,11 @@ class ProfileListBoxGadget extends GadgetKind
         return 'profileListBox';
     }
 
+    public function label(): string
+    {
+        return __('Profile List Box');
+    }
+
     public function description(): string
     {
         return __("The member's profile fields.");

@@ -24,8 +24,8 @@ class GadgetLayoutPicker extends Field
     {
         return array_map(static fn (string $layout): array => [
             'value' => $layout,
-            'name' => 'Layout '.GadgetLayout::letter($layout),
-            'zones' => implode(', ', GadgetLayout::zones($layout)),
+            'name' => __('Layout :letter', ['letter' => GadgetLayout::letter($layout)]),
+            'zones' => implode(', ', array_map(GadgetLayout::zoneLabel(...), GadgetLayout::zones($layout))),
         ], self::SELECTABLE);
     }
 }

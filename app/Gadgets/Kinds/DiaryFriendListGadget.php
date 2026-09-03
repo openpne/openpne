@@ -14,6 +14,11 @@ class DiaryFriendListGadget extends DiaryListGadget
         return 'diaryFriendList';
     }
 
+    public function label(): string
+    {
+        return __('%Diary% %Friend% List');
+    }
+
     public function description(): string
     {
         return __('Recently posted %diaries% from %My_friends%.');

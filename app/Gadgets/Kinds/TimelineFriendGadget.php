@@ -14,6 +14,11 @@ class TimelineFriendGadget extends TimelineListGadget
         return 'timelineFriend';
     }
 
+    public function label(): string
+    {
+        return __('%Activity% %Friend%');
+    }
+
     public function description(): string
     {
         return __('Recent %activity% posts from you and your %friends%.');

@@ -14,6 +14,11 @@ class RecentGroupEventCommentGadget extends GroupRecentListGadget
         return 'recentGroupEventComment';
     }
 
+    public function label(): string
+    {
+        return __('Recent %Community% Event Comment');
+    }
+
     public function description(): string
     {
         return __('Recently posted events in %communities% you have joined.');

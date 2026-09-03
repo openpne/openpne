@@ -12,6 +12,11 @@ class DiaryCommentHistoryGadget extends DiaryListGadget
         return 'diaryCommentHistory';
     }
 
+    public function label(): string
+    {
+        return __('%Diary% Comment History');
+    }
+
     public function description(): string
     {
         return __('%Diaries% you commented on.');

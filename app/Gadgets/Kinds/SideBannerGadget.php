@@ -21,6 +21,11 @@ class SideBannerGadget extends GadgetKind
         return 'sideBanner';
     }
 
+    public function label(): string
+    {
+        return __('Side banner');
+    }
+
     public function description(): string
     {
         return __('The side banner set on the Banner page.');

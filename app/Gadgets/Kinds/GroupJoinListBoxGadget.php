@@ -14,6 +14,11 @@ class GroupJoinListBoxGadget extends GridListGadget
         return 'groupJoinListBox';
     }
 
+    public function label(): string
+    {
+        return __('%Community% Join List Box');
+    }
+
     public function description(): string
     {
         return __('A list of the %communities% the member belongs to.');

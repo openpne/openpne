@@ -15,6 +15,11 @@ class FreeAreaGadget extends GadgetKind
         return 'freeArea';
     }
 
+    public function label(): string
+    {
+        return __('Free Area');
+    }
+
     public function description(): string
     {
         return __('A free area for a custom title and HTML/text.');

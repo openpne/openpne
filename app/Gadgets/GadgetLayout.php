@@ -54,6 +54,18 @@ final class GadgetLayout
         return self::LAYOUTS[$layout] ?? self::LAYOUTS['layoutA'];
     }
 
+    /** The admin's word for a zone, shared by the pickers and the wireframe; the key itself for a zone no layout names. */
+    public static function zoneLabel(string $zone): string
+    {
+        return match ($zone) {
+            'top' => __('Top'),
+            'sideMenu' => __('Side menu'),
+            'contents' => __('Main area'),
+            'bottom' => __('Bottom'),
+            default => $zone,
+        };
+    }
+
     /**
      * The OpenPNE 3 layout letter (layoutA => "A") for the Classic shell's `id="Layout…"`. OpenPNE 3
      * picks it from the setting (setLayout), not from which zones have content; unknown falls back to

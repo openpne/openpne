@@ -14,6 +14,11 @@ class SearchBoxGadget extends GadgetKind
         return 'searchBox';
     }
 
+    public function label(): string
+    {
+        return __('Search Box');
+    }
+
     public function description(): string
     {
         return __('A member search box.');

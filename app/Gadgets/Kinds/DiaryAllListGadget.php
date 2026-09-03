@@ -12,6 +12,11 @@ class DiaryAllListGadget extends DiaryListGadget
         return 'diaryList';
     }
 
+    public function label(): string
+    {
+        return __('%Diary% List');
+    }
+
     public function description(): string
     {
         return __('Recently posted %diaries% from everyone.');
