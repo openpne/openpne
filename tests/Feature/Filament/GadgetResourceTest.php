@@ -151,6 +151,17 @@ class GadgetResourceTest extends TestCase
             ->assertSee(__('Main area'));
     }
 
+    public function test_kind_labels_read_in_japanese(): void
+    {
+        app()->setLocale('ja');
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home'])
+            ->assertSee('フリーエリア')
+            ->assertSee('インフォメーションボックス');
+    }
+
     public function test_zone_picker_marks_zones_the_current_layout_hides(): void
     {
         app()->setLocale('en');

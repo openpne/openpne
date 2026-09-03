@@ -66,6 +66,14 @@ class GadgetLayoutSettingsTest extends TestCase
             ->assertSeeHtml('Top, Side menu, Main area, Bottom');
     }
 
+    public function test_the_zones_read_in_japanese(): void
+    {
+        app()->setLocale('ja');
+        Livewire::test(GadgetLayoutSettings::class)
+            ->assertSee('レイアウト A')
+            ->assertSeeHtml('上部, サイドメニュー, メイン, 下部');
+    }
+
     public function test_rejects_an_unknown_layout(): void
     {
         // layoutD is sidebanner-only (not selectable); an unknown value must not reach sns_settings.
