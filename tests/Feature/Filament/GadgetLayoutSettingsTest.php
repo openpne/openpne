@@ -52,6 +52,7 @@ class GadgetLayoutSettingsTest extends TestCase
 
     public function test_renders_a_wireframe_radio_card_per_selectable_layout(): void
     {
+        app()->setLocale('en');
         Livewire::test(GadgetLayoutSettings::class)
             ->assertSee('Layout A')
             ->assertSee('Layout B')
@@ -61,7 +62,8 @@ class GadgetLayoutSettingsTest extends TestCase
             ->assertSeeHtml('type="radio"')
             // the zone wireframe
             ->assertSeeHtml('viewBox="0 0 240 200"')
-            ->assertSeeHtml('top, sideMenu, contents, bottom');
+            // the zones in the admin's words, not their keys
+            ->assertSeeHtml('Top, Side menu, Main area, Bottom');
     }
 
     public function test_rejects_an_unknown_layout(): void

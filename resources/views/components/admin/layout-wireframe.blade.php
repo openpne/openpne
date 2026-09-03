@@ -4,7 +4,6 @@
     // viewBox 240×200; panes mirror the gadget zones (top / sideMenu = left column / contents /
     // bottom), worded as the zone picker words them. Recolored to currentColor so it tracks the
     // surrounding text color (selected = primary, idle = gray) and works in light/dark.
-    $labels = ['top' => __('Top'), 'sideMenu' => __('Side menu'), 'contents' => __('Main area'), 'bottom' => __('Bottom')];
     $panes = match ($layout) {
         'layoutA' => [[14, 14, 212, 34, 'top'], [14, 58, 64, 92, 'sideMenu'], [86, 58, 140, 92, 'contents'], [14, 160, 212, 28, 'bottom']],
         'layoutB' => [[14, 14, 64, 136, 'sideMenu'], [86, 14, 140, 136, 'contents'], [14, 160, 212, 28, 'bottom']],
@@ -24,7 +23,7 @@
           fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.5" />
     @foreach ($panes as [$x, $y, $w, $h, $zone])
         @php
-            $label = $labels[$zone];
+            $label = \App\Gadgets\GadgetLayout::zoneLabel($zone);
             // A wide label (the side column's, in Japanese) is squeezed into its pane rather than
             // spilling over the neighbour; ~5.5 units per half-width column at this font size.
             $squeeze = mb_strwidth($label) * 5.5 > $w - 6 ? ' textLength="'.($w - 6).'" lengthAdjust="spacingAndGlyphs"' : '';

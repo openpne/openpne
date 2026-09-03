@@ -56,16 +56,9 @@ class GadgetResource extends Resource
     /** @return array<string, string> zone => label, for the zones a context can hold. */
     public static function zoneOptions(string $context): array
     {
-        $labels = [
-            'top' => __('Top'),
-            'sideMenu' => __('Side menu'),
-            'contents' => __('Main area'),
-            'bottom' => __('Bottom'),
-        ];
-
         $options = [];
         foreach (GadgetLayout::contextZones($context) as $zone) {
-            $options[$zone] = $labels[$zone] ?? $zone;
+            $options[$zone] = GadgetLayout::zoneLabel($zone);
         }
 
         return $options;

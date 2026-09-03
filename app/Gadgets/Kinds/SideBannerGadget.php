@@ -23,7 +23,7 @@ class SideBannerGadget extends GadgetKind
 
     public function label(): string
     {
-        return __('Side Banner');
+        return __('Side banner');
     }
 
     public function description(): string
