@@ -60,6 +60,8 @@ class LinkUrlTest extends TestCase
     {
         return [
             'empty' => [''],
+            // The URI parser refuses a zone id, so the fetcher would too; no card for it.
+            'ipv6 literal with a zone id' => ['https://[fe80::1%25eth0]/a'],
             'relative' => ['/just/a/path'],
             'scheme relative' => ['//example.com/a'],
             'no host' => ['https:///a'],
