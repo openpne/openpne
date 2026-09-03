@@ -102,6 +102,13 @@ test('a count of one is said in the singular, on every phrase the nav carries', 
     );
 });
 
+test('the bar tab says one in the singular too', () => {
+    const unread = { friendRequests: 1, unreadMessages: 1, notifications: 1, groupTalks: 1 };
+    render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread })} />);
+
+    named('1 %community% with new messages %Communities%', '1 unread notification Notifications');
+});
+
 test('a hub tab is named word first, as it was', () => {
     render(
         <PageTabs
@@ -154,6 +161,20 @@ test('a conversation row is named by who it is with and how many are waiting', (
     );
 
     named('Sato 9 unread messages');
+});
+
+test('a conversation row with one waiting says so in the singular', () => {
+    render(
+        <ConversationRow
+            conversation={{
+                counterpart: { id: 2, name: 'Sato', imageUrl: null, avatarColor: null, isAi: false },
+                unread: 1,
+                latest: { body: 'see you there', createdAt: '2026-08-20T10:00:00+09:00' },
+            }}
+        />,
+    );
+
+    named('Sato 1 unread message');
 });
 
 test('a conversation row with nothing waiting is named by who it is with, and no more', () => {

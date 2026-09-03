@@ -8,7 +8,7 @@ type Translate = (key: string, replacements?: Record<string, string | number>) =
  * pill shows most, so it is the one a reader hears most.
  */
 export function badgePhrase(t: Translate, badge: CountBadge, count: number): string {
-    return count === 1 ? t(badge.one.key, badge.one.replacements) : t(badge.label.key, { count });
+    return count === 1 ? t(badge.one.key, badge.one.replacements) : t(badge.label.key, { ...badge.label.replacements, count });
 }
 
 /** The unread-messages phrase a room row, a tile, or a pill carries. */

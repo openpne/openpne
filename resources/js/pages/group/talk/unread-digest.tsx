@@ -41,7 +41,8 @@ export function TalkUnreadDigestCard({
 
     return (
         <Card className={cn('px-4 py-3 sm:px-5', className)}>
-            {/* The card's title, and the slot a written account of the backlog would replace. */}
+            {/* The card's title, and the slot a written account of the backlog would replace. Plural
+                only: the card exists from TalkAbsenceDigest::THRESHOLD messages up, never at one. */}
             <Heading as="h2" variant="minor">
                 {t(':count messages while you were away', { count: digest.count })}
             </Heading>
