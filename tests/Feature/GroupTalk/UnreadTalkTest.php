@@ -223,7 +223,7 @@ class UnreadTalkTest extends TalkTestCase
                 ->where('rooms.data.0.muted', false));
     }
 
-    /** Another member's group list is not the viewer's unread; the prop is empty there. */
+    /** Another member's group list is not the viewer's unread; the grid ships no such prop. */
     public function test_someone_else_s_group_list_carries_no_unread(): void
     {
         $group = $this->group();
@@ -232,6 +232,6 @@ class UnreadTalkTest extends TalkTestCase
         GroupMessage::factory()->create(['group_id' => $group->getKey()]);
 
         $this->actingAs($viewer)->get("/groups/mine?id={$owner->getKey()}")
-            ->assertInertia(fn ($page) => $page->where('talkUnread', []));
+            ->assertInertia(fn ($page) => $page->where('view', 'grid')->where('isOwner', false)->missing('talkUnread'));
     }
 }

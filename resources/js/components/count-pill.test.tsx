@@ -67,10 +67,10 @@ const counted = { friendRequests: 4, unreadMessages: 5, notifications: 2, groupT
  * same renders and asserted unchanged — if the phrase does not fold into a contents-derived name the
  * way the attribute did, this is where it shows.
  *
- * They are not all in the same order, and this PR deliberately did not make them so: two surfaces
- * put the pill ahead of the visible word in the DOM (the bar's tab, the group tile), so their names
- * lead with the count. Unifying that changes what a reader hears and is a separate question; pinning
- * it here is what keeps the difference deliberate rather than drifting.
+ * They are not all in the same order, and this PR deliberately did not make them so: the bar's tab
+ * puts the pill ahead of the visible word in the DOM, so its name leads with the count. Unifying
+ * that changes what a reader hears and is a separate question; pinning it here is what keeps the
+ * difference deliberate rather than drifting.
  */
 test('the bar tab is named count first, as it was', () => {
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
@@ -278,20 +278,4 @@ test('every heading that shows a pill also says the count', () => {
         return !/sr-only[\s\S]*?:count/.test(code.slice(opens.at(-1)?.index ?? 0, at));
     });
     expect(bare.map(({ file }) => path.relative(root, file))).toEqual([]);
-});
-
-/*
- * The group tile's own page is not rendered here, but its shape is: a link whose pill comes before
- * the word, which is why its name leads with the count. Pinned so the count-first half of shape A is
- * not held by the bar alone.
- */
-test('a link whose pill precedes its word is named count first', () => {
-    render(
-        <a href="/groups/3">
-            <CountPill count={4} label="4 unread messages" />
-            <span>Book club</span>
-        </a>,
-    );
-
-    named('4 unread messages Book club');
 });
