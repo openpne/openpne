@@ -14,6 +14,11 @@ class RecentGroupTopicCommentGadget extends GroupRecentListGadget
         return 'recentGroupTopicComment';
     }
 
+    public function label(): string
+    {
+        return __('Recent %Community% %Topic% Comment');
+    }
+
     public function description(): string
     {
         return __('Recently posted %topics% in %communities% you have joined.');

@@ -14,6 +14,11 @@ class RecentGroupTopicCommentSnsGadget extends GroupRecentListGadget
         return 'recentGroupTopicCommentSns';
     }
 
+    public function label(): string
+    {
+        return __('Recent %Community% %Topic% Comment Sns');
+    }
+
     public function description(): string
     {
         return __('Recently posted %topics% in public %communities%.');

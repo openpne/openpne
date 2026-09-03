@@ -8,6 +8,7 @@ use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
 use App\Filament\Resources\Gadgets\Pages\EditGadget;
 use App\Filament\Resources\Gadgets\Pages\ListGadgets;
+use App\Gadgets\GadgetKindRegistry;
 use App\Models\AdminUser;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
@@ -127,6 +128,7 @@ class GadgetResourceTest extends TestCase
 
     public function test_placements_groups_by_zone_with_nulls_last(): void
     {
+        app()->setLocale('en');
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => null]);
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 5]);
         Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'rssBox', 'sort_order' => 0]); // unregistered
@@ -135,6 +137,18 @@ class GadgetResourceTest extends TestCase
 
         // numeric sort_order first (0, 5), null last; unregistered kind falls back to the raw name.
         $this->assertSame(['rssBox', 'Information Box', 'Free Area'], $contents);
+    }
+
+    /** Every kind's label has a Japanese entry: a kind whose key has none reads the same in both locales. */
+    public function test_every_kind_label_is_translated(): void
+    {
+        foreach (GadgetKindRegistry::all() as $name => $kind) {
+            app()->setLocale('en');
+            $en = $kind->label();
+            app()->setLocale('ja');
+
+            $this->assertNotSame($en, $kind->label(), $name);
+        }
     }
 
     public function test_zone_picker_shows_existing_gadgets_and_the_pages_zones(): void

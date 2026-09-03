@@ -18,6 +18,11 @@ class TimelineProfileGadget extends GadgetKind
         return 'timelineProfile';
     }
 
+    public function label(): string
+    {
+        return __('%Activity% Profile');
+    }
+
     public function description(): string
     {
         return __("The member's recent %activity% posts.");
