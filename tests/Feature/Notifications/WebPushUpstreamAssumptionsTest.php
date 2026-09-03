@@ -31,7 +31,9 @@ use Throwable;
  * what to go and re-read, rather than the behaviour quietly becoming something else.
  *
  * Read this file when bumping laravel-notification-channels/webpush, minishlink/web-push, or
- * guzzlehttp/guzzle. The rest of the seam is docs/internals/outbound-http.md.
+ * guzzlehttp/guzzle. The rest of the seam is docs/internals/outbound-http.md. What Guzzle's curl
+ * handler refuses from the `curl` option — the escape hatch that could once undo the seam's pins —
+ * is asserted in OutboundTransportTest, next to the transport it belongs to.
  *
  * Two neighbouring assumptions are covered elsewhere and not repeated: that the channel sends
  * through `flush()` (FakeWebPush overrides exactly that, so the push tests stop exercising anything

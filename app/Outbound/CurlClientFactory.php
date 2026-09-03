@@ -34,9 +34,10 @@ final class CurlClientFactory
 
         return new Client([
             'handler' => HandlerStack::create(new CurlHandler),
-            // SafeHttpFetcher also sets CURLOPT_NOPROXY per request; stated here too so the client
-            // is not proxy-capable by construction. A proxy resolves the destination itself, which
-            // is the step the pin exists to control.
+            // SafeHttpFetcher also fixes `proxy` per request; stated here too so the client is not
+            // proxy-capable by construction. A proxy resolves the destination itself, which is the
+            // step the pin exists to control. Guzzle pins the empty value as CURLOPT_PROXY itself,
+            // with no fallback to the environment.
             'proxy' => '',
         ]);
     }
