@@ -154,7 +154,7 @@ class TalkRoomListTest extends TalkTestCase
                 ->where('isOwner', false)
                 ->where('groups.data.0.id', $group->getKey())
                 ->has('groups.data.0.memberCount')
-                ->where('talkUnread', []));
+                ->missing('talkUnread'));
     }
 
     public function test_the_grid_returns_when_talk_is_switched_off(): void
@@ -171,7 +171,7 @@ class TalkRoomListTest extends TalkTestCase
                 ->where('view', 'grid')
                 ->where('isOwner', true)
                 ->where('groups.data.0.id', $group->getKey())
-                ->where('talkUnread', []));
+                ->missing('talkUnread'));
     }
 
     /** A switched-off unit does not read the conversation it is hiding — nor does anything Classic. */

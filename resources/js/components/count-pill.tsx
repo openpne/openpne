@@ -10,9 +10,9 @@ import { cn } from '@/lib/utils';
  * phrase for a screen reader to read in place of them. Where that phrase ends up depends on what the
  * pill is standing in, and there are three cases:
  *
- * - **Inside a control named from its contents** (the nav entries, a bottom-bar tab, a hub tab, a
- *   group tile). The phrase joins that control's name, which is the whole point: the link says both
- *   what it is and how many are waiting. Pass `label`.
+ * - **Inside a control named from its contents** (the nav entries and the room rows under them, a
+ *   bottom-bar tab, a hub tab). The phrase joins that control's name, which is the whole point: the
+ *   link says both what it is and how many are waiting. Pass `label`.
  * - **Beside a control** — a row whose link is stretched over it, with the pill in another column.
  *   The phrase would name nothing here, so the row's `<Link>` carries it as `sr-only` text instead
  *   and the pill is left to the eye. Omit `label`.
