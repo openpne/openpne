@@ -76,6 +76,16 @@ class OutboundTransportTest extends TestCase
         $this->assertInstanceOf(Client::class, (new CurlClientFactory)->make());
     }
 
+    public function test_the_client_itself_refuses_a_proxy(): void
+    {
+        // The fetcher fixes `proxy` per request as well; this is the second layer, so a caller that
+        // reaches the client another way still cannot be routed through the environment's proxy.
+        $client = (new CurlClientFactory)->make();
+
+        $this->assertInstanceOf(Client::class, $client);
+        $this->assertSame('', $client->getConfig('proxy'), 'An absent proxy option is not neutral: Guzzle would take it from the environment.');
+    }
+
     public function test_the_fetcher_is_wired_to_the_curl_handler(): void
     {
         $client = $this->clientOf($this->app->make(SafeHttpFetcher::class));

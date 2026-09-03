@@ -92,7 +92,8 @@ trait FakesOutboundTransport
             }
 
             if (isset($options['on_stats'])) {
-                $options['on_stats'](new TransferStats($request, $response, 0.0, null, [
+                // An aborted write reports CURLE_WRITE_ERROR (23) as the handler error data, as libcurl does.
+                $options['on_stats'](new TransferStats($request, $response, 0.0, $capped ? 23 : 0, [
                     'primary_ip' => $connectedTo ?? $this->pinnedAddress($options),
                 ]));
             }

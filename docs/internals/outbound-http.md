@@ -118,9 +118,12 @@ plainly:
   it, and the status of an aborted answer is handed on so a 404/410 still retires the device.
   Nothing else in that array is pinned. The three cannot be undone from a `curl` sub-array either:
   Guzzle's curl handler refuses the raw proxy, redirect and write-callback options there, and
-  `OutboundTransportTest` pins that refusal. The client is built here at all because the channel
-  package would otherwise build it in a way that drops the option bag entirely, and every
-  guarantee here would be config that no longer applies.
+  `OutboundTransportTest` pins that refusal. That array is still operator config with real reach —
+  `CURLOPT_RESOLVE` or `CURLOPT_UNIX_SOCKET_PATH` re-aims the connection and `CURLOPT_USERPWD`
+  attaches credentials — which is the same trust the rest of `config/webpush.php` already carries.
+  The client is built here at all because the channel package would otherwise build it in a way
+  that drops the option bag entirely, and every guarantee here would be config that no longer
+  applies.
 - **The job is bounded, not just the request.** The library sends a member's devices one at a time,
   so the per-request timeout multiplies by the device cap. That product stays under the notification's
   own `$timeout`, which stays under the queue's `retry_after` — past it the job is handed out again

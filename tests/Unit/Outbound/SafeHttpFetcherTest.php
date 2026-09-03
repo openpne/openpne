@@ -536,26 +536,29 @@ class SafeHttpFetcherTest extends TestCase
 
             [$response, $connectedTo] = $queued;
             $abortOnCap = $queued[2] ?? false;
+            $capped = false;
 
             if (isset($options['sink'])) {
                 $options['sink']->write((string) $response->getBody());
+                $capped = $abortOnCap && $options['sink']->wasCapped();
                 $response = $response->withBody($options['sink']);
             }
 
             if (isset($options['on_stats'])) {
                 // Stand in for what libcurl reports. The default models the pin working: the peer is
                 // the address CURLOPT_CONNECT_TO named. Defaulting to "no address reported" instead
-                // would quietly make every success case exercise the unverified path.
+                // would quietly make every success case exercise the unverified path. An aborted
+                // write reports CURLE_WRITE_ERROR (23) as the handler error data, as libcurl does.
                 $stats = match ($connectedTo) {
                     null => ['primary_ip' => $this->pinnedAddress($options)],
                     self::NO_PEER_REPORTED => [],
                     default => ['primary_ip' => $connectedTo],
                 };
 
-                $options['on_stats'](new TransferStats($request, $response, 0.0, null, $stats));
+                $options['on_stats'](new TransferStats($request, $response, 0.0, $capped ? 23 : 0, $stats));
             }
 
-            if ($abortOnCap && $options['sink']->wasCapped()) {
+            if ($capped) {
                 return Create::rejectionFor(new ResponseException('Unable to write to stream', $request, $response));
             }
 
