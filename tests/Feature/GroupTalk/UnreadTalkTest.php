@@ -232,6 +232,6 @@ class UnreadTalkTest extends TalkTestCase
         GroupMessage::factory()->create(['group_id' => $group->getKey()]);
 
         $this->actingAs($viewer)->get("/groups/mine?id={$owner->getKey()}")
-            ->assertInertia(fn ($page) => $page->missing('talkUnread'));
+            ->assertInertia(fn ($page) => $page->where('view', 'grid')->where('isOwner', false)->missing('talkUnread'));
     }
 }
