@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { jumpToUnreadPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
@@ -90,7 +91,7 @@ export function TalkUnreadDigestCard({
                 {onJump !== undefined && (
                     <Button size="sm" variant="ghost" onClick={onJump}>
                         <ArrowUp className="size-4" aria-hidden />
-                        {t('Jump to :count unread messages', { count: digest.count })}
+                        {jumpToUnreadPhrase(t, digest.count)}
                     </Button>
                 )}
             </div>

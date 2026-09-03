@@ -11,6 +11,7 @@ import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
+import { badgePhrase } from '@/lib/count-phrase';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import {
@@ -253,7 +254,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
             <Tip
                 label={
                     notifications > 0
-                        ? t(NOTIFICATIONS_SECTION.badge.label.key, { count: notifications })
+                        ? badgePhrase(t, NOTIFICATIONS_SECTION.badge, notifications)
                         : t(NOTIFICATIONS_SECTION.label.key)
                 }
             >

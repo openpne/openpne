@@ -52,7 +52,7 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
                     <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             <Link href="/friend/requests" className={stretchedLink}>
-                                {t(':count pending %friend% requests', { count: friendRequests })}
+                                {friendRequests === 1 ? t('1 pending %friend% request') : t(':count pending %friend% requests', { count: friendRequests })}
                             </Link>
                         </span>
                     </ListRow>
@@ -61,7 +61,9 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
                     <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             <Link href="/messages" className={stretchedLink}>
-                                {t(':count conversations with new messages', { count: unreadMessages })}
+                                {unreadMessages === 1
+                                    ? t('1 conversation with new messages')
+                                    : t(':count conversations with new messages', { count: unreadMessages })}
                             </Link>
                         </span>
                     </ListRow>

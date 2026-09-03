@@ -11,6 +11,7 @@ import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { dividerBeforeId, firstUnreadBoundary } from '@/lib/chat/unread';
+import { jumpToUnreadPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
@@ -295,7 +296,7 @@ export default function MessageConversation() {
                 <div className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 flex justify-center">
                     <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
                         <ArrowUp className="size-4" aria-hidden />
-                        {t('Jump to :count unread messages', { count: backlog.count })}
+                        {jumpToUnreadPhrase(t, backlog.count)}
                     </Button>
                 </div>
             )}

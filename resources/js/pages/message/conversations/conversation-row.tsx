@@ -4,6 +4,7 @@ import { Avatar } from '@/components/avatar';
 import { CountPill } from '@/components/count-pill';
 import { Timestamp } from '@/components/timestamp';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
+import { unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { ConversationRowData } from '../types';
 
@@ -30,7 +31,7 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
                             {/* The pill is in the other column, outside this link, so its number
                                 would belong to nothing. The row is what the count is about, and this
                                 is the row. */}
-                            {unread > 0 && <span className="sr-only"> {t(':count unread messages', { count: unread })}</span>}
+                            {unread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, unread)}</span>}
                         </Link>
                     </p>
                     <AiChip isAi={counterpart?.isAi ?? false} />

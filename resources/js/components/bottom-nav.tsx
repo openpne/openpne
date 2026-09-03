@@ -13,6 +13,7 @@ import {
     NOTIFICATIONS_SECTION,
     type TabMark,
 } from '@/lib/member-chrome';
+import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -95,7 +96,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                             // own label. A dot prints nothing to name, so the phrase goes here — and
                             // that replaces the name rather than joining it, which stays inside
                             // WCAG 2.5.3 only because the phrase spells the word out again.
-                            aria-label={dotted ? t(NOTIFICATIONS_SECTION.badge.label.key, { count }) : undefined}
+                            aria-label={dotted ? badgePhrase(t, NOTIFICATIONS_SECTION.badge, count) : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
                                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -104,7 +105,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                             <span className="relative inline-flex">
                                 <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
                                 {mark === 'count' && badge && (
-                                    <CountPill count={count} label={t(badge.label.key, { count })} className="absolute -top-2 -right-2.5" />
+                                    <CountPill count={count} label={badgePhrase(t, badge, count)} className="absolute -top-2 -right-2.5" />
                                 )}
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
@@ -164,7 +165,7 @@ function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; coun
         <li className="flex w-24 shrink-0 items-stretch">
             <Link
                 href={section.href}
-                aria-label={badge && count > 0 ? t(badge.label.key, { count }) : undefined}
+                aria-label={badge && count > 0 ? badgePhrase(t, badge, count) : undefined}
                 className="flex size-full min-h-11 items-center justify-center gap-1.5 px-1 text-muted-foreground transition hover:text-foreground"
             >
                 <span className="relative inline-flex">

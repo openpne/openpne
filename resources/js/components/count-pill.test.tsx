@@ -90,6 +90,18 @@ test('a nav entry is named word first, as it was', () => {
     );
 });
 
+test('a count of one is said in the singular, on every phrase the nav carries', () => {
+    arrive('dashboard', '/dashboard', { unread: { friendRequests: 1, unreadMessages: 1, notifications: 1, groupTalks: 1 } });
+    render(<NavItems />);
+
+    named(
+        '%Communities% 1 %community% with new messages',
+        '%Friends% 1 pending %friend% request',
+        'Messages 1 conversation with new messages',
+        'Notifications 1 unread notification',
+    );
+});
+
 test('a hub tab is named word first, as it was', () => {
     render(
         <PageTabs
@@ -240,6 +252,23 @@ test('a group room row is named by the group and how many are waiting', () => {
     named('Book club 4 unread messages');
 });
 
+test('a group room row with one waiting says so in the singular', () => {
+    render(
+        <RoomRow
+            room={{
+                id: 3,
+                name: 'Book club',
+                imageUrl: null,
+                unread: 1,
+                muted: false,
+                latest: { body: 'see you there', authorName: 'Sato', authorIsAi: false, createdAt: '2026-08-20T10:00:00+09:00' },
+            }}
+        />,
+    );
+
+    named('Book club 1 unread message');
+});
+
 /*
  * The heading tests above build the counted title the way the two pages build it, which proves the
  * mechanism and not the wiring: either page could drop its `sr-only` phrase and stay green. This
@@ -271,11 +300,12 @@ test('every heading that shows a pill also says the count', () => {
     const bare = sites.filter(({ code, at }) => {
         // Only the section this pill is in, from its own opening tag. "An sr-only somewhere near a
         // title" is satisfied by any other section's, so removing this heading's phrase and adding
-        // an unrelated one elsewhere would leave it green — and the phrase has to be the count, not
-        // whatever sr-only happens to live in the same band.
+        // an unrelated one elsewhere would leave it green — and the phrase has to be the count (a
+        // `:count` template, or the shared phrase that picks the singular at one), not whatever
+        // sr-only happens to live in the same band.
         const opens = [...code.slice(0, at).matchAll(SECTION)];
 
-        return !/sr-only[\s\S]*?:count/.test(code.slice(opens.at(-1)?.index ?? 0, at));
+        return !/sr-only[\s\S]*?(?::count|unreadMessagesPhrase\()/.test(code.slice(opens.at(-1)?.index ?? 0, at));
     });
     expect(bare.map(({ file }) => path.relative(root, file))).toEqual([]);
 });
