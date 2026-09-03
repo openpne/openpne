@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { jumpToUnreadPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
@@ -40,7 +41,8 @@ export function TalkUnreadDigestCard({
 
     return (
         <Card className={cn('px-4 py-3 sm:px-5', className)}>
-            {/* The card's title, and the slot a written account of the backlog would replace. */}
+            {/* The card's title, and the slot a written account of the backlog would replace. Plural
+                only: the card exists from TalkAbsenceDigest::THRESHOLD messages up, never at one. */}
             <Heading as="h2" variant="minor">
                 {t(':count messages while you were away', { count: digest.count })}
             </Heading>
@@ -90,7 +92,7 @@ export function TalkUnreadDigestCard({
                 {onJump !== undefined && (
                     <Button size="sm" variant="ghost" onClick={onJump}>
                         <ArrowUp className="size-4" aria-hidden />
-                        {t('Jump to :count unread messages', { count: digest.count })}
+                        {jumpToUnreadPhrase(t, digest.count)}
                     </Button>
                 )}
             </div>

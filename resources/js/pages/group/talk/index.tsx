@@ -14,6 +14,7 @@ import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/cha
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
+import { jumpToUnreadPhrase } from '@/lib/count-phrase';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
@@ -462,7 +463,7 @@ export default function GroupTalkIndex() {
                     ) : (
                         <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
                             <ArrowUp className="size-4" aria-hidden />
-                            {t('Jump to :count unread messages', { count: backlog.count })}
+                            {jumpToUnreadPhrase(t, backlog.count)}
                         </Button>
                     )}
                 </div>

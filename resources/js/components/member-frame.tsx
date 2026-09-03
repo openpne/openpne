@@ -7,6 +7,7 @@ import { PageTabs } from '@/components/page-tabs';
 import { PlaceBar } from '@/components/place-bar';
 import { ActionLink } from '@/components/ui/action-link';
 import { type Chrome, type ChromeLabel, lookSpec } from '@/lib/member-chrome';
+import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -103,7 +104,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                             label: label(tab.label),
                             active: tab.active,
                             count,
-                            countLabel: tab.badge ? t(tab.badge.label.key, { count }) : undefined,
+                            countLabel: tab.badge ? badgePhrase(t, tab.badge, count) : undefined,
                         };
                     })}
                 />

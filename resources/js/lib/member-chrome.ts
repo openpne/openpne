@@ -37,7 +37,10 @@ export type BadgeCount = keyof UnreadCounts;
  */
 export interface CountBadge {
     count: BadgeCount;
+    /** The phrase with `:count` in it. */
     label: ChromeLabel;
+    /** The phrase at exactly one, where English drops the plural (lib/count-phrase.ts). */
+    one: ChromeLabel;
 }
 
 export interface ChromeTab {
@@ -267,12 +270,16 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
 // its own, the way this entry already answers for both boards. The href is the joined list
 // rather than the browse tab: the badge sends a member here to find out which group is waiting,
 // and only the joined rows carry that.
-const GROUPS_SECTION: NavSection = {
+const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
     href: '/groups/mine',
     match: ['/groups', '/topics', '/events'],
     icon: Users,
     label: COMMUNITIES,
-    badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
+    badge: {
+        count: 'groupTalks',
+        label: t(':count %communities% with new messages'),
+        one: t('1 %community% with new messages'),
+    },
     feature: 'group',
 };
 
@@ -282,7 +289,7 @@ export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
     match: ['/notifications'],
     icon: Bell,
     label: NOTIFICATIONS,
-    badge: { count: 'notifications', label: t(':count unread notifications') },
+    badge: { count: 'notifications', label: t(':count unread notifications'), one: t('1 unread notification') },
 };
 
 /** Named for the same reason: the unified bottom bar's search zone is this entry. */
@@ -306,7 +313,7 @@ export const NAV_SECTIONS: NavSection[] = [
         match: ['/friend'],
         icon: UserCircle2,
         label: FRIENDS,
-        badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
+        badge: { count: 'friendRequests', label: t(':count pending %friend% requests'), one: t('1 pending %friend% request') },
         feature: 'friend',
     },
     // The badge counts conversations with something new, not messages — see
@@ -317,7 +324,11 @@ export const NAV_SECTIONS: NavSection[] = [
         match: ['/message'],
         icon: Mail,
         label: MESSAGES,
-        badge: { count: 'unreadMessages', label: t(':count conversations with new messages') },
+        badge: {
+            count: 'unreadMessages',
+            label: t(':count conversations with new messages'),
+            one: t('1 conversation with new messages'),
+        },
         feature: 'directMessage',
     },
     NOTIFICATIONS_SECTION,
@@ -402,8 +413,8 @@ const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
         href: '/groups/mine',
         label: t('Joined'),
         active: active === 'joined',
-        // The same phrase the nav badge uses, so the two announcements cannot drift apart.
-        badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
+        // The nav badge itself, so the two announcements cannot drift apart.
+        badge: GROUPS_SECTION.badge,
     },
     { href: '/groups', label: t('All'), active: active === 'browse' },
     { href: '/groups/recent', label: t('Recent activity'), active: active === 'recent' },
