@@ -73,7 +73,7 @@ export default function CommunityShow() {
                     <div className="min-w-0 flex-1">
                         <Heading variant="page">{group.name}</Heading>
                         {group.category && <p className="text-sm text-muted-foreground">{group.category.name}</p>}
-                        <Link href={`/community/member/list?id=${group.id}`} className="text-sm text-link hover:underline">
+                        <Link href={`/groups/${group.id}/members`} className="text-sm text-link hover:underline">
                             {t(':count members', { count: group.memberCount })}
                         </Link>
                     </div>
@@ -101,7 +101,7 @@ export default function CommunityShow() {
                         <Link href={`/groups/edit?id=${group.id}`} className="text-link hover:underline">
                             {t('Edit %community%')}
                         </Link>
-                        <Link href={`/community/member/manage/${group.id}`} className="text-link hover:underline">
+                        <Link href={`/groups/${group.id}/members/manage`} className="text-link hover:underline">
                             {t('Management member')}
                         </Link>
                         {viewerRole === 'admin' && (

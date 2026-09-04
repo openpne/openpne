@@ -30,17 +30,17 @@ export default function CommunityManage() {
     const confirm = useConfirm();
     const { members, group, viewerRole, pendingAdminId } = usePage<ManageProps>().props;
 
-    const post = (path: 'appointSubAdmin' | 'demoteSubAdmin' | 'drop' | 'transferAdmin', memberId: number) =>
-        router.post(`/community/member/${path}`, { id: group.id, member_id: memberId }, { preserveScroll: true });
+    const post = (path: 'appoint' | 'demote' | 'drop' | 'transfer', memberId: number) =>
+        router.post(`/groups/${group.id}/members/${path}`, { member_id: memberId }, { preserveScroll: true });
 
     const appoint = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t('Appoint :name as a sub-administrator of this %community%?', { name: member.name }), confirmLabel: t('Appoint') })) {
-            post('appointSubAdmin', member.id);
+            post('appoint', member.id);
         }
     };
     const demote = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t("Demote :name from this %community%'s sub-administrator?", { name: member.name }), confirmLabel: t('Demote') })) {
-            post('demoteSubAdmin', member.id);
+            post('demote', member.id);
         }
     };
     const drop = async (member: CommunityMemberRow) => {
@@ -50,7 +50,7 @@ export default function CommunityManage() {
     };
     const transfer = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t("Ask :name to take over this %community%'s administration?", { name: member.name }), confirmLabel: t('Transfer') })) {
-            post('transferAdmin', member.id);
+            post('transfer', member.id);
         }
     };
 
