@@ -24,6 +24,9 @@ class FileUploader
         private readonly ImageMetadataStripper $stripper,
     ) {}
 
+    /**
+     * @throws ImageMetadataStripException when a strip fails closed; the caller converts it to a field validation error
+     */
     public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
     {
         $type = $upload->getMimeType() ?? 'application/octet-stream';

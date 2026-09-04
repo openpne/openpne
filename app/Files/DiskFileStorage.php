@@ -36,8 +36,6 @@ class DiskFileStorage implements FileStorage
 
     public function delete(File $file): void
     {
-        // Storage::delete is idempotent (a missing path is not an error), matching
-        // the contract and the DB-BLOB backend.
         Storage::disk($this->disk)->delete($file->name);
     }
 

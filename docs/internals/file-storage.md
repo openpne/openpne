@@ -27,7 +27,7 @@ There is no constant-memory streaming out of a database row, so the DB-blob back
 BLOB in PHP memory on read and on write, and `readStream()` materialises the row into `php://temp`. A
 single file is bounded by the upload validation layer and ultimately by `memory_limit` /
 `max_allowed_packet`; an oversized write surfaces as a DB error rather than silently truncating.
-Readers that work to a budget bound the read themselves ([images.md](images.md), [mcp.md](mcp.md)).
+Readers that work to a budget bound the read themselves ([mcp.md](mcp.md)).
 
 ## Writing an upload
 

@@ -14,3 +14,4 @@ the container:
 | `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped |
 | `webp-vp8x-meta.webp` | VP8X (flags ICC + reserved + EXIF + XMP) + image + odd-length EXIF + `XMP ` |
 | `tiny.gif` | plain GIF, no metadata |
+| `jpeg-truncated.jpg` | a JPEG cut short, so the strip fails closed |

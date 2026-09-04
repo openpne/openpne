@@ -20,7 +20,6 @@ final class ImageEdit
         public readonly array $removals,
     ) {}
 
-    /** The extraction SSoT: the images[] uploads and remove_images[] ids off the edit request. */
     public static function fromRequest(Request $request): self
     {
         $files = $request->file('images', []);
@@ -34,15 +33,12 @@ final class ImageEdit
         );
     }
 
-    /** An empty delta (a text-only edit adds and removes nothing). */
     public static function none(): self
     {
         return new self([], []);
     }
 
     /**
-     * Build a delta directly (tests), normalizing the same way fromRequest does.
-     *
      * @param  array<int, UploadedFile>  $additions
      * @param  array<int, int|string>  $removals
      */
@@ -67,8 +63,6 @@ final class ImageEdit
     }
 
     /**
-     * How many of the entity's images survive the edit (current minus the ones being removed).
-     *
      * @param  array<int, int>  $currentIds
      */
     public function keptCount(array $currentIds): int
@@ -77,8 +71,6 @@ final class ImageEdit
     }
 
     /**
-     * Whether the edit would push the post past the image cap: kept plus the new uploads.
-     *
      * @param  array<int, int>  $currentIds
      */
     public function exceedsCap(array $currentIds): bool
