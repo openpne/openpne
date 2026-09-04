@@ -10,10 +10,11 @@ to a single `INSERT ... SELECT` (`InsertSelectCompiler`). The mapping is typed P
 the runtime enum it must agree with. A table other than the step's FROM is read by correlated
 subquery; its name is wrapped in `SourceRef::table()` so `--source-prefix` / `--source-database`
 reach it, and the FROM table is aliased to its bare name so subqueries can correlate on it. Where
-the target has them, ids and timestamps copy verbatim, so the FK graph resolves without a remap and
-post dates survive; a target with its own surrogate id (`mail_template_translations`) or no
-timestamps (the join rows) relies on its defaults. `FileUpgrade::ownedFileReferences()` drives both
-the owner CASE and the audit, so an owning table cannot be wired into one without the other.
+both sides have them, ids and timestamps copy verbatim, so the FK graph resolves without a remap and
+post dates survive; a target column with no OpenPNE 3 source (a surrogate id, timestamps OpenPNE 3
+never kept) relies on its default, as each step's `targetDefaults()` / `gaps()` record.
+`FileUpgrade::ownedFileReferences()` drives both the owner CASE and the audit, so an owning table
+cannot be wired into one without the other.
 
 `StepRegistry::classes()` is the run order (FK order: `files` first, image join rows last).
 `tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source column to a mapping or a
