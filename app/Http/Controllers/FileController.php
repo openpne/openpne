@@ -10,17 +10,14 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Serves stored file bytes. Every backend streams through here so FilePolicy gates
- * each request — disk backends are never handed out as a bare Storage::url(), which
- * would bypass the policy. The route binds {file} by its opaque `name` token.
+ * Every backend streams through here so FilePolicy gates each request; a disk backend is never
+ * handed out as a bare Storage::url(). The route binds {file} by its opaque `name` token.
  */
 class FileController extends Controller
 {
     /**
-     * MIME types served inline. Anything else — including SVG, which can run script
-     * — is sent as an opaque attachment so a stored file is never interpreted as a
-     * same-origin document (stored-XSS defense; the upload validation also rejects
-     * non-raster types, this is the second line).
+     * Anything else, SVG included, is sent as an attachment so a stored file is never interpreted as a
+     * same-origin document; OpenPNE 3 rows are upgraded verbatim, so a non-raster type can be present.
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -40,13 +37,11 @@ class FileController extends Controller
             ),
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
-            // The token names one immutable byte string, so it is the validator. Should delivery ever
-            // change the bytes under a token, the tag has to take a generation, as ImageTransform's does.
+            // The token names one immutable byte string, so it is the validator.
             'ETag' => '"'.$file->name.'"',
         ];
 
-        // Validated before the store is opened: a 304 sends no bytes. After the policy, so a viewer
-        // who may no longer see the file is answered 404, never "unchanged".
+        // Checked after the policy so a viewer who may no longer see the file is answered 404, never 304.
         $unchanged = response('', 200, $headers);
         if ($unchanged->isNotModified($request)) {
             return $unchanged;

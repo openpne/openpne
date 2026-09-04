@@ -33,8 +33,7 @@ class ImageController extends Controller
         $transform = ImageTransform::fromGeometry($geometry);
         abort_unless($transform !== null, 404);
 
-        // Validated before anything is read: the tag needs no bytes and a 304 sends none. After the
-        // policy, so a viewer who may no longer see the file is answered 404, never "unchanged".
+        // Checked after the policy so a viewer who may no longer see the file is answered 404, never 304.
         $response = response('', 200, [
             'Content-Type' => $file->type,
             'X-Content-Type-Options' => 'nosniff',

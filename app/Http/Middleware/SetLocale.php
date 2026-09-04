@@ -11,17 +11,9 @@ use Illuminate\Support\Facades\App;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Resolves the request locale in priority order:
- *   1. (member scope only) the authenticated member's persisted `members.locale`
- *   2. session `locale` value (set by POST /locale during the current session)
- *   3. Accept-Language header negotiated against SUPPORTED_LOCALES
- *
- * The member preference outranks the session because it is the member's durable choice
- * (OpenPNE 3 member_config[lang]); a guest session toggle remains the guest mechanism.
- *
- * Scope: the `web` group registers this as member-aware (step 1 active). The Filament admin
- * panel registers it with the `:session` scope so an admin page never picks up a co-logged-in
- * member's locale — admins follow session/Accept-Language only.
+ * The member's persisted locale outranks the session toggle because it is the durable choice
+ * (OpenPNE 3 member_config[lang]); a guest keeps the session toggle. The admin panel registers the
+ * `:session` scope so an admin page never picks up a co-logged-in member's locale.
  */
 class SetLocale
 {
@@ -48,11 +40,8 @@ class SetLocale
             return $session;
         }
 
-        // Accept-Language negotiation. Explicit membership check + fallback to the
-        // first supported locale because Symfony's getPreferredLanguage() can be
-        // shadowed by Request::create() test defaults (HTTP_ACCEPT_LANGUAGE
-        // 'en-us,en;q=0.5') and by unparseable headers — both would otherwise
-        // return 'en' even though we declare ja as the app default.
+        // Explicit membership check and fallback because getPreferredLanguage() answers 'en' from
+        // Request::create()'s default Accept-Language or an unparseable header, while ja is the app default.
         $preferred = $request->getPreferredLanguage(self::SUPPORTED_LOCALES);
         if (in_array($preferred, self::SUPPORTED_LOCALES, strict: true)) {
             return $preferred;

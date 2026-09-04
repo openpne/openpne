@@ -15,10 +15,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The routes a guest may reach that still render for a signed-in member. Dropping `auth` from such
- * a route must not also drop `auth.session`: AuthenticateSession is what ends a session whose
- * password hash is stale, and every gate on these pages reads the viewer it would otherwise leave
- * in place. The middleware pin is the drift guard; the regression below is what it protects.
+ * Pins that the guest-reachable routes listed below still carry `auth.session`: dropping `auth` must
+ * not also drop it, since AuthenticateSession is what ends a session whose password hash is stale,
+ * and every gate on these pages reads the viewer it would otherwise leave in place.
  */
 class PublicRouteBoundaryTest extends TestCase
 {

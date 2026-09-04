@@ -22,12 +22,9 @@ class MfaManagementRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // An empty field is "not provided", not a wrong password: HTML forms and shared client
-        // form state submit it even when the UI does not show it (ConvertEmptyStringsToNull has
-        // already turned '' into null here). Dropping it lets requiredIf decide — a
-        // demanded-but-empty password fails as "required" (accurate), and an undemanded empty one
-        // no longer shadows the real error (e.g. an invalid TOTP code) with a message the page
-        // has no field to show it under.
+        // An empty field is "not provided", not a wrong password: the form submits it even when the
+        // UI shows no field, and dropping it lets requiredIf decide rather than raising an error the
+        // page has nowhere to show.
         if (in_array($this->input('current_password'), [null, ''], true)) {
             $this->request->remove('current_password');
         }

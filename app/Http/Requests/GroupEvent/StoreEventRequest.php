@@ -45,8 +45,7 @@ class StoreEventRequest extends FormRequest
                 $this->merge([$field => rtrim($this->input($field))]);
             }
         }
-        // Coerce a missing comment to '' (OpenPNE 3 stores empty, not null). A non-string (e.g. an
-        // array) is left untouched so the string rule rejects it rather than being cast to "Array".
+        // A non-string is left untouched so the string rule refuses it rather than casting it to "Array".
         $comment = $this->input('open_date_comment');
         if ($comment === null) {
             $this->merge(['open_date_comment' => '']);
@@ -60,9 +59,8 @@ class StoreEventRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string'],
-            // Bounded by bytes, not characters: the body lives in a TEXT column (65535 bytes), and
-            // MySQL rejects anything longer at insert time. The cap equals the column size, so no
-            // migrated value can be locked out of re-editing.
+            // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated
+            // value is locked out of re-editing.
             'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'area' => ['required', 'string'],
             'open_date' => $this->openDateRules(),

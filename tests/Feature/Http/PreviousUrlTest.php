@@ -20,11 +20,6 @@ use Inertia\Inertia;
 use Tests\TestCase;
 
 /**
- * What the session records as the previous URL — the target of every redirect()->back(), so of every
- * validation error and failed login. A page pulls in cookie-bearing subresources of its own, so
- * recording each routed GET would leave an image or a 404 as the back target and lose the error the
- * form was meant to show. See App\Http\Middleware\StartSession.
- *
  * These cases must not use $this->from(): setting the previous URL by hand is what let the flaw sit
  * unnoticed in the suites that cover those forms.
  */
@@ -70,9 +65,8 @@ class PreviousUrlTest extends TestCase
     }
 
     /**
-     * What Inertia's client sends on a visit. The version has to match: without it the answer is a
-     * 409 asking for a full load, which is no page — the full load that follows is what gets recorded.
-     * Read after a request has run: the middleware is what sets the version the factory reports.
+     * The version has to match, since a 409 asking for a full load is no page. Call after a request
+     * has run: the middleware is what sets the version the factory reports.
      *
      * @return array<string, string>
      */
@@ -106,8 +100,8 @@ class PreviousUrlTest extends TestCase
 
     public function test_a_client_side_visit_is_recorded(): void
     {
-        // Inertia's client sends X-Requested-With alongside X-Inertia, so the framework's XHR
-        // exclusion covers the very case this must record. Livewire's navigate fetch does not.
+        // Inertia's client sends X-Requested-With alongside X-Inertia (Livewire's navigate fetch does
+        // not), so the framework's XHR exclusion covers the very case this must record.
         foreach (['inertia', 'livewire'] as $client) {
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login');
 
@@ -170,8 +164,8 @@ class PreviousUrlTest extends TestCase
             $this->assertSame($name, Route::getRoutes()->match(Request::create($url))->getName());
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
 
-            // No Fetch Metadata — the framework's rule would record this plain GET. withHeader()
-            // persists for the test, so the header has to be taken off again.
+            // Without Fetch Metadata the framework's rule would record this plain GET; withHeader()
+            // persists for the test, so it has to be taken off again.
             $bytes = $this->withoutHeader('Sec-Fetch-Dest')->get($url);
             $bytes->assertOk();
             $this->assertStringStartsNotWith('text/html', (string) $bytes->headers->get('Content-Type'), $name);
@@ -186,8 +180,8 @@ class PreviousUrlTest extends TestCase
 
     public function test_an_error_page_is_not_recorded_whatever_surface_renders_it(): void
     {
-        // A stale icon token answers 404. On the Modern surface that is an HTML page, so the
-        // content type alone would call it a page; the status is what rules it out.
+        // A stale icon token's 404 is an HTML page on the Modern surface, so the content type alone
+        // would call it a page and only the status rules it out.
         config()->set('openpne.surface_mode', 'modern_only');
         $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
 
@@ -227,9 +221,8 @@ class PreviousUrlTest extends TestCase
     {
         $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
 
-        // No Fetch Metadata at all — a probe or a tool, the case headers cannot rule out (Chrome
-        // DevTools asks every page for /.well-known/appspecific/com.chrome.devtools.json).
-        // withHeader() persists for the test, so the header has to be taken off again.
+        // No Fetch Metadata at all, as a probe or a tool sends (Chrome DevTools asks every page for
+        // /.well-known/appspecific/com.chrome.devtools.json); withHeader() persists, so it is taken off again.
         $this->withoutHeader('Sec-Fetch-Dest')->get('/.well-known/appspecific/com.chrome.devtools.json')->assertNotFound();
 
         $this->assertSame(url('/login'), $this->previousUrl());

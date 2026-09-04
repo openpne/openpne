@@ -10,12 +10,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Serves the admin custom CSS (App\Support\SnsSettingKey::CustomCss) as a standalone text/css
- * document, the way OpenPNE 3 did (<link> to /cache/css/customizing.css). Linking it rather than
- * inlining a <style> block preserves stylesheet semantics: @charset / @import are honored, and
- * relative url(...) resolve against this URL's directory — kept at OpenPNE 3's path so a migrated
- * site's relative asset references still resolve. Served dynamically from the DB with a content ETag
- * (no cache file written), so a fleet host needs no storage:link.
+ * A standalone stylesheet at OpenPNE 3's path, so @charset / @import and a migrated site's relative
+ * url(...) keep resolving. Served from the DB with a content ETag, never written to disk, so no
+ * storage:link is needed.
  */
 class CustomizingCssController extends Controller
 {

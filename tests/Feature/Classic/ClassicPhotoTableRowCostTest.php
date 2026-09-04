@@ -12,11 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The Classic photo table labels every row "name (friend count)", which is the shape that invites an
- * N+1. The counts are subqueries on the paged query instead, so a page of 12 costs what a page of 3
- * does. The gadget grids share the same list queries and print one number — the whole-set total
- * behind "show all (n)" — so their unpaged path buys it with a single aggregate and keeps the
- * per-row count subquery out.
+ * "name (friend count)" per row is the shape that invites an N+1, so the assertion is that a page of
+ * 12 costs the same query count as a page of 3; the gadget grids are held to one aggregate for the
+ * total and no per-row count.
  */
 class ClassicPhotoTableRowCostTest extends TestCase
 {

@@ -26,22 +26,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * modern_only contract guard: a member browsing a Modern-only install must never land on a Classic
- * Blade page. Each member-facing canonical GET below is asserted to render Inertia under
- * surface_mode=modern_only.
- *
- * KNOWN_LEAKS is empty: no canonical GET renders Classic under modern_only anymore. The const and
- * its guards stay as the tripwire — a future Classic-only page fails the classification test until
- * it is Modernized (COVERED) or consciously allowlisted here.
- *
- * REDIRECTS_UNDER_MODERN are the OpenPNE 3 confirm pages (Modern confirms inline instead): under
- * modern_only a direct GET redirects to its context page rather than rendering a page.
+ * Every member-facing canonical GET is asserted to render Inertia under surface_mode=modern_only, and
+ * the classification test fails on a parameterless one that is neither covered nor consciously
+ * allowlisted.
  */
 class ModernOnlyCoverageTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Canonical GET route names that STILL render Classic under modern_only (kept empty). */
+    /** Canonical GET route names that render Classic under modern_only; empty is a valid state, and an entry here is a conscious allowlisting. */
     private const KNOWN_LEAKS = [];
 
     /**
@@ -74,8 +67,8 @@ class ModernOnlyCoverageTest extends TestCase
         'group.members.demote.show',
         'group.members.drop.show',
         'group.members.transfer.show',
-        // The mailbox's reading pages. Modern reads the same store as chat, so each of these lands
-        // in the conversation list or in one conversation (see DirectMessageController).
+        // The mailbox's reading pages: Modern reads the same store as chat, so each lands in the
+        // conversation list or in one conversation.
         'message.index',
         'message.index_compat',
         'message.receive',
@@ -109,10 +102,6 @@ class ModernOnlyCoverageTest extends TestCase
         config()->set('openpne.surface_mode', 'modern_only');
     }
 
-    /**
-     * The core member navigation surface: parameterless canonical pages a member reaches by browsing.
-     * Under modern_only every one must render Inertia (not Classic).
-     */
     #[DataProvider('memberPages')]
     public function test_member_page_renders_modern_under_modern_only(string $uri): void
     {
@@ -166,10 +155,7 @@ class ModernOnlyCoverageTest extends TestCase
         ];
     }
 
-    /**
-     * Pages that target another member via ?id= (the friend-link and block-add confirm forms). Both
-     * go through respondWith, so under modern_only they must render Inertia.
-     */
+    /** Parameterised by ?id=, so outside the classification guard's enumeration. */
     public function test_member_target_pages_render_modern_under_modern_only(): void
     {
         [$viewer, $target] = Member::factory()->count(2)->create();
@@ -185,10 +171,7 @@ class ModernOnlyCoverageTest extends TestCase
         }
     }
 
-    /**
-     * Group management pages target a community via ?id= and require the viewer to be its admin
-     * (the member roster and the pending-approval queue). Both go through respondWith → Inertia.
-     */
+    /** Parameterised and admin-only, so outside the classification guard's enumeration. */
     public function test_community_management_pages_render_modern_under_modern_only(): void
     {
         $admin = Member::factory()->create();
@@ -206,11 +189,7 @@ class ModernOnlyCoverageTest extends TestCase
         }
     }
 
-    /**
-     * The core parameterized canonical show pages (profile / diary / community / a hashtag's feed) —
-     * the classification guard only covers parameterless routes, so these are asserted explicitly
-     * (Codex). Under modern_only each must render its Inertia component.
-     */
+    /** The classification guard covers only parameterless routes, so the parameterized show pages are asserted explicitly. */
     public function test_parameterized_member_show_pages_render_modern_under_modern_only(): void
     {
         $viewer = Member::factory()->create();
@@ -233,10 +212,7 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/config/ai/show'));
     }
 
-    /**
-     * Keeps the allowlists from going stale: every listed name must still be a registered route. A
-     * page that is renamed/removed but left here — or a typo — fails, so the lists stay honest.
-     */
+    /** A renamed or removed page left in a list, or a typo, would otherwise pass the classification test silently. */
     public function test_allowlisted_names_are_registered_routes(): void
     {
         foreach ([...self::KNOWN_LEAKS, ...self::REDIRECTS_UNDER_MODERN, ...self::FRAGMENTS] as $name) {
@@ -245,10 +221,9 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * Keeps the allowlist honest (Codex): every parameterless member-facing canonical GET must be
-     * classified — either page-covered above (COVERED) or an explicit KNOWN_LEAK. A newly added
-     * Classic-only page therefore fails here until it is Modernized (added to COVERED) or consciously
-     * allowlisted. Parameterized routes are covered case-by-case, not by this enumeration.
+     * Every parameterless member-facing canonical GET must be in one list, so a new Classic-only page
+     * fails here until it is Modernized or consciously allowlisted; parameterized routes are asserted
+     * case-by-case instead.
      */
     public function test_every_parameterless_member_canonical_get_is_classified(): void
     {
@@ -292,11 +267,7 @@ class ModernOnlyCoverageTest extends TestCase
         $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, to REDIRECTS_UNDER_MODERN for a confirm page, to FRAGMENTS if it is not a page, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
     }
 
-    /**
-     * The confirm token landing from the email-change mail survives as a page under modern_only.
-     * Asserts the VALID-token render, not only the invalid-token redirect — otherwise a Classic
-     * render could hide behind the redirect.
-     */
+    /** Asserts the valid-token render, since a Classic render could hide behind the invalid-token redirect. */
     public function test_valid_token_email_change_confirm_renders_modern_under_modern_only(): void
     {
         $member = Member::factory()->create();
@@ -338,11 +309,7 @@ class ModernOnlyCoverageTest extends TestCase
                 ->where('newEmail', 'new@example.com'));
     }
 
-    /**
-     * The admin-issued MFA reset link landing survives as a page under modern_only. Asserts the
-     * VALID-token render (a live factor, so it does not redirect out), not only the invalid-token
-     * redirect — otherwise a Classic render could hide behind the redirect. Guest-reachable, so no login.
-     */
+    /** Asserts the valid-token render with a live factor (so it does not redirect out), since a Classic render could hide behind the invalid-token redirect. */
     public function test_valid_token_mfa_reset_renders_modern_under_modern_only(): void
     {
         $member = Member::factory()->create();
@@ -442,7 +409,7 @@ class ModernOnlyCoverageTest extends TestCase
             'recipient_id' => $viewer->getKey(),
             'recipient_deleted_at' => now(),
         ]);
-        // Modern has no trash screen at all now: the purge confirm lands in the conversation.
+        // Modern has no trash screen, so the purge confirm lands in the conversation.
         $this->actingAs($viewer)->get(route('message.trash.purge.confirm', ['message' => $message->getKey()]))
             ->assertRedirect(route('message.chat.show', ['member' => $friend->getKey()]));
     }

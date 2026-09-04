@@ -11,12 +11,9 @@ use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * What an owner may rewrite on one of their AI accounts: the name every member has, and the
- * self-introduction the site's own profile field defines — held to the same rules the profile
- * editor is held to, so a value this panel writes is one the profile page could have written.
- *
- * No re-authentication: this is the account's face, not its credentials, and a person edits their
- * own name and bio without proving themselves again.
+ * The name and self-introduction are held to the profile editor's own rules, so a value this panel
+ * writes is one the profile page could have written. No re-authentication: this is the account's
+ * face, not its credentials.
  */
 class UpdateAiAccountRequest extends FormRequest
 {

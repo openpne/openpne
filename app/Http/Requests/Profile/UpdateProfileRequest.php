@@ -14,10 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validates a profile-edit submission. Rules are built per field from its form_type:
- * select/radio → the option ids (preset choice keys or custom option ids), country/region →
- * the valid code/region set, date → date, input/textarea → string + the field's regexp/min/max.
- * A per-value visibility is accepted only for member-editable fields, restricted to that field's
+ * A per-value visibility is accepted only for a member-editable field, restricted to the field's
  * offered choices (Open only when web-public) plus the audience the value already carries.
  */
 class UpdateProfileRequest extends FormRequest
