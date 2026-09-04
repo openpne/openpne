@@ -384,3 +384,5 @@ the adapter; the domain rule behind it stays in the feature module.
 5. A Level 1 compatibility item MUST be detectable by an invariant test, the route
    parity, or a customization smoke check; a dropped Level 2/3 item MUST be recorded
    with its reason.
+6. A Modern page MUST link and POST to the canonical URL, never to a `/community*`
+   compat URL — those are GET-only redirects (`ModernCanonicalUrlGuardTest`).
