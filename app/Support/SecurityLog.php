@@ -6,20 +6,9 @@ use Illuminate\Support\Facades\Log;
 use Stringable;
 
 /**
- * The security event trail: authentication and credential-mutation events, written to the
- * dedicated `security` log channel (config/logging.php, docs/internals/logging.md).
- *
- * PII / secret contract — what an event MAY and MUST NOT carry:
- *  - ALWAYS the actor where a resolved one exists (member id / admin username) and the guard.
- *  - The attempted identifier (email / username) ONLY for failed-login and lockout events (no
- *    actor has been resolved yet) and for email-change events (the address is the subject).
- *  - NEVER a password, token, session id, recovery code, or a Failed event's raw credentials
- *    array. Listeners and seams pass the single identifier value, never the credential map.
- *
- * Every context value is sanitised: cast to string (a bool becomes "true"/"false"), control
- * characters — including CR/LF, which would otherwise forge log lines — collapsed to a space,
- * and truncated to 256. A null (or any non-scalar, non-Stringable) value is dropped, so an
- * absent actor simply leaves no key rather than logging an empty one.
+ * An event carries the actor and guard where one is resolved, the attempted identifier only for
+ * failed-login, lockout and email-change events, and never a password, token, session id, recovery
+ * code or raw credentials array (docs/internals/logging.md).
  */
 final class SecurityLog
 {

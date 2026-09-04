@@ -4,25 +4,15 @@ namespace App\Support;
 
 use Illuminate\Support\Str;
 
-/**
- * The one line a conversation leads with wherever it is listed — the room list, the conversation
- * list, and the group page's talk card. Shared so the three cannot disagree about how much of a
- * message travels or what a message with nothing but pictures reads as.
- */
+/** Shared by every list that previews a message, so truncation and the pictures-only label cannot diverge. */
 final class ChatPreview
 {
-    /**
-     * How much of a body travels. The rows show one line and clip it in CSS, so this is a payload
-     * bound, not the visible truncation. Nothing is appended: the ellipsis belongs to the clip.
-     */
+    /** A payload bound, not the visible truncation: the row clips in CSS and adds the ellipsis. */
     private const LIMIT = 140;
 
     /**
-     * The line to lead with: the first of $texts that has anything in it — a body, then a mailbox
-     * message's subject — and failing all of them the stand-in for a message that is pictures alone.
-     *
-     * The emptiness test is strict against `''` and lives here rather than at the three call sites,
-     * because PHP's `?:` would read a body of "0" as nothing and drop a message a member did write.
+     * The emptiness test is strict against `''`: PHP's `?:` would read a body of "0" as nothing and
+     * drop a message a member did write.
      *
      * @param  list<string>  $texts  in the order they should be tried
      */

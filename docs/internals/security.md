@@ -301,6 +301,14 @@ is registered in the `web` group **and** on the Filament panel's own stack:
 the panel does not inherit the `web` group, so the admin pages — the
 highest-value clickjacking target — would otherwise ship none of these.
 
+Where it sits in the `web` group matters: a response that aborts inside the group unwinds only
+through the middleware it had already entered, so a slot at the end of the group would miss the
+419, the guest redirect and the implicit-binding 404 — all pages a member sees. It is therefore
+prepended (only the public-file cookie scrub, which reads the finished response, sits outside
+it). `SetLocale` needs the session, so it is placed right after `ShareErrorsFromSession` and
+ahead of the first middleware that can abort, with `PreventRequestForgery` joined to the priority
+list as that anchor ([`bootstrap/app.php`](../../bootstrap/app.php)).
+
 Deliberately not set:
 
 - **A content CSP (`script-src`)** — the Vite/Inertia bundle has no nonce/hash

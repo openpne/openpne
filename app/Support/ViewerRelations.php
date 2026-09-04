@@ -11,28 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Answers already known about what one reader is to particular other members and groups.
- *
- * The access rules a page runs are each a single-row question — does this owner block me, are we
- * friends, what am I to this group — so a list that asks them per row multiplies with its rows. A
- * page of link cards is what forced this: a card of one of this site's own pages is gated by the
- * linked record's own rule, so sixty rows on the conversation poll asked sixty times.
- *
- * **It is a memo of pairs, never a picture of a reader.** Nothing is loaded on the strength of who
- * is reading; a caller that knows which records a page is about reads exactly those pairs, in one
- * query each, and everything outside that set is simply not here. That bounds this by the page
- * rather than by the size of a reader's social graph, and it is why there is no armed/unarmed
- * distinction: an empty memo misses every question and the rules behave exactly as they always did.
- *
- * The rules therefore keep **one** code path — memo if the pair is in it, their own query if not —
- * and the two must agree. `ViewerRelationsTest` pins that agreement branch by branch, because the
- * bulk read and the single-row read are separate spellings of one predicate.
- *
- * The viewer id is part of every key, so a job serving several readers cannot be answered with
- * somebody else's relations.
- *
- * A write to any of these relations calls {@see flush()}: the memo is answers taken before that
- * write, and nothing here re-reads on its own.
+ * A memo of pairs read in bulk for one page, never a picture of a reader: a pair not read answers
+ * null, and the rule then runs its own single-row query, which must agree with the bulk read. A
+ * write to any of these relations calls {@see flush()}; nothing here re-reads on its own.
  */
 final class ViewerRelations
 {
@@ -60,9 +41,8 @@ final class ViewerRelations
     {
         $key = $this->key($viewer, $owner);
 
-        // array_key_exists throughout: a pair that was read and found unrelated is stored as false,
-        // and `??` would report it as unread and send the caller back to the database — which is
-        // the common case on a page of strangers, and would leave the per-row read in place.
+        // array_key_exists, not `??`: a pair read and found unrelated is stored as false and must not
+        // read as unread.
         return array_key_exists($key, $this->blocks) ? $this->blocks[$key] : null;
     }
 

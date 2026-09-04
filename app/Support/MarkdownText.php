@@ -23,11 +23,8 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
 
 /**
- * Renders a user-entered Markdown body as safe HTML, an opt-in alternative to the plain path
- * (BodyText). CommonMark + a GitHub-flavoured subset (autolink, strikethrough, tables) produces the
- * HTML; a symfony/html-sanitizer allowlist is the second belt over it. The two layers are
- * independent: CommonMark escapes raw HTML input (html_input=escape) and the sanitizer strips
- * anything outside the allowlist, so a body is safe even if one layer ever regresses.
+ * CommonMark with html_input=escape, then a symfony/html-sanitizer allowlist: the two layers are
+ * deliberately redundant, so a body stays inert if either one regresses (docs/internals/body-text.md).
  */
 final class MarkdownText
 {
@@ -43,12 +40,8 @@ final class MarkdownText
     }
 
     /**
-     * The URLs this body links to, in document order.
-     *
-     * Read from the parsed document rather than by matching text, so it sees exactly what the
-     * renderer will link: `[label](url)` and a bare URL (which the autolink extension turns into the
-     * same node) both count, while a URL inside a code span or fenced block does not — it is not a
-     * link on the page either, and a card for it would be surprising.
+     * Read from the parsed document rather than by matching text, so a URL in a code span or fenced
+     * block, which the page does not link, yields no card.
      *
      * @return list<string>
      */
@@ -82,19 +75,14 @@ final class MarkdownText
     }
 
     /**
-     * The full body flattened to plain text for a text/plain context (notification mail), with no
-     * width cut. Renders to HTML, turns <br> and block-element boundaries into newlines so the
-     * paragraph/list shape survives, then strips tags and decodes entities (strip_tags before decode,
-     * as in excerpt(), so a raw-HTML fragment the user typed reads back as they typed it). Runs of
-     * three-plus newlines collapse to a blank line.
+     * Block boundaries become newlines so the paragraph and list shape survives, and strip_tags runs
+     * before html_entity_decode so a raw-HTML fragment the user typed reads back as they typed it.
      */
     public static function plainText(?string $text): string
     {
         $html = self::render($text)->toHtml();
-        // Keep link targets: strip_tags would reduce [label](url) to just the label, silently
-        // dropping the reference from a text/plain mail. A label that is the URL itself (autolink)
-        // stays a single URL; an unsafe-scheme link has no href after the sanitizer and keeps its
-        // label only (the regex does not match).
+        // Keep link targets, which strip_tags would drop: a label that is the URL itself stays a single
+        // URL, and an unsafe-scheme link has no href after the sanitizer so it keeps its label only.
         $html = (string) preg_replace_callback(
             '~<a\b[^>]*\bhref="([^"]*)"[^>]*>(.*?)</a>~is',
             function (array $m): string {
@@ -129,11 +117,11 @@ final class MarkdownText
         }
 
         $environment = new Environment([
-            // Escape raw HTML rather than pass it through; the sanitizer is a second belt, not the
-            // only defence. Single newlines become <br> so a Markdown body reads plaintext-like.
+            // Escaped rather than passed through, so the sanitizer is a second belt and not the only defence.
             'html_input' => 'escape',
             'allow_unsafe_links' => false,
             'max_nesting_level' => 20,
+            // A single newline reads as a line break, so a Markdown body behaves like plain text.
             'renderer' => ['soft_break' => "<br>\n"],
         ]);
         $environment->addExtension(new CommonMarkCoreExtension);
@@ -141,9 +129,8 @@ final class MarkdownText
         $environment->addExtension(new StrikethroughExtension);
         $environment->addExtension(new TableExtension);
 
-        // Render an image as its escaped alt text, not <img>: the sanitizer allowlist has no img, so
-        // letting the tag through only to drop it would silently discard the alt text too. Priority
-        // above the core ImageRenderer (0) so this wins.
+        // An image renders as its escaped alt text (priority 10 outranks the core ImageRenderer's 0):
+        // the sanitizer allowlist has no img, and dropping the tag there would discard the alt text too.
         $environment->addRenderer(Image::class, new class implements NodeRendererInterface
         {
             public function render(Node $node, ChildNodeRendererInterface $childRenderer): string
@@ -181,7 +168,6 @@ final class MarkdownText
             $config = $config->allowElement($element);
         }
 
-        // Links carry href only; no title/class/style. Every link opens in a new tab with a hardened rel.
         $config = $config->allowElement('a', ['href'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer nofollow')
             ->forceAttribute('a', 'target', '_blank');

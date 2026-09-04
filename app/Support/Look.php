@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * A named set of deviations from the standard Modern layout. LookResolver decides which one a
- * request renders in; SnsSettingKey::DefaultLook stores the site's. A screen a look says nothing
- * about renders standard, so a look is never a second copy of the UI
- * (docs/internals/looks.md). Its client half is the LOOKS registry in
- * resources/js/lib/member-chrome.ts, held in step by LookRegistryParityTest.
+ * A named set of deviations from the standard Modern layout; a screen a look says nothing about
+ * renders standard (docs/internals/looks.md).
  */
 enum Look: string
 {
@@ -23,11 +20,8 @@ enum Look: string
     case Tabbed = 'tabbed';
 
     /**
-     * Whether the two swapped routes render the unified page components instead of the shipped ones.
-     *
-     * A bool rather than a page-format id: every look that deviates from standard so far renders the
-     * same unified page components, differing only in the chrome around them. A third page format is
-     * what would turn this into an enum.
+     * A bool rather than a page-format id: every non-standard look so far renders the same unified
+     * page components and differs only in its chrome.
      */
     public function usesUnifiedPages(): bool
     {

@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * The per-site brand color (SnsSettingKey::BrandColor): its accepted form and the foreground that
- * stays readable on it.
- *
- * The foreground is pure white or pure black — never an off-black. Against a white/slate-900 pair a
- * mid-tone hue such as #0088aa clears 4.5:1 on neither side; pure black and white keep the worst case
- * at 4.58:1, so any color an administrator picks still carries AA text on the fill.
- * resources/js/lib/identity-mark.ts is the client twin of this comparison.
+ * The foreground is pure white or pure black, never an off-black: a mid-tone fill such as #0088aa
+ * clears 4.5:1 against neither white nor slate-900, while pure black and white keep the worst case at
+ * 4.58:1. resources/js/lib/identity-mark.ts must make the same choice.
  */
 class BrandColor
 {
@@ -28,9 +24,8 @@ class BrandColor
     }
 
     /**
-     * White or black, whichever has the higher WCAG contrast ratio against $hex. A ratio comparison
-     * (not a luminance threshold) is what keeps mid-gray backgrounds readable. Invalid input falls
-     * back to white, as the client twin does.
+     * A WCAG contrast-ratio comparison rather than a luminance threshold, so a mid-gray fill stays
+     * readable; invalid input falls back to white, as the client twin does.
      */
     public static function readableForeground(string $hex): string
     {
