@@ -8,7 +8,6 @@ use App\Compat\RouteParity;
 use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
-/** OpenPNE 3 `member` module. */
 class MemberRouteParity extends RouteParity
 {
     protected string $module = 'member';
