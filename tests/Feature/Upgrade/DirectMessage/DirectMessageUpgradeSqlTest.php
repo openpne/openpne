@@ -11,14 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/**
- * Runs the compiled `message` → `direct_messages` INSERT...SELECT against the real OpenPNE 3 DDL, checking
- * the type filter, the is_send→is_draft inversion, self-reference null-normalization, the draft
- * recipient fold, and the deleted_message trash/purge fold onto the sender-side soft-delete columns.
- *
- * MySQL only: the set-based copy, the source DDL (TEXT, DATETIME, utf8mb3) and the correlated
- * subqueries are MySQL features.
- */
+/** Runs the compiled `message` step against the real OpenPNE 3 DDL; MySQL only. */
 class DirectMessageUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;
@@ -191,8 +184,8 @@ class DirectMessageUpgradeSqlTest extends TestCase
     public function test_is_deleted_without_a_pointer_falls_back_to_updated_at(): void
     {
         $sender = Member::factory()->create();
-        // Anomalous: is_deleted=1 with no trash pointer. Keep it out of the active boxes (deleted_at
-        // set) without inventing a purge.
+        // Anomalous data — is_deleted=1 with no trash pointer — must leave the active boxes without
+        // inventing a purge.
         $this->seedMessage(1002, $sender->id, ['is_send' => 1, 'is_deleted' => 1, 'updated_at' => '2021-05-05 05:05:05']);
 
         $this->runUpgrade();

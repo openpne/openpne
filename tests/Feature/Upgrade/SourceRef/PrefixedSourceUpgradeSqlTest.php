@@ -13,14 +13,10 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Proves --source-prefix reaches a step's correlated subqueries end-to-end, not just the FROM table:
- * a prefixed OpenPNE 3 `op_member_config` (a shared-rental install whose source carries a table
- * prefix) sits alongside the unprefixed OpenPNE 4 target, and MemberPreferenceUpgrade — whose filter
- * reads member_config again in a MAX() subquery, and whose active-member guard reads `member` — must
- * read the prefixed tables in all three places.
- *
- * MigratesUpgradeTargetsOnce (not RefreshDatabase): creating the source table is DDL, which auto-commits on
- * MySQL and cannot be rolled back inside a transaction.
+ * Proves --source-prefix reaches a step's correlated subqueries, not just the FROM table: a prefixed
+ * `op_member_config` and `op_member` sit beside the unprefixed target, and MemberPreferenceUpgrade
+ * must read the prefix in its FROM, its MAX() subquery and its active-member guard.
+ * MigratesUpgradeTargetsOnce, not RefreshDatabase: creating the source table is DDL and auto-commits.
  */
 class PrefixedSourceUpgradeSqlTest extends TestCase
 {

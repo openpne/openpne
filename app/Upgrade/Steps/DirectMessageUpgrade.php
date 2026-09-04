@@ -7,29 +7,11 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message` (SendMessageData, opMessagePlugin) → OpenPNE 4 `direct_messages` (the sender's record).
- *
- * Only the personal-message type is migrated (filter: message_type.type_name = 'message'); the
- * friend/community message-types were OpenPNE 3's notification mechanism, carried by the OpenPNE 4
- * notification system instead. id is preserved so direct_message_recipients.direct_message_id and the self
- * references resolve by id.
- *
- * Two OpenPNE 3 quirks are folded in with correlated subqueries (the community_config treatment):
- *
- *  - draft_recipient_id: OpenPNE 4 holds a draft's pending recipient on the message and creates the
- *    receipt only on send (a receipt means "delivered"). OpenPNE 3 instead always wrote a
- *    message_send_list row, draft or sent, so a draft's recipient is read back from there and folded
- *    onto the column; sent rows get NULL. The personal-message compose form is 1:1, so a draft has a
- *    single send-list row; if anomalous data carries several, the lowest-id one wins and the rest are
- *    dropped (a draft never had a receipt to migrate).
- *  - sender_deleted_at / sender_purged_at: OpenPNE 3's trash is message.is_deleted (in/out of trash)
- *    plus a deleted_message pointer row whose own is_deleted marks a permanent purge. is_deleted=1
- *    with the pointer not purged = trash (deleted_at, from the pointer's created_at); the pointer
- *    purged = purged_at too. Rows are never hard-deleted, matching OpenPNE 4's purge.
- *
- * parent_id/thread_id (OpenPNE 3 return_message_id/thread_message_id) are null-normalized: a 0
- * (OpenPNE 3 default) or a reference outside the migrated personal-message set becomes NULL rather
- * than a dangling self reference.
+ * OpenPNE 3 `message` (opMessagePlugin) → OpenPNE 4 `direct_messages`, personal messages only: the
+ * friend/community message types were OpenPNE 3's notification mechanism. A draft's recipient is
+ * folded from its message_send_list row onto draft_recipient_id, and OpenPNE 3's trash
+ * (message.is_deleted plus a deleted_message pointer whose own is_deleted marks the purge) onto
+ * sender_deleted_at / sender_purged_at.
  */
 class DirectMessageUpgrade extends UpgradeStep
 {
@@ -80,11 +62,9 @@ class DirectMessageUpgrade extends UpgradeStep
     }
 
     /**
-     * SQL boolean: this `message_send_list` row is the one folded onto its draft's
-     * draft_recipient_id. The compose form is 1:1 so a draft normally has exactly one; where
-     * anomalous data carries several, the lowest id wins and the rest are dropped. Public because
-     * ActiveMember's preflight must count over the row this actually reads — refusing a migration
-     * over a duplicate the step discards would contradict that.
+     * SQL boolean: this `message_send_list` row is the one folded onto its draft's draft_recipient_id,
+     * the lowest id where anomalous data carries several (the compose form is 1:1). Public because
+     * ActiveMember's preflight scope must count exactly this row.
      */
     public static function draftRecipientRowSelector(): string
     {

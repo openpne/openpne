@@ -16,18 +16,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Post-migration integrity check for openpne:verify-upgrade — a read-only gate run before switchover.
- * It does not trust the runner's self-report: it independently re-counts the live source and target.
- *
- *  - Check A (per step): source rows matching the step's filter == the recorded rows_affected == the
- *    rows the step owns in the target (UpgradeStep::targetFilter). A divergence is source drift
- *    (source mutated after the run), target corruption, or a step that never completed.
- *  - Check B (file_bin): every file has its bytes and files.byte_size == LENGTH(file_bin.bin), and the
- *    FK is rewired onto files.
- *  - Check C (passwords): the wrap pass's terminal invariant — no bare OpenPNE 3 MD5 at rest, flagged
- *    rows hold bcrypt, no unknown schemes.
- *
- * Console-free (an output closure) and registry-injectable (tests pass a step subset), like the runner.
+ * Read-only gate for openpne:verify-upgrade, run before switchover; it re-counts the live source and
+ * target rather than trusting the runner's self-report (Checks A/B/C in docs/internals/upgrade.md,
+ * "Verify"). Console-free and registry-injectable, like the runner.
  */
 final class UpgradeVerifier
 {
@@ -43,10 +34,9 @@ final class UpgradeVerifier
         $report = new VerifyReport;
         $steps = $this->steps();
 
-        // The same read-only source inspection the runner does. A fully-absent optional plugin group is
-        // a legitimate "not installed" state — the runner ensure-exists'd an empty source, ran 0 rows,
-        // and dropped it — so those source tables are absent by design (not a failure, and not to be
-        // COUNTed: that would throw on the missing table). Required / partial problems are failures.
+        // A fully absent optional plugin group is a legitimate state (the runner ran its steps against
+        // an empty table and dropped it), so those tables are excluded from the COUNTs rather than
+        // failed or thrown on.
         $preflight = (new SourcePreflight($steps, SourceSchema::default()))->inspect($options->sourcePrefix, $options->sourceDatabase);
         $absent = $preflight->absentOptional;
 
@@ -67,7 +57,7 @@ final class UpgradeVerifier
             $this->verifyStep($report, $out, $step, $options, $absent);
         }
 
-        // file_bin is not a step; its bytes migrate by FK rewire/rename. Only when this run migrates files.
+        // file_bin is no step's target, so its check is gated on this run migrating files.
         if (in_array('files', $this->targetTables(), true)) {
             $this->verifyFileBin($report, $out);
         }
@@ -78,10 +68,8 @@ final class UpgradeVerifier
     }
 
     /**
-     * The wrap pass's terminal invariant (Check C): no bare OpenPNE 3 MD5 may remain at
-     * rest — such a row can no longer authenticate anyone — every row flagged md5_bcrypt
-     * must actually hold a bcrypt string, and no row carries an unknown scheme. Cutover
-     * is held until all pass.
+     * The wrap pass's terminal invariant (Check C): no bare OpenPNE 3 MD5 at rest, every md5_bcrypt
+     * row holds a bcrypt string, and no row carries an unknown scheme.
      */
     private function verifyPasswords(VerifyReport $report, Closure $out): void
     {
@@ -129,20 +117,16 @@ final class UpgradeVerifier
             return;
         }
 
-        // The COUNT reads only the FROM table and the filter (not the columns' subqueries — those feed
-        // the INSERT's SELECT, not this count). So a step migrated nothing, and its COUNT would hit a
-        // missing table, only when its FROM table or a filter subquery table is an absent optional
-        // plugin — treat that as 0 (0 == 0 == 0 then passes). A core FROM whose columns merely read an
-        // absent optional owner (e.g. FileUpgrade) still counts normally.
+        // The COUNT reads only the FROM table and the filter, so a missing table matters only when one
+        // of those is an absent optional plugin (counted as 0), not when a column subquery reads one.
         $countTables = array_merge([$step->sourceTable()], SourceRef::tablesIn($step->effectiveFilter() ?? ''));
         $sourceN = array_intersect($countTables, $absent) !== []
             ? 0
             : $this->sourceCount($step, $options);
         $affectedN = (int) $state->rows_affected;
 
-        // Only the rows the step owns: a target table can also hold rows from a sibling step, or
-        // ones the runner wrote out of band (sns_settings holds both — the feature flags and the
-        // post-walk surface_mode stamp), and counting those would read as target drift.
+        // Only the rows the step owns: a sibling step or the runner (the surface_mode stamp) can also
+        // write the target table, and counting those rows would read as target drift.
         $target = DB::table($step->targetTable());
         if ($step->targetFilter() !== null) {
             $target->whereRaw($step->targetFilter());

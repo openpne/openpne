@@ -8,24 +8,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member_profile` → OpenPNE 4 `member_profiles`, flattening the nested set.
- *
- * In OpenPNE 3 every value row is a root (tree_key = id) or, for a multi-select, a child
- * (tree_key = root id). The OpenPNE 4 table has no tree columns — one row per value — so
- * which rows are copied depends on the field's form_type (read from `profile`):
- *
- *  - single-value (input/textarea/select/radio/country/region, and preset date): copy the
- *    root row as-is.
- *  - checkbox: copy each child row (it carries profile_option_id); drop the empty root.
- *  - custom (non-preset) date: keep one row (the root) and drop the children. Its value comes
- *    from the year/month/day child rows when it has them, and from the root's own `value`
- *    when it has none — OpenPNE 3 writes the date either way (MemberProfile::getValue()).
- *
- * visibility maps OpenPNE 3's public_flag onto App\Support\Visibility (web=4→Open,
- * SNS=1→Members, friend=2→Friends, private=3→Private); an invalid 0 / NULL becomes NULL
- * ("use the field default"). Effective resolution (is_edit_public_flag, NULL →
- * profiles.default_visibility) happens in the read layer — like OpenPNE 3's read-time
- * resolution — rather than baking it into stored data.
+ * OpenPNE 3 `member_profile` → OpenPNE 4 `member_profiles`, flattening the nested set: the filter
+ * copies single-value roots, checkbox children (root dropped), and a custom date's root, whose value
+ * is composed from its children. visibility maps public_flag onto Visibility; 0 / NULL becomes
+ * NULL, resolved to the field default at read time as in OpenPNE 3.
  */
 class MemberProfileUpgrade extends UpgradeStep
 {
@@ -53,8 +39,8 @@ class MemberProfileUpgrade extends UpgradeStep
                 uses: ['value', 'tree_key', 'lft', 'id', 'profile_id'],
             ),
             'value_datetime' => Column::expr($this->normalizedDatetime(), uses: ['value_datetime']),
-            // OpenPNE 3 public_flag → Visibility; 0/invalid → NULL (fall back to the field
-            // default). A multi-select stores the flag only on the root, so a child inherits it.
+            // A multi-select stores public_flag only on the root, so a child reads its root's
+            // (rawPublicFlag); 0 or an invalid flag becomes NULL, the field default.
             'visibility' => Column::expr(
                 sprintf(
                     'CASE (%1$s) WHEN 4 THEN %2$d WHEN 1 THEN %3$d WHEN 2 THEN %4$d WHEN 3 THEN %5$d ELSE NULL END',
@@ -138,16 +124,10 @@ class MemberProfileUpgrade extends UpgradeStep
     }
 
     /**
-     * A custom date field's value, following OpenPNE 3's own precedence (MemberProfile::getValue()):
-     * a childless root is read from its own value, and a root with children is composed from the
-     * year/month/day rows (ordered by lft) instead.
-     *
-     * OpenPNE 3 writes the date onto the root either way (MemberProfileForm) and adds children only
-     * for the year/month/day options the field defines — a date field with no options has none — so
-     * the child count is what says which shape a row is. Reading the root regardless would still be
-     * wrong where the two disagree, because the composed value is the one OpenPNE 3 displayed.
-     * Children present but not the three complete, non-zero parts is malformed, and becomes NULL
-     * rather than a half-date like `2020-03` — again as OpenPNE 3 resolves it.
+     * A custom date's value as OpenPNE 3 displayed it (MemberProfile::getValue()): a childless root
+     * reads its own value, a root with children composes its year/month/day rows, and an incomplete
+     * or zero triple is NULL, not a half-date. OpenPNE 3 writes the root either way and adds children
+     * only when the field defines options, so the child count tells the shapes apart.
      */
     private function customDateValue(): string
     {
@@ -162,17 +142,11 @@ class MemberProfileUpgrade extends UpgradeStep
     }
 
     /**
-     * The date OpenPNE 3 shows for a year/month/day triple, overflow included: it composes with
-     * DateTime::setDate(), so an impossible 2020-02-31 rolls forward to 2020-03-02 rather than being
-     * stored as written. Its own form rejects that via checkdate(), so such a triple came from
-     * somewhere else — but it is still a date OpenPNE 3 renders, and concatenating the parts would
-     * migrate one that does not exist.
-     *
-     * Offsetting from January 1st is what makes it exact: MySQL clamps a month addition to the end of
-     * the target month (2020-01-31 + 1 MONTH = 2020-02-29) and the 1st gives it nothing to clamp.
-     * The year is zero-padded into a date literal rather than passed to MAKEDATE, which reads any
-     * year below 100 as a two-digit one — 20 would become 2020, while OpenPNE 3 accepts a year of 20
-     * (checkdate does) and renders it as 0020.
+     * The date OpenPNE 3 shows for a year/month/day triple, overflow included: DateTime::setDate()
+     * rolls 2020-02-31 forward to 2020-03-02, and concatenating the parts would migrate a date that
+     * does not exist. Offsetting from January 1st avoids MySQL's clamp on a month addition, and the
+     * zero-padded year literal avoids MAKEDATE reading a year below 100 as two-digit (OpenPNE 3
+     * renders 20 as 0020).
      */
     private function composedDate(string $y, string $m, string $d): string
     {

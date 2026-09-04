@@ -6,12 +6,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `admin_user` → OpenPNE 4 `admin_users`.
- *
- * The password copies verbatim: it is an OpenPNE 3 MD5 hash, and INSERT...SELECT bypasses the model's
- * `hashed` cast so it lands unchanged here; the runner's post-walk wrap pass (PasswordWrap) then
- * converts it to bcrypt(md5) + password_scheme before the run completes, so no bare MD5 survives at
- * rest. `remember_token` has no OpenPNE 3 source and defaults to null.
+ * OpenPNE 3 `admin_user` → OpenPNE 4 `admin_users`. The password copies verbatim as the OpenPNE 3 MD5
+ * (INSERT...SELECT bypasses the model's `hashed` cast); PasswordWrap converts it after the walk.
  */
 class AdminUserUpgrade extends UpgradeStep
 {
@@ -32,8 +28,8 @@ class AdminUserUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // password_scheme is set by the runner's post-walk wrap pass; the app_authentication_*
-        // columns are opt-in MFA state an admin sets up post-migration. None have an OpenPNE 3 source.
+        // No OpenPNE 3 source: password_scheme is set by PasswordWrap, and the app_authentication_*
+        // columns are MFA state an admin sets up after the move.
         return ['password_scheme', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes'];
     }
 }

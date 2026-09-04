@@ -6,9 +6,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `profile_option` → OpenPNE 4 `profile_options` (choices for custom
- * select/radio/checkbox fields). id is preserved (member_profiles and the option
- * translation table reference it). Preset fields have no options here.
+ * OpenPNE 3 `profile_option` → OpenPNE 4 `profile_options`, the choices of custom
+ * select/radio/checkbox fields; a preset field has none.
  */
 class ProfileOptionUpgrade extends UpgradeStep
 {

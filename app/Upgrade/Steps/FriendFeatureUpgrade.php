@@ -6,13 +6,10 @@ use App\Support\Feature;
 use App\Upgrade\Column;
 
 /**
- * OpenPNE 3 `sns_config.enable_friend_link` → the OpenPNE 4 friend flag. OpenPNE 3 kept this one
- * feature in sns_config rather than in `plugin`, but the semantics are the plugin table's.
- *
- * A step of its own rather than a key in SnsSettingUpgrade: that step copies whatever value the
- * source holds, so an OpenPNE 3 site with friends enabled — by an absent row or an explicit '1' —
- * would either lose "absent means enabled" or leave the verify count depending on which of the two
- * OpenPNE 3 wrote. Carrying only the disabled row keeps both sides lazy.
+ * OpenPNE 3 `sns_config.enable_friend_link` → the OpenPNE 4 friend flag; OpenPNE 3 kept this one
+ * feature in sns_config with the `plugin` table's semantics. A step of its own rather than a
+ * SnsSettingUpgrade key: that step copies the value as stored, and only carrying the disabled row
+ * keeps "absent means enabled" on both sides.
  */
 class FriendFeatureUpgrade extends FeatureFlagUpgrade
 {

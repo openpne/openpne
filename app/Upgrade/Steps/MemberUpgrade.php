@@ -9,30 +9,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member` → OpenPNE 4 `members`, activated members only (see ActiveMember, and the
- * matching guard on every step whose rows point at a member).
- *
- * The login email, password hash, and profile-page visibility are not member-table columns
- * in OpenPNE 3 — they live in the `member_config` KV table — so they are pulled in with
- * correlated subqueries:
- *
- *  - email: PC address, falling back to the mobile address; neither present yields NULL, i.e. a
- *    login-impossible member whose row is still preserved (an activated account can lack both, e.g.
- *    one whose addresses were cleared administratively).
- *  - password: the bare 32-char MD5. INSERT...SELECT bypasses Eloquent, so the model's
- *    `hashed` cast does not fire and the legacy hash lands verbatim here; the runner's
- *    post-walk wrap pass (PasswordWrap) then converts it to bcrypt(md5) + password_scheme
- *    before the run completes, so no bare MD5 survives at rest.
- *  - profile_visibility: the SNS-wide sns_config[is_allow_config_public_flag_profile_page]
- *    when truthy (it overrides the per-member flag in OpenPNE 3's MemberTable::appendRules,
- *    so a stale member_config must not over-expose), else member_config[profile_page_public_flag],
- *    mapped onto Visibility (web=4→Open i.e. guest-viewable, friend=2→Friends, private=3→Private,
- *    SNS=1/unset→Members).
- *  - locale: member_config[language] (e.g. ja_JP) folded to a SUPPORTED_LOCALES slug, NULL for
- *    an unrecognised value (falls back to the session/Accept-Language chain at request time).
- *
- * The subqueries use the latest row per name (member_config has no (member_id, name) unique), so a
- * duplicate resolves deterministically rather than by storage order.
+ * OpenPNE 3 `member` → OpenPNE 4 `members`, activated members only (ActiveMember). The login email,
+ * password hash, profile-page visibility and locale live in the `member_config` KV table, so they
+ * are pulled in by correlated subquery, latest row per name (docs/internals/upgrade.md); the password
+ * lands as the bare MD5 for PasswordWrap, since INSERT...SELECT bypasses the `hashed` cast.
  */
 class MemberUpgrade extends UpgradeStep
 {
@@ -57,11 +37,9 @@ class MemberUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // No OpenPNE 3 source; rely on the schema default (null). password_scheme is set
-        // by the runner's post-walk wrap pass, not this step. The two_factor_* columns are
-        // opt-in MFA state a member sets up post-migration; avatar_color is likewise an
-        // OP4-native choice, as is owner_member_id — every migrated member is a person, and
-        // an AI account is something a member creates after the move.
+        // No OpenPNE 3 source: password_scheme is set by PasswordWrap, the two_factor_* columns are
+        // MFA state a member sets up after the move, and avatar_color and owner_member_id are
+        // OpenPNE 4-native choices (every migrated member is a person).
         return ['email_verified_at', 'password_scheme', 'remember_token',
             'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
             'avatar_color', 'owner_member_id'];

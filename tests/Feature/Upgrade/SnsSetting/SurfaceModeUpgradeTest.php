@@ -15,10 +15,9 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * The upgrade establishes the Classic-default surface for a migrated site — a fail-safe write in the
- * runner (not the command) so a direct UpgradeRunner invocation gets it too. Insert-if-absent, only
- * after a full success, and never on a dry-run. MySQL-only, like the runner (the relation source +
- * steps mirror UpgradeRunnerSqlTest; the stamp fires on any full walk, independent of file migration).
+ * The Classic-default surface stamp is a runner write (not the command's), so a direct UpgradeRunner
+ * invocation gets it too; pinned as insert-if-absent, after a full success only, never on a dry run.
+ * The relation source and steps mirror UpgradeRunnerSqlTest, since the stamp fires on any full walk.
  */
 class SurfaceModeUpgradeTest extends TestCase
 {

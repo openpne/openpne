@@ -8,11 +8,8 @@ use App\Upgrade\UpgradeStep;
 
 /**
  * Shared shape for the steps carrying OpenPNE 3's feature availability into `sns_settings`
- * (App\Support\Feature, docs/internals/feature-toggles.md).
- *
- * Only a switched-off unit gets a row: an absent row means enabled on both sides — OpenPNE 3's lazy
- * `plugin` rows — so the filter keeps only the source rows that switched something off and `value` is
- * always the literal '0'. A site that never disabled anything migrates with no feature row at all.
+ * (docs/internals/feature-toggles.md). An absent row means enabled on both sides, so only a source
+ * row that switched something off is copied, always as the literal '0'.
  */
 abstract class FeatureFlagUpgrade extends UpgradeStep
 {

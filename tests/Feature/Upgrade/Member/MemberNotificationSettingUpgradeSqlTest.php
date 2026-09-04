@@ -12,13 +12,8 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * Runs the compiled member_config → member_notification_settings INSERT...SELECT against the
- * real OpenPNE 3 `member_config` DDL: the name→(kind, channel) CASEs, the '0'-is-the-only-opt-out
- * value semantics, the latest-row dedup for the KV table's missing (member_id, name) unique, and
- * the restriction to the registered NotificationKind keys (wired or not).
- *
- * MySQL only, like the other upgrade SQL tests. A target member is created first so the
- * member_notification_settings.member_id FK resolves.
+ * Runs the compiled member_config → member_notification_settings step against the real OpenPNE 3 DDL;
+ * MySQL only, with a target member created first so the member_id FK resolves.
  */
 class MemberNotificationSettingUpgradeSqlTest extends TestCase
 {

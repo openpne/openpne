@@ -6,13 +6,9 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `diary_comment` (opDiaryPlugin) → OpenPNE 4 `diary_comments`.
- *
- * id is preserved because diary_comment_image references diary_comment.id; keeping it
- * lets DiaryCommentImageUpgrade rewire by id. timestamps are the original
- * post dates, not the upgrade run's clock. member_id stays nullable: a withdrawn author
- * is NULL in OpenPNE 3 (onDelete set null) and the comment is kept. body is TEXT → TEXT,
- * so long content round-trips untruncated.
+ * OpenPNE 3 `diary_comment` (opDiaryPlugin) → OpenPNE 4 `diary_comments`, ids and timestamps
+ * verbatim. member_id stays nullable: OpenPNE 3 sets it NULL when the author withdraws and keeps
+ * the comment.
  */
 class DiaryCommentUpgrade extends UpgradeStep
 {
@@ -34,11 +30,8 @@ class DiaryCommentUpgrade extends UpgradeStep
     }
 
     /**
-     * `link_card_id` / `link_card_synced_at` are left at their schema default (null) rather than
-     * mapped, as every other body's step leaves them: OpenPNE 3 has no equivalent, and a null
-     * `link_card_synced_at` is exactly the "never examined" state the read path looks for — so a
-     * migrated comment picks up a card the first time its page is opened, if the operator has the
-     * feature on at all.
+     * link_card_id / link_card_synced_at stay at their null default: OpenPNE 3 has no equivalent, and
+     * a null link_card_synced_at is the "never examined" state the read path fetches a card for.
      */
     public function targetDefaults(): array
     {

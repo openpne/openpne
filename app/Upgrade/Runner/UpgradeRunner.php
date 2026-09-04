@@ -15,29 +15,16 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Walks the upgrade steps in dependency order, copying each into the OpenPNE 4 schema and
- * checkpointing it in openpne4_upgrade_state. Console-free (the command passes an output closure) and
- * registry-injectable (tests pass a step subset), so the orchestration is testable on its own.
- *
- * Each step runs in its own transaction wrapping the INSERT...SELECT and the checkpoint write — the
- * whole run cannot be one transaction at OpenPNE 3 data volumes — so completed ⟺ committed and a
- * re-run resumes from the first incomplete step without re-inserting verbatim ids.
- *
- * A checkpoint records only that a step ran, not the step definition it ran. Changing a step's column
- * mapping invalidates prior UpgradeState checkpoints: resuming a database that was upgraded or
- * interrupted under an older step set is unsupported — reset (--force-restart) and re-run from scratch.
- *
- * The one case the runner can detect on its own is a rename of the identifiers a checkpoint is keyed
- * by (step_key is a class basename, and the target tables it wrote are named too): NAMING_EPOCH is
- * bumped with each such rename and stamped into the state on the first run, so a resume under a
- * different epoch aborts instead of silently skipping steps whose old keys no longer exist.
+ * Walks the steps in registry order, each in its own transaction with its checkpoint, and runs the
+ * post-walk passes; console-free (an output closure) and registry-injectable (tests pass a step
+ * subset). Checkpoints, resume, the naming epoch and the pass order are in docs/internals/upgrade.md.
  */
 final class UpgradeRunner
 {
     /**
-     * Bumped whenever the upgrade's own identifiers are renamed (step class names, target tables).
-     * 2 = the Message → DirectMessage rename. 3 = the Community → Group rename. 4 = the
-     * CommunityTopic → GroupTopic rename. 5 = the CommunityEvent → GroupEvent rename.
+     * Bumped whenever the upgrade's own identifiers (step class names, target tables) are renamed; a
+     * resume under another epoch aborts. 2 = Message → DirectMessage, 3 = Community → Group,
+     * 4 = CommunityTopic → GroupTopic, 5 = CommunityEvent → GroupEvent.
      */
     public const NAMING_EPOCH = 5;
 
@@ -62,9 +49,8 @@ final class UpgradeRunner
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
         $report = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
 
-        // file_bin (the BLOBs) has no step, so its bytes-complete check rides alongside the step
-        // preflight — but only once the step preflight is clean, since it COUNTs the source `file` the
-        // latter guards. Runs only when this run migrates files at all (the whole registry does).
+        // The file_bin bytes-complete check runs only on a clean structural verdict (it COUNTs the
+        // source `file` that verdict guards) and only when this run migrates files.
         $fileBin = new FileBinMigration;
         $migratesFiles = in_array('files', $this->targetTables(), true);
         $fileBinError = $migratesFiles && ! $report->hasErrors()
@@ -77,9 +63,9 @@ final class UpgradeRunner
             ? (new MailTemplatePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : new MailTemplatePreflightReport([], []);
 
-        // Same shape again: it counts rows in the source columns the structural check guards. An
-        // inactive-member reference the upgrade will not resolve on its own, or a member missing from
-        // the source, is a state no step can migrate correctly — so it joins this abort too.
+        // Also only on a clean structural verdict, since it counts rows in the guarded columns; an
+        // unresolvable inactive-member reference or a member missing from the source is a state no
+        // step can migrate correctly.
         $memberErrors = ! $report->hasErrors()
             ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase))
             : [];
@@ -100,9 +86,8 @@ final class UpgradeRunner
             return false;
         }
 
-        // Only now that the structure is verified: the scan reads columns the checks above guard.
-        // Before the plan/run split, because an unrecognised name is a read-only observation about the
-        // source and a dry run is the cheapest place to see it.
+        // After the structural verdict (the scan reads guarded columns) and before the plan/run split,
+        // so a dry run shows the unrecognised names too.
         foreach ($preflight->unknownSourceNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
             foreach ($counts as $name => $rows) {
                 $out('WARN '.SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
@@ -170,8 +155,8 @@ final class UpgradeRunner
                 $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $out);
             }
 
-            // Migrate the BLOBs only after the walk: FileUpgrade (first step) has populated `files`, so
-            // the move + the FK rewire's existing-row validation resolve. No later step touches file_bin.
+            // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row
+            // validation resolves, and no step touches file_bin.
             if ($walked && $migratesFiles) {
                 $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $out);
                 $fileBin->rewire($out);
@@ -190,9 +175,9 @@ final class UpgradeRunner
     }
 
     /**
-     * Establish the Classic-default surface for the migrated site. Insert-if-absent so a resume /
-     * re-run never clobbers a later operator switch (openpne:surface-mode). surface_mode has no
-     * OpenPNE 3 source column, so it is set here rather than copied by a step.
+     * Establishes the Classic-default surface for the migrated site; insert-if-absent, so a re-run
+     * never clobbers a later operator switch. surface_mode has no OpenPNE 3 source column, so it is
+     * stamped here rather than copied by a step.
      */
     private function stampSurfaceMode(Closure $out): void
     {
@@ -209,14 +194,10 @@ final class UpgradeRunner
     }
 
     /**
-     * Stamp this run's naming epoch, or refuse to resume state written under another one.
-     *
-     * A checkpoint is keyed by a step's class basename and records rows written into named target
-     * tables; after a rename, the old keys match no current step, so a resume would report every
-     * renamed step as pending and re-copy into the new tables alongside the old rows. Detected here
-     * rather than left to a runbook, because the failure is silent. Public alongside reset() so the
-     * guard is exercisable without a MySQL source. With $dryRun the check runs but never writes the
-     * marker — a plan stays read-only.
+     * Stamps this run's naming epoch, or refuses to resume state written under another one: after a
+     * rename the old checkpoint keys match no current step, so a resume would re-copy every renamed
+     * step alongside the old rows. Public so the guard is exercisable without a MySQL source; with
+     * $dryRun the check runs but never writes the marker.
      */
     public function claimNamingEpoch(?Closure $out = null, bool $dryRun = false): bool
     {
@@ -302,11 +283,10 @@ final class UpgradeRunner
     }
 
     /**
-     * Resets for --force-restart: clears the upgrade-owned target tables (verbatim ids would otherwise
-     * collide on re-insert) and the checkpoints. DELETE, not TRUNCATE — a FK-referenced table like
-     * `files` refuses TRUNCATE even with checks off (error 1701). file_bin is no step's target and
-     * holds the OpenPNE 3 BLOBs, so it is never cleared here — but its FK onto `files` is dropped first,
-     * so DELETEing `files` cannot cascade into those BLOBs; the re-run's rewire re-adds it.
+     * Clears the upgrade-owned target tables (verbatim ids would collide on re-insert) and the
+     * checkpoints; DELETE, because an FK-referenced table like `files` refuses TRUNCATE even with
+     * checks off (error 1701). The file_bin FK onto `files` is dropped first so the DELETE cannot
+     * cascade into the BLOBs, which no step owns; rewire re-adds it.
      */
     public function reset(?Closure $out = null): void
     {

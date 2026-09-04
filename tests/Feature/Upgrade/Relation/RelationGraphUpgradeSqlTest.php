@@ -14,12 +14,7 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
-/**
- * Runs the compiled member_relationship steps against the real OpenPNE 3 DDL, checking the
- * single source table decomposes into friendships / friend_requests / member_blocks by flag.
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
- */
+/** Runs the compiled member_relationship steps against the real OpenPNE 3 DDL; MySQL only. */
 class RelationGraphUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
@@ -93,11 +88,9 @@ class RelationGraphUpgradeSqlTest extends TestCase
 
     public function test_a_relationship_with_a_member_who_never_activated_is_dropped(): void
     {
-        // OpenPNE 3's member invite friends the inviter to the invitee at invite time
-        // (InviteForm::save), while the invitee is still an inactive pre-registration. That member is
-        // not migrated, so the friendship has no one to point at — on either end.
-        // (member_id_to, member_id_from) is unique, so each flag needs its own pair; one per
-        // decomposed table, and both directions, since the guard covers both ends.
+        // OpenPNE 3's invite (InviteForm::save) friends the inviter to an invitee who is still an
+        // inactive pre-registration; (member_id_to, member_id_from) is unique, so each flag and
+        // direction needs its own pair.
         $inviter = $this->activeMember();
         [$friend, $requested, $blocked] = array_map($this->inactiveSourceMember(...), [9001, 9002, 9003]);
 

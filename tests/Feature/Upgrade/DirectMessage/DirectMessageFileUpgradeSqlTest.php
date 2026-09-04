@@ -13,12 +13,8 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled `message_file` → `direct_message_files` INSERT...SELECT against the real OpenPNE 3 DDL,
- * after DirectMessageUpgrade has populated the parent messages. Checks the synthesized 1..N slot (OpenPNE 3
- * has no slot column) and that an attachment on a non-personal message type is dropped (those messages
- * are not migrated).
- *
- * MySQL only: the set-based copy, the source DDL and the correlated subqueries are MySQL features.
+ * Runs the compiled `message_file` step against the real OpenPNE 3 DDL after DirectMessageUpgrade has
+ * populated the parent messages; MySQL only.
  */
 class DirectMessageFileUpgradeSqlTest extends TestCase
 {

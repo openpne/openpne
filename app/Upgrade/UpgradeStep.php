@@ -3,13 +3,9 @@
 namespace App\Upgrade;
 
 /**
- * One feature's OpenPNE 3 → 4 mapping. The subclass is the SSoT: it names the
- * source/target tables, maps each target column, and records accepted gaps.
- *
- * Keeping the mapping in typed PHP (vs. external data) lets expressions reference
- * the runtime enums/models they must agree with — e.g. a visibility CASE built from
- * Visibility::Open->value cannot silently drift from the enum. InsertSelectCompiler
- * turns a step into the set-based SQL the tool runs.
+ * One OpenPNE 3 table's mapping onto one OpenPNE 4 table, compiled by InsertSelectCompiler into a
+ * single INSERT...SELECT. The mapping is typed PHP so an expression can read the runtime enum it
+ * must agree with (docs/internals/upgrade.md).
  */
 abstract class UpgradeStep
 {
@@ -53,10 +49,9 @@ abstract class UpgradeStep
     }
 
     /**
-     * Target columns whose source mapping is deferred, with the reason. Distinct from
-     * targetDefaults() (no source, rely on the schema default): these need a source but
-     * it is not resolved yet, so the step is not runnable. The audit accepts them as
-     * accounted-for, and InsertSelectCompiler refuses to compile while any remain.
+     * Target columns that need a source mapping the step does not have, with the reason; unlike
+     * targetDefaults() they cannot rely on the schema default. A step with any is not runnable: the
+     * compiler refuses it and the runner skips it.
      *
      * @return array<string, string> target column => reason
      */
@@ -85,14 +80,10 @@ abstract class UpgradeStep
     }
 
     /**
-     * FROM-row columns referencing `member`.`id` whose row the upgrade drops when that member is one
-     * MemberUpgrade skips (see ActiveMember). Declared per step rather than derived from the source
-     * FKs because dropping is only right where such a row can exist — a registration artifact
-     * (member_config, member_profile, member_image, member_relationship, community_member). A member
-     * reference on a content table cannot occur in stock OpenPNE 3 (an inactive account has no
-     * SNSMember credential, so it posts nothing) and dropping there would mean dropping the row's
-     * children too; SourcePreflight refuses to start on one instead. UpgradeMatrixAuditTest holds
-     * every source reference to one treatment or the other.
+     * FROM-row columns referencing `member.id` whose row the guard drops when that member is one the
+     * upgrade skips (ActiveMember). Declared only where stock OpenPNE 3 produces such a row (a
+     * registration artifact); a content table's inactive reference is refused by the preflight
+     * instead (docs/internals/upgrade.md).
      *
      * @return list<string>
      */
@@ -121,9 +112,8 @@ abstract class UpgradeStep
     }
 
     /**
-     * Optional raw SQL boolean scoping the target rows this step owns, for the verify row-count
-     * parity. null = the step owns the whole target table. Required once several steps write one
-     * table, or something outside the steps also writes rows into it.
+     * SQL boolean scoping the target rows this step owns, for the verify row count; null = the whole
+     * table. Required once another step or the runner also writes the table.
      */
     public function targetFilter(): ?string
     {

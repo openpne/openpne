@@ -12,13 +12,8 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * Runs the compiled member_config → member_preferences INSERT...SELECT against the real
- * OpenPNE 3 `member_config` DDL: the name→key and public_flag→Visibility CASEs, the
- * latest-row dedup for the KV table's missing (member_id, name) unique, and the restriction
- * to the registered PreferenceKey names.
- *
- * MySQL only, like the other upgrade SQL tests. A target member is created first so the
- * member_preferences.member_id FK resolves.
+ * Runs the compiled member_config → member_preferences step against the real OpenPNE 3 DDL; MySQL
+ * only, with a target member created first so the member_id FK resolves.
  */
 class MemberPreferenceUpgradeSqlTest extends TestCase
 {

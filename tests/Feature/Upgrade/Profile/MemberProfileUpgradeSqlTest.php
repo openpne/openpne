@@ -14,13 +14,9 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * Runs the compiled profile INSERT...SELECTs against the real OpenPNE 3 DDL, exercising the
- * nested-set flattening: single-value rows, checkbox children (root dropped, flag
- * inherited), custom-date composition, and the public_flag → Visibility mapping. Source
- * rows carry OpenPNE 3's public_flag; the target stores App\Support\Visibility values.
- *
- * MySQL only — the correlated/self subqueries (CONCAT_WS/LPAD/OFFSET) and source DDL are
- * MySQL features. Profiles/options are upgraded first so the member_profiles FKs resolve.
+ * Runs the compiled profile steps against the real OpenPNE 3 DDL, profiles and options first so the
+ * member_profiles FKs resolve; MySQL only. Source rows carry OpenPNE 3's public_flag and the target
+ * stores Visibility values.
  */
 class MemberProfileUpgradeSqlTest extends TestCase
 {
@@ -141,7 +137,7 @@ class MemberProfileUpgradeSqlTest extends TestCase
     public function test_custom_date_without_children_keeps_the_root_value(): void
     {
         // The shape OpenPNE 3.10 actually writes: the root holds the date and there are no
-        // year/month/day rows to compose from. Composing regardless discarded the date.
+        // year/month/day rows, so composing regardless would discard it.
         $this->seedProfile(11, 'joined_on', 'date');
         $this->seedMemberProfile(1100, 11, ['value' => '2019-04-01', 'public_flag' => 1, 'tree_key' => 1100, 'lft' => 1]);
 
@@ -168,8 +164,8 @@ class MemberProfileUpgradeSqlTest extends TestCase
 
     public function test_custom_date_keeps_a_year_below_100_as_written(): void
     {
-        // OpenPNE 3 accepts a year of 20 and renders it as 0020. Composing through MySQL's
-        // MAKEDATE() would read it as a two-digit year and move the date to 2020.
+        // OpenPNE 3 accepts a year of 20 and renders it as 0020, which MySQL's MAKEDATE() would read
+        // as two-digit and move to 2020.
         $this->seedProfile(14, 'custom_date5', 'date');
         $this->seedMemberProfile(1400, 14, ['value' => '', 'public_flag' => 1, 'tree_key' => 1400, 'lft' => 1]);
         $this->seedMemberProfile(1401, 14, ['value' => '20', 'tree_key' => 1400, 'lft' => 2]);

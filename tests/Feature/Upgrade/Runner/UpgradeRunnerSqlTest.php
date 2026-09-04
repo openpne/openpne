@@ -19,12 +19,10 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * Exercises the runner's orchestration end-to-end: a single member_relationship source decomposes
- * into three targets (the three relation steps), letting one fixture cover run order, checkpointing,
- * resume, dry-run, force-restart, and the not-runnable skip. Members are created directly by the
- * factory, so the steps' only source table is member_relationship.
- *
- * MigratesUpgradeTargetsOnce (not RefreshDatabase): creating the source table is DDL and auto-commits.
+ * One member_relationship fixture decomposing into the three relation steps, so run order,
+ * checkpointing, resume, dry run, force-restart and the not-runnable skip share it; members come
+ * from the factory, so the only source table is member_relationship. MigratesUpgradeTargetsOnce, not
+ * RefreshDatabase: creating the source table is DDL and auto-commits.
  */
 class UpgradeRunnerSqlTest extends TestCase
 {

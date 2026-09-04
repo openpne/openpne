@@ -11,12 +11,8 @@ use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
- * Runs the compiled `file` → `files` INSERT...SELECT against the real OpenPNE 3 DDL, checking the
- * metadata copy (id/name verbatim, filesize→byte_size) and the owner resolution: each owning table
- * sets the right morph alias + id, a non-personal message attachment and a file only an unmigrated
- * surface points at stay ownerless, and every `file` row migrates regardless so no binary is lost.
- *
- * MySQL only: the set-based copy, the source DDL and the correlated owner subqueries are MySQL features.
+ * Runs the compiled `file` step against the real OpenPNE 3 DDL, with every owning table the owner CASE
+ * reads created from the dump; MySQL only.
  */
 class FileUpgradeSqlTest extends TestCase
 {
@@ -38,8 +34,8 @@ class FileUpgradeSqlTest extends TestCase
         'message',
         'message_type',
         'banner_image',
-        // Not read by the owner CASE; seeded to show a file only an unowned surface points at stays
-        // ownerless (community.file_id / oauth_consumer.file_id behave the same — see the matrix audit).
+        // Not read by the owner CASE; seeded so a file only an unstepped table points at is shown to
+        // stay ownerless.
         'activity_image',
     ];
 

@@ -15,11 +15,8 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * The post-walk emoji pass: every mapped [i:N]/[e:N]/[s:N] code in a member-authored text column
- * becomes Unicode, unmapped and carrier-logo codes stay literal, and a codeless row is left alone.
- * Progress is an id cursor (unmapped codes never drain a predicate), so resuming from a persisted
- * cursor and restarting from 0 both converge without double-converting. MySQL only (REGEXP + utf8mb4
- * preflight), like the rest of the upgrade suite.
+ * The post-walk emoji pass; MySQL only (REGEXP and the utf8mb4 preflight). The resume tests pin that
+ * a persisted cursor and a restart from 0 both converge without double-converting.
  */
 class EmojiTransformTest extends TestCase
 {

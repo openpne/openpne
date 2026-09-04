@@ -33,7 +33,7 @@ class InsertSelectCompilerTest extends TestCase
 
     public function test_database_qualifies_the_table_separately(): void
     {
-        // `db`.`table`, not `db.table` — the different-database workflow.
+        // Database and table are separate quoted identifiers, not one dotted name.
         $sql = (new InsertSelectCompiler)->compile(
             new DiaryUpgrade,
             sourceDatabase: 'op3db',
@@ -73,8 +73,8 @@ class InsertSelectCompilerTest extends TestCase
 
     public function test_member_guard_is_the_whole_where_clause_when_the_step_has_no_filter(): void
     {
-        // MemberProfileUpgrade does have a filter; MemberPreferenceUpgrade's guard rides alongside
-        // one too. Use a bare step so the "guard only" composition is pinned on its own.
+        // MemberProfileUpgrade has a filter and MemberPreferenceUpgrade's guard rides alongside one,
+        // so a bare step pins the guard-only composition on its own.
         $step = new class extends UpgradeStep
         {
             protected string $source = 'member_profile';

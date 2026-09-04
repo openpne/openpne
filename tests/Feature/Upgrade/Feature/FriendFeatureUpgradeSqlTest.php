@@ -9,13 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/**
- * Runs the compiled `sns_config.enable_friend_link` → `sns_settings` copy against the real OpenPNE 3
- * DDL. Only the disabled row carries over, so both of OpenPNE 3's ways of saying "friends are on"
- * (an absent row, an explicit '1') stay absent in OpenPNE 4.
- *
- * MySQL only, like the other upgrade SQL tests.
- */
+/** Runs the compiled `sns_config.enable_friend_link` copy against the real OpenPNE 3 DDL; MySQL only. */
 class FriendFeatureUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;

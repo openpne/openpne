@@ -6,28 +6,9 @@ use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 
 /**
- * OpenPNE 3's `member.is_active`, which the upgrade reads as "is this a member at all".
- *
- * It is not an ordinary column: `opActivateBehavior` puts a `preDqlSelect` listener on the Member
- * model that appends `is_active = 1 OR is_active IS NULL` to every DQL SELECT, so an inactive row
- * is absent from every listing, search, and member page in OpenPNE 3 — and `isSNSMember()` is that
- * same flag, so the account cannot use the site either. The row is a registration that never
- * completed: `MemberTable::createPre()` writes it when someone requests a signup link or an admin
- * sends an invite, and `opAuthAdapter::activate()` flips it only on the final step.
- *
- * OpenPNE 4 has no such state — `CompleteRegistration` creates the member row at completion and
- * holds the pending signup in `registration_tokens` — so `members` means "a real member", full
- * stop. Carrying an inactive row over would not just add a ghost to the member list: the OpenPNE 3
- * form saves the nickname, password, and address one request *before* activation, so an abandoned
- * signup arrives with working credentials and OpenPNE 4 (which gates login on the password and
- * `is_login_rejected` alone) would let it in. The upgrade therefore skips those rows, and no target
- * row may point at one.
- *
- * The predicate is the listener's condition verbatim, NULL included: the column is NOT NULL in the
- * 3.6+ DDL the upgrade targets, but OpenPNE 3 itself reads a NULL as active and a source restored
- * from an older schema should be read the same way.
- *
- * `references()` is the ledger of what that costs each source reference; see its docblock.
+ * OpenPNE 3 `member.is_active` read as "is this a member at all": an inactive row is a registration
+ * that never completed, and the upgrade neither carries it nor lets a target row point at it
+ * (docs/internals/upgrade.md, "Members who never activated").
  */
 final class ActiveMember
 {
@@ -44,9 +25,9 @@ final class ActiveMember
     }
 
     /**
-     * SQL boolean: `$table`.`$column` does not point at a skipped member. A NULL reference passes —
-     * it names no one, and the OpenPNE 3 columns that allow it are the ON DELETE SET NULL ones whose
-     * OpenPNE 4 counterpart is likewise nullable ("the member is gone").
+     * SQL boolean: `$table.$column` is NULL or names a member the upgrade carries. A NULL reference
+     * passes: the OpenPNE 3 columns that allow it are ON DELETE SET NULL, and their OpenPNE 4
+     * counterparts are nullable too.
      */
     public static function referenceGuard(string $table, string $column): string
     {
@@ -62,27 +43,10 @@ final class ActiveMember
     }
 
     /**
-     * Every OpenPNE 3 `table.column` that is a foreign key onto `member`(id), and what the upgrade
-     * owes it. This ledger holds the two treatments a step cannot express on its own; the third,
-     * dropping the row, is declared by the step itself (UpgradeStep::memberRefs()) so the guard sits
-     * next to the mapping it applies to. UpgradeMatrixAuditTest checks the three sets are disjoint
-     * and together cover the fixture's member FKs exactly, so neither a new step nor a new source
-     * table can leave a reference unhandled.
-     *
-     * REFUSE is for the content tables. An inactive account holds no SNSMember credential, so in
-     * stock OpenPNE 3 it cannot write a diary, a topic, an event, or a message — a row here breaks an
-     * assumption rather than exercising a case, and dropping it would mean dropping its comments and
-     * attachments too, silently, on a customised source no test covers. The preflight counts them
-     * before the first write and names what it found instead.
-     *
-     * `scope` narrows the count to the rows that actually reach a target member column, and replaces
-     * (not extends) the FROM step's own filter — so it must describe the complete set. It is needed
-     * wherever the rows the upgrade reads are not simply "the FROM step's rows": a member reference
-     * resolved by correlated subquery has its own predicate, and counting the rest would abort on data
-     * the upgrade never looks at. Where that predicate picks one row out of several, the scope calls
-     * the step's own selector rather than restating it, so the two cannot disagree about which row
-     * counts. `scopeColumns` are the outer columns a scope reads beyond the reference itself, so the
-     * structural check can require them (nothing else attributes them to a table).
+     * Every OpenPNE 3 FK onto `member.id` that no step drops through memberRefs(), with its treatment
+     * (docs/internals/upgrade.md, "Members who never activated"). A REFUSE `scope` replaces the FROM
+     * step's filter and must describe every row whose member id reaches a target column;
+     * `scopeColumns` are the extra columns it reads.
      *
      * @return array<string, array{treatment: string, scope?: string, scopeColumns?: list<string>, reason?: string}>
      */
@@ -99,10 +63,8 @@ final class ActiveMember
             'community_event_member.member_id' => ['treatment' => self::REFUSE],
             // DirectMessageUpgrade's own filter scopes this to the personal-message type it migrates.
             'message.member_id' => ['treatment' => self::REFUSE],
-            // Both paths out of this table at once — every receipt of a sent message, and the one
-            // send-list row folded onto a draft's draft_recipient_id — since either can put the id in
-            // a target column. The FROM step's filter would see only the sent half; counting every
-            // row of a draft would refuse over the duplicates DirectMessageUpgrade itself discards.
+            // Scoped to both paths out of this table (every receipt of a sent message, and the one
+            // send-list row folded onto a draft), not the FROM step's sent-only filter.
             'message_send_list.member_id' => ['treatment' => self::REFUSE,
                 'scope' => self::migratedSendListRow(), 'scopeColumns' => ['id', 'message_id']],
             // Only the latest admin_confirm row per community becomes pending_admin_member_id; the
@@ -127,14 +89,10 @@ final class ActiveMember
     }
 
     /**
-     * The send-list rows of a migrated personal message whose member id reaches a target column: every
-     * row of a sent one (DirectMessageRecipientUpgrade writes a receipt per row), and only the selected row
-     * of a draft (DirectMessageUpgrade folds one onto draft_recipient_id and drops the rest).
-     *
-     * Both `is_send` values are tested, not one inferred from the other: the column is a bare
-     * tinyint(1) with no CHECK, and the two steps read `= 1` and `= 0`, so a third value reaches
-     * neither target column. This is a preflight, which exists to diagnose sources that are already
-     * strange — inferring the range here would refuse a migration over a row it then ignores.
+     * Send-list rows whose member id reaches a target column: every row of a sent personal message,
+     * and the selected row of a draft. Both `is_send` values are tested, not one inferred from the
+     * other: the column is a bare tinyint with no CHECK, so a third value reaches neither target
+     * column.
      */
     private static function migratedSendListRow(): string
     {

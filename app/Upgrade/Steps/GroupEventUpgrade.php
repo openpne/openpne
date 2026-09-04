@@ -6,15 +6,10 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `community_event` (opCommunityTopicPlugin) → OpenPNE 4 `group_events`.
- *
- * id is preserved because community_event_comment, community_event_member and community_event_image
- * reference community_event.id; keeping it lets the comment / RSVP / image upgrades rewire
- * by id. member_id stays nullable: a withdrawn author is NULL in OpenPNE 3 (onDelete set null) and the
- * event is kept. name/body/open_date_comment/area are TEXT → TEXT, so long content round-trips
- * untruncated. open_date / application_deadline / capacity carry the scheduling data verbatim, and
- * updated_at is the board sort key (the event board orders by it, not by open_date). event_updated_at
- * is the OpenPNE 3 latest-events activity timestamp, carried for fidelity.
+ * OpenPNE 3 `community_event` (opCommunityTopicPlugin) → OpenPNE 4 `group_events`, ids, scheduling
+ * data and timestamps verbatim. member_id stays nullable (OpenPNE 3 sets it NULL when the author
+ * withdraws); updated_at is the board sort key, and event_updated_at is OpenPNE 3's latest-events
+ * activity timestamp.
  */
 class GroupEventUpgrade extends UpgradeStep
 {
@@ -41,12 +36,10 @@ class GroupEventUpgrade extends UpgradeStep
         ];
     }
 
-    /** OpenPNE 3 community events carry no rich-text decoration; the body stays plain (schema default). */
     /**
-     * `link_card_id` / `link_card_synced_at` are left at their schema default (null) rather than
-     * mapped: OpenPNE 3 has no equivalent, and a null `link_card_synced_at` is exactly the "never
-     * examined" state the read path looks for — so migrated records pick up cards on first view, if
-     * the operator has the feature on at all.
+     * format stays at its plain default: OpenPNE 3 community events carry no rich-text decoration.
+     * link_card_id / link_card_synced_at stay null: OpenPNE 3 has no equivalent, and a null
+     * link_card_synced_at is the "never examined" state the read path fetches a card for.
      */
     public function targetDefaults(): array
     {
