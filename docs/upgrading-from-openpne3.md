@@ -198,17 +198,14 @@ change from a problem when you go through it.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`.
-- **Site settings** — `sns_config` values are carried over, except those whose feature is gone or
-  replaced and which therefore have no counterpart: `enable_pc` / `enable_mobile` / the
-  `op_auth_*_plugin_enable_pc` flags (one responsive surface), `enable_cmd` / `enable_language`
-  (always on), `is_check_mobile_ip` / `retrieve_uid` (no feature-phone frontend), `enable_openid` /
-  `enable_connection` / `enable_jsonapi` / `external_pc_login_url` / `google_maps_api_key` (OpenID,
-  external connections, the legacy JSON API, the external login page and the Google Maps module are
-  not ported), `daily_news_day`, `ignored_sns_config`,
-  `nickname_of_member_who_does_not_have_credentials` (a withdrawn member is deleted, not shown under a
-  placeholder name), `richtextarea_*` (the rich-text editor is frozen), `Theme_used` (Classic ships one
-  skin plus custom CSS) and `op_timeline_plugin_timeline_comment_reply` (the composer resolves a
-  mention instead).
+- **Site settings** — an `sns_config` value is copied only where this version has a matching
+  setting, and **the security settings are never copied**: CAPTCHA starts on and registration starts
+  invite-only whatever the OpenPNE 3 site had, so set them yourself before the cutover
+  (*Settings → Authentication*). The dry-run report lists what the settings step copies. Values with no
+  counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
+  feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
+  JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen)
+  and `Theme_used` (Classic ships one skin plus custom CSS).
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how
