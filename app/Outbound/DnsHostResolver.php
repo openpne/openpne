@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\Outbound;
 
 /**
- * Resolves through the DNS, deliberately not through the system resolver.
- *
- * This answer is not what libcurl would look up on its own — /etc/hosts and NSS modules are not
- * consulted here. That divergence is harmless because the connection is pinned to an address from
- * this answer (SafeHttpFetcher), so the validated address is the one actually dialled. A name that
- * resolves only through a local hosts file therefore fails rather than being reached unvalidated.
+ * Queries the DNS directly, so `/etc/hosts` and NSS modules are not consulted. That divergence from
+ * libcurl's own lookup is harmless because the connection is pinned to an address from this answer;
+ * a name that resolves only through a hosts file fails rather than being dialled unvalidated.
  */
 final class DnsHostResolver implements HostResolver
 {

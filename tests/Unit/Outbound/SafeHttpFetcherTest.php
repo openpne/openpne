@@ -102,8 +102,8 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_a_redirect_to_a_private_address_is_refused(): void
     {
-        // The first hop is impeccable; the second is where the attack lives. Validating only the
-        // URL the member pasted would follow this straight to localhost.
+        // The first hop is impeccable and the second is where the attack lives; validating only the
+        // pasted URL would follow this straight to localhost.
         $this->resolves('example.com', ['93.184.216.34']);
         $this->resolves('internal.example.com', ['127.0.0.1']);
         $this->respondsWith(new Response(302, ['Location' => 'https://internal.example.com/']));
@@ -248,8 +248,8 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_a_url_the_uri_parser_refuses_is_blocked_before_it_is_resolved(): void
     {
-        // parse_url() accepts this host; Guzzle's URI parser does not. The refusal is a policy answer
-        // (nothing about it changes on retry), and it comes before the resolver sees the host.
+        // `parse_url()` accepts this host and Guzzle's URI parser does not, so the refusal is a policy
+        // answer that comes before the resolver sees the host.
         $this->resolves('ex%zz.example', ['93.184.216.34']);
 
         try {
@@ -323,8 +323,8 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_it_refuses_a_response_that_arrived_from_an_unvalidated_address(): void
     {
-        // Belt and braces for the pin itself: if CURLOPT_CONNECT_TO ever fails to match, the request
-        // still succeeds — against whatever DNS chose. Reading the peer address back catches that.
+        // If `CURLOPT_CONNECT_TO` ever fails to match, the request still succeeds against whatever
+        // DNS chose, and reading the peer address back is what catches it.
         $this->resolves('example.com', ['93.184.216.34']);
         $this->respondsWith(new Response(200, [], 'ok'), connectedTo: '10.0.0.5');
 
@@ -336,9 +336,8 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_it_refuses_a_response_when_the_transport_reports_no_peer_address(): void
     {
-        // "The transport did not say where it connected" is the same evidential position as a bad
-        // address: a handler that reports nothing is precisely one that may not have honoured the
-        // pin. Accepting it would make the verification vanish exactly where it is needed.
+        // A transport that did not say where it connected is in the same evidential position as a
+        // bad address, so accepting it would make the verification vanish exactly where it is needed.
         $this->resolves('example.com', ['93.184.216.34']);
         $this->respondsWith(new Response(200, [], 'ok'), connectedTo: self::NO_PEER_REPORTED);
 
@@ -358,9 +357,9 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_a_capped_body_keeps_the_real_status_and_content_type(): void
     {
-        // The transfer aborts before Guzzle returns a response, but the response it had already
-        // built rides along on the exception. Synthesising a 200 instead would tell the caller a
-        // truncated 404 error page was the resource they asked for.
+        // The transfer aborts before Guzzle returns a response, but the response it had already built
+        // rides along on the exception; synthesising a 200 would tell the caller a truncated 404 page
+        // was the resource.
         $this->resolves('example.com', ['93.184.216.34']);
         $this->queueWriteAbort(new Response(404, ['Content-Type' => 'image/png'], 'PNGDATA-and-more'));
 
@@ -387,12 +386,9 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_a_failed_request_reports_the_url_without_its_query(): void
     {
-        // A pasted URL carries its secrets in the query — a signed link, a one-time token — and an
-        // exception from a queued job reaches the log verbatim.
-        //
-        // The Guzzle message below is shaped like Guzzle 7's, which appended the request URI, query
-        // and all, to the cURL error text. Guzzle 8 redacts it, but the wording is upstream's to
-        // change, so the underlying message is not repeated at all rather than trusted.
+        // The Guzzle message below is shaped like Guzzle 7's, which appended the request URI to the
+        // cURL error text; Guzzle 8 redacts it, but the wording is upstream's to change, so the
+        // underlying message is not repeated at all.
         $url = 'https://example.com/doc?token=s3cr3t-value';
         $this->resolves('example.com', ['93.184.216.34']);
         $this->failsWith(new ConnectException(
@@ -415,9 +411,9 @@ class SafeHttpFetcherTest extends TestCase
 
     public function test_a_transfer_that_fails_after_the_response_headers_is_still_a_failure(): void
     {
-        // A response-aware failure — the body cut off by a reset, say — arrives as a ResponseException
-        // like a capped transfer does. Only the sink's own cut is recovered; this one is a failure,
-        // reported with the same diagnostics as a failure before any response.
+        // A response-aware failure (the body cut off by a reset) arrives as a `ResponseException`
+        // like a capped transfer does, and only the sink's own cut is recovered; this one stays a
+        // failure.
         $url = 'https://example.com/doc?token=s3cr3t-value';
         $this->resolves('example.com', ['93.184.216.34']);
         $this->failsWith(new ResponseTransferException(
@@ -464,13 +460,15 @@ class SafeHttpFetcherTest extends TestCase
         $this->fetcher()->get('https://example.com/page', 1024, microtime(true) - 1);
     }
 
+    /**
+     * On a host that burns the whole window before the check, the older already-past guard fires
+     * and this proves nothing without failing.
+     */
     public function test_it_gives_up_when_less_than_a_millisecond_of_the_deadline_is_left(): void
     {
         // Guzzle rejects a timeout in (0, 0.001) seconds as invalid rather than treating it as none,
-        // so the remainder is reported as the time having run out before it reaches the transport.
-        // The fake transport has no such validation: if the guard let this through, the fetch would
-        // succeed. (On a machine slow enough to burn the whole window before the check, the older
-        // "already past" guard fires instead — the test then proves nothing, but does not fail.)
+        // and the fake transport has no such validation, so if the guard let this through the fetch
+        // would succeed.
         $this->resolves('example.com', ['93.184.216.34']);
         $this->respondsWith(new Response(200, [], 'ok'));
 
@@ -486,10 +484,9 @@ class SafeHttpFetcherTest extends TestCase
     }
 
     /**
-     * @param  string|null  $connectedTo  The peer address the transport will report. Null keeps the
-     *                                    default, which is the address the pin named — i.e. the pin
-     *                                    worked. Pass NO_PEER_REPORTED to model a transport that
-     *                                    says nothing.
+     * @param  string|null  $connectedTo  the peer address the transport will report; null keeps the
+     *                                    default (the address the pin named), and NO_PEER_REPORTED
+     *                                    models a transport that says nothing
      */
     private function respondsWith(Response $response, ?string $connectedTo = null): void
     {
@@ -508,10 +505,8 @@ class SafeHttpFetcherTest extends TestCase
     }
 
     /**
-     * Queue a transport failure.
-     *
-     * @param  int|null  $errno  The curl errno libcurl reported. Guzzle hands it to on_stats as the
-     *                           handler error data before rejecting, which is where the fetcher reads it.
+     * @param  int|null  $errno  the curl errno; Guzzle hands it to on_stats as the handler error
+     *                           data before rejecting, which is where the fetcher reads it
      */
     private function failsWith(GuzzleException $failure, ?int $errno = null): void
     {
@@ -545,10 +540,10 @@ class SafeHttpFetcherTest extends TestCase
             }
 
             if (isset($options['on_stats'])) {
-                // Stand in for what libcurl reports. The default models the pin working: the peer is
-                // the address CURLOPT_CONNECT_TO named. Defaulting to "no address reported" instead
-                // would quietly make every success case exercise the unverified path. An aborted
-                // write reports CURLE_WRITE_ERROR (23) as the handler error data, as libcurl does.
+                // Stands in for what libcurl reports: the default models the pin working (the peer is
+                // the pinned address), since defaulting to no address would send every success case
+                // down the unverified path; an aborted write reports `CURLE_WRITE_ERROR` as libcurl
+                // does.
                 $stats = match ($connectedTo) {
                     null => ['primary_ip' => $this->pinnedAddress($options)],
                     self::NO_PEER_REPORTED => [],

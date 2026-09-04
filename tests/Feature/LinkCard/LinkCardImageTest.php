@@ -22,10 +22,9 @@ use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
 /**
- * The image import runs against the real SafeHttpFetcher and the real FileUploader; only the socket
- * and the resolver are fake. What is asserted here is mostly *order*, because the ordering is the
- * security property: a decoder allocates width × height × 4 bytes, so an oversized image has to be
- * refused from its header before anything decodes it.
+ * The import runs against the real SafeHttpFetcher and FileUploader with only the socket and the
+ * resolver fake, and what is asserted is mostly order: the size checks must run before anything
+ * decodes.
  */
 class LinkCardImageTest extends TestCase
 {
@@ -50,11 +49,6 @@ class LinkCardImageTest extends TestCase
 
     public function test_a_card_image_is_not_stored_as_a_public_asset(): void
     {
-        // Marking these public would serve them from the login-free route to anyone holding the
-        // token, and a link card attaches to friends-only diaries and private messages as readily as
-        // to open ones. The source URL is no evidence to the contrary: normalisation keeps the query,
-        // so the image behind a signed or expiring link is copied too, and a permanent public copy
-        // outlives both that expiry and the body's own visibility rule.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->png(10, 10), 'image/png');
@@ -71,9 +65,8 @@ class LinkCardImageTest extends TestCase
 
     public function test_an_oversized_image_is_refused_before_it_is_decoded(): void
     {
-        // The contract that matters. A PNG header can claim 40000x40000 in a handful of bytes; if the
-        // size check ran after decoding, that claim would already have cost 6.4GB of allocation. The
-        // assertion is that no decode happened at all, not merely that the result was null.
+        // A PNG header can claim 40000x40000 in a handful of bytes, so the assertion is that no
+        // decode happened at all, not merely that the result was null.
         config()->set('openpne.images.max_upload_dimension', 100);
 
         $card = $this->card();
@@ -120,9 +113,6 @@ class LinkCardImageTest extends TestCase
 
     public function test_an_animated_image_never_reaches_the_decoder(): void
     {
-        // Frame count is bounded by neither the wire size nor the dimensions, and Intervention
-        // decodes animations by default — so a few-kilobyte GIF can hold hundreds of full-size
-        // allocations. A card shows one still picture, so these are refused from the header.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->animatedGif(), 'image/gif');
@@ -137,7 +127,7 @@ class LinkCardImageTest extends TestCase
     public function test_an_animation_without_a_loop_extension_never_reaches_the_decoder(): void
     {
         // The shape a marker search misses: two frames, no NETSCAPE extension, and a colour-table
-        // byte that shifts the pattern a naive scan keys on. A decoder expands both frames.
+        // byte that shifts the pattern a naive scan keys on.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->animatedGif(loopExtension: false), 'image/gif');
@@ -163,9 +153,9 @@ class LinkCardImageTest extends TestCase
 
     public function test_an_animation_hidden_behind_the_parser_budget_never_reaches_the_decoder(): void
     {
-        // ~20 KB, well inside the read cap, and structurally valid: two frames separated by enough
-        // legal comment blocks to exhaust the container walk's budget. If running out of budget were
-        // treated as "still", the walk's own limit would become the fixed window it exists to avoid.
+        // About 20 KB, well inside the read cap, and structurally valid: two frames separated by
+        // enough legal comment blocks to exhaust the container walk's budget, which must not be
+        // treated as still.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->paddedAnimatedGif(), 'image/gif');
@@ -189,8 +179,8 @@ class LinkCardImageTest extends TestCase
 
     public function test_a_header_only_forgery_is_refused(): void
     {
-        // Passes finfo and getimagesizefromstring — there is simply nothing behind the header. Storing
-        // it would give the card a picture that never renders.
+        // Passes finfo and getimagesizefromstring with nothing behind the header, so storing it would
+        // give the card a picture that never renders.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->pngHeaderClaiming(10, 10), 'image/png');
@@ -201,8 +191,8 @@ class LinkCardImageTest extends TestCase
 
     public function test_metadata_is_stripped_exactly_once(): void
     {
-        // One strip in the pipeline, inside FileUploader. Handing raw bytes around and stripping here
-        // as well would re-encode twice and put a second, divergent copy of the rule in this class.
+        // One strip in the pipeline, inside FileUploader: stripping here as well would re-encode
+        // twice and put a second copy of the rule in this class.
         $stripper = new class extends ImageMetadataStripper
         {
             public int $calls = 0;
@@ -226,8 +216,8 @@ class LinkCardImageTest extends TestCase
 
     public function test_the_declared_content_type_is_not_believed(): void
     {
-        // Content-Type is the far end's claim; finfo reads the actual signature. A script served as
-        // image/png must not become a stored image.
+        // Content-Type is the far end's claim; a script served as image/png must not become a stored
+        // image.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary('<?php echo "not a png";', 'image/png');
@@ -310,12 +300,10 @@ class LinkCardImageTest extends TestCase
     }
 
     /**
-     * An uploader that notes where the bytes it is handed are sitting, and optionally throws there.
-     *
-     * The staged file is gone by the time the assertions run — cleaning it up is what is under test —
-     * so the only moment its path can be seen is as it is passed on. Throwing is how the second path
-     * through `store()` is reached at all: every refusal `import()` makes is decided above `store()`,
-     * so a body that is not an image never stages anything and can say nothing about cleaning up.
+     * The staged file is gone by the time the assertions run, so the only moment its path can be
+     * seen is as it is passed on. Throwing is how the second path through `store()` is reached at
+     * all: every refusal `import()` makes is decided above `store()`, so a body that is not an image
+     * never stages anything.
      *
      * @param  list<string>  $staged
      */
@@ -347,20 +335,16 @@ class LinkCardImageTest extends TestCase
     }
 
     /**
-     * A staging directory this test alone writes to, removed when it ends.
-     *
-     * The importer stages under the system temp directory by default, which every ParaTest worker
-     * shares, and a staged name says nothing about which process wrote it. Watching that directory
-     * watches the other workers' imports too — one of them finishing mid-window moves the count
-     * without this test doing anything, which is the failure this test used to have.
+     * A staging directory this test alone writes to, removed when it ends. The default is the system
+     * temp directory every ParaTest worker shares, and a staged name says nothing about which
+     * process wrote it, so watching that directory counts other workers' in-flight imports too.
      */
     private function stagingDirectory(): string
     {
         $dir = sys_get_temp_dir().'/linkcard-staging-'.getmypid().'-'.bin2hex(random_bytes(6));
-        // Said by the test rather than left to the framework: tempnam falls back to the shared
-        // directory when the one it is given is missing, and scandir on a missing directory answers
-        // with the empty list this test reads as success. Today an E_NOTICE-to-exception conversion
-        // catches that; this does not depend on it staying.
+        // Asserted rather than left to the framework: `tempnam` falls back to the shared directory
+        // when the one it is given is missing, and `scandir` on a missing directory answers with the
+        // empty list this test reads as success.
         $this->assertTrue(mkdir($dir, 0o700), 'Could not create the staging directory.');
         $this->beforeApplicationDestroyed(function () use ($dir) {
             array_map(fn (string $name) => @unlink($dir.'/'.$name), $this->stagedFiles($dir));

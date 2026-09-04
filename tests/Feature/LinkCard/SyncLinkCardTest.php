@@ -146,10 +146,9 @@ class SyncLinkCardTest extends TestCase
 
     public function test_it_does_not_attach_a_card_to_a_body_that_changed_underneath_it(): void
     {
-        // The job reads the body at the start and writes the result at the end. An edit in between
-        // clears the marker so the new text gets examined — but an unconditional write would attach
-        // the OLD body's card to the NEW text and mark it synced. Worse, ShouldBeUnique can still be
-        // holding the lock, so the edit's own job is dropped and it stays that way.
+        // An edit between the job's read and write clears the marker, but an unconditional write
+        // would attach the old body's card to the new text, and `ShouldBeUnique` may still hold the
+        // lock so the edit's own job is dropped.
         Queue::fake();
         $diary = $this->diary('Original https://example.com/original');
 
@@ -178,9 +177,8 @@ class SyncLinkCardTest extends TestCase
 
     public function test_syncing_does_not_bump_the_record_timestamp(): void
     {
-        // Group topic and event lists order by updated_at, so a card synced from someone opening
-        // an old post would float it back to the top of the board. saveQuietly does not help: it
-        // suppresses events but still goes through performUpdate, which touches the timestamp.
+        // Group topic and event lists order by `updated_at`, so a synced card would float an old post
+        // back to the top; `saveQuietly` still goes through `performUpdate`, which touches the timestamp.
         Queue::fake();
         $diary = $this->diary('https://example.com/a');
         $before = $diary->updated_at;

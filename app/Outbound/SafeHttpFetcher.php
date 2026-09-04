@@ -16,37 +16,11 @@ use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
 
 /**
- * The one place this app fetches a URL a member supplied. Everything outbound goes through here.
- *
- * The threat is SSRF: a member pastes a URL, the server dereferences it, and the response (or merely
- * the attempt) reaches somewhere only the server can go — a metadata endpoint, an admin port on
- * localhost, a neighbour in the private network. Validating the URL string is not enough, because
- * DNS decides where the connection lands and can answer differently between the check and the dial,
- * and because a redirect is a second URL nobody validated.
- *
- * So the contract is:
- *
- *   - every URL is validated, resolved, and had all of its addresses proven globally routable
- *     (PublicIpGuard) before a socket is opened;
- *   - the connection is PINNED to one of those addresses with CURLOPT_CONNECT_TO, so the address
- *     validated is the address dialled — a second DNS answer cannot redirect it;
- *   - redirects are not followed by libcurl. Each Location re-enters validation from the top, with
- *     its own resolution and its own pin;
- *   - no proxy, ever. A proxy resolves the destination itself, which is exactly the step the pin
- *     exists to control, so the `proxy` option is fixed to '' — Guzzle's final decision, which its
- *     curl handler pins as CURLOPT_PROXY itself, with no fallback to the environment variables
- *     libcurl would otherwise honour.
- *
- * The pin only works with the curl handler: with Guzzle's PHP stream fallback every CURLOPT_* is
- * ignored and requests would go wherever the system resolver points. The client is therefore built
- * on an explicit CurlHandler (OutboundServiceProvider) and composer.json requires ext-curl, so an
- * install without it fails loudly instead of running with the guard silently disarmed. The pin is
- * also the only raw curl option this class sends: Guzzle 8 refuses the proxy, redirect, sink and
- * timeout options in that array (and the netrc and redirect-auth options this class used to set
- * there), so those are set through their first-class options and cannot be undone from it.
- *
- * Requests carry no cookies, no credentials and no Referer, and TLS verification is not
- * configurable off. See docs/internals/outbound-http.md.
+ * The one place this app fetches a member-supplied URL: every hop is validated, every resolved
+ * address proven global, and the connection pinned to one of them with `CURLOPT_CONNECT_TO`, so
+ * redirects re-enter validation instead of being followed by libcurl. No proxy, cookies,
+ * credentials or Referer, and TLS verification is not configurable off; see
+ * docs/internals/outbound-http.md.
  */
 final class SafeHttpFetcher
 {
@@ -104,16 +78,10 @@ final class SafeHttpFetcher
     }
 
     /**
-     * Describe a transport failure without quoting the underlying exception.
-     *
-     * Guzzle 8 redacts the request URI in its own messages, but this class does not lean on that:
-     * the wording is upstream's to change (Guzzle 7 appended the URI, query string and all), and a
-     * logged exception prints its whole chain. So the message is never repeated and the previous
-     * exception is dropped.
-     *
-     * What survives is the part that is diagnostic without being sensitive: the exception class and
-     * the curl errno the transfer reported through on_stats — enough to tell a DNS failure from a
-     * TLS one.
+     * The underlying message is never repeated and the previous exception is dropped: Guzzle 8
+     * redacts the request URI but the wording is upstream's to change (Guzzle 7 appended it), and a
+     * logged exception prints its whole chain. What survives is the exception class and the curl
+     * errno, enough to tell a DNS failure from a TLS one.
      */
     private static function transportFailure(ValidatedUrl $target, GuzzleException $e, ?int $errno): OutboundException
     {
@@ -186,18 +154,15 @@ final class SafeHttpFetcher
 
         $host = $this->canonicalHost($parts['host']);
 
-        // The URL is rewritten to carry the canonical host, because CURLOPT_CONNECT_TO matches on the
-        // host as it appears in the request URL. Leave a Unicode or trailing-dot host in place and the
-        // pin quietly fails to match, dropping the request back to whatever the system resolver says
-        // — the guard would still have run, but on an address nobody dialled.
-        // An IPv6 literal goes back in bracketed; the bare form is not a valid URI host.
-        //
-        // Built before the host is resolved, so a URL the URI parser refuses is refused here as
-        // malformed rather than handed to the resolver. The constructor wraps its refusal in
-        // MalformedUriException; withHost() throws the bare InvalidArgumentException it extends.
+        // Rewritten to carry the canonical host (an IPv6 literal bracketed): `CURLOPT_CONNECT_TO`
+        // matches on the host as the request URL spells it, and a mismatch silently drops the
+        // request back to the system resolver.
         try {
             $uri = (new Uri($url))->withHost(str_contains($host, ':') ? "[{$host}]" : $host);
         } catch (\InvalidArgumentException) {
+            // Caught as the bare `InvalidArgumentException` (`withHost()` throws that, not
+            // `MalformedUriException`) so a URL the parser refuses is reported malformed before the
+            // resolver sees it.
             throw OutboundException::blocked('Malformed URL: ['.self::describe($url).'].');
         }
 
@@ -303,9 +268,8 @@ final class SafeHttpFetcher
                 RequestOptions::HTTP_ERRORS => false,
                 RequestOptions::COOKIES => false,
                 RequestOptions::VERIFY => true,
-                // Final: Guzzle pins CURLOPT_PROXY to '' itself, so libcurl never reads
-                // http_proxy/HTTPS_PROXY/ALL_PROXY. A proxy resolves the destination itself, which
-                // would silently undo the pin.
+                // Final: Guzzle pins `CURLOPT_PROXY` to '' itself, so libcurl never reads the proxy
+                // environment variables that would let a proxy resolve the destination and undo the pin.
                 RequestOptions::PROXY => '',
                 RequestOptions::SINK => $sink,
                 RequestOptions::CONNECT_TIMEOUT => min($this->connectTimeout, $remaining),
@@ -322,17 +286,16 @@ final class SafeHttpFetcher
                     'Accept' => 'text/html,application/xhtml+xml,application/json;q=0.9,image/*;q=0.8,*/*;q=0.5',
                 ],
                 // The pin, and nothing else: Guzzle 8's curl handler refuses the proxy, redirect,
-                // sink and timeout options from this array (and the netrc and redirect-auth options
-                // once set here), so they are the first-class options above and cannot be undone here.
+                // sink and timeout options from this array, so those are first-class options above
+                // and cannot be undone here.
                 'curl' => [
                     CURLOPT_CONNECT_TO => [$target->connectTo()],
                 ],
             ]);
         } catch (ResponseException $e) {
-            // A capped body aborts the transfer (CappedStream), which surfaces here as a write error
-            // carrying the response Guzzle had already built. The bytes already collected are the
-            // ones worth having, so that is not a failure — and the real status and Content-Type
-            // survive rather than being replaced by a synthetic 200 the caller would misread.
+            // A capped body aborts the transfer, which surfaces as a write error carrying the
+            // response Guzzle had already built; the collected prefix is kept with its real status
+            // and Content-Type rather than a synthetic 200.
             if ($sink->wasCapped()) {
                 $this->assertConnectedAsPinned($target, $connected);
                 $sink->rewind();
@@ -351,16 +314,10 @@ final class SafeHttpFetcher
     }
 
     /**
-     * Confirm the socket actually landed on a validated address.
-     *
-     * The pin is a libcurl feature reached through two layers of configuration, and its failure mode
-     * is silence: a mismatched CURLOPT_CONNECT_TO entry, or a handler that ignores curl options
-     * altogether, leaves the request working perfectly while going wherever DNS says. Reading back
-     * the peer address turns that from an invisible hole into a failed fetch.
-     *
-     * An unknown peer address is refused rather than waved through. "The transport did not tell us
-     * where it connected" is the same evidential position as a bad address — a handler that reports
-     * nothing is precisely one that may not have honoured the pin either.
+     * The pin's failure mode is silence: a mismatched `CURLOPT_CONNECT_TO` entry or a handler that
+     * ignores curl options leaves the request working while going wherever DNS says, so the peer
+     * address is read back. A transport that reports no peer is refused too: it is in the same
+     * evidential position as a wrong address.
      *
      * @throws OutboundException
      */
@@ -376,11 +333,9 @@ final class SafeHttpFetcher
     }
 
     /**
-     * The absolute URL of the redirect this response asks for, or null when it is not a redirect.
-     *
-     * A relative Location is resolved against the URL that produced it, per RFC 7231. The result is
-     * only a candidate: the caller feeds it back through validate(), so a redirect to a private
-     * address is refused exactly as a pasted one would be.
+     * The absolute URL of the redirect this response asks for, or null when it is not one; a
+     * relative Location is resolved against the URL that issued it (RFC 7231). The result is a
+     * candidate only: the caller feeds it back through validate().
      */
     private function redirectTarget(ResponseInterface $response, ValidatedUrl $from): ?string
     {
@@ -397,10 +352,9 @@ final class SafeHttpFetcher
         try {
             return (string) UriResolver::resolve(new Uri($from->url), new Uri($location));
         } catch (\InvalidArgumentException) {
-            // A Location this app cannot parse is not followed. Reported as blocked rather than
-            // escaping as a Guzzle type (MalformedUriException from the parser, or the bare
-            // InvalidArgumentException it extends from the URI mutators), so OutboundException stays
-            // this class's whole contract.
+            // Caught as the bare `InvalidArgumentException` (the URI mutators throw that, not
+            // `MalformedUriException`) and reported as blocked, so `OutboundException` stays this
+            // class's whole contract.
             throw OutboundException::blocked('Redirect from ['.self::describe($from->url).'] carries a malformed Location.');
         }
     }

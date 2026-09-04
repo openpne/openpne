@@ -27,16 +27,11 @@ use ReflectionProperty;
 use Tests\TestCase;
 
 /**
- * The SSRF guard rests on libcurl honouring CURLOPT_CONNECT_TO, which the unit tests cannot show:
- * they drive a fake handler, where the curl options are inert data. These pin the transport itself,
- * because every way of losing it is silent — Guzzle falls back to the PHP stream handler when
- * ext-curl is missing, and there every CURLOPT_* is ignored while requests keep succeeding, aimed
- * wherever the system resolver points.
- *
- * The option bags the two seams build are also put through Guzzle's real curl handler
- * configuration here. Its allow-list of raw curl options is what makes the pins final, and the
- * flip side is that an option it refuses is a request that never goes out — a fake handler would
- * carry it happily.
+ * The unit tests drive a fake handler where curl options are inert data, so the transport is pinned
+ * here: losing `CURLOPT_CONNECT_TO` is silent, as Guzzle's stream-handler fallback ignores every
+ * `CURLOPT_*` while requests keep succeeding. Both seams' option bags pass through Guzzle's curl
+ * handler configuration, whose allow-list makes the pins final and a refused option a request that
+ * never goes out.
  */
 class OutboundTransportTest extends TestCase
 {
@@ -60,11 +55,9 @@ class OutboundTransportTest extends TestCase
 
     public function test_it_refuses_to_build_a_client_on_a_libcurl_that_cannot_pin(): void
     {
-        // A self-hoster compiles their own PHP, where ext-curl can be present but linked against a
-        // libcurl older than CURLOPT_CONNECT_TO — the option is then accepted and ignored. The
-        // after-the-fact peer check does not catch that, because the system resolver normally hands
-        // back the same addresses the guard validated; the gap opens only when someone controls the
-        // answer, which is the case being defended against. So the factory refuses instead.
+        // A self-hoster's PHP can have ext-curl linked against a libcurl older than
+        // `CURLOPT_CONNECT_TO`, which accepts and ignores the option, and the peer check does not
+        // catch that.
         $this->expectException(OutboundException::class);
         $this->expectExceptionMessage('libcurl 7.49.0 or newer');
 
@@ -115,8 +108,8 @@ class OutboundTransportTest extends TestCase
     {
         [$request, $options] = $this->optionsTheFetcherSends();
 
-        // CurlFactory::create() is where the curl handler validates the bag — raw options against
-        // its allow-list, the proxy option, the timeouts — and prepares the easy handle. No network.
+        // `CurlFactory::create()` is where the curl handler validates the bag (raw options against
+        // its allow-list, the proxy option, the timeouts) and prepares the easy handle, with no network.
         $factory = new CurlFactory(1);
         $easy = $factory->create($request, $options);
         $factory->release($easy);
@@ -152,12 +145,9 @@ class OutboundTransportTest extends TestCase
     }
 
     /**
-     * What the seams' pins rely on Guzzle refusing from the `curl` sub-array.
-     *
-     * Guzzle 7 applied that array last, so a site could undo the proxy, redirect and sink pins in
-     * CURLOPT_ terms; Guzzle 8 refuses those options there. The netrc entry is the same guarantee
-     * from the other side: credentials from ~/.netrc stay off because libcurl's default ignores the
-     * file and nothing in the option bag can turn it back on.
+     * Guzzle 8 refuses the raw options Guzzle 7 let a site undo the proxy, redirect and sink pins
+     * with; the netrc entry is the same guarantee from the other side, since nothing in the option
+     * bag can turn `~/.netrc` on.
      */
     #[DataProvider('rawCurlOptionsTheHandlerRefuses')]
     public function test_the_curl_handler_refuses_the_raw_options_that_could_undo_a_pin(int $option, mixed $value): void

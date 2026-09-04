@@ -12,11 +12,8 @@ use Illuminate\Support\Facades\Date;
 use Tests\TestCase;
 
 /**
- * The concurrency contract for fetching a card.
- *
- * A link posted by many people at once produces many jobs for one URL, and a job slow enough to lose
- * its lease can return after a newer one has already answered. Neither is rare enough to leave to
- * chance, and neither shows up in a single-threaded test unless it is written for.
+ * Many jobs for one URL, and a job slow enough to lose its lease returning after a newer one has
+ * answered: neither shows up in a single-threaded test unless it is written for.
  */
 class LinkCardLeaseTest extends TestCase
 {
@@ -26,8 +23,8 @@ class LinkCardLeaseTest extends TestCase
     {
         $card = LinkCard::factory()->pending()->create();
 
-        // Two workers that both picked up the same URL. Separate instances, as separate processes
-        // would be — the conditional UPDATE is what settles it, not anything held in memory.
+        // Separate instances, as separate processes would be: the conditional UPDATE is what settles
+        // it, not anything held in memory.
         $first = LinkCard::findOrFail($card->id)->claimFetch(120);
         $second = LinkCard::findOrFail($card->id)->claimFetch(120);
 
@@ -57,10 +54,9 @@ class LinkCardLeaseTest extends TestCase
 
     public function test_a_stale_worker_cannot_overwrite_a_newer_claimant(): void
     {
-        // The case a claim alone does not cover. Worker A takes the lease and is slow; the lease
-        // expires; worker B claims it and finishes. When A finally comes back with its own answer,
-        // the affected-rows check at claim time is long past — only the fence stops it writing over
-        // B's newer result.
+        // Worker A takes the lease and is slow, it expires, B claims and finishes, and when A comes
+        // back the affected-rows check at claim time is long past, so only the fence stops it
+        // overwriting B.
         $card = LinkCard::factory()->pending()->create();
 
         $leaseA = LinkCard::findOrFail($card->id)->claimFetch(120);

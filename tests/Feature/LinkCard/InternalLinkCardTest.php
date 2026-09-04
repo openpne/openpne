@@ -34,9 +34,6 @@ use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
 /**
- * A URL of this site's own: how a body gets a pointer row, and what keeps that row out of the
- * network.
- *
  * The fetch runs against a real SafeHttpFetcher with only the socket and the resolver faked, so
  * "nothing went out" here is the absence of a request the fetcher would really have made.
  */
@@ -128,10 +125,9 @@ class InternalLinkCardTest extends TestCase
 
     public function test_a_body_whose_first_link_is_external_is_left_unexamined_while_the_setting_is_off(): void
     {
-        // The marker is written once in a body's life, so marking here would cost that body its card
-        // forever: switched on later, nothing revisits it. The second URL is deliberately one of
-        // ours — a card is the *first* URL, and going looking past it would change what a body's
-        // card is depending on when the job happened to run.
+        // The second URL is deliberately one of ours: a card is the first URL, and marking here would
+        // cost the body its card forever, since the marker is written once and nothing revisits it
+        // when the setting returns.
         Queue::fake();
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->bodyLinking('https://example.com/article', $this->selfUrl());
@@ -170,9 +166,6 @@ class InternalLinkCardTest extends TestCase
 
     public function test_a_row_fetched_before_this_existed_is_converted_and_loses_its_picture(): void
     {
-        // What a self-hosted URL used to produce: a card of the login screen, or a failure. Nothing
-        // else would ever revisit it — the read trigger goes on offering it to the fetch job week
-        // after week — so the conversion is the repair, and it needs no migration.
         Queue::fake();
         $card = $this->fetchedCard($this->selfUrl());
         $image = $card->image;
@@ -195,10 +188,8 @@ class InternalLinkCardTest extends TestCase
 
     public function test_a_picture_a_fetch_stored_while_this_ran_goes_with_the_rest(): void
     {
-        // The window the row's own column cannot close: a fetch already in flight stores its picture
-        // and writes image_file_id around the conversion, so the card owns two files while the row
-        // names at most one. Both are referenced by nothing the moment the row becomes a pointer, and
-        // nothing else can reach them — the sweep collects cards, and this card stays.
+        // The window the row's own column cannot close: a fetch in flight stores its picture around
+        // the conversion, so the card owns two files while the row names at most one.
         Queue::fake();
         $card = $this->fetchedCard($this->selfUrl());
         $named = $card->image;
@@ -297,11 +288,9 @@ class InternalLinkCardTest extends TestCase
 
     public function test_a_row_marked_internal_is_refused_by_the_claim_even_where_the_url_no_longer_reads_as_ours(): void
     {
-        // The second belt, reached only when the URL test above does not fire: this site has been
-        // renamed since the row was written, so the address is somebody else's now — and the row is
-        // still one whose columns are null by invariant and whose lease must not be taken.
-        // "Nothing went out" is not self-evidence here: what shows the job really ran this far is
-        // its sibling below, where the same runFetch() over an external row does make the request.
+        // Reached only when the URL test does not fire (the site renamed since the row was written);
+        // nothing went out is not self-evidence here, which the sibling below shows by making the
+        // request over an external row.
         $card = $this->internalRow();
         config(['app.url' => 'https://elsewhere.example.com']);
 

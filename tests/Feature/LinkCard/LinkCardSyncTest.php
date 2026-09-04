@@ -16,11 +16,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
-/**
- * The read-side trigger, which is what makes the feature apply to anything other than future posts:
- * records written before it was switched on have never been examined, and a card fetched a week ago
- * has expired. Neither is reachable from a write.
- */
 class LinkCardSyncTest extends TestCase
 {
     use RefreshDatabase;
@@ -44,9 +39,9 @@ class LinkCardSyncTest extends TestCase
 
     public function test_an_expired_card_is_refetched_directly(): void
     {
-        // Not through SyncLinkCard: the record already knows which URL it points at, and re-parsing
-        // the body per view would queue a job every time while the card sat in its backoff. The
-        // claim stops the duplicate fetch, but nothing stops the queue churn.
+        // Not through `SyncLinkCard`: the record already knows its URL, and re-parsing the body per
+        // view would queue a job every time while the card sat in its backoff, which the claim does
+        // not stop.
         $card = LinkCard::factory()->stale()->create();
         $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
 
@@ -145,8 +140,8 @@ class LinkCardSyncTest extends TestCase
     public function test_a_page_queues_nothing_while_the_setting_is_off(): void
     {
         // Answered once for the batch rather than once per record: the setting is read through a
-        // cache the default store keeps in the database, so a page of a busy room would otherwise
-        // pay a query per row to be told the same thing.
+        // database-backed cache, so a page of a busy room would otherwise pay a query per row to be
+        // told the same thing.
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
 
         $this->sync()->ensureAll([$this->diary(['link_card_synced_at' => null])]);

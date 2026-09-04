@@ -106,14 +106,9 @@ class PruneLinkCardsCommandTest extends TestCase
 
     public function test_a_card_adopted_after_it_was_selected_is_not_deleted(): void
     {
-        // Cards are keyed by URL, so a new post of a URL nobody has used for weeks picks up the
-        // *existing* row rather than making one — and the window between selecting candidates and
-        // deleting them is exactly when that happens. cardFor does not touch updated_at, so the
-        // grace period does not cover it.
-        //
-        // Getting this wrong loses the card permanently, not temporarily: the attach writes
-        // link_card_id and link_card_synced_at together, so a delete landing between them leaves the
-        // body marked examined with no card, which the read path reads as "no link here" forever.
+        // A new post of a URL nobody has used for weeks adopts the existing row, `cardFor` does not
+        // touch `updated_at`, and a delete landing between the attach's two writes leaves the body
+        // marked examined with no card forever.
         $card = $this->agedCard();
 
         $adopted = false;

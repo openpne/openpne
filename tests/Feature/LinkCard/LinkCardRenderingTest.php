@@ -51,8 +51,8 @@ class LinkCardRenderingTest extends TestCase
             'description' => 'What the page says it is about.',
             'site_name' => 'Example',
             'status' => LinkCardStatus::Ok,
-            // Fetched and fresh. Left due, the read trigger would queue a real fetch — the queue is
-            // sync under test — and these are about drawing a card, not acquiring one.
+            // Fetched and fresh: left due, the read trigger would queue a real fetch (the queue is
+            // sync under test), and these are about drawing a card, not acquiring one.
             'fetched_at' => now(),
             'expires_at' => now()->addDays(7),
             'next_attempt_at' => null,
@@ -128,9 +128,8 @@ class LinkCardRenderingTest extends TestCase
 
     public function test_the_thumbnail_url_is_the_same_whichever_shape_was_chosen(): void
     {
-        // The square thumbnail is what every surface draws today. Whichever shape the server names,
-        // the address it hands over stays the one the current renderers ask for — so nothing on
-        // screen moves until the renderers are taught the second shape.
+        // `imageUrl` is the square thumbnail whichever shape is named; the wide shape's picture comes
+        // from `fitSources`.
         config(['openpne.surface_mode' => 'modern_default']);
         $diary = $this->diary();
 
@@ -182,11 +181,9 @@ class LinkCardRenderingTest extends TestCase
 
     public function test_the_classic_wide_picture_is_held_to_the_same_box_as_modern_and_never_enlarged(): void
     {
-        // The smallest picture the shape admits is 267x200, and a Classic card is ~460 wide, so
-        // `width: 100%` on its own stretches it by 1.7. The cap is the formula Modern writes
-        // (link-card.test.tsx; Modern's carries the ratio in parentheses): the box a member's own
-        // picture gets, then the source's width — one surface shipped without the other's cap once.
-        // LinkCardLayoutParityTest holds the two boxes to the same rems.
+        // The smallest picture the shape admits is 267x200 and a Classic card is ~460 wide, so
+        // `width: 100%` alone stretches it by 1.7; the cap is the formula Modern writes, the box a
+        // member's picture gets, then the source's width.
         $this->card->image->update(['width' => 267, 'height' => 200]);
         $diary = $this->diary();
 
@@ -217,9 +214,9 @@ class LinkCardRenderingTest extends TestCase
         $post = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         GroupMessage::factory()->for($group)->for($this->author, 'author')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
 
-        // Every surface draws a card in either shape without falling over. Which shape it drew is
-        // not visible here — the Modern four decide that client-side — so that is asserted where it
-        // can be seen: the Classic pair below, and link-card.test.tsx.
+        // Every surface draws a card in either shape without falling over; which shape is not visible
+        // here (the Modern four decide that client-side), so that is asserted in the Classic pair
+        // below and link-card.test.tsx.
         foreach ([[100, 100], [1200, 630]] as [$width, $height]) {
             $this->card->image->update(['width' => $width, 'height' => $height]);
 
@@ -254,8 +251,6 @@ class LinkCardRenderingTest extends TestCase
 
     public function test_card_text_is_escaped_not_rendered(): void
     {
-        // A card is assembled from a page we do not control. The body pipeline's guarantee is that
-        // trusted HTML comes only from BodyRenderer, and a card is not body: every field is text.
         $this->card->update([
             'title' => '<script>alert(1)</script>',
             'description' => '<img src=x onerror=alert(2)>',
@@ -366,9 +361,8 @@ class LinkCardRenderingTest extends TestCase
 
     public function test_a_thread_costs_the_same_whatever_the_replies_carry(): void
     {
-        // The same guard the feed has, on the page this change put cards on. A reply's card costs
-        // three queries of its own without the eager load: the read trigger's freshness check, the
-        // serializer's card, and that card's picture.
+        // The same guard the feed has: a reply's card costs three queries of its own without the
+        // eager load (the read trigger's freshness check, the serializer's card, and its picture).
         config(['openpne.surface_mode' => 'modern_default']);
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_synced_at' => now()]);
         // With pictures, deliberately: `$card->image` costs no query when `image_file_id` is null, so
@@ -402,10 +396,8 @@ class LinkCardRenderingTest extends TestCase
 
     public function test_a_timeline_list_costs_the_same_whatever_the_cards(): void
     {
-        // The Classic timeline row is shared by the feed, the profile and three gadgets, so a card
-        // read per row would multiply across every one of them.
-        // With pictures — see the thread guard for why a card without one leaves this watching two
-        // reads of three.
+        // With pictures, deliberately: a card without one leaves this watching two of the three reads
+        // (see the thread guard).
         foreach (range(1, 5) as $ignored) {
             $card = LinkCard::factory()->create(['status' => LinkCardStatus::Ok, 'title' => 'A title from the page']);
             $card->update(['image_file_id' => $this->imageFor($card)->id]);
@@ -435,9 +427,9 @@ class LinkCardRenderingTest extends TestCase
         return Diary::factory()->for($this->author)->create($attributes + [
             'visibility' => Visibility::Open,
             'link_card_id' => $this->card->id,
-            // Marked examined, as a real post is by the time it renders. Without it the read trigger
-            // runs SyncLinkCard inline, reads a factory body with no URL in it, and detaches the very
-            // card under test — leaving assertions that pass because nothing was drawn at all.
+            // Marked examined, as a real post is by the time it renders: otherwise the read trigger
+            // runs `SyncLinkCard` inline, reads a factory body with no URL, and detaches the very card
+            // under test.
             'link_card_synced_at' => now(),
         ]);
     }

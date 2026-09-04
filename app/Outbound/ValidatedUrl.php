@@ -14,12 +14,11 @@ namespace App\Outbound;
 final readonly class ValidatedUrl
 {
     /**
-     * @param  string  $url  Absolute, normalised, http(s), no userinfo. Its host is $host verbatim —
-     *                       see SafeHttpFetcher::validate(), which rewrites it so the pin can match.
-     * @param  string  $host  Punycode host, no trailing dot.
-     * @param  int  $port  80 or 443.
-     * @param  string  $pinnedAddress  A validated address from $addresses; the one dialled.
-     * @param  list<string>  $addresses  Every address the host resolved to, all validated as global.
+     * Caller preconditions: `$url` carries `$host` verbatim so the pin can match, `$host` is Punycode
+     * without a trailing dot, `$port` is 80 or 443, and `$pinnedAddress` is one of `$addresses`, all
+     * validated as global.
+     *
+     * @param  list<string>  $addresses
      */
     public function __construct(
         public string $url,
@@ -30,11 +29,10 @@ final readonly class ValidatedUrl
     ) {}
 
     /**
-     * The libcurl CURLOPT_CONNECT_TO entry that sends this request to the validated address.
-     *
-     * Format is HOST:PORT:CONNECT-TO-HOST:CONNECT-TO-PORT, with an IPv6 literal bracketed. Unlike
-     * CURLOPT_RESOLVE this leaves the Host header and the TLS SNI as the URL's own host and does not
-     * seed libcurl's DNS cache, so the override cannot leak into a later request on the same handle.
+     * The `CURLOPT_CONNECT_TO` entry, `HOST:PORT:CONNECT-TO-HOST:CONNECT-TO-PORT` with an IPv6
+     * literal bracketed. Unlike `CURLOPT_RESOLVE` it leaves the Host header and TLS SNI as the URL's
+     * own host and does not seed libcurl's DNS cache, so the override cannot leak into a later
+     * request on the same handle.
      */
     public function connectTo(): string
     {
