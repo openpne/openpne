@@ -13,7 +13,7 @@ reach it, and the FROM table is aliased to its bare name so subqueries can corre
 both sides have them, ids and timestamps copy verbatim, so the FK graph resolves without a remap and
 post dates survive; a target column with no OpenPNE 3 source (a surrogate id, timestamps OpenPNE 3
 never kept) relies on its default, as each step's `targetDefaults()` records (`gaps()` is the
-reverse: source columns with no target).
+reverse: source columns or tables with no target).
 `FileUpgrade::ownedFileReferences()` drives both the owner CASE and the audit, so an owning table
 cannot be wired into one without the other.
 
