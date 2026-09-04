@@ -115,10 +115,9 @@ class UpgradeMatrixAuditTest extends TestCase
 
     public function test_steps_sharing_a_target_table_declare_what_they_own(): void
     {
-        // Verify compares a step's source rows against the rows it owns in the target; with several
-        // steps writing one table, a null targetFilter() would count the siblings' rows as drift.
-        // That the declared filters do not overlap is raw SQL, not checkable here — the mixed
-        // sns_settings table in VerifierSharedTargetTest pins it instead.
+        // With several steps writing one table, a null targetFilter() would make verify count the
+        // siblings' rows as drift; that the filters do not overlap is raw SQL, pinned by
+        // VerifierSharedTargetTest instead.
         $stepsByTarget = [];
         foreach (StepRegistry::all() as $step) {
             $stepsByTarget[$step->targetTable()][] = $step;
@@ -138,12 +137,9 @@ class UpgradeMatrixAuditTest extends TestCase
 
     public function test_every_file_referencing_column_is_owned_or_accounted_for(): void
     {
-        // A file's binary is preserved (FileUpgrade keeps every `file` row), but its owner must be
-        // explicitly accounted for so no upload silently loses its owning entity. An owner can sit on
-        // a join table (member_image) or a plain column (community.file_id), so this is checked per
-        // file_id column, not per table: each is owned by FileUpgrade, on an unstepped source table, or
-        // declared in unownedFileColumns() — anything else (e.g. a file column on a migrated table
-        // that nothing owns) is a silent drop.
+        // Per file_id column, not per table (an owner can be a join table or a plain column): each is
+        // owned by FileUpgrade, on an unstepped source table, or declared unowned, else its owner
+        // would be silently dropped.
         $references = SourceSchema::default()->fileReferencingColumns();
 
         $owned = array_keys((new FileUpgrade)->ownedFileReferences());
@@ -170,17 +166,15 @@ class UpgradeMatrixAuditTest extends TestCase
 
     public function test_every_member_referencing_column_has_a_treatment(): void
     {
-        // `members` holds only activated members (ActiveMember), so every source reference to a member
-        // must resolve to one of three treatments: the step drops the row (memberRefs()), the preflight
-        // refuses to start on it, or it reaches no target member column at all. Anything else would put
-        // a skipped member's id into a target row — the FK failure, or the ghost, this all exists to
-        // prevent. Checked per column, like the file references, since a table can carry two.
+        // Every source reference to a member must have one of the three treatments (ActiveMember),
+        // else a skipped member's id could land in a target row; checked per column, since a table can
+        // carry two.
         $references = SourceSchema::default()->memberReferencingColumns();
         $ledger = ActiveMember::references();
 
-        // Per step, not per reference: two steps can share a FROM table (community_member feeds the
-        // membership and the join request), and each inserts its own rows, so each owes the guard.
-        // Checking the reference alone would let one of them drop it and still pass on the other's.
+        // Per step, not per reference: two steps can share a FROM table (community_member feeds both
+        // the membership and the join request), and checking the reference alone would let one drop
+        // the guard and pass on the other's.
         $fromColumns = [];
         $declaredGuards = [];
         foreach (StepRegistry::all() as $step) {
@@ -227,10 +221,9 @@ class UpgradeMatrixAuditTest extends TestCase
 
     public function test_member_references_resolved_by_subquery_are_in_the_ledger(): void
     {
-        // The guard/ledger split is only complete if the ledger covers the member ids that reach a
-        // target column without their source table being any step's FROM — those are invisible to
-        // memberRefs() by construction, so a plain "FROM table FKs" audit would pass while
-        // groups.pending_admin_member_id and direct_messages.draft_recipient_id went unchecked.
+        // A member id reaching a target column through a table that is no step's FROM is invisible to
+        // memberRefs(), so only the ledger can cover groups.pending_admin_member_id and
+        // direct_messages.draft_recipient_id.
         $fromTables = array_map(static fn ($step): string => $step->sourceTable(), StepRegistry::all());
         $ledger = ActiveMember::references();
 
@@ -262,9 +255,8 @@ class UpgradeMatrixAuditTest extends TestCase
 
     public function test_file_owner_morph_aliases_are_registered(): void
     {
-        // FileUpgrade writes the morph alias into files.related_entity_type as a string literal; an
-        // alias absent from the map resolves to no model, so the FilePolicy would deny the file
-        // forever (a silent, invisible loss). Pin the aliases to the registered map.
+        // FileUpgrade writes the morph alias as a string literal, and an alias absent from the map
+        // resolves to no model, so FilePolicy would deny the file forever.
         $morphMap = Relation::morphMap();
 
         foreach ((new FileUpgrade)->ownedFileReferences() as $reference => $spec) {

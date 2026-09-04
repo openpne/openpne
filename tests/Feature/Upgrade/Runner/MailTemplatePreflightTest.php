@@ -157,8 +157,8 @@ class MailTemplatePreflightTest extends TestCase
 
     public function test_a_name_the_source_collation_equates_is_covered_like_the_step_covers_it(): void
     {
-        // utf8mb3_unicode_ci is PAD SPACE, so the step's `name IN (…)` and its key CASE both carry this
-        // row. Resolving the name in PHP would not, and the row would migrate untested.
+        // utf8mb3_unicode_ci is PAD SPACE, so the step's `name IN (…)` and key CASE both carry this row
+        // where a PHP name comparison would not.
         $this->insertTemplate(name: self::SOURCE_NAME.'  ', body: '{{ "shout"|upper }}');
 
         [$ok, $output] = $this->preflight();

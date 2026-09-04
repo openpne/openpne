@@ -15,11 +15,9 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled diary INSERT...SELECT against the real OpenPNE 3 `diary` DDL.
- *
- * MySQL only: the set-based copy and the source DDL (TEXT, tinyint, DATETIME, utf8mb3)
- * are MySQL features. Uses MigratesUpgradeTargetsOnce rather than RefreshDatabase because
- * creating the source table is DDL, which implicitly commits transactions.
+ * Runs the compiled INSERT...SELECT against the real OpenPNE 3 `diary` DDL, MySQL only.
+ * MigratesUpgradeTargetsOnce rather than RefreshDatabase, because creating the source table is DDL
+ * and implicitly commits.
  */
 class DiaryUpgradeSqlTest extends TestCase
 {

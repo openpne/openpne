@@ -49,9 +49,9 @@ class KnownConfigNamesTest extends TestCase
     }
 
     /**
-     * A kind OpenPNE 4 added itself has no source key, so the upgrade must pass over it entirely:
-     * it can neither widen the recognised-name set (every extra name there is one the preflight
-     * stops reporting) nor appear as a target the step could write.
+     * A kind OpenPNE 4 added itself has no source key, so it can neither widen the recognised-name
+     * set (every extra name there is one the preflight stops reporting) nor be a target the step
+     * writes.
      */
     public function test_a_native_notification_kind_stays_out_of_the_upgrade(): void
     {
@@ -96,10 +96,9 @@ class KnownConfigNamesTest extends TestCase
     }
 
     /**
-     * The registry-derived halves cannot drift, but the names MemberUpgrade and GroupUpgrade
-     * pin as literals in their subqueries can — and a name a step reads but the set omits is
-     * reported to the operator as unrecognised while being migrated. Read the literals back out of
-     * the SQL the steps emit rather than restating them here, which would be the same second list.
+     * A name a step reads but the set omits is reported as unrecognised while migrated, so the
+     * literals MemberUpgrade and GroupUpgrade pin in their subqueries are read back out of the
+     * emitted SQL rather than restated as a second list.
      */
     public function test_the_names_the_subquery_steps_actually_read_are_recognised(): void
     {

@@ -9,16 +9,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member_config` rows → OpenPNE 4 `member_preferences`, for the keys the typed
- * PreferenceKey registry recognises (diary/age default visibility). The set of migrated
- * source names is derived from PreferenceKey::cases(), so registering a key is all it takes
- * to migrate it — there is no second list here to drift.
- *
- * member_config is a KV table without a (member_id, name) unique, so duplicates can exist; the
- * filter keeps only the latest row per (member_id, name) to satisfy the target's unique index.
- * Every PreferenceKey value is on the OpenPNE 3 public_flag scale (SNS=1, friend=2, private=3,
- * web=4), the same scale Visibility maps, so one value CASE serves all keys (the per-member
- * default carries no is_open companion, unlike a diary row).
+ * OpenPNE 3 `member_config` rows → OpenPNE 4 `member_preferences`, for the names
+ * PreferenceKey::upgradableCases() derive, latest row per (member_id, name) since member_config has
+ * no such unique. Every PreferenceKey value is on OpenPNE 3's public_flag scale (SNS=1, friend=2,
+ * private=3, web=4) with no is_open companion, so one value CASE serves all keys.
  */
 class MemberPreferenceUpgrade extends UpgradeStep
 {

@@ -9,21 +9,10 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Migrates the OpenPNE 3 `file_bin` BLOBs (gigabytes/site) into OpenPNE 4 without rewriting a byte:
- *
- *  - snapshot:  record MAX(source file.id) for a post-switchover rollback bound.
- *  - move:      when the source file_bin is a different physical table (a --source-prefix or
- *               --source-database run), RENAME it onto the app's `file_bin` (.ibd move, no row copy).
- *               In-place (same database, no prefix) needs no move — the dump's file_bin already IS
- *               the app's, kept by the create_file_bin_table guard.
- *  - rewire:    re-point file_bin.file_id's FK from the old `file` table onto `files`. FileUpgrade
- *               copies file→files preserving ids, so the bytes stay addressable.
- *
- * MySQL-only (like the runner), driven by the runner's output closure. Idempotency comes from
- * information_schema state (the FK's referenced table, the source table's presence), so a resume or
- * --force-restart re-runs cleanly. Assumes DB-blob storage: OpenPNE 3's default file storage writes a
- * file_bin row per file (1:1), so a file/file_bin count mismatch is an incomplete or filesystem-storage
- * dump and is rejected by preflight() rather than migrating file metadata without its bytes.
+ * Migrates the OpenPNE 3 `file_bin` BLOBs without rewriting a byte: snapshot, move (RENAME of a
+ * prefixed / other-database source), rewire of the file_id FK from `file` onto `files`
+ * (docs/internals/upgrade.md, "file_bin"). Idempotent from information_schema state (FK target,
+ * source table presence) so a resume or --force-restart re-runs cleanly; MySQL only.
  */
 final class FileBinMigration
 {
@@ -34,15 +23,15 @@ final class FileBinMigration
     private const REWIRE_KEY = 'file_bin_rewire';
 
     /**
-     * Pre-walk, read-only. Returns an error to abort the run (before any write), or null. Call only
-     * once SourcePreflight has passed, so the source `file` table is present to COUNT.
+     * Read-only; returns the error that aborts the run before any write, or null. Call only after
+     * SourcePreflight has passed, so the source `file` table is present to COUNT.
      */
     public function preflight(string $sourcePrefix, ?string $sourceDatabase): ?string
     {
         $fileRows = (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
 
-        // Where the bytes live now: the source file_bin (a fresh run), else the app's own (in-place, or
-        // a prior run already moved them). An absent app file_bin (a crash mid-move) counts as 0.
+        // The bytes are in the source file_bin on a fresh run, else in the app's own (in-place, or
+        // already moved); an app file_bin absent after a crash mid-move counts as 0.
         $sourcePresent = $this->tableExists($this->sourceSchema($sourceDatabase), $sourcePrefix.'file_bin');
         $bytesRows = $sourcePresent
             ? (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin'))

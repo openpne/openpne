@@ -21,14 +21,10 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The preflight's member-reference checks: content the upgrade will not migrate for a member
- * OpenPNE 3 never activated, and references to a member missing from the source altogether. Both
- * abort before the first write; what makes them useful rather than noisy is that each is counted
- * over the rows that actually reach a target column, so a deliberately-unmigrated row is not an
- * abort (the point of ActiveMember::references()'s scopes).
- *
- * DatabaseMigrations, not MigratesUpgradeTargetsOnce: the runner rewires the file_bin FK when a run
- * migrates files, which mutates the app schema.
+ * The preflight's member-reference checks, each pinned as counted over the rows that actually reach
+ * a target column, so a deliberately unmigrated row is not an abort. DatabaseMigrations, not
+ * MigratesUpgradeTargetsOnce: a run that migrates files rewires the file_bin FK, which mutates the
+ * app schema.
  */
 class InactiveMemberPreflightTest extends TestCase
 {
@@ -89,8 +85,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_rows_own_step_filter_scopes_the_count(): void
     {
-        // The friend/community message types are OpenPNE 3's notification mechanism and are not
-        // migrated. Counting every `message` row would abort on data the upgrade never reads.
+        // The friend/community message types are not migrated, so counting every `message` row would
+        // abort on data the upgrade never reads.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 0);
         $this->seedMessageType(1, 'message');
@@ -160,9 +156,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_draft_send_list_row_the_step_discards_is_not_an_abort(): void
     {
-        // DirectMessageUpgrade folds the lowest-id send-list row onto draft_recipient_id and drops the rest,
-        // so only that row's member can reach a target column. Refusing over a discarded duplicate
-        // would contradict the step.
+        // Only the lowest-id send-list row is folded onto draft_recipient_id, so refusing over a
+        // discarded duplicate would contradict the step.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
@@ -195,10 +190,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_send_list_row_under_an_out_of_range_is_send_is_not_an_abort(): void
     {
-        // is_send is a bare tinyint with no CHECK. DirectMessageUpgrade folds a recipient only WHEN
-        // is_send = 0 and DirectMessageRecipientUpgrade writes receipts only for = 1, so a third value puts
-        // no member id anywhere — the row migrates as a draft with no recipient, and refusing over its
-        // send-list member would be a refusal about data neither step reads.
+        // is_send is a bare tinyint with no CHECK, and a third value puts no member id anywhere (folded
+        // only at 0, receipts only at 1), so the row migrates as a recipient-less draft without a refusal.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
@@ -216,7 +209,7 @@ class InactiveMemberPreflightTest extends TestCase
     public function test_a_superseded_admin_confirm_row_is_not_an_abort(): void
     {
         // (community_member_id, name) is the UNIQUE, so a community can hold several admin_confirm
-        // rows; GroupUpgrade reads the latest. An older one is never looked at.
+        // rows and GroupUpgrade reads only the latest.
         $this->createGroupSources();
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
@@ -250,9 +243,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_refuse_only_subset_still_verifies_the_columns_its_check_reads(): void
     {
-        // No step in this subset selects FROM `member`, so the per-step column check never reaches
-        // is_active — but the refusal count does. It must abort with the column message rather than
-        // throw inside the count.
+        // No step in this subset selects FROM `member`, so only the refusal count reaches is_active;
+        // it must abort with the column message rather than throw inside the count.
         $this->createSources('member', 'diary', 'diary_image');
         DB::statement('ALTER TABLE `member` DROP COLUMN `is_active`');
 
@@ -277,8 +269,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_dangling_rows_are_counted_across_every_step_reading_the_column(): void
     {
-        // member_config is guarded by both the preference and the notification-settings steps, each
-        // with its own name filter. Counting one step's slice would under-report the total.
+        // member_config is guarded by both the preference and the notification-settings steps with
+        // different name filters, so counting one step's slice would under-report the total.
         $this->createSources('member', 'member_config');
         $this->seedConfig(1, memberId: 999, name: 'diary_public_flag');              // MemberPreferenceUpgrade
         $this->seedConfig(2, memberId: 999, name: 'is_send_pc_diaryReplyPost_mail'); // MemberNotificationSettingUpgrade
