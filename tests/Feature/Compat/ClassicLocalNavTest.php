@@ -12,11 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * OpenPNE 3 localNav contexts: the viewer's own pages render the `default` set; a page about
- * another member renders the `friend` set with that member's id threaded into its Home / Diary /
- * Friends links (OpenPNE 3 sf_nav_type=friend + sf_nav_id). Guests get no localNav (@auth).
- */
 class ClassicLocalNavTest extends TestCase
 {
     use RefreshDatabase;

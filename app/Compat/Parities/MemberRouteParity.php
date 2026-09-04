@@ -9,18 +9,9 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * The OpenPNE 3 `member` module is the member hub — profile, avatar, search, auth, config,
- * invite, withdrawal — ported feature by feature. This parity owns the whole module: the
- * home / profile / avatar / search / edit slices are mapped, and the actions still living in
- * OpenPNE 3 (or moved to another feature, like Fortify auth) are gapped, so an un-ported
- * member URL surfaces instead of being silently dropped. Actions move from gap to map as
- * their feature lands. The module keeps OpenPNE 3's global /:module/:action fallback on, so
- * named-route coverage is non-exhaustive — acknowledged below.
- *
- * op3Action carries the OpenPNE 3 page hook so the Classic body id stays faithful
- * (page_member_{action}). A moved URL is kept reachable by a routes/web.php redirect: mapped
- * to that redirect route when its target needs the request (own-profile / raw alias), or
- * recorded as a compatRedirect when the move is static (the avatar editor).
+ * A moved OpenPNE 3 member URL is mapped to its routes/web.php redirect route when the target
+ * needs the request (the own-profile and raw aliases), and recorded in compatRedirects() when the
+ * move is static (the avatar editor, login).
  */
 class MemberRouteParity extends RouteParity
 {
@@ -28,30 +19,25 @@ class MemberRouteParity extends RouteParity
 
     protected function layouts(): array
     {
-        // OpenPNE 3 member/config is layoutB (config/view.yml `configSuccess: layout: layoutB`): the
-        // category pageNav fills the sidemenu. Classic only — Modern keeps its single Inertia page.
-        // The AI account page has no OpenPNE 3 source; it keeps the same nav, so it keeps the layout
-        // that floats it.
+        // member/config is layoutB in OpenPNE 3 (view.yml configSuccess), and the AI account page,
+        // which shares its pageNav sidemenu, takes the same letter.
         return ['member.config' => 'B', 'member.config.ai.show' => 'B'];
     }
 
     public function maps(): array
     {
         return [
-            // Portal home — OpenPNE 3 member/home at the canonical root (/), with /member as its
-            // alias (member_index). Both resolve by surface; the Classic home keeps page_member_home.
             new RouteMap('homepage', '/', 'home', 'GET', op3Action: 'home'),
             new RouteMap('member_index', '/member', 'member.index_compat', 'GET', op3Action: 'home'),
-            // Profile page — OpenPNE 4 /member/{id} preserves the OpenPNE 3 URL in place.
-            // OpenPNE 3 kept a second /member/:id route "for BC" (member_profile); same page.
+            // OpenPNE 3 kept a second /member/:id route "for BC" (member_profile), so both names map to
+            // the one page.
             new RouteMap('obj_member_profile', '/member/:id', 'member.profile.show', 'GET', op3Action: 'profile'),
             new RouteMap('member_profile', '/member/:id', 'member.profile.show', 'GET', op3Action: 'profile'),
             // Own-profile aliases preserved by redirect to the canonical /member/{id}.
             new RouteMap('member_profile_mine', '/member/profile', 'member.profile.mine_compat', 'GET', op3Action: 'profile'),
             new RouteMap('member_profile_raw', '/member/profile/id/:id/*', 'member.profile.raw_compat', 'GET', op3Action: 'profile'),
-            // Avatar editor — OpenPNE 3's member_config_image (one ANY route) served the form on
-            // GET and the upload on POST; OpenPNE 4 splits them at the new /member/avatar. The
-            // legacy /member/image/config URL is preserved by a static redirect (compatRedirects).
+            // Avatar editor: one OpenPNE 3 ANY route, split into a GET form + POST upload at the moved
+            // /member/avatar (redirect in compatRedirects()).
             new RouteMap('member_config_image', '/member/image/config', 'member.avatar.edit', 'GET', op3Action: 'configImage'),
             new RouteMap('member_config_image', '/member/image/config', 'member.avatar.update', 'POST'),
             // Member search.
@@ -59,9 +45,8 @@ class MemberRouteParity extends RouteParity
             // Profile editor — one OpenPNE 3 route (ANY) splits into a GET form + POST submit.
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.edit', 'GET', op3Action: 'editProfile'),
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.update', 'POST'),
-            // Member config — the member's own settings page (diary default / age / language / surface).
-            // OpenPNE 3 had one ANY route; OpenPNE 4 keeps the GET URL (Classic paginates it by
-            // ?category=) and splits saves into per-section POSTs (so saving one never rewrites another).
+            // Member config: OpenPNE 3's one ANY route becomes the GET page plus per-section POSTs, so
+            // saving one section never rewrites another.
             new RouteMap('member_config', '/member/config', 'member.config', 'GET', op3Action: 'config'),
             new RouteMap('member_config', '/member/config', 'member.config.diary', 'POST'),
             new RouteMap('member_config', '/member/config', 'member.config.age', 'POST'),
@@ -71,16 +56,14 @@ class MemberRouteParity extends RouteParity
             // Email-address change request — OpenPNE 3 member/config ?category=pcAddress (mobileAddress
             // dropped); the confirmation step is an OpenPNE 4-native URL (no inventory counterpart).
             new RouteMap('member_config', '/member/config', 'member.config.email', 'POST'),
-            // Withdrawal — OpenPNE 3 member_delete was GET/POST /leave. OpenPNE 4 serves it as the
-            // member-config withdrawal category: the GET URL is kept by a redirect (URL/bookmark
-            // compatibility only), and the submit is the config-category POST (no POST /leave alias).
+            // Withdrawal: GET /leave is kept by a redirect and the submit is the config-category POST,
+            // with no POST /leave alias.
             new RouteMap('member_delete', '/leave', 'member.leave_compat', 'GET', op3Action: 'delete'),
             new RouteMap('member_delete', '/leave', 'member.config.withdrawal', 'POST'),
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
             new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),
-            // Member invitation — OpenPNE 3 member/invite at /invite; the GET form and POST send share
-            // the URL. Keeps page_member_invite for the Classic body id.
+            // Member invitation.
             new RouteMap('member_invite', '/invite', 'member.invite', 'GET', op3Action: 'invite'),
             new RouteMap('member_invite', '/invite', 'member.invite.submit', 'POST'),
         ];
@@ -105,11 +88,6 @@ class MemberRouteParity extends RouteParity
         ];
     }
 
-    /**
-     * Surface elements per OpenPNE 3 member template, against resources/views/member/*.blade.php
-     * (the login form lives in resources/views/auth/login.blade.php, rendered by Fortify's
-     * surface-aware loginView). Levels follow docs/internals/classic-compatibility.md.
-     */
     public function screens(): array
     {
         return [

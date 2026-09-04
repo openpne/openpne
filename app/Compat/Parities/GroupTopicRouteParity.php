@@ -24,8 +24,7 @@ class GroupTopicRouteParity extends RouteParity
             new RouteMap('communityTopic_delete_confirm', '/communityTopic/deleteConfirm/:id', 'group.topics.delete.show', 'GET', op3Action: 'deleteConfirm'),
             new RouteMap('communityTopic_delete', '/communityTopic/delete/:id', 'group.topics.delete', 'POST'),
 
-            // communityTopicComment module: rendered under page_communityTopicComment_* (op3Module
-            // override). create keys off the topic id; deleteConfirm/delete key off the comment id.
+            // communityTopicComment module (op3Module override).
             new RouteMap('communityTopic_comment_create', '/communityTopic/:id/comment/create', 'group.topics.comment.store', 'POST'),
             new RouteMap('communityTopic_comment_delete_confirm', '/communityTopic/comment/deleteConfirm/:id', 'group.topics.comment.delete.show', 'GET',
                 op3Action: 'deleteConfirm', op3Module: 'communityTopicComment'),
@@ -36,11 +35,7 @@ class GroupTopicRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            // Cross-community "recently updated topics" feed (ordered by updated_at, not the
-            // topic_updated_at widget).
             'communityTopic_recently_topic_list' => 'Cross-community recently-updated topics feed; a sidebar feature, not ported.',
-            // Topic keyword search. OpenPNE 3 routes it through one search surface shared with the
-            // event plugin, a separate surface neither board adapter provides.
             'communityTopic_search' => 'Per-community topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_all' => 'Global topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_form' => 'The shared topic/event search form page; a separate search surface the board adapter does not provide.',
@@ -70,11 +65,6 @@ class GroupTopicRouteParity extends RouteParity
         return false;
     }
 
-    /**
-     * Surface elements per opCommunityTopicPlugin communityTopic template, against
-     * resources/views/group-topic/*.blade.php. Levels follow
-     * docs/internals/classic-compatibility.md; an item short of a faithful port records why.
-     */
     public function screens(): array
     {
         return [

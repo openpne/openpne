@@ -6,11 +6,6 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The retired /m/ URL space permanently redirects to canonical URLs via the compat.m_prefix
- * catch-all: 308 so a stale in-flight form keeps its method, query string preserved. Registered
- * last, so a still-live /m/ route (the transition-era surface twins) always wins over it.
- */
 class MPrefixRedirectTest extends TestCase
 {
     use RefreshDatabase;
@@ -54,9 +49,8 @@ class MPrefixRedirectTest extends TestCase
     }
 
     /**
-     * The retired RESTful Modern GET shapes do not map onto their canonical URL by dropping the
-     * prefix; each has an explicit redirect ahead of the catch-all. (Their POST siblings have no
-     * path-rewritable canonical form and 404 — never persisted, so only stale in-flight forms.)
+     * These shapes are not prefix-strippable, so each needs its explicit redirect registered ahead
+     * of the catch-all.
      */
     public function test_a_reshaped_modern_get_url_redirects_to_its_canonical_shape(): void
     {

@@ -16,14 +16,11 @@ class TimelineRouteParity extends RouteParity
     {
         return [
             new RouteMap('member_timeline', '/member/:id/timeline', 'timeline.member', 'GET', op3Action: 'member'),
-            // The SNS-wide home feed. OpenPNE 3's pc_frontend executeSns forwarded to the error page
-            // (the feed ran on mobile and as the homeAllTimeline home gadget); OpenPNE 4 unifies it
-            // into a real /timeline page. The /sns/timeline URL is preserved by redirect (below).
+            // OpenPNE 3's PC sns_timeline forwarded to the error page (the feed lived on mobile and in
+            // the homeAllTimeline gadget); OpenPNE 4 answers the URL with the /timeline page.
             new RouteMap('sns_timeline', '/sns/timeline', 'timeline.index', 'GET', op3Action: 'sns'),
-            // The group timeline. Its canonical URL moved with the Group rename, so the OpenPNE 3
-            // URL is preserved by redirect (below).
-            // The community timeline was replaced by group talk; the OpenPNE 3 URL keeps working by
-            // landing on the conversation that took its place (docs/internals/timeline.md).
+            // The community timeline was replaced by group talk, so its OpenPNE 3 URL lands on the
+            // conversation that took its place.
             new RouteMap('community_timeline', '/community/:id/timeline', 'group.talk.show', 'GET', op3Action: 'community'),
             // OpenPNE 3 reached the single-activity page through the global /:module/:action fallback
             // (/timeline/show/id/:id), so there is no named route — a fallback-only map that still
@@ -52,24 +49,16 @@ class TimelineRouteParity extends RouteParity
             // OpenPNE 3's SNS-wide timeline URL → canonical home feed.
             '/sns/timeline' => 'timeline.index',
             // The group timeline's OpenPNE 3 URL, and the global-fallback spelling of it that
-            // OpenPNE 3 also answered → the canonical /groups/:id/timeline.
+            // OpenPNE 3 also answered → the group talk that replaced it.
             '/community/:id/timeline' => 'group.talk.show',
             '/timeline/community/id/:id' => 'group.talk.show',
         ];
     }
 
-    /**
-     * Surface elements per OpenPNE 3 timeline template (templates/_timelineAll.php +
-     * _timelineProfile.php + _timelineTemplate.php + showSuccess.php). OpenPNE 3 streams activities
-     * client-side from the API via jQuery templates; the Classic adapter renders them server-side,
-     * so the rendering mechanism differs (an L3 may-differ) while the content is preserved.
-     * Write-side and reply elements are not part of this read surface.
-     */
     public function screens(): array
     {
         return [
-            // The SNS-wide home feed. OpenPNE 3 rendered this as the homeAllTimeline home gadget
-            // (_timelineAll.php) sharing _timelineTemplate.php; OpenPNE 4 serves it as the /timeline page.
+            // _timelineAll.php (the homeAllTimeline home gadget) + _timelineTemplate.php → timeline/index.blade.php
             'sns' => [
                 new ScreenElement('author nickname + profile link', L::Two, S::Ported, 'timelineTemplate <a href="${member.profile_url}">${member.name}', 'cross-member feed; Classic links the nickname server-side, OpenPNE 3 builds each post client-side from the API'),
                 new ScreenElement('author avatar (48px, rounded)', L::Two, S::Ported, 'timelineTemplate ${member.profile_image} + timeline.css', 'the 48px thumbnail in timeline-post-member-image, no_image fallback'),
@@ -99,9 +88,8 @@ class TimelineRouteParity extends RouteParity
                 new ScreenElement('per-post reply form', L::Two, S::Ported, 'timelineTemplate #timeline-post-comment-form', 'the OpenPNE 3 inline form under each row, with the last ten replies above it and 以前のコメントを見る past them; a plain body input (the @mention picker is on the thread page, as OpenPNE 3 had it), and without the script the コメントする link keeps its jump to that page'),
                 new ScreenElement('own-post delete', L::Two, S::Ported, 'timelineTemplate timeline-post-delete-confirm', 'the delete link opens timelineTemplate\'s confirm block in a <dialog> (OpenPNE 3: colorbox) and the row leaves the page on the JSON answer; without the script the link is the confirm page'),
             ],
-            // communitySuccess.php → include_component('timeline', 'timelineCommunity') (_timelineCommunity.php),
-            // which the plugin's view customize also injected into the community home. The URL now
-            // redirects to group talk, which is Modern-only: no Classic screen renders under this body id.
+            // communitySuccess.php + _timelineCommunity.php (also injected into the community home) → no
+            // Classic screen: the URL redirects to Modern-only group talk
             'community' => [
                 new ScreenElement('%community% timeline box', L::One, S::Missing, 'opTimelinePlugin community/config/view.yml homeSuccess customize timelineCommunity (parts communityHome, target before) + _timelineCommunity.php div#communityTimeline.dparts.communityTimeline', 'no Classic screen: the URL redirects to the Modern talk surface (GroupTalkController::show), so nothing under this body id renders in Classic; the entrance link box on the community home is inventoried there'),
                 new ScreenElement('member-only rendering', L::One, S::Missing, '_timelineCommunity.php if ($community->isPrivilegeBelong($memberId)) + api/activity search forward400Unless CommunityMember::isMember', 'no Classic screen; the Modern talk surface reads by GroupTalkAccess::canView (the topic_read_access column), so an Everyone group opens talk to a non-member where OpenPNE 3 drew nothing'),
