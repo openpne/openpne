@@ -7,9 +7,8 @@ use Tests\TestCase;
 
 /**
  * The Modern surface emits canonical /groups/* URLs. The OpenPNE 3 /community* family (also
- * /communityTopic, /communityEvent) survives
- * only as GET redirects for bookmarks, so a Modern page that still POSTs there gets a 405 (the
- * group core rename left two pages behind that way).
+ * /communityTopic, /communityEvent) survives only as GET redirects for bookmarks, so a Modern page
+ * that still POSTs there gets a 405 (the group core rename left two pages behind that way).
  */
 class ModernCanonicalUrlGuardTest extends TestCase
 {
