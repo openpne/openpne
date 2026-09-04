@@ -17,9 +17,8 @@ class FilesServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Whether EXIF Orientation can be read is a host fact, but the variant key reads it from
-        // config so that a test can take either branch. Set unconditionally: config:cache runs this
-        // too and would otherwise freeze the build host's answer for every request.
+        // Through config so a test can take either branch, and set unconditionally because
+        // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
         // Bound (not singleton) so each resolution reflects the current
@@ -27,21 +26,15 @@ class FilesServiceProvider extends ServiceProvider
         $this->app->bind(FileStorage::class, function (): FileStorage {
             $disk = config('openpne.files.disk');
 
-            // 'blob' is the DB-BLOB backend (not a Laravel filesystem disk). Any
-            // other value names a config/filesystems.php disk served by DiskFileStorage.
+            // 'blob' is the DB-BLOB backend, not a filesystem disk name.
             return $disk === 'blob'
                 ? new DbBlobFileStorage
                 : new DiskFileStorage($disk);
         });
 
         $this->app->singleton(ImageManager::class, function (): ImageManager {
-            // Both ship with intervention/image. imagick is the one worth choosing
-            // deliberately: unlike GD it can convert an embedded colour profile.
-            //
-            // An unrecognised value throws rather than falling back to GD: a deployment
-            // that asked for a driver it does not get would run with different colour
-            // handling and never be told — a leftover `vips`, or a typo, would look like
-            // it took effect.
+            // An unrecognised value throws rather than falling back to GD, whose colour handling
+            // differs (GD cannot convert an embedded profile), so a typo never looks like it took effect.
             $driver = match ($configured = config('openpne.images.driver')) {
                 'gd' => GdDriver::class,
                 'imagick' => ImagickDriver::class,
@@ -50,11 +43,9 @@ class FilesServiceProvider extends ServiceProvider
                 ),
             };
 
-            // Nothing here renders animation (see StillImageDecoder), and skipping the
-            // frames keeps them from being allocated at all. Imagick is the exception:
-            // intervention/image 4.2.0 drops the animation by emptying the Imagick object
-            // the decoder then reads the media type from, so every GIF — animated or not —
-            // fails to decode. StillImageDecoder collapses that driver's frames instead.
+            // With decodeAnimation off, intervention/image 4.2.0 empties the Imagick object the decoder
+            // reads the media type from and every GIF fails, so it stays on for Imagick and
+            // StillImageDecoder collapses the frames instead.
             return new ImageManager($driver, decodeAnimation: $driver === ImagickDriver::class);
         });
     }

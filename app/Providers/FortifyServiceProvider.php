@@ -34,10 +34,8 @@ class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Enabling the two-factor feature would also auto-register Fortify's /user/two-factor-*
-        // management routes, which bypass this app's management contract (inline current_password
-        // re-auth + session revocation on factor change). Routes Fortify would register are instead
-        // declared by hand in routes/web.php — only the ones this app uses.
+        // Fortify's own routes are never registered: its /user/two-factor-* management routes would
+        // bypass this app's re-auth and revocation contract (docs/internals/security.md).
         Fortify::ignoreRoutes();
 
         // Both outcomes of a forgot-password request resolve to the same neutral response, so the
@@ -50,20 +48,15 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::createUsersUsing(CreateNewMember::class);
 
-        // A class-string is not a callable, so wrap the invokable action in a closure. With the
-        // two-factor feature on, Fortify's login pipeline invokes this callback twice on a
-        // successful non-two-factor login (RedirectIfTwoFactorAuthenticatable validates first,
-        // AttemptToAuthenticate re-validates), so the resolved member is memoised per request —
-        // otherwise every such login would burn a second bcrypt verification. A failure throws at
-        // the first stage, so failures are still counted exactly once.
+        // Memoised per request: with the two-factor feature on, Fortify's login pipeline calls this
+        // twice on a successful login, and a failure throws at the first call so it is counted once.
         Fortify::authenticateUsing(function (Request $request): ?Member {
             if ($request->attributes->has('login.member')) {
                 return $request->attributes->get('login.member');
             }
 
-            // After repeated failures from this IP, require the CAPTCHA before the credentials are even
-            // checked — a soft escalation, never a lockout. A missing/invalid solve re-renders the form
-            // with the widget; a bad solve is not counted as a login failure.
+            // A soft escalation, never a lockout: a bad solve re-renders the form and is not counted as
+            // a login failure.
             if ($this->loginChallengeRequired($request) && ! $this->loginCaptchaSolved($request)) {
                 throw ValidationException::withMessages(['altcha' => __('Captcha verification failed. Please try again.')]);
             }
@@ -110,10 +103,8 @@ class FortifyServiceProvider extends ServiceProvider
 
         // Auth-flow rate limiters (content/social write limiters live in AppServiceProvider).
         RateLimiter::for('login', function (Request $request) {
-            // In the challenge phase the proof-of-work + single-use solution is the throttle, so a
-            // solved challenge lifts the per-minute cap — otherwise the solved retry would be 429'd
-            // before the credentials are checked, defeating the escalation. An unsolved request keeps
-            // the per-(email, IP) limit.
+            // A solved challenge lifts the cap: the proof of work is the throttle then, and a 429 on
+            // the solved retry would defeat the escalation.
             if ($this->loginChallengeRequired($request) && $this->loginCaptchaSolved($request)) {
                 return Limit::none();
             }
@@ -123,36 +114,27 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
-        // Two-factor challenge submissions, keyed by the challenged member (login.id) alone —
-        // vendor semantics. The adversary here already holds the password, so the guess budget
-        // must be per account, not per (account, IP): an IP component would hand a distributed
-        // attacker 5/min per IP. Unchallenged strays (no login.id) share one bucket and fail at
-        // challengedUser() anyway.
+        // Keyed by the challenged member alone, since the adversary already holds the password and an
+        // IP component would hand a distributed attacker 5/min per IP; a stray with no login.id shares
+        // one bucket and fails at challengedUser() anyway.
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id'));
         });
 
-        // The four member two-factor management POSTs (enable/confirm/disable/regenerate) share one
-        // budget; the GET render is left unthrottled (routes/web.php). Keyed by the authenticated
-        // member, not the IP: the adversary at these endpoints already holds the session, so the
-        // guess budget for the inline code/recovery proof must not scale with attacker IPs (same
-        // reasoning as the challenge limiter).
+        // Keyed by the member, not the IP: the adversary here already holds the session, so the
+        // proof-guess budget must not scale with attacker IPs.
         RateLimiter::for('mfa-manage', function (Request $request) {
             return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
-        // Creating and deleting AI accounts, keyed by the owning member: each one is a member row
-        // appearing in or vanishing from the site, so the budget belongs to whoever is spending it,
-        // not to the address they are spending it from.
+        // Keyed by the owning member, not the IP: each call adds or removes a member row, so the
+        // budget belongs to whoever spends it.
         RateLimiter::for('ai-manage', function (Request $request) {
             return Limit::perMinute(5)->by('ai-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
-        // The admin-issued two-factor reset submit, keyed PER TOKEN, not per IP: a reset link is one
-        // account's password-guess surface, so a distributed attacker must not be able to pool
-        // 5/min-per-IP onto a single link. The raw token is hashed into the key so it never lands in the
-        // cache store or a log. The per-IP spray cap across links is the route's throttle:30,1; a re-send
-        // kills the old token, so its bucket simply goes stale.
+        // Keyed per token, hashed so the raw token never lands in the cache store or a log, and not
+        // per IP because a distributed attacker must not pool 5/min per IP onto one link.
         RateLimiter::for('mfa-reset', function (Request $request) {
             return Limit::perMinute(5)->by('mfa-reset|'.hash('sha256', (string) $request->route('token')));
         });
@@ -169,8 +151,7 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
-        // Per-IP cap on the token-gated completion form (GET render + POST submit). The 40-char token
-        // is the real gate; this just bounds blind guessing against the endpoint.
+        // The 40-char token is the real gate; this bounds blind guessing against it.
         RateLimiter::for('register-complete', fn (Request $request) => Limit::perMinute(10)->by('register-complete|'.$request->ip()));
 
         // Member invitation send, keyed by the inviting (authenticated) member, not the IP: per-(member,
@@ -194,9 +175,8 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('email-change|'.$memberId);
         });
 
-        // Per-IP cap on the credential-bearing password endpoints (the broker only throttles
-        // per-email, leaving relay/guessing across addresses open). Applied to every Fortify route
-        // via config, so the GET forms and the separately-limited login route pass through unlimited.
+        // Attached to every Fortify route via config, hence the name filter; the broker itself
+        // throttles only per email, leaving guessing across addresses open.
         RateLimiter::for('password-reset', function (Request $request) {
             return in_array($request->route()?->getName(), ['password.email', 'password.update'], true)
                 ? Limit::perMinute(5)->by('password-reset|'.$request->ip())
@@ -230,11 +210,8 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * Whether the request carries a valid CAPTCHA solution. The solution is single-use, so it is
-     * verified at most once per request and the result is memoised — the rate limiter and the
-     * authentication callback both read it without consuming it twice. Load-bearing: with the
-     * two-factor feature on, the login pipeline calls the authentication callback twice in one
-     * request, so an unmemoised verify would spend the solution and fail its own second read.
+     * Memoised because the solution is single-use and one request reads it more than once (the rate
+     * limiter, then the authentication callback).
      */
     private function loginCaptchaSolved(Request $request): bool
     {

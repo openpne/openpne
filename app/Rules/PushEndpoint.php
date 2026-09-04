@@ -8,17 +8,10 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * A push service endpoint the site is willing to POST to later.
- *
- * The URL arrives from the member's browser, but nothing stops a client from sending any URL it
- * likes, and the send happens in a queue worker against a client that validates no address and pins
- * no connection — so this is where the destination shape is fixed: https on the default port, a
- * fully-qualified host, no embedded credentials. An address literal or a single-label host
- * (`intranet`) is refused — every real push service is a dotted name, and both are shapes an
- * internal target hides behind.
- *
- * Shape control only: it cannot stop a name that resolves inward (docs/internals/outbound-http.md).
- * The transport's no-redirect, no-proxy configuration is the other half.
+ * The queued send validates no address, so the destination shape is fixed here: an address literal or
+ * a single-label host is refused because every real push service is a dotted name and both are shapes
+ * an internal target hides behind. Shape only; a name that resolves inward is the transport's problem
+ * (docs/internals/outbound-http.md).
  */
 final class PushEndpoint implements ValidationRule
 {
@@ -34,8 +27,7 @@ final class PushEndpoint implements ValidationRule
 
     private function isPushService(string $url): bool
     {
-        // Printable ASCII, as a URL is (RFC 3986), and no longer than the column — whose charset is
-        // ascii, so this is also exactly what it can hold. \z rather than $, which admits a final newline.
+        // Printable ASCII (RFC 3986), matched with \z rather than $, which admits a final newline.
         if (preg_match('/\A[\x21-\x7e]{1,'.self::MAX_LENGTH.'}\z/', $url) !== 1) {
             return false;
         }
@@ -52,8 +44,7 @@ final class PushEndpoint implements ValidationRule
 
         $host = $parts['host'] ?? '';
 
-        // A bracketed IPv6 literal reaches here with its brackets; strip them before judging.
-        // A dotless host is a single-label internal name, never a push service.
+        // parse_url keeps an IPv6 literal's brackets.
         return $host !== ''
             && str_contains($host, '.')
             && filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) === false;

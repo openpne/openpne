@@ -13,10 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Resolves the gadgets (`gadgets` + `gadget_configs`) into render-ready items grouped by zone. Rows
- * are cached as plain arrays (the production cache cannot serialize models); the admin UI calls
- * clearCache() after a change. A row is dropped when its kind is unregistered/unavailable, its zone
- * is not in the active layout, or a guest may not see a members-only kind here.
+ * Rows are cached as plain arrays because the production cache store cannot serialize models.
  */
 class GadgetService
 {
@@ -27,10 +24,8 @@ class GadgetService
     public function __construct(private readonly SnsSettingService $settings) {}
 
     /**
-     * Render-ready gadgets for a context, grouped by the active layout's zones (all present, in order).
-     * $subject is passed through on each item for the per-member kinds; its meaning is per context
-     * (home=viewer, profile=owner, login/sidebanner=null). $viewer is null for a guest. The context is
-     * carried on each item so a kind that behaves differently by context (activityBox) can branch on it.
+     * Every zone of the active layout is present, in order, even when empty. $subject's meaning is per
+     * context (home=viewer, profile=owner, login/sidebanner=null).
      *
      * @return array<string, list<array{name: string, component: string, config: array<string, mixed>, partId: ?string, subject: ?Member, context: string}>>
      */

@@ -7,17 +7,10 @@ use App\Upgrade\SourceSchema;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The OpenPNE 3 `member` source table, for upgrade SQL tests whose step is not MemberUpgrade.
- *
- * Every step that copies rows belonging to a member guards them against `member.is_active`
- * (App\Upgrade\ActiveMember), so its compiled SQL reads the source `member` table even when the
- * step's own FROM table is something else. A test that seeds only its own source table and target
- * `members` rows would hit a missing table rather than exercise the guard.
- *
- * activeMember() is the usual entry point: it creates the OpenPNE 4 row a step's output references
- * and the activated OpenPNE 3 row the guard looks for, keyed the same, which is what a real source
- * mid-upgrade looks like. inactiveSourceMember() covers the other side — the registration that never
- * completed, whose rows the guard must drop.
+ * Every step that copies member-owned rows guards them against `member.is_active`
+ * (App\Upgrade\ActiveMember), so its SQL reads the source `member` table whatever its own FROM table
+ * is. activeMember() seeds the OpenPNE 4 row and the activated OpenPNE 3 row keyed the same;
+ * inactiveSourceMember() seeds the registration that never completed.
  */
 trait SeedsSourceMembers
 {

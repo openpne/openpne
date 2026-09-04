@@ -16,17 +16,10 @@ use GuzzleHttp\TransferStats;
 use Psr\Http\Message\RequestInterface;
 
 /**
- * Builds a REAL SafeHttpFetcher over a fake transport, for testing anything that fetches.
- *
- * The substitution is deliberately made underneath the fetcher — at the HTTP handler and the DNS
- * resolver — rather than by faking SafeHttpFetcher itself. A stubbed fetcher would let a caller's
- * tests pass while the destination check, the connection pin, the byte cap and the media-type rules
- * never run, so every one of those could regress without a red test. Here they all execute on every
- * call, and a test that wants to see a refusal arranges the refusal rather than asserting a stub.
- *
- * The transport reports the pinned address as the peer by default, modelling the pin working. That
- * default matters: a fake reporting no peer would send every test down the unverified path, which is
- * exactly the shape of a hole this suite is meant to detect.
+ * Substituted beneath a real SafeHttpFetcher (the HTTP handler and the DNS resolver), so the
+ * destination check, the connection pin, the byte cap and the media-type rules run on every call. The
+ * transport reports the pinned address as the peer by default; a fake reporting no peer would send
+ * every test down the unverified path.
  */
 trait FakesOutboundTransport
 {
@@ -99,8 +92,7 @@ trait FakesOutboundTransport
             }
 
             // libcurl aborts on a short write, which Guzzle surfaces as a ResponseException carrying
-            // the response it had already built. Modelling that is what exercises the fetcher's
-            // truncation path rather than a happy one.
+            // the response built so far.
             if ($capped) {
                 return Create::rejectionFor(new ResponseException('Unable to write to stream', $request, $response));
             }

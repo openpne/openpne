@@ -9,14 +9,9 @@ use NotificationChannels\WebPush\WebPushServiceProvider as PackageWebPushService
 use Psr\Http\Client\ClientInterface;
 
 /**
- * Replaces the one thing this app cannot let the channel package decide: which HTTP client the push
- * transport runs on. Everything else it does — the VAPID auth array, padding, the report handler
- * binding, publishing — is inherited, so a future release changing that setup still lands.
- *
- * The package is listed under `dont-discover` so only this provider registers. That is belt and
- * braces rather than the mechanism: providers from the package manifest register before the ones in
- * bootstrap/providers.php, so the later contextual binding would win either way. Which also means a
- * typo in that list is silent — WebPushClientConfigTest is what actually holds this in place.
+ * Extends rather than replaces the package provider, so its VAPID, padding and report-handler setup
+ * keeps landing across releases. `dont-discover` is belt and braces: manifest providers register
+ * before the ones in bootstrap/providers.php, so this later binding wins either way.
  */
 class WebPushServiceProvider extends PackageWebPushServiceProvider
 {

@@ -6,10 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Symfony\Component\Intl\Countries;
 
 /**
- * Country list for the country_select profile form type.
- *
- * Supplies the CLDR country names (~250 ISO 3166-1 alpha-2 codes) localised for the UI locale.
- * Accepts both the app locale ('ja'/'en') and the Doctrine translation lang ('ja_JP').
+ * Accepts both the app locale ('ja'/'en') and the OpenPNE 3 Doctrine translation lang ('ja_JP').
  */
 class CountryListService
 {

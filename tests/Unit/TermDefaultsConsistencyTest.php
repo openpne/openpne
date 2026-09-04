@@ -9,9 +9,8 @@ use App\Services\TermService;
 use Tests\TestCase;
 
 /**
- * The Filament admin form renders one row per term name. Term names that exist
- * in one locale but not another would either be hidden from the form or fall
- * back silently — both confusing. Lock the key set to match across locales.
+ * Pins the term key set to match across locales: the admin form renders one row per name, and a
+ * name missing from one locale would be hidden or fall back silently.
  */
 class TermDefaultsConsistencyTest extends TestCase
 {

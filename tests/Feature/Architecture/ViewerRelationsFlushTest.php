@@ -10,18 +10,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins that a write to a memoised relation clears the memo.
- *
- * `ViewerRelations` holds answers about blocks, friendships and group roles that were true when a
- * page read them. Forgetting the flush fails **open** — a request that changes one of these and then
- * renders is answered from before its own write — and nothing about that is visible at the call
- * site, so wiring it by hand alone would rot silently. This is the guard that says the wiring is
- * complete.
- *
- * The detection is deliberately coarse: any file naming one of the three tables (or the membership
- * model) alongside a write verb has to flush, or be listed below with a reason. A file that trips
- * this and writes none of the three is an entry in that list; a file that trips it and does write
- * one is a bug this test is for.
+ * Pins that a write to a memoised relation clears the memo; a forgotten flush fails open, answering
+ * the request from before its own write, and nothing at the call site shows it.
+ * Detection is coarse on purpose: a file naming one of the tables beside a write verb must flush or
+ * be listed below with a reason.
  */
 class ViewerRelationsFlushTest extends TestCase
 {

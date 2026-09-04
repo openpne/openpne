@@ -8,13 +8,9 @@ use Minishlink\WebPush\WebPush;
 use NotificationChannels\WebPush\WebPushChannel;
 
 /**
- * Substitutes the push transport underneath the channel, the way FakesOutboundTransport does for the
- * fetcher: the real WebPushChannel still runs, so the subscription lookup, the payload it builds and
- * the report handling (including expiry deletion) execute on every call. Faking the channel itself
- * would let all of that regress without a red test.
- *
- * The swap must use the same contextual binding the package registers — a global instance() for
- * Minishlink\WebPush\WebPush is not what the channel resolves.
+ * Substituted beneath the real WebPushChannel, so the subscription lookup, the payload and the report
+ * handling (expiry deletion included) run on every call. The swap must use the package's contextual
+ * binding; a global instance() for WebPush is not what the channel resolves.
  */
 trait FakesWebPushTransport
 {

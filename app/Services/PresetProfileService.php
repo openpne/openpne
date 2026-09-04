@@ -5,12 +5,8 @@ namespace App\Services;
 use App\Models\Profile;
 
 /**
- * Resolves the preset profile catalog (config/preset_profile.php).
- *
- * Preset fields (profiles.name starting with `op_preset_`) take their structure and
- * choices from the catalog rather than the database: select/radio choices come from the
- * catalog and the chosen key is stored directly in member_profiles.value (no
- * profile_option row). Custom fields use profile_options instead.
+ * A preset select/radio stores the chosen catalog key in member_profiles.value with no profile_options
+ * row, unlike a custom field.
  */
 class PresetProfileService
 {
@@ -81,9 +77,8 @@ class PresetProfileService
     }
 
     /**
-     * Preset keys not yet registered as a profile, for the admin "add preset" picker.
-     * All region_* variants are hidden once any `op_preset_region` exists (they share the
-     * unique name). Returns [catalogKey => translated caption].
+     * All region_* variants are hidden once any `op_preset_region` exists, since they share that
+     * unique name.
      *
      * @return array<string, string>
      */

@@ -11,16 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Reads the global SNS settings (`sns_settings`), resolving each key to its stored override or its
- * App\Support\SnsSettingKey default. The admin pages call clearCache() after persisting.
- *
- * The overrides are cached in tiers so the hot path stays small: the identity / auth / gadget settings
- * (read on every request — sns_name() is shared to Modern too) never deserialize the large design
- * blobs. The Classic HTML-insertion / footer keys load only when a Classic page renders. The custom
- * CSS document is isolated entirely — its body has its own entry, read only by the CSS endpoint, and a
- * separate boolean flag answers "is any custom CSS set" so a Classic render decides whether to <link>
- * it without ever loading the body. The login screen message has its own entry for the same reason:
- * it is TEXT-sized and only the login screen reads it.
+ * Overrides are cached in tiers (the keys below) so the per-request hot path never deserializes the
+ * design blobs, the custom CSS body or the login message.
  */
 class SnsSettingService
 {

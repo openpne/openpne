@@ -18,13 +18,8 @@ abstract class TestCase extends BaseTestCase
 
         $this->withoutVite();
 
-        // Registration mode and the CAPTCHA toggle are DB-backed (App\Support\SnsSettingKey), no longer
-        // env. Seed the convenient test baseline the suite assumes — open registration, CAPTCHA off —
-        // so most auth tests need no setup; the few that exercise a mode override it with setSnsSetting().
-        //
-        // Only for RefreshDatabase tests, which get an isolated per-process database. Other tests share
-        // the base database across parallel processes, so writing here pollutes it (and previously raced
-        // a duplicate-key 1062); none of them depend on the seed.
+        // Seeded only for RefreshDatabase tests, which own an isolated per-process database; the others
+        // share the base database across parallel processes and none depend on the seed.
         if ($this->usesRefreshDatabase() && Schema::hasTable('sns_settings')) {
             $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'open');
             $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, false);
@@ -38,13 +33,10 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Simulate the next HTTP request arriving on a fresh worker: forget every cached
-     * object that captured the previous request's session store (guards, the session
-     * manager's built driver, the redirector), so UseAdminSessionStore's per-realm
-     * pin can take effect, plus the scoped bindings that memoize per request. The test
-     * container outlives a request, so both are required between requests in any test
-     * that crosses the member/admin realm boundary or changes what a scoped service
-     * already counted, within one test method.
+     * The test container outlives a request, so between two requests in one test the objects that
+     * captured the first request's session store (guards, the built session driver, the redirector)
+     * and the scoped bindings must be forgotten by hand. Required when a test crosses the member/admin
+     * realm boundary or changes what a scoped service already counted.
      */
     protected function freshRequestState(): void
     {
@@ -70,12 +62,9 @@ abstract class TestCase extends BaseTestCase
             ['value'],
         );
         app(SnsSettingService::class)->clearCache();
-        // A service that read this setting once for its scope (LinkCardSettings) holds the old
-        // answer, and in production that scope ends with the request or the job. The test container
-        // outlives both, so flipping a setting mid-test has to end it here or the change is
-        // invisible to everything already resolved. This takes the other scoped services with it —
-        // UnreadCounts and NotificationCenterWindow — so a test asserting that two surfaces share
-        // one set of counts must not change a setting between them.
+        // Scoped services hold the old answer until their scope ends, which the test container never
+        // does on its own, so a test comparing counts across two surfaces must not flip a setting
+        // between them.
         $this->app->forgetScopedInstances();
     }
 }

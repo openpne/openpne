@@ -8,10 +8,8 @@ use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
- * Wrapper around `php artisan i18n:check`. Fails CI when any `t()` / `__()` /
- * `@lang()` literal points at a key absent from lang/{ja,en}.json (modulo
- * baseline grandfathering). Runs as part of the normal test suite so missing
- * translations are blocked by the same gate as other failures.
+ * Runs `i18n:check` inside the normal suite, so a translation literal pointing at a key absent from
+ * lang/{ja,en}.json (outside the baseline) is blocked by the same gate as any other failure.
  */
 class I18nCoverageTest extends TestCase
 {

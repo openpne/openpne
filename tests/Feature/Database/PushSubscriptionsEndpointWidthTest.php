@@ -31,8 +31,7 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
     {
         $migration = $this->migration();
 
-        // RefreshDatabase has already run up(). The width is the rule's bound: widening one without
-        // the other turns a 422 into a 1406.
+        // The width is the rule's bound: widening one without the other turns a 422 into a 1406.
         $this->assertContains(self::UNIQUE, $this->indexNames());
         $this->assertEndpointColumn(PushEndpoint::MAX_LENGTH, 'ascii_bin');
 

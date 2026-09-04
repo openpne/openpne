@@ -95,8 +95,8 @@ class HomeIssuesTablesTest extends TestCase
 
     public function test_the_issue_key_needs_no_index_of_its_own(): void
     {
-        // It leads the (home_issue_id, section, rank) unique, and both engines take a leftmost
-        // prefix. Asserted so that adding a redundant one later has to argue with this.
+        // It leads the (home_issue_id, section, rank) unique and both engines use a leftmost prefix,
+        // so a redundant index added later has to argue with this.
         $names = array_map(
             fn (array $index): array => $index['columns'],
             Schema::getIndexes('home_issue_items'),
@@ -108,9 +108,8 @@ class HomeIssuesTablesTest extends TestCase
 
     public function test_every_index_name_fits_mysql(): void
     {
-        // MySQL rejects an identifier past 64 characters (errno 1059); SQLite enforces no limit. The
-        // four-column unique's generated name runs to 67, so without this the migration would build
-        // cleanly on the lane that runs first and fail on the one that runs last.
+        // MySQL rejects an identifier past 64 characters (errno 1059) and SQLite enforces no limit, so
+        // the four-column unique's 67-character generated name would fail only on the MySQL lane.
         foreach (['home_issues', 'home_issue_items'] as $table) {
             foreach (Schema::getIndexes($table) as $index) {
                 $name = (string) $index['name'];
@@ -150,10 +149,8 @@ class HomeIssuesTablesTest extends TestCase
         $issues = require database_path('migrations/2026_08_27_000001_create_home_issues_table.php');
         $items = require database_path('migrations/2026_08_27_000002_create_home_issue_items_table.php');
 
-        // RefreshDatabase has already run both up()s. Rolled back newest first, which is what a real
-        // rollback does and the only order that works: MySQL refuses to drop a table another still
-        // holds a foreign key into (errno 3730), so taking home_issues down on its own would pass on
-        // SQLite and fail on MySQL.
+        // Newest first, the only order that works: MySQL refuses to drop a table another still holds
+        // a foreign key into (errno 3730), which SQLite would let pass.
         $items->down();
         $this->assertFalse(Schema::hasTable('home_issue_items'));
 

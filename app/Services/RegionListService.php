@@ -6,16 +6,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 
 /**
- * Region list for the region_select profile form type, built from config/regions.php plus the
- * country names from CountryListService.
- *
- * value_type drives two shapes:
- *   - 'string' / null : grouped by country ([country name => [region => label]])
- *   - 'JP' / 'US' ... : a single country's flat list ([region => label])
- *
- * The stored value is always the English source region name from config/regions.php, so saved
- * data is locale-independent; only the display label is translated via lang/{locale}/regions.php,
- * falling back to the English source for untranslated keys.
+ * The stored value is always the English source region name from config/regions.php, so saved data
+ * is locale-independent and only the display label is translated.
  */
 class RegionListService
 {
