@@ -8,12 +8,7 @@ use App\Models\Member;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
-/**
- * The subject member's profile values, filtered to what the
- * current viewer may see. OpenPNE 3 always seeds the nickname row first, so the box renders even
- * for a member with no visible fields; the visible profile fields follow. The page-level
- * owner→viewer block is the controller's; here we only resolve per-field visibility.
- */
+/** The page-level owner→viewer block is the controller's; this resolves only per-field visibility. */
 class ProfileListBox extends Component
 {
     /** @var list<array{caption: string, value: string, linkify: bool}> */
@@ -40,9 +35,9 @@ class ProfileListBox extends Component
         /** @var Member|null $viewer */
         $viewer = auth()->user();
 
-        // OpenPNE 3 seeds the nickname row, then Age right after it (gated separately from the
-        // birthday field), then the visible profile fields. Only the free-text profile values are
-        // URL-auto-linked (OpenPNE 3 op_auto_link_text); nickname and the computed Age are not.
+        // OpenPNE 3 order: nickname, then Age (gated separately from the birthday field), then the
+        // visible fields; only the free-text values are auto-linked (op_auto_link_text), not the
+        // nickname or Age.
         $rows = [['caption' => __('%Nickname%'), 'value' => $subject->name, 'linkify' => false]];
         if (($age = $visibleAge($viewer, $subject)) !== null) {
             $rows[] = ['caption' => __('Age'), 'value' => __(':age years old', ['age' => $age]), 'linkify' => false];

@@ -33,10 +33,9 @@ class CreateProfile extends CreateRecord
             $service = app(PresetProfileService::class);
             $def = $service->findByKey($presetKey);
             if ($def !== null) {
-                // Lock the structure from the preset definition (OpenPNE opPresetProfileForm).
-                // region_JP etc. resolve to name=op_preset_region, value_type=JP. The choices of a
-                // preset select/radio come from the catalog, not profile_options, so no option
-                // rows are created — usesValueColumnForChoice() drives reads off the catalog.
+                // Preset structure (OpenPNE 3 opPresetProfileForm): region_JP resolves to
+                // name=op_preset_region, value_type=JP, and no option rows are created because a
+                // preset's choices come from the catalog (usesValueColumnForChoice()).
                 $resolved = $service->nameForKey($presetKey);
                 $data['name'] = $resolved['name'];
                 $data['form_type'] = $def['form_type'];

@@ -48,9 +48,8 @@ class DiariesTable
                         ->all()),
             ])
             ->recordActions([
-                // Admin delete runs the author-less core: the panel guard already gates access,
-                // so it bypasses DeleteDiary's Member-author check while keeping the image-byte purge.
-                // Return truthy: DeleteAction reports failure when the using() result is falsy.
+                // The panel guard authorizes, so purge() skips DeleteDiary's author check; the truthy
+                // return is required because DeleteAction reports failure on a falsy using() result.
                 DeleteAction::make()
                     ->using(function (Diary $record): bool {
                         app(DeleteDiary::class)->purge($record);

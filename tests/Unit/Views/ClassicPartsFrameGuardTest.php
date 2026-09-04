@@ -7,11 +7,10 @@ namespace Tests\Unit\Views;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Hand-writing the frame is how its nesting drifts: a `.partsHeading` emitted as a sibling of
- * `.parts` lands outside the box every skin draws, and no per-screen assertion notices. New page
- * parts therefore use <x-classic.parts>. The views below predate it and each transcribes an
- * OpenPNE 3 partial that hand-writes the frame too, so the set is frozen rather than rewritten —
- * matching on the file, not the markup, so a Blade directive between the divs cannot hide one.
+ * The views listed below are the frozen set of hand-written parts frames (each transcribes an
+ * OpenPNE 3 partial that hand-writes it); new page parts use <x-classic.parts>, whose nesting cannot
+ * drift. Matched on the file's text, not parsed markup, so a Blade directive between the divs cannot
+ * hide one.
  */
 class ClassicPartsFrameGuardTest extends TestCase
 {

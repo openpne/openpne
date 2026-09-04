@@ -16,10 +16,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The "Appearance (Classic)" admin screens are hidden and their URLs blocked under modern_only — the
- * Classic surface is not served, so the settings have no effect and showing them would mislead. Under a
- * coexistence mode they are accessible. (Reverses the earlier #190 "never hide" call, whose premise —
- * Classic-only modules keep the Classic shell rendering under modern_only — no longer holds.)
+ * Each Classic-only admin screen listed below must be hidden and URL-blocked under modern_only and
+ * reachable under a coexistence mode.
  */
 class AppearanceClassicModernOnlyTest extends TestCase
 {

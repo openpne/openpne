@@ -15,12 +15,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The mail-template editor lists the registry templates and edits one at a time in a modal. Each edit
- * saves only that template and persists a row only when a field diverges from the default (absence =
- * default); the configurable toggle gates the mail; the body is byte-bounded and rejected when it uses
- * syntax the engine cannot send.
- */
 class MailTemplateSettingsTest extends TestCase
 {
     use RefreshDatabase;

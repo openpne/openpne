@@ -11,9 +11,8 @@ class GroupCategoryForm
 {
     public static function configure(Schema $schema): Schema
     {
-        // Categories are a flat master. The parent_id column is deliberately not exposed —
-        // nothing reads it, and an unrestricted parent select would let an admin create
-        // self-parent / cyclic master data.
+        // parent_id is deliberately not exposed: nothing reads it, and an unrestricted parent select
+        // would allow self-parent or cyclic rows.
         return $schema
             ->columns(1)
             ->components([

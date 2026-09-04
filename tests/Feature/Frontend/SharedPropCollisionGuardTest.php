@@ -11,14 +11,9 @@ use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
- * No page may pass a prop named after one of HandleInertiaRequests' shared props: page props win
- * the Inertia merge, so the shadowed value silently disappears for every component on that page —
- * a page prop `look` once handed the shell an object where it reads a look id, and the whole
- * screen went blank.
- *
- * Text-scrape over the literal `Inertia::render('x', [...])` arrays, like ChromeContextCoverageTest.
- * Blind spot, accepted: a serializer-built payload (`Inertia::render('x', Foo::page(...))`) is not
- * scanned — a shadowing key from those still needs a reviewer's eye.
+ * No literal `Inertia::render('x', [...])` array in app/ may carry a key named after one of
+ * HandleInertiaRequests' shared props: page props win the Inertia merge, so the shared value silently
+ * disappears for every component on that page. A serializer-built payload is not scanned.
  */
 class SharedPropCollisionGuardTest extends TestCase
 {

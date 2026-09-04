@@ -10,11 +10,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 birthdayBox: a birthday greeting image rendered by context. On the home (subject =
- * viewer) it shows only on the viewer's own birthday; on a profile (subject = owner) it shows on the
- * owner's birthday and the three days before. The birthday is read through the field's own
- * visibility (VisibleBirthday); a guest never reaches this members-only kind, so a null subject or an
- * invisible birthday yields nothing.
+ * OpenPNE 3 birthdayBox: `subject` is the viewer on the home and the owner on a profile. The birthday
+ * is read through the field's own visibility, so a null subject or an invisible birthday yields nothing.
  */
 class BirthdayBox extends Component
 {
@@ -60,10 +57,8 @@ class BirthdayBox extends Component
     }
 
     /**
-     * Days until the next occurrence of this birthday's month/day (0 on the day), ignoring the year —
-     * a faithful port of OpenPNE 3 opToolkit::extractTargetDay. Building each occurrence from Jan 1
-     * of the year reproduces that method's mktime month/day overflow, so a Feb 29 birthday lands on
-     * Mar 1 in a non-leap year. "Today" is the app timezone.
+     * Port of OpenPNE 3 opToolkit::extractTargetDay. Building each occurrence from Jan 1 reproduces its
+     * mktime month/day overflow, so a Feb 29 birthday lands on Mar 1 in a non-leap year.
      */
     private static function daysUntilNextBirthday(CarbonInterface $birthday): int
     {

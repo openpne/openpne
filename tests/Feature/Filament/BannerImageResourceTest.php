@@ -15,9 +15,9 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The upload/replace/delete logic lives in App\Features\Banner\Actions and is covered directly by
- * BannerImageActionsTest (storeFiles(false) temporary uploads can't be driven through Livewire's test
- * harness); this covers the page's form wiring and validation.
+ * storeFiles(false) temporary uploads cannot be driven through Livewire's test harness, so the
+ * upload/replace/delete behaviour is asserted on the actions directly; this covers the form wiring
+ * and validation.
  */
 class BannerImageResourceTest extends TestCase
 {

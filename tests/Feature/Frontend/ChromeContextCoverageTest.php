@@ -8,10 +8,9 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Guards ContextHeader coverage (default-over-opt-in): every routed Modern component must be
- * classified — either its member-chrome.ts registry entry builds a context crumb, or it is listed in
- * NO_CONTEXT_COMPONENTS with a reason. Without this, a new page lands with no back-navigation and
- * nobody notices. auth/* pages render outside MemberFrame and are exempt.
+ * Every Modern component routed from app/ (Inertia::render or the slash-form screen() helper) must
+ * either build a context crumb in its member-chrome.ts entry or be listed in NO_CONTEXT_COMPONENTS.
+ * auth/* pages render outside MemberFrame and are exempt.
  */
 class ChromeContextCoverageTest extends TestCase
 {

@@ -83,13 +83,8 @@ class AdminDateFormatTest extends TestCase
     ];
 
     /**
-     * The format lives in one place, so a screen added later inherits it. A column passing its own would
-     * still render — and would drift the moment the default changes — which no rendering test elsewhere
-     * would catch.
-     *
-     * Tokenized rather than matched as text: an argument can arrive as a literal, a named argument, a
-     * constant or a closure, and a pattern written for one of those spellings quietly passes the rest.
-     * What is checked is only whether the parentheses are empty.
+     * Tokenized rather than text-matched: an argument can arrive as a literal, a named argument, a
+     * constant or a closure, so only whether the parentheses are empty is checked.
      */
     public function test_no_column_carries_a_format_of_its_own(): void
     {

@@ -67,8 +67,8 @@ class AdminPageChromeTest extends TestCase
     }
 
     /**
-     * Read off the rendered page rather than the schema, so this holds whatever component grew the
-     * heading. Both locales, because %term% substitution can collapse a distinct key onto the title.
+     * Read off the rendered page in both locales: any component may grow a heading, and %term%
+     * substitution can collapse a distinct key onto the title.
      */
     public function test_no_heading_repeats_the_page_title(): void
     {

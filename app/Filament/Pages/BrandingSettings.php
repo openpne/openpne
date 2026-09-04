@@ -32,16 +32,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Edit the site's branding: the brand color, the logo mark and the favicon.
- *
- * The upload fields start empty on every visit and leaving one blank keeps the stored file, so the
- * form carries a removal toggle rather than a "clear" gesture on the field. Persisting is
- * App\Features\Branding\Actions\SaveBrandingSettings — the uploads and the settings write have to
- * succeed or fail together.
- *
- * The stored tokens are not existence-checked on render (hot path): deleting the referenced File from
- * the Files resource leaves a dangling URL until a new image is saved here — the same accepted risk
- * as an ownerless public asset embedded in custom HTML/CSS.
+ * The stored file tokens are not existence-checked on render (hot path): deleting the referenced
+ * File leaves a dangling URL until a new image is saved here.
  *
  * @property-read Schema $form
  */
@@ -91,9 +83,8 @@ class BrandingSettings extends Page
                                 __('Applies to the Modern member screens and the browser chrome. Leave it blank for the built-in color.'),
                                 __('Applies to the member screens and the browser chrome. Leave it blank for the built-in color.'),
                             ))
-                            // Blank-tolerant: the stored '' means "unbranded". Wrapped in a no-arg
-                            // factory so Filament passes the closure through as a validation rule
-                            // instead of injecting its ($attribute, $value, $fail) arguments.
+                            // Blank means unbranded; the no-arg factory makes Filament pass the closure
+                            // through as a validation rule instead of injecting its arguments.
                             ->rules([
                                 fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
                                     $hex = is_string($value) ? trim($value) : '';
@@ -234,9 +225,8 @@ class BrandingSettings extends Page
     }
 
     /**
-     * One "current image + replace + remove" block. $currentUrl is resolved at render, not at build:
-     * the same request that saves has already built this schema, and the preview has to show what was
-     * just stored. The removal toggle exists only while there is a file to remove.
+     * $currentUrl is resolved at render, not at build: the request that saves has already built this
+     * schema, and the preview must show what was just stored.
      *
      * @param  Closure(): ?string  $currentUrl
      */

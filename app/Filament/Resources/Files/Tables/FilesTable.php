@@ -80,8 +80,7 @@ class FilesTable
                     ),
             ])
             ->recordActions([
-                // Bytes are served by the admin-gated AdminFileController (download=1 forces an
-                // attachment even for raster types). Opening in a new tab avoids leaving the list.
+                // download=1 makes AdminFileController send an attachment even for raster types.
                 Action::make('download')
                     ->label(__('Download'))
                     ->icon(Heroicon::OutlinedArrowDownTray)

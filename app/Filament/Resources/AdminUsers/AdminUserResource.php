@@ -48,10 +48,8 @@ class AdminUserResource extends Resource
         return AdminUsersTable::configure($table);
     }
 
-    // OpenPNE 3 parity: the primary administrator (id 1) and the acting
-    // administrator can never be deleted, mirroring pc_backend/admin's
-    // executeDeleteUser guards. Consulted by both the table row action and the
-    // edit-page header action.
+    // OpenPNE 3 parity (pc_backend admin/deleteUser): the primary administrator (id 1) and the acting
+    // administrator can never be deleted.
     public static function canDelete(Model $record): bool
     {
         return $record->getKey() !== 1 && $record->getKey() !== auth('admin')->id();

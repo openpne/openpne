@@ -12,14 +12,13 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin board-topic moderation. List + view (with the topic's comments) + delete; no admin
-// edit (OpenPNE 3 had none). The view page hosts the comments RM.
+// No admin edit: OpenPNE 3 had none.
 class GroupTopicResource extends Resource
 {
     protected static ?string $model = GroupTopic::class;
 
-    // Authorization is the `admin` guard (panel access). The content policies (GroupTopicPolicy
-    // etc.) are member-typed and would TypeError on an AdminUser, so skip Filament's per-record checks.
+    // The panel guard authorizes; GroupTopicPolicy is member-typed and would TypeError on an
+    // AdminUser, so Filament's per-record checks are skipped.
     protected static bool $shouldSkipAuthorization = true;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;

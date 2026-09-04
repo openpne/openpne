@@ -16,10 +16,6 @@ use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The admin batch-invite page (OpenPNE 3 admin member/invite): a textarea of addresses, each issued an
- * admin-invite registration token and mailed a link. Available unless registration is suspended.
- */
 class InviteMembersTest extends TestCase
 {
     use RefreshDatabase;

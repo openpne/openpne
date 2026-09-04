@@ -141,10 +141,9 @@ class SitePolicySettings extends Page
         return Textarea::make($key->value)
             ->label($key->label())
             ->rows(15)
-            // Bounded by bytes, not characters: the value lives in a TEXT column (65535 bytes),
-            // and a char-count max would let a multi-byte value overflow it. Wrapped in a no-arg
-            // factory so Filament passes the closure through as a validation rule instead of
-            // trying to inject its ($attribute, $value, $fail) arguments.
+            // Bounded by bytes: the TEXT column holds 65535 bytes and a character max would let a
+            // multi-byte value overflow it; the no-arg factory makes Filament pass the closure through
+            // as a rule, not inject its arguments.
             ->rules([
                 fn (): Closure => function (string $attribute, mixed $value, Closure $fail) use ($key): void {
                     if (strlen((string) $value) > $key->maxBytes()) {

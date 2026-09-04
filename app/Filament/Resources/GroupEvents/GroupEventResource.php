@@ -13,14 +13,12 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin event moderation. List + view (with the event's comments and RSVP roster) + delete;
-// no admin edit. The view page hosts the two relation managers.
 class GroupEventResource extends Resource
 {
     protected static ?string $model = GroupEvent::class;
 
-    // Authorization is the `admin` guard (panel access). The content policies (GroupEventPolicy)
-    // are member-typed and would TypeError on an AdminUser, so skip Filament's per-record checks.
+    // The panel guard authorizes; GroupEventPolicy is member-typed and would TypeError on an
+    // AdminUser, so Filament's per-record checks are skipped.
     protected static bool $shouldSkipAuthorization = true;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;

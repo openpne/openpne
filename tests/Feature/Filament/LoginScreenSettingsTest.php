@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The login screen message editor. `sns_settings` is authoritative and the Markdown is stored
- * verbatim; the value is bounded by the TEXT column's byte size, not a character count.
- */
 class LoginScreenSettingsTest extends TestCase
 {
     use RefreshDatabase;

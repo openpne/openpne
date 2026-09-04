@@ -12,16 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * Exercises the three save transitions of the term-override editor:
- *   - changing a field from its default writes a row;
- *   - changing it back to the default deletes the row;
- *   - submitting a blank field deletes the row.
- *
- * These guard the "do not persist values that match the default" invariant
- * (a regression would leave the table full of redundant rows and obscure the
- * actual administrator customisations).
- */
 class TermSettingsTest extends TestCase
 {
     use RefreshDatabase;

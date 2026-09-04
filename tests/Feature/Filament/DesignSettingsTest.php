@@ -15,11 +15,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The design-settings editor (custom CSS, PC HTML insertion slots, footer). `sns_settings` is
- * authoritative: design values are stored verbatim and, unlike the identity fields, are NOT trimmed,
- * and the page only ever exposes its own (Design) group.
- */
 class DesignSettingsTest extends TestCase
 {
     use RefreshDatabase;

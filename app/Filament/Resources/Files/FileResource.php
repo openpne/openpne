@@ -10,9 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin file monitor. Lists every uploaded
-// file across the morph-owned content; admins preview, download, and delete. Read-only (no create —
-// admin upload is a separate feature). Bytes are served by the admin-gated AdminFileController.
+// No create page: the only admin upload is the public-image header action on the list.
 class FileResource extends Resource
 {
     protected static ?string $model = File::class;

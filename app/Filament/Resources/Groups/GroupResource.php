@@ -13,14 +13,13 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin community moderation. List + delete, plus an admin EDIT (OpenPNE 3 had none) for
-// fixing violating groups: name / description / category / policies.
+// Admin edit diverges from OpenPNE 3 (which had none): it exists for fixing violating groups.
 class GroupResource extends Resource
 {
     protected static ?string $model = Group::class;
 
-    // Authorization is the `admin` guard (panel access). GroupPolicy is member-typed and would
-    // TypeError on an AdminUser, so skip Filament's per-record policy checks.
+    // The panel guard authorizes; GroupPolicy is member-typed and would TypeError on an AdminUser,
+    // so Filament's per-record checks are skipped.
     protected static bool $shouldSkipAuthorization = true;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

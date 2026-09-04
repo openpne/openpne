@@ -8,11 +8,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * The subject member's friends as a row × col thumbnail grid. The
- * subject owns the list (home: the viewer; profile: the viewed member); a profile the viewer may
- * not see is already a 404 in the controller, so listing the owner's friends here is safe.
- *
- * The "show all (n)" total adds exactly one aggregate to the slice path (the slice itself carries its eager loads).
+ * `subject` is the viewer on the home and the viewed member on a profile. The list is taken as the
+ * subject's own view because a profile the viewer may not see is already a 404 in the controller.
  */
 class FriendListBox extends Component
 {

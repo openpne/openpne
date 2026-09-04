@@ -25,13 +25,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the design customizations reflected in the Classic shell: custom CSS, the PC HTML
- * insertion slots, and the footer HTML (logged-out / logged-in). `sns_settings` is authoritative —
- * every field is stored verbatim, with no trimming, so a stylesheet's leading @charset and any
- * significant whitespace survive. The typed registry is App\Support\SnsSettingKey (Design group).
- *
- * The values are emitted raw into the Classic page (admin-trusted operator HTML/CSS, e.g. analytics
- * tags); the write path is the admin panel only.
+ * Every value is stored verbatim, with no trimming, so a stylesheet's leading @charset and any
+ * significant whitespace survive. The values are emitted raw into the Classic page: admin-trusted
+ * operator HTML/CSS.
  *
  * @property-read Schema $form
  */
@@ -170,10 +166,9 @@ class DesignSettings extends Page
         return Textarea::make($key->value)
             ->label($key->label())
             ->rows($key === SnsSettingKey::CustomCss ? 12 : 4)
-            // Bounded by bytes, not characters: the value lives in a TEXT column (65535 bytes), and a
-            // char-count max would let a multi-byte value overflow it. Wrapped in a no-arg factory so
-            // Filament passes the closure through as a validation rule instead of trying to inject its
-            // ($attribute, $value, $fail) arguments.
+            // Bounded by bytes: the TEXT column holds 65535 bytes and a character max would let a
+            // multi-byte value overflow it; the no-arg factory makes Filament pass the closure through
+            // as a rule, not inject its arguments.
             ->rules([
                 fn (): Closure => function (string $attribute, mixed $value, Closure $fail) use ($key): void {
                     if (strlen((string) $value) > $key->maxBytes()) {

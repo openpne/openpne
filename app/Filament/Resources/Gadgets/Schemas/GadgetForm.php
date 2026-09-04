@@ -19,10 +19,8 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 /**
- * Gadget placement + per-gadget config. Context and kind are fixed after creation (changing the kind
- * would orphan its config). The config inputs are generated from the kinds' own GadgetConfigField
- * definitions and each shown only for the selected kind, so the form never restates a kind's schema.
- * Config inputs are prefixed `config_`; the Create/Edit pages persist them to gadget_configs.
+ * Context and kind are fixed after creation: changing the kind would orphan its config. Config inputs
+ * are prefixed `config_` and the Create/Edit pages persist them to gadget_configs.
  */
 class GadgetForm
 {
@@ -37,8 +35,7 @@ class GadgetForm
                     ->label(__('Gadget placement'))
                     ->helperText(__('Which page this gadget appears on.'))
                     ->options(GadgetResource::contextOptions())
-                    // Pre-select from the ?context= the list's Create button passes (the tab in view); a
-                    // bogus value is ignored. Only applies on create (the field is disabled on edit).
+                    // Pre-selected from the ?context= the list's Create button passes.
                     ->default(fn (): ?string => in_array($c = (string) request()->input('context'), array_keys(GadgetResource::contextOptions()), true) ? $c : null)
                     ->required()
                     ->live()
@@ -50,8 +47,6 @@ class GadgetForm
                     ->rules(['in:'.implode(',', array_keys(GadgetResource::contextOptions()))])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
-                // The page diagram: click an area to place into. Same `zone` state + same context-dependent
-                // rule as the dropdown it replaces; the picker reads `context` via $get to draw that page.
                 GadgetZonePicker::make('zone')
                     ->label(__('Zone'))
                     ->required()
@@ -64,9 +59,6 @@ class GadgetForm
                         },
                     ]),
 
-                // A radio list (not a dropdown) so every gadget kind is visible at once with its one-line
-                // description. On edit the kind is fixed (changing it would orphan its config), so only the
-                // chosen kind is shown — not the whole list.
                 Radio::make('name')
                     ->label(__('Gadget'))
                     ->options(function (Get $get, string $operation): array {

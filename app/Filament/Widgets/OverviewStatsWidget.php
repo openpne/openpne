@@ -15,11 +15,7 @@ use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * SNS scale and activity at a glance. Message volume and any 1:1 communication metric are
- * deliberately omitted (OpenPNE's privacy stance). New registrations are shown modestly — one
- * monthly card with a prior-month delta — rather than framed as a target to grow.
- */
+/** Message volume and any 1:1 communication metric are deliberately omitted (OpenPNE's privacy stance). */
 class OverviewStatsWidget extends StatsOverviewWidget
 {
     protected ?string $heading = null;
@@ -73,10 +69,9 @@ class OverviewStatsWidget extends StatsOverviewWidget
     }
 
     /**
-     * Distinct groups with topic/event activity since $since. Keyed on updated_at, not
-     * created_at: a new comment bumps its parent topic/event updated_at (CreateTopicComment /
-     * CreateEventComment), so a fresh comment on an old thread counts as activity too — matching how
-     * the board orders threads. Public+static so it's assertable without rendering the widget.
+     * Keyed on updated_at, which a new comment bumps on its parent topic or event, so a fresh comment
+     * on an old thread counts as activity. Public and static so it is assertable without rendering the
+     * widget.
      */
     public static function activeGroupCount(CarbonInterface $since): int
     {

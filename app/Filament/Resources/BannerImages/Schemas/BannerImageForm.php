@@ -12,10 +12,8 @@ use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
 
 /**
- * A banner image: the uploaded picture, its optional link and a label (the <img> alt). The upload is
- * kept as a temporary file (storeFiles(false)) and stored through App\Files\FileUploader by the
- * Create/Edit pages, not on a Filament disk. Which placements show the image is chosen on the Banner
- * page, not here.
+ * The upload stays a temporary file (storeFiles(false)); the Create/Edit pages store it through
+ * App\Files\FileUploader, not a Filament disk.
  */
 class BannerImageForm
 {

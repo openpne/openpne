@@ -25,10 +25,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Switch the feature units (App\Support\Feature) on and off site-wide; see
- * docs/internals/feature-toggles.md. `sns_settings` is authoritative; every key is stored verbatim
- * on save and resolves to enabled while no row exists, so an install that never opened this page
- * runs every unit.
+ * A key resolves to enabled while no `sns_settings` row exists, so an install that never opened this
+ * page runs every unit (docs/internals/feature-toggles.md).
  *
  * @property-read Schema $form
  */
@@ -149,10 +147,8 @@ class FeatureSettings extends Page
                 $toggle->live();
             }
 
-            // A nested unit is unreachable while its parent is off, and the control itself must say
-            // so — a live disabled state, not only the helper text beneath it. disabled() skips
-            // dehydration by default, which would make save-all overwrite the child's stored value
-            // with the enabled default, so dehydrated() keeps it in the state.
+            // disabled() skips dehydration by default, which would make save-all overwrite the child's
+            // stored value with the enabled default, so dehydrated() keeps it in the state.
             if (($parent = $feature->parent()) !== null) {
                 $toggle
                     ->disabled(fn (Get $get): bool => ! $get($parent->settingKey()->value))

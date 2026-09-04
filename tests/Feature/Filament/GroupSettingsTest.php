@@ -16,8 +16,8 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The talk notification default. DB-authoritative; a fresh install with no row is mentions-only, so
- * the path that matters here is an administrator asking for every message.
+ * A fresh install with no row is mentions-only, so the path asserted here is an administrator asking
+ * for every message.
  */
 class GroupSettingsTest extends TestCase
 {

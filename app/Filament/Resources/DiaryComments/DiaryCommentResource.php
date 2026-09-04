@@ -10,7 +10,6 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin diary-comment monitoring. List-only: read/search/delete.
 class DiaryCommentResource extends Resource
 {
     protected static ?string $model = DiaryComment::class;

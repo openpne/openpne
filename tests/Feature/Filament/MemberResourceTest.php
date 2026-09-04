@@ -252,11 +252,9 @@ class MemberResourceTest extends TestCase
         Notification::fake();
         $member = $this->memberWithLiveFactor();
 
-        // The true modal-mounted race: the factor is invalidated between before() (which passed on the
-        // still-live record) and RequestMfaReset's locked recheck, which then throws. Filament re-checks
-        // visibility on a mounted action, so a disable-then-confirm sequence would just silently hide it;
-        // to reach the action body deterministically, stand in a RequestMfaReset that throws as the lock
-        // recheck would. The action must catch it and warn — not 500 — and mint/mail/log nothing.
+        // Filament re-checks visibility on a mounted action, so a disable-then-confirm sequence would
+        // silently hide it; the stand-in RequestMfaReset throws as the locked recheck would, reaching
+        // the action body deterministically.
         $this->app->bind(RequestMfaReset::class, fn () => new class extends RequestMfaReset
         {
             public function __invoke(Member $member): void

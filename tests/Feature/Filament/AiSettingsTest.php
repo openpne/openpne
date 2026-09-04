@@ -96,9 +96,7 @@ class AiSettingsTest extends TestCase
 
     public function test_the_page_says_the_switch_is_read_at_creation_only(): void
     {
-        // "Allow members to create AI accounts" reads like a live permission; it is not, and an
-        // operator deciding to switch it off has to know that on this page. Asserted through __()
-        // under an explicit locale, since the panel renders in the site language.
+        // Asserted through __() under an explicit locale because the panel renders in the site language.
         foreach (['en', 'ja'] as $locale) {
             app()->setLocale($locale);
 
