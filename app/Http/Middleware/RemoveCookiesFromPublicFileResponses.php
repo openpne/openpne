@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A shared cache will not store a response carrying Set-Cookie, and one configured to store it anyway
- * would hand one visitor another's session. Outermost in the `web` group: StartSession and
+ * would hand one visitor another's session. Must be outermost in the `web` group: StartSession and
  * AddQueuedCookiesToResponse add cookies while the response unwinds, so anything inside them sees a
  * response they will still add to.
  */

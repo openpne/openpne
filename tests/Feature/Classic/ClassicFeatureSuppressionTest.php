@@ -11,7 +11,7 @@ use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** The navigation and the gadgets carry their own tests (NavigationServiceTest, GadgetServiceTest); this covers the blocks each page hard-codes. */
+/** Covers the blocks each Classic page hard-codes for a switched-off unit; the navigation and the gadget lists are covered by their services' tests. */
 class ClassicFeatureSuppressionTest extends TestCase
 {
     use RefreshDatabase;

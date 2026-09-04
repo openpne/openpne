@@ -14,7 +14,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class PublicFileController extends Controller
 {
-    /** Anything else is sent as an attachment so a stored file is never interpreted as a same-origin document. */
+    /**
+     * Anything else is sent as an attachment so a stored file is never interpreted as a same-origin
+     * document; the upload validation already rejects non-raster types, so this is the second line.
+     */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
     public function show(File $file, FileStorage $storage): StreamedResponse

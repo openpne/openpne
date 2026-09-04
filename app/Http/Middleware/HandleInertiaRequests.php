@@ -46,8 +46,8 @@ class HandleInertiaRequests extends Middleware
                     'isAi' => $user->isAiAccount(),
                 ] : null,
             ],
-            // A guest gets a constant all-false map in the same shape: the gate keeps toggle state
-            // unobservable to a guest, and the client type stays non-nullable.
+            // A guest gets a constant all-false map in the same shape, so this prop discloses no toggle
+            // state and the client type stays non-nullable.
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),

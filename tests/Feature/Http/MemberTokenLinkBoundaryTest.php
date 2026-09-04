@@ -15,7 +15,7 @@ use Tests\TestCase;
  * Pins the auth boundary of the member token-link landings: every MemberConfigController route is
  * authenticated-only, while the mail-link landings (email-change confirm/cancel, the admin-issued MFA
  * reset) are deliberately guest-reachable on their own controllers with only their throttles,
- * NoReferrer where the URL carries a secret, and the issued-token length constraint.
+ * NoReferrer where the URL carries a secret and a password, and the issued-token length constraint.
  */
 class MemberTokenLinkBoundaryTest extends TestCase
 {

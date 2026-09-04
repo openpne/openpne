@@ -99,9 +99,9 @@ class FeatureRouteMiddlewarePinTest extends TestCase
     }
 
     /**
-     * Pins the gate's slot in the resolved stack (bootstrap/app.php priority list): after auth so a
-     * guest never sees toggle state, before ThrottleRequests and SubstituteBindings so a disabled unit
-     * spends no limiter and reaches no missing() handler.
+     * Pins the gate's slot in the resolved stack: after auth so a guest in an auth group meets the
+     * login redirect first, before ThrottleRequests and SubstituteBindings so a disabled unit spends
+     * no limiter and reaches no missing() handler.
      */
     public function test_the_gate_runs_after_auth_and_before_throttle_and_bindings(): void
     {
