@@ -9,26 +9,10 @@ use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 
 /**
- * Normalises a URL into the key a card is stored under, and resolves references found inside a page.
- *
- * The point is to make two spellings of the same page share one card, without ever making two
- * different pages collide. That asymmetry decides what is normalised and what is left alone:
- *
- *  - scheme and host lowercase, default port dropped, trailing dot removed, IDN to Punycode —
- *    these cannot change which resource is addressed;
- *  - the fragment is dropped, since it never reaches the server;
- *  - **the query is kept in full, including an empty one.** Plenty of sites put the article id
- *    there, so stripping or reordering it would merge unrelated pages into one card; and a server
- *    can distinguish `/a` from `/a?`, so the trailing `?` is kept as well. Tracking parameters
- *    therefore split the cache, which is the safe direction to be wrong in.
- *
- * http and https are deliberately *not* unified: they are different origins, and the fetcher treats
- * them as such.
- *
- * Ports are restricted to the same scheme-independent set SafeHttpFetcher will dial, 80 and 443.
- * Accepting more here would only mint cards for URLs the fetcher then refuses, leaving permanently
- * failed rows behind. A legal non-default combination (https on 80) keeps its port, since that is
- * part of the address.
+ * Two spellings of one page share a card and two different pages never collide, which decides what
+ * is normalised and what is kept in full, the query included (docs/internals/link-cards.md). Ports
+ * are restricted to the 80 and 443 `SafeHttpFetcher` dials, since a card minted for a port it
+ * refuses could never be filled in.
  */
 final class LinkUrl
 {
@@ -105,14 +89,10 @@ final class LinkUrl
     }
 
     /**
-     * $reference resolved against $base, per RFC 3986, or null when the result is not http(s).
-     *
-     * $base must be the URL of the *response* the reference was found in, not the URL that was
-     * requested: after a redirect crosses hosts, `/thumb.jpg` on the page we arrived at is a
-     * different file from the same path on the page we asked for.
-     *
-     * Purely textual — nothing here resolves a name or opens a connection. Whether the result may be
-     * fetched is SafeHttpFetcher's decision, made when it is fetched.
+     * $reference resolved against $base per RFC 3986, or null when the result is not http(s); $base
+     * must be the URL of the response the reference was found in, since after a cross-host redirect
+     * the same path names a different file. Purely textual: whether the result may be fetched is
+     * `SafeHttpFetcher`'s decision, made when it is fetched.
      */
     public static function resolve(?string $reference, string $base): ?string
     {
@@ -148,10 +128,9 @@ final class LinkUrl
             return null;
         }
 
-        // An IPv6 literal in its RFC 5952 form, by the same parser resolve() goes through, so a
-        // pasted URL and a reference found inside a page do not mint two cards for one address —
-        // and the key does not depend on what the platform's inet_pton() accepts. A literal the
-        // canonicaliser refuses (a zone id, an IPvFuture form) gets no card.
+        // An IPv6 literal in its RFC 5952 form by the same parser `resolve()` uses, so a pasted URL
+        // and a page reference mint one card and the key does not depend on the platform's
+        // `inet_pton()`.
         if (str_contains($host, ':')) {
             try {
                 $host = Rfc3986::canonicalizeIpv6($host);

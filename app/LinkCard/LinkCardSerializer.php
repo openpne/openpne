@@ -10,15 +10,10 @@ use App\Support\LinkCardStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The card a body renders, as data.
- *
- * Both surfaces read this one shape. Classic could have assembled its own from the model and drifted
- * quietly — a description shown on one surface and not the other, a domain spelled two ways — and
- * more importantly the *gates* would have drifted: whether the setting is on, whether the card has
- * enough to draw, and which URL its picture is served from are all decided here, once.
- *
- * Nothing in the result is HTML. A card is drawn from a page we do not control, so every field
- * arrives at a template as text to be escaped ([body-text.md](../../docs/internals/body-text.md)).
+ * The one shape both surfaces read, so the gates (whether the setting is on, whether the card has
+ * enough to draw, which URL its picture is served from) are decided once rather than per surface.
+ * Nothing in the result is HTML: every field reaches a template as text to be escaped
+ * (docs/internals/body-text.md).
  */
 final class LinkCardSerializer
 {
@@ -26,21 +21,16 @@ final class LinkCardSerializer
     private const THUMBNAIL = 120;
 
     /**
-     * Boxes for the full-width picture, the same fit ladder a post's own images ship
-     * (App\Features\Timeline\Serializers\TimelinePostSerializer::image). Every one is already in
-     * `openpne.images.allowed_sizes`, and fit scales down only — so a box above the source collapses
-     * onto the source's own width, which is why the client derives the `w` descriptors from the
-     * recorded size rather than from the box (resources/js/lib/image-sources.ts).
+     * The same fit ladder a post's own images ship; each box is in `openpne.images.allowed_sizes`,
+     * and a fit variant is at most the source's own size (docs/internals/images.md).
      */
     private const FIT_BOXES = [320, 640, 1200];
 
     /**
-     * $record's card, or null when there is nothing to draw.
-     *
-     * $viewer is passed rather than read off the request because a card of one of this site's own
-     * pages is built from a record the reader may not be allowed to see, and there is no default
-     * that is right for both a web-public page and a queued job. No convenience fallback: a call
-     * site that forgets it fails loudly instead of quietly serving the card to a guest.
+     * $viewer is passed rather than read off the request: an internal card is built from a record
+     * the reader may not see, and no default is right for both a web-public page and a queued job.
+     * No convenience fallback, so a call site that forgets it fails loudly instead of serving the
+     * card to a guest.
      *
      * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
      */
@@ -72,17 +62,14 @@ final class LinkCardSerializer
             'description' => $card->description,
             'siteName' => $card->site_name,
             'domain' => self::domain($card->url),
-            // Which of the two shapes to draw, decided here so the two renderers cannot disagree —
-            // the same reason the gates below are not restated per surface. See CardLayout.
+            // Decided here so the two renderers cannot disagree, as the gates are (see CardLayout).
             'layout' => ($wide ? CardLayout::Wide : CardLayout::Compact)->value,
             // Never the file's own URL: a card is shared by every body mentioning the link, so the
             // address has to name this record for the request to be authorised against it.
             'imageUrl' => CardContext::imageUrl($record, self::THUMBNAIL, self::THUMBNAIL, square: true),
-            // The size the bytes *render* at, from the File rather than from the card row: the card's
-            // own columns are what the container declared, read before decoding as part of the size
-            // guard, and a sideways-shot JPEG declares its sides the other way round
-            // (App\Files\ImageDimensions). Shipped for the reserved aspect box and the `w`
-            // descriptors, which is not the same thing as the size it is drawn at.
+            // The size the bytes render at, from the File: the card row's own columns are what the
+            // container declared before decoding, and a sideways-shot JPEG declares its sides the
+            // other way round (`App\Files\ImageDimensions`).
             'imageWidth' => $card->image?->width,
             'imageHeight' => $card->image?->height,
             // Only the full-width shape asks for these; the thumbnail above is a fixed square.
@@ -91,26 +78,10 @@ final class LinkCardSerializer
     }
 
     /**
-     * A card of one of this site's own pages, assembled from the record it names.
-     *
-     * Nothing is read from the row but the URL and the pointer. What such a card says depends on who
-     * is asking, and one row is shared by every body that mentions the URL, so caching any of it
-     * would be caching one reader's answer for everyone.
-     *
-     * The order of the tests is the design:
-     *
-     *  1. **The URL is read again**, and the pointer must still agree with it. A card is drawn beside
-     *     its own `url`, which is what the reader clicks; if this site's address has changed, that
-     *     link now leads somewhere else, and describing it with the record the pointer names would be
-     *     describing one page while linking to another. It also refuses the row the rename leaves
-     *     behind at the old host, which someone else may now answer for.
-     *  2. **The unit**, before the record is loaded — as `LinkCardImageController` does, and for the
-     *     same reason: an operator switching diaries off has to take their previews with them.
-     *  3. **The record's own access rule**, never a copy of it.
-     *
-     * Everything that fails answers null, so a record that is gone, one the reader may not see, and a
-     * row whose pointer is missing or names a kind this app no longer has all read alike — as a link
-     * with no card, which is what the body says on its own.
+     * Nothing is read from the row but the URL and the pointer. The order is the design: URL re-read
+     * and pointer must agree, unit before the record is loaded, then the record's own access rule;
+     * every failure answers null so refusal and absence are indistinguishable
+     * (docs/internals/link-cards.md, Who may see one).
      *
      * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
      */
@@ -119,9 +90,8 @@ final class LinkCardSerializer
         $link = InternalUrl::of($card->url);
         $target = $link->target;
 
-        // A target is only ever set for our own host, so this one test covers both halves: an
-        // address that has stopped being ours resolves to nothing, and so does one of ours that
-        // names no record — the state a row of an OpenPNE 3 spelling is left in.
+        // A target is only set for our own host, so this one test covers both an address that has
+        // stopped being ours and one of ours that names no record.
         if ($target === null) {
             return null;
         }
@@ -174,8 +144,8 @@ final class LinkCardSerializer
             'domain' => self::domain($card->url),
             'layout' => $layout->value,
             // The record's own picture at its own address, so `FilePolicy` authorises the bytes
-            // against the same record whose rule admitted this card. The `/linkCard/…` route is for
-            // pictures a fetch downloaded, and refuses these rows.
+            // against the record whose rule admitted this card; the `/linkCard/…` route is for
+            // fetched pictures and refuses these rows.
             'imageUrl' => $file?->thumbnailUrl(self::THUMBNAIL, self::THUMBNAIL, square: true),
             'imageWidth' => $file?->width,
             'imageHeight' => $file?->height,

@@ -8,13 +8,10 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 
 /**
- * Whether this site shows link preview cards.
- *
- * One question, asked from three places, and all three have to agree or the switch does not mean
- * what it says: the read path (do not start work), the fetch job (do not make the request, even if
- * it was queued while the setting was on), and the renderer (do not show a card fetched earlier).
- * Reading the setting through one method rather than three call sites is what keeps a later change
- * from being applied to only two of them.
+ * One question asked from three places, and all three have to agree or the switch does not mean
+ * what it says: the read path (start no work), the fetch job (make no request, even if already
+ * queued), and the renderer (show no card fetched earlier). Read through one method so a later
+ * change cannot reach only two of them.
  */
 final class LinkCardSettings
 {

@@ -121,9 +121,9 @@ class MetadataExtractorTest extends TestCase
 
     public function test_a_legacy_page_cut_mid_character_keeps_the_readable_prefix(): void
     {
-        // The read cap can land mid-character, leaving bytes valid in nothing. Converting from UTF-8
-        // to UTF-8 at that point replaces every multi-byte character in the whole prefix (日本語
-        // becomes ???{??); converting from the declared charset replaces only the broken tail.
+        // The read cap can land mid-character, leaving bytes valid in nothing; converting from UTF-8
+        // to UTF-8 then replaces every multi-byte character in the whole prefix, from the declared
+        // charset only the broken tail.
         $html = mb_convert_encoding(
             '<html><head><title>日本語のタイトル</title></head></html>',
             'SJIS-win',
@@ -137,9 +137,8 @@ class MetadataExtractorTest extends TestCase
 
     public function test_an_iso_2022_jp_page_cut_mid_sequence_still_converts(): void
     {
-        // Worse than the other legacy encodings: a truncated ISO-2022-JP body fails its own validity
-        // check but every byte is still ASCII, so a UTF-8 test passes and the title comes back full
-        // of raw ESC sequences. The condition has to be "declared, and carrying escapes", not "valid".
+        // A truncated ISO-2022-JP body fails its validity check but every byte is still ASCII, so a
+        // UTF-8 test passes; the condition has to be declared and carrying escapes, not valid.
         $html = mb_convert_encoding(
             '<html><head><title>日本語のタイトル</title></head></html>',
             'ISO-2022-JP',
@@ -228,8 +227,8 @@ class MetadataExtractorTest extends TestCase
 
     public function test_markup_in_a_meta_value_stays_text(): void
     {
-        // Nothing here produces HTML; a card is drawn from escaped text. The value comes out as the
-        // characters the page wrote, which the renderer then escapes.
+        // Nothing here produces HTML: the value comes out as the characters the page wrote, which the
+        // renderer then escapes.
         $metadata = $this->extract('<html><head><meta property="og:title" content="&lt;script&gt;alert(1)&lt;/script&gt;"></head></html>');
 
         $this->assertSame('<script>alert(1)</script>', $metadata->title);
@@ -290,9 +289,9 @@ class MetadataExtractorTest extends TestCase
 
     public function test_a_structured_image_property_belongs_to_its_own_image(): void
     {
-        // Per ogp.me a structured property attaches to the most recent root og:image, and the first
-        // object listed is the page's preferred one. Flattening the tags by name and then preferring
-        // secure_url picks second-secure.jpg — the *second* image, which the page ranked lower.
+        // Per ogp.me a structured property attaches to the most recent root `og:image`, and the first
+        // object listed is the page's preferred one, so flattening by name and preferring
+        // `secure_url` would pick the second image.
         $metadata = $this->extract(<<<'HTML'
             <html><head>
             <meta property="og:image" content="https://cdn.example.com/first.jpg">
@@ -320,9 +319,9 @@ class MetadataExtractorTest extends TestCase
 
     public function test_og_image_url_opens_an_image_group_of_its_own(): void
     {
-        // og:image:url is defined as identical to og:image, so it is a root tag, not a structured
-        // property of one. Treating it as the latter lets the second image's secure_url win over the
-        // first image the page ranked highest.
+        // `og:image:url` is defined as identical to `og:image`, a root tag rather than a structured
+        // property, and treating it as the latter lets the second image's `secure_url` win over the
+        // first image.
         $metadata = $this->extract(<<<'HTML'
             <html><head>
             <meta property="og:image:url" content="https://cdn.example.com/first.jpg">
@@ -363,8 +362,8 @@ class MetadataExtractorTest extends TestCase
 
     public function test_relative_references_resolve_against_a_declared_base(): void
     {
-        // A <base href> is what the document says its relative references mean, and browsers honour
-        // it. The fetcher guards the result either way, so respecting it costs no safety.
+        // A `<base href>` is what the document says its relative references mean, and browsers
+        // honour it; the fetcher guards the result either way.
         $metadata = $this->extract(
             '<html><head><base href="https://cdn.example.net/assets/"><meta property="og:image" content="hero.png"></head></html>',
         );

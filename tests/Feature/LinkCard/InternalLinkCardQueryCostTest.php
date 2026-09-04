@@ -24,17 +24,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * What a page of internal cards costs.
- *
- * A card of one of this site's own pages is read from the record it names, and unlike a fetched one
- * there is nothing on the row to read instead. So the question every list here asks is the same:
- * does the second card cost anything? Read one at a time it is three queries per row on the
- * conversation poll — the app's most frequent request, every few seconds, sixty rows at a time.
- *
- * The guard is **flatness**, not a budget: each list is measured twice, with a few cards and with
- * five times as many, all naming *different* records, and the two must come to the same number.
- * A budget drifts with unrelated work on the page; a count that does not move with the number of
- * rows is the property being defended.
+ * Each list is measured with a few cards and with five times as many, all naming different records,
+ * and the two counts must be equal: flatness, not a budget, since a budget drifts with unrelated
+ * work on the page.
  */
 class InternalLinkCardQueryCostTest extends TestCase
 {
@@ -152,11 +144,9 @@ class InternalLinkCardQueryCostTest extends TestCase
         DB::flushQueryLog();
         DB::disableQueryLog();
 
-        // Flatness can hold vacuously — a page size falling to the smaller run's count would make
-        // the two runs equal with nothing batched — so the guard also pins that the measured run
-        // actually drew the cards it claims to measure. Every target is named for the card that
-        // draws it and by nothing else on the page, and a card's title is its target's name, so the
-        // marker appears once per card drawn — on an HTML surface and a JSON payload alike.
+        // Flatness can hold vacuously if the page size fell to the smaller run's count, so the
+        // measured run must also have drawn the cards it claims to: each target's name appears once
+        // per card drawn, on HTML and JSON alike.
         $content = $response->getContent();
         $drawn = substr_count($content, self::MARKER);
         $this->assertSame($cardsDrawn, $drawn, "Expected {$cardsDrawn} cards in the measured response, found {$drawn}.");
@@ -194,17 +184,10 @@ class InternalLinkCardQueryCostTest extends TestCase
     }
 
     /**
-     * A fresh record for a card to name, so no two rows on a page point at the same one.
-     *
-     * The kinds are cycled because the access rules they run are what a per-row read costs: a
-     * diary asks the block table and the friend table, a members-only board's topic asks what the
-     * reader is to the group, and a member page asks the block the policy owns. One kind alone would
-     * leave the other seams unmeasured.
-     *
-     * **Related and unrelated are both here**, deliberately. A page of strangers is answered
-     * entirely by the pairs a bulk read found *nothing* for, so a batch that recorded only what it
-     * found would look flat on a friend's page and cost per row on everyone else's — and the other
-     * way round.
+     * A fresh record per card, cycling the kinds because their access rules are what a per-row read
+     * costs. Related and unrelated targets are both here: a page of strangers is answered by pairs a
+     * bulk read found nothing for, so a batch recording only hits would look flat on a friend's page
+     * and cost per row on everyone else's.
      */
     private function linkedTarget(): Model
     {

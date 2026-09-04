@@ -11,8 +11,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Reading a URL as one of ours.
- *
  * Two answers, not one, and the tests are mostly about the gap between them: an address of this site
  * that resolves to nothing is still ours, and must never be handed to the fetcher.
  */

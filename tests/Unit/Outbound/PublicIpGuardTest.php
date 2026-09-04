@@ -118,7 +118,7 @@ class PublicIpGuardTest extends TestCase
 
     public function test_operator_supplied_ranges_cannot_re_permit_a_denied_address(): void
     {
-        // The extra list only ever subtracts. Naming a private range does not make it reachable.
+        // The extra list only ever subtracts, so naming a private range does not make it reachable.
         $guard = new PublicIpGuard(['0.0.0.0/0']);
 
         $this->assertFalse($guard->isGlobal('10.0.0.1'));

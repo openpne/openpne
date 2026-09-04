@@ -10,24 +10,15 @@ use Masterminds\HTML5;
 use Throwable;
 
 /**
- * Reads a page's own description of itself out of its markup.
- *
- * Pure by construction: bytes in, LinkMetadata out. It never fetches anything — not the oEmbed
- * endpoint it discovers, not the image it names — so every test of it is a test of parsing rather
- * than of a mock's behaviour, and no network policy can be accidentally bypassed by living in here.
- *
- * Field precedence is Open Graph, then Twitter Cards, then plain HTML: the general-purpose namespace
- * is canonical and the provider-scoped one is its fallback. All three are read from the response
- * already in hand, unlike oEmbed, which costs a second request. The oEmbed endpoint is only
- * *discovered* here; whether it is worth calling is decided by the caller, from what came back
- * missing.
+ * Pure by construction: markup in, `LinkMetadata` out, and it never fetches, not even the endpoint
+ * or image it names, so no network policy can be bypassed from here. Precedence is Open Graph, then
+ * Twitter Cards, then plain HTML, all read from the response in hand; whether the discovered oEmbed
+ * endpoint is worth a second request is the caller's decision.
  */
 final class MetadataExtractor
 {
     /**
-     * @param  string  $html  The response body, in whatever encoding it arrived in.
-     * @param  string|null  $charset  The Content-Type charset, if the response declared one.
-     * @param  string  $url  The URL of the response, used to resolve relative references.
+     * @param  string  $url  The response's own URL, after redirects, which relative references resolve against.
      */
     public function extract(string $html, ?string $charset, string $url): LinkMetadata
     {
@@ -38,9 +29,8 @@ final class MetadataExtractor
         }
 
         $meta = $this->metaContent($document);
-        // A <base href> is what the document itself says relative references resolve against, and
-        // browsers honour it. The fetcher guards the result either way, so respecting it costs no
-        // safety and gets the right file from pages that set one.
+        // A `<base href>` is what the document says relative references resolve against, and the
+        // fetcher guards the result either way, so honouring it costs no safety.
         $base = $this->baseHref($document, $url) ?? $url;
 
         return new LinkMetadata(
@@ -69,14 +59,10 @@ final class MetadataExtractor
     }
 
     /**
-     * The image to use, honouring Open Graph's grouping rules.
-     *
-     * Per ogp.me, a structured property (`og:image:url`, `og:image:secure_url`) belongs to the most
-     * recent root `og:image` tag, and the first object listed is the page's preferred one. Flattening
-     * the tags by name and then preferring `secure_url` mixes the groups: given first.jpg, then
-     * second.jpg with second-secure.jpg after it, that picks the *second* image's secure URL, which
-     * the page ranked below the first. So the tags are walked in document order and only the first
-     * group is considered.
+     * Per ogp.me a structured property (`og:image:secure_url`) belongs to the most recent root
+     * `og:image`, and the first object listed is the page's preferred one. Flattening the tags by
+     * name and then preferring `secure_url` would pick the second image's secure URL over the first
+     * image, so the tags are walked in document order and only the first group is considered.
      */
     private function imageReference(DOMDocument $document, array $meta): ?string
     {
@@ -91,8 +77,8 @@ final class MetadataExtractor
                 continue;
             }
 
-            // og:image:url is defined as identical to og:image, so it opens an image object just as
-            // og:image does. A second root means the first group is complete.
+            // `og:image:url` is defined as identical to `og:image`, so it opens an image object too,
+            // and a second root means the first group is complete.
             if ($key === 'og:image' || $key === 'og:image:url') {
                 if ($inGroup) {
                     break;

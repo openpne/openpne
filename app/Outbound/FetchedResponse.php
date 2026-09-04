@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\Outbound;
 
 /**
- * What a completed fetch yielded.
- *
- * `url` is the URL of the response that produced the body — after redirects, not the one asked for.
- * Relative references found in the body (an oEmbed discovery href, an og:image) resolve against this
- * one, as RFC 3986 requires; resolving against the requested URL points at the wrong origin whenever
- * a redirect crossed hosts.
+ * `url` is the URL of the response that produced the body, after redirects. Relative references
+ * found in the body resolve against it (RFC 3986); resolving against the requested URL points at the
+ * wrong origin whenever a redirect crossed hosts.
  */
 final readonly class FetchedResponse
 {

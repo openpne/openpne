@@ -15,44 +15,17 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 
 /**
- * Builds the HTTP client web push is delivered on.
- *
- * The channel package would otherwise build it from `webpush.client_options` itself, and on this
- * Laravel version it builds that client through `Http::…->buildClient()`, whose `createClient()`
- * passes only a handler stack — the option bag is dropped on the floor. Every option this app sets
- * there would silently stop applying. So the client is built here instead, which is also where the
- * egress boundary test expects an HTTP client to be constructed.
- *
- * `proxy` and `allow_redirects` are applied after the caller's options rather than before them:
- * those two are what keeps a validated https endpoint from becoming a request somewhere else, and
- * an absent `proxy` is not a neutral default but the environment's. The response sink is pinned
- * too, by the innermost handler on the stack rather than in the option bag (a `sink` set there is
- * overridden): the channel reads a response's status and nothing else, so the body is kept only up
- * to MAX_RESPONSE_BYTES and the transfer aborted past it — without that, a member-supplied endpoint
- * answering at length would be buffered whole into the worker. None of the three can be undone from
- * the `curl` sub-array either: Guzzle 8's curl handler refuses the raw proxy, redirect and write
- * options there. Nothing else here is pinned — the rest of the option bag is the config's to set.
- *
- * The timeout is the config's to set too, but its fallback is not a free choice: it is what applies
- * on a site that deleted the key, and the transport sends one device after another, so a generous
- * default silently multiplies into a job that outlives the queue's reservation. It has to satisfy
- * the same bound the configured value does, and WebPushTimeoutBudgetTest builds a client to check
- * the value that actually applies rather than the constant behind it.
- *
- * This is not SafeHttpFetcher's client: no address is validated and no connection is pinned, which
- * is the documented weakness of this seam (docs/internals/outbound-http.md). CurlClientFactory is
- * deliberately not reused — it refuses to build at all without libcurl 7.49, a requirement that
- * exists for a pin this path does not make, and importing it would newly break push on builds that
- * work today.
- *
- * Only WebPush::flush() runs on this client. flushPooled() takes a separate async client that the
- * library discovers on its own — with no options at all — and no HTTPlug adapter is installed, so
- * today it throws instead. Installing one would grow an egress path with none of the above, which
- * is why WebPushUpstreamAssumptionsTest fails the moment one becomes discoverable.
+ * Builds the HTTP client web push is delivered on; it validates no address and pins no connection,
+ * which is the documented weakness of this seam (docs/internals/outbound-http.md).
+ * `CurlClientFactory` is deliberately not reused: its libcurl 7.49 refusal guards a pin this path
+ * does not make and would newly break push on builds that work today.
  */
 final class PushClientFactory
 {
-    /** Applies when `webpush.client_options` states none; see the note above on why it is not 30. */
+    /**
+     * Applies when `webpush.client_options` states no timeout; the transport sends devices one after
+     * another, so it must satisfy the same job bound a configured value does.
+     */
     private const FALLBACK_TIMEOUT = 5;
 
     /**
@@ -66,8 +39,7 @@ final class PushClientFactory
     {
         $handler = $options['handler'] ?? null;
         // Cloned, not pushed onto: the channel's provider builds a client per resolve from one
-        // captured option bag, and a shared stack would gain a copy of this handler each time. The
-        // caller's stack is left as it was, so a later push onto it does not reach this client.
+        // captured option bag, and a shared stack would gain a copy of this handler each time.
         $stack = $handler instanceof HandlerStack ? clone $handler : HandlerStack::create($handler);
         $stack->push(self::boundResponseBody(), 'bound_response_body');
 
@@ -75,6 +47,7 @@ final class PushClientFactory
             'timeout' => self::FALLBACK_TIMEOUT,
             ...$options,
             'handler' => $stack,
+            // After the caller's options, so a site deleting them cannot make `proxy` the environment's.
             'allow_redirects' => false,
             'proxy' => '',
         ]);
@@ -82,13 +55,8 @@ final class PushClientFactory
 
     /**
      * A fresh sink per request, not one on the client: a client-level sink is a single stream every
-     * response would be appended to. CappedStream's short write is what makes libcurl abort.
-     *
-     * The abort surfaces as a write error carrying the response libcurl had already built (a
-     * ResponseException), and the status is what the channel reads — a 404 or 410 retires the
-     * device. So a capped transfer is handed on as that response rather than as a failure
-     * (SafeHttpFetcher does the same); the sink's prefix stands in for the body, which nothing
-     * reads. Any other failure stays one.
+     * response would be appended to. A capped transfer is handed on as the response libcurl had
+     * already built, since the status is what retires a dead device; any other failure stays one.
      */
     private static function boundResponseBody(): callable
     {

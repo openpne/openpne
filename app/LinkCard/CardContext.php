@@ -23,19 +23,10 @@ use App\Support\Feature;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The kind of body a link-card image is being requested through.
- *
- * A card image is shared: the same picture can sit under a world-readable diary and a private one at
- * the same time, so the File itself cannot carry a visibility. What decides whether a viewer may see
- * it is *which post they are looking at*, and this enum is how that post is named in the URL.
- *
- * It is a closed enum for exactly that reason. The alternative — putting a class name or a morph
- * type in the URL — would let a request choose which model the app resolves, which is a much larger
- * hole than the one being closed. A slug outside this list simply does not resolve.
- *
- * `canView` delegates to each kind's existing access rule rather than restating it. Visibility here
- * has to mean the same thing it means on the post: the same blocks, the same community membership,
- * the same web-public rule. A second implementation would drift, and the drift would be silent.
+ * The post a card image is requested through, named in the URL: a card is shared, so the File
+ * cannot carry a visibility and only the post being looked at can answer. A closed enum, because
+ * the URL may choose which post is consulted and never which model the app resolves; `canView`
+ * delegates to each kind's own access rule.
  */
 enum CardContext: string
 {
@@ -78,14 +69,10 @@ enum CardContext: string
     }
 
     /**
-     * The table this kind's records live in — the one place that knows every table with a
-     * `link_card_id` column, so the prune sweep cannot be left behind when a kind is added.
-     *
-     * A table name and nothing more. Whatever query {@see find()} builds is about *serving one
-     * record*, and prune asks the opposite question: does any row at all still point at this card.
-     * Carrying a filter across would delete a card a row the filter refuses is still using — and
-     * that loss is permanent, not transient: the reference is nulled, `link_card_synced_at` stays,
-     * and the read path then reads the body as one with no URL and never revisits it.
+     * The one place that knows every table with a `link_card_id` column, so the prune sweep cannot
+     * be left behind when a kind is added. A table name and nothing more: a filter carried over from
+     * {@see find()} would make the sweep delete a card a row it refuses still uses, and that loss is
+     * permanent because `link_card_synced_at` stays set.
      */
     public function table(): string
     {
@@ -102,12 +89,10 @@ enum CardContext: string
     }
 
     /**
-     * The unit this kind of post belongs to.
-     *
-     * A card image is fetched by URL, so no page mediates it — the same reason `FilePolicy` resolves
-     * an owning feature. Without this a known image URL keeps returning bytes after an operator
-     * switches the module off, while every screen around it is gone. `Feature::enabled()` resolves
-     * ancestors, so a topic's card stops when groups are switched off as well.
+     * The unit this kind of post belongs to, resolved because a card image is fetched by URL with
+     * no page to mediate it, so switching the module off has to stop its images too.
+     * `Feature::enabled()` resolves ancestors, so a topic's card stops when groups are switched off
+     * as well.
      */
     public function feature(): Feature
     {
@@ -127,11 +112,8 @@ enum CardContext: string
 
     /**
      * The URL of $record's card image at the given size, or null when there is no image to show.
-     *
-     * Built here rather than at each call site so the same File never gets a context-free URL by
-     * accident: what makes this safe is that the address names the post, and a caller reaching for
-     * `File::url()` instead would produce a link the generic file route refuses — or, worse, one
-     * that authorised the wrong thing.
+     * Built here so the same File never gets a context-free URL: `File::url()` would produce a link
+     * the generic file route refuses, or one that authorises the wrong thing.
      */
     public static function imageUrl(Model $record, int $width, int $height, bool $square = false): ?string
     {
@@ -171,12 +153,10 @@ enum CardContext: string
             self::Diary => Diary::with(['member', 'linkCard'])->find($id),
             self::Topic => GroupTopic::with(['group', 'linkCard'])->find($id),
             self::Event => GroupEvent::with(['group', 'linkCard'])->find($id),
-            // A reply resolves, and is authorised by the thread it is in — see canView. Its root
-            // comes with it, because that is whose audience decides.
+            // A reply resolves and is authorised by its thread, so its root comes with it (see canView).
             self::TimelinePost => TimelinePost::with(['member', 'parent.member', 'linkCard'])->find($id),
             // Not scoped to a group: which group a message belongs to is the message's own fact, and
-            // canView asks that group. Naming another group's message resolves and is then refused
-            // by its own room's rule, which is the same answer the conversation page would give.
+            // canView refuses another room's message by that room's rule, as the conversation page would.
             self::Talk => GroupMessage::with(['group', 'linkCard'])->find($id),
             // The body a comment hangs under comes with it: that is whose rule decides, so it is
             // loaded with what that rule reads.
@@ -187,18 +167,10 @@ enum CardContext: string
     }
 
     /**
-     * Whether $viewer may read the thread $post is in.
-     *
-     * The thread's root, never the row itself, when the row is a reply: a reply inherits the root's
-     * visibility but carries its own author, and `TimelineAccess` reads the row's author — so the
-     * reply's own rule admits the *replier's* friends, who are not who the page was gated for. The
-     * page re-centers a reply permalink to the root and asks there (`ShowTimelinePost`); this asks
-     * the same question of the same row.
-     *
-     * A reply whose root is gone is refused rather than falling back to its own rule, which is the
-     * unsafe half of this. The foreign key cascades, so that state should not exist — and the page
-     * refuses it too (`ShowTimelinePost` returns null), which is the point: what a fallback here
-     * would do is quietly restore the audience this method exists to avoid.
+     * The thread's root decides for a reply: a reply inherits the root's visibility but carries its
+     * own author, and `TimelineAccess` reads the row's author, so the reply's own rule would admit
+     * the replier's friends, who are not who the page was gated for. A reply whose root is gone is
+     * refused rather than judged on its own rule.
      */
     private static function canViewThread(TimelinePost $post, ?Member $viewer): bool
     {
@@ -224,12 +196,9 @@ enum CardContext: string
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
             self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
             self::Talk => $record instanceof GroupMessage && $viewer !== null && GroupTalkAccess::canView($record->group, $viewer),
-            // A comment carries no audience of its own: the page is the body it hangs under, and
-            // that body's rule is the one the page asked. No branch for a missing parent, unlike the
-            // reply above, and it takes two facts rather than one: the column is NOT NULL and
-            // cascades, so a comment cannot outlive its body; and none of the three bodies is
-            // soft-deleted, so none resolves to null through a default scope while its row is still
-            // there. Give one of them SoftDeletes and this needs the reply's refusal.
+            // No missing-parent branch: the column is NOT NULL and cascades, and none of the three
+            // bodies is soft-deleted, so a comment cannot resolve without its body; give one of them
+            // SoftDeletes and this needs the reply's refusal.
             self::DiaryComment => $record instanceof DiaryComment && DiaryAccess::canView($viewer, $record->diary),
             self::TopicComment => $record instanceof GroupTopicComment && $viewer !== null && GroupTopicAccess::canViewTopic($record->topic, $viewer),
             self::EventComment => $record instanceof GroupEventComment && $viewer !== null && GroupEventAccess::canViewEvent($record->event, $viewer),

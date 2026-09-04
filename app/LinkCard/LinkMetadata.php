@@ -5,16 +5,10 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 /**
- * What a page said about itself: the fields a card is drawn from.
- *
- * Every string here came from a stranger's markup or a provider's JSON, so it is stored as text and
- * rendered as text — nothing in this object is HTML. `imageUrl` and `oembedUrl` are absolute but not
- * yet validated as fetchable; that is the fetcher's job.
- *
- * **Cleaning and length limits live in the constructor, not in the callers.** These values land in
- * sized columns, so a source that forgot to trim would fail the insert under MySQL strict mode — and
- * there is more than one source (page markup, oEmbed). Putting the rule here makes it impossible for
- * a new one to arrive without it.
+ * Nothing in this object is HTML: every string is stored and rendered as text, and `imageUrl` /
+ * `oembedUrl` are absolute but not yet validated as fetchable. Cleaning and length limits live in
+ * the constructor rather than in the callers, so a new source cannot arrive without them and fail
+ * the insert under MySQL strict mode.
  */
 final readonly class LinkMetadata
 {

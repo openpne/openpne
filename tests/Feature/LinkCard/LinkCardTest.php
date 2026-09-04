@@ -56,10 +56,9 @@ class LinkCardTest extends TestCase
 
     public function test_the_shape_follows_the_size_the_picture_renders_at(): void
     {
-        // The card row and the File disagree for a sideways-shot JPEG: the row holds what the
-        // container declared (read from the header, before decoding, as part of the size guard) and
-        // the File holds what the bytes draw as, EXIF Orientation applied. The shape has to follow
-        // the second, or a portrait photo is laid out as a landscape one.
+        // The card row holds what the container declared (read before decoding as part of the size
+        // guard) and the File holds what the bytes draw as, EXIF Orientation applied, so the shape
+        // has to follow the second.
         $file = File::factory()->create(['width' => 300, 'height' => 900]);
         $card = LinkCard::factory()->create([
             'image_file_id' => $file->id,
@@ -72,9 +71,8 @@ class LinkCardTest extends TestCase
 
     public function test_the_two_recorded_sizes_really_do_diverge(): void
     {
-        // Guards the premise of the test above rather than any of our code: if the header and the
-        // rendered size ever stopped disagreeing, the care taken over which one to read would be
-        // cargo, and this says so out loud instead.
+        // Guards the premise of the test above rather than any of our code: if the header and
+        // rendered sizes ever stopped disagreeing, the care over which one to read would be cargo.
         $bytes = (string) file_get_contents(base_path('tests/Fixtures/images/jpeg-gps-orientation.jpg'));
 
         $this->assertSame([12, 6], array_slice((array) getimagesizefromstring($bytes), 0, 2));
@@ -94,9 +92,7 @@ class LinkCardTest extends TestCase
 
     public function test_only_a_fetched_card_with_a_title_renders(): void
     {
-        // A title is the minimum. An image alone is a mystery box, and a card with neither is worse
-        // than the bare link it replaces — so status alone is not the test, because a fetch can
-        // succeed against a page carrying no metadata at all.
+        // Status alone is not the test: a fetch can succeed against a page carrying no metadata at all.
         $this->assertTrue(LinkCard::factory()->create()->isRenderable());
         $this->assertFalse(LinkCard::factory()->pending()->create()->isRenderable());
         $this->assertFalse(LinkCard::factory()->failed()->create()->isRenderable());

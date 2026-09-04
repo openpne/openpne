@@ -10,28 +10,10 @@ use App\Support\ViewerRelations;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The records this request's internal cards are built from, loaded once and in one query per kind.
- *
- * A card of one of this site's own pages is read from the record it names on every render, and a
- * page draws many: a conversation shows sixty rows and the poll behind it asks again every few
- * seconds. Read one at a time that is three queries per row, forever, on the app's most frequent
- * request.
- *
- * **The batch assembles itself, rather than being declared at each list.** Every page that draws
- * cards eager-loads them in one go, before anything is serialized, and each row passing through
- * hydration announces its pointer here ({@see LinkCard::booted()}). The first card that actually
- * needs a record therefore already knows every record the page will ask for, and fetches them
- * together. A list added later gets that without opting in — which is the point, since an opt-in
- * would be silently missing from exactly the list nobody remembered.
- *
- * Scoped to the request or the job (AppServiceProvider), never static: a worker serves many of both,
- * and a record cached across them would go on describing what it looked like at the start. Only the
- * record is held. Whether a *reader* may see it is asked every time — that answer is not the
- * record's, and the reader is not this object's to know.
- *
- * The reader is passed in for one instant, and only so that the relations the rules are about to ask
- * for can be read for the whole batch rather than per card ({@see ViewerRelations}). Nothing about
- * them is kept here, and no decision is taken with them.
+ * One query per kind: every row announces its pointer as it is hydrated ({@see LinkCard::booted()}),
+ * so the first card needing a record reads every one the page will ask for. Scoped to the request
+ * or job, never static; whether a reader may see it is asked every time, and the reader is passed
+ * only so {@see ViewerRelations} can be warmed for the batch.
  */
 final class InternalCardResolver
 {
@@ -42,11 +24,8 @@ final class InternalCardResolver
     private array $pending = [];
 
     /**
-     * Announce that $card's target is likely to be asked for.
-     *
-     * Costs nothing on its own — a page whose cards are all refused by a switched-off unit reads no
-     * record at all. An `internal_context` this app no longer has is dropped here rather than
-     * carried: it names no kind, and the render refuses it anyway.
+     * Costs nothing on its own: a page whose cards are all refused by a switched-off unit reads no
+     * record at all. An `internal_context` this app no longer has names no kind and is dropped here.
      */
     public function note(LinkCard $card): void
     {

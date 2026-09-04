@@ -5,18 +5,11 @@ declare(strict_types=1);
 namespace App\Outbound;
 
 /**
- * Decides whether an IP address is a globally-routable unicast destination this app may connect to.
- *
- * Fail-closed by construction: an address is rejected unless it is recognised as global. For IPv6
- * that is expressible directly — global unicast is 2000::/3 — so the check is an allowlist with
- * carve-outs. IPv4 has no such rule, so it is a denylist drawn from IANA's special-purpose registry
- * rather than a hand-picked set; the ranges below are the registry's `Global: False` entries plus
- * multicast. Enumerating from memory is how these checks acquire holes.
- *
- * Addresses that embed an IPv4 address (IPv4-mapped, IPv4-compatible, 6to4, NAT64 well-known prefix)
- * are not judged by their wrapper: the embedded address is extracted and re-checked, because that is
- * the address the packet ultimately reaches. 64:ff9b:1::/48 is rejected outright — RFC 6052 lets the
- * embedded address sit at several offsets there, so there is no single position to re-check.
+ * Fail-closed: IPv6 is an allowlist (global unicast is 2000::/3) with carve-outs, and IPv4 a
+ * denylist drawn from IANA's special-purpose registry (`Global: False` entries plus multicast)
+ * rather than a hand-picked set. An address embedding an IPv4 one (IPv4-mapped, IPv4-compatible,
+ * 6to4, NAT64 well-known prefix) is judged on the embedded address; `64:ff9b:1::/48` is rejected
+ * outright because RFC 6052 allows several offsets there.
  *
  * @see https://www.iana.org/assignments/iana-ipv4-special-registry/
  * @see https://www.iana.org/assignments/iana-ipv6-special-registry/
@@ -60,9 +53,8 @@ final class PublicIpGuard
     /**
      * @param  list<string>  $extraDenied  CIDRs to reject on top of the built-in list.
      *
-     * @throws OutboundException when a range is malformed. A typo in a security setting must not
-     *                           read as "no extra ranges configured" — that is a hole that looks
-     *                           exactly like a working configuration.
+     * @throws OutboundException when a range is malformed: a typo in a security setting must not
+     *                           read as no extra ranges configured.
      */
     public function __construct(array $extraDenied = [])
     {
@@ -132,8 +124,8 @@ final class PublicIpGuard
             return false;
         }
 
-        // Global unicast is 2000::/3. Loopback, unspecified, ULA, link-local and multicast all fall
-        // outside it, so they need no separate entries.
+        // Global unicast is 2000::/3, so loopback, unspecified, ULA, link-local and multicast need no
+        // separate entries.
         if (! $this->inCidr($packed, '2000::/3')) {
             return false;
         }

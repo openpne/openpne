@@ -65,8 +65,8 @@ class FetchLinkCardTest extends TestCase
 
     public function test_a_page_that_says_nothing_about_itself_is_recorded_as_a_failure(): void
     {
-        // Reached and read, with nothing to show. That is an answer, so it is cached rather than
-        // retried on the next view.
+        // Reached and read with nothing to show is an answer, so it is cached rather than retried on
+        // the next view.
         $card = $this->card('https://example.com/bare');
         $this->queueHtml('<html><body><p>Hello</p></body></html>');
 
@@ -173,9 +173,9 @@ class FetchLinkCardTest extends TestCase
 
     public function test_a_delayed_duplicate_does_not_refetch_a_card_that_is_already_fresh(): void
     {
-        // ShouldBeUnique has a time window, so a duplicate delayed past it arrives after the first
-        // job has already succeeded — with the lease released and the card fresh. Nothing in the
-        // claim's timing conditions stops that; the state has to be part of the claim itself.
+        // `ShouldBeUnique` has a time window, so a duplicate delayed past it arrives after the first
+        // job has succeeded with the lease released; the claim's timing conditions do not stop that,
+        // only its state condition does.
         $card = $this->card('https://example.com/article');
         $this->queueHtml('<html><head><meta property="og:title" content="Fetched once"></head></html>');
         $this->runJob($card);
@@ -214,9 +214,8 @@ class FetchLinkCardTest extends TestCase
         $this->queueHtml('<html><head><meta property="og:title" content="T"><meta property="og:image" content="https://example.com/i.png"></head></html>');
         $this->queueBinary($this->png(), 'image/png');
 
-        // The lease has to move *while this worker is running*, not before — set beforehand it would
-        // simply fail to claim and never fetch at all, and the test would pass having proved nothing.
-        // Storing the image is the moment to do it.
+        // The lease has to move while this worker is running, not before (set beforehand it would
+        // simply fail to claim and the test would prove nothing), so storing the image is the moment.
         $stolen = false;
         File::created(function () use ($card, &$stolen): void {
             if ($stolen) {
@@ -236,9 +235,6 @@ class FetchLinkCardTest extends TestCase
 
     public function test_a_failed_refresh_keeps_the_card_that_was_already_working(): void
     {
-        // A refresh failing says nothing about whether the metadata already held is still good.
-        // Blanking it turns one bad request into a visibly broken post — the card disappears from a
-        // page it has been on for a week because the far end returned a 500 this morning.
         $card = $this->card('https://example.com/flaky');
         $file = File::factory()->create();
         $card->update([

@@ -8,16 +8,10 @@ use GuzzleHttp\Psr7\StreamDecoratorTrait;
 use Psr\Http\Message\StreamInterface;
 
 /**
- * A response sink that stops accepting bytes past a cap, aborting the transfer.
- *
- * The cap is on DECODED bytes. libcurl inflates a gzip response before handing it to the write
- * callback, so a Content-Length check would let a small compressed body expand without bound; this
- * counts what actually lands in memory.
- *
- * Past the cap write() returns a short count rather than throwing. That is libcurl's documented
- * signal for "the writer refused the data": it aborts the transfer with CURLE_WRITE_ERROR instead of
- * downloading the rest. Throwing out of a curl callback is not reliably propagated, and would also
- * lose the bytes already collected — which for HTML are the useful ones, since <head> comes first.
+ * The cap is on decoded bytes: libcurl inflates gzip before the write callback sees it, so a
+ * Content-Length check would let a small compressed body expand without bound. Past the cap
+ * `write()` returns a short count rather than throwing, which is libcurl's signal to abort the
+ * transfer; a throw out of a curl callback is not reliably propagated.
  */
 final class CappedStream implements StreamInterface
 {
