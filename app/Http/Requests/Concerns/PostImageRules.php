@@ -4,10 +4,7 @@ namespace App\Http\Requests\Concerns;
 
 use App\Files\PostImages;
 
-/**
- * Validation rules for the `images[]` upload on a community topic/comment or event/comment, shared so
- * every form enforces the same cap and decompression-bomb guard. The cap is PostImages::MAX_IMAGES.
- */
+/** Shared by every form that takes an `images[]` upload, so the cap and the decompression-bomb guard cannot diverge. */
 final class PostImageRules
 {
     /** @return array<string, mixed> */
@@ -42,10 +39,9 @@ final class PostImageRules
     }
 
     /**
-     * One image's rules. Bound the pixel dimensions, not just the file size: the thumbnail decoder
-     * allocates width*height*4 bytes, so a small file declaring huge dimensions is a
-     * memory-exhaustion (decompression-bomb) vector — same guard as the avatar upload. `image`
-     * rejects non-images; `mimes` further drops SVG (scriptable) and other exotic types.
+     * Pixel dimensions are bounded as well as the file size: the thumbnail decoder allocates
+     * width*height*4 bytes, so a small file declaring huge dimensions is a decompression bomb. `mimes`
+     * drops SVG, which can carry script.
      *
      * @return array<int, mixed>
      */

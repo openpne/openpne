@@ -15,10 +15,8 @@ class StoreGroupMessageRequest extends FormRequest
         $body = $this->input('body');
 
         if ($body === null) {
-            // What a picture-only message arrives as: the global ConvertEmptyStringsToNull turns the
-            // composer's empty field into null, and TrimStrings has already made a whitespace-only
-            // one empty. Back to a string, so `body === ''` is the one shape "no words" takes and
-            // the write is handed a string either way; rules() decides whether that is allowed.
+            // ConvertEmptyStringsToNull has turned the composer's empty field into null; back to a
+            // string so `body === ''` is the one shape "no words" takes and the write always receives a string.
             $this->merge(['body' => '']);
         } elseif (is_string($body)) {
             // Before the length check, so a CRLF body is not measured a line-break longer than the
@@ -34,20 +32,15 @@ class StoreGroupMessageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // A picture is a message: the body may be empty when something is attached, whichever
-            // wire named it. `required_without_all` is implicit, so it is still asked when `nullable`
-            // would otherwise stop the chain.
+            // The body may be empty when something is attached on either wire; `required_without_all`
+            // is implicit, so `nullable` does not stop it being asked.
             'body' => ['nullable', 'string', 'max:'.TalkBody::MAX, 'required_without_all:images,image'],
-            // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post
-            // with attachments. A refusal takes the whole message down, so nothing is half-sent.
             ...PostImageRules::rules(),
-            // The single-image wire this endpoint spoke before it took three. A talk tab stays open
-            // across a deploy and keeps sending; ignoring its `image` would 201 the body and
-            // silently drop the file. Transitional: remove once no session predates images[].
+            // A talk tab open across a deploy still sends the lone `image` wire, and ignoring it would
+            // 201 the body and silently drop the file.
             'image' => ['prohibits:images', ...PostImageRules::single()],
-            // Only when the composer actually sent it: `sometimes` treats a key holding null as an
-            // argument to check, and ConvertEmptyStringsToNull turns an empty field into exactly
-            // that. Which message it names is resolved by the controller, against this group.
+            // `sometimes` still validates a key holding null (what ConvertEmptyStringsToNull makes of an
+            // empty field), so a present-but-empty value 422s and the composer omits the key when not replying.
             'reply_to_message_id' => ['sometimes', 'integer', 'min:1'],
             ...MentionRules::rules(TalkBody::MAX),
         ];

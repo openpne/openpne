@@ -10,19 +10,14 @@ use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Edit one of the viewer's own drafts. Ownership + draft state are gated in authorize() (before
- * validation) so any other message id gets a uniform 404. `action=draft` keeps it a draft,
- * otherwise it sends.
- */
+/** Ownership and draft state are gated in authorize(), before validation, so any other message id gets a uniform 404. */
 class UpdateDraftRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $draft = DirectMessage::find($this->route('message'));
         $viewer = $this->user();
-        // The viewer's own, still a draft, and not trashed/purged (a trashed draft is editable only
-        // after restoring it). OpenPNE 3 isDraftOwner rejects a deleted draft.
+        // A trashed draft is editable only after restoring it (OpenPNE 3 isDraftOwner rejects a deleted draft).
         if (! $draft instanceof DirectMessage || ! $viewer instanceof Member
             || (int) $draft->sender_id !== (int) $viewer->getKey() || ! $draft->is_draft
             || $draft->sender_deleted_at !== null || $draft->sender_purged_at !== null) {

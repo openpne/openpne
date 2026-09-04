@@ -9,18 +9,15 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Public delivery of banner images. OpenPNE 3 banners show to guests (e.g. the before-login banner),
- * so unlike the authed FileController this route needs no login. Only files owned by a BannerImage are
- * served — anything else 404s, keeping the rest of the file store behind FileController — and
- * FilePolicy is still checked (it makes banner images public) as defence in depth.
+ * Public: OpenPNE 3 banners show to guests. Only files owned by a BannerImage are served, and
+ * FilePolicy is still checked as defence in depth.
  */
 class BannerImageController extends Controller
 {
     /**
-     * MIME types served inline. Anything else is sent as an opaque attachment so a stored file is
-     * never interpreted as a same-origin document — the same second-line defense as FileController,
-     * kept here because this route is public and cacheable (the upload path rejects non-raster
-     * types; the OpenPNE 3 banner-image upgrade copies rows verbatim and does not).
+     * Anything else is sent as an attachment so a stored file is never interpreted as a same-origin
+     * document; the OpenPNE 3 banner-image upgrade copies rows verbatim, so a non-raster type can be
+     * present here.
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 

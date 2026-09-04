@@ -16,11 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * What a switched-off feature unit answers over HTTP: 404 on everything it owns, for a member and
- * for a guest alike, while every other unit keeps working. The routes stay registered — the gate is
- * App\Http\Middleware\EnsureFeatureEnabled.
- */
 class FeatureToggleRouteTest extends TestCase
 {
     use RefreshDatabase;
@@ -128,10 +123,7 @@ class FeatureToggleRouteTest extends TestCase
         $this->actingAs($this->member)->post('/member/config/diary')->assertNotFound();
     }
 
-    /**
-     * The friend diary feed is a lens the friend unit owns inside the diary module. The friendships
-     * it filters by survive the toggle, so the deep link would otherwise keep serving the lens.
-     */
+    /** The friendships it filters by survive the toggle, so without the friend gate the deep link would keep serving the lens. */
     public function test_the_friend_diary_feed_closes_with_friends_while_the_diary_stays_open(): void
     {
         $friend = Member::factory()->create();

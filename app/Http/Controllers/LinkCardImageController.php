@@ -14,27 +14,9 @@ use App\Models\LinkCard;
 use Illuminate\Http\Response;
 
 /**
- * Serves a link card's picture, authorised through the post it appears under.
- *
- * A card is shared by URL, so its image can sit under a world-readable diary and a private one at
- * the same moment. Nothing about the File answers "may this person see it" — only the post they are
- * looking at does. So the URL names that post, and every request re-derives permission from it.
- *
- * **Every condition is checked again, on current data, on every request.** Not because any of them
- * is likely to have changed, but because each is something a URL can outlive:
- *
- *  1. the viewer may read the post — by that post kind's own rule, never a copy of it;
- *  2. the post still points at this card — it may have been edited to a different link;
- *  3. the card still points at this file — a refresh may have replaced the picture;
- *  4. the file still belongs to that card — the id in the URL is not evidence of anything;
- *  5. link cards are on, the owning module is on, and the card is renderable — an operator can
- *     switch any of the three off.
- *
- * A signed URL would not replace any of this: signing proves the link was issued, not that what it
- * described is still true, and a link issued before a post went private stays valid for its lifetime.
- *
- * Everything fails as 404, matching the rest of the app: a 403 would confirm that a card exists on a
- * post the asker cannot see.
+ * Authorised through the post the URL names, re-deriving every condition from current data on each
+ * request because each is something a URL can outlive (docs/internals/link-cards.md). Everything
+ * fails as 404: a 403 would confirm that a card exists on a post the asker cannot see.
  */
 class LinkCardImageController extends Controller
 {
@@ -54,8 +36,7 @@ class LinkCardImageController extends Controller
 
         $kind = CardContext::fromSlug($context);
         abort_if($kind === null, 404);
-        // Before the row is even looked up: an operator switching a module off has to stop its bytes,
-        // not only its screens. Same reason FilePolicy resolves an owning feature.
+        // Before the row is looked up: switching a module off has to stop its bytes, not only its screens.
         abort_unless($kind->feature()->enabled(), 404);
 
         $found = $kind->find($record);
@@ -77,9 +58,8 @@ class LinkCardImageController extends Controller
         return response($cache->bytes($file, $transform, $imageFormat), 200, [
             'Content-Type' => $file->type,
             'X-Content-Type-Options' => 'nosniff',
-            // The answer depends on who asked, so it must not be reused for anyone else. `no-store`
-            // rather than a short private max-age: the case that matters is a post going private,
-            // and a cached copy that outlives the change is the whole failure being avoided.
+            // `no-store` rather than a short private max-age: a cached copy outliving a post going
+            // private is the failure this route exists to prevent.
             'Cache-Control' => 'private, no-store',
             // Not embeddable elsewhere: a cross-origin load would otherwise report, by succeeding or
             // failing, whether the requester can see a post they were never shown.
@@ -88,12 +68,9 @@ class LinkCardImageController extends Controller
     }
 
     /**
-     * Whether $file really is $card's current picture.
-     *
-     * Both directions are checked. The card naming the file rules out a URL that outlived a refresh;
-     * the file naming the card rules out pointing this endpoint at any other stored image — an
-     * avatar, someone's diary photo — by pairing its name with a card the viewer happens to be able
-     * to see.
+     * Both directions are checked. Card-to-file rules out a URL that outlived a refresh; file-to-card
+     * rules out serving any other stored image (an avatar) by pairing its name with a card the viewer
+     * can see.
      */
     private function belongsToCard(File $file, LinkCard $card): bool
     {

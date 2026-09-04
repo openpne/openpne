@@ -50,9 +50,8 @@ class StoreTopicRequest extends FormRequest
         return [...$this->textRules(), ...PostImageRules::rules()];
     }
 
-    // Bounded by bytes, not characters: the body lives in a TEXT column (65535 bytes), and MySQL
-    // rejects anything longer at insert time. The cap equals the column size, so no migrated value
-    // can be locked out of re-editing.
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
+    // is locked out of re-editing.
     private const BODY_MAX_BYTES = 65535;
 
     /**

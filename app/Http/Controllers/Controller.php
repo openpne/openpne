@@ -41,11 +41,8 @@ abstract class Controller
     }
 
     /**
-     * Resolve the member a member-scoped page is about (its OpenPNE 3 localNav `friend`
-     * subject), and deny the whole page (404) when that member has blocked the viewer. Pass
-     * null for a self-scoped page; the viewer becomes the subject. Centralises the block gate
-     * so every owner page responds uniformly instead of some 404-ing and others rendering an
-     * empty body.
+     * Null means a self-scoped page. A member who has blocked the viewer denies the whole page as a
+     * 404, so every owner page answers uniformly rather than some rendering an empty body.
      */
     protected function memberSubject(?Member $subject): Member
     {

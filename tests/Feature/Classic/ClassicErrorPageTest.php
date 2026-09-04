@@ -13,13 +13,9 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * OpenPNE 3's `default/error` screen: 403/404/419 render inside the Classic shell. The framework's
- * own error pages stay in place for everyone else — JSON clients, the admin panel, Modern.
- *
  * The abort() probe routes stand in for the real sources (a policy denial, a stale CSRF token): the
- * exception handler sees the same HttpException either way, and a probe keeps each status reachable
- * from one place. `PreventRequestForgery` skips validation under the test runner, so a real 419
- * cannot be provoked at all.
+ * exception handler sees the same HttpException either way. `PreventRequestForgery` skips validation
+ * under the test runner, so a real 419 cannot be provoked at all.
  */
 class ClassicErrorPageTest extends TestCase
 {
@@ -100,8 +96,8 @@ class ClassicErrorPageTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        // An Inertia navigation cannot consume Classic Blade. POST, because Inertia answers a GET
-        // whose asset version does not match with a 409 of its own before the status gets here.
+        // POST, because Inertia answers a GET whose asset version does not match with a 409 of its own
+        // before the status gets here.
         Route::middleware('web')->post('/__error_probe_inertia', fn () => abort(419));
         $this->actingAs($member)->post('/__error_probe_inertia', [], ['X-Inertia' => 'true'])
             ->assertStatus(419)

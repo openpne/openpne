@@ -7,12 +7,9 @@ use Illuminate\Foundation\Http\FormRequest;
 class MarkTalkReadRequest extends FormRequest
 {
     /**
-     * The id of the last message the client rendered. Only its shape is checked here — whether it
-     * names a live message of this group is the action's question, and answering it needs the group.
-     *
-     * Optional, because its absence is the other thing this endpoint means: read through the latest
-     * (the digest's catch-up). A value that is present but not an id is still refused — an unusable
-     * id must not fall through to "mark everything read".
+     * Only the shape is checked; whether it names a live message of this group is the action's
+     * question. Absence means "read through the latest", so a value that is present but not an id is
+     * refused rather than falling through to mark everything read.
      *
      * @return array<string, mixed>
      */

@@ -11,10 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * OpenPNE 3 parity: an unset member/community image renders the vendored no_image.gif rather than
- * nothing. The fallback flows through the shared x-classic.image component across Classic screens.
- */
+/** OpenPNE 3 parity: an unset member/community image renders the vendored no_image.gif rather than nothing. */
 class ClassicNoImageFallbackTest extends TestCase
 {
     use RefreshDatabase;

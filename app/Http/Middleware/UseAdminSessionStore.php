@@ -9,22 +9,10 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Give the admin realm its own session store, separate from the member realm.
- * ("Realm" is the member/admin split; "surface" is reserved for Classic/Modern.)
- * With separate stores an operator stays signed in to both in one browser,
- * `url.intended` cannot leak a redirect across realms, and either side's logout
- * (`session()->invalidate()`) destroys only its own store.
- *
- * This must be GLOBAL middleware, keyed by request path: Livewire endpoints — which
- * carry every Filament interaction after the initial page load — run under the `web`
- * group, not the panel middleware stack, and Livewire's persistent middleware is
+ * Pins the session store and the default auth guard to the realm of the request path, so the two
+ * realms keep separate sessions (docs/internals/sessions.md). Global middleware, not the panel
+ * stack: Livewire requests run under the `web` group, and Livewire's persistent middleware is
  * re-applied only after StartSession has already resolved the store.
- *
- * The default auth guard is pinned to the same realm so the database session
- * handler stamps `user_id` from the matching guard even on admin-realm requests
- * where Filament's Authenticate never runs (login-screen Livewire updates, file
- * uploads, the locale switch). Without the pin those writes null the column and the
- * row would escape a future purge-by-admin-id.
  */
 class UseAdminSessionStore
 {
@@ -32,9 +20,8 @@ class UseAdminSessionStore
 
     private readonly string $memberGuard;
 
-    // Bound as a container singleton: the member-realm base values are captured
-    // once per process, before any request's pin mutates them. The table pin needs
-    // no capture — session.member_table / session.admin_table are stable keys.
+    // Bound as a container singleton so the member-realm base values are captured once per process,
+    // before any request's pin mutates them.
     public function __construct()
     {
         $this->memberCookie = (string) config('session.cookie');
@@ -57,12 +44,9 @@ class UseAdminSessionStore
         $response = $next($request);
 
         if ($admin) {
-            // The XSRF-TOKEN cookie is one global name, so whichever realm responds
-            // last would overwrite the other's token and 419 the member realm's next
-            // Inertia/axios POST. Nothing on the admin realm reads it (Livewire sends
-            // its page-embedded data-csrf token) — drop it from admin responses instead.
-            // removeCookie only matches an exact name/path/domain triple, which must
-            // mirror how PreventRequestForgery queued it.
+            // One global cookie name would let an admin response overwrite the member realm's token;
+            // removeCookie matches an exact name/path/domain triple, which must mirror how
+            // PreventRequestForgery queued it.
             $response->headers->removeCookie(
                 'XSRF-TOKEN',
                 config('session.path', '/'),
@@ -74,13 +58,10 @@ class UseAdminSessionStore
     }
 
     /**
-     * The `__Secure-` prefix ties the cookie to HTTPS: a browser accepts a `__Secure-`
-     * cookie only when it carries the Secure attribute over TLS, and rejects it outright
-     * otherwise. So add the prefix exactly when the session cookie is already Secure
-     * (`session.secure` — set explicitly or by force_https), never on a plain-HTTP dev
-     * host where it would silently break login. Leave an already-prefixed base untouched
-     * — an operator-set SESSION_COOKIE, or the pin re-deriving in a long-lived process —
-     * including a stricter `__Host-` name, which `__Secure-__Host-…` would demote.
+     * A browser rejects a `__Secure-` cookie that is not Secure over HTTPS, so the prefix is added
+     * exactly when `session.secure` is on. An already-prefixed base (an operator-set name, or the pin
+     * re-deriving in a long-lived process) is left untouched, since `__Secure-__Host-…` would demote a
+     * `__Host-` name.
      */
     private function cookieName(string $base): string
     {

@@ -8,10 +8,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * A bulk action submitted from a message list (OpenPNE 3 MessageDeleteForm). `box` names the list
- * the checkboxes came from and `action` what to do with the selected `ids`. The per-row scoping
- * lives in the actions, so an id the viewer does not own simply matches nothing. `confirm` marks the
- * second step of a purge, which is gated behind a confirmation page.
+ * A bulk action from a message list (OpenPNE 3 MessageDeleteForm). No ownership rule on `ids`: the
+ * actions scope per row, so an id the viewer does not own matches nothing.
  */
 class BulkDirectMessageRequest extends FormRequest
 {
@@ -34,8 +32,7 @@ class BulkDirectMessageRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        // The trash box restores or purges; the other boxes only move to trash. Reject any other
-        // pairing so a tampered form cannot, say, "purge" a sent message.
+        // Any other box/action pairing is refused so a tampered form cannot purge a sent message.
         $validator->after(function (Validator $validator): void {
             $box = $this->enum('box', DirectMessageBox::class);
             if ($box === null) {

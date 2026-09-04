@@ -11,19 +11,15 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Serves stored file bytes to the admin file monitor (thumbnail preview + download).
- *
- * Unlike FileController (member-gated through FilePolicy), this path is gated by the `admin`
- * guard and intentionally bypasses FilePolicy: an administrator may inspect any uploaded file
- * regardless of its owning entity's visibility. The guard is checked here (not via route
- * middleware) so a non-admin gets a flat 404 rather than a redirect to a member login.
+ * Gated by the `admin` guard alone, deliberately not FilePolicy: an administrator may inspect any
+ * uploaded file. The guard is checked in the action so a non-admin gets a flat 404 rather than a
+ * redirect to a member login.
  */
 class AdminFileController extends Controller
 {
     /**
-     * MIME types served inline (so the thumbnail column can render them). Anything else — including
-     * SVG, which can run script — is sent as an attachment so a stored file is never interpreted as
-     * a same-origin document (stored-XSS defense; mirrors FileController).
+     * Anything else, SVG included, is sent as an attachment so a stored file is never interpreted as a
+     * same-origin document; OpenPNE 3 rows are upgraded verbatim, so a non-raster type can be present.
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -34,8 +30,6 @@ class AdminFileController extends Controller
         abort_unless($storage->exists($file), 404);
 
         $raster = in_array($file->type, self::INLINE_IMAGE_TYPES, true);
-        // Raster images render inline (thumbnail); ?download=1 forces a download. Everything
-        // non-raster is always an attachment.
         $inline = $raster && ! $request->boolean('download');
 
         $headers = [

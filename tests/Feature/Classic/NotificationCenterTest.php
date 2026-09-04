@@ -19,12 +19,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * OpenPNE 3's `#notificationCenter`: the header sprite, its three badges, and the panel they head.
- * Two things are load-bearing — who gets it at all (the Classic shell also renders for a guest and
- * for an error page, where there is nobody to count for), and that the sprite stays ONE control
- * that opens in place rather than three that navigate.
- */
 class NotificationCenterTest extends TestCase
 {
     use RefreshDatabase;
@@ -65,10 +59,7 @@ class NotificationCenterTest extends TestCase
             ->assertSee(e(asset('js/classic-notification-center.js')), false);
     }
 
-    /**
-     * The badges partition one set of rows. Before this they were counted off three different
-     * sources, so an unread message was counted by its own badge AND by the third one.
-     */
+    /** The hole: badges counted off three separate sources would count an unread message under its own badge and under the third one. */
     public function test_the_three_badges_partition_the_panels_rows_without_overlap(): void
     {
         $viewer = Member::factory()->create();
@@ -81,15 +72,11 @@ class NotificationCenterTest extends TestCase
 
         $this->assertStringContainsString('<span id="nc_icon1">1</span>', $content);
         $this->assertStringContainsString('<span id="nc_icon2">1</span>', $content);
-        // One diary comment — not three. The message and the request belong to the other two.
+        // One, not three: the message and the request belong to the other two badges.
         $this->assertStringContainsString('<span id="nc_icon3">1</span>', $content);
     }
 
-    /**
-     * The badges count the window the panel shows, not the whole table. OpenPNE 3 sliced its store
-     * to 20 as it wrote, so its counts and its list saw the same items by construction; counting
-     * past the window would badge events the panel has no room to account for.
-     */
+    /** OpenPNE 3 sliced its store to 20 as it wrote, so its counts and its list saw the same items by construction. */
     public function test_an_unread_event_older_than_the_panels_window_is_not_badged(): void
     {
         $viewer = Member::factory()->create();
@@ -111,9 +98,8 @@ class NotificationCenterTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
-        // Older than the window by an explicit second, and unread — must not reach a badge.
-        // Exactly LIMIT rows share the newer second: one more would tie them into a random-id
-        // eviction, and which row loses must not decide this test.
+        // Exactly LIMIT rows share the newer second: one more would tie them into an id eviction, and
+        // which row loses must not decide this test.
         $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()], createdAt: now()->subSecond());
         foreach (range(1, NotificationCenterWindow::LIMIT - 2) as $ignored) {
             $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
@@ -128,11 +114,6 @@ class NotificationCenterTest extends TestCase
         $this->assertStringNotContainsString('id="nc_icon3"', $content);
     }
 
-    /**
-     * created_at is second-granular, so a second that produced more rows than the window holds
-     * needs a defined loser. The UUID is the tiebreak — arbitrary, but the same arbitrary for the
-     * badge request and the panel request, which is the point.
-     */
     public function test_a_same_second_overflow_evicts_by_id_not_by_chance(): void
     {
         $viewer = Member::factory()->create();
@@ -161,7 +142,6 @@ class NotificationCenterTest extends TestCase
         $this->assertStringNotContainsString('id="nc_icon1"', $content);
     }
 
-    /** A kind nobody has classified still has to reach a badge rather than vanish from all three. */
     public function test_an_unclassified_row_lands_in_the_third_badge(): void
     {
         $viewer = Member::factory()->create();
@@ -196,7 +176,6 @@ class NotificationCenterTest extends TestCase
             ->assertSee('<span id="nc_icon1">'.NotificationCenterWindow::LIMIT.'</span>', false);
     }
 
-    /** Reading the feed clears the badges, because they count the same unread rows it lists. */
     public function test_reading_everything_clears_the_badges(): void
     {
         $viewer = Member::factory()->create();

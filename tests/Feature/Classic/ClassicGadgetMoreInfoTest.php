@@ -11,11 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The moreInfo footer OpenPNE 3's parts frame gave the member-image and grid gadgets: the links out
- * of a box that only ever shows a slice. Its entries turn on the *subject*, not the viewer, so
- * another member's box offers the list and not the viewer's own settings.
- */
+/** The moreInfo footer is what OpenPNE 3's parts frame gave the member-image and grid gadgets: the links out of a box that only ever shows a slice. */
 class ClassicGadgetMoreInfoTest extends TestCase
 {
     use RefreshDatabase;
@@ -77,8 +73,8 @@ class ClassicGadgetMoreInfoTest extends TestCase
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            // OpenPNE 3's gadget links straight to friend/manage — the roster with unlink links —
-            // under its own title. Never the pending-request screen.
+            // OpenPNE 3's gadget links to friend/manage (the roster with unlink links), never the
+            // pending-request screen.
             ->assertSee('<a href="'.route('friend.manage').'">'.e(__('%my_friend% Setting')).'</a>', false)
             ->assertDontSee('<a href="'.route('friend.requests').'"', false);
 

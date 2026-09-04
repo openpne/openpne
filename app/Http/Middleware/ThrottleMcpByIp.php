@@ -11,15 +11,10 @@ use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The per-IP cap on the MCP endpoint, spelled out here rather than as `throttle:` because the
- * framework's ThrottleRequests sits BELOW Authenticate in the middleware priority list: a named
- * limiter attached to the same route runs only once a credential has been accepted, so it bounds a
- * legitimate client and does nothing at all about someone spraying tokens at the door. This one is
- * outside the priority list, so it keeps the slot the route gives it — first.
- *
- * Keyed by IP alone, deliberately: before authentication there is nothing else to key by. Behind a
- * proxy that means TRUSTED_PROXIES must be set, or every caller shares one bucket
- * (see bootstrap/app.php).
+ * Spelled out rather than `throttle:` because the framework's ThrottleRequests sorts below
+ * Authenticate in the priority list and would run only once a credential is accepted; this one is
+ * outside the list and keeps the first slot. Keyed by IP alone, so behind a proxy TRUSTED_PROXIES
+ * must be set or every caller shares one bucket.
  */
 class ThrottleMcpByIp
 {

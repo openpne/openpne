@@ -46,36 +46,24 @@ class HandleInertiaRequests extends Middleware
                     'isAi' => $user->isAiAccount(),
                 ] : null,
             ],
-            // Which units the administrator has switched on, dependencies resolved. Presentation only —
-            // a disabled unit's data does not enter the payload either. Free: the core settings map is
-            // already loaded (sns_name above). A guest gets a constant all-false map: the gate's
-            // auth-first contract keeps toggle state unobservable to guests (EnsureFeatureEnabled),
-            // so the shared prop must not disclose it either — and the constant map only ever costs a
-            // guest chrome they could not open anyway (the diary hub's friend tab, member-only), so
-            // false is safe. Same shape, so the client types stay non-nullable.
+            // A guest gets a constant all-false map in the same shape, so this prop discloses no toggle
+            // state and the client type stays non-nullable.
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
-            // Which look the Modern shell draws (docs/internals/looks.md), resolved once here rather
-            // than asked again per bar. Always a look id, never null — a guest's is `standard`
-            // whatever the site setting says (LookResolver).
+            // Resolved once for the request and never null: a guest's is always `standard`.
             'look' => LookResolver::resolve($request)->value,
-            // Shell nav badges: attention counts for the signed-in member, memoized per request so the
-            // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
-            // Right rail (xl+ only): a grid of faces. Evaluated per request for a member; a plain
-            // closure (not Inertia::optional) so it is present on first render, which is where the
-            // rail shows.
+            // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must
+            // be present then.
             'rightRail' => $user ? fn () => $this->rightRail($user) : null,
-            // The desktop sidebar's room list, nested under the groups entry: the joined list's
-            // order and unread without its previews (NavTalkRooms). Null for a guest and while talk
-            // is off — there is no room list to slice, and the nav renders none.
+            // Null rather than an empty list for a guest or while talk is off; the nav renders no room
+            // section on null.
             'talkNavRooms' => $user !== null && Feature::GroupTalk->enabled()
                 ? fn () => app(NavTalkRooms::class)($user)
                 : null,
-            // What the client needs to subscribe this device to push, or null when it cannot: a guest,
-            // or a site with no VAPID keypair (which is the whole feature's switch). Null is what the
-            // UI hides on, so nothing else has to re-derive "is push available here".
+            // Null for a guest or a site without a VAPID keypair; the UI hides push on null, so nothing
+            // else re-derives availability.
             'push' => $user !== null && WebPushConfig::configured()
                 ? ['vapidPublicKey' => (string) config('webpush.vapid.public_key')]
                 : null,
@@ -89,9 +77,8 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'locale' => $locale,
-            // The one clock both surfaces render in. Shipped so the client formats in the site's zone
-            // instead of the browser's, which is what made Modern and Classic disagree by the viewer's
-            // offset (docs/internals/runtime.md).
+            // Shipped so the client formats in the site's zone rather than the browser's, which would
+            // make Modern and Classic disagree by the viewer's offset (docs/internals/runtime.md).
             'timezone' => config('app.timezone'),
             'terms' => $this->termsForClient($locale),
         ];

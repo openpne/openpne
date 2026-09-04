@@ -27,10 +27,8 @@ class StoreChatMessageRequest extends FormRequest
         $body = $this->input('body');
 
         if ($body === null) {
-            // What a picture-only message arrives as: the global ConvertEmptyStringsToNull turns the
-            // composer's empty field into null, and TrimStrings has already made a whitespace-only
-            // one empty. Back to a string, so `body === ''` is the one shape "no words" takes and
-            // the write is handed a string either way; rules() decides whether that is allowed.
+            // ConvertEmptyStringsToNull has turned the composer's empty field into null; back to a
+            // string so `body === ''` is the one shape "no words" takes and the write always receives a string.
             $this->merge(['body' => '']);
         } elseif (is_string($body)) {
             // Before the length check, so a CRLF body — which is what multipart puts on the wire — is
@@ -45,12 +43,9 @@ class StoreChatMessageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // A picture is a message: the body may be empty when something is attached.
-            // `required_without` is implicit, so it is still asked when `nullable` would otherwise
-            // stop the chain.
+            // The body may be empty when something is attached; `required_without` is implicit, so
+            // `nullable` does not stop it being asked.
             'body' => ['nullable', 'string', 'max:'.self::MAX_BODY, 'required_without:images'],
-            // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post with
-            // attachments. A refusal takes the whole message down, so nothing is half-sent.
             ...PostImageRules::rules(),
         ];
     }

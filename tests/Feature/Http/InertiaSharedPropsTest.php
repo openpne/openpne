@@ -78,11 +78,7 @@ class InertiaSharedPropsTest extends TestCase
                 ->where('enabledFeatures.diary', true));
     }
 
-    /**
-     * The gate answers a guest auth-first so toggle state is unobservable (EnsureFeatureEnabled);
-     * the shared prop must not disclose it either. A guest gets the same all-false map whatever
-     * the rows say.
-     */
+    /** A unit is switched off between the two reads, so the all-false map is shown to be constant rather than a coincidence. */
     public function test_a_guest_learns_no_toggle_state_from_the_shared_props(): void
     {
         // The phpunit baseline is classic_default; the login page is Inertia only on Modern.

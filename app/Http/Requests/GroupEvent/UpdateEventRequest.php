@@ -9,12 +9,7 @@ use App\Models\GroupEvent;
 use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
 
-/**
- * Edit an event. Edit authority (the author while still a member, or a community admin) is checked in
- * authorize() before validation, so a non-editor's invalid payload gets the same 404 as a valid one.
- * Editing keeps the validation of creating, except the open date may stay in the past, and it adds
- * image slot management (new uploads into free slots, remove_images[] for removals).
- */
+/** Edit authority is checked in authorize(), before validation, so a non-editor's invalid payload gets the same 404 as a valid one. */
 class UpdateEventRequest extends StoreEventRequest
 {
     public function authorize(): bool

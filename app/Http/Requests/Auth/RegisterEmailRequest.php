@@ -7,9 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 /**
- * The registration email-entry submission. Deliberately no `unique` rule: an already-registered
- * address must look identical to a fresh one (enumeration-safety lives in IssueRegistrationToken,
- * which no-ops for a known member). Email normalization is also the action's job.
+ * Deliberately no `unique` rule: an already-registered address must look identical to a fresh one
+ * (IssueRegistrationToken no-ops for a known member). Email normalization is also the action's job.
  */
 class RegisterEmailRequest extends FormRequest
 {

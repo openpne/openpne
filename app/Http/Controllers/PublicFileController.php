@@ -9,18 +9,14 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Public delivery of admin-uploaded public assets (explicit_visibility='public'), e.g. an image an
- * operator embeds in custom HTML/CSS. Like BannerImageController this route needs no login; only files
- * explicitly marked public are served — anything else 404s, keeping the rest of the file store behind
- * the authed FileController — and FilePolicy is still checked (it makes these public) as defence in
- * depth. Bound by the opaque `name` token.
+ * Public: only files explicitly marked public are served, and FilePolicy is still checked as defence
+ * in depth. The route binds {file} by its opaque `name` token.
  */
 class PublicFileController extends Controller
 {
     /**
-     * MIME types served inline. Anything else is an opaque attachment so a stored file is never
-     * interpreted as a same-origin document — the same second-line defense as BannerImageController,
-     * kept because this route is public and cacheable.
+     * Anything else is sent as an attachment so a stored file is never interpreted as a same-origin
+     * document; the upload validation already rejects non-raster types, so this is the second line.
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 

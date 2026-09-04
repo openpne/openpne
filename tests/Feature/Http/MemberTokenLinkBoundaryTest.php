@@ -12,13 +12,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Pins the per-controller auth boundary of the member token-link landings. Every MemberConfigController
- * route is authenticated-only (it sits in the member `auth` group); the token-gated mail-link landings
- * (email-change confirm/cancel and the admin-issued MFA reset) are deliberately guest-reachable and live
- * on their own controllers with no auth middleware — only their throttles, NoReferrer where the URL
- * carries a secret + password, and the issued-token length constraint. A route edit that moves an authed
- * member-config action onto a guest controller, drops the member auth guard, or unpins the token
- * shape/middleware must fail here.
+ * Pins the auth boundary of the member token-link landings: every MemberConfigController route is
+ * authenticated-only, while the mail-link landings (email-change confirm/cancel, the admin-issued MFA
+ * reset) are deliberately guest-reachable on their own controllers with only their throttles,
+ * NoReferrer where the URL carries a secret and a password, and the issued-token length constraint.
  */
 class MemberTokenLinkBoundaryTest extends TestCase
 {
@@ -50,17 +47,14 @@ class MemberTokenLinkBoundaryTest extends TestCase
     public static function tokenLinkRoutes(): array
     {
         return [
-            // Email-change: per-IP throttle + token regex. These carry no NoReferrer today — a known
-            // oversight (the URL holds a token); tracked for a separate fix, so it is not asserted here.
-            // The per-token mfa-reset limiter must never leak onto them.
+            // The per-token mfa-reset limiter must never leak onto the email-change landings.
             'email.confirm' => ['member.config.email.confirm', EmailChangeLinkController::class, 'confirmEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
             'email.confirm.submit' => ['member.config.email.confirm.submit', EmailChangeLinkController::class, 'confirmEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
             'email.cancel' => ['member.config.email.cancel', EmailChangeLinkController::class, 'cancelEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
             'email.cancel.submit' => ['member.config.email.cancel.submit', EmailChangeLinkController::class, 'cancelEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
 
-            // MFA reset: NoReferrer on both (URL secret + password); the POST also carries the per-token
-            // limiter. The GET must NOT — the limiter guards password guesses, and a render must not spend
-            // the guess budget (POST-only pin).
+            // The per-token limiter is POST-only: it guards password guesses, and a render must not
+            // spend the guess budget.
             'mfa.reset' => ['member.mfa.reset', MfaResetLinkController::class, 'form', 'GET', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
             'mfa.reset.submit' => ['member.mfa.reset.submit', MfaResetLinkController::class, 'reset', 'POST', [NoReferrer::class, 'throttle:30,1', 'throttle:mfa-reset'], []],
         ];

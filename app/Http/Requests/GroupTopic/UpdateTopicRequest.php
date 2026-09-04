@@ -10,12 +10,7 @@ use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
 
-/**
- * Edit a topic. Edit authority (the author while still a member, or a group admin) is checked in
- * authorize() before validation, so a non-editor's invalid payload gets the same 404 as a valid one.
- * Editing adds new images into free slots and removes selected ones (remove_images[]); the total
- * after the edit may not exceed the cap.
- */
+/** Edit authority is checked in authorize(), before validation, so a non-editor's invalid payload gets the same 404 as a valid one. */
 class UpdateTopicRequest extends StoreTopicRequest
 {
     public function authorize(): bool

@@ -15,12 +15,10 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * Every route a feature unit owns must carry that unit's gate. Walks the WHOLE route inventory
- * rather than a route-name scan: ownership is claimed by name prefix, by URL segment (which catches
- * an unnamed alias), and by an explicit map for the endpoints that sit outside their unit's prefix.
- * A route added later to a gated feature therefore fails here until it is gated or allowlisted.
- * Ownership is single, but the gate set need not be: a route may also depend on another unit
- * (DEPENDENCIES), and then every gate in the set is required.
+ * Pins the feature gate on every route a unit owns, over the whole route inventory so a later route
+ * cannot dodge it; ownership is claimed by name prefix, by URL segment (catching an unnamed alias) or
+ * by OUT_OF_PREFIX. A DEPENDENCIES route requires every gate in its set, so ownership is single but
+ * the gate set is not.
  */
 class FeatureRouteMiddlewarePinTest extends TestCase
 {
@@ -48,9 +46,8 @@ class FeatureRouteMiddlewarePinTest extends TestCase
     ];
 
     /**
-     * Feature-owned routes deliberately left ungated. Empty: the retired `/m/*` redirects are the
-     * only feature-shaped URLs without a gate, and they are claimed by neither rule (their canonical
-     * target answers). The const stays as the tripwire — a new exemption is a conscious entry here.
+     * Feature-owned routes deliberately left ungated; empty is a valid state, and a new exemption is a
+     * conscious entry here.
      *
      * @var list<string>
      */
@@ -102,11 +99,9 @@ class FeatureRouteMiddlewarePinTest extends TestCase
     }
 
     /**
-     * The gate's slot in the resolved stack (bootstrap/app.php priority list): after auth, so a
-     * guest in an auth group meets the login redirect and the toggle state never shows; before
-     * ThrottleRequests, so a disabled unit's request consumes no limiter; before
-     * SubstituteBindings, so a binding's missing() handler (the /diary/listMember guest bounce)
-     * cannot outrank the 404.
+     * Pins the gate's slot in the resolved stack: after auth so a guest in an auth group meets the
+     * login redirect first, before ThrottleRequests and SubstituteBindings so a disabled unit spends
+     * no limiter and reaches no missing() handler.
      */
     public function test_the_gate_runs_after_auth_and_before_throttle_and_bindings(): void
     {

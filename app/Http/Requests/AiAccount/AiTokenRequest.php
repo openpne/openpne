@@ -10,16 +10,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Handing out an AI account's token, and taking one back, re-authenticate with the owner's account
- * password (`current_password:member` — the guard is `member`, not the default), so a walked-up
- * unattended session cannot mint a credential that outlives the sitting. Verified once per sitting
- * rather than per request ({@see AiTokenReauth}), the same shape the two-factor set-up flow uses;
- * whenever the field is present it must be the account password, whatever the window says.
- *
- * Ownership is settled before any of this: both token routes carry `can:manageAiAccount,member`, so
- * an id that is not one of the viewer's own AI accounts is refused before this request is validated.
- * A password error reaching such an id would answer differently for an account that exists than for
- * one that does not, which is the whole of what that 404 hides.
+ * Minting or revoking a token re-authenticates with the owner's password (`current_password:member`,
+ * since the guard is not the default), verified once per sitting through AiTokenReauth. Ownership is
+ * settled first by the route's `can:manageAiAccount,member`, so a password error never answers
+ * differently for an AI account that exists than for one that does not.
  */
 class AiTokenRequest extends FormRequest
 {

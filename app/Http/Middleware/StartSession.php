@@ -9,22 +9,10 @@ use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Records the session's previous URL only for a request that is a page the visitor is actually on.
- *
- * The framework records every routed GET that is not an XHR, which gets both halves wrong here. It
- * records the cookie-bearing subresources a page pulls in — the brand mark on the sign-in screen, an
- * avatar, a polling fetch — so whichever loads last becomes the back-navigation target, and the
- * redirect issued for a validation error or a failed login lands on an image instead of the form.
- * And it drops client-side page visits, which are XHRs that *are* navigations, so on those pages
- * back() reaches for whatever full page load came before.
- *
- * Two things have to hold. The request has to be a navigation: Fetch Metadata (`Sec-Fetch-Dest`)
- * says so, and a client that does not send it keeps the framework's rule. And the response has to
- * be a page — a successful one that is HTML, or an Inertia page response. The second is what a
- * client without Fetch Metadata cannot get wrong: an image, a stylesheet, the manifest or a JSON
- * poll is not a page whatever headers asked for it, and neither is an error page — a 404 for a
- * stale icon URL renders as HTML on the Modern surface, and is no more somewhere to send a visitor
- * back to than the unmatched URL the framework answers the same way.
+ * Records the previous URL only for a page the visitor is on: a navigation request (Fetch Metadata,
+ * or the framework's XHR rule without it) answered by a successful HTML or Inertia page
+ * (docs/internals/sessions.md). The framework alone records cookie-bearing subresources and drops
+ * client-side visits, so redirect()->back() would land on an image or skip a page.
  */
 class StartSession extends FrameworkStartSession
 {

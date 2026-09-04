@@ -6,10 +6,9 @@ use App\Notifications\Settings\NotificationKind;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * A partial settings map: `settings[{kind}][{channel}] = bool`. Modern posts one toggle at a
- * time, Classic posts every rendered control — both are subsets of the same shape. Fail-closed:
- * the `array:` key allowlists reject any kind without a sender (unwired kinds cannot be written)
- * and any channel outside web/mail.
+ * A partial map (`settings[{kind}][{channel}] = bool`): each surface posts a subset of the same shape.
+ * Fail-closed: the `array:` key allowlists refuse any kind without a sender and any channel outside
+ * web/mail.
  */
 class UpdateNotificationSettingsRequest extends FormRequest
 {

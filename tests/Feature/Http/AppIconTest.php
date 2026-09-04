@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * The home-screen icon derived from the branding favicon. A tab favicon and an app icon have very
- * different display sizes, so what matters here is what happens when the uploaded image cannot
- * carry the larger one — and that an alpha channel never reaches iOS, which paints it black.
+ * A tab favicon and an app icon have very different display sizes, so the cases are what happens when
+ * the uploaded image cannot carry the larger one, and that an alpha channel never reaches iOS, which
+ * paints it black.
  */
 class AppIconTest extends TestCase
 {
@@ -77,10 +77,8 @@ class AppIconTest extends TestCase
 
     public function test_a_setting_pointing_at_a_file_it_does_not_own_reads_nothing(): void
     {
-        // What SaveBrandingSettings treats as the corrupted-setting case: the token names a member's
-        // own upload, which this route must not transform and hand out as the site's icon. An avatar
-        // specifically, because FilePolicy lets a guest view one — so only the public-visibility
-        // check stands between the setting and the file, and the case guards that check alone.
+        // An avatar specifically, because FilePolicy lets a guest view one, so only the
+        // public-visibility check stands between a corrupted setting and the file.
         $file = app(FileUploader::class)->store(
             UploadedFile::fake()->image('avatar.png', 512, 512),
             'member',
