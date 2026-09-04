@@ -8,20 +8,10 @@ use PDO;
 use RuntimeException;
 
 /**
- * Default file storage backend: keeps the bytes in the database `file_bin` table,
- * keyed by file_id (= File::id). This is the OSS default and the OpenPNE 3
- * heritage layout, so a whole site (including images) is one DB dump.
- *
- * The connection is resolved per call from $file->getConnectionName() (the
- * connection the File model is on), so the bytes always land in the same database
- * as their metadata. It is never cached on this instance, so the binding stays
- * correct if the File model's connection is ever reconfigured.
- *
- * Memory shape: the whole BLOB is buffered in PHP memory on read and write (a DB
- * limitation — there is no constant-memory streaming from a row), so readStream
- * materialises the row into php://temp. A single file's size is bounded by the
- * upload validation layer and ultimately by memory_limit / max_allowed_packet;
- * oversized writes surface as a DB/PDO error, not silently.
+ * The connection is resolved per call from the File's own connection and never cached, so the bytes
+ * land in the database its metadata is in even if that connection is reconfigured. There is no
+ * constant-memory streaming out of a row, so a whole BLOB is buffered in memory on read and write
+ * ([file-storage.md](../../docs/internals/file-storage.md) § Memory shape).
  */
 class DbBlobFileStorage implements FileStorage
 {
@@ -36,13 +26,11 @@ class DbBlobFileStorage implements FileStorage
         $connection = DB::connection($file->getConnectionName());
         $now = now()->toDateTimeString();
 
-        // Bind the bytes as a LOB so embedded NUL and high bytes survive on both
-        // SQLite and MySQL: PARAM_STR can corrupt binary data (text binding /
-        // emulated-prepare quoting). Drive the statement through the connection's
-        // PDO so the write joins any open transaction (FileUploader wraps the row
-        // insert and this write in one transaction for atomicity).
+        // Take the connection's own PDO so the write joins any transaction open on it.
         $pdo = $connection->getPdo();
 
+        // Bind the bytes as a LOB: on both SQLite and MySQL, PARAM_STR can corrupt embedded NUL and
+        // high bytes through text binding or emulated-prepare quoting.
         if ($this->exists($file)) {
             $statement = $pdo->prepare('update file_bin set bin = ?, updated_at = ? where file_id = ?');
             $statement->bindValue(1, $contents, PDO::PARAM_LOB);
@@ -84,9 +72,6 @@ class DbBlobFileStorage implements FileStorage
 
     public function delete(File $file): void
     {
-        // Idempotent. The File `deleting` observer calls this before Eloquent
-        // deletes the files row, and the file_bin FK cascade also removes it, so a
-        // no-op on an already-absent row must not error.
         DB::connection($file->getConnectionName())
             ->table('file_bin')
             ->where('file_id', $file->id)

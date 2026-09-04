@@ -5,19 +5,8 @@ namespace App\Files;
 use App\Models\File;
 
 /**
- * Stores and retrieves the bytes of an uploaded file, keyed by the File entity.
- *
- * This is OpenPNE's own storage seam rather than a Laravel filesystem disk,
- * because the default DB-BLOB backend keys bytes by file_id (a surrogate key in
- * the frozen `file_bin` table), which a path-string disk abstraction cannot
- * address without re-deriving the id from `files` on every call. Passing the
- * File entity (which already carries id and name) lets each backend use its
- * native key directly: DbBlobFileStorage by file_id, DiskFileStorage by name.
- *
- * Scope: this contract is intentionally the four byte-level operations only.
- * URL generation / delivery is NOT here — delivery is backend-independent and
- * policy-gated (the file controllers stream the bytes whatever the backend),
- * with File::url() as the single entry point above this seam.
+ * Byte-level operations only: delivery sits above this seam and is backend-independent
+ * ([file-storage.md](../../docs/internals/file-storage.md)).
  */
 interface FileStorage
 {

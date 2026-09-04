@@ -30,7 +30,7 @@ class FormUploadTest extends TestCase
     {
         $this->assertNull(FormUpload::single(null));
         $this->assertNull(FormUpload::single([]));
-        // A bare string must not be mistaken for an upload (the old (array)-cast bug).
+        // A bare string must not be mistaken for an upload.
         $this->assertNull(FormUpload::single('livewire-tmp/whatever.png'));
     }
 }

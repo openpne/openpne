@@ -10,13 +10,6 @@ use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 use Tests\TestCase;
 
-/**
- * The configured driver has to be one the app actually supports.
- *
- * Falling back to GD on an unrecognised value would let a deployment run with different colour
- * handling than it asked for and never be told: GD cannot convert an embedded colour profile, so
- * a leftover `vips` — or a typo — would silently change what viewers see.
- */
 class ImageDriverResolutionTest extends TestCase
 {
     private function driverFor(?string $configured): object

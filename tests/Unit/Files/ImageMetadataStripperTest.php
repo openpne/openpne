@@ -10,21 +10,8 @@ use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
 /**
- * Container-level metadata stripping. Exercises the committed byte fixtures in
- * tests/Fixtures/images/, each carrying a searchable "LEAK"/date sentinel so a surviving byte is a
- * hard failure.
- *
- * Fixture recipe (regenerate with the throwaway generator, see the PR's scratchpad script): GD
- * writes a clean baseline image, then the generator splices hand-built EXIF/XMP/comment segments
- * (a real GPS IFD + Orientation) into the container:
- *   - jpeg-gps-orientation.jpg  APP1 EXIF with a GPS IFD (GPSDateStamp "2021:07:04") + Orientation 6,
- *                               base image 12x6 landscape.
- *   - jpeg-postsos-meta.jpg      progressive JPEG with a COM + EXIF(GPS) placed AFTER the last SOS.
- *   - jpeg-app2-mixed.jpg        a non-ICC APP2 ("MPFDROPME") and a real ICC_PROFILE APP2 ("ICCKEEPME").
- *   - png-meta.png               eXIf (GPS) + tEXt ("png-text-LEAK") after IHDR.
- *   - png-badcrc.png             png-meta with one chunk's CRC flipped.
- *   - webp-vp8x-meta.webp        VP8X (flags ICC+reserved+EXIF+XMP) + image + odd-length EXIF + "XMP ".
- *   - tiny.gif                   plain GIF, no metadata.
+ * Each fixture carries a searchable LEAK or date sentinel, so a byte that survives the strip fails
+ * an assertion (tests/Fixtures/images/README.md).
  */
 class ImageMetadataStripperTest extends TestCase
 {

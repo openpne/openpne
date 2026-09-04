@@ -19,16 +19,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fans a new timeline post out to its audience off the request. The audience
- * (TimelinePostedRecipients) is walked in id-ordered chunks so a public post's member-wide reach
- * never loads at once; each chunk resolves every recipient's channels from ONE opt-out query (the
- * fanout index) rather than a per-recipient cold read, then queues one TimelinePostedNotification
- * per recipient with the decided channels.
- *
- * The two catalog kinds compose as the OpenPNE 3 notification extension did (a union, which
- * realises dependOnNot): a recipient is mailed/fed if timeline-new-post is on, OR they are one of
- * the author's friends and the friends-only variant is on. Rows are absent-means-on, so only the
- * opted-out set is loaded.
+ * The chunked walk, the single opt-out query and the union of the two catalog kinds are in
+ * [notifications.md](../../docs/internals/notifications.md) § Broadcast fan-out.
  */
 class BroadcastTimelinePosted implements ShouldQueue
 {
@@ -63,9 +55,8 @@ class BroadcastTimelinePosted implements ShouldQueue
             return; // a private post has no audience
         }
 
-        // Precedence Mention > NewPost: this subtracts the very set the mention notification was
-        // sent to (the event's snapshot), which is what makes it one notification per member. A set
-        // re-derived here could disagree with the one that was actually used.
+        // The subtracted set is the mention snapshot the event carried, never one re-derived here, so
+        // each member gets exactly one of the two notifications.
         $audience->whereNotIn('id', $this->mentionedMemberIds);
 
         $author = $post->member;

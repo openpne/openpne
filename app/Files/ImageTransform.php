@@ -3,12 +3,9 @@
 namespace App\Files;
 
 /**
- * A validated thumbnail transform parsed from an OpenPNE 3-style geometry segment
- * (`w120_h120`, `w_h` for the original size, `w120_h120_sq` to center-crop and fill the
- * box exactly — OpenPNE 3 only ever asked for a square one, hence the token, but the box
- * may be any ratio). null from fromGeometry() means the request is malformed or asks for a
- * size outside the whitelist — the caller turns that into a 404, so a request cannot
- * drive arbitrary-size generation.
+ * `_sq` center-crops to fill the box exactly, which need not be square despite the OpenPNE 3 token.
+ * null from fromGeometry() means malformed or outside the size whitelist, and the caller turns that
+ * into a 404 so a request cannot drive arbitrary-size generation.
  */
 final class ImageTransform
 {
@@ -51,26 +48,15 @@ final class ImageTransform
     }
 
     /**
-     * Bump when a change alters the bytes a transform produces — this code, a dependency (the image
-     * library, GD, Imagick, their codecs) — so the new code does not go on serving what the old code
-     * cached. The cache disk outlives a release — hosting points it outside the release directory —
-     * and a variant is only ever regenerated on a miss, so without this a stale thumbnail is
-     * permanent; and since the ETag derives from the key, clearing the cache disk does not reach
-     * browsers either. Superseded generations are dropped with the rest of the file's variants when
-     * the file is deleted.
+     * Bump when a change outside the cache key — this code, the image library, GD, Imagick, a codec
+     * — alters the bytes a transform produces, since a variant is otherwise only regenerated on a
+     * miss and the cache disk outlives a release.
      */
     private const GENERATION = 2;
 
     /**
-     * Cache path for $file's bytes under this transform:
-     * `{name}/g{N}/{driver}-q{quality}[-noexif]/w{W}_h{H}[_sq].{format}` — the original (`w_h`)
-     * is passed through unencoded, so its key carries no encoder segment.
-     *
-     * The encoder segment carries what changes the bytes without a code change: the two env knobs,
-     * and whether ext-exif is present (`openpne.images.exif`, set by FilesServiceProvider; without
-     * it a rotated photo is not turned upright). Each is a
-     * different variant, not a stale one — for the disk cache and for the ETag derived from this key
-     * alike. What it does not carry is library and host versions; those are GENERATION's.
+     * `openpne.images.exif` is in the key because without ext-exif a rotated photo is not turned
+     * upright, which is a different picture rather than a stale one.
      */
     public function cacheKey(string $name, string $format): string
     {

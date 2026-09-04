@@ -14,10 +14,8 @@ use Tests\Fixtures\CountingFileStorage;
 use Tests\TestCase;
 
 /**
- * A caller with a byte budget never holds more than it could answer with: ImageCache stops reading
- * one byte past the budget rather than reading a file whole and measuring afterwards. The source
- * here is generated as it is read, so the bound is asserted on bytes actually taken — a read that
- * ignored it would be visible in the count and not only in the memory it cost.
+ * The source is generated as it is read, so the bound is asserted on the bytes actually taken rather
+ * than on the memory they would have cost.
  */
 class ImageCacheBoundedReadTest extends TestCase
 {

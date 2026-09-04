@@ -11,13 +11,8 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Encoders\PngEncoder;
 
 /**
- * Home-screen icon bytes derived from the branding favicon: the web app manifest icons and the
- * apple-touch-icon, which a launcher draws far larger than a browser tab draws a favicon.
- *
- * Two rules keep a tab-sized favicon from becoming a bad app icon. A source too small to fill the
- * requested box keeps the shipped icon rather than being upscaled into a blurred one. Transparency
- * is flattened onto the white the manifest declares as its background_color, because iOS composites
- * an alpha channel against black.
+ * Transparency is flattened onto the white the manifest declares as its `background_color`, because
+ * iOS composites an alpha channel against black.
  */
 class AppIcon
 {
@@ -78,9 +73,8 @@ class AppIcon
             return (string) $disk->get($key);
         }
 
-        // Only the verdict is cached, never the shipped bytes: they are the app's own asset and an
-        // upgrade that replaces them must take effect, but a public request must not re-read the
-        // stored original to reach the same answer every time.
+        // Only the verdict is cached, never the shipped bytes, so an upgrade that replaces the
+        // shipped asset takes effect.
         if ($disk->exists($tooSmall)) {
             return self::shippedBytes($size);
         }

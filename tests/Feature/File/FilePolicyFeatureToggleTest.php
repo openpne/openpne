@@ -26,11 +26,6 @@ use Illuminate\Support\Facades\Gate;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/**
- * Files are fetched by URL, so no page mediates them: switching a unit off has to stop its bytes at
- * the policy or its images stay readable while every screen around them is gone
- * (docs/internals/feature-modules.md, Key invariant 2).
- */
 class FilePolicyFeatureToggleTest extends TestCase
 {
     use RefreshDatabase;
@@ -66,10 +61,7 @@ class FilePolicyFeatureToggleTest extends TestCase
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $file));
     }
 
-    /**
-     * The schema permits a feature-owned file to also carry the public override; the unit's state
-     * is decided first, so the mark cannot keep a switched-off unit's bytes guest-readable.
-     */
+    /** The schema permits a feature-owned file to also carry the public override. */
     public function test_the_public_visibility_override_does_not_outrank_a_switched_off_unit(): void
     {
         $viewer = Member::factory()->create();
@@ -121,8 +113,8 @@ class FilePolicyFeatureToggleTest extends TestCase
 
     public function test_the_admin_file_monitor_still_reads_a_switched_off_units_bytes(): void
     {
-        // Operators keep moderating a unit they switched off. The admin route carries its own guard
-        // and never consults FilePolicy, which is what makes that survive.
+        // The admin route carries its own guard and never consults FilePolicy, so operators keep
+        // moderating a unit they switched off.
         $diary = Diary::factory()->create(['member_id' => Member::factory()->create()->getKey()]);
         $file = $this->fileWithBytes('diary-bytes', [
             'type' => 'image/png',
