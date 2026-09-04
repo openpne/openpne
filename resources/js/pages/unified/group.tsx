@@ -69,7 +69,7 @@ export default function UnifiedGroup() {
     };
 
     // The roster the member count has always linked to — an OpenPNE 3 URL, kept.
-    const memberListHref = `/community/member/list?id=${group.id}`;
+    const memberListHref = `/groups/${group.id}/members`;
     const hasActions = isPending || canJoin || canLeave || canManage;
     const hasMoments = recentPhotos.length > 0 || recentTopics !== null || recentEvents !== null;
 
@@ -134,7 +134,7 @@ export default function UnifiedGroup() {
                                     <Link href={`/groups/edit?id=${group.id}`} className="text-link hover:underline">
                                         {t('Edit %community%')}
                                     </Link>
-                                    <Link href={`/community/member/manage/${group.id}`} className="text-link hover:underline">
+                                    <Link href={`/groups/${group.id}/members/manage`} className="text-link hover:underline">
                                         {t('Management member')}
                                     </Link>
                                     {viewerRole === 'admin' && (
