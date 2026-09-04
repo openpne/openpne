@@ -15,11 +15,12 @@ class ModernCanonicalUrlGuardTest extends TestCase
     public function test_no_modern_page_emits_an_openpne3_community_url(): void
     {
         $offenders = [];
+        // Test files are out: back-nav.test.ts uses OpenPNE 3 URLs as history fixtures.
         $files = Finder::create()->files()->in(resource_path('js'))
             ->name(['*.ts', '*.tsx'])->notName(['*.test.ts', '*.test.tsx']);
         foreach ($files as $file) {
             // Quote/backtick-led so a comment naming the URL family does not count.
-            if (preg_match_all('#[`\'"]/community(?:Topic|Event)?/#', $file->getContents(), $matches) > 0) {
+            if (preg_match_all('#[`\'"]/community(?:Topic|Event)?\b#', $file->getContents(), $matches) > 0) {
                 $offenders[] = $file->getRelativePathname().' ('.count($matches[0]).')';
             }
         }

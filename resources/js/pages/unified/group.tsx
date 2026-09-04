@@ -68,7 +68,6 @@ export default function UnifiedGroup() {
         }
     };
 
-    // The roster the member count has always linked to — an OpenPNE 3 URL, kept.
     const memberListHref = `/groups/${group.id}/members`;
     const hasActions = isPending || canJoin || canLeave || canManage;
     const hasMoments = recentPhotos.length > 0 || recentTopics !== null || recentEvents !== null;
