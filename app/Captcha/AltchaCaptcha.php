@@ -14,11 +14,9 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Self-hosted ALTCHA (v2, PBKDF2/SHA-256 — the maintained default; plain SHA-256 PoW is too cheap to
- * parallelise to deter bots). The challenge is HMAC-signed with a key derived from APP_KEY, so it
- * needs no separate secret and a forged/tampered solution fails the signature check. verify()
- * reconstructs the widget's submitted payload into the library's objects (it has no one-call
- * deserializer) and re-derives the key to confirm the proof of work.
+ * PBKDF2/SHA-256 rather than plain SHA-256: plain-hash proof of work is too cheap to parallelise to
+ * deter bots. The HMAC key defaults to one derived from APP_KEY, so no separate secret is needed and
+ * a tampered solution fails the signature check.
  */
 class AltchaCaptcha implements Captcha
 {
@@ -69,10 +67,8 @@ class AltchaCaptcha implements Captcha
                 algorithm: $this->algorithm,
             ))->verified;
 
-            // Single-use: a valid payload is accepted once, then its (unique, signed) challenge is
-            // consumed for the rest of the TTL — otherwise one solved payload could be replayed across
-            // many registration posts within the expiry window. Cache::add is atomic, so a concurrent
-            // replay loses the race too.
+            // Cache::add is atomic, so a solved payload is accepted once per TTL and a concurrent
+            // replay loses the race.
             return $verified
                 && is_string($signature)
                 && Cache::add('altcha:used:'.$signature, true, $this->expiresSeconds);

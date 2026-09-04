@@ -16,14 +16,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Resolves the admin-configurable Classic navigation (`navigations`) into render-ready link lists.
- *
- * The stored rows (grouped by type, with raw captions) are cached as plain arrays — never Eloquent
- * models, since the production cache store does not allow serializing classes. The admin UI calls
- * clearCache() after a change. Per-request resolution (route matching, feature toggles, %term%
- * captions, subject id) is NOT cached: route sets change between deploys and a feature unit is
- * switched off from the admin panel, so neither result may outlive the request — the cached rows
- * stay feature-agnostic, and switching a unit needs no nav cache clear.
+ * Rows are cached as plain arrays because the production cache store cannot serialize classes. Route
+ * matching, feature toggles and %term% captions are resolved per request and never cached, so the
+ * rows stay feature-agnostic and switching a unit needs no cache clear.
  */
 class NavigationService
 {
@@ -49,14 +44,7 @@ class NavigationService
 
     private ?string $logoutPath = null;
 
-    /**
-     * Render-ready items for a navigation type, in sort order. Each item is
-     * ['href' => string, 'label' => string, 'domId' => string, 'isPostLogout' => bool].
-     * Unresolved uris, items pointing at missing routes, compatibility shims, and items whose
-     * target belongs to a switched-off feature unit are dropped.
-     *
-     * @return list<array{href: string, label: string, domId: string, isPostLogout: bool}>
-     */
+    /** @return list<array{href: string, label: string, domId: string, isPostLogout: bool}> */
     public function visibleEntries(string $type, string $locale, ?int $subjectId = null): array
     {
         // Local-nav ids carry the presentation token, not the stored type: `group` renders as
@@ -193,11 +181,8 @@ class NavigationService
 
     private function matchRealRoute(string $path): ?RoutingRoute
     {
-        // Route::matches() validates uri/method without binding parameters, so this never mutates
-        // the routes (the current page's route is a shared instance). Only GET routes count: a
-        // POST-only path is not a navigable link (logout, the one exception, is handled earlier).
-        // The fallback route is skipped or every path would look reachable — it is what serves the
-        // 404 these links exist to avoid.
+        // Route::matches() binds nothing, so the shared current route is never mutated; the fallback
+        // route is skipped or every path would look reachable.
         $request = Request::create($path, 'GET');
         foreach (Route::getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
             if (! $route->isFallback && $route->matches($request)) {

@@ -79,9 +79,8 @@ class TermService
      */
     public static function defaults(string $locale): array
     {
-        // The `$locale` segment is interpolated into a filesystem path. Restrict
-        // it to the explicit supported set so unrelated callers cannot reach
-        // arbitrary files through path-style values.
+        // $locale is interpolated into a filesystem path, so an unsupported value must not reach
+        // lang_path().
         if (! self::isSupportedLocale($locale)) {
             return [];
         }

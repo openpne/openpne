@@ -11,12 +11,9 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Rejects a password that embeds a context word an attacker knowing the target would try first: the
- * site name, the member's own name or email local part, or the admin username (ASVS 5.0 6.2.4).
- * Context is resolved best-effort per source — a failing source (an unresolved guard, no DB schema
- * for sns_name() mid-install) skips only itself, never blocks, and never discards the tokens the
- * other sources yielded. Accepted trade-off: a member whose name is a common short word cannot
- * embed it in a password.
+ * Rejects a password that embeds the site name, the member's name or email local part, or the admin
+ * username (ASVS 5.0 6.2.4). A source that fails to resolve (an unresolved guard, no DB schema for
+ * sns_name() mid-install) skips only itself and never blocks or discards the other sources' tokens.
  */
 class NotContextWord implements DataAwareRule, ValidationRule
 {
@@ -52,13 +49,7 @@ class NotContextWord implements DataAwareRule, ValidationRule
         }
     }
 
-    /**
-     * Raw context tokens from the three layers. Each source that reaches beyond the data at hand
-     * (guards, the DB-backed sns_name()) is guarded on its own: one failing source must not discard
-     * the tokens already gathered from the validation data.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function tokens(): array
     {
         $tokens = [];

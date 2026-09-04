@@ -8,23 +8,15 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins the feature-module boundary rules from docs/internals/feature-modules.md that the folder
- * layout alone cannot enforce — the layout is conventional, so a violation would otherwise creep in
- * silently. Each assertion names the rule and the doc:
- *
- *  - HTTP stays at the adapter boundary: Actions/Queries/Data/Serializers never receive a Request
- *    or FormRequest (Key invariant 1 / "Boundary rules").
- *  - Transactional side effects live in Actions, not controllers (Key invariant 3 / "Side effects").
- *  - A controller never imports another feature's controller (surfaces stay thin, "Boundary rules").
+ * Pins the boundary rules from docs/internals/feature-modules.md that the folder layout alone cannot
+ * enforce: HTTP stays at the adapter boundary, transactions live in Actions, and no controller
+ * imports another feature's controller.
  */
 class FeatureModuleBoundaryTest extends TestCase
 {
     /**
-     * Controllers carrying a `DB::transaction(` today. Side effects belong in Actions, so the target
-     * is zero everywhere; any remaining entry predates this guard and its move into feature Actions is
-     * tracked for burn-down. The pinned count may only go DOWN — a new/extra occurrence fails as a
-     * regression, and a drop below the pinned number fails too so whoever lands the burn-down updates
-     * this baseline. Empty now: MemberMfaController's cores moved to App\Features\Member\Actions.
+     * Controllers still carrying a `DB::transaction(`, pinned so the count can only go down: an extra
+     * occurrence fails as a regression, and a drop below the pin fails until the baseline is lowered.
      */
     private const TRANSACTION_BASELINE = [];
 
@@ -55,10 +47,9 @@ class FeatureModuleBoundaryTest extends TestCase
 
     public function test_http_stays_at_the_adapter_boundary(): void
     {
-        // Scope is path-based: only the four adapter-facing subdirectories are scanned. Top-level
-        // feature primitives (e.g. Auth/LoginFormData, Auth/SpamTrap) legitimately touch Request and
-        // are deliberately NOT scanned — the FormRequest converts HTTP input at the controller edge.
-        // (No GLOB_BRACE: it is unavailable on musl-based systems.)
+        // Only the four adapter-facing subdirectories: top-level primitives (Auth/LoginFormData)
+        // legitimately touch Request, and GLOB_BRACE is unavailable on musl so the paths are built by
+        // hand.
         $dirs = [];
         foreach (glob(app_path('Features').'/*', GLOB_ONLYDIR) ?: [] as $featureDir) {
             foreach (['Actions', 'Queries', 'Data', 'Serializers'] as $sub) {

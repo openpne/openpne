@@ -37,27 +37,18 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            // Closure, not eager: sns_name() reads the DB, and panel() boots on every console
-            // command (migrate included) where the settings table may not exist yet. Filament
-            // evaluates the brand name at render, so the DB read happens only per request.
-            // The suffix marks the realm in the header and every browser title, so an admin tab
-            // is never mistaken for the member surface; keeping the site name in front keeps
-            // tabs of different installs distinguishable from each other.
+            // Closure: panel() boots on every console command, migrate included, before the settings
+            // table sns_name() reads exists.
             ->brandName(fn (): string => sns_name().' '.__('Admin panel'))
-            // Browsers auto-request /favicon.ico; this makes Filament emit an explicit <link> so the
-            // admin tab shows the site's mark on the PNG path too — kept per-site so tabs of
-            // different installs stay distinguishable. Closure for the same reason as brandName above.
+            // Closure for the same reason as brandName.
             ->favicon(fn (): string => brand_favicon_url() ?? asset('favicon-32x32.png'))
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
             // and vice versa.
             ->authGuard('admin')
             ->login(Login::class)
-            // Opt-in TOTP two-factor auth (Filament's built-in App provider). isRequired is
-            // false by design — a nudge, not a gate (see the dashboard reminder widget and
-            // docs/internals/security.md). codeWindow(1) tightens Filament's lax
-            // default (8 ≈ ±4 min) to ±1 step (~±30s). AdminAppAuthentication revokes other
-            // sessions on enable/disable.
+            // Opt-in (isRequired false) by design, and codeWindow(1) tightens Filament's default of 8
+            // (docs/internals/security.md).
             ->multiFactorAuthentication(
                 [AdminAppAuthentication::make()->recoverable()->codeWindow(1)],
                 isRequired: false,
@@ -84,9 +75,8 @@ class AdminPanelProvider extends PanelProvider
             // Only our own dashboard widgets are discovered; Filament's default Account/Info cards
             // are intentionally not registered (logout stays in the top-right user menu).
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            // Explicit group order. Labels are closures so they resolve in the request locale (matching
-            // each screen's getNavigationGroup()); a bare __() here would evaluate at boot and a locale
-            // mismatch would silently drop a group to the end.
+            // Labels are closures: a bare __() evaluates at boot, and a group whose label mismatches its
+            // screens' getNavigationGroup() silently drops to the end.
             ->navigationGroups([
                 NavigationGroup::make(fn (): string => __('Members')),
                 NavigationGroup::make(fn (): string => __('Content')),
@@ -95,11 +85,8 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make(fn (): string => __('System')),
             ])
             ->middleware([
-                // Outermost so it decorates every response the inner stack produces — not just a
-                // rendered page but a CSRF 419, an auth redirect, a binding error. The panel does
-                // NOT inherit the `web` group, so without this the admin pages — the highest-value
-                // clickjacking target — would ship no security headers. (Livewire endpoints already
-                // run under the `web` group.) It only sets static headers, so the early slot is safe.
+                // Outermost so every response gets the headers (a 419, an auth redirect), and listed at
+                // all because the panel does not inherit the `web` group.
                 SecurityHeaders::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -110,16 +97,12 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                // SetLocale runs after StartSession so it can read session('locale').
-                // Required because the Filament panel does NOT inherit the `web` middleware
-                // group — the panel keeps its own stack and must register SetLocale here too,
-                // otherwise admin pages would always render in APP_LOCALE regardless of the
-                // user's session preference. `:session` scope keeps it admin-correct: an admin
-                // page must not pick up a co-logged-in member's persisted members.locale.
+                // After StartSession, and scoped to `:session` so an admin page never picks up a
+                // co-logged-in member's persisted locale.
                 SetLocale::class.':session',
             ])
-            // ja↔en toggle in the panel header and on the login screen. Posts to the
-            // session-only locale route so a co-logged-in member's persisted locale is untouched.
+            // Posts to the session-only locale route so a co-logged-in member's persisted locale is
+            // untouched.
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn (): View => view('filament.locale-switcher'),
@@ -140,16 +123,8 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * The admin panel's one date format, set as Filament's default rather than passed per column, so a
-     * new screen inherits it instead of picking its own (docs/internals/datetime.md).
-     *
-     * Sortable digits, not the locale's narrative form the member surface uses: this is a surface for
-     * scanning and comparing rows, and `2026-08-10 00:05` lines up in a column where `2026年8月10日`
-     * does not. No seconds, and no relative time anywhere — an operator filtering by period cannot work
-     * from "3 days ago".
-     *
-     * Timezone needs no wiring: Filament resolves it through FilamentTimezone, which falls back to
-     * `config('app.timezone')` — the same site clock both member surfaces render in.
+     * Filament's panel-wide defaults, so a screen added later inherits the admin date format
+     * (docs/internals/datetime.md).
      */
     public function boot(): void
     {
@@ -160,9 +135,8 @@ class AdminPanelProvider extends PanelProvider
                 ->defaultTimeDisplayFormat('H:i');
         });
 
-        // Infolist entries read their defaults from Schema, so one added later lands on the same format
-        // instead of Filament's `M j, Y H:i:s`. Form inputs do not: DateTimePicker carries its own
-        // defaults, and would need configuring separately if a date input ever needs to match.
+        // Infolist entries read their defaults from Schema; DateTimePicker carries its own and is not
+        // covered.
         Schema::configureUsing(function (Schema $schema): void {
             $schema
                 ->defaultDateDisplayFormat('Y-m-d')

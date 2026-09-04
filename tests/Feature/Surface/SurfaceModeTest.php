@@ -12,12 +12,8 @@ use Inertia\Inertia;
 use Tests\TestCase;
 
 /**
- * The surface_mode setting: the SurfaceMode enum semantics, the DB-authoritative resolution (config
- * as the absent-row fallback), and the openpne:surface-mode writer. Driver-agnostic — the upgrade's
- * fail-safe stamp is exercised on the MySQL lane by Tests\Feature\Upgrade\SnsSetting\SurfaceModeUpgradeTest.
- *
  * The test env pins OPENPNE_SURFACE_MODE=classic_default (phpunit.xml), so an install with no row
- * behaves like the pre-rename mixed+classic default.
+ * resolves to classic_default here.
  */
 class SurfaceModeTest extends TestCase
 {
@@ -82,10 +78,8 @@ class SurfaceModeTest extends TestCase
     }
 
     /**
-     * An Inertia navigation can only come from the Modern SPA, so it is always served Modern:
-     * a Classic Blade body would be rejected by the Inertia client. This is what keeps a Modern
-     * session on a coexistence install (no durable preference) from breaking the moment it follows
-     * a canonical link. Deliberate Modern→Classic handoffs use Inertia::location (full page load).
+     * The Inertia client rejects a Classic Blade body, so the URL that resolves to Classic on a full
+     * load must still answer Modern to an X-Inertia request.
      */
     public function test_an_inertia_navigation_is_always_served_modern(): void
     {

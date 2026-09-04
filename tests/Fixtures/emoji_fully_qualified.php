@@ -1,8 +1,7 @@
 <?php
 
-// Fully-qualified + component emoji sequences from Unicode emoji-test.txt v17.0
-// (unicode.org, © Unicode, Inc.), retrieved 2026-07-20. Generated fixture for
-// EmojiMapTest structural sweep; do not hand-edit.
+// Generated from Unicode emoji-test.txt v17.0 (unicode.org, © Unicode, Inc.), retrieved
+// 2026-07-20; do not hand-edit.
 
 return [
     "\u{1F600}",

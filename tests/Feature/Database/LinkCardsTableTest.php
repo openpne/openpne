@@ -12,13 +12,10 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Pins the two schema facts that are load-bearing rather than stylistic: `image_file_id` matches
- * `files.id`'s signed INT, and the table can be dropped again.
- *
- * The type is not a preference. `files.id` is a signed INT so the upgrade tool can rewire `file_bin`
- * by metadata alone instead of copying gigabytes of BLOBs (see create_files_table), and `foreignId()`
- * would emit BIGINT UNSIGNED, which MySQL refuses to constrain against it. SQLite accepts either, so
- * without this the mismatch would only appear on a real deployment.
+ * Pins that `image_file_id` matches `files.id`'s signed INT: `files.id` is signed so the upgrade tool
+ * can rewire `file_bin` by metadata alone (create_files_table), and `foreignId()` would emit BIGINT
+ * UNSIGNED, which MySQL refuses to constrain against it. SQLite accepts either, so the mismatch would
+ * only appear on a real deployment.
  */
 class LinkCardsTableTest extends TestCase
 {
@@ -71,16 +68,8 @@ class LinkCardsTableTest extends TestCase
 
     public function test_the_link_card_key_is_indexed_on_every_body_table(): void
     {
-        // The prune sweep asks "does any body still point at this card?" once per candidate. Without
-        // an index that is a full scan of every body table each time, worst for exactly the
-        // unreferenced cards the command exists to find.
-        //
-        // InnoDB creates a backing index for every foreign key and SQLite creates none, so the two
-        // engines reach this by different routes — the migration adds one only on SQLite. Asserted
-        // on both lanes, because what matters is that the column is indexed, not how.
-        //
-        // The tables come from CardContext, which is where the sweep reads them: a kind added there
-        // and not here would leave the new table unasserted while this went on passing.
+        // InnoDB backs every foreign key with an index and SQLite does not, so the migration adds one
+        // only on SQLite; the tables come from CardContext so a kind added there is asserted here too.
         foreach (array_map(fn (CardContext $context): string => $context->table(), CardContext::cases()) as $table) {
             $this->assertTrue(
                 Schema::hasIndex($table, ['link_card_id']),
@@ -91,10 +80,6 @@ class LinkCardsTableTest extends TestCase
 
     public function test_the_tables_round_trip(): void
     {
-        // Rolled back in reverse migration order, which is the only order that works and the one a
-        // real rollback uses: the body tables hold foreign keys into link_cards, and MySQL refuses
-        // to drop a table another still references (errno 3730). Taking the create migration down on
-        // its own passes on SQLite and fails on MySQL, which is how this was originally written.
         $create = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
         $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
         $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
@@ -105,11 +90,9 @@ class LinkCardsTableTest extends TestCase
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
 
-        // Every migration that touches these tables, newest first — and *every* one: a body that
-        // still holds a reference is what MySQL refuses the drop for, whichever migration attached
-        // it. SQLite refuses to drop a column an index still names, and MySQL refuses to drop a
-        // table another still references (errno 3730), so this order is not a preference; it is the
-        // only one that works, and the one a real rollback uses.
+        // Newest first and every one of them: MySQL refuses to drop a table another still references
+        // (errno 3730), SQLite refuses to drop a column an index still names, and each lane passes
+        // the other's failure.
         $internal->down();
         $comments->down();
         $talk->down();

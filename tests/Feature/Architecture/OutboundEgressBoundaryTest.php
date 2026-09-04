@@ -11,17 +11,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins the single-seam rule from docs/internals/outbound-http.md: App\Outbound is the only part of
- * this app that may open an outbound connection.
- *
- * The rule exists because SSRF defence is not a property of any one call site — it is the property
- * that every fetch of a member-supplied URL went through the guard. One `Http::get($url)` added
- * later, anywhere, is a hole that no amount of care inside SafeHttpFetcher covers, and it is exactly
- * the kind of line that looks unremarkable in review.
- *
- * The forbidden set is deliberately wider than "the HTTP client". A URL can be dereferenced through
- * a stream wrapper or a raw socket just as well, and those are the forms someone reaches for when
- * the obvious one is unavailable.
+ * Pins the single-seam rule from docs/internals/outbound-http.md: App\Outbound alone may open an
+ * outbound connection, since SSRF defence is only the property that every fetch of a member-supplied
+ * URL went through the guard. Stream wrappers and raw sockets are forbidden too, as they dereference
+ * a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
@@ -35,12 +28,9 @@ class OutboundEgressBoundaryTest extends TestCase
     ];
 
     /**
-     * PHP functions that take a path and will just as happily take a URL.
-     *
-     * These are the shortest route from a member-supplied URL to an outbound request, and matching
-     * only a literal `'https://…'` first argument catches none of it — `file_get_contents($url)` is
-     * what the offending code would actually say. So they are banned outright and the existing
-     * local-path readers are named below instead.
+     * PHP functions that take a path and will just as happily take a URL. Banned outright, since
+     * matching only a literal URL argument would miss `file_get_contents($url)`, and the local-path
+     * readers are named instead.
      *
      * @var list<string>
      */
@@ -140,25 +130,10 @@ class OutboundEgressBoundaryTest extends TestCase
     }
 
     /**
-     * The stream-wrapper functions $source reaches, found by tokenising rather than by regex.
-     *
-     * A regex cannot do this job. Requiring a literal `'https://…'` argument misses the form real
-     * code takes; matching the bare name instead hits `$request->file(...)` and even English prose in
-     * comments ("an unlinked file (no related entity)"), and dropping `file` to silence that leaves a
-     * URL-aware function unguarded — which is exactly how the one real caller in this repository went
-     * unnoticed. The tokeniser has already separated comments and strings from code, so the rule can
-     * be stated on what it actually means.
-     *
-     * Two spellings both count as reaching the function:
-     *
-     *  - a call, `file_get_contents(…)` or `\file_get_contents(…)`. The leading backslash matters:
-     *    PHP 8 lexes that as one T_NAME_FULLY_QUALIFIED token, so a scan that only looks at T_STRING
-     *    silently passes every fully-qualified call.
-     *  - an import, `use function file_get_contents as fetch;`. Renaming defeats any name-based check
-     *    at the call site, so the import is what gets flagged.
-     *
-     * Known limit: a dynamic callable (`$fn = 'file_get_contents'; $fn($url);`) is invisible to this,
-     * as it is to any check of this kind. The guard is a guard rail, not a proof.
+     * Tokenised rather than matched by regex: a bare-name regex hits `$request->file(...)` and prose
+     * in comments, and requiring a literal URL argument misses the form real code takes. A call and a
+     * `use function` import both count; a dynamic callable is invisible to this, as to any check of
+     * this kind.
      *
      * @return list<string>
      */
@@ -173,10 +148,8 @@ class OutboundEgressBoundaryTest extends TestCase
         $importing = false;
 
         foreach ($tokens as $i => $token) {
-            // `use function a, b as c;` imports every name up to the semicolon, so this is tracked as
-            // a statement rather than by looking a fixed distance behind each name — otherwise only
-            // the first of a comma-separated list is seen. A closure's `use (` and a trait's
-            // `use Foo;` do not match, since neither is followed by T_FUNCTION.
+            // Tracked as a statement up to the semicolon, since a fixed lookbehind sees only the first
+            // name of a comma-separated import.
             if (is_array($token) && $token[0] === T_USE) {
                 $importing = is_array($tokens[$i + 1] ?? null) && $tokens[$i + 1][0] === T_FUNCTION;
 
@@ -262,8 +235,7 @@ class OutboundEgressBoundaryTest extends TestCase
 
     public function test_the_guard_catches_a_violation(): void
     {
-        // The patterns are only worth their runtime if they actually match. Checking them against a
-        // sample keeps a typo'd regex from passing everything forever.
+        // A typo'd regex would pass everything forever.
         $sample = <<<'PHP'
             <?php
             use Illuminate\Support\Facades\Http;
@@ -317,8 +289,7 @@ class OutboundEgressBoundaryTest extends TestCase
         $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function file_get_contents as fetch;'));
         $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function \file_get_contents;'));
 
-        // One `use function` imports a comma-separated list, so a harmless first name must not hide
-        // the rest. Only tracking the statement catches this; a fixed lookbehind sees the comma.
+        // A harmless first name in a comma-separated import must not hide the rest.
         $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function strlen, file_get_contents as fetch;'));
         $this->assertSame(['copy', 'fopen'], $this->streamWrapperCalls('<?php use function strlen, fopen as open, copy;'));
 
@@ -336,14 +307,8 @@ class OutboundEgressBoundaryTest extends TestCase
     }
 
     /**
-     * The push client is not the fetcher, and only the seam that needs it may reach it.
-     *
-     * PushClientFactory sits in the allowlisted directory because that is where an HTTP client is
-     * allowed to be constructed — not because what it builds is safe to send anything on. It
-     * validates no address and pins no connection; it is the weaker seam the docs describe, and it
-     * is only that because the endpoint behind it was shape-checked at ingress and the response is
-     * never read. Anything else picking it up would be an unguarded fetch wearing an approved name,
-     * and the directory allowlist above would not say a word about it.
+     * PushClientFactory lives in the allowlisted directory, so the directory allowlist would say
+     * nothing about another file picking up a client that validates no address and pins no connection.
      */
     public function test_the_push_client_is_reachable_only_from_the_push_seam(): void
     {
