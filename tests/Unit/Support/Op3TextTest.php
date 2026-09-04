@@ -8,8 +8,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Golden matrix for the OpenPNE 3 rich-text port. Cases marked "OP3 case N" are ported from the
  * OpenPNE 3 widget unit test (opWidgetFormRichTextareaOpenPNETest); where OpenPNE 4's text-token
- * escaping diverges from that test's semi-escaped inputs, the delta is called out (see the Op3Text
- * class docblock).
+ * escaping diverges from that test's semi-escaped inputs, the delta is called out
+ * (docs/internals/body-text.md).
  */
 class Op3TextTest extends TestCase
 {
@@ -29,8 +29,8 @@ class Op3TextTest extends TestCase
             ['<op:large>x</op:large>', '<span class="op_large">x</span>', 'large raw'],
             ['<op:small>x</op:small>', '<span class="op_small">x</span>', 'small raw'],
 
-            // Every tag, entity form (a stored body that was already escaped). The attributed tags
-            // pin TAG_SPLIT + attribute parsing on the &quot;-delimited values a stored body carries.
+            // Entity form, as a stored body that was already escaped carries them, with the
+            // &quot;-delimited attribute values such a body has.
             ['&lt;op:b&gt;x&lt;/op:b&gt;', '<span class="op_b">x</span>', 'bold entity'],
             ['&lt;op:s&gt;x&lt;/op:s&gt;', '<span class="op_s">x</span>', 'strike entity (literal entity op tag)'],
             ['&lt;op:color code=&quot;#ff0000&quot;&gt;x&lt;/op:color&gt;', '<span class="op_color" style="color:#ff0000">x</span>', 'color entity'],

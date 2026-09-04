@@ -89,9 +89,8 @@ class BodyTextTest extends TestCase
 
     public function test_full_width_url_truncation_uses_display_width(): void
     {
-        // Str::limit measures display width (mb_strwidth), so this 47-character full-width URL (width
-        // ~87 > 57) truncates and gets an ellipsis. The TS linkify() mirror measures character count
-        // and intentionally diverges — no ellipsis — see resources/js/lib/linkify.test.ts.
+        // Str::limit measures display width, so this 47-character full-width URL (width 87) truncates
+        // where the TS linkify() mirror, measuring character count, deliberately does not.
         $url = 'http://'.str_repeat('あ', 40);
 
         $html = (string) BodyText::render($url);

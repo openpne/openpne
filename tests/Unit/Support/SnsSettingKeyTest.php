@@ -37,8 +37,8 @@ class SnsSettingKeyTest extends TestCase
     {
         $key = SnsSettingKey::DiaryAllowWebPublic;
 
-        // Absent is OpenPNE 3's default (on) — the site never decided. A STORED value that is neither
-        // '1' nor '0' is corruption, and for an exposure switch corruption reads as off.
+        // Absent is OpenPNE 3's default (on), but a stored value that is neither '1' nor '0' is
+        // corruption and reads as off.
         $this->assertTrue($key->decode(null));
         $this->assertTrue($key->default());
         $this->assertTrue($key->decode('1'));
@@ -185,8 +185,8 @@ class SnsSettingKeyTest extends TestCase
         $this->assertFalse($key->isRequired());
         $this->assertSame(GroupTalkNotifyMode::Mentions->value, $key->default());
 
-        // Stored as the plain backing value, like RegistrationMode. What an unreadable one means is
-        // GroupTalkNotifyDefault's to answer (the quieter mode), not the codec's to guess.
+        // Stored as the plain backing value; what an unreadable one means is GroupTalkNotifyDefault's
+        // to answer, not the codec's.
         $this->assertSame('all', $key->encode($key->coerce(' all ')));
         $this->assertSame('all', $key->decode('all'));
         $this->assertSame(GroupTalkNotifyMode::Mentions->value, $key->decode(null));

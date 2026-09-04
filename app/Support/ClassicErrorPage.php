@@ -11,12 +11,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * OpenPNE 3's `default/error` screen: the statuses a member can walk into render inside the Classic
- * shell, the way OpenPNE 3 decorated that action with the layout — a bare framework error page
- * drops the site's header, nav and skin, which for a Classic install reads as the site being gone.
- *
- * Only 403/404/419. A 5xx keeps the framework's dependency-free page: the shell it would render in
- * reads the database (settings, navigation, banners), which is exactly what tends to be broken.
+ * OpenPNE 3 `default/error`: 403/404/419 render inside the Classic shell. A 5xx keeps the
+ * framework's dependency-free page, because the shell reads the database, which is what tends to be
+ * broken.
  */
 final class ClassicErrorPage
 {
@@ -30,9 +27,8 @@ final class ClassicErrorPage
     {
         $status = $e->getStatusCode();
 
-        // Only requests routed through the web group get the shell: system routes (the storage
-        // file server, vendor endpoints) never ran the session/locale/header middleware and must
-        // keep their native errors. Checked before the surface so they don't query settings either.
+        // Only routes in the web group get the shell: a system route never ran the session/locale
+        // middleware, and this check precedes the surface read so it queries no settings either.
         $route = $request->route();
         $isWebRoute = $route instanceof Route
             && in_array('web', $route->gatherMiddleware(), true);

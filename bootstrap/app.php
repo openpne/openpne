@@ -28,11 +28,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Behind a reverse proxy, $request->ip()/scheme reflect the proxy, not the client, unless
-        // the proxy is trusted — which collapses every per-IP rate limit and the HTTPS check.
-        // TRUSTED_PROXIES is the proxy IP/CIDR list (or "*" to trust all forwarded headers); empty
-        // trusts none. X-Forwarded-Host is deliberately NOT trusted — the real Host is validated by
-        // trustHosts instead, keeping the host-poisoning surface closed.
+        // X-Forwarded-Host is deliberately not trusted: the Host is validated by trustHosts instead
+        // (docs/internals/runtime.md).
         $proxies = trim((string) env('TRUSTED_PROXIES'));
         $middleware->trustProxies(
             at: $proxies === '' ? null : ($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies))),
@@ -41,9 +38,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO,
         );
 
-        // Pin the trusted Host to exactly APP_URL — subdomains: false, so a wildcard-DNS or
-        // attacker-controlled subdomain is not trusted either — so a forged Host cannot poison
-        // generated URLs (notably the password-reset link). Enforced outside local/testing.
+        // Exactly APP_URL's host, subdomains refused too, so a forged Host cannot poison generated URLs
+        // such as the password-reset link.
         $middleware->trustHosts(
             at: fn () => array_filter([
                 ($host = parse_url((string) config('app.url'), PHP_URL_HOST)) ? '^'.preg_quote($host).'$' : null,
@@ -57,13 +53,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // the admin realm's Livewire endpoints.
         $middleware->prepend(UseAdminSessionStore::class);
 
-        // A response that aborts inside the group unwinds through only the middleware it had already
-        // entered, so a slot at the end of the group misses the 419, the guest redirect and the
-        // implicit-binding 404 — all pages a member sees. SecurityHeaders sets static headers, so it
-        // goes ahead of everything that can abort, as it does in the Filament panel stack (only the
-        // cookie scrub, which reads the finished response, sits outside it); SetLocale needs the session, so it
-        // goes right after StartSession/ShareErrorsFromSession and ahead of the first middleware
-        // that can abort. PreventRequestForgery has to join the priority list to be that anchor.
+        // An abort unwinds only through middleware already entered, so SecurityHeaders and SetLocale
+        // must sit ahead of the first middleware that can abort (docs/internals/security.md).
         $middleware->web(prepend: [
             // Outermost, so it sees the response after EncryptCookies and
             // AddQueuedCookiesToResponse have attached the session cookies.
@@ -76,44 +67,32 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToPriorityList(ShareErrorsFromSession::class, PreventRequestForgery::class);
         $middleware->prependToPriorityList(PreventRequestForgery::class, SetLocale::class);
 
-        // Where a route lists the feature gate, it must run right after auth (a guest in an auth
-        // group still meets the login redirect, so the toggle state never shows) but before
-        // ThrottleRequests and SubstituteBindings: a disabled unit's request must not consume a
-        // rate limiter, and must not reach a binding's missing() handler — /diary/listMember's
-        // guest-login fallback would otherwise answer 302 where the spec says 404.
+        // The feature gate runs after auth, so a guest never learns the toggle state, and before
+        // ThrottleRequests and SubstituteBindings, so a disabled unit consumes no limiter and reaches no
+        // missing() handler.
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureFeatureEnabled::class);
 
-        // Sanctum ships the ability checks unaliased. `ability` is the any-of one, which for the
-        // single ability routes/ai.php lists is also the all-of one.
+        // Sanctum ships its ability checks unaliased; `ability` is the any-of check, which for a single
+        // ability is also all-of.
         $middleware->alias(['ability' => CheckForAnyAbility::class]);
 
         // An already-authenticated member on /login or /register goes through the root so the
         // landing stays surface-aware; the framework default would pick the Modern /dashboard.
         $middleware->redirectUsersTo(fn () => route('home'));
 
-        // OpenPNE 3 sent a guest to the login form with a notice rather than a bare form. The
-        // callback runs only where the framework redirects a guest, so /login itself never flashes
-        // it — the same exclusion OpenPNE 3 made for its homepage and login actions.
-        //
-        // Null for the MCP endpoint, which answers 401 with no body instead: a bearer client has no
-        // login form to be sent to, and returning a target here would also flash a notice into a
-        // session that realm never starts. See docs/internals/mcp.md.
+        // Null for the MCP endpoint, which answers 401 with no body: a bearer client has no login form,
+        // and a target here would flash a notice into a session that realm never starts.
         $middleware->redirectGuestsTo(
             fn (Request $request): ?string => $request->is('mcp') ? null : GuestLoginRedirect::target(),
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Give the security log 429 observability (rate-limit tuning depends on it). A
-        // ThrottleRequestsException is an HttpException, and the handler ignores *every*
-        // HttpException by default (internalDontReport), so un-ignoring only the subclass does
-        // not lift the parent's ignore — the parent must be un-ignored, then re-narrowed here.
-        // ->stop() fires for every HttpException: 429s reach the security channel, and the rest
-        // stay out of the default channel exactly as before (they were already ignored). The
-        // limiter key is deliberately never logged — login keys embed the attempted email; ip and
-        // user_agent come from SecurityLog's request auto-attach. See docs/internals/logging.md.
+        // The handler ignores every HttpException by default, and un-ignoring only the subclass would
+        // not lift that, so the parent is un-ignored and ->stop() keeps the rest out of the default channel.
         $exceptions->stopIgnoring(HttpException::class);
         $exceptions->report(function (HttpException $e): void {
             if ($e instanceof ThrottleRequestsException) {
+                // The limiter key is never logged: login keys embed the attempted email.
                 SecurityLog::event('throttle.hit', [
                     'route' => request()->route()?->getName(),
                     'member_id' => request()->user()?->getKey(),
@@ -121,15 +100,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
             }
         })->stop();
 
-        // Render the errors a member can walk into inside the Classic shell. A render callback
-        // rather than resources/views/errors/4xx.blade.php overrides: those apply to every realm
-        // and surface, and the choice here is per-request. Returning null leaves the framework's
-        // own error response untouched. See App\Support\ClassicErrorPage.
+        // A render callback rather than errors/4xx.blade.php overrides, which would apply to every
+        // realm and surface.
         $exceptions->render(fn (HttpExceptionInterface $e, Request $request) => ClassicErrorPage::render($request, $e));
     })->create();
 
-// Let the env file and storage directory be relocated to deployer-chosen paths
-// (defaults to the in-project locations when unset). See docs/internals/runtime.md.
+// Deployer-chosen env and storage paths; unset means the in-project locations (docs/internals/runtime.md).
 if ($path = getenv('OPENPNE_ENV_PATH')) {
     $app->useEnvironmentPath($path);
 }

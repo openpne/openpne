@@ -25,8 +25,8 @@ class BodyRendererUrlsTest extends TestCase
 
     public function test_a_bare_www_host_gets_the_scheme_the_renderer_gives_it(): void
     {
-        // BodyText::link() prefixes http:// for a bare www. host, so extraction must too — otherwise
-        // the body shows a link with no card beside it.
+        // BodyText::link() prefixes http:// for a bare `www.` host, so extraction must too or the body
+        // shows a link with no card.
         $this->assertSame(['http://www.example.com/x'], BodyRenderer::urls('see www.example.com/x', BodyFormat::Plain));
     }
 

@@ -146,8 +146,8 @@ class MarkdownTextTest extends TestCase
 
     public function test_excerpt_strips_tags_before_decoding_entities(): void
     {
-        // Order pin: strip_tags removes the <strong> real tag, then decode turns the escaped <b> back
-        // into the literal the user typed. Decoding first would let strip_tags eat the <b> too.
+        // Decoding entities before strip_tags would let it eat the user's literal <b> along with the
+        // real <strong>.
         $this->assertSame('bold <b>x</b>', MarkdownText::excerpt('**bold** <b>x</b>'));
     }
 

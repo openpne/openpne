@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * Allow-list for a navigation item's stored uri. The single source of truth shared by the
- * renderer (App\Services\NavigationService skips anything not renderable), the admin form
- * (App\Filament — rejects bad input), and the upgrade tool's tests.
- *
- * A renderable uri is either a single-slash internal path (a protocol-relative `//host` is
- * rejected) or an `http(s)://` URL — with no whitespace or control characters. Everything else
- * (an unconverted OpenPNE 3 token like `@homepage` or `diary/index`, a non-http scheme such as
- * `ftp://`, `javascript:`) is treated as unresolved: the upgrade keeps it verbatim and the
- * renderer hides it.
+ * An unrenderable uri, such as an unconverted OpenPNE 3 token like `@homepage`, is kept verbatim
+ * by the upgrade and hidden by the renderer rather than rejected.
  */
 final class NavigationUri
 {

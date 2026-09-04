@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * How a single install serves the two rendering surfaces (App\Support\Surface). Read by
- * SurfaceResolver and stored as the SnsSettingKey::SurfaceMode value; the fresh-install default
- * lives in config/openpne.php. The OpenPNE 3 → 4 upgrade establishes classic_default so a migrated
- * site keeps its Classic appearance until the operator switches.
- *
- * The two coexistence modes carry the default surface for an undecided viewer; modern_only carries
- * none because Classic is not served at all. Folding "is Classic available?" and "which surface is
- * the default?" into one value removes the dead combination the two former flags allowed — a default
- * surface that modern_only silently ignored.
+ * One value for both whether Classic is served and which surface an undecided viewer gets, so a
+ * default surface under modern_only cannot be stored. The upgrade establishes classic_default.
  */
 enum SurfaceMode: string
 {

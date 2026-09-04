@@ -13,15 +13,9 @@ use InvalidArgumentException;
 final class SiteTimezone
 {
     /**
-     * A bad name would otherwise pass silently: LoadConfiguration's date_default_timezone_set only
-     * warns on one it cannot use and leaves the previous zone in place, so every timestamp would be
-     * written and read in a zone nobody chose.
-     *
-     * The canonical group only — every one of its zones is also formattable by the client's Intl, which
-     * is what lets both surfaces share the value. `ALL_WITH_BC` cannot be used for this: it carries
-     * tzdata filenames (`leapseconds`, `localtime`, `tzdata.zi`, `Factory`) that Intl rejects and that
-     * make date_default_timezone_get raise "Timezone database is corrupt". Non-canonical aliases
-     * (`Etc/UTC`, `GMT`, `Japan`) are rejected on purpose — configure the canonical name instead.
+     * LoadConfiguration's date_default_timezone_set only warns on a name it cannot use and keeps the
+     * previous zone, so a bad APP_TIMEZONE would pass silently. The canonical group only: `ALL_WITH_BC`
+     * carries tzdata filenames that the client's Intl rejects and that corrupt date_default_timezone_get.
      *
      * @throws InvalidArgumentException
      */

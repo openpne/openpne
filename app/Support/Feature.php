@@ -7,16 +7,9 @@ namespace App\Support;
 use App\Services\SnsSettingService;
 
 /**
- * The closed registry of admin-togglable feature units, and the single source of truth for which
- * setting stores a unit's flag and which routes it owns. See docs/internals/feature-toggles.md.
- *
- * Switching a unit off is a gate, never a data operation: its rows, files and relationships stay,
- * and switching it back on restores the feature intact (OpenPNE 3 `plugin.is_enabled` parity).
- *
- * The case value is the feature vocabulary the surface resolver already uses (App\Support\SurfaceResolver);
- * it is normally the route-name prefix and the URL segment too. Two units come apart from that:
- * DirectMessage's routes and URLs stay on the OpenPNE 3 `message` word until they are redesigned, and
- * Mcp owns no route name at all. Both declare their prefixes explicitly below.
+ * The closed registry of admin-togglable feature units (docs/internals/feature-toggles.md). Switching
+ * a unit off is a gate, never a data operation: its rows stay and switching it back on restores it
+ * intact (OpenPNE 3 `plugin.is_enabled`).
  */
 enum Feature: string
 {
@@ -97,10 +90,8 @@ enum Feature: string
     }
 
     /**
-     * Route-name prefixes this unit owns. Dot-terminated, so a prefix claims whole name segments
-     * and never a route that merely begins with the same letters. A child unit nests inside its
-     * parent's prefix (`group.topics.`); owningRouteName() resolves that overlap by preferring the
-     * longest match.
+     * Dot-terminated, so a prefix claims whole name segments and never a route that merely begins
+     * with the same letters.
      *
      * @return list<string>
      */
@@ -116,8 +107,7 @@ enum Feature: string
             self::GroupEvent => ['group.events.'],
             self::GroupTalk => ['group.talk.'],
             self::Friend => ['friend.'],
-            // The MCP endpoint's three routes come from the package unnamed (routes/ai.php), so
-            // there is no name to claim; FeatureRouteMiddlewarePinTest claims them by URL segment.
+            // The MCP endpoint's routes come from the package unnamed, so there is no name to claim.
             self::Mcp => [],
         };
     }

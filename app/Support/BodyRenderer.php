@@ -4,11 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\HtmlString;
 
-/**
- * Single dispatch from a stored body + its BodyFormat to safe HTML, used by both member surfaces
- * (Classic <x-user-text> and the Modern serializers' bodyHtml). Keeps the format→renderer mapping
- * in one place so the two surfaces cannot diverge.
- */
+/** The one format-to-renderer mapping, so the Classic and Modern surfaces cannot diverge. */
 final class BodyRenderer
 {
     public static function render(?string $text, BodyFormat $format): HtmlString
@@ -21,11 +17,8 @@ final class BodyRenderer
     }
 
     /**
-     * The URLs this body links to, in the order they appear.
-     *
-     * Dispatched here for the same reason rendering is: what a link card is fetched for must be
-     * exactly what the reader sees as a link, and that differs per format. An op3 body's decoration
-     * tags are stripped first so a colour attribute cannot read as a URL.
+     * Exactly the URLs render() links, in order, so a card is never fetched for text the reader does
+     * not see as a link. Op3 decoration is stripped first so a tag attribute cannot read as a URL.
      *
      * @return list<string>
      */
@@ -38,12 +31,7 @@ final class BodyRenderer
         };
     }
 
-    /**
-     * A feed excerpt. Markdown flattens its rendered HTML to plain text (MarkdownText::excerpt);
-     * Plain and Op3 share BodyText::excerpt, which strips <op:*> tags and collapses newlines.
-     *
-     * `$width` is a display width, not a character count: a fullwidth glyph spends two of it.
-     */
+    /** `$width` is a display width, not a character count: a fullwidth glyph spends two of it. */
     public static function excerpt(?string $text, BodyFormat $format, int $width = BodyText::EXCERPT_WIDTH): string
     {
         return match ($format) {
@@ -52,11 +40,7 @@ final class BodyRenderer
         };
     }
 
-    /**
-     * The full body as plain text for a text/plain context (notification mail), so a Markdown body is
-     * not emailed as literal `**bold**` and an op3 body carries no `<op:*>` tags. Unlike excerpt() this
-     * keeps the whole body and its line structure — no width cut. Plain passes through unchanged.
-     */
+    /** The whole body as plain text with its line structure kept, for a text/plain context such as mail. */
     public static function plainText(?string $text, BodyFormat $format): string
     {
         return match ($format) {

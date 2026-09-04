@@ -5,15 +5,9 @@ namespace App\Support;
 use App\Models\Member;
 
 /**
- * Content visibility, shared across features (diaries, profile values, …).
- *
- * Levels are in ascending restriction (Open = least restricted … Private = most
- * restricted). The monotonic ordering makes an access check a single range comparison:
- *   content.visibility <= Visibility::clearanceFor($viewer, $owner)
- *
- * OpenPNE 3 stored visibility on a different (non-monotonic) public_flag scale; the upgrade
- * maps it here via fromOpenPne3PublicFlag() / the equivalent SQL CASE, so the whole app uses
- * this one representation. Open (web-public) is gated per field by is_public_web for profiles.
+ * Levels ascend in restriction, so an access check is one range comparison: content.visibility <=
+ * clearanceFor($viewer, $owner). The OpenPNE 3 public_flag scale is not monotonic; the upgrade maps it
+ * through fromOpenPne3PublicFlag() and an equivalent SQL CASE.
  */
 enum Visibility: int
 {
@@ -25,11 +19,7 @@ enum Visibility: int
 
     case Private = 3;
 
-    /**
-     * The highest restriction level $viewer may see on $owner's content.
-     * owner → Private (everything); friend → Friends; any other member → Members.
-     * A guest (no Member) is handled by the caller, not here.
-     */
+    /** A guest (no Member) is the caller's case, not handled here. */
     public static function clearanceFor(Member $viewer, Member $owner): self
     {
         if ($viewer->is($owner)) {
@@ -44,10 +34,8 @@ enum Visibility: int
     }
 
     /**
-     * Map an OpenPNE 3 public_flag (SNS=1, friend=2, private=3, web=4) to a concrete
-     * Visibility. Anything else (including OpenPNE's invalid 0 default) falls back to
-     * Members. For per-value upgrades the SQL CASE mirrors this but keeps NULL as "use the
-     * field default" instead of collapsing to Members.
+     * OpenPNE 3 public_flag: SNS=1, friend=2, private=3, web=4; anything else, including the invalid 0
+     * default, is Members. The per-value upgrade's SQL CASE keeps NULL as "use the field default" instead.
      */
     public static function fromOpenPne3PublicFlag(?int $publicFlag): self
     {

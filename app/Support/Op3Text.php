@@ -5,28 +5,8 @@ namespace App\Support;
 use Illuminate\Support\HtmlString;
 
 /**
- * Renders an OpenPNE 3 rich-text body — the <op:*> decoration tags produced by
- * opWidgetFormRichTextareaOpenPNE — as safe HTML, porting that widget's PC-mode
- * (is_use_stylesheet = true) toHtml pipeline. Migrated diary bodies carry these tags;
- * BodyText (the plain path) only strips them.
- *
- * Architecture: tokenize the raw stored body against the OpenPNE 3 master regex (which matches
- * both raw <op:...> and entity &lt;op:...&gt; tag forms), convert op tags to spans, and render
- * the text between them through BodyText — escape, autolink, nl2br — so no utility is duplicated.
- *
- * Deltas from the OpenPNE 3 widget (which itself is XSS-safe only because the template escaped the
- * whole body with ESC_SPECIALCHARS *before* calling toHtml, then toHtml converted the already
- * entity-encoded tags back):
- *  - Text tokens are HTML-escaped here (OpenPNE 3's toHtml did not escape — it relied on the
- *    upstream template escape). Tokenizing the raw body and escaping only the text between tags is
- *    equivalent to OpenPNE 3's escape-then-convert for a raw-stored body, and makes this renderer
- *    XSS-safe on its own. A literal <b>/<script> in the body therefore stays escaped text.
- *  - Consequently quotes and ampersands in text are escaped (ENT_QUOTES, matching ESC_SPECIALCHARS);
- *    the OpenPNE 3 *unit test* fed semi-escaped inputs that left quotes raw, so a case with a quote
- *    in text renders &quot; here where that test showed a bare ".
- *  - A close tag with no open span is dropped (OpenPNE 3 emitted an orphan </span>); dropping keeps
- *    the fragment balanced for injection via dangerouslySetInnerHTML. Unclosed opens are still
- *    auto-closed at the end (OpenPNE 3 htmlTagFollowup).
+ * OpenPNE 3 opWidgetFormRichTextareaOpenPNE toHtml, PC mode: <op:*> tags become spans and only the
+ * text between them goes through BodyText. Deltas from OpenPNE 3 are listed in docs/internals/body-text.md.
  */
 final class Op3Text
 {
