@@ -20,10 +20,8 @@ class TermTranslatorTest extends TestCase
 
     public function test_fallback_locale_is_inherited_from_framework_translator(): void
     {
-        // Regression: extending the `translator` binding must preserve the
-        // fallback locale that `TranslationServiceProvider` set on the base
-        // instance. Without it, untranslated keys would no longer resolve via
-        // the fallback chain.
+        // Extending the `translator` binding must carry over the fallback locale the base instance was
+        // given, or untranslated keys stop resolving.
         $this->assertSame(config('app.fallback_locale'), $this->app['translator']->getFallback());
     }
 
@@ -50,18 +48,15 @@ class TermTranslatorTest extends TestCase
 
     public function test_has_returns_false_for_unregistered_placeholder_key(): void
     {
-        // Regression: `Translator::has()` is `get(...) !== $key`. Without the
-        // overridden `has()` the placeholder substitution would turn
-        // `%Friend%` into `フレンド`, making the existence check report a
-        // false positive and breaking `Lang::has` / `choice` semantics.
+        // `Translator::has()` is `get(...) !== $key`, so without the override the placeholder
+        // substitution would make an unregistered `%Friend%` look present.
         $this->assertFalse(Lang::has('%Friend%', 'ja'));
     }
 
     public function test_pure_placeholder_key_renders_via_substitution_when_unregistered(): void
     {
-        // Counterpart to the above: `__()` still resolves `%Friend%` to the
-        // localized value even though `Lang::has` reports it as absent. The
-        // pure-placeholder exemption in `i18n:check` depends on this contract.
+        // The pure-placeholder exemption in `i18n:check` depends on `__()` resolving `%Friend%` while
+        // `Lang::has` reports it absent.
         $this->app->setLocale('ja');
 
         $this->assertSame('フレンド', __('%Friend%'));

@@ -9,11 +9,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Behavior of the write limiters (App\Providers\AppServiceProvider). The limit is exercised via a
- * config() override rather than by firing the default 30 requests. An empty body is enough: the
- * throttle middleware counts the hit before the controller (and its validation) runs
- * (Illuminate\Routing\Middleware\ThrottleRequests::handleRequest checks/increments each limit, then
- * calls $next), so a 302/422/404 from validation past the limit still counts — no content factories.
+ * The limit is lowered through config() rather than by firing the default 30 requests. An empty body
+ * is enough: ThrottleRequests counts the hit before the controller runs, so a 302/422/404 from
+ * validation still counts.
  */
 class WriteThrottleBehaviorTest extends TestCase
 {
@@ -74,11 +72,10 @@ class WriteThrottleBehaviorTest extends TestCase
     }
 
     /**
-     * Post as a member on a clean session so AuthenticateSession never faults on a password hash
-     * left by a previous member — its 302-to-login would replace the response this test asserts on
-     * (ThrottleRequests runs first, so the hit still counts, but the status would lie). The
-     * rate-limiter state lives in the cache store, so flushing the session does not reset the
-     * counters under test.
+     * A clean session, so AuthenticateSession never faults on a password hash left by a previous
+     * member and replaces the asserted status with its 302 (the hit still counts, ThrottleRequests
+     * running first). Rate-limiter state lives in the cache store, so flushing the session does not
+     * reset the counters.
      */
     private function postAs(Member $member, string $uri): TestResponse
     {

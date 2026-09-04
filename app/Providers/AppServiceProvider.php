@@ -68,10 +68,8 @@ class AppServiceProvider extends ServiceProvider
         // once per process, before any request's surface pin mutates it.
         $this->app->singleton(UseAdminSessionStore::class);
 
-        // Swapped in through the container rather than by replacing the class in the web group:
-        // the pipeline resolves middleware by name from here, so every stack that lists the
-        // framework class gets ours (web group, Filament panel) while the middleware priority
-        // list — which matches on that name — keeps ordering the session middleware as before.
+        // Bound under the framework class rather than listed in the web group: every stack naming
+        // that class gets ours, and the middleware priority list still matches it by name.
         $this->app->singleton(FrameworkStartSession::class, fn ($app): StartSession => new StartSession(
             $app->make(SessionManager::class),
             fn () => $app->make(CacheFactory::class),
@@ -84,19 +82,15 @@ class AppServiceProvider extends ServiceProvider
         // surfaces in that request ask (see NotificationCenterWindow).
         $this->app->scoped(NotificationCenterWindow::class);
 
-        // Scoped rather than singleton, deliberately: a queue worker outlives the job it is running,
-        // and FetchLinkCard re-reads this setting so that work queued while cards were on stops when
-        // an operator switches them off. A process-lifetime memo would answer that re-read with what
-        // the worker booted with. Scoped instances are forgotten between jobs.
+        // Scoped, not singleton: a queue worker outlives its jobs, and a job's re-read of this setting
+        // must see an operator's switch-off rather than what the worker booted with.
         $this->app->scoped(LinkCardSettings::class);
 
         // Same scope, same reason it is not static: it holds records read for this page's internal
         // cards, and a worker serves many jobs (see InternalCardResolver).
         $this->app->scoped(InternalCardResolver::class);
 
-        // The answers those cards' access rules needed, kept for the page that read them. Scoped for
-        // the same reason again, and cleared by any write that changes what it holds
-        // (ViewerRelations::flush).
+        // Scoped for the same reason as LinkCardSettings.
         $this->app->scoped(ViewerRelations::class);
 
         // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a
@@ -158,11 +152,8 @@ class AppServiceProvider extends ServiceProvider
         // cookie or credentials (see MemberUserProvider).
         Auth::provider('member-eloquent', fn ($app, array $config): MemberUserProvider => new MemberUserProvider($app['hash'], $config['model']));
 
-        // The single password policy — every path validates via Password::default(), so this is the
-        // one place the bounds live. Min 8 and the 72-BYTE cap (bcrypt reads nothing past its 72nd
-        // input byte; characters would under-count multibyte) always apply; the guessability checks
-        // (common-password blocklist + context words) are gated by OPENPNE_PASSWORD_BLOCKLIST so a dev
-        // environment can opt out. Rationale and standards in docs/internals/security.md.
+        // The one password policy; the guessability rules are gated so a dev environment can opt out
+        // (docs/internals/security.md).
         Password::defaults(function (): Password {
             $rules = [new MaxBytes(72)];
             if (config('openpne.password.blocklist')) {
@@ -173,14 +164,8 @@ class AppServiceProvider extends ServiceProvider
             return Password::min(8)->rules($rules);
         });
 
-        // Stable morph alias so a file's owner is stored as `member`, not the FQCN;
-        // FilePolicy resolves the owning entity through this map.
-        //
-        // A class may carry more than one alias: the FIRST key mapping to it is what getMorphClass()
-        // writes, later ones stay readable. `message`, `community`, `communityTopic*` and
-        // `communityEvent*` are kept behind `directMessage`, `group`, `groupTopic*` and
-        // `groupEvent*` on that basis, so rows written before those renames still resolve.
-        // MorphAliasTest pins both directions.
+        // The first alias mapping to a class is what getMorphClass() writes, so each legacy alias is
+        // listed after its current one and stays readable.
         Relation::morphMap([
             'member' => Member::class,
             'diary' => Diary::class,
@@ -228,10 +213,9 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * The MCP endpoint's per-token cap. Keyed by the token rather than by the member: a member may
-     * hold several, and one runaway client must not spend another's budget. This limb only ever runs
-     * once a token has been accepted — the unauthenticated caller is bounded before that, by
-     * App\Http\Middleware\ThrottleMcpByIp, which the priority list cannot reorder behind auth.
+     * Keyed by the token rather than the member, so one runaway client cannot spend a sibling token's
+     * budget. Runs only once a token has been accepted; the unauthenticated caller is bounded earlier
+     * by ThrottleMcpByIp.
      */
     private function tokenLimiter(): Closure
     {
@@ -253,13 +237,9 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * A two-limb write limiter: a per-member cap (primary) and a looser per-IP cap keyed under
-     * distinct prefixes. Config is read per request so an env override — and the tests' config()
-     * lever — take effect. A disabled (0) limb is OMITTED from the array rather than passed as
-     * Limit::none(): ThrottleRequests bypasses only a none() returned as the sole response, so a
-     * none() inside the array degrades to a shared-key PHP_INT_MAX limit instead of a bypass
-     * (Illuminate\Routing\Middleware\ThrottleRequests::handleRequestUsingNamedLimiter). When both
-     * limbs are disabled the sole none() is the correct unlimited signal.
+     * A disabled (0) limb is omitted rather than passed as Limit::none(): ThrottleRequests bypasses
+     * only a none() returned alone, and a none() inside an array degrades to a shared-key PHP_INT_MAX
+     * limit.
      */
     private function writeLimiter(string $prefix, string $perMemberKey, string $perIpKey): Closure
     {

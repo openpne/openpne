@@ -4,9 +4,8 @@ namespace Tests\Fixtures;
 
 /**
  * A stream of any declared length whose bytes are made as they are read, counting how many a reader
- * actually took. It lets a test pose a stored file far larger than the cap under test without ever
- * holding that many bytes, and then assert how few of them a bounded read pulled into memory — a
- * read that ignored its budget shows up in the count rather than only in the memory it took.
+ * took. A test can pose a file far larger than the cap under test without holding the bytes, and a
+ * read that ignored its budget shows up in the count.
  */
 class CountedByteStream
 {

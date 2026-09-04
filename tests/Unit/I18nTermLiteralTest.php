@@ -71,11 +71,8 @@ class I18nTermLiteralTest extends TestCase
     }
 
     /**
-     * Dynamic-registry captions/help reach __() through a variable and never enter the code
-     * scanner, so an unwired, ja-unregistered caption like "New timeline posts (everyone)" could
-     * stay literal while i18n:check reported green. The gate closes that hole via
-     * {@see Cmd::dynamicSourceStrings()}; assert that corpus carries the source-only unwired caption
-     * and that every collected source is term-clean.
+     * Dynamic-registry captions reach __() through a variable and never enter the code scanner, so an
+     * unwired, ja-unregistered caption could stay literal while i18n:check reported green.
      */
     public function test_dynamic_registry_sources_are_collected_and_term_clean(): void
     {

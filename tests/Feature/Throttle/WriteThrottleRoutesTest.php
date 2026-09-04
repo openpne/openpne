@@ -9,9 +9,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Drift guard: every content-posting and mail-triggering member write route keeps its named
- * write limiter. A route edit that drops the throttle must fail here, not silently in production.
- * The limiter definitions live in App\Providers\AppServiceProvider.
+ * Pins the named write limiter on the routes listed below, so a route edit that drops one of these
+ * throttles fails here rather than silently in production.
  */
 class WriteThrottleRoutesTest extends TestCase
 {

@@ -26,16 +26,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Who may read a stored file. Visibility is inherited from the file's owning entity
- * (files have no owner column of their own), resolved through the morph map.
- *
- * Fail-closed: an unlinked file (no related entity), an unknown entity type, or an
- * owner that no longer exists is denied — never served as if public. New owner types
- * must be added to the match explicitly, so an unhandled type stays private.
- *
- * An explicit_visibility='public' override is the one ownerless-but-public case: an admin-uploaded
- * asset embedded in custom HTML/CSS. Only the literal 'public' opens it, so the override is itself
- * fail-closed.
+ * Fail-closed: an unlinked file, an unknown owner type, a deleted owner or an owner type missing from
+ * the match is denied. explicit_visibility='public' is the one ownerless-but-public case (an
+ * admin-uploaded asset embedded in custom HTML/CSS), and only that literal opens it.
  */
 class FilePolicy extends BasePolicy
 {
@@ -43,11 +36,8 @@ class FilePolicy extends BasePolicy
     {
         $owner = $this->owner($file);
 
-        // A file is fetched by URL, so no page mediates it: a switched-off unit's bytes have to be
-        // refused here or its images stay readable while every screen around them is gone. Decided
-        // BEFORE the public override — the schema permits a feature-owned file to carry the public
-        // mark, and a switched-off unit's bytes are refused whatever the mark says. The admin
-        // monitor reads through its own route (AdminFileController), so moderation keeps working.
+        // Files are fetched by URL with no page in front, so a switched-off unit is refused here, and
+        // before the public override because the schema lets a feature-owned file carry that mark.
         if (! ($this->owningFeature($owner)?->enabled() ?? true)) {
             return false;
         }
@@ -57,14 +47,10 @@ class FilePolicy extends BasePolicy
         }
 
         return match (true) {
-            // A banner image is public by design: a banner shows to guests (the before-login
-            // placement), so anyone may fetch it. Writes are admin-only, so the public set is
-            // exactly the images an operator placed.
+            // Public: a banner shows to guests (the before-login placement).
             $owner instanceof BannerImage => true,
-            // A member's image (avatar) is visible to any member the owner has not blocked, and to
-            // a guest — it is what a web-public profile or diary shows the author as, and OpenPNE 3
-            // put no login in front of image delivery at all. ownerBlocksViewer is one-way
-            // (BasePolicy); a guest is nobody to block.
+            // Guest-readable: a web-public profile or diary shows the author's avatar, and OpenPNE 3
+            // put no login in front of image delivery.
             $owner instanceof Member => $viewer === null || ! $this->ownerBlocksViewer($owner, $viewer),
             // A diary image inherits the diary's visibility: a web-public (Open) diary's images are
             // public (guest-readable); otherwise the viewer's clearance on the author, blocked → none.
@@ -81,16 +67,10 @@ class FilePolicy extends BasePolicy
             // An event/comment image inherits the same community read gate as the event it hangs on.
             $owner instanceof GroupEvent => $viewer !== null && GroupEventAccess::canViewEvent($owner, $viewer),
             $owner instanceof GroupEventComment => $viewer !== null && $owner->event !== null && GroupEventAccess::canViewEvent($owner->event, $viewer),
-            // A message attachment is private to the message's parties: the sender, and a recipient of
-            // a delivered (non-draft) message. A draft's recipient is excluded (DirectMessageAccess).
             $owner instanceof DirectMessage => $viewer !== null && DirectMessageAccess::canViewMessage($owner, $viewer),
-            // A timeline post's image inherits the post's visibility: a web-public (Open) post's
-            // image is guest-readable, otherwise the viewer's clearance on the author, blocked →
-            // none. TimelineAccess handles the guest (null) case.
             $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
-            // A talk image inherits the conversation's read gate — the group's own access column, the
-            // same one the boards read. No per-row filter here either: talk shows every surviving
-            // message to whoever may read the group, and its attachments follow.
+            // No per-message gate: talk shows every surviving message to whoever may read the group,
+            // and its attachments follow.
             $owner instanceof GroupMessage => $viewer !== null && GroupTalkAccess::canView($owner->group, $viewer),
             default => false,
         };
@@ -115,10 +95,7 @@ class FilePolicy extends BasePolicy
         };
     }
 
-    /**
-     * The owning entity of $file, or null when it cannot be resolved to an existing
-     * model (unlinked, unknown morph alias, or deleted) — all of which deny.
-     */
+    /** Null (unlinked, unknown morph alias, or deleted) denies unless explicit_visibility is 'public'. */
     private function owner(File $file): ?Model
     {
         if ($file->related_entity_type === null || $file->related_entity_id === null) {

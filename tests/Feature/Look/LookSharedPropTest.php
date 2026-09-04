@@ -26,11 +26,6 @@ class LookSharedPropTest extends TestCase
         $this->freshRequestState();
     }
 
-    /**
-     * The look reaches the shell as well as the page: the mobile bars read one shared prop rather
-     * than resolving it again per bar. Switching the site adds no key to the response — what it must
-     * not change is what the chrome renders while the look is standard.
-     */
     public function test_the_shell_learns_the_look_from_a_shared_prop(): void
     {
         $viewer = Member::factory()->create();

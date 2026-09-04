@@ -9,11 +9,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Both variables reach Laravel's SQLite connector as raw PRAGMA values, and SQLite is lenient about
- * what it accepts, so what the config file makes of a value it was not given properly is the whole
- * guard. A blank journal mode would build `pragma journal_mode = ` and fail every connection; a
- * mistyped synchronous level would resolve — silently, and to something less durable than the default
- * it replaced.
+ * Both variables reach the SQLite connector as raw PRAGMA values and SQLite is lenient, so what
+ * config/database.php makes of a malformed value is the whole guard. A blank journal mode fails every
+ * connection; a mistyped synchronous level silently resolves to something less durable than the
+ * default.
  */
 class SqlitePragmaConfigTest extends TestCase
 {
@@ -34,8 +33,7 @@ class SqlitePragmaConfigTest extends TestCase
             'unset leaves SQLite its own FULL' => [null, null],
             'blank reads as unset' => ['', null],
 
-            // The published contract: four names and SQLite's own numbering for them. 0 is a level,
-            // so it has to survive being falsy.
+            // 0 is a level, so it has to survive being falsy.
             'OFF' => ['OFF', 'OFF'],
             'NORMAL' => ['NORMAL', 'NORMAL'],
             'FULL' => ['FULL', 'FULL'],
