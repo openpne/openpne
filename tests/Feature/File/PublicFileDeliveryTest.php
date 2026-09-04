@@ -11,9 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The public delivery route for admin-uploaded public assets. The point the Gate-only policy tests
- * miss: a guest must actually receive the bytes over HTTP (file.show is behind auth, so the public
- * route is what makes an embedded asset load for logged-out visitors).
+ * The point the Gate-only policy tests miss: a guest must actually receive the bytes over HTTP.
  */
 class PublicFileDeliveryTest extends TestCase
 {

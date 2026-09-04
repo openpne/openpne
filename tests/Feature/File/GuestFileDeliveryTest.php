@@ -22,9 +22,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * What byte delivery answers a guest, per owning entity. The Gate is unit-tested in FilePolicyTest;
- * this exercises the same matrix over HTTP, because the delivery routes carry no login of their own
- * — reachability is the thing that changed, and only a request proves it.
+ * The Gate is unit-tested in FilePolicyTest; this walks the same matrix over HTTP, because only a
+ * request proves reachability.
  */
 class GuestFileDeliveryTest extends TestCase
 {

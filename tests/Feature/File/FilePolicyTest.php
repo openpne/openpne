@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 /**
- * FilePolicy::view, exercised through the Gate (so the morph map + policy
- * registration are covered too). The fail-closed cases are the point: anything that
- * does not resolve to a permitted owner must be denied, never served as public.
+ * Exercised through the Gate, so the morph map and the policy registration are covered too.
  */
 class FilePolicyTest extends TestCase
 {
@@ -105,8 +103,7 @@ class FilePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $file));
     }
 
-    // A timeline post's image inherits the post's visibility (morph alias `timelinePost` +
-    // FilePolicy branch). Without these the fetch would fail-closed to 404.
+    // Without the morph alias and the FilePolicy branch these fetches would fail closed to 404.
 
     public function test_members_post_image_is_visible_to_any_member(): void
     {

@@ -9,12 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
-/**
- * files.width / files.height: recorded at upload, and filled for older rows by
- * `openpne:backfill-image-dimensions`. The recorded size is the one the image renders at, EXIF
- * Orientation applied. Both paths are fail-open — a size that cannot be read leaves NULL rather
- * than failing the upload or the run (docs/internals/images.md).
- */
 class ImageDimensionsTest extends TestCase
 {
     use RefreshDatabase;
@@ -50,9 +44,8 @@ class ImageDimensionsTest extends TestCase
 
     public function test_an_unstripped_upload_records_the_rotated_size_too(): void
     {
-        // Stripping rewrites the container, so the two upload paths measure different bytes. The
-        // stripper re-emits Orientation instead of baking the rotation into the pixels, so both
-        // still declare 12x6 and both need the swap.
+        // The stripper re-emits Orientation instead of baking the rotation into the pixels, so the
+        // stripped bytes still declare 12x6 and still need the swap.
         config(['openpne.images.strip_metadata' => false]);
 
         $file = $this->upload($this->rotatedPhoto());
@@ -85,9 +78,8 @@ class ImageDimensionsTest extends TestCase
 
     public function test_an_image_whose_size_cannot_be_read_still_uploads(): void
     {
-        // A header-only webp: the type is read as an image, but the decode yields 0x0, which is no
-        // size at all. Stripping is off because it is fail-closed on bytes like these, and what is
-        // under test here is the size, not the strip.
+        // A header-only webp reads as an image but decodes to 0x0; stripping is off because it is
+        // fail-closed on bytes like these.
         config(['openpne.images.strip_metadata' => false]);
 
         $file = $this->upload(UploadedFile::fake()->createWithContent('broken.webp', $this->headerOnlyWebp()));

@@ -19,16 +19,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fans one talk message out to its room, on a site that asked for that (docs/internals/group-talk.md).
- *
- * A mention-only site is the case to stay cheap in: with both channel defaults off and nobody opted
- * in, the job exits on two indexed probes and never touches the membership. Once anyone has opted in
- * the audience walks — bounded to the opted-in members, which the override-row rule
- * (Member::setNotificationSetting) keeps to genuine opt-ins rather than to everyone who ever saved
- * the settings form.
- *
- * Unlike the other fan-outs this reads the kind's rows in BOTH polarities: its default can be false,
- * so the opted-out set alone would say nothing about who wants it.
+ * Why this fan-out reads the kind's rows in both polarities, and how it stays cheap on a site where
+ * nobody opted in, are in [notifications.md](../../docs/internals/notifications.md) § Broadcast
+ * fan-out.
  */
 class BroadcastGroupMessagePosted implements ShouldQueue
 {

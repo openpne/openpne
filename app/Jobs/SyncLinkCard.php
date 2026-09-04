@@ -23,18 +23,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Works out which card a body should point at, and attaches it.
- *
- * Split from the fetch because the two are keyed differently and fail differently. This one is about
- * a record — cheap, local, and repeated per post — while FetchLinkCard is about a URL, shared by
- * every record that mentions it, and is the part that touches the network. Keeping them apart is
- * what lets a thousand posts of the same link cost one request.
- *
- * Only the first URL becomes a card: a body full of links is better served by the links themselves
- * than by a stack of cards.
- *
- * When that URL is one of this site's own it takes the other branch entirely — a pointer row, no
- * fetch, and an answer that does not depend on the outbound setting ({@see InternalUrl}).
+ * Keyed by the record where FetchLinkCard is keyed by the URL, and only a body's first URL becomes a
+ * card ([link-cards.md](../../docs/internals/link-cards.md) § When a card is fetched).
  */
 class SyncLinkCard implements ShouldBeUnique, ShouldQueue
 {
@@ -52,12 +42,8 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     public function __construct(public readonly string $model, public readonly int $id) {}
 
     /**
-     * Queue this record for a card, once the write that produced it is committed.
-     *
-     * `afterCommit` is the point: the job re-reads the record by id, and the body writes it follows
-     * all happen inside a transaction. Dispatched plainly, a worker can pick the job up before that
-     * transaction commits and find nothing — or, worse, find the row as it was before the edit and
-     * conclude the old URL is still current.
+     * afterCommit is the point: the job re-reads the record by id, and the writes it follows happen
+     * inside a transaction a worker could otherwise read before or during.
      */
     public static function for(Model $record): void
     {
@@ -88,16 +74,14 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Read after the body, not on entry, because the switch governs *fetching*: a card of one of
-        // this site's own pages is drawn without one and so is decided above whatever it says. What
-        // it does govern is the marker — a body whose first URL is external is left unexamined while
-        // this is off, so switching it on later still picks up everything already posted.
+        // Read after the body, not on entry: the switch governs fetching, and a card of one of this
+        // site's own pages needs none, so it is decided above whatever the switch says.
         if (! $settings->enabled()) {
             return;
         }
 
         if ($url === null) {
-            // Marked as looked at, so the read path stops asking. The body genuinely has no card.
+            // Marked as looked at, so the read path stops asking about a body that has no card.
             $this->attach($record, $body, $format, null);
 
             return;
@@ -116,19 +100,10 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Point $record at $cardId, but only if its body is still the one this job read.
-     *
-     * Two reasons this is a conditional query rather than a save:
-     *
-     *  - **It must not win a race with an edit.** The body is read at the start of the job and the
-     *    result written at the end; in between someone can save new text, which clears the marker so
-     *    the new body gets examined. An unconditional write would then attach the *old* body's card
-     *    to the new text and mark it synced — and because ShouldBeUnique may still be holding the
-     *    lock, the edit's own job can be dropped, leaving it that way.
-     *  - **It must not touch `updated_at`.** Even saveQuietly, which only suppresses events, goes
-     *    through performUpdate and bumps the timestamp. Group topic and event lists are ordered
-     *    by `updated_at`, so a card synced from someone viewing an old post would float it back to
-     *    the top of the board.
+     * Conditional on the body still being the one this job read: an unconditional write would put
+     * the old body's card under new text, and the edit's own job can be dropped while ShouldBeUnique
+     * holds the lock. It updates through the query builder because even saveQuietly bumps
+     * updated_at, which the boards are ordered by.
      */
     private function attach(Model $record, string $body, BodyFormat $format, ?int $cardId): bool
     {
@@ -172,17 +147,9 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The row for $url when $url is one of this site's own, or null when there is none to point at.
-     *
-     * **No row is created for an address of ours that names nothing a card can be built from** — an
-     * OpenPNE 3 spelling, a list page, a route the resolver does not know. A row that could only
-     * ever draw nothing is one more thing for the sweep to collect. What that costs is stated in
-     * link-cards.md: a kind added to the resolver later does not reach bodies already examined.
-     *
-     * **An existing row is converted either way**, and that is not the same decision. A row is
-     * shared by every body that mentions the URL, so one minted before this existed holds a card of
-     * the login screen — and left alone it goes on being drawn on all of them, whether or not this
-     * particular address resolves to a record.
+     * No row is minted for an address of ours that names nothing a card can be built from, while a
+     * row already there is converted either way
+     * ([link-cards.md](../../docs/internals/link-cards.md) § Rows written before this existed).
      */
     private function internalCardFor(string $url, InternalUrl $link): ?LinkCard
     {

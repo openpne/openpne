@@ -15,10 +15,6 @@ use Intervention\Gif\Decoder;
 use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
-/**
- * Thumbnail delivery at the OpenPNE 3-compatible /cache/img URL: gated by FilePolicy,
- * size-whitelisted, cached, and purged with the file.
- */
 class ImageDeliveryTest extends TestCase
 {
     use RefreshDatabase;
@@ -80,8 +76,8 @@ class ImageDeliveryTest extends TestCase
 
     public function test_a_guest_gets_an_avatar_at_both_thumbnail_and_original_size(): void
     {
-        // The route carries no login of its own — FilePolicy is the whole gate. Both geometries are
-        // pinned: the thumbnail is what a page embeds, w_h is the full-size variant of the same URL.
+        // Both geometries are pinned: the thumbnail is what a page embeds, and w_h is the full-size
+        // variant of the same URL.
         $file = $this->avatar(Member::factory()->create());
 
         $this->get($file->thumbnailUrl(120, 120, square: true))->assertOk();
@@ -167,9 +163,7 @@ class ImageDeliveryTest extends TestCase
 
     public function test_the_imagick_driver_also_thumbnails_an_animated_gif_to_a_still(): void
     {
-        // Imagick cannot be told to skip the frames while decoding (intervention/image 4.2.0
-        // fails the decode outright when configured that way), so it takes the other route
-        // through StillImageDecoder. Both have to end at one frame.
+        // The two drivers reach a still frame by different routes, and both have to end at one.
         if (! extension_loaded('imagick')) {
             $this->markTestSkipped('ext-imagick is not installed.');
         }
@@ -203,9 +197,8 @@ class ImageDeliveryTest extends TestCase
 
     public function test_migrated_openpne3_names_with_underscores_or_dots_are_served(): void
     {
-        // Migrated OpenPNE 3 files keep their original name verbatim. OpenPNE 3 allowed
-        // [\w._-], so a name may carry underscores (m_42_abcdef_jpg) or dots (test1.jpg);
-        // both must route to delivery.
+        // A migrated file keeps its OpenPNE 3 name verbatim, and OpenPNE 3 allowed [\w._-], so an
+        // underscore and a dot both have to route.
         $owner = Member::factory()->create();
 
         foreach (['m_42_abcdef_jpg', 'test1.jpg'] as $name) {

@@ -7,13 +7,9 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Generates image thumbnails on demand and caches them on a filesystem disk, keyed by
- * the file's name token plus the transform. The original bytes are read through the
- * FileStorage seam, so the cache works the same on any storage backend.
- *
- * A thumbnail is always a still image, so an animated source is thumbnailed from its
- * first frame (see StillImageDecoder). The original size is served untouched, which is
- * where an uploaded animation still plays — as in OpenPNE 3.
+ * A thumbnail is always a still image; the original size is served untouched, so that is where an
+ * uploaded animation still plays (see [security.md](../../docs/internals/security.md) § Decoding an
+ * upload).
  */
 class ImageCache
 {
@@ -23,14 +19,9 @@ class ImageCache
     ) {}
 
     /**
-     * The thumbnail bytes for $file under $transform, generating and caching on a miss.
-     * The original size (`w_h`) returns the stored bytes unchanged — there is nothing
-     * to transform or cache.
-     *
      * $maxBytes bounds the read of the stored bytes: a file that outgrows it is refused with
-     * ImageBytesOverLimitException instead of being read, so a caller working to a budget never
-     * holds more than it could answer with. Null reads whatever is stored. A cache hit is served
-     * unbounded: its bytes were produced here, to a whitelisted size.
+     * ImageBytesOverLimitException rather than read. A cache hit is served unbounded, its bytes
+     * having been produced here to a whitelisted size.
      */
     public function bytes(File $file, ImageTransform $transform, string $format, ?int $maxBytes = null): string
     {
@@ -59,9 +50,8 @@ class ImageCache
 
     private function generate(File $file, ImageTransform $transform, string $format, ?int $maxBytes = null): string
     {
-        // The budget bounds the source rather than the thumbnail made from it: a thumbnail is never
-        // larger than its source, so a source over the budget cannot yield an answer that fits. It
-        // keeps an oversized source out of the decoder as well as out of memory.
+        // The budget bounds the source, not the thumbnail: a thumbnail is never larger than its
+        // source, so an over-budget source cannot yield an answer that fits.
         $image = $this->decoder->decode($this->original($file, $maxBytes));
 
         if ($transform->square) {
@@ -84,10 +74,8 @@ class ImageCache
                 return (string) stream_get_contents($stream);
             }
 
-            // One byte past the budget settles whether the file fits, and is the most this may pull
-            // into memory: reading it whole and measuring afterwards is what the bound exists to
-            // avoid. max() keeps a spent budget from reaching stream_get_contents as its read-it-all
-            // sentinel.
+            // One byte past the budget settles whether the file fits, and max() keeps a spent
+            // budget from reaching stream_get_contents as its read-it-all sentinel.
             $bytes = (string) stream_get_contents($stream, max($maxBytes, 0) + 1);
 
             if (strlen($bytes) > $maxBytes) {

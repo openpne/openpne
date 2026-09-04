@@ -198,7 +198,10 @@ muted the room. Because the kind's default can be false, the queued
 [`BroadcastGroupMessagePosted`](../../app/Jobs/BroadcastGroupMessagePosted.php) reads each chunk's
 rows in both polarities (`explicit ?? default`) rather than an opted-out set; with both defaults off
 and nobody opted in it exits on two indexed probes without walking the membership, and with someone
-opted in the audience is narrowed to the opt-ins. It is dispatched with a short delay so a member
+opted in the audience is narrowed to the opt-ins. That bound depends on
+`Member::setNotificationSetting` deleting, for a kind and channel whose default is a site setting, a
+row equal to that default rather than storing it, so the rows are genuine opt-ins and not every
+member who ever saved the settings form. It is dispatched with a short delay so a member
 reading the room marks it read first: the job then drops anyone whose cursor has passed the message,
 which is a race rather than a guarantee. Its feed row is the room's — one per (member, group), read or
 unread ([group-talk.md](group-talk.md#what-talk-notifies)) — the one kind whose rows are deleted

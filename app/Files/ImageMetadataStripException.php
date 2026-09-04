@@ -5,9 +5,8 @@ namespace App\Files;
 use RuntimeException;
 
 /**
- * A structurally unparseable image reached the metadata stripper. Upstream validation already
- * cleared its magic bytes and dimensions, so a parse failure here means the container is corrupt
- * or adversarial — a privacy control fails closed rather than passing the original bytes through.
+ * Fails closed: the original bytes are never passed through
+ * ([security.md](../../docs/internals/security.md) § Uploaded image metadata).
  */
 class ImageMetadataStripException extends RuntimeException
 {

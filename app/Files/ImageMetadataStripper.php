@@ -3,23 +3,13 @@
 namespace App\Files;
 
 /**
- * Removes metadata (EXIF/GPS, XMP, comments) from an uploaded image without touching the encoded
- * image data — no re-encode, so no quality loss. Works at the container level: it walks the byte
- * structure and rewrites it keeping only the segments an image needs to render faithfully.
- *
- * Deliberately kept:
- *   - JPEG EXIF Orientation (re-emitted as a minimal APP1) — display and thumbnail rotation read it.
- *   - JPEG ICC (APP2) / Adobe (APP14) and PNG iCCP/gAMA — color fidelity.
- *
- * Fails closed: a structural parse error throws {@see ImageMetadataStripException} rather than
- * returning the original (unstripped) bytes.
+ * Each container walk, the segments it deliberately keeps, and the fail-closed rule are in
+ * [security.md](../../docs/internals/security.md) § Uploaded image metadata.
  */
 class ImageMetadataStripper
 {
     /**
-     * Return $bytes with metadata removed. $mime selects the container parser; a type this class
-     * does not strip (e.g. image/gif) is returned unchanged. The caller gates which MIME types
-     * reach here (FileUploader), so an unexpected type is a no-op, never a re-interpretation.
+     * A MIME type with no parser here is returned unchanged rather than refused.
      */
     public function strip(string $bytes, string $mime): string
     {
@@ -31,13 +21,6 @@ class ImageMetadataStripper
         };
     }
 
-    /**
-     * Allow-list segment walk from SOI to EOI. Structural markers are kept verbatim; among the APPn
-     * segments only JFIF/JFXX (APP0), ICC (APP2) and Adobe (APP14) survive, every other APPn and COM
-     * is dropped. The EXIF APP1 is dropped but its Orientation is preserved by re-emitting a minimal
-     * APP1 right after SOI. Progressive/multi-scan JPEGs place markers between scans, so scan data is
-     * copied verbatim only up to the next real marker, which then re-enters the allow-list.
-     */
     private function stripJpeg(string $bytes): string
     {
         $length = strlen($bytes);
@@ -232,11 +215,6 @@ class ImageMetadataStripper
             : (($a << 24) | ($b << 16) | ($c << 8) | $d);
     }
 
-    /**
-     * Chunk walk. Drops the metadata chunks (eXIf, tEXt, zTXt, iTXt — XMP rides iTXt); keeps every
-     * other chunk verbatim (iCCP/gAMA included). Each input chunk's CRC is verified — a mismatch is
-     * corruption and throws. IHDR must be first and IEND must terminate the stream.
-     */
     private function stripPng(string $bytes): string
     {
         $signature = "\x89PNG\r\n\x1A\n";
@@ -288,11 +266,6 @@ class ImageMetadataStripper
         throw new ImageMetadataStripException('PNG: missing IEND chunk.');
     }
 
-    /**
-     * RIFF walk. Drops the EXIF and "XMP " chunks; on a VP8X chunk clears only the EXIF (0x08) and
-     * XMP (0x04) flag bits, leaving ICC/alpha/animation and reserved bits intact. Odd-sized chunks
-     * carry a pad byte; the walk and the recomputed RIFF size both account for it.
-     */
     private function stripWebp(string $bytes): string
     {
         $length = strlen($bytes);
@@ -300,9 +273,8 @@ class ImageMetadataStripper
             throw new ImageMetadataStripException('WebP: not a RIFF/WEBP container.');
         }
 
-        // Bound the walk to the declared RIFF payload, and reject anything past it (beyond one
-        // odd-size pad byte). Otherwise trailing chunks outside the declared length would be walked
-        // and promoted into the recomputed output — a metadata channel the strip must not carry.
+        // Chunks past the declared RIFF payload are refused: walking them would promote them into
+        // the recomputed output as a metadata channel.
         $declared = $this->uint32($bytes, 4, true);
         $end = 8 + $declared;
         if ($end > $length || $length > $end + ($declared & 1)) {

@@ -24,22 +24,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Fetches one URL and fills in its card.
- *
- * This is the only job that talks to the network. It is deliberately hard to run twice at once and
- * hard to finish out of order, because both would happen otherwise: a link everyone shares at once
- * arrives as many identical jobs, and a job slow enough to lose its lease can come back after a
- * newer one has already answered.
- *
- *  - `ShouldBeUnique` on the card id collapses the duplicates a burst produces before they queue;
- *  - a conditional UPDATE claims the fetch, so of the jobs that do run, one proceeds and the rest
- *    return immediately (LinkCard::claimFetch);
- *  - every write back is fenced on the lease that claim returned, so a worker that overran cannot
- *    overwrite the result of the one that replaced it.
- *
- * `tries = 1`: retrying is expressed as a stored backoff on the row, not as a queue retry, so a URL
- * that is simply gone stops costing anything quickly and a transient failure is picked up on the
- * next view rather than immediately.
+ * The only job that talks to the network. How duplicates are collapsed, how the fetch is claimed and
+ * how a write back is fenced are in [link-cards.md](../../docs/internals/link-cards.md) § Two
+ * workers, one URL.
  */
 class FetchLinkCard implements ShouldBeUnique, ShouldQueue
 {
@@ -48,6 +35,7 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /** A retry is a stored backoff on the row, not a queue retry. */
     public int $tries = 1;
 
     /** Longer than the job's own budget, so the lease outlives the work it guards. */
@@ -83,11 +71,8 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Decided from the URL, before the lease and before the row's own status is trusted, so
-        // "this app never requests its own pages" holds whatever state a row is in. It is also the
-        // repair: rows minted before internal links existed are ok-with-a-login-screen or failed,
-        // and nothing else would ever revisit them — the read trigger goes on offering them here
-        // week after week, and this is where that stops, without a migration or a command.
+        // Decided from the URL, before the lease and before the row's own status is trusted, so this
+        // app never requests its own pages whatever state a row is in.
         $link = InternalUrl::of($card->url);
 
         if ($link->isSelfHosted) {
@@ -96,10 +81,8 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // The second belt is the claim's own `status != internal` condition rather than a check
-        // repeated here: it answers the row this one cannot — one already marked internal whose URL
-        // has stopped reading as ours, after a host is renamed — and it is where the lease is
-        // decided, so nothing can take one on a row whose bookkeeping columns are null by invariant.
+        // The claim's own `status != internal` condition answers the row this check cannot: one
+        // already marked internal whose URL has stopped reading as ours after a host was renamed.
         $lease = $card->claimFetch(self::LEASE_SECONDS);
 
         if ($lease === null) {
@@ -116,10 +99,8 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         }
 
         if (! $card->completeFetch($lease, $attributes) && $imported !== null) {
-            // The lease moved on while this was fetching, so the row keeps whatever the newer worker
-            // wrote — and the image downloaded here is referenced by nothing. Deleting the File takes
-            // its bytes and cached thumbnails with it (FileObserver); leaving it would accumulate
-            // unreachable blobs every time a fetch overran.
+            // The lease moved on while this was fetching, so the row keeps what the newer worker
+            // wrote and the image downloaded here is referenced by nothing.
             $imported->delete();
         }
     }
@@ -157,11 +138,8 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         }
 
         if (! $metadata->isUsable()) {
-            // Reached, read, and had nothing to show — recorded as a failure like any other, and so
-            // subject to the same backoff. Pages do gain metadata over time, so this is deliberately
-            // not a permanent negative; the backoff is what keeps re-asking cheap. Distinguishing a
-            // transient failure from a deterministic one would let each have its own schedule, and
-            // is left for when the logs say it matters.
+            // Reached and read but with nothing to show: recorded as a failure like any other, so
+            // the same backoff decides when it is asked again.
             return $this->failed($card);
         }
 
@@ -186,18 +164,8 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The attributes describing a failure, with the backoff that keeps it from being retried on
-     * every view.
-     *
-     * A card that already renders is **not** demoted. A refresh failing says nothing about whether
-     * the metadata already held is still good, and blanking it turns one bad request into a visibly
-     * broken post — the card vanishes from a page it has been on for a week because the far end
-     * returned a 500 this morning. Only the schedule moves; the stale card keeps showing until a
-     * later attempt replaces it.
-     *
-     * That also settles what would otherwise be a leak: demoting the card while leaving
-     * `image_file_id` in place kept the old File referenced by a card nobody renders, where no
-     * unreferenced-file sweep could ever collect it.
+     * A card that already renders is not demoted by a failure; only the schedule moves
+     * ([link-cards.md](../../docs/internals/link-cards.md) § Two workers, one URL).
      *
      * @return array<string, mixed>
      */

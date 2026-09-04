@@ -15,11 +15,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
-/**
- * A publicly cacheable file response must carry no session cookie: a shared cache will not store a
- * response with Set-Cookie, so the `public` declaration would be inert — and a cache made to store
- * it anyway would hand one visitor another's session.
- */
 class PublicResponseCookiesTest extends TestCase
 {
     use RefreshDatabase;
@@ -76,9 +71,8 @@ class PublicResponseCookiesTest extends TestCase
 
     public function test_a_public_response_outside_the_delivery_routes_keeps_its_cookies(): void
     {
-        // The route allowlist is the second condition: a new route does not become cookie-free by
-        // declaring itself public, it has to be listed. Synthetic rather than one of the app's own
-        // public routes so that making those cacheable later does not have to fight this test.
+        // The route is synthetic rather than one of the app's own, so making those cacheable later
+        // does not have to fight this test.
         Route::middleware('web')->get('/__public-probe', fn () => response('ok', 200, [
             'Cache-Control' => 'public, max-age=86400',
         ]));
@@ -92,8 +86,6 @@ class PublicResponseCookiesTest extends TestCase
 
     public function test_a_private_response_keeps_its_cookies(): void
     {
-        // Only `public` responses are scrubbed. A private one is never shared, and dropping its
-        // cookies would be a silent session change.
         $owner = Member::factory()->create();
         $file = app(FileUploader::class)->store(
             UploadedFile::fake()->image('a.png', 40, 40),

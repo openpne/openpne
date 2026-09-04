@@ -9,11 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
-/**
- * The file delivery endpoint. Every backend streams through the controller so
- * FilePolicy gates each fetch, and a stored file is never interpreted as a
- * same-origin document.
- */
 class FileDeliveryTest extends TestCase
 {
     use RefreshDatabase;

@@ -44,7 +44,7 @@ class AdminImageUploadTest extends TestCase
     {
         $upload = UploadedFile::fake()->image('orphan.png');
 
-        // No explicit visibility and no owner → fail-closed (the existing contract is unchanged).
+        // No explicit visibility and no owner: fail-closed.
         $file = app(FileUploader::class)->store($upload);
 
         $this->assertNull($file->explicit_visibility);

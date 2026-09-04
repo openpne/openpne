@@ -9,12 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
-/**
- * End-to-end metadata stripping through the real upload endpoints: a GPS-bearing photo is stored
- * stripped, the delivery Content-Length tracks the post-strip length, the toggle disables it, and a
- * fail-closed strip surfaces as a field validation error (never a 500). Fixtures are the committed
- * byte images in tests/Fixtures/images/ (see ImageMetadataStripperTest for their recipe).
- */
+/** Fixtures are the committed byte images described in tests/Fixtures/images/README.md. */
 class ImageMetadataStripTest extends TestCase
 {
     use RefreshDatabase;
