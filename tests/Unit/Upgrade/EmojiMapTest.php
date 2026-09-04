@@ -9,7 +9,7 @@ class EmojiMapTest extends TestCase
 {
     /**
      * Spot checks against the OpenPNE 3 Img.php Japanese names: i:1 晴れ, i:98 三日月, i:33 車（セダン）,
-     * i:136 黒ハート, e:1 warning, e:51 ハート, e:94 カメラ, s:4 お父さん, s:327 パン.
+     * i:136 黒ハート, e:1 `！`, e:51 ハート, e:94 カメラ, s:4 お父さん, s:327 パン.
      */
     public function test_known_ids_map_to_expected_unicode(): void
     {

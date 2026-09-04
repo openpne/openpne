@@ -39,7 +39,7 @@ class MemberProfileUpgrade extends UpgradeStep
                 uses: ['value', 'tree_key', 'lft', 'id', 'profile_id'],
             ),
             'value_datetime' => Column::expr($this->normalizedDatetime(), uses: ['value_datetime']),
-            // A multi-select stores public_flag only on the root, so a child reads its root's
+            // A multi-select stores public_flag only on the root, so a child reads its root's flag
             // (rawPublicFlag); 0 or an invalid flag becomes NULL, the field default.
             'visibility' => Column::expr(
                 sprintf(

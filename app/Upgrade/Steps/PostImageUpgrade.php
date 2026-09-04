@@ -8,7 +8,7 @@ use App\Upgrade\UpgradeStep;
 /**
  * Shared shape for the OpenPNE 3 post-image attachment tables (community topic / event and their
  * comments): a join row of post_id, file_id and the 1..N slot. OpenPNE 3 allowed a placeholder row
- * with a null file_id, which OpenPNE 4 requires, so the filter drops those.
+ * with a null file_id; OpenPNE 4 requires the file, so the filter drops those rows.
  */
 abstract class PostImageUpgrade extends UpgradeStep
 {

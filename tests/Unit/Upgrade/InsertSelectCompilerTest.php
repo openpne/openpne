@@ -33,7 +33,8 @@ class InsertSelectCompilerTest extends TestCase
 
     public function test_database_qualifies_the_table_separately(): void
     {
-        // Database and table are separate quoted identifiers, not one dotted name.
+        // Separate quoted identifiers (`db`.`table`, not `db.table`), which the different-database
+        // workflow depends on.
         $sql = (new InsertSelectCompiler)->compile(
             new DiaryUpgrade,
             sourceDatabase: 'op3db',

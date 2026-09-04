@@ -49,9 +49,9 @@ abstract class UpgradeStep
     }
 
     /**
-     * Target columns that need a source mapping the step does not have, with the reason; unlike
-     * targetDefaults() they cannot rely on the schema default. A step with any is not runnable: the
-     * compiler refuses it and the runner skips it.
+     * Target columns that need a source mapping the step has not resolved, with the reason
+     * (targetDefaults() lists the ones that need none). A step with any is not runnable: the compiler
+     * refuses it and the runner skips it.
      *
      * @return array<string, string> target column => reason
      */

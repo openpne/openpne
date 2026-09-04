@@ -10,10 +10,10 @@ use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `member_config` opt-in rows → OpenPNE 4 `member_notification_settings`, for every
- * NotificationKind × NotificationChannel source name; an unwired kind imports too, since the upgrade
- * is one-shot and its stored choice must survive. '0' is the only opt-out (the source's fail-open
- * default); the filter keeps the latest row per (member_id, name), as member_config has no such
- * unique.
+ * importable NotificationKind × NotificationChannel source name (a native kind has none and is passed
+ * over; an unwired kind imports, since the upgrade is one-shot). '0' is the only opt-out (the
+ * source's fail-open default); the filter keeps the latest row per (member_id, name), as
+ * member_config has no such unique.
  */
 class MemberNotificationSettingUpgrade extends UpgradeStep
 {

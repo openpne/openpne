@@ -9,8 +9,11 @@ A step (`App\Upgrade\UpgradeStep`) maps one OpenPNE 3 table onto one OpenPNE 4 t
 to a single `INSERT ... SELECT` (`InsertSelectCompiler`). The mapping is typed PHP so a CASE reads
 the runtime enum it must agree with. A table other than the step's FROM is read by correlated
 subquery; its name is wrapped in `SourceRef::table()` so `--source-prefix` / `--source-database`
-reach it, and the FROM table is aliased to its bare name so subqueries can correlate on it. Ids
-and timestamps copy verbatim: the FK graph resolves without a remap, and post dates survive.
+reach it, and the FROM table is aliased to its bare name so subqueries can correlate on it. Where
+the target has them, ids and timestamps copy verbatim, so the FK graph resolves without a remap and
+post dates survive; a target with its own surrogate id (`mail_template_translations`) or no
+timestamps (the join rows) relies on its defaults. `FileUpgrade::ownedFileReferences()` drives both
+the owner CASE and the audit, so an owning table cannot be wired into one without the other.
 
 `StepRegistry::classes()` is the run order (FK order: `files` first, image join rows last).
 `tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source column to a mapping or a
@@ -89,7 +92,7 @@ table, error 1701) after dropping the `file_bin` FK so the BLOBs cannot cascade.
 ## Post-walk passes
 
 Work an `INSERT ... SELECT` cannot express runs after the walk, in this order, each under its own
-checkpoint:
+checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_state` row:
 
 | Pass | Why after the walk | Resume model |
 |---|---|---|
