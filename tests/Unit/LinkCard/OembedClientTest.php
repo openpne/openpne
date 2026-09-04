@@ -42,10 +42,8 @@ class OembedClientTest extends TestCase
 
     public function test_the_html_field_is_never_read(): void
     {
-        // The whole reason this client exists in this shape. `html` is provider-authored markup —
-        // an iframe, a script tag — and this app injects trusted HTML in exactly one place, from
-        // exactly one producer. A card is text plus a self-hosted image, so there is nothing markup
-        // could contribute that is worth the seam.
+        // No field of the metadata may carry markup, since this app injects trusted HTML from exactly
+        // one producer.
         $this->resolvesTo('example.com', ['93.184.216.34']);
         $this->queueJson([
             'version' => '1.0',
@@ -76,8 +74,8 @@ class OembedClientTest extends TestCase
 
     public function test_an_endpoint_resolving_to_a_private_address_yields_nothing(): void
     {
-        // The endpoint URL came out of a stranger's markup, so it gets the same suspicion the page
-        // did. This is the guard running for real, not a stub returning empty.
+        // The endpoint URL came out of a stranger's markup, so this is the guard running for real
+        // rather than a stub returning empty.
         $this->resolvesTo('oembed.internal', ['127.0.0.1']);
         $this->queueJson(['version' => '1.0', 'title' => 'Should never be read']);
 
@@ -126,9 +124,9 @@ class OembedClientTest extends TestCase
 
     public function test_long_fields_are_cut_to_the_column_widths(): void
     {
-        // oEmbed values reach the same sized columns as the page's own, via completedWith(). The cap
-        // lives in LinkMetadata rather than in each source, so a new source cannot arrive without it
-        // and blow up the insert under MySQL strict mode.
+        // oEmbed values reach the same sized columns as the page's own via `completedWith()`, and the
+        // cap lives in `LinkMetadata` so a new source cannot arrive without it and fail the insert
+        // under MySQL strict mode.
         $this->resolvesTo('example.com', ['93.184.216.34']);
         $this->queueJson([
             'version' => '1.0',

@@ -5,27 +5,9 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 /**
- * Converts a fetched page to UTF-8 before anything tries to read it.
- *
- * Not an edge case for a Japanese SNS: Shift_JIS, EUC-JP and ISO-2022-JP pages are still out there in
- * quantity, and the parser this feeds (Masterminds\HTML5) assumes UTF-8. Skipping this step does not
- * fail loudly — it produces a card whose title is mojibake, which then gets stored and shown.
- *
- * The order below is the whole design, and each step is there because the obvious alternative is
- * wrong in a specific way:
- *
- *  1. **ISO-2022-JP first, if that is what was declared.** It encodes Japanese entirely within the
- *     ASCII byte range using escape sequences, so it passes a UTF-8 validity check — leaving a title
- *     full of raw `ESC $ B` sequences. It is the one legacy encoding a UTF-8 test cannot rule out.
- *  2. **Then strict UTF-8.** Asking instead whether the *declared* charset fits the bytes does not
- *     work: almost any UTF-8 Japanese text is also a valid CP932 sequence, so a page mislabelled
- *     Shift_JIS by a CMS template would answer yes and be converted into mojibake. UTF-8's structure
- *     is strict, and Shift_JIS lead bytes are invalid in it, so a genuine legacy page fails here.
- *  3. **Then the declaration**, then detection.
- *  4. **Then the declaration again, with substitution.** A body cut mid-character by the read cap is
- *     valid in nothing, and a blanket `UTF-8 from UTF-8` at that point replaces every multi-byte
- *     character in the whole prefix (`日本語` becomes `???{??`). Converting from the charset the page
- *     declared replaces only the incomplete tail and keeps the rest readable.
+ * Converts a fetched page to UTF-8 before the HTML5 parser, which assumes it, reads anything; a
+ * wrong guess stores a title of mojibake rather than failing. The order in `toUtf8()` is the design
+ * and is explained step by step in docs/internals/link-cards.md (Encoding is not an edge case).
  */
 final class Encoding
 {
@@ -62,14 +44,9 @@ final class Encoding
     {
         $charset = self::resolve($declared ?? self::sniff($html));
 
-        // Escape-sequence encodings hide inside ASCII, so they have to be handled before any UTF-8
-        // test can be trusted. See the class docblock.
-        //
-        // Validity is not the condition — a body the read cap cut mid-sequence is invalid but still
-        // ISO-2022-JP, and falling through would return it with raw escapes in the title. The
-        // condition is that it was declared ISO-2022-JP *and* actually contains a designation
-        // sequence; a declaration with no escapes anywhere is a mislabel, and better treated as the
-        // UTF-8 it almost certainly is.
+        // Before any UTF-8 test, which ISO-2022-JP passes by hiding inside ASCII; the condition is
+        // declaration plus a designation sequence, not validity, because a truncated body is invalid
+        // yet still ISO-2022-JP and a declaration with no escapes is a mislabel.
         if ($charset === 'ISO-2022-JP' && self::hasIso2022Escape($html)) {
             return mb_convert_encoding($html, 'UTF-8', 'ISO-2022-JP');
         }
@@ -88,9 +65,9 @@ final class Encoding
             return mb_convert_encoding($html, 'UTF-8', $detected);
         }
 
-        // Valid in nothing — almost always a body the read cap cut mid-character. Converting from the
-        // declared charset substitutes just the broken tail; falling back to UTF-8-from-UTF-8 here
-        // would mangle every multi-byte character before it too.
+        // Valid in nothing, almost always a body cut mid-character by the read cap: converting from
+        // the declared charset substitutes only the broken tail, where UTF-8-from-UTF-8 would mangle
+        // every multi-byte character before it.
         return mb_convert_encoding($html, 'UTF-8', $charset ?? 'UTF-8');
     }
 
@@ -135,12 +112,10 @@ final class Encoding
     }
 
     /**
-     * The charset a document declares in its own markup, in either spelling.
-     *
-     * Both forms are matched: the HTML5 `<meta charset>` and the older
+     * Both spellings are matched: the HTML5 `<meta charset>` and the older
      * `<meta http-equiv="Content-Type" content="text/html; charset=...">`, which is what the legacy
-     * pages this exists for actually carry. Only the head is examined — the declaration is required
-     * near the top, and scanning a whole document for something shaped like a charset invites
+     * pages this exists for carry. Only the head is examined, since HTML requires the declaration
+     * near the top and scanning a whole document for something shaped like a charset invites
      * matching body text.
      */
     private static function sniff(string $html): ?string

@@ -9,9 +9,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The question is "is this provably one still frame?", so every case that is not a completed walk
- * proving that must answer false. Several of these are shapes an earlier version got wrong — by
- * searching for markers, and then by treating its own block limit as an all-clear.
+ * Every case that is not a completed walk proving one frame must answer false, and several are the
+ * shapes a marker search or a limit-as-all-clear gets wrong.
  */
 class ImageContainerTest extends TestCase
 {
@@ -27,9 +26,9 @@ class ImageContainerTest extends TestCase
 
     public function test_a_two_frame_gif_without_a_loop_extension_is_refused(): void
     {
-        // The NETSCAPE looping extension controls repetition; it is not what makes a GIF animated,
-        // and a two-frame file needs none. Requiring it — or counting a byte pattern that a non-zero
-        // colour-table byte shifts — calls this a still image while a decoder expands both frames.
+        // The NETSCAPE looping extension controls repetition, not whether a GIF is animated, and a
+        // two-frame file needs none, so requiring it (or a byte pattern a non-zero colour-table byte
+        // shifts) calls this still while a decoder expands both frames.
         $this->assertFalse(ImageContainer::isSafeStill($this->gif(frames: 2, loopExtension: false), 'image/gif'));
     }
 
@@ -40,10 +39,9 @@ class ImageContainerTest extends TestCase
 
     public function test_an_animation_hidden_behind_the_block_limit_is_refused(): void
     {
-        // The block limit is a CPU bound, not a window: padding the file with legal comment blocks
-        // until the walk runs out of budget must not report a still image. Treating the limit as an
-        // all-clear turns the bound itself into the fixed window this parser exists to avoid — a
-        // ~20 KB file, well inside the read cap, that a decoder expands to two frames.
+        // The block limit is a CPU bound, not a window: padding with legal comment blocks until the
+        // walk runs out of budget must not report a still image, or the limit becomes the fixed
+        // window this parser exists to avoid.
         $comment = "\x21\xFE\x01\x41\x00";
 
         $this->assertFalse(ImageContainer::isSafeStill(
@@ -54,9 +52,9 @@ class ImageContainerTest extends TestCase
 
     public function test_a_still_gif_padded_past_the_block_limit_is_also_refused(): void
     {
-        // The honest counterpart of the case above. It cannot be told apart from the attack without
-        // parsing further than the budget allows, so it is refused too — the cost is one card's
-        // image, where the other direction costs the worker.
+        // The honest counterpart of the case above, indistinguishable from the attack without parsing
+        // past the budget, so it is refused too: the cost is one card's image, where the other
+        // direction costs the worker.
         $comment = "\x21\xFE\x01\x41\x00";
 
         $this->assertFalse(ImageContainer::isSafeStill(

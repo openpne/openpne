@@ -74,8 +74,8 @@ class LinkCardWiringTest extends TestCase
 
     public function test_editing_a_diary_body_detaches_the_old_card_in_the_same_write(): void
     {
-        // Between the write and the job there is a window in which the page renders. The card must
-        // already be gone by then, or the new text shows under the previous body's card.
+        // Between the write and the job there is a window in which the page renders, so the card must
+        // already be gone by then or the new text shows under the previous body's card.
         $card = LinkCard::factory()->create();
         $diary = Diary::factory()->for($this->member)->create([
             'body' => 'Old https://example.com/old',
@@ -117,8 +117,8 @@ class LinkCardWiringTest extends TestCase
     #[DataProvider('bodyKinds')]
     public function test_posting_any_body_kind_queues_a_sync(string $kind): void
     {
-        // One assertion per call site. A single representative would go green with five of the six
-        // dispatches deleted, which is precisely the failure this PR exists to prevent.
+        // One assertion per call site: a single representative would go green with every other
+        // dispatch deleted.
         $record = $this->{'create'.$kind}();
 
         Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->model === $record::class && $job->id === $record->id);
@@ -152,9 +152,8 @@ class LinkCardWiringTest extends TestCase
 
     public function test_changing_only_the_format_detaches_the_card(): void
     {
-        // The other field the card depends on. A body reads differently as Markdown — a bare URL in
-        // a code span stops being a link — so the card has to be worked out again even though the
-        // text is byte-for-byte identical.
+        // A body reads differently as Markdown (a bare URL in a code span stops being a link), so the
+        // card has to be worked out again even though the text is byte-for-byte identical.
         $diary = $this->createDiary();
         $card = LinkCard::factory()->create();
         $diary->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
@@ -203,14 +202,9 @@ class LinkCardWiringTest extends TestCase
     #[DataProvider('bodyKinds')]
     public function test_every_sync_is_marked_to_wait_for_the_commit(string $kind): void
     {
-        // The job re-reads the record by id, so queued before the commit a worker can find nothing —
-        // or, after an edit, find the text as it was before it and conclude the old URL is current.
-        //
-        // Asserted as the flag on the job rather than by opening a transaction and watching: the
-        // deferral lives in Illuminate\Queue\Queue::enqueueUsing, and QueueFake::push does not go
-        // through it, so a test that wrapped this in DB::transaction would see the job queued
-        // immediately whether or not the call site asked to wait — proving nothing either way. What
-        // is ours to get right is that every call site asks.
+        // Asserted as the flag on the job rather than by opening a transaction: the deferral lives in
+        // `Illuminate\Queue\Queue::enqueueUsing`, which `QueueFake::push` bypasses, so a test wrapped
+        // in `DB::transaction` would see the job queued immediately either way.
         $this->{'create'.$kind}();
 
         Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->afterCommit === true);
@@ -263,8 +257,7 @@ class LinkCardWiringTest extends TestCase
     public function test_viewing_a_timeline_post_queues_a_sync_for_the_thread(): void
     {
         // The root and every reply: a reply is a body of its own, and the thread page is the page it
-        // is read on. It used to be the root alone, on the grounds that a stack of cards under a post
-        // would read as noise — talk draws them in a denser list than this one.
+        // is read on.
         $post = TimelinePost::factory()->for($this->member)->create([
             'body' => 'Root https://example.com/root',
             'link_card_synced_at' => null,
@@ -298,8 +291,7 @@ class LinkCardWiringTest extends TestCase
     public function test_opening_a_talk_queues_a_sync_for_every_unexamined_row_it_renders(): void
     {
         // Talk's exception to the detail-page rule: a conversation has no detail page, so the page is
-        // where a card is asked for. The bound is the page — and the marker below is what keeps that
-        // from being asked twice.
+        // where a card is asked for, and the marker below is what keeps that from being asked twice.
         $group = $this->joinedGroup();
         $messages = GroupMessage::factory()->count(3)->for($group)->for($this->member, 'author')->create([
             'body' => 'See https://example.com/a',
@@ -358,9 +350,9 @@ class LinkCardWiringTest extends TestCase
 
     public function test_a_reply_parent_read_only_to_decorate_the_page_is_not_examined(): void
     {
-        // The parent of a reply is quoted in the row above the answer, from a row that is not on the
-        // page and arrives without its card loaded. Examining it would mark a body nobody looked at
-        // and lazy-load a query per reply.
+        // The parent of a reply is quoted from a row that is not on the page and arrives without its
+        // card loaded, so examining it would mark a body nobody looked at and lazy-load a query per
+        // reply.
         $group = $this->joinedGroup();
         $parent = GroupMessage::factory()->for($group)->for($this->member, 'author')->create([
             'body' => 'Parent https://example.com/parent',

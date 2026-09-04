@@ -5,37 +5,17 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 /**
- * Decides whether an image is provably a single still frame, by walking its container structure.
- *
- * The question is deliberately "is this safe to decode?" and not "does this look animated?". Those
- * are not complements. A scan that hunts for evidence of animation answers "no" both when the file
- * is a still image and when the parser gave up — ran past a block limit, met a block it did not
- * recognise, read off the end — and the second case is the one an attacker constructs. So every exit
- * that is not a completed walk proving one frame returns false, and the caller refuses the image.
- *
- * Searching the bytes for a marker string does not work either, in both directions. It misses real
- * animations — a two-frame GIF needs no NETSCAPE loop extension, and an animated WebP can carry a
- * padding chunk that pushes its ANIM header past any fixed window — and it invents them, since a
- * still image's compressed data or metadata may contain the same bytes by chance.
- *
- * So each format is parsed the way its specification defines it: length-prefixed blocks for GIF,
- * length-prefixed chunks for PNG and WebP. That is exact, and it is cheap — no pixel data is
- * touched, only the headers that say how far to skip. This runs before any decode, because deciding
- * to decode in order to count frames is the mistake the check exists to prevent: a decoder allocates
- * a full frame at a time, and an out-of-memory kill cannot be caught.
- *
- * The consequence of failing closed is that an unusual but honest file — a still GIF carrying
- * thousands of comment blocks — is refused. That costs a card an image; the other direction costs a
- * worker.
+ * Walks the container's own block lengths, so every exit that is not a completed walk proving one
+ * still frame is a refusal; a parse that gave up is what an attacker constructs. Why neither a
+ * marker search nor decoding can answer this is in docs/internals/link-cards.md (The image is
+ * copied, and the order of checks is the safety).
  */
 final class ImageContainer
 {
     /**
-     * A CPU bound on the walk, not a correctness bound.
-     *
-     * Every loop advances monotonically through the buffer, so termination comes from the buffer
-     * length alone; this only stops a pathological file from spending a long time getting there.
-     * Reaching it is treated as "could not prove", never as "still".
+     * A CPU bound on the walk, not a correctness bound: every loop advances monotonically, so
+     * termination comes from the buffer length alone. Reaching it is treated as could not prove,
+     * never as still.
      */
     private const MAX_BLOCKS = 4096;
 
@@ -158,12 +138,9 @@ final class ImageContainer
     }
 
     /**
-     * A PNG is still when the walk reaches IDAT without having met an animation control chunk.
-     *
-     * acTL is required to precede IDAT, so arriving at the image data proves there is none. Nothing
-     * bounds how much ancillary metadata may come first, which is why this follows chunk lengths
-     * rather than reading a fixed prefix — and why running out of budget before IDAT is a failure
-     * rather than an all-clear.
+     * Still when the walk reaches IDAT without meeting acTL, which is required to precede it. Nothing
+     * bounds how much ancillary metadata may come first, so the walk follows chunk lengths rather
+     * than a fixed prefix, and running out of budget before IDAT is a failure rather than an all-clear.
      */
     private static function pngIsStill(string $bytes): bool
     {
@@ -201,11 +178,9 @@ final class ImageContainer
     }
 
     /**
-     * A WebP is still when the walk reaches the end of the RIFF payload having seen no animation.
-     *
-     * Both signals disqualify it: the animation bit in the extended-format header, and the ANIM /
-     * ANMF chunks. A file may carry padding chunks before either, so the walk follows the declared
-     * chunk sizes to the end rather than reading a prefix.
+     * Still when the walk reaches the end of the RIFF payload having seen neither the animation bit
+     * in the VP8X header nor an ANIM / ANMF chunk. A file may carry padding chunks before either, so
+     * the walk follows the declared chunk sizes to the end rather than reading a prefix.
      */
     private static function webpIsStill(string $bytes): bool
     {

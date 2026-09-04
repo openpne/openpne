@@ -23,8 +23,8 @@ class CappedStreamTest extends TestCase
     {
         $stream = $this->stream(4);
 
-        // A short return is libcurl's "the writer refused these bytes" signal: it aborts the transfer
-        // rather than downloading the rest. That is what bounds a decompression bomb, which a
+        // A short return is libcurl's signal that the writer refused the bytes, so it aborts the
+        // transfer rather than downloading the rest, which is what bounds a decompression bomb a
         // Content-Length check cannot see.
         $this->assertSame(4, $stream->write('hello world'));
         $this->assertTrue($stream->wasCapped());

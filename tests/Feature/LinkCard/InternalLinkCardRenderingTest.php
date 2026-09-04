@@ -34,12 +34,9 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Drawing a card of one of this site's own pages.
- *
- * Every test here is really the same question asked seven ways: does the card show exactly what its
- * own page would show this reader, and nothing when that page would show them nothing. Refusal and
- * absence are deliberately the same answer — a card that appeared only for records the reader may
- * not open would be an oracle over them.
+ * Every test asks the same question: does the card show exactly what its own page would show this
+ * reader, and nothing when that page would show nothing; refusal and absence are deliberately the
+ * same answer, or the card is an oracle over records the reader cannot open.
  */
 class InternalLinkCardRenderingTest extends TestCase
 {
@@ -131,8 +128,8 @@ class InternalLinkCardRenderingTest extends TestCase
     public function test_a_talk_message_card_answers_only_through_its_own_rooms_path(): void
     {
         // The conversation page refuses an anchor naming another room's message, so a card drawn
-        // through the wrong room's path would describe a message its own URL does not open — for a
-        // reader allowed into both rooms, not an authorization question at all.
+        // through the wrong room's path would describe a message its own URL does not open, for a
+        // reader allowed into both rooms.
         [$group, $member] = $this->membersOnlyGroup();
         $other = Group::factory()->create();
         GroupMember::factory()->create(['group_id' => $other->id, 'member_id' => $member->id]);
@@ -214,10 +211,9 @@ class InternalLinkCardRenderingTest extends TestCase
 
     public function test_a_reply_cards_picture_answers_to_the_replier_as_the_thread_page_does(): void
     {
-        // Pinned rather than fixed. The card is authorised by the thread root, but its picture is the
-        // reply's own file, and FilePolicy asks the row that owns the bytes — so a reader the replier
-        // has blocked is offered a picture that 404s. The thread page draws that same reply's picture
-        // on the same terms; one file answering two ways would be the worse outcome.
+        // Pinned rather than fixed: the picture is the reply's own file and `FilePolicy` asks the row
+        // that owns the bytes, so a reader the replier has blocked is offered a picture that 404s,
+        // exactly as the thread page draws it.
         Storage::fake('image_cache');
         $replier = Member::factory()->create();
         $viewer = Member::factory()->create();
@@ -293,9 +289,6 @@ class InternalLinkCardRenderingTest extends TestCase
 
     public function test_renaming_this_site_stops_the_card_rather_than_relabelling_the_link(): void
     {
-        // The card is drawn beside its own URL, which is what the reader clicks. Once that address
-        // is somebody else's, describing it with a record of ours would describe one page while
-        // linking to another — and whoever answers the old host would be doing the describing.
         $diary = Diary::factory()->for($this->author)->create(['visibility' => Visibility::Members]);
         $this->assertNotNull($this->draw($diary, $this->author));
 

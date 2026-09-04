@@ -5,28 +5,10 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 /**
- * Reads a normalised URL as one of three answers: somewhere else, here-and-we-know-what, or
- * here-but-nothing-we-can-draw.
- *
- * Purely textual, and deliberately so — it is asked both when a body is parsed and again when a card
- * is drawn ({@see LinkCardSerializer}), and the second answer has to be derivable from the URL alone.
- *
- * **Being ours is decided before being resolvable, and settles the question of fetching on its own.**
- * A URL on this host is never handed to the fetcher, whether or not it names something a card can be
- * built from. The alternative — treating what we cannot resolve as an external link — leaves this
- * app requesting its own pages for every address outside the canonical set: the OpenPNE 3-compatible
- * spellings (whose redirects only help a reader), list pages, and anything added to the routing
- * table later. On a deployment behind a private address `PublicIpGuard` refuses those requests, so
- * they would also be a permanent supply of failed rows serving out their backoff.
- *
- * Host and port only, never the scheme: `http://` and `https://` of this site are the same server,
- * and requesting one of them because the other is configured is the self-fetch this exists to stop.
- *
- * A port outside {@see LinkUrl}'s 80/443 never arrives here at all — `normalize()` has already
- * refused it, and the body's next URL takes its place. That restriction is not relaxed for our own
- * host: it exists so no row is minted for an address the fetcher would refuse, and widening it here
- * would leave the external half of that rule stated in two places. A site served on another port
- * therefore draws no internal cards, which is a deployment outside the fleet standard.
+ * Reads a normalised URL as one of three answers, purely textually, because it is asked again when
+ * a card is drawn. Being ours is decided by host and port before being resolvable and settles
+ * fetching on its own: a URL on this host is never handed to the fetcher
+ * (docs/internals/link-cards.md, Links to this site are never fetched).
  */
 final class InternalUrl
 {
@@ -77,16 +59,10 @@ final class InternalUrl
     }
 
     /**
-     * The canonical route $segments names, as a kind and an id.
-     *
-     * A closed list, matched on the whole path rather than on a prefix: the URL picks which of seven
-     * models is loaded, so anything it does not name exactly resolves to nothing. That is also what
-     * keeps `/timeline/new` and `/groups/mine` — sibling routes whose segment is a word rather than
-     * an id — out of the resolved set without naming them here.
-     *
-     * The OpenPNE 3-compatible spellings are deliberately absent. They redirect, which serves a
-     * reader following the link and does nothing for a card; resolving them would also mean carrying
-     * a second address table that has to stay in step with the first.
+     * A closed list matched on the whole path, since the URL picks which of seven models is loaded;
+     * that is also what keeps `/timeline/new` and `/groups/mine` out of the resolved set without
+     * naming them. The OpenPNE 3-compatible spellings are deliberately absent: they redirect, which
+     * serves a reader and not a card, and resolving them would mean a second address table.
      *
      * @param  list<string>  $segments
      * @param  array<string, mixed>  $query
@@ -110,11 +86,9 @@ final class InternalUrl
             return [$kind, $id, null];
         }
 
-        // A conversation is a page rather than a row, so the message is in the query — the deep link
-        // the talk surface itself hands out. The group the path names rides along rather than being
-        // checked here: the conversation page refuses an anchor naming another room's message
-        // (GroupTalkController::anchor scopes its lookup to the route's group), and the render
-        // applies the same refusal through {@see InternalCardTarget::urlLeadsTo()}.
+        // A conversation is a page, so the message is in the query, and the path's group rides along
+        // unchecked: the render applies the conversation page's own refusal of another room's
+        // message through {@see InternalCardTarget::urlLeadsTo()}.
         if (count($segments) === 3 && $segments[0] === 'groups' && $segments[2] === 'talk' && ($group = self::id($segments[1])) !== null) {
             $message = self::id(is_string($query['m'] ?? null) ? $query['m'] : null);
 

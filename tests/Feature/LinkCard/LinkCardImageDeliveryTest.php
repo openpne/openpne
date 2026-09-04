@@ -28,9 +28,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * A card image is shared: the same picture can sit under a world-readable post and a private one at
- * the same moment. Nothing about the File decides who may see it — only the post being looked at
- * does — so these tests are almost all about that separation holding under substitution.
+ * One picture can sit under a public post and a private one at once, so these tests are about the
+ * post-decides-not-the-file separation holding under substitution.
  */
 class LinkCardImageDeliveryTest extends TestCase
 {
@@ -72,8 +71,6 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_the_response_is_not_cacheable_by_anything_shared(): void
     {
-        // The answer depends on who asked. A cached copy that outlives a post going private is the
-        // failure this endpoint exists to prevent, so there is no window in which one may exist.
         $diary = $this->diary(Visibility::Open);
 
         $this->actingAs($this->author)
@@ -85,9 +82,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_the_same_card_is_public_through_one_post_and_private_through_another(): void
     {
-        // The case the whole design exists for. One card, one File, two posts — and the answer must
-        // come from the post in the URL, never from the most permissive post that happens to share
-        // the picture.
+        // One card, one File, two posts: the answer must come from the post in the URL, never from
+        // the most permissive post that shares the picture.
         $open = $this->diary(Visibility::Open);
         $private = $this->diary(Visibility::Private);
         $stranger = Member::factory()->create();
@@ -221,9 +217,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_community_body_follows_its_board_rule(): void
     {
-        // Whatever the board admits, the card admits — including the part that is not a restriction:
-        // an Everyone board is readable by any signed-in member, so its cards are too. What must not
-        // happen is the endpoint inventing a rule of its own in either direction.
+        // Whatever the board admits the card admits, including the part that is not a restriction:
+        // an Everyone board is readable by any signed-in member, so its cards are too.
         $closed = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
         $open = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
         GroupMember::factory()->create(['group_id' => $closed->id, 'member_id' => $this->author->id]);
@@ -240,9 +235,8 @@ class LinkCardImageDeliveryTest extends TestCase
             foreach ([$topic, $message] as $record) {
                 $this->actingAs($this->author)->get($this->urlFor($record))->assertOk();
 
-                // Signed out has no case to express on a group board, whichever it is. The explicit
-                // logout is load-bearing: actingAs holds for the rest of the test, so without it this
-                // would re-ask as the member above and pass while proving nothing.
+                // The explicit logout is load-bearing: `actingAs` holds for the rest of the test, so
+                // without it this would re-ask as the member above and pass while proving nothing.
                 $this->app['auth']->forgetGuards();
                 $this->get($this->urlFor($record))->assertNotFound();
 
@@ -254,9 +248,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_message_from_another_room_is_answered_by_that_room(): void
     {
-        // The talk lookup is deliberately not scoped to a group: which room a message belongs to is
-        // the message's own fact, and that room is what decides. So an id from a conversation the
-        // asker may not read resolves, and is then refused — by its rule, not by the URL's shape.
+        // The talk lookup is deliberately not scoped to a group, so an id from a conversation the
+        // asker may not read resolves and is then refused by its room's rule, not by the URL's shape.
         $mine = Group::factory()->create();
         $theirs = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
         GroupMember::factory()->create(['group_id' => $mine->id, 'member_id' => $this->author->id]);
@@ -325,9 +318,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_card_pointing_at_a_file_that_is_not_a_card_image_refuses(): void
     {
-        // Defence in depth against the row being wrong rather than the URL. Everything else here
-        // trusts `link_cards.image_file_id`; this is the one check that does not, so that a card
-        // whose image has come to name an avatar serves nothing rather than serving the avatar.
+        // Everything else here trusts `link_cards.image_file_id`; this is the one check that does
+        // not, so a card whose image has come to name an avatar serves nothing rather than the avatar.
         $diary = $this->diary(Visibility::Open);
         $avatar = File::factory()->create(['type' => 'image/png', 'related_entity_type' => 'member']);
         $this->storePng($avatar);
@@ -404,10 +396,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_reply_is_authorised_by_its_thread_root_not_by_its_own_author(): void
     {
-        // The audience of a thread is the root author's, in one place: a reply inherits the root's
-        // visibility (CreateReply) but carries its *own* author, and TimelineAccess reads the row's
-        // author. So the reply's own rule admits the replier's friends — who are not the audience
-        // the page was gated for, and who cannot open the thread the card sits in.
+        // The replier's friend is the audience the reply's own rule would admit, and they cannot
+        // open the thread the card sits in.
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Friends]);
         $replier = Member::factory()->create();
         $this->makeFriends($this->author, $replier);
@@ -431,11 +421,9 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_reply_whose_thread_is_gone_is_refused_rather_than_judged_on_its_own(): void
     {
-        // The unsafe half of "authorise by the thread" is the fallback: no thread, judge the row —
-        // which is exactly the audience this rule exists to avoid. Asserted against the predicate
-        // rather than through a request, because the database will not hold the state: the foreign
-        // key cascades, and it refuses a reply repointed at a row that is not there. So the guard is
-        // for a reply that arrives without its root by some other route.
+        // Asserted against the predicate rather than through a request, because the database will
+        // not hold the state (the foreign key cascades), so the guard is for a reply arriving without
+        // its root by some other route.
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for($this->author)->create([
             'in_reply_to_id' => $root->id,
@@ -450,9 +438,6 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_reply_addresses_its_picture_like_any_other_row(): void
     {
-        // A reply used to resolve to nothing here, because it would have been authorised against a
-        // different audience than the page. It is addressable now that it is authorised against the
-        // thread — see the test above for the audience, this one for the address.
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for(Member::factory()->create())->create([
             'visibility' => Visibility::Open,
