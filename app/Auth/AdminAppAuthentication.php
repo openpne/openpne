@@ -22,8 +22,8 @@ use SensitiveParameter;
 
 /**
  * Enabling or disabling MFA revokes the administrator's other sessions, as a password change does;
- * regenerating recovery codes leaves the factor unchanged and revokes nothing. Every management
- * action also demands the account password inline (AdminMfaPasswordReauth, docs/internals/security.md).
+ * regenerating recovery codes leaves the factor unchanged and revokes nothing. All three management
+ * actions also demand the account password inline (AdminMfaPasswordReauth, docs/internals/security.md).
  */
 class AdminAppAuthentication extends AppAuthentication
 {
@@ -107,8 +107,8 @@ class AdminAppAuthentication extends AppAuthentication
 
             if ($event !== null) {
                 // Filament runs after() even when the action body saves nothing (set-up args minted
-                // for another admin are discarded), so the hooks compare the persisted columns around
-                // the body and skip both unless something changed.
+                // for another admin are discarded), so the hooks compare the raw persisted columns
+                // around the body and skip the log and the revocation unless something changed.
                 $before = (object) ['secret' => null, 'codes' => null];
 
                 $action->before(function () use ($before): void {

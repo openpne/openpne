@@ -33,7 +33,7 @@ class ResetMemberPassword implements ResetsUserPasswords
         ])->validate();
 
         // A reset answers a possible compromise, so remember_token rotates in the same save as the
-        // password and every other session is purged.
+        // password and every session, this one included, is purged.
         $member->forceFill([
             'password' => Hash::make($input['password']),
             'remember_token' => Str::random(60),

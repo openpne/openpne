@@ -110,8 +110,8 @@ class RegistrationController extends Controller
 
     /**
      * Closed 404s before the lookup, so a known and an unknown token are indistinguishable while the
-     * route is off. The live token is then checked against its own origin, so an invite completes in
-     * invite or admin_only mode while a self token does not.
+     * route is off. The live token is then checked against its own origin, so an admin invite completes
+     * even in admin_only mode while a self or member link does not.
      */
     private function resolveForCompletion(string $token): RegistrationToken|RedirectResponse
     {

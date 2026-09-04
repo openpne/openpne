@@ -91,8 +91,8 @@ class FortifyRoutesTest extends TestCase
 
     public function test_the_two_factor_management_posts_are_throttled_but_the_render_is_not(): void
     {
-        // Pins that the four management POSTs share the mfa-manage budget while the GET render does not
-        // (a refresh must not spend it); separate from pinnedRoutes(), whose rows assume the pre-login shape.
+        // Separate from pinnedRoutes(), whose rows assume the pre-login shape; the GET render is asserted
+        // unthrottled because a refresh must not spend the budget.
         foreach ([
             'member.config.mfa.enable',
             'member.config.mfa.confirm',
