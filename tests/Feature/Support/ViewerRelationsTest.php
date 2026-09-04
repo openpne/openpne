@@ -25,14 +25,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * That reading a relation in bulk and reading it one row at a time give the same answer.
- *
- * These are two spellings of one predicate — a `whereIn` over a page's owners, and the single-row
- * question each rule has always asked — and an access rule now takes whichever is available. So the
- * property that matters is agreement, branch by branch: a disagreement is not a slow page, it is a
- * card shown to someone the rule refuses, or withheld from someone it admits.
- *
- * Every branch is set up explicitly. Left to the factories, a run would exercise one arm of each
+ * Every branch is set up explicitly: left to the factories, a run would exercise one arm of each
  * rule (a stranger, no block, no membership) and pass while the others were wrong.
  */
 class ViewerRelationsTest extends TestCase
@@ -104,10 +97,6 @@ class ViewerRelationsTest extends TestCase
         }
     }
 
-    /**
-     * The same question at the level a card actually asks it, over every arm of every rule a card
-     * runs — which is where a disagreement would show as an access decision rather than a boolean.
-     */
     public function test_every_card_rule_reads_the_same_whether_or_not_it_was_read_in_bulk(): void
     {
         foreach ($this->cases() as $name => [$target, $record, $expected]) {
@@ -164,7 +153,7 @@ class ViewerRelationsTest extends TestCase
         $this->block($owner, $other);
 
         $this->cold(fn () => null);
-        // The viewer is not blocked; the other reader is. Both pairs name the same owner.
+        // The viewer is not blocked but the other reader is, and both pairs name the same owner.
         app(ViewerRelations::class)->warmBlocks($this->viewer, [$owner->getKey()]);
 
         $this->assertFalse(BlockLookup::ownerBlocksViewer($owner, $this->viewer));

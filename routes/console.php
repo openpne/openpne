@@ -15,18 +15,10 @@ Artisan::command('inspire', function () {
 // Sweep expired pending tokens (see each model's prunable()): registration, email-change, and MFA-reset links.
 Schedule::command('model:prune', ['--model' => [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class]])->daily();
 
-// Link cards no body points at any more, and the image each still holds. Weekly, and off the hour the
-// daily sweep runs: nothing depends on an orphan going promptly, and the sweep walks every card.
-//
-// In the background because it is the one scheduled command that can run for minutes — every orphan
-// is its own DELETE. Held in the foreground it occupies `schedule:run` for that whole time, and a
-// per-minute systemd timer skips rather than queues while the last unit is still running, so the
-// daily sweeps would go missing with it.
+// In the background: this can run for minutes, and a per-minute systemd timer skips rather than
+// queues while the last `schedule:run` is still running, so the daily sweeps would go missing.
 Schedule::command('openpne:prune-link-cards')->weeklyOn(0, '3:10')->runInBackground();
 
-// The day's home issue, on the site's clock. In the foreground, unlike the prune above: this is a
-// handful of capped reads and one insert, so it costs `schedule:run` seconds rather than minutes and
-// a per-minute timer's next tick is never at risk. Nothing guards a double run either — a second run
-// the same day finds the issue and writes nothing, and the unique on `issue_date` is what makes that
-// true even when two runs overlap (App\Features\Home\Actions\PublishHomeIssue).
+// Foreground and unguarded against a double run: it costs seconds, and the unique on `issue_date`
+// makes an overlapping second run write nothing.
 Schedule::command('openpne:publish-home-issue')->dailyAt(PublishHomeIssue::TIME);

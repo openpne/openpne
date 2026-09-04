@@ -9,17 +9,14 @@ use App\Services\SnsSettingService;
 use Illuminate\Http\Request;
 
 /**
- * Decides which App\Support\Look a request renders in. URLs carry no look — it is an attribute of
- * the viewer — so every consumer asks here and the shell ships the answer as one shared prop.
- * The chain is guest clamp → durable member choice → site default (docs/internals/looks.md).
+ * URLs carry no look, so every consumer resolves it here and the shell ships the answer as one
+ * shared prop (docs/internals/looks.md).
  */
 final class LookResolver
 {
     public static function resolve(Request $request): Look
     {
-        // A look is a member's way around their own pages, and a signed-out visitor reaches none of
-        // them — so the site default does not answer for a guest. The pages a guest does reach (a
-        // web-public profile) have no viewer for a look's serializer to render against.
+        // A guest gets standard, not the site default: a look's serializer needs a viewer to render against.
         $member = $request->user('member');
         if (! $member instanceof Member) {
             return Look::Standard;
@@ -32,8 +29,7 @@ final class LookResolver
             return self::siteDefault();
         }
 
-        // A stored look the site no longer offers is ignored rather than honoured. The real defense
-        // is the admin save's cleanup; this is the belt for a row it has not reached yet.
+        // A stored look the site no longer offers is ignored, the belt for a row the admin save's cleanup has not reached.
         $chosen = $member->preferredLook();
         if ($chosen !== null && in_array($chosen, self::selectable(), true)) {
             return $chosen;
@@ -43,10 +39,8 @@ final class LookResolver
     }
 
     /**
-     * The looks a member may pick from: the ones the administrator offers, plus the site default —
-     * which is always among them, being what "follow the site default" follows. THE single
-     * derivation point of the effective set; resolver, serializer, form requests and the admin
-     * cleanup all read it from here.
+     * The looks the administrator offers plus the site default, which is always pickable; the one
+     * derivation point of the effective set.
      *
      * @return list<Look>
      */

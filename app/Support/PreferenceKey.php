@@ -5,20 +5,8 @@ namespace App\Support;
 use InvalidArgumentException;
 
 /**
- * The closed registry of per-member preferences kept in `member_preferences`.
- *
- * This enum is the single source of truth for which preferences exist: the case value is the
- * stored `key`, and each case declares its OpenPNE 3 origin, default, and value codec. The
- * upgrade derives its migrated name set from upgradableCases() (App\Upgrade\Steps\MemberPreferenceUpgrade),
- * so registering a key with an op3SourceName() is what makes it migrate — there is no second list to keep in sync.
- *
- * Most preferences are on the App\Support\Visibility scale (feature-scoped visibility defaults),
- * but the codec is value-type aware per case: PreferredSurface stores an App\Support\Surface and is
- * tri-state (an absent row means "no member choice", deferring to the SurfaceResolver fallback),
- * PreferredLook is the same shape for App\Support\Look (deferring to LookResolver's site default),
- * and ComposeEditor stores an App\Support\ComposeEditor with a concrete default (Rich).
- * Identity-bearing / hot-path member attributes (locale, screen name) live as typed `members`
- * columns instead, not here.
+ * The closed registry of per-member preferences in `member_preferences` (docs/internals/member-preferences.md);
+ * a case with an op3SourceName() is the only thing that makes a preference upgrade.
  */
 enum PreferenceKey: string
 {

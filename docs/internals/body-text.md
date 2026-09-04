@@ -45,8 +45,17 @@ unbalanced tags closed). Its architecture is a tokenizer: op tags (raw and entit
 forms) are cut out of the raw stored body first, and only the text between them goes through
 the shared escape/autolink/nl2br. Escaping the whole body first would corrupt entity-stored
 tags, and autolinking after span generation would double-escape URL ampersands. Intentional
-deltas from OpenPNE 3 are documented in the class docblock and pinned by
-[`Op3TextTest`](../../tests/Unit/Support/Op3TextTest.php).
+deltas from OpenPNE 3, pinned by [`Op3TextTest`](../../tests/Unit/Support/Op3TextTest.php):
+
+- **Text tokens are HTML-escaped here** (`ENT_QUOTES`). OpenPNE 3's `toHtml` did not escape; it
+  relied on the template having escaped the whole body with `ESC_SPECIALCHARS` first, then
+  converted the entity-encoded tags back. For a raw-stored body the two orders are equivalent, and
+  this renderer is XSS-safe on its own: a literal `<b>` or `<script>` stays escaped text, and a
+  quote in text renders `&quot;` where the OpenPNE 3 unit test's semi-escaped inputs showed a bare
+  `"`.
+- **A close tag with no open span is dropped**, where OpenPNE 3 emitted an orphan `</span>`, so the
+  fragment stays balanced for `dangerouslySetInnerHTML`. Unclosed opens are still auto-closed at
+  the end (`htmlTagFollowup`).
 
 `op3` is never authorable: Store/Update requests validate `format` ∈ `plain|markdown`, and the
 update actions additionally refuse to change an op3 row's format regardless of input. The

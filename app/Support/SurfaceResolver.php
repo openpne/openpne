@@ -7,10 +7,8 @@ use App\Services\SnsSettingService;
 use Illuminate\Http\Request;
 
 /**
- * Decides whether a canonical feature route renders the Classic or Modern surface. URLs carry no
- * surface — the surface is an attribute of the viewer (install mode, durable member choice) and of
- * the client (an Inertia navigation is always Modern). Shared by every feature controller that
- * serves both surfaces.
+ * URLs carry no surface: it is an attribute of the viewer (install mode, durable member choice) and
+ * of the client (an Inertia navigation is always Modern).
  */
 class SurfaceResolver
 {
@@ -24,10 +22,8 @@ class SurfaceResolver
             return self::CLASSIC;
         }
 
-        // An Inertia navigation can only originate from the Modern SPA, and answering it with
-        // Classic Blade would make the client reject the response — so a Modern session sticks
-        // across canonical URLs regardless of the viewer's resolved surface. A deliberate handoff
-        // to Classic (the surface picker) bypasses this via Inertia::location (full page load).
+        // The Modern client rejects a Blade response, so an Inertia navigation stays Modern whatever the
+        // viewer resolves to; a handoff to Classic is a full page load (Inertia::location).
         if ($request->hasHeader('X-Inertia')) {
             return self::MODERN;
         }
@@ -35,14 +31,7 @@ class SurfaceResolver
         return self::canonicalSurface($request, $feature);
     }
 
-    /**
-     * The surface the VIEWER resolves to — resolve() minus the Inertia-client stickiness. Honours
-     * the hard gates (a non-native feature is Classic, modern_only is Modern) before the member's
-     * durable choice / the mode's default surface. The member config page uses this both for the
-     * surface it preselects and for its "saving the current surface is a no-op" check, so the form
-     * reflects what the member gets on a fresh page load — not the SPA session the page is in, and
-     * not the bare default when a hard gate overrides it.
-     */
+    /** resolve() minus the Inertia-client stickiness: what the viewer gets on a fresh page load. */
     public static function canonicalSurface(Request $request, string $feature): string
     {
         if (config("features.{$feature}.modern_status", 'native') !== 'native') {

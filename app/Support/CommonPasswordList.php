@@ -5,11 +5,8 @@ namespace App\Support;
 use RuntimeException;
 
 /**
- * Membership test against the bundled common-password blocklist
- * (resources/data/common-passwords.txt, provenance in its README). Entries are lowercase, so
- * {@see contains} is a plain set lookup and expects the caller to have folded case (NotCommonPassword
- * does). The set is loaded once per process. A missing or unreadable data file throws rather than
- * resolving to "not common", so the check can never silently disable.
+ * Entries are lowercase, so the caller folds case before {@see contains}. A missing or unreadable
+ * data file throws rather than reading as "not common", so the check can never silently disable.
  */
 class CommonPasswordList
 {

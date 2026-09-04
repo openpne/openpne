@@ -3,20 +3,10 @@
 namespace App\Support;
 
 /**
- * A member's chosen color for the no-image initial badge. null (no row value) = the neutral badge;
- * a chosen color is deliberate self-expression, so it renders as a solid fill — the default stays
- * achromatic precisely because the system must not assign personality the member didn't pick.
- *
- * The slugs are the stored `members.avatar_color` values and the hexes are what serializers ship;
- * both live here so palette changes stay one edit. The column is a free string, not this enum, so
- * a later "any color code" tier can store `#rrggbb` literals without a schema change.
- *
- * Nine families (gray + eight hues) in a light and a deep tier. Every light hex keeps slate-900
- * text >= 4.5:1 and every deep hex keeps white text >= 4.5:1, so the client's readable-text pick
- * lands uniformly per tier — never one odd badge in a row. The case order is family-paired
- * (light, deep) because the picker grid renders it verbatim: column-major on wide screens gives
- * one column per family, row-major on phones keeps each pair adjacent. The default (null) fills
- * the light-gray cell, which is why Gray has no Light twin here.
+ * Case order is family-paired (light, deep) because the picker grid renders it verbatim, and null
+ * (the neutral badge) fills the light-gray cell, which is why Gray has no Light twin. Every light hex
+ * must keep slate-900 text at 4.5:1 and every deep hex white text at 4.5:1: the client picks text
+ * color per tier, not per hex.
  */
 enum AvatarColor: string
 {

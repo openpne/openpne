@@ -7,85 +7,41 @@ namespace App\Support;
 use App\Features\GroupTalk\GroupTalkNotifyMode;
 
 /**
- * The closed registry of global, site-wide SNS settings kept in `sns_settings`.
- *
- * This enum is the single source of truth for which SNS settings exist: the case value is the
- * stored `key`, and each case declares its OpenPNE 3 origin, default, codec, and admin-page group.
- *
- * `sns_settings` is the single source of truth: the admin page stores every key verbatim. `default()`
- * is the fallback used only while no row exists yet (fresh install / before first save) — not a
- * second, env-driven tier that competes with the stored value. A display key's default may borrow an
- * application config value (`config('app.name')`); a security key (SettingGroup::Auth) must instead
- * return a fixed fail-closed constant, so a missing row can never open registration or drop a check.
- *
- * Deliberately NOT ported from OpenPNE 3's sns_config (obsolete or superseded in OpenPNE 4):
- *   - enable_pc / enable_mobile / op_auth_*_plugin_enable_pc — single responsive surface
- *     (App\Support\SurfaceResolver), no PC-vs-mobile split;
- *   - enable_cmd / enable_language — always-on or handled by other mechanisms;
- *   - is_check_mobile_ip / retrieve_uid — the feature-phone frontend is not in scope;
- *   - enable_openid / enable_connection / enable_jsonapi / external_pc_login_url /
- *     google_maps_api_key — the OpenID provider, external-service connections, the legacy JSON
- *     API, the external login page and the Google Maps module are not ported;
- *   - daily_news_day — the daily-news digest is not in scope;
- *   - ignored_sns_config — member config has no per-category hiding;
- *   - nickname_of_member_who_does_not_have_credentials — a withdrawn member is deleted, not shown
- *     under a placeholder name;
- *   - richtextarea_* — the OpenPNE 3 rich-text editor is frozen (docs/internals/body-text.md);
- *   - Theme_used — opSkinThemePlugin themes; Classic ships its one skin plus custom CSS;
- *   - op_timeline_plugin_timeline_comment_reply — the @name-prefixing reply link; the composer
- *     resolves a mention instead.
- * Not ported yet, not dropped: is_allow_post_activity, is_allow_config_public_flag_profile_page,
- * image_max_filesize, pc_home_information, op_diary_plugin_search_*, op_timeline_plugin_view_photo,
- * and the op_*_plugin_update_activity pair (waiting on the auto-generated-activity decision).
- *
- * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
- * for the keys `isMigratedFromOp3()` allows (the security keys are excluded so an OpenPNE 3 value
- * cannot silently override their fail-closed default).
+ * The closed registry of site-wide settings in `sns_settings`; the stored row is the single source of
+ * truth and {@see default} answers only while no row exists.
  */
 enum SnsSettingKey: string
 {
-    /** SNS name shown in the header/logo, page titles, and outgoing mail (OpenPNE 3 general.sns_name). */
     case SnsName = 'sns_name';
 
-    /** Site title shown in the document <title> on both surfaces, falling back to the SNS name (general.sns_title). */
     case SnsTitle = 'sns_title';
 
-    /** From-address for system mail / administrator contact (general.admin_mail_address). */
     case AdminMailAddress = 'admin_mail_address';
 
-    /** How the install serves the Classic/Modern surfaces (App\Support\SurfaceMode): modern_only|classic_default|modern_default. */
     case SurfaceMode = 'surface_mode';
 
-    /** Who may create an account (App\Features\Auth\RegistrationMode value): open|invite|admin_only|closed. */
+    /** Stores an App\Features\Auth\RegistrationMode value. */
     case RegistrationMode = 'registration_mode';
 
-    /** Whether the bot challenge is enforced on the auth entries. */
     case CaptchaEnabled = 'captcha_enabled';
 
-    /** Whether members may make their age visible to web guests (OpenPNE 3 is_allow_web_public_flag_age). */
     case AllowWebPublicAge = 'allow_web_public_age';
 
-    /** Whether members may make a timeline post visible to web guests (OpenPNE 3 op_activity_is_open). */
     case TimelineAllowWebPublic = 'timeline_allow_web_public';
 
-    /**
-     * Whether members may make a diary entry visible to web guests (OpenPNE 3
-     * op_diary_plugin_use_open_diary). Off also closes the guest-reachable diary screens
-     * (App\Http\Middleware\EnsureWebPublicDiaryEnabled), as OpenPNE 3 did.
-     */
+    /** Off also closes the guest-reachable diary screens, as OpenPNE 3 did. */
     case DiaryAllowWebPublic = 'diary_allow_web_public';
 
-    /** The Classic gadget layout (layoutA/B/C) for the home / profile / login pages (App\Gadgets\GadgetLayout). */
+    /** An App\Gadgets\GadgetLayout id (layoutA/B/C). */
     case GadgetHomeLayout = 'gadget_home_layout';
 
     case GadgetProfileLayout = 'gadget_profile_layout';
 
     case GadgetLoginLayout = 'gadget_login_layout';
 
-    /** OpenPNE 3 admin custom CSS, served to Classic as a `text/css` document (design.customizing_css). */
     case CustomCss = 'customizing_css';
 
-    /** OpenPNE 3 PC HTML insertion slots, emitted raw at fixed positions in the Classic shell (design.*). */
+    /** Operator HTML, emitted raw in the Classic shell. */
     case PcHtmlHead = 'pc_html_head';
 
     case PcHtmlTop2 = 'pc_html_top2';
@@ -96,15 +52,12 @@ enum SnsSettingKey: string
 
     case PcHtmlBottom = 'pc_html_bottom';
 
-    /** Classic footer HTML, by page security (insecure / secure pages, OpenPNE 3 footer_before/after — not the viewer's login state). */
+    /** Operator HTML, emitted raw; chosen by page security (OpenPNE 3 isSecurePage), not the viewer's login state. */
     case FooterBefore = 'footer_before';
 
     case FooterAfter = 'footer_after';
 
-    /**
-     * Feature availability toggles (App\Support\Feature). An absent row means enabled, so an install
-     * that never opened the page runs every feature — OpenPNE 3's lazy `plugin` rows.
-     */
+    /** An absent row means enabled (OpenPNE 3's lazy `plugin` rows). */
     case FeatureDiaryEnabled = 'feature_diary_enabled';
 
     case FeatureDirectMessageEnabled = 'feature_direct_message_enabled';
@@ -117,116 +70,67 @@ enum SnsSettingKey: string
 
     case FeatureGroupEventEnabled = 'feature_group_event_enabled';
 
-    /**
-     * Ordinary now. It was the one fail-closed feature flag while group talk was being built beside
-     * the community timeline it replaces — the two must never have been reachable at once — and the
-     * cutover flipped both halves (default and decode arm) into the shared family below.
-     */
     case FeatureGroupTalkEnabled = 'feature_group_talk_enabled';
 
-    /**
-     * OpenPNE 3 kept this one in sns_config (`enable_friend_link`), not in `plugin`. It still
-     * upgrades through App\Upgrade\Steps\FriendFeatureUpgrade, which writes only a disabled row, so
-     * absent = enabled holds on both sides.
-     */
+    /** Upgrades from sns_config `enable_friend_link` through its own step, which writes only a disabled row. */
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
     /**
-     * Whether the MCP endpoint answers (docs/internals/mcp.md). A kill switch, not the boundary:
-     * what keeps a caller out is the bearer token and its abilities, so this is fail-open like every
-     * other unit and turning it off is how an operator takes the endpoint down without revoking
-     * anything.
+     * A kill switch, not the boundary: the bearer token and its abilities keep callers out, so this is
+     * fail-open like every other unit (docs/internals/mcp.md).
      */
     case FeatureMcpEnabled = 'feature_mcp_enabled';
 
     /**
-     * Whether a URL in a member's body is fetched and shown as a preview card.
-     *
-     * Off unless an operator turns it on. This is the only setting that makes the site issue
-     * outbound requests, and it does so for URLs in friends-only and private bodies as well as open
-     * ones — a decision about what this deployment tells the wider web, not a display preference.
-     * See docs/internals/link-cards.md.
+     * Off by default: the only setting that makes the site issue outbound requests, for URLs in private
+     * bodies as well as open ones (docs/internals/link-cards.md).
      */
     case LinkCardEnabled = 'link_card_enabled';
 
     /**
-     * Whether a member may create an AI account (a member row with an owner).
-     *
-     * A creation gate only, off unless an operator turns it on. Managing, deleting and revoking
-     * tokens for an AI account that already exists stays available with this off, so switching it
-     * off never strands one out of its owner's reach.
+     * A creation gate only, off by default: managing, deleting and revoking tokens for an existing AI
+     * account stay available with this off, so switching it off strands nothing.
      */
     case AiAccountsEnabled = 'ai_accounts_enabled';
 
-    /** How many AI accounts one member may own. */
     case AiAccountLimit = 'ai_account_limit';
 
-    /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
     case BrandColor = 'brand_color';
 
-    /**
-     * The `files.name` token of the uploaded logo mark, or '' for none. An opaque token, not a path:
-     * the bytes are served by App\Http\Controllers\PublicFileController, so no storage:link is needed.
-     */
+    /** Logo and favicon are `files.name` tokens, not paths. */
     case BrandLogoFile = 'brand_logo_file';
 
-    /** The `files.name` token of the uploaded favicon (PNG), or '' for none. */
     case BrandFaviconFile = 'brand_favicon_file';
 
-    /**
-     * Markdown shown above the sign-in form on the Modern login screen, or '' for none. Rendered
-     * through the member-body sanitizer (App\Support\MarkdownText), not emitted as operator HTML.
-     */
+    /** Markdown rendered through the member-body sanitizer, never emitted as operator HTML. */
     case LoginMessage = 'login_message';
 
     /**
-     * The site's terms of service and privacy policy bodies, as Markdown (OpenPNE 3 sns_config
-     * user_agreement / privacy_policy). OpenPNE 3 emitted the stored value as raw HTML wrapped in
-     * nl2br; here it renders through the member-body sanitizer, so the upgrade rewrites the
-     * OpenPNE 3 text into Markdown first (App\Upgrade\Runner\Op3PolicyMarkdown).
+     * Markdown rendered through the member-body sanitizer; the upgrade rewrites OpenPNE 3's raw HTML
+     * into Markdown first.
      */
     case UserAgreement = 'user_agreement';
 
     case PrivacyPolicy = 'privacy_policy';
 
-    /**
-     * Which App\Support\Look the Modern surface renders for an undecided member. A look is a
-     * read-only projection of pages the member already reaches, so switching the site back to
-     * `standard` restores the previous pages with no deploy (docs/internals/looks.md).
-     */
     case DefaultLook = 'default_look';
 
-    /**
-     * Which App\Support\Look values a member may pick for themselves, as a CSV of look ids — the
-     * registry's one list-valued key. The effective set is this ∪ the default look, derived in one
-     * place (LookResolver::selectable()); an empty set leaves the site on the default alone.
-     */
+    /** A CSV of look ids, the registry's one list-valued key; the effective set is this plus the default look. */
     case SelectableLooks = 'selectable_looks';
 
     /**
-     * How much of a group's talk this site notifies about by default
-     * (App\Features\GroupTalk\GroupTalkNotifyMode value): mentions|all. It is the web default of the
-     * `group_talk_new_message` catalog kind, which a member's own row overrides
-     * (docs/internals/notifications.md).
+     * A GroupTalkNotifyMode value: the web default of the `group_talk_new_message` kind, which a
+     * member's own row overrides.
      */
     case GroupTalkNotifyDefault = 'group_talk_notify_default';
 
-    /**
-     * Whether a %topic% / event comment offers a Reply link that quotes `>>N name` into the comment
-     * box (OpenPNE 3 op_community_topic_plugin_community_topic_comment_reply /
-     * community_event_comment_reply, off by default there too).
-     */
     case GroupTopicCommentReply = 'group_topic_comment_reply';
 
     case GroupEventCommentReply = 'group_event_comment_reply';
 
-    /**
-     * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
-     * footer keys so a fresh site shows the same bar it always did.
-     */
+    /** OpenPNE 3's footer seed. */
     private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
 
-    /** Which admin page edits this setting. */
     public function group(): SettingGroup
     {
         return match ($this) {
@@ -267,8 +171,7 @@ enum SnsSettingKey: string
             self::SnsName => 'sns_name',
             self::SnsTitle => 'sns_title',
             self::AdminMailAddress => 'admin_mail_address',
-            // OpenPNE 4-native: no OpenPNE 3 sns_config column. The upgrade establishes classic_default
-            // out of band (App\Upgrade\Runner\UpgradeRunner), not as a copied setting.
+            // The upgrade establishes classic_default out of band, not as a copied sns_config value.
             self::SurfaceMode => null,
             // OpenPNE 3's enable_cmd is not an ancestor of this: it embedded three named services in the
             // reader's browser, where this fetches arbitrary hosts from the server.
@@ -294,9 +197,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
             self::FeatureMcpEnabled => null,
-            // OpenPNE 4-native: OpenPNE 3 had no AI accounts.
             self::AiAccountsEnabled, self::AiAccountLimit => null,
-            // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
             // gadgets (freeArea), which upgrade as gadgets — there is no sns_config column behind it.
@@ -304,9 +205,7 @@ enum SnsSettingKey: string
             // The policy bodies keep the OpenPNE 3 sns_config name verbatim; only their markup is
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
-            // OpenPNE 4-native: OpenPNE 3 had no Modern surface to lay out.
             self::DefaultLook, self::SelectableLooks => null,
-            // OpenPNE 4-native: OpenPNE 3 had no group chat to notify about.
             self::GroupTalkNotifyDefault => null,
             self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
             self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
@@ -314,11 +213,8 @@ enum SnsSettingKey: string
     }
 
     /**
-     * Whether SnsSettingUpgrade copies this key from OpenPNE 3 sns_config: a key with an
-     * op3SourceName() does, except in the Auth group, where copying an OpenPNE 3 value could silently
-     * override a security key's fail-closed default (an OpenPNE 3 site with the CAPTCHA off would turn
-     * it off here) — carrying those over is a separate, security-reviewed decision. The match is
-     * exhaustive so that adding a group forces the same decision rather than inheriting one.
+     * The Auth group is never copied from OpenPNE 3, so an OpenPNE 3 value cannot silently override a
+     * security key's fail-closed default. The match is exhaustive so a new group must decide for itself.
      */
     public function isMigratedFromOp3(): bool
     {
@@ -326,22 +222,15 @@ enum SnsSettingKey: string
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
             SettingGroup::Diary, SettingGroup::SitePolicy, SettingGroup::GroupBoard => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
-            // Link cards have no OpenPNE 3 ancestor, and enabling outbound requests is a decision for
-            // the operator of this site rather than something inherited from a migrated one. AI
-            // accounts likewise: nothing in an OpenPNE 3 site says whether this one should offer them.
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
-            // The look is a choice about this site's Modern surface, which OpenPNE 3 had none of.
             SettingGroup::Ai, SettingGroup::Look,
-            // How loud this site's chat is belongs to the people running it, and OpenPNE 3 had no
-            // chat to have decided it.
             SettingGroup::GroupTalk => false,
         };
     }
 
     /**
-     * Fallback used only while no row exists (fresh install / before first save), never as a runtime
-     * tier above a stored value. A display key may borrow an application config value; a security key
-     * must return a fixed fail-closed constant. Returns `mixed` because keys decode to string/bool/enum.
+     * A security key (SettingGroup::Auth) returns a fixed fail-closed constant, never a config or env
+     * value, so a missing row cannot open registration or drop a check.
      */
     public function default(): mixed
     {
@@ -349,8 +238,6 @@ enum SnsSettingKey: string
             self::SnsName => (string) config('app.name'),
             self::SnsTitle => '',
             self::AdminMailAddress => (string) config('mail.from.address'),
-            // Install fallback (no row): the fresh-site default set in config/openpne.php. The upgrade
-            // writes a classic_default row, so SnsSettingService is the authoritative tier.
             self::SurfaceMode => SurfaceMode::tryFrom((string) config('openpne.surface_mode')) ?? SurfaceMode::ModernOnly,
             // Fail-closed, hardcoded (no env tier): a missing row must never open registration or
             // disable the bot challenge.
@@ -369,9 +256,7 @@ enum SnsSettingKey: string
             // Off, matching OpenPNE 3's op_activity_is_open default — posts may not be web-public
             // until an admin opts in.
             self::TimelineAllowWebPublic => false,
-            // On, matching OpenPNE 3's op_diary_plugin_use_open_diary default — the one web-public
-            // switch OpenPNE 3 shipped enabled. It offers members the audience rather than publishing
-            // anything itself, and a site that turned it off upgrades an explicit '0'.
+            // On, as OpenPNE 3 shipped it: the switch offers members an audience rather than publishing anything itself.
             self::DiaryAllowWebPublic => true,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
             // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
@@ -407,10 +292,8 @@ enum SnsSettingKey: string
     /** Validate and coerce an incoming (form) value to this key's typed value. */
     public function coerce(mixed $value): mixed
     {
-        // Multi-line free text is stored verbatim: trimming would drop a leading newline or space,
-        // and both bodies give the first character meaning — a stylesheet's @charset / @import is
-        // only honored at the very start (OpenPNE 3 stored the design keys with trim disabled), and
-        // a Markdown body that opens with an indented code block would lose it.
+        // Stored verbatim, no trim: a stylesheet's @charset is only honored at the very start, and a
+        // Markdown body may open with an indented code block.
         if (in_array($this->group(), [SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy], true)) {
             return is_string($value) ? $value : (string) $value;
         }
@@ -422,9 +305,8 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled,
-            self::AiAccountsEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
-            // The registry's one integer key. A non-numeric submission lands on 0 (no new accounts),
-            // the safe side of a cap.
+            self::AiAccountsEnabled => (bool) $value,
+            // A non-numeric submission lands on 0, the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
@@ -476,21 +358,17 @@ enum SnsSettingKey: string
             // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
             // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
             self::CaptchaEnabled => $value !== '0',
-            // Fail-closed the OTHER way: here `true` widens exposure, so only an explicit '1' enables
-            // it; a malformed/empty value must not open a web-public audience (the opposite of
-            // CaptchaEnabled). This is about a STORED value: an absent row returned above, so diary's
-            // on-by-default install fallback is untouched — unreadable is corruption, not consent.
+            // Only an explicit '1' widens exposure; a malformed stored value is corruption, not consent,
+            // and an absent row already returned the default above.
             self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
             // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
             self::LinkCardEnabled, self::AiAccountsEnabled,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => $value === '1',
-            // The one integer key. A stored value that is not a number is corruption rather than a
-            // decision, so it reads as the shipped cap; a negative one clamps to 0 (create nothing)
-            // rather than inverting the comparison it feeds.
+            // A non-numeric stored value is corruption and reads as the shipped cap; a negative one
+            // clamps to 0 rather than inverting the comparison it feeds.
             self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
-            // Fail-OPEN, the one place that direction is right: an availability switch, so only an
-            // explicit '0' takes a feature down. A malformed value must not black out a module and
-            // strand its content — the opposite trade-off from the security keys above.
+            // Fail-open, the one place that direction is right: only an explicit '0' takes a feature
+            // down, so a malformed value cannot black out a module and strand its content.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,

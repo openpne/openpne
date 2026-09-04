@@ -71,11 +71,8 @@ if (! function_exists('brand_favicon_url')) {
 
 if (! function_exists('app_icon_url')) {
     /**
-     * URL of the home-screen icon at $size (App\Files\AppIcon::SIZES): derived from the uploaded
-     * favicon when one is set, otherwise the shipped asset. The favicon's token is in the URL, so
-     * replacing it changes what the manifest and the <head> declare — an installed app updates its
-     * icon off that change, not off new bytes at an unchanged URL. Decided on the stored token alone
-     * so a page render costs no more than the settings lookup it already does.
+     * The favicon's token is in the URL because an installed app updates its icon off a changed URL,
+     * not off new bytes at an unchanged one.
      */
     function app_icon_url(int $size): string
     {
@@ -165,11 +162,7 @@ if (! function_exists('classic_layout')) {
 }
 
 if (! function_exists('classic_banner')) {
-    /**
-     * The content of a Classic banner placement (OpenPNE 3 op_banner): operator HTML (is_use_html,
-     * emitted raw) or one of the placement's images at random, linked to the image's URL when set.
-     * Empty when the placement is unconfigured. The caller picks the placement (top/side, by login).
-     */
+    /** OpenPNE 3 op_banner: operator HTML is emitted raw, or one of the placement's images at random. */
     function classic_banner(string $placement): string
     {
         // The shell renders before the schema exists on a pre-migrate boot (and on the error page

@@ -7,15 +7,9 @@ namespace App\Support;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 
 /**
- * The audiences a picker offers, and the rule accepting exactly those. Every picker (diaries,
- * timeline posts, profile values, the age gate) builds its option list here and derives its rule
- * from that list, so the two cannot drift.
- *
- * Two tiers are conditional. Open is offered where the caller serves web-public content. Friends is
- * a dead choice while the friend unit is off — no new friendship can form — so it goes for new
- * content, but a value already stored at Friends keeps its own tier offered ($current): that is what
- * lets an edit form round-trip instead of silently widening the row to Members. Nothing else clamps
- * a stored audience; see docs/internals/feature-toggles.md.
+ * Every picker builds its options here and derives its rule from that list, so the two cannot drift.
+ * A value already stored at Friends keeps that tier offered while the friend unit is off, so an edit
+ * form round-trips instead of silently widening the row (docs/internals/feature-toggles.md).
  */
 final class VisibilityChoices
 {
