@@ -102,7 +102,7 @@ class LookSettingsTest extends TestCase
     public function test_a_look_added_to_the_registry_is_offered_and_accepted(): void
     {
         // Both controls read Look::cases() and Filament validates against the offered options, so
-        // tabbed, named nowhere else, proves registering a look is the whole of publishing it.
+        // registering a look is the whole of publishing it; tabbed is the case that would notice otherwise.
         Livewire::test(LookSettings::class)
             ->set('data.'.SnsSettingKey::DefaultLook->value, 'tabbed')
             ->set('data.'.SnsSettingKey::SelectableLooks->value, ['tabbed'])

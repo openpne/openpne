@@ -9,7 +9,7 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Every source file under resources/js is budgeted by weight-class count (docs/internals/typography.md):
+ * Weight occurrences under resources/js are counted per file against a budget (docs/internals/typography.md):
  * a weight in a file with no budget, a count above its budget, or a count below it fails. A budgeted
  * file is not a skipped file; owners get an exact count because they also hold ordinary text.
  */
@@ -69,8 +69,8 @@ class FontWeightGuardTest extends TestCase
 
     /**
      * `.ts` counts as UI source, not just `.tsx`: `compose/editor-extensions.ts` holds the class string
-     * ProseMirror's editable is rendered with. Node test files are excluded because their fixtures are
-     * not shipped markup.
+     * ProseMirror's editable is rendered with. Only `.test.ts` files are excluded; a `.test.tsx` fixture
+     * is scanned like any component.
      */
     private function occurrences(): array
     {

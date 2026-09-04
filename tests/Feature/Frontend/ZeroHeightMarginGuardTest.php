@@ -10,8 +10,8 @@ use Tests\TestCase;
 /**
  * A `space-y-*` on every member page's `<main>` (components/member-frame.tsx) becomes a margin-bottom
  * on every child but the last under Tailwind v4, so a class string written `h-0` alone still takes
- * 16px. The bottom margin must be stated in the same class string, not be zero: `h-0 mb-4` passes,
- * silence fails.
+ * 16px. The bottom margin must be stated in the same class string, whatever its value: `h-0 mb-0`
+ * passes, as would a deliberate `h-0 mb-4`, and only silence fails.
  */
 class ZeroHeightMarginGuardTest extends TestCase
 {
