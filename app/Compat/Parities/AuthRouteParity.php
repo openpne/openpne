@@ -9,12 +9,9 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * The pre-login auth screens Fortify owns (password reset and registration). This is an
- * OpenPNE 4-native grouping, not an OpenPNE 3 module — openpne3Module() is null, so the audit does
- * not expect it in the route inventory. The OpenPNE 3 origins (the opAuthMailAddress plugin's
- * passwordRecovery/passwordRecoveryComplete actions) are not in the inventory either, so these are
- * native maps (no op3Route): they derive a faithful Classic body id via op3Module/op3Action without
- * binding to an inventory entry. The OpenPNE 3 URLs are kept reachable through compatRedirects().
+ * Fortify's pre-login screens (password reset, registration), an OpenPNE 4-native grouping with no
+ * OpenPNE 3 module: their OpenPNE 3 origins are absent from the route inventory, so the maps bind to
+ * no inventory entry and carry op3Module / op3Action for the body id alone.
  */
 class AuthRouteParity extends RouteParity
 {
@@ -37,19 +34,16 @@ class AuthRouteParity extends RouteParity
             new RouteMap(null, null, 'register', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
             new RouteMap(null, null, 'register.sent', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
 
-            // Registration completion — the token-gated account form. OpenPNE 3's mailed link landed on
-            // opAuthMailAddress/register, which forwarded to the member/registerInput form; OpenPNE 4
-            // serves the form directly, so the body id follows the rendered screen (member/registerInput).
+            // OpenPNE 3's mailed link hit opAuthMailAddress/register, which forwarded to
+            // member/registerInput; the body id follows the rendered form.
             new RouteMap(null, null, 'register.form', 'GET', op3Action: 'registerInput', op3Module: 'member'),
         ];
     }
 
     public function compatRedirects(): array
     {
-        // OpenPNE 3 password-recovery URLs (the second is the one its mail emitted, with ?token=&id=).
-        // Fortify's token scheme (email + path token) is incompatible with OpenPNE 3's (id + token),
-        // so an in-flight OpenPNE 3 token cannot be honored — both entry points redirect to the
-        // request form to restart the flow.
+        // passwordRecoveryComplete (the mailed link, ?token=&id=) also lands on the request form: an
+        // OpenPNE 3 token cannot be honoured under Fortify's email + path-token scheme.
         return [
             '/opAuthMailAddress/passwordRecovery' => 'password.request',
             '/opAuthMailAddress/passwordRecoveryComplete' => 'password.request',
@@ -78,9 +72,7 @@ class AuthRouteParity extends RouteParity
                 new ScreenElement('"invitation sent" confirmation screen', L::Two, S::Ported, 'requestRegisterURLSuccess.php', 'register.sent; enumeration-safe (shown whether or not the address is a member)'),
                 new ScreenElement('CAPTCHA', L::Three, S::Ported, 'is_use_captcha', 'self-hosted ALTCHA proof-of-work replaces the OpenPNE 3 image CAPTCHA'),
             ],
-            // member/registerInput → resources/views/auth/register-complete.blade.php. The address is
-            // fixed by the token (shown, not re-entered); name + password + the registration profile
-            // fields are collected, then the member is created and logged in.
+            // member/registerInput → resources/views/auth/register-complete.blade.php
             'registerInput' => [
                 new ScreenElement('mail address (read-only)', L::Two, S::Ported, 'member/registerInput', 'authoritative from the token, not an input'),
                 new ScreenElement('nickname input', L::One, S::Ported, 'sfWidgetFormInputText nickname', 'field name not preserved (name, Level 3)'),

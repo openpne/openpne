@@ -9,11 +9,8 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * OpenPNE 3's `default` module: the two site policy screens, served in place at /terms and /privacy
- * with every OpenPNE 3 URL for them preserved by redirect (compatRedirects()); the customizing
- * stylesheet, served at its OpenPNE 3 URL; and the module's helper and error catch-alls, which are
- * gaps. screens() keys by Laravel route name: the pages and their redirects share an action, and
- * a key must resolve to the page whatever order maps() declares them in.
+ * OpenPNE 3's `default` module. screens() keys by Laravel route name because each page shares
+ * its action with its compat redirect routes.
  */
 class PolicyRouteParity extends RouteParity
 {

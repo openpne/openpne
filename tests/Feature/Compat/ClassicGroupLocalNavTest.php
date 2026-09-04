@@ -13,12 +13,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * OpenPNE 3 community localNav: a page about one group renders the `group` set with that group's
- * id threaded into its Top / Topics / Events / Join / Leave links (OpenPNE 3 sf_nav_type=community).
- * The search and member-group-list pages keep the default nav.
- *
- * The markup keeps OpenPNE 3's `community` word — the stored type is `group`, the presentation
- * token is not (Navigation::presentationToken), so a site's custom CSS keeps matching.
+ * Asserts the OpenPNE 3 `community` word: the stored nav type is `group`, but the presentation
+ * token keeps the OpenPNE 3 name so a site's custom CSS keeps matching.
  */
 class ClassicGroupLocalNavTest extends TestCase
 {
@@ -92,8 +88,8 @@ class ClassicGroupLocalNavTest extends TestCase
     }
 
     /**
-     * The join / quit / delete confirms are pages about one concrete group too. Regression: the
-     * classic() helper read the pre-rename `community` data key, so these three dropped the nav.
+     * Regression: the classic() helper once read the pre-rename `community` data key, so these
+     * three confirms dropped the nav.
      */
     public function test_join_quit_and_delete_confirms_render_the_community_localnav(): void
     {

@@ -15,9 +15,8 @@ use PHPUnit\Framework\TestCase;
 class PluginStylesheetsTest extends TestCase
 {
     /**
-     * The vendored bytes, locked. The files are served to themes and customer CSS as the URLs
-     * OpenPNE 3 served them from, so an edit here is a silent compatibility break: any fix
-     * belongs in a stylesheet of our own, not in the vendored copy.
+     * A byte lock on the vendored OpenPNE 3 files: themes and custom CSS rely on them as served, so
+     * a fix belongs in a stylesheet of our own, never in the copy.
      */
     public function test_the_vendored_files_are_the_openpne3_bytes(): void
     {
@@ -25,8 +24,8 @@ class PluginStylesheetsTest extends TestCase
             'opDiaryPlugin/css/diary.css' => '82a8852e045e5891b538528c38559e7d',
             'opCommunityTopicPlugin/css/communityTopic.css' => 'a222acbbda97c3db931c15bd17d9c798',
             'opMessagePlugin/css/message.css' => '4c62db3435618cd0299727253ccd4d9e',
-            // The message list's row status icons (listSuccess.php): unopened / opened / sent /
-            // replied. message.css does not reference them — the templates do, by path.
+            // The message list's row status icons, referenced by path from the templates rather than
+            // from message.css.
             'opMessagePlugin/images/icon_mail_1.gif' => '3d40a300272ec2812ae4ca958b7038d9',
             'opMessagePlugin/images/icon_mail_2.gif' => 'f20567b31473c2d80f0b8c2e225307f7',
             'opMessagePlugin/images/icon_mail_3.gif' => '1c118e37db2cee0417d41d75de81757f',
@@ -36,8 +35,8 @@ class PluginStylesheetsTest extends TestCase
             'images/icon_2.gif' => '5eeff8dd69a4d7606d8455fac953eb8a',
             // The Classic shell's flash alertBox icon (OpenPNE 3 `_partsAlertBox.php`).
             'images/icon_alert.gif' => '05daef255575c91468b475c2915a9a3c',
-            // The header notification center's icon sprite (OpenPNE 3 `_header.php`). The skin
-            // positions the three badges over its glyphs, so its geometry is part of the contract.
+            // The notification center sprite (OpenPNE 3 `_header.php`), whose geometry the skin's
+            // badge positions depend on.
             'images/NOTIFY_CENTER.png' => '3bb8a12cf45a980b2dd84ff48e7a39eb',
             // The spinner the notification center panel shows until its rows arrive.
             'images/ajax-loader.gif' => '7b9776076d5fceef4993b55c9383dedd',
@@ -93,8 +92,8 @@ class PluginStylesheetsTest extends TestCase
 
     public function test_modules_that_declare_no_stylesheet_get_none(): void
     {
-        // The community module embeds the topic and event components on its home without loading
-        // communityTopic.css — its view.yml declares no stylesheet, only the customize entries.
+        // The community module's view.yml declares no stylesheet; its home's communityTopic.css load
+        // is component-driven, outside this map.
         $this->assertNull(PluginStylesheets::forRoute('group.show'));
         $this->assertNull(PluginStylesheets::forRoute('member.profile.show'));
         $this->assertNull(PluginStylesheets::forRoute('home'));

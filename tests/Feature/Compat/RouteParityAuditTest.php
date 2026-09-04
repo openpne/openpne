@@ -73,9 +73,8 @@ class RouteParityAuditTest extends TestCase
 
     public function test_no_openpne3_route_is_both_mapped_and_gapped(): void
     {
-        // The coverage audit above accepts a route from either list, so a route present in both
-        // would pass while its gap reason contradicts the live mapping. Once a gapped route is
-        // ported, its gaps() entry must go.
+        // The coverage audit accepts either list, so a route in both would pass with a gap reason
+        // that contradicts the live mapping.
         foreach (RouteParityRegistry::all() as $parity) {
             $overlap = array_intersect($parity->mappedRoutes(), array_keys($parity->gaps()));
 
@@ -86,10 +85,8 @@ class RouteParityAuditTest extends TestCase
 
     public function test_url_compatible_routes_stay_get_reachable(): void
     {
-        // A GET-reachable OpenPNE 3 URL (bookmarked / mailed / linked) keeps its
-        // URL-preservation obligation: at least one Laravel route it maps to must answer GET.
-        // Grouped per OpenPNE 3 route, because one route may split into a GET confirm + POST
-        // submit (obj_friend_unlink). Maps with no named OpenPNE 3 route are out of scope.
+        // Grouped per OpenPNE 3 route, because a route split into a GET confirm + POST submit
+        // (obj_friend_unlink) satisfies the obligation through its GET half alone.
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {
@@ -113,11 +110,8 @@ class RouteParityAuditTest extends TestCase
 
     public function test_fallback_acknowledgement_matches_the_inventory(): void
     {
-        // The coverage audit above iterates named routes only, so it is exhaustive solely for a
-        // module that disables OpenPNE 3's global /:module/:action/* fallback. A module that
-        // keeps the fallback on has un-named reachable actions, so its parity must consciously
-        // acknowledge non-exhaustive coverage rather than let the gap pass silently. A native
-        // feature with no OpenPNE 3 module has no fallback to acknowledge.
+        // The coverage audit iterates named routes only, so a module that keeps OpenPNE 3's global
+        // fallback on must acknowledge that its coverage is not exhaustive.
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {

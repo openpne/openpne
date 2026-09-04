@@ -28,17 +28,13 @@ class GroupRouteParity extends RouteParity
             new RouteMap('community_joinlist', '/community/joinList', 'group.list_mine', 'GET', op3Action: 'joinlist'),
             new RouteMap('community_memberList', '/community/member/list', 'group.members', 'GET', op3Action: 'memberList'),
 
-            // OpenPNE 3 serves one /community/edit for both new and edit (id presence switches),
-            // and one POST for create/update. Laravel cannot route the same method+path to two
-            // named routes by query param, so each is a single endpoint.
+            // OpenPNE 3's one /community/edit serves new and edit by ?id= presence, so group.edit and
+            // group.save each stay a single endpoint.
             new RouteMap('community_edit', '/community/edit', 'group.edit', 'GET', op3Action: 'edit'),
             new RouteMap('community_edit', '/community/edit', 'group.save', 'POST'),
 
-            // join / quit / delete: OpenPNE 3 confirms on GET and runs on POST under one route;
-            // split into an explicit GET confirm + POST submit (cf. FriendRouteParity unlink).
-            // When the confirm does not apply (already a member on join; the admin on quit),
-            // OpenPNE 4 redirects to the community home instead of rendering the OpenPNE 3
-            // confirm page (Level 3).
+            // join / quit / delete: one OpenPNE 3 route confirming on GET and running on POST, split
+            // into a GET confirm + POST submit.
             new RouteMap('community_join', '/community/join', 'group.join.show', 'GET', op3Action: 'join'),
             new RouteMap('community_join', '/community/join', 'group.join', 'POST'),
             new RouteMap('community_quit', '/community/quit', 'group.quit.show', 'GET', op3Action: 'quit'),
@@ -46,12 +42,8 @@ class GroupRouteParity extends RouteParity
             new RouteMap('community_delete', '/community/delete/:id', 'group.delete.show', 'GET', op3Action: 'delete'),
             new RouteMap('community_delete', '/community/delete/:id', 'group.delete', 'POST'),
 
-            // The member-management page: the /community/member/manage/:id URL is preserved (path
-            // param) and it borrows page_community_memberManage. The per-member operations are
-            // OpenPNE 4-native (OpenPNE 3 reached them through the global fallback), so they carry no
-            // named OpenPNE 3 route; the GET confirms borrow the OpenPNE 3 input-page body ids.
-            // It must precede the pending queue below: both declare memberManage, and screens()
-            // resolves an action to its *first* map, so the OpenPNE 3 screen has to win.
+            // The management page must precede the pending queue below: both declare memberManage,
+            // and screenMap() takes the first match, so the OpenPNE 3 screen has to win.
             new RouteMap('community_memberManage', '/community/member/manage/:id', 'group.members.manage', 'GET', op3Action: 'memberManage', note: 'The member-management page is fully ported: sub-admin appoint/demote, member removal, and admin-transfer request.'),
             new RouteMap(null, null, 'group.members.appoint.show', 'GET', op3Action: 'subAdminRequest', note: 'OpenPNE 3 nominated a sub-admin through a confirmation handshake; OpenPNE 4 appoints immediately (the upgrade drops pending nominations; the appointee gets a feed notification).'),
             new RouteMap(null, null, 'group.members.appoint', 'POST'),
@@ -64,9 +56,8 @@ class GroupRouteParity extends RouteParity
             new RouteMap(null, null, 'group.members.transfer.accept', 'POST'),
             new RouteMap(null, null, 'group.members.transfer.reject', 'POST'),
 
-            // Pending-member approval. OpenPNE 3 has no named route for it (joins were approved
-            // from the global confirmation center), so these are native maps; the screen borrows
-            // page_community_memberManage, the body id of the management page above.
+            // Pending-member approval, OpenPNE 4-native (OpenPNE 3 approved joins from its confirmation
+            // center); the queue borrows the management page's body id.
             new RouteMap(null, null, 'group.members.pending', 'GET', op3Action: 'memberManage'),
             new RouteMap(null, null, 'group.members.approve', 'POST'),
             new RouteMap(null, null, 'group.members.decline', 'POST'),
@@ -89,9 +80,9 @@ class GroupRouteParity extends RouteParity
 
     public function compatRedirects(): array
     {
-        // Every OpenPNE 3 /community/* GET URL: the canonical moved to the nested-plural /groups/*
-        // space, so each is served by a redirect (routes/web.php). The two OpenPNE 4-native shapes
-        // the Modern surface published under /community are redirected on the same footing.
+        // The canonical moved to /groups/*, so the OpenPNE 3 /community/* GET URLs redirect (all but
+        // deleteImage, which gaps() drops), and so do the OpenPNE 4-native /community/* shapes, which
+        // have no OpenPNE 3 counterpart.
         return [
             '/community/:id' => 'group.show',
             '/community/search' => 'group.search',
@@ -111,16 +102,11 @@ class GroupRouteParity extends RouteParity
         ];
     }
 
-    /**
-     * Surface elements per OpenPNE 3 apps/pc_frontend/modules/community template, against
-     * resources/views/group/*.blade.php. Levels follow docs/internals/classic-compatibility.md;
-     * an item short of a faithful port records why.
-     */
     public function screens(): array
     {
         return [
             // homeSuccess.php (layoutA) + the six view.yml customizes opCommunityTopicPlugin and
-            // opTimelinePlugin inject into it → community/show.blade.php + x-group.sidemenu
+            // opTimelinePlugin inject into it → group/show.blade.php + x-group.sidemenu
             'home' => [
                 new ScreenElement('community image box (photo + name)', L::Two, S::Ported, "op_include_parts('memberImageBox', 'communityImageBox')", 'x-group.sidemenu: 180×180 photo, bare, over the getNameAndCount() caption'),
                 new ScreenElement('member grid (3×3, admin crown)', L::Two, S::Ported, "op_include_parts('nineTable', 'friendList', crownIds)", 'x-gadget.nine-table; the name cell carries the friend count while the friend unit is on. The id friendList is OpenPNE 3\'s own copy-paste name for the community grid, restored verbatim'),
@@ -139,7 +125,7 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('per-community notification-mail form', L::Two, S::Deferred, 'communityTopic/_configNotificationMail.php', 'OpenPNE 4 notification opt-outs are member-level, with no per-community toggle (config_community_topic_notification_mail is gapped in communityTopic)'),
                 new ScreenElement('topic search form + link', L::Two, S::Missing, 'communityTopic/_topSearchForm.php + _searchFormLine.php', 'the shared topic/event search surface is not ported (communityTopic_search is gapped)'),
             ],
-            // searchSuccess.php → community/search.blade.php
+            // searchSuccess.php → group/search.blade.php
             'search' => [
                 new ScreenElement('keyword + category search form', L::Two, S::Ported, "op_include_form('searchCommunity', \$filters, method get)"),
                 new ScreenElement('create-a-community link', L::Two, S::Ported, "searchSuccess.php moreInfo link_to('@community_edit')"),
@@ -148,21 +134,21 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('empty-results box', L::Three, S::Ported, "op_include_box('searchCommunityResult', 'Your search queries did not match any %community%.')"),
                 new ScreenElement('topic search link', L::Two, S::Missing, 'communityTopic/_topicSearchLink.php (searchSuccess customize)', 'the shared topic/event search surface is not ported (communityTopic_search_all is gapped)'),
             ],
-            // joinlistSuccess.php / joinlistError.php → community/list.blade.php
+            // joinlistSuccess.php / joinlistError.php → group/list.blade.php
             'joinlist' => [
                 new ScreenElement('community grid (photo, name + member count)', L::Two, S::Ported, "op_include_parts('photoTable', 'communityList')", 'x-classic.photo-table; getNameAndCount() renders as "name (N)"'),
                 new ScreenElement('admin crown badge', L::Three, S::Ported, 'joinlistSuccess.php crownIds'),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'photoTable pager + link_to_pager'),
                 new ScreenElement('empty-list box', L::Three, S::Ported, "joinlistError.php op_include_box('noJoinCommunity')"),
             ],
-            // memberListSuccess.php → community/members.blade.php
+            // memberListSuccess.php → group/members.blade.php
             'memberList' => [
                 new ScreenElement('member grid (avatar, name + friend count)', L::Two, S::Ported, "op_include_parts('photoTable', 'communityMembersList')", 'x-classic.photo-table; getNameAndCount() renders as "name (N)"'),
                 new ScreenElement('admin crown badge', L::Three, S::Ported, 'memberListSuccess.php crownIds', 'the administrator only; OpenPNE 3 crowns no sub-admin here'),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'photoTable pager + link_to_pager'),
             ],
             // editSuccess.php (CommunityForm + CommunityConfigForm + CommunityFileForm) →
-            // community/edit.blade.php
+            // group/edit.blade.php
             'edit' => [
                 new ScreenElement('one form for create and edit', L::Two, S::Ported, 'editSuccess.php $communityForm->isNew() title / url switch'),
                 new ScreenElement('name input', L::Two, S::Ported, 'CommunityForm name (opValidatorString max_length 64)'),
@@ -176,25 +162,25 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('delete-community box', L::Two, S::Ported, "op_include_parts('buttonBox', 'deleteForm')", 'GET form to the delete confirm page, administrator only (a sub-admin may edit but not delete)'),
                 new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
             ],
-            // joinInput.php / joinError.php → community/join.blade.php
+            // joinInput.php / joinError.php → group/join.blade.php
             'join' => [
                 new ScreenElement('join confirmation form', L::One, S::Ported, "op_include_form('communityJoining', \$form, body + title)", 'OpenPNE 4 words the question per register policy and adds a Cancel link'),
                 new ScreenElement('community preview rows (photo 76×76 + name link)', L::Two, S::Ported, 'joinInput.php firstRow slot'),
                 new ScreenElement('already-joined error page', L::Three, S::Ported, 'joinError.php', 'group/error.blade.php: the error box + the history-back line; Modern still returns to the community'),
             ],
-            // quitSuccess.php / quitError.php → community/quit.blade.php
+            // quitSuccess.php / quitError.php → group/quit.blade.php
             'quit' => [
                 new ScreenElement('leave confirmation form', L::One, S::Ported, "op_include_form('communityQuiting', \$form, body + title)", 'OpenPNE 4 adds a Cancel link'),
                 new ScreenElement('community preview rows (photo 76×76 + name link)', L::Two, S::Ported, 'quitSuccess.php firstRow slot'),
                 new ScreenElement('administrator error page', L::Three, S::Ported, 'quitError.php', 'group/error.blade.php: the error box + the history-back line; Modern still returns to the community'),
             ],
-            // deleteSuccess.php → community/delete.blade.php
+            // deleteSuccess.php → group/delete.blade.php
             'delete' => [
                 new ScreenElement('delete confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'deleteConfirmForm')", 'OpenPNE 4 adds the .block statement OpenPNE 3 left to the box title'),
                 new ScreenElement('negative answer as a second form', L::Three, S::Partial, '_partsYesNo.php no_form / no_url', 'a GET form home; OpenPNE 3 posted back to the delete URL, which redirected home'),
             ],
-            // memberManageSuccess.php → community/manage.blade.php, plus the OpenPNE 4-native
-            // approval queue that borrows this body id (community/pending.blade.php)
+            // memberManageSuccess.php → group/manage.blade.php, plus the OpenPNE 4-native
+            // approval queue that borrows this body id (group/pending.blade.php)
             'memberManage' => [
                 new ScreenElement('hand-written parts box + div.item roster table', L::Two, S::Ported, 'memberManageSuccess.php <div class="parts"> … <div class="item"><table>', 'no kind and no id in OpenPNE 3; the id here is OpenPNE 4\'s own'),
                 new ScreenElement('member link per row', L::Two, S::Ported, 'memberManageSuccess.php td.member op_link_to_member'),
@@ -205,22 +191,22 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('join-request approval queue', L::Two, S::Partial, 'community/_cautionAboutCommunityMemberPre.php → confirmation_list?category=community_confirm', 'an OpenPNE 4-native per-community queue (group.members.pending) borrowing this body id, with the manageList roster and approve / decline buttons; OpenPNE 3 approved joins from the global confirmation center, which is not ported'),
                 new ScreenElement('sub-admin / admin-transfer request notices', L::Two, S::Partial, '_cautionAboutSubAdminRequest.php + _cautionAboutChangeAdminRequest.php p.caution', 'the nominee decides from a banner on the community home plus a feed notification; there is no confirmation center to link to'),
             ],
-            // subAdminRequestInput.php → community/member-action.blade.php (form kind)
+            // subAdminRequestInput.php → group/member-action.blade.php (form kind)
             'subAdminRequest' => [
                 new ScreenElement('appointment request form', L::One, S::Ported, "op_include_form('communitySubAdminRequest', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the title, plus a Cancel link'),
                 new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Ported, 'subAdminRequestInput.php firstRow slot', 'the confirm form opens with the photo and %nickname% rows, both linking to the profile'),
             ],
-            // removeSubAdminInput.php → community/member-action.blade.php (yesNo kind)
+            // removeSubAdminInput.php → group/member-action.blade.php (yesNo kind)
             'removeSubAdmin' => [
                 new ScreenElement('demote confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'removeSubAdminConfirmForm', body)"),
                 new ScreenElement('negative answer as a second form', L::Three, S::Ported, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a GET form whose submit returns where no_url pointed'),
             ],
-            // dropMemberInput.php → community/member-action.blade.php (yesNo kind)
+            // dropMemberInput.php → group/member-action.blade.php (yesNo kind)
             'dropMember' => [
                 new ScreenElement('drop confirmation (yesNo)', L::One, S::Ported, "op_include_parts('yesNo', 'dropMemberConfirmForm', body)"),
                 new ScreenElement('negative answer as a second form', L::Three, S::Ported, '_partsYesNo.php no_url=@community_memberManage, no_method=get', 'a GET form whose submit returns where no_url pointed'),
             ],
-            // changeAdminRequestInput.php → community/member-action.blade.php (form kind)
+            // changeAdminRequestInput.php → group/member-action.blade.php (form kind)
             'changeAdminRequest' => [
                 new ScreenElement('take-over request form', L::One, S::Ported, "op_include_form('communityAdminRequest', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the title, plus a Cancel link'),
                 new ScreenElement('nominee preview rows (photo 76×76 + nickname link)', L::Two, S::Ported, 'changeAdminRequestInput.php firstRow slot', 'the confirm form opens with the photo and %nickname% rows, both linking to the profile'),

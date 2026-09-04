@@ -80,9 +80,8 @@ class RouteParityLayoutTest extends TestCase
         }
         sort($found);
 
-        // A Classic screen that opens a sidemenu/top column needs an A/B letter (the skin floats
-        // #Left only under A/B). Adding one here is the prompt to declare its layout in the
-        // matching RouteParity::layouts(); otherwise it renders under the default LayoutC and breaks.
+        // Adding a view here is the prompt to declare A or B in the matching RouteParity::layouts(),
+        // since the skin floats #Left only under those.
         $this->assertSame([
             'diary/edit', 'diary/list', 'diary/new', 'diary/show', 'group/show',
             'member/ai-account', 'member/config', 'message/list', 'message/show',

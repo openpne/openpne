@@ -14,8 +14,8 @@ enum ScreenStatus: string
     {
         return match ($this) {
             self::Ported => '✅',
-            // 🟡, not ⚠️: the warning sign is text-presentation and Symfony Console strips its
-            // base char on output, leaving a bare selector. The other glyphs render as emoji.
+            // 🟡, not ⚠️: the warning sign is a text-presentation glyph whose base char Symfony
+            // Console strips on output, leaving a bare variation selector.
             self::Partial => '🟡',
             self::Missing => '❌',
             self::Deferred => '🚫',

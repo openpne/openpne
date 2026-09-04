@@ -25,8 +25,7 @@ class GroupEventRouteParity extends RouteParity
             new RouteMap('communityEvent_delete', '/communityEvent/delete/:id', 'group.events.delete', 'POST'),
             new RouteMap('communityEvent_memberList', '/communityEvent/:id/memberList', 'group.events.member_list', 'GET', op3Action: 'memberList'),
 
-            // communityEventComment module: rendered under page_communityEventComment_* (op3Module
-            // override). create keys off the event id; deleteConfirm/delete key off the comment id.
+            // communityEventComment module (op3Module override).
             new RouteMap('communityEvent_comment_create', '/communityEvent/:id/comment/create', 'group.events.comment.store', 'POST'),
             new RouteMap('communityEvent_comment_delete_confirm', '/communityEvent/comment/deleteConfirm/:id', 'group.events.comment.delete.show', 'GET',
                 op3Action: 'deleteConfirm', op3Module: 'communityEventComment'),
@@ -37,11 +36,7 @@ class GroupEventRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            // Cross-community "recently updated events" feed (ordered by updated_at): a sidebar
-            // widget, outside the per-community event board this adapter serves.
             'communityEvent_recently_event_list' => 'Cross-community recently-updated events feed; a sidebar widget outside the event board.',
-            // Global event search. OpenPNE 3 routes it to the shared topic/event search action, a
-            // separate search surface the board adapter does not provide.
             'communityEvent_search_all' => 'Global event search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
         ];
     }
@@ -69,11 +64,6 @@ class GroupEventRouteParity extends RouteParity
         return false;
     }
 
-    /**
-     * Surface elements per opCommunityTopicPlugin communityEvent template, against
-     * resources/views/group-event/*.blade.php. Levels follow
-     * docs/internals/classic-compatibility.md; an item short of a faithful port records why.
-     */
     public function screens(): array
     {
         return [

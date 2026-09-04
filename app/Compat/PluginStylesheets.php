@@ -3,18 +3,10 @@
 namespace App\Compat;
 
 /**
- * The OpenPNE 3 plugin stylesheet a Classic page links, keyed by the OpenPNE 3 module the page
- * renders under: the port of each plugin's `apps/pc_frontend/modules/{module}/config/view.yml`
- * `all: stylesheets:` entry, vendored verbatim under public/.
- *
- * Per module, not global. The files override shared skin rules — diary.css restyles
- * `.commentList` / `.recentList` / `.prevNextLinkLine`, message.css restyles
- * `.prevNextLinkLine` too — so linking them everywhere would change screens OpenPNE 3 left
- * alone. A module absent here declares no stylesheet in its `view.yml`. That is not the whole
- * story for `community`: its home embeds the topic and event list components, and those
- * partials call `addStylesheet` themselves, so OpenPNE 3 does load communityTopic.css there.
- * That component-driven load follows the screen, not the module, so it is not mapped here:
- * the page pushes its own link onto the layout's pluginCss stack (community/show.blade.php).
+ * Each entry is the module's OpenPNE 3 `config/view.yml` `stylesheets:` declaration, so a module
+ * absent here declared none. `community` is deliberately absent: the communityTopic.css its home
+ * loads in OpenPNE 3 is component-driven (the embedded topic and event list partials), so the
+ * group home page links it itself.
  */
 final class PluginStylesheets
 {

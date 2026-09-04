@@ -30,8 +30,6 @@ class DiaryRouteParity extends RouteParity
             new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member', 'GET',
                 note: 'Served by the same diary.list_member route (optional {member?}) as diary_list_mine.',
                 op3Action: 'listMember'),
-            // Calendar archive: same listMember action narrowed to a month/day window. The
-            // clickable calendar-navigation widget lives in the sidemenu (x-diary.sidemenu).
             new RouteMap('diary_list_member_year_month', '/diary/listMember/:id/:year/:month', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_list_member_year_month_day', '/diary/listMember/:id/:year/:month/:day', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_new', '/diary/new', 'diary.new', 'GET', op3Action: 'new'),
@@ -51,10 +49,7 @@ class DiaryRouteParity extends RouteParity
 
     protected function layouts(): array
     {
-        // OpenPNE 3 decorate_with('layoutB') on the member-scoped diary screens (showSuccess,
-        // newSuccess, editSuccess, listMemberSuccess), which carry the author/calendar sidemenu.
-        // The all-diary and friend lists (diary.list/list_friend/search → the feed view) keep the
-        // global default layoutC, sidemenu-less, as OpenPNE 3 did.
+        // OpenPNE 3 decorate_with('layoutB') on the member-scoped diary screens, which carry the sidemenu.
         return [
             'diary.show' => 'B',
             'diary.new' => 'B',
@@ -66,10 +61,7 @@ class DiaryRouteParity extends RouteParity
 
     public function gaps(): array
     {
-        return [
-            // Comment create/delete and image attachments are ported (above) on both surfaces. Still
-            // deferred within comments: notifications, unread tracking, and this history feed.
-        ];
+        return [];
     }
 
     public function compatRedirects(): array
@@ -77,11 +69,6 @@ class DiaryRouteParity extends RouteParity
         return ['/diary' => 'diary.list'];
     }
 
-    /**
-     * Surface elements per OpenPNE 3 diary template, against resources/views/diary/*.blade.php.
-     * Levels follow docs/internals/classic-compatibility.md; an item short of a faithful port
-     * records why (a dependency, or that it is small and unblocked).
-     */
     public function screens(): array
     {
         return [
@@ -105,15 +92,13 @@ class DiaryRouteParity extends RouteParity
             ],
             // showSuccess.php + diaryComment/_list.php component
             'show' => [
-                // Comment thread (diaryComment/list component). The list renders, but several of
-                // its OpenPNE 3 behaviors are split out below so they stay visible as gaps.
+                // Comment thread (diaryComment/list component).
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate::dateTimeLines; year / date / time stacked, as the entry dt'),
                 new ScreenElement('comment images', L::Three, S::Ported, '$comment->getDiaryCommentImagesJoinFile()', 'DiaryCommentImage thumbnails via the shared _images partial; FilePolicy-gated by the diary visibility'),
-                // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
-                // form is multipart and embeds photo fields, which is a separate deferred element.
+                // Comment post form.
                 new ScreenElement('comment post form + is_open notice', L::One, S::Ported, 'op_include_form formDiaryComment'),
                 new ScreenElement('comment image upload', L::Three, S::Ported, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
                 // Diary record.

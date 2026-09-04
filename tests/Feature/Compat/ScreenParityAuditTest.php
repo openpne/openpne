@@ -87,9 +87,8 @@ class ScreenParityAuditTest extends TestCase
     }
 
     /**
-     * The inventory's completeness claim, held in the other direction: every GET map that renders
-     * a Classic screen (an op3Action and a registered route) has a screens() entry for its body id.
-     * OpenPNE 4-native screens with no OpenPNE 3 template are exempted here by name, with the reason.
+     * Held in the other direction from the key checks above: every GET map rendering a Classic
+     * screen must have a screens() entry, native screens exempted by name with a reason.
      */
     public function test_every_classic_get_screen_has_an_inventory(): void
     {
@@ -139,8 +138,7 @@ class ScreenParityAuditTest extends TestCase
 
     public function test_ported_elements_need_no_note(): void
     {
-        // The flip side: a faithful port carries no reason, so Ported is the only status that
-        // may omit the note. Keeps the note column meaningful (it is always a gap reason).
+        // Ported is the only status that may omit the note, so the note column is always a gap reason.
         $this->assertFalse(ScreenStatus::Ported->requiresNote());
     }
 }
