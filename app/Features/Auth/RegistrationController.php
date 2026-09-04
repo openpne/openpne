@@ -22,12 +22,6 @@ use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-/**
- * Multi-stage member registration. The email-entry half takes an
- * address, mails a single-use token, and shows a neutral confirmation. The completion half renders the
- * token-gated form (name/password/profile) and creates the member on submit; the token's email is
- * authoritative throughout, so the address is never re-entered.
- */
 class RegistrationController extends Controller
 {
     public function requestForm(Request $request, SpamTrap $trap, Captcha $captcha): View|InertiaResponse
@@ -45,9 +39,8 @@ class RegistrationController extends Controller
 
     public function request(RegisterEmailRequest $request, IssueRegistrationToken $issue, SpamTrap $trap): RedirectResponse
     {
-        // Always lands on the same neutral screen — whether or not the address is already a member,
-        // and whether or not the bot filters passed. A tripped filter just skips issuing the token,
-        // so a bot cannot tell it was caught.
+        // A tripped bot filter only skips issuing the token: the same neutral screen answers either
+        // way, so a bot cannot tell it was caught.
         if ($trap->passes($request)) {
             $issue($request->validated()['email']);
         }
@@ -90,11 +83,9 @@ class RegistrationController extends Controller
             return $pending;
         }
 
-        // The token's address was free when issued, but a member may have claimed it since (admin
-        // creation, or a concurrent completion). The form has no email field, so a unique-email
-        // failure has nowhere to show — every such case consumes the now-dead token and sends them to
-        // sign in. Caught at three layers as the window narrows: this up-front check, the create's
-        // unique rule (ValidationException on `email`), and the insert itself (QueryException).
+        // The address may have been claimed since issuance, and the form has no email field to show a
+        // unique failure on, so each layer that catches it consumes the dead token and redirects to
+        // sign in.
         if (Member::whereRaw('lower(email) = ?', [$pending->email])->exists()) {
             return $this->addressClaimed($pending);
         }
@@ -118,12 +109,9 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Resolves a raw token for completion, applying the mode gate, or returns a redirect to send the
-     * visitor away. The completion route is no longer open-only (an invite must be completable in
-     * invite/admin_only mode), so the mode is re-checked here against the token's origin:
-     *   1. closed → 404 before the lookup, so the route is wholly off (known and unknown tokens alike).
-     *   2. unknown/expired → the expired() redirect (only reached when not closed).
-     *   3. a live token whose source the current mode no longer issues (e.g. a self token in invite) → 404.
+     * Closed 404s before the lookup, so a known and an unknown token are indistinguishable while the
+     * route is off. The live token is then checked against its own origin, so an invite completes in
+     * invite or admin_only mode while a self token does not.
      */
     private function resolveForCompletion(string $token): RegistrationToken|RedirectResponse
     {
@@ -156,11 +144,8 @@ class RegistrationController extends Controller
 
     private function expired(): RedirectResponse
     {
-        // A null lookup cannot tell a spent token (registration already finished) from an expired or
-        // unknown one, so the message has to serve both: sign in if you are already registered,
-        // otherwise get a fresh link. Where to send them depends on the mode: only open exposes the
-        // self-service entry, so the "enter your email again" path is offered there; the invite modes
-        // send the visitor to sign-in (their fresh link comes from a new invitation, not self-service).
+        // A null lookup cannot tell a spent token from an expired or unknown one, so the message covers
+        // both, and only open mode can offer the self-service entry as the way to a fresh link.
         if (RegistrationMode::current()->allowsOpenRegistration()) {
             return redirect()->route('register')
                 ->with('status', __('This registration link is no longer valid. If you have already registered, please sign in; otherwise, enter your email again to get a new link.'));

@@ -18,8 +18,6 @@ class AdminPanelBootTest extends TestCase
 
     public function test_admin_panel_redirects_guests_to_login(): void
     {
-        // An authenticated route rejects unauthenticated access. The panel root
-        // sits behind the admin guard.
         $this->get('/admin')->assertRedirect('/admin/login');
     }
 }

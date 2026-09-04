@@ -32,10 +32,8 @@ class ResetMemberPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        // A reset answers a possible compromise, so every other authenticated foothold for this member
-        // must drop. remember_token rotates in the same save as the password; the session purge is
-        // SessionRevocation's (for non-database drivers the auth.session middleware is the best-effort
-        // fallback — it drops a session once the stored password hash no longer matches).
+        // A reset answers a possible compromise, so remember_token rotates in the same save as the
+        // password and every other session is purged.
         $member->forceFill([
             'password' => Hash::make($input['password']),
             'remember_token' => Str::random(60),
@@ -43,9 +41,8 @@ class ResetMemberPassword implements ResetsUserPasswords
 
         SessionRevocation::purgeMemberSessions((int) $member->getAuthIdentifier());
 
-        // Same reasoning one step out: an AI account the member owns is a foothold reached with a
-        // token this member minted, and whoever prompted the reset may have minted one. Revoked
-        // here, alongside the sessions, rather than left for the owner to notice.
+        // An owned AI account's tokens are a foothold this member minted, so a reset revokes them too
+        // rather than leaving them for the owner to notice.
         AiAccountTokens::revokeOwnedBy($member);
 
         // A reset answers a possible compromise, so void any pending email change too: otherwise an

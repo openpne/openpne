@@ -14,11 +14,9 @@ class FileObserver
     ) {}
 
     /**
-     * The single cleanup hub for a deleted file. Removes the stored bytes; for the
-     * DB-BLOB backend the file_bin row also goes via the FK cascade, so this runs
-     * first and FileStorage::delete must be idempotent. For disk backends this is
-     * the only thing that removes the physical bytes. Cached thumbnails are purged
-     * too, so file deletion fans out to every stored artefact (both idempotent).
+     * Runs before the SQL DELETE, whose FK cascade also drops the DB-BLOB backend's file_bin row, so
+     * FileStorage::delete must be idempotent. On a disk backend this is the only thing that removes
+     * the physical bytes.
      */
     public function deleting(File $file): void
     {

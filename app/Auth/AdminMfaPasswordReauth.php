@@ -13,27 +13,10 @@ use Illuminate\Validation\ValidationException;
 use SensitiveParameter;
 
 /**
- * Password re-authentication ("sudo mode") for the three admin MFA management actions
- * (set-up / disable / regenerate), shared across all three modals.
- *
- * Implicit and fail-fast: it runs even when the field is blank ($implicit) and THROWS rather than
- * collecting an error, aborting the whole validator before any later field runs. This is
- * load-bearing on the disable modal: its recovery-code field verifies DURING validation and
- * *consumes* the code from the database (AdminAppAuthentication then logs mfa.recovery_code_used).
- * Laravel does not short-circuit validation across fields, so a merely-collected error would still
- * let a valid recovery code be spent under a wrong or absent password. Throwing first prevents that,
- * which is why the password field is placed first in each schema.
- *
- * Hash::check bypasses LegacyEloquentUserProvider::validateCredentials, which is safe here: the admin
- * panel has no remember-me, so every session starts from a full credential login, and that login has
- * already retired any md5_bcrypt wrap to a plain bcrypt (pinned by
- * AdminMfaTest::test_first_login_of_a_wrapped_admin_with_mfa_retires_the_password_scheme).
- *
- * The throttle is rule-internal and keyed per admin (not per IP): Wizard::nextStep() validates a
- * step's child schema directly and never reaches the action-level ->rateLimit(5) (which only runs in
- * callMountedAction), and with an empty code the vendor's per-modal code limiter is not hit either, so
- * step-level password validation would otherwise be an unthrottled guessing oracle. One shared budget
- * across the three modals stops it being multiplied by hopping between them.
+ * Throws rather than collecting an error, because Laravel still validates the later fields and the
+ * disable modal's recovery-code rule consumes the code as it validates. Hash::check on the stored
+ * hash is correct only because the admin panel has no remember-me: every session began with a
+ * credential login that already retired any md5_bcrypt wrap.
  */
 class AdminMfaPasswordReauth implements ValidationRule
 {
@@ -46,6 +29,9 @@ class AdminMfaPasswordReauth implements ValidationRule
     public function validate(string $attribute, #[SensitiveParameter] mixed $value, Closure $fail): void
     {
         $admin = Filament::auth()->user();
+        // Rule-internal and keyed per admin: the wizard's per-step validation never reaches the
+        // action-level rate limit, and one budget across the three modals cannot be multiplied by
+        // hopping between them.
         $key = 'admin-mfa-reauth:'.($admin?->getAuthIdentifier() ?? 'unknown');
 
         if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {

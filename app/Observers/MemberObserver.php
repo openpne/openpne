@@ -8,40 +8,28 @@ use Illuminate\Support\Facades\DB;
 class MemberObserver
 {
     /**
-     * Purge the member's avatar File once the row is durably gone. The File has no DB foreign key to
-     * the member (the owner link is polymorphic), so the member_images cascade drops only the link row
-     * — deleting the File runs the FileObserver, which removes the bytes, instead of leaving them
-     * orphaned in storage.
-     *
-     * The purge is deferred to DB::afterCommit because `deleting` fires BEFORE the SQL DELETE: purging
-     * inline would destroy the bytes irreversibly even if the delete (or an FK cascade) then rolled
-     * back. Outside a transaction afterCommit runs the callback immediately, so plain deletes are
-     * unchanged; on rollback it is discarded and the File row + bytes survive. Accepted residue: a
-     * crash between commit and the callback leaks the File row and bytes (the repo's leak-over-loss
-     * preference), never the reverse.
-     *
-     * Read through a query (not the cached relation, which may be stale) and on `deleting` (not a
-     * member_images observer) because a DB-level cascade deletes the link row without firing events.
+     * Deferred to DB::afterCommit because `deleting` fires before the SQL DELETE: an inline purge
+     * would destroy the bytes irreversibly even if the delete then rolled back, while a discarded
+     * callback leaves the File row and bytes intact. A crash between the commit and the callback
+     * leaks the File row and bytes, never the reverse (leak over loss).
      */
     public function deleting(Member $member): void
     {
+        // A fresh query on `deleting`, not a member_images observer: a DB-level cascade deletes the
+        // link row without firing events, and the cached relation may be stale.
         $file = $member->avatar()->with('file')->first()?->file;
 
         if ($file !== null) {
-            DB::afterCommit(fn () => $file->delete()); // deleting the File runs FileObserver, which purges the bytes
+            DB::afterCommit(fn () => $file->delete()); // no FK reaches the File (polymorphic owner), so only this purges its bytes
         }
 
-        // Personal access tokens are polymorphic too, so no cascade reaches them. Left behind they
-        // would not merely leak rows: `tokenable_id` is resolved at authentication time, so a reused
-        // member id would hand the withdrawn member's token to whoever inherits the id. Deleted
-        // inline (not afterCommit) because a rollback should restore these rows, not outlive them.
+        // No cascade reaches the polymorphic tokens, and a reused member id would hand a surviving
+        // token to whoever inherits the id; deleted inline, not afterCommit, so a rollback restores them.
         $member->tokens()->delete();
 
-        // The member's own notification feed and push subscriptions, polymorphic for the same reason
-        // and carrying the same id-reuse hazard — a surviving subscription would push the next
-        // holder of this id's notifications to a stranger's browser. Only rows ADDRESSED to this
-        // member: the ones where they are merely the actor stay, so other members' feeds keep
-        // rendering with the withdrawn-member placeholder.
+        // Same id-reuse hazard (a surviving subscription would push the next id holder's notifications
+        // to a stranger's browser); only rows addressed to this member go, since rows where they are
+        // merely the actor keep other members' feeds rendering.
         $member->notifications()->delete();
         $member->pushSubscriptions()->delete();
     }

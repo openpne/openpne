@@ -70,9 +70,8 @@ class FortifyRoutesTest extends TestCase
             $this->assertNull(Route::getRoutes()->getByName($name), "route [{$name}] must not exist");
         }
 
-        // Nothing serves their paths either. Asserted against the route table rather than a
-        // response status: the catch-all Route::fallback() answers any unrouted GET, so a 404
-        // would no longer distinguish "not registered" from "registered and returning 404".
+        // Asserted against the route table rather than a response status, because Route::fallback()
+        // answers any unrouted GET and a 404 would not distinguish unregistered from registered-and-404.
         foreach ([
             ['POST', '/user/two-factor-authentication'],
             ['DELETE', '/user/two-factor-authentication'],
@@ -92,9 +91,8 @@ class FortifyRoutesTest extends TestCase
 
     public function test_the_two_factor_management_posts_are_throttled_but_the_render_is_not(): void
     {
-        // The four management POSTs share the mfa-manage budget (FortifyServiceProvider); the GET
-        // render is left out so a refresh cannot spend it. Kept separate from pinnedRoutes(), whose
-        // rows assume the pre-login challenge shape (NoReferrer, guest:member).
+        // Pins that the four management POSTs share the mfa-manage budget while the GET render does not
+        // (a refresh must not spend it); separate from pinnedRoutes(), whose rows assume the pre-login shape.
         foreach ([
             'member.config.mfa.enable',
             'member.config.mfa.confirm',

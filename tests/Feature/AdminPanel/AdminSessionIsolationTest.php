@@ -13,14 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * P0 regression coverage for the dual-guard session cross-bleed: the member and admin
- * realms keep separate session stores (UseAdminSessionStore), so `url.intended`
- * cannot redirect a login across realms and either side's logout leaves the other
- * side signed in.
- *
- * Requests run on the database driver and carry both cookies at once (withCookie
- * persists within a test), modelling one browser's cookie jar. freshRequestState()
- * between requests plays the role of the next request hitting a fresh worker.
+ * Requests carry both realm cookies at once, modelling one browser's cookie jar. freshRequestState()
+ * between requests plays the next request hitting a fresh worker.
  */
 class AdminSessionIsolationTest extends TestCase
 {

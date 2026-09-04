@@ -5,13 +5,9 @@ namespace App\Auth;
 use Illuminate\Contracts\Session\Session;
 
 /**
- * A re-authentication window: the account password is verified once and the session carries that
- * proof for a short while, so a flow spanning several requests does not demand it at every step
- * (the sudo-mode convention — one re-auth per sitting, not per step).
- *
- * One window per subclass, never a shared stamp: proving it is you before scanning a QR code must
- * not also open the door to minting a credential. The window is deliberately short — it bounds how
- * long a walked-up session can trade on someone else's proof.
+ * One window per subclass, never a shared stamp: a password proven for one flow must not also open
+ * another. The window is deliberately short, bounding how long a walked-up session can trade on
+ * someone else's proof.
  */
 abstract class ReauthWindow
 {

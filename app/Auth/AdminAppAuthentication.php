@@ -21,23 +21,9 @@ use LogicException;
 use SensitiveParameter;
 
 /**
- * The Filament TOTP provider, extended so that enabling or disabling MFA revokes the
- * administrator's other sessions — a change to the authenticating factor set, the same
- * class of event as a password change (App\Auth\SessionRevocation, established by the
- * account-revocation work). Regenerating recovery codes does not revoke: the TOTP
- * factor is unchanged, only the backup codes rotate.
- *
- * All three management actions additionally require the administrator's account password inline
- * ("sudo mode", App\Auth\AdminMfaPasswordReauth): set-up prepends an identity step, disable puts the
- * password first, and regenerate is tightened from password-OR-code to password-AND-code. The pre-
- * existing code requirements are kept. This blocks a walked-up unlocked session from enrolling or
- * rotating a factor and closes the password-only regenerate path that could mint TOTP-bypassing
- * recovery codes. See docs/internals/security.md.
- *
- * It also fixes the set-up QR code on servers without the imagick extension (common on
- * shared hosting): the provider's `getQRCodeInline` already returns a complete data: URI,
- * and Filament's parent re-base64-wraps it in that case, producing a double-encoded image
- * a browser cannot parse.
+ * Enabling or disabling MFA revokes the administrator's other sessions, as a password change does;
+ * regenerating recovery codes leaves the factor unchanged and revokes nothing. Every management
+ * action also demands the account password inline (AdminMfaPasswordReauth, docs/internals/security.md).
  */
 class AdminAppAuthentication extends AppAuthentication
 {
@@ -49,7 +35,8 @@ class AdminAppAuthentication extends AppAuthentication
             return parent::generateQrCodeDataUri($secret);
         }
 
-        // Return the provider's data URI as-is (PNG with imagick, SVG otherwise) — no re-wrap.
+        // Without imagick getQRCodeInline already returns a complete data: URI, which the parent
+        // would base64-wrap a second time.
         return $this->google2FA->getQRCodeInline(
             $this->getBrandName(),
             $this->getHolderName($user),
@@ -58,10 +45,9 @@ class AdminAppAuthentication extends AppAuthentication
     }
 
     /**
-     * A recovery code was spent — at the login challenge or to authorize a disable. The parent
-     * consumes the code (idempotent: a re-validation of the same code returns false), so this logs
-     * at most once per code, and never the code itself. Admin TOTP-code *failure* is deliberately
-     * not logged (see docs/internals/logging.md).
+     * The parent consumes the code, so a re-validation of the same code returns false and this logs
+     * at most once per code, never the code itself. Admin TOTP-code failure is deliberately not
+     * logged (docs/internals/logging.md).
      */
     public function verifyRecoveryCode(#[SensitiveParameter] string $recoveryCode, ?HasAppAuthenticationRecovery $user = null): bool
     {
@@ -81,11 +67,9 @@ class AdminAppAuthentication extends AppAuthentication
     }
 
     /**
-     * The login challenge swaps into the page mid-flow with focus nowhere, and the admin's next
-     * action is always typing the code read off their phone — focus the code input for them.
-     * The autofocus attribute alone cannot do it: browsers only honour it while the document is
-     * loading, and the challenge is Livewire-morphed in long after that, so the first digit box
-     * also focuses itself on insertion (deferred a tick to outlast the morph's focus handling).
+     * Browsers honour autofocus only while the document loads and the challenge is Livewire-morphed
+     * in after that, so the code input also focuses itself on insertion, deferred a tick to outlast
+     * the morph's own focus handling.
      *
      * @param  Authenticatable&HasAppAuthentication&HasAppAuthenticationRecovery  $user
      * @return array<Component>
@@ -112,9 +96,8 @@ class AdminAppAuthentication extends AppAuthentication
 
             $this->requirePassword($action);
 
-            // No framework event fires for these admin-side changes; log (and, for a factor
-            // change, revoke other sessions) in the action's after-hook. Regenerating recovery
-            // codes leaves the factor unchanged, so it logs without revoking (member parity).
+            // No framework event fires for these admin-side changes, so the after-hook logs them and,
+            // for a factor change, revokes the other sessions.
             $event = match ($action->getName()) {
                 'setUpAppAuthentication' => 'mfa.enabled',
                 'disableAppAuthentication' => 'mfa.disabled',
@@ -123,10 +106,9 @@ class AdminAppAuthentication extends AppAuthentication
             };
 
             if ($event !== null) {
-                // Filament runs after() even when the action body no-ops (e.g. set-up args minted
-                // for a different admin are discarded without saving), so the hooks compare the
-                // persisted columns around the body and skip both the log and the revocation
-                // unless a real change happened. Raw column reads: no need to decrypt to compare.
+                // Filament runs after() even when the action body saves nothing (set-up args minted
+                // for another admin are discarded), so the hooks compare the persisted columns around
+                // the body and skip both unless something changed.
                 $before = (object) ['secret' => null, 'codes' => null];
 
                 $action->before(function () use ($before): void {
@@ -163,12 +145,9 @@ class AdminAppAuthentication extends AppAuthentication
     }
 
     /**
-     * Fold the inline password re-auth into each management action.
-     *
-     * The raw value behind schema()/steps() lives in the protected Action::$schema property, which
-     * has no getter (schema()/steps() only replace it). Reading it through a bound closure and re-
-     * wrapping is a deliberate loud-break dependency: if a Filament upgrade renames the property this
-     * throws at runtime and AdminMfaReauthTest goes red rather than the guard silently disappearing.
+     * Action::$schema has no getter, so the vendor schema is read through a bound closure. A Filament
+     * rename of that property throws here at runtime, which is preferred to the password gate
+     * silently disappearing.
      */
     private function requirePassword(Action $action): void
     {
@@ -176,10 +155,9 @@ class AdminAppAuthentication extends AppAuthentication
         $vendorRaw = $readSchema($action);
 
         match ($action->getName()) {
-            // Wizard: prepend a self-contained identity step. The vendor steps are never introspected
-            // (an unattached Step throws on child access) — the captured raw value is only re-evaluated
-            // inside a fresh wrapper, and a new array is built per render so nothing accumulates. As a
-            // side effect the password is now asked before the QR code is shown.
+            // The vendor steps are never introspected, since an unattached Step throws on child access,
+            // and the captured raw value is re-evaluated inside a fresh closure so nothing accumulates
+            // across renders.
             'setUpAppAuthentication' => $action->steps(fn (Action $action): array => [
                 self::identityStep(),
                 ...$action->evaluate($vendorRaw),
@@ -190,9 +168,8 @@ class AdminAppAuthentication extends AppAuthentication
                 self::currentPasswordField(),
                 ...$action->evaluate($vendorRaw),
             ]),
-            // The vendor schema already carries the password and code fields; make both mandatory (was
-            // password-OR-code) and route the password through the shared throttled rule. The captured
-            // field instances are mutated in place — once per render — so ->rule() cannot accumulate.
+            // The captured vendor field instances are mutated in place once per render, so ->rule()
+            // cannot accumulate.
             'regenerateAppAuthenticationRecoveryCodes' => self::requirePasswordAndCode($vendorRaw),
             default => null,
         };
@@ -209,10 +186,8 @@ class AdminAppAuthentication extends AppAuthentication
 
     private static function currentPasswordField(): TextInput
     {
-        // markAsRequired, not required(): a real `required` rule is implicit and Laravel short-circuits
-        // the attribute once it fails, so on a blank password the fail-fast AdminMfaPasswordReauth would
-        // never run and the disable modal's recovery-code field could still be validated and consume a
-        // code. markAsRequired shows the asterisk; the implicit rule enforces blank/wrong/throttled.
+        // markAsRequired, not required(): Laravel stops an attribute's rules once `required` fails, so a
+        // blank password would skip the fail-fast rule and let the recovery-code field consume a code.
         return TextInput::make('current_password')
             ->label(__('Current password'))
             ->password()
@@ -244,8 +219,8 @@ class AdminAppAuthentication extends AppAuthentication
 
             match ($component->getName()) {
                 'code' => $required[] = $component->required(),
-                // The vendor label reads "Or, enter your current password" — an or-phrasing that
-                // became misleading once both fields are required. Same label as the other modals.
+                // The vendor label's or-phrasing ("Or, enter your current password") is misleading once
+                // both fields are required.
                 'password' => $required[] = $component->required()
                     ->label(__('Current password'))
                     ->rule(new AdminMfaPasswordReauth),
