@@ -148,7 +148,7 @@ abstract class RouteParity
         return $map === null ? null : $this->moduleOf($map);
     }
 
-    /** The first map rendering $laravelRoute as a page; POST submits (no op3Action) render none. */
+    /** The first map carrying an op3Action for $laravelRoute; a POST submit may carry the one of the page it re-renders. */
     private function renderedMap(string $laravelRoute): ?RouteMap
     {
         foreach ($this->maps() as $map) {

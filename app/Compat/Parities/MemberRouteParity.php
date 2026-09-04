@@ -9,9 +9,8 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * A moved OpenPNE 3 member URL is mapped to its routes/web.php redirect route when the target
- * needs the request (the own-profile and raw aliases), and recorded in compatRedirects() when the
- * move is static (the avatar editor, login).
+ * A moved OpenPNE 3 member URL is mapped to its named redirect route where routes/web.php declares
+ * one, and recorded in compatRedirects() otherwise.
  */
 class MemberRouteParity extends RouteParity
 {

@@ -13,8 +13,8 @@ class RouteParityCommandTest extends TestCase
             ->expectsOutputToContain('`diary.show`')
             ->expectsOutputToContain('`home` | `/`') // root renders as /, not //
             // A parity bound to an OpenPNE 3 module of another name (policy → default) still scopes
-            // its rows from the inventory; claimed here because each output line satisfies only the
-            // first expectation that matches it.
+            // its rows from the inventory; registered before the plain gap-line expectation below,
+            // because each output line satisfies only the first expectation that matches it.
             ->expectsOutputToContain('| 🔗 | `customizing_css` | `/cache/css/customizing.:sf_format` | GET | `design.customizing_css` |')
             ->expectsOutputToContain('- 🔗 `global_search` — Not ported:')
             ->expectsOutputToContain('Not ported:')

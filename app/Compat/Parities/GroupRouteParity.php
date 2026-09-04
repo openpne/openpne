@@ -80,9 +80,9 @@ class GroupRouteParity extends RouteParity
 
     public function compatRedirects(): array
     {
-        // The canonical moved to /groups/*, so every OpenPNE 3 /community/* GET URL redirects, as do
-        // the two OpenPNE 4-native shapes (pending, recent) the Modern surface once published under
-        // /community.
+        // The canonical moved to /groups/*, so the OpenPNE 3 /community/* GET URLs redirect (all but
+        // deleteImage, which gaps() drops), and so do the OpenPNE 4-native shapes the Modern surface
+        // once published under /community.
         return [
             '/community/:id' => 'group.show',
             '/community/search' => 'group.search',
