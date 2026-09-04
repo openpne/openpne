@@ -17,7 +17,7 @@ class FileController extends Controller
 {
     /**
      * Anything else, SVG included, is sent as an attachment so a stored file is never interpreted as a
-     * same-origin document; the upload validation already rejects non-raster types, so this is the second line.
+     * same-origin document; OpenPNE 3 rows are upgraded verbatim, so a non-raster type can be present.
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
