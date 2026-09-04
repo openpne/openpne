@@ -10,8 +10,8 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins that every write to a memoised relation calls ViewerRelations::flush; a forgotten flush fails
- * open, answering the request from before its own write, and nothing at the call site shows it.
+ * Pins that a write to a memoised relation clears the memo; a forgotten flush fails open, answering
+ * the request from before its own write, and nothing at the call site shows it.
  * Detection is coarse on purpose: a file naming one of the tables beside a write verb must flush or
  * be listed below with a reason.
  */

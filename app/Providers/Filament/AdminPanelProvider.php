@@ -85,8 +85,9 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make(fn (): string => __('System')),
             ])
             ->middleware([
-                // Outermost so every response gets the headers (a 419, an auth redirect), and listed at
-                // all because the panel does not inherit the `web` group.
+                // Outermost so every response gets the headers (a 419, an auth redirect), safe there
+                // because it only sets static headers, and listed at all because the panel does not
+                // inherit the `web` group.
                 SecurityHeaders::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

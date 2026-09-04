@@ -9,8 +9,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Pins that every content-posting and mail-triggering member write route keeps its named write
- * limiter, so a route edit that drops the throttle fails here rather than silently in production.
+ * Pins the named write limiter on the routes listed below, so a route edit that drops one of these
+ * throttles fails here rather than silently in production.
  */
 class WriteThrottleRoutesTest extends TestCase
 {

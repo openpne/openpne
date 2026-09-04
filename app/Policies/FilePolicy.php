@@ -95,10 +95,7 @@ class FilePolicy extends BasePolicy
         };
     }
 
-    /**
-     * The owning entity of $file, or null when it cannot be resolved to an existing
-     * model (unlinked, unknown morph alias, or deleted) — all of which deny.
-     */
+    /** Null (unlinked, unknown morph alias, or deleted) denies unless explicit_visibility is 'public'. */
     private function owner(File $file): ?Model
     {
         if ($file->related_entity_type === null || $file->related_entity_id === null) {

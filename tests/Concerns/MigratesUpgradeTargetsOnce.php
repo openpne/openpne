@@ -10,10 +10,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Migrates once per worker process and resets only data between methods: the source tables are raw
- * DDL, which commits and so cannot ride inside RefreshDatabase's transaction, and a per-method
- * migrate:fresh is the MySQL lane's long pole. Not for a test that drops or alters an app table;
- * those keep DatabaseMigrations.
+ * Migrates once per worker and resets only data between methods: the raw-DDL source tables commit and
+ * so cannot ride inside RefreshDatabase's transaction, and a per-method migrate:fresh is the MySQL
+ * lane's long pole. Not for a test that drops or alters an app table, directly or through the
+ * file_bin FK rewire a run migrating `files` performs; those keep DatabaseMigrations.
  */
 trait MigratesUpgradeTargetsOnce
 {

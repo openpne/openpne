@@ -56,6 +56,7 @@ class AltchaCaptcha implements Captcha
         }
 
         try {
+            // Rebuilt into the library's objects by hand because it offers no one-call deserializer.
             $data = json_decode(base64_decode($payload, true) ?: '', true, 512, JSON_THROW_ON_ERROR);
             $signature = $data['challenge']['signature'] ?? null;
             $params = ChallengeParameters::fromArray($data['challenge']['parameters']);

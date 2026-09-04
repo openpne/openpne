@@ -43,9 +43,9 @@ class FilesServiceProvider extends ServiceProvider
                 ),
             };
 
-            // decodeAnimation stays on for Imagick: intervention/image 4.2.0 empties the Imagick object
-            // the decoder reads the media type from, so every GIF would fail, and StillImageDecoder
-            // collapses the frames instead.
+            // With decodeAnimation off, intervention/image 4.2.0 empties the Imagick object the decoder
+            // reads the media type from and every GIF fails, so it stays on for Imagick and
+            // StillImageDecoder collapses the frames instead.
             return new ImageManager($driver, decodeAnimation: $driver === ImagickDriver::class);
         });
     }

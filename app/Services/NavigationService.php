@@ -28,8 +28,7 @@ class NavigationService
 
     /**
      * Route names that resolve but are not real pages (OpenPNE 3 compatibility shims), so a nav
-     * item pointing at them is hidden rather than linking to a 404/redirect. Empty now that
-     * /member/config is a real page; keep the mechanism for the next shim.
+     * item pointing at them is hidden rather than linking to a redirect; empty is a valid state.
      *
      * @var list<string>
      */

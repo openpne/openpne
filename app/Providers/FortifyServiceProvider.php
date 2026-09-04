@@ -114,8 +114,9 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
-        // Keyed by the challenged member alone: the adversary already holds the password, so an IP
-        // component would hand a distributed attacker 5/min per IP.
+        // Keyed by the challenged member alone, since the adversary already holds the password and an
+        // IP component would hand a distributed attacker 5/min per IP; a stray with no login.id shares
+        // one bucket and fails at challengedUser() anyway.
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id'));
         });
