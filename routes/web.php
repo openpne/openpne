@@ -256,11 +256,8 @@ Route::middleware('auth.session')->group(function () {
         ->where([
             'format' => 'jpg|png|gif|webp',
             'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
-            // `.` is admitted because OpenPNE 3 file names allow [\w._-]; the greedy match still binds
-            // the trailing `.{ext}`.
-
-            // The pattern is not the gate: the File-name lookup and Flysystem's traversal guard decide
-            // what is served.
+            // `.` is admitted because OpenPNE 3 file names allow [\w._-]; the pattern is not the gate,
+            // since the File-name lookup and Flysystem's traversal guard decide what is served.
             'name' => '[A-Za-z0-9_.-]+',
             'ext' => 'jpg|png|gif|webp',
         ])

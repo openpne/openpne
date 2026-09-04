@@ -201,7 +201,7 @@ change from a problem when you go through it.
 - **Site settings** — an `sns_config` value is copied only where this version has a matching
   setting, and **the security settings are never copied**: CAPTCHA starts on and registration starts
   invite-only whatever the OpenPNE 3 site had, so set them yourself before the cutover
-  (*Settings → Authentication*). The dry-run report lists what the settings step copies. Values with no
+  (*Settings → Registration settings*). The dry-run report lists what the settings step copies. Values with no
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
   JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen)
