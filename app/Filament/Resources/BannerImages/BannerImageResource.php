@@ -52,8 +52,6 @@ class BannerImageResource extends Resource
     }
 
     /**
-     * The shared image pool for the Banner page picker grid.
-     *
      * @return list<array{id: int, title: string, thumb: string, dims: string, linkUrl: string}>
      */
     public static function pickerOptions(): array
@@ -79,9 +77,7 @@ class BannerImageResource extends Resource
     public const LIGHTBOX_CLICK = '$dispatch(\'open-image-lightbox\', { src: $el.dataset.lbSrc, title: $el.dataset.lbTitle, dims: $el.dataset.lbDims, linkUrl: $el.dataset.lbUrl })';
 
     /**
-     * HTML attributes that make an <img> open the shared lightbox on click (used on the list thumbnail
-     * and the edit preview). The caller supplies sizing; this adds the behavior. Empty when there are
-     * no bytes to show.
+     * The caller supplies sizing; empty when there are no bytes to show.
      *
      * @return array<string, string>
      */

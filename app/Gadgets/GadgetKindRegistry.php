@@ -32,12 +32,8 @@ use App\Gadgets\Kinds\TimelineFriendGadget;
 use App\Gadgets\Kinds\TimelineProfileGadget;
 
 /**
- * The registered gadget kinds. A `gadgets.name` not found here (an unregistered OpenPNE 3 kind,
- * e.g. a plugin gadget) is hidden at render and flagged Unsupported in admin; adding a kind is
- * registering its class here.
- *
- * LEGACY_NAMES resolves a name OpenPNE 4 has since renamed. It is a read-side alias only: all()
- * stays canonical, so admin and the seeder can never write the old spelling back.
+ * LEGACY_NAMES is a read-side alias only: all() stays canonical, so admin and the seeder never
+ * write the old spelling back.
  */
 final class GadgetKindRegistry
 {

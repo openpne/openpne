@@ -9,11 +9,8 @@ use Filament\Facades\Filament;
 use Filament\Widgets\Widget;
 
 /**
- * A full-width call-to-action prompting the signed-in administrator to enable two-factor
- * authentication — the opt-in posture relies on the prompt being seen. Rendered only while
- * MFA is off (a nudge you've acted on should not linger; the Security nav item remains the
- * ongoing entry point), and styled as an alert, not a stat, so it reads as being about the
- * operator's own account rather than a member metric.
+ * Rendered only while the signed-in administrator's MFA is off: the opt-in posture relies on the
+ * prompt being seen, and an acted-on nudge should not linger.
  */
 class MfaReminderWidget extends Widget
 {

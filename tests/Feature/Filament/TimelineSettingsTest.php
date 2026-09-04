@@ -12,10 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The timeline settings editor. DB-authoritative; a fresh install with no row falls back to the
- * fail-closed default (web-public posts off).
- */
 class TimelineSettingsTest extends TestCase
 {
     use RefreshDatabase;

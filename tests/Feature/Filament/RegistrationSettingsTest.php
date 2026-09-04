@@ -16,11 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The registration/authentication settings editor. These settings are DB-authoritative: saving takes
- * effect immediately (the CAPTCHA wrapper re-reads the toggle rather than freezing it), and a fresh
- * install with no rows falls back to the fail-closed defaults (invite-only, CAPTCHA on).
- */
 class RegistrationSettingsTest extends TestCase
 {
     use RefreshDatabase;

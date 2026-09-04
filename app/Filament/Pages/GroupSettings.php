@@ -26,11 +26,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The group-wide settings: how much of a group's talk this site notifies about
- * (App\Features\GroupTalk\GroupTalkNotifyMode) and what the topic / event boards offer.
- * `sns_settings` is authoritative; a value is stored verbatim on save and resolves to its default
- * while no row exists. The talk default sets a default, not a policy: a member's own catalog row
- * overrides it (docs/internals/notifications.md).
+ * A value resolves to its default only while no `sns_settings` row exists. The talk default is a
+ * default, not a policy: a member's own catalog row overrides it (docs/internals/notifications.md).
  *
  * @property-read Schema $form
  */

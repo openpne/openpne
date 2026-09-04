@@ -72,8 +72,8 @@ class AppearanceNavigationTest extends TestCase
     {
         app()->setLocale('ja');
 
-        // getNavigation() is keyed by a serialized group label; values()->all() reindexes to positions.
-        // The Dashboard sits in an unlabelled bucket above the groups, which filter() drops.
+        // getNavigation() is keyed by serialized group label, with the Dashboard in an unlabelled
+        // bucket that filter() drops.
         $order = (new Collection(Filament::getCurrentPanel()->getNavigation()))
             ->map->getLabel()
             ->filter()
@@ -93,8 +93,6 @@ class AppearanceNavigationTest extends TestCase
 
     public function test_gadget_form_shows_field_helper_text(): void
     {
-        // The Placement field keeps its helper; the Gadget field is now a radio list whose per-kind
-        // descriptions are asserted in GadgetResourceTest.
         Livewire::test(CreateGadget::class)
             ->assertSee(__('Which page this gadget appears on.'));
     }

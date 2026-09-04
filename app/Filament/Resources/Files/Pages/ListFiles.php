@@ -26,10 +26,8 @@ class ListFiles extends ListPage
         $maxDimension = (int) config('openpne.images.max_upload_dimension', 5000);
 
         return [
-            // Upload a standalone public image (no owning entity) to embed in custom HTML/CSS. Stored
-            // through FileUploader as explicit_visibility='public' so PublicFileController serves it to
-            // guests; the list reloads after the action so the new file shows here. Raster only, ≤5 MB,
-            // dimension-capped (the banner upload rules); the temp upload is handed to FileUploader.
+            // Ownerless and explicitly public: the image is meant for custom HTML/CSS, so
+            // PublicFileController must serve it to guests.
             Action::make('uploadImage')
                 ->label(__('Upload image'))
                 ->icon(Heroicon::OutlinedArrowUpTray)

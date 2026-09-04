@@ -12,10 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The member-privacy settings editor. DB-authoritative; a fresh install with no row falls back to the
- * fail-closed default (web-public age off).
- */
 class MemberPrivacySettingsTest extends TestCase
 {
     use RefreshDatabase;

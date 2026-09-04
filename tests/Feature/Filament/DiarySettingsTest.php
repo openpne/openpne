@@ -14,8 +14,8 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The diary settings editor. DB-authoritative; a fresh install with no row falls back to OpenPNE 3's
- * default (web-public entries on), so the path that matters here is an administrator turning it off.
+ * A fresh install with no row falls back to OpenPNE 3's default (web-public entries on), so the path
+ * asserted here is an administrator turning it off.
  */
 class DiarySettingsTest extends TestCase
 {

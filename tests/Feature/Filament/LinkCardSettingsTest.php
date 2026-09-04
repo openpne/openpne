@@ -70,12 +70,8 @@ class LinkCardSettingsTest extends TestCase
 
     public function test_the_page_says_what_turning_it_on_does(): void
     {
-        // The label does not imply the server reaches out to every linked page, from private posts
-        // included — nor that a link to one of this site's own pages is previewed whatever the
-        // switch says. Both belong where the decision is made.
-        // Asserted through __() under an explicit locale: the admin panel renders in the site
-        // language, so hardcoding the English copy would pass or fail depending on that setting
-        // rather than on whether the page carries the warning.
+        // Asserted through __() under an explicit locale: the panel renders in the site language, so
+        // hardcoded English copy would pass or fail on that setting rather than on the warning's presence.
         foreach (['en', 'ja'] as $locale) {
             app()->setLocale($locale);
 

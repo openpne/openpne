@@ -11,10 +11,8 @@ use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 activityBox: the same kind renders by context. On the home it is the viewer + friends feed
- * (subject = viewer); on a profile it is the owner's timeline under the viewer's clearance (subject =
- * owner). The heading and "More" target follow the context. A guest never reaches this members-only
- * kind (GadgetService hides it), so a null viewer/subject defensively yields an empty box.
+ * OpenPNE 3 activityBox: `subject` is the viewer on the home and the owner on a profile. A guest never
+ * reaches this members-only kind, so a null viewer or subject yields an empty box rather than an error.
  */
 class ActivityBox extends Component
 {

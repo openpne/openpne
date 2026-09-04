@@ -27,10 +27,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
 /**
- * The Classic banner config, one section per placement (#topBanner and the #sideBanner gadget). Each
- * placement either shows images picked from the shared pool (default, one at random per request) or
- * operator HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and
- * edited in the Banner images resource; here you choose which of them each placement shows.
+ * The HTML mode stores operator markup verbatim; it is admin-trusted and rendered unescaped.
  *
  * @property-read Schema $form
  */
@@ -109,9 +106,9 @@ class BannerSettings extends Page
 
             $banner = Banner::firstOrCreate(['name' => $name]);
             $banner->is_use_html = $mode === 'html';
-            // Write each mode's payload only in its own mode so the other survives a round-trip
-            // (OpenPNE 3 keeps both banner.html and the image selection regardless of is_use_html;
-            // the hidden field is also not dehydrated, so writing it here would wipe it).
+            // Each mode writes only its own payload: OpenPNE 3 keeps both banner.html and the image
+            // selection regardless of is_use_html, and the hidden field is not dehydrated, so writing
+            // it would wipe it.
             if ($mode === 'html') {
                 $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
             }
@@ -151,9 +148,6 @@ class BannerSettings extends Page
     }
 
     /**
-     * One section per placement: the mode, the pool images shown when in image mode, and the HTML used
-     * when in HTML mode.
-     *
      * @return list<Section>
      */
     private function buildSections(): array

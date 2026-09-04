@@ -11,11 +11,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
- * Navigation item form. `uri` is validated against the same allow-list the renderer uses
- * (App\Support\NavigationUri): a single-slash internal path or an http(s) URL. The `:id`
- * placeholder is render-time substitution and is only meaningful in the friend/community contexts,
- * so it is rejected elsewhere. Captions are virtual fields persisted to navigation_translations by
- * the Create/Edit pages (source_uri is not exposed — it is an upgrade/DOM-id concern).
+ * Captions are virtual fields that the Create/Edit pages persist to navigation_translations.
+ * source_uri is deliberately not exposed: it is an upgrade and DOM-id concern.
  */
 class NavigationForm
 {

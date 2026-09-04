@@ -73,8 +73,8 @@ class GroupsTable
                         Notification::make()->success()->title(__('Saved'))->send();
                     }),
 
-                // One-time bulk join of all existing members; registration does not auto-join
-                // default groups. Idempotent via AddAllMembers.
+                // Registration does not auto-join default groups; this bulk join is the catch-up and is
+                // safe to repeat.
                 Action::make('addAllMembers')
                     ->label(__('Add all members'))
                     ->icon(Heroicon::OutlinedUserPlus)

@@ -15,11 +15,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The feature-toggle editor. DB-authoritative; a fresh install with no rows runs every unit except
- * the page stores its whole group on
- * save (docs/internals/feature-toggles.md).
- */
 class FeatureSettingsTest extends TestCase
 {
     use RefreshDatabase;

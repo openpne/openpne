@@ -8,14 +8,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Guards the registry in resources/js/lib/chat/opening-scroll.ts, which names the pages that scroll
- * themselves when they open and so decline Inertia's placement.
- *
- * The name is a string on both sides, so drift is silent: `message/conversation/index` and
- * `message/conversations/index` differ by one letter and both exist, and the module's own unit tests
- * write the same literal the registry does — they would stay green while the screen stopped opening
- * at the newest message. Only the filesystem can catch that, so it is checked in both directions: a
- * name that resolves to nothing, and a conversation that never got a name.
+ * Pins the SELF_PLACING registry in resources/js/lib/chat/opening-scroll.ts to the filesystem in both
+ * directions: a registered name must resolve to a page, and every page driving the chat stream must be
+ * registered. The name is a string on both sides and the module's unit tests write the same literal,
+ * so only the filesystem catches drift.
  */
 class ConversationScrollRegistryTest extends TestCase
 {

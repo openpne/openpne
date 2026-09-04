@@ -25,11 +25,8 @@ class AdminFormColumnsTest extends TestCase
     }
 
     /**
-     * Single column is the house default for admin forms: the custom settings Pages are already
-     * single-column, so a Resource form that omits `->columns()` silently inherits Filament's
-     * 2-column default and lays out ragged. `hasCustomColumns()` is exactly "did this form set a
-     * column count, vs fall back to the default"; asserting explicitness (not exactly 1) keeps a
-     * deliberate future multi-column root open while still catching the forgot-to-set-it case.
+     * Explicitness is asserted rather than exactly one column, so a deliberate multi-column root stays
+     * possible while an omitted `->columns()` (which inherits Filament's 2-column default) is caught.
      */
     public function test_every_resource_form_sets_an_explicit_column_count(): void
     {
@@ -38,9 +35,8 @@ class AdminFormColumnsTest extends TestCase
         $this->assertNotEmpty($resources, 'The admin panel registers resources to check.');
 
         foreach ($resources as $resource) {
-            // A list-only moderation resource (e.g. diary monitoring) does not declare a form(),
-            // so it inherits the base Resource::form() that returns the schema unchanged. The
-            // single-column rule only constrains resources that actually have a form — skip the rest.
+            // A list-only resource inherits the base Resource::form(), which returns the schema
+            // unchanged, so it has no form to constrain.
             if ((new ReflectionMethod($resource, 'form'))->getDeclaringClass()->getName() === Resource::class) {
                 continue;
             }

@@ -23,13 +23,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Turn link preview cards on or off.
- *
- * The one switch here decides whether this site makes outbound requests at all, so the page carries
- * the explanation an operator needs to answer that: the site fetches the pages members link to, for
- * private and friends-only bodies as well as open ones, which tells those destinations that the link
- * was shared here. `sns_settings` is authoritative and the value resolves to its fail-closed default
- * (off) while no row exists.
+ * This switch decides whether the site makes outbound requests at all; the value resolves to its
+ * fail-closed default (off) while no row exists.
  *
  * @property-read Schema $form
  */
@@ -136,11 +131,8 @@ class LinkCardSettings extends Page
             ->schema([
                 Toggle::make(SnsSettingKey::LinkCardEnabled->value)
                     ->label(SnsSettingKey::LinkCardEnabled->label())
-                    // Stated on the page because it is not what "show previews" implies: the server
-                    // reaches out to every linked page, including from bodies only a few people can
-                    // read, and the destination learns the link was shared here. What the switch does
-                    // *not* govern is worth saying too: a link to one of this site's own pages is
-                    // built from the record it names, so it needs no request and no permission.
+                    // The copy states the outbound fetch, even from restricted bodies, because "show
+                    // previews" does not imply one; links to this site's own pages need no request.
                     ->helperText(__('This site will request the pages members link to, including from private posts and posts limited to %friends%. Those sites can tell the link was shared here. Links to pages on this site are never requested.')),
             ]);
     }

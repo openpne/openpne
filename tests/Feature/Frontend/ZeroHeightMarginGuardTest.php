@@ -8,24 +8,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * An element drawn at zero height is drawn there so that it costs the page nothing — a floating pill
- * over the conversation, an overlay that must not move what it floats over. Zero height does not give
- * that on its own: every member page is a `<main>` carrying a `space-y-*` from
- * `components/member-frame.tsx`, and Tailwind v4 spends that as a `margin-bottom` on every child but
- * the last. A wrapper written `h-0` and nothing else therefore takes 16px, permanently if it is
- * mounted permanently, which is the opposite of what `h-0` was reached for.
- *
- * Found by measuring rather than reading (the jump-to-latest pill grew the page by 16px each time it
- * appeared, on both conversation surfaces), so the guard is here to make the finding outlive the fix.
- *
- * What it asks for is that the bottom margin be **stated**, not that it be zero. `h-0 mb-0` passes;
- * so would a deliberate `h-0 mb-4`. Only silence fails, because silence is where the page's rhythm
- * answers for you. If a future `h-0` is not a child of a `space-y-*` container it inherits no margin
- * and the rule does not bind — but `mb-0` costs nothing there, so satisfying the guard is cheaper
- * than arguing with it.
- *
- * Per class string rather than per file: the two have to travel together to be read together, and a
- * file-wide check would pass on an `mb-0` written for something else entirely.
+ * A `space-y-*` on every member page's `<main>` (components/member-frame.tsx) becomes a margin-bottom
+ * on every child but the last under Tailwind v4, so a class string written `h-0` alone still takes
+ * 16px. The bottom margin must be stated in the same class string, not be zero: `h-0 mb-4` passes,
+ * silence fails.
  */
 class ZeroHeightMarginGuardTest extends TestCase
 {
@@ -36,10 +22,8 @@ class ZeroHeightMarginGuardTest extends TestCase
     private const STATES_MARGIN = '/(?<![\w.\-])(?:[a-z-]+:)?mb-/';
 
     /**
-     * Quoted strings on one line. Class strings are written on one line here, and staying on one is
-     * what keeps prose out: an apostrophe in a comment opens a "string" that runs to the next one, and
-     * across lines that swallows whole blocks — enough to report an unreadable blob, and enough to
-     * pair an `h-0` in one place with an `mb-` in another and pass.
+     * Matched within one line: an apostrophe in a comment opens a "string" that, across lines, would
+     * swallow whole blocks and pair an `h-0` in one place with an `mb-` in another.
      */
     private const CLASS_STRINGS = '/([\'"])((?:(?!\1)[^\r\n])*)\1/';
 

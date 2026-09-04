@@ -8,15 +8,9 @@ use App\LinkCard\CardLayout;
 use Tests\TestCase;
 
 /**
- * A card's shape is named once in PHP and read by two renderers that share no code — the React
- * component and the Blade one — so all three have to mean the same strings by it. Drift ships a card
- * that falls through to the wrong shape on one surface only, which is invisible from either side:
- * both keep rendering, and neither is obviously wrong on its own.
- *
- * **This guards the vocabulary, not the drawing.** Both renderers agreeing on the word "wide" says
- * nothing about their agreeing on what a wide card looks like — one of them shipped without the
- * no-enlarging cap the other had, and this test was green throughout. What holds the drawing to the
- * same rules is LinkCardRenderingTest for Classic and link-card.test.tsx for Modern, side by side.
+ * A card's layout is named once in PHP (CardLayout) and read by the React and Blade renderers, which
+ * share no code, so all three must mean the same strings. This guards the vocabulary, not the drawing:
+ * the renderers agreeing on "wide" says nothing about the shape they draw.
  */
 class LinkCardLayoutParityTest extends TestCase
 {
@@ -44,9 +38,8 @@ class LinkCardLayoutParityTest extends TestCase
 
     public function test_the_classic_banner_is_held_to_the_box_the_image_grid_declares(): void
     {
-        // The box is named once, in boxedPictureMaxWidth, and Modern calls it; Classic writes the
-        // formula out by hand in Blade. Two string assertions that do not know each other held them
-        // together before, which is how one surface once shipped without the other's cap.
+        // boxedPictureMaxWidth names the box once and Modern calls it, while Classic writes the formula
+        // by hand in Blade, so the two are pinned to each other here.
         $grid = (string) file_get_contents(resource_path('js/components/image-grid.tsx'));
         $this->assertSame(1, preg_match('/export function boxedPictureMaxWidth\([^)]*\)[^{]*\{(?<body>.*?)\n\}/s', $grid, $fn));
         preg_match_all('/\d+rem/', $fn['body'], $box);
@@ -65,9 +58,8 @@ class LinkCardLayoutParityTest extends TestCase
 
     public function test_the_classic_component_compares_against_a_layout_that_exists(): void
     {
-        // Blade names only the shape it branches on — the other is the fallthrough — so this is not a
-        // set comparison. What it catches is the typo, and the rename that leaves Classic testing for
-        // a string PHP no longer emits: every card would quietly take the else.
+        // Blade names only the shape it branches on, so this is not a set comparison; it catches a
+        // value PHP no longer emits, which would send every card down the else.
         $blade = (string) file_get_contents(resource_path('views/components/link-card.blade.php'));
 
         preg_match_all("/\\\$card\['layout'\]\s*===\s*'(?<value>[a-z]+)'/", $blade, $m);

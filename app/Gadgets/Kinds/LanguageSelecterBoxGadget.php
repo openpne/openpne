@@ -7,9 +7,8 @@ namespace App\Gadgets\Kinds;
 use App\Gadgets\GadgetKind;
 
 /**
- * A locale switcher (OpenPNE 3 default/languageSelecterBox). Lives in the side banner and is public
- * (guests switch language too). Rendered as the functional equivalent of OpenPNE 4 locale switching,
- * not a byte-for-byte template port.
+ * OpenPNE 3 languageSelecterBox, public because guests switch language too. The view is a functional
+ * equivalent of OpenPNE 4 locale switching, not a byte-for-byte port of the OpenPNE 3 template.
  */
 class LanguageSelecterBoxGadget extends GadgetKind
 {

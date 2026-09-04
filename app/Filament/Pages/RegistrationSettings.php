@@ -24,9 +24,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the registration settings (who may register, whether the bot challenge is enforced).
- * `sns_settings` is authoritative: every field is stored verbatim on save. While no row exists yet
- * a setting resolves to its fail-closed default (registration invite-only, CAPTCHA on).
+ * While no `sns_settings` row exists a setting resolves to its fail-closed default (registration
+ * invite-only, CAPTCHA on).
  *
  * @property-read Schema $form
  */

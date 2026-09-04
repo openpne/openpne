@@ -30,15 +30,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 
 /**
- * Edit the system-mail templates. The templates are a fixed registry
- * (App\Mail\Template\MailTemplate), not table rows, so this lists them from the registry and edits one at
- * a time in a modal — each template saves on its own, which keeps the editing target obvious and isolates
- * a change to a single template (a long single form made accidental edits easy to miss).
- *
- * A row is persisted only when a field diverges from the built-in default (absence = default), so an
+ * A row is persisted only where a field diverges from the built-in default (absence = default), so an
  * untouched template keeps tracking the registry wording and the OpenPNE 3 import stays authoritative.
- * Required/security mails (registration, password, email change) have no toggle — the service always
- * sends them. The body is stored verbatim (line endings normalised to LF).
  */
 class MailTemplateSettings extends Page implements HasTable
 {

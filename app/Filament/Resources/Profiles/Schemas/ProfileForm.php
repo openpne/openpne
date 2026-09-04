@@ -16,13 +16,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Profile field-definition form. On create the admin either registers a preset (structure
- * locked from config/preset_profile.php) or builds a custom field; on edit a preset's structural
- * fields (name/form_type/value_type/value_regexp/is_unique) are read-only, matching OpenPNE 3's
- * opPresetProfileForm. Captions/info are virtual fields persisted to profile_translations by the
- * Create/Edit pages.
- */
+/** Captions and info are virtual fields that the Create/Edit pages persist to profile_translations. */
 class ProfileForm
 {
     /** form_type values that carry a value_type (and so text validation). */
@@ -106,9 +100,9 @@ class ProfileForm
                             ->required()
                             ->maxLength(64)
                             ->unique(table: 'profiles', column: 'name', ignoreRecord: true)
-                            // OpenPNE 3 ProfileForm: a custom name is a word with at least one
-                            // letter, and "op_preset_" is reserved for presets (it drives
-                            // Profile::isPreset()). A preset's own name is locked, so skip it there.
+                            // OpenPNE 3 ProfileForm rule: a custom name is a word with at least one letter,
+                            // and "op_preset_" is reserved because it drives Profile::isPreset(); a preset's
+                            // own locked name is exempt.
                             ->rules(fn (string $operation, ?Model $record): array => self::isPresetEdit($operation, $record) ? [] : [
                                 'regex:/^\w*[a-z]\w*$/i',
                                 function (string $attribute, mixed $value, callable $fail): void {
