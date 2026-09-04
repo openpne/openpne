@@ -484,9 +484,9 @@ class SafeHttpFetcherTest extends TestCase
     }
 
     /**
-     * @param  string|null  $connectedTo  the peer address the transport will report; null keeps the
+     * @param  string|null  $connectedTo  The peer address the transport will report; null keeps the
      *                                    default (the address the pin named), and NO_PEER_REPORTED
-     *                                    models a transport that says nothing
+     *                                    models a transport that says nothing.
      */
     private function respondsWith(Response $response, ?string $connectedTo = null): void
     {
@@ -505,8 +505,8 @@ class SafeHttpFetcherTest extends TestCase
     }
 
     /**
-     * @param  int|null  $errno  the curl errno; Guzzle hands it to on_stats as the handler error
-     *                           data before rejecting, which is where the fetcher reads it
+     * @param  int|null  $errno  The curl errno; Guzzle hands it to on_stats as the handler error
+     *                           data before rejecting, which is where the fetcher reads it.
      */
     private function failsWith(GuzzleException $failure, ?int $errno = null): void
     {

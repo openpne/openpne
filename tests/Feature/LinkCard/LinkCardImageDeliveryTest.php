@@ -438,7 +438,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_a_reply_addresses_its_picture_like_any_other_row(): void
     {
-        // The audience is the test above; this one is the address.
+        // The audience is test_a_reply_is_authorised_by_its_thread_root_not_by_its_own_author; this
+        // one is the address.
         $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
         $reply = TimelinePost::factory()->for(Member::factory()->create())->create([
             'visibility' => Visibility::Open,

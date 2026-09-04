@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 /**
- * Answers whether an image is provably one still frame by walking the container's own block
- * lengths, so every exit that is not a completed walk is a refusal; a parse that gave up is what an
- * attacker constructs. Why neither a marker search nor decoding can answer this is in
- * docs/internals/link-cards.md (The image is copied).
+ * Walks the container's own block lengths, so every exit that is not a completed walk proving one
+ * still frame is a refusal; a parse that gave up is what an attacker constructs. Why neither a
+ * marker search nor decoding can answer this is in docs/internals/link-cards.md (The image is
+ * copied, and the order of checks is the safety).
  */
 final class ImageContainer
 {

@@ -18,9 +18,7 @@ use Throwable;
 final class MetadataExtractor
 {
     /**
-     * @param  string  $html  the response body, in whatever encoding it arrived in
-     * @param  string|null  $charset  the Content-Type charset, when declared
-     * @param  string  $url  the response's own URL, after redirects, which relative references resolve against
+     * @param  string  $url  The response's own URL, after redirects, which relative references resolve against.
      */
     public function extract(string $html, ?string $charset, string $url): LinkMetadata
     {

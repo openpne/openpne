@@ -160,9 +160,9 @@ final class SafeHttpFetcher
         try {
             $uri = (new Uri($url))->withHost(str_contains($host, ':') ? "[{$host}]" : $host);
         } catch (\InvalidArgumentException) {
-            // Caught as the bare `InvalidArgumentException` (`withHost()` throws that, not
-            // `MalformedUriException`) so a URL the parser refuses is reported malformed before the
-            // resolver sees it.
+            // Caught as the bare `InvalidArgumentException`, which the parser's `MalformedUriException`
+            // extends and `withHost()` throws directly, so a URL the parser refuses is reported
+            // malformed before the resolver sees it.
             throw OutboundException::blocked('Malformed URL: ['.self::describe($url).'].');
         }
 
@@ -352,9 +352,9 @@ final class SafeHttpFetcher
         try {
             return (string) UriResolver::resolve(new Uri($from->url), new Uri($location));
         } catch (\InvalidArgumentException) {
-            // Caught as the bare `InvalidArgumentException` (the URI mutators throw that, not
-            // `MalformedUriException`) and reported as blocked, so `OutboundException` stays this
-            // class's whole contract.
+            // Caught as the bare `InvalidArgumentException`, which the parser's `MalformedUriException`
+            // extends and the URI mutators throw directly, so `OutboundException` stays this class's
+            // whole contract.
             throw OutboundException::blocked('Redirect from ['.self::describe($from->url).'] carries a malformed Location.');
         }
     }

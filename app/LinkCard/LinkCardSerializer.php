@@ -62,7 +62,7 @@ final class LinkCardSerializer
             'description' => $card->description,
             'siteName' => $card->site_name,
             'domain' => self::domain($card->url),
-            // Decided here so the two renderers cannot disagree, as the gates above are (see CardLayout).
+            // Decided here so the two renderers cannot disagree, as the gates are (see CardLayout).
             'layout' => ($wide ? CardLayout::Wide : CardLayout::Compact)->value,
             // Never the file's own URL: a card is shared by every body mentioning the link, so the
             // address has to name this record for the request to be authorised against it.

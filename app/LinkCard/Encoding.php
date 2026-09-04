@@ -114,8 +114,9 @@ final class Encoding
     /**
      * Both spellings are matched: the HTML5 `<meta charset>` and the older
      * `<meta http-equiv="Content-Type" content="text/html; charset=...">`, which is what the legacy
-     * pages this exists for carry. Only the head is examined, since scanning a whole document for
-     * something shaped like a charset invites matching body text.
+     * pages this exists for carry. Only the head is examined, since HTML requires the declaration
+     * near the top and scanning a whole document for something shaped like a charset invites
+     * matching body text.
      */
     private static function sniff(string $html): ?string
     {

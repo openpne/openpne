@@ -26,7 +26,7 @@ final class OembedClient
      * Never throws: an unreachable, hostile or non-oEmbed endpoint leaves the card with whatever the
      * page provided, since failing an optional enrichment would turn a working card into no card.
      *
-     * @param  float|null  $deadline  the job's remaining budget, so this cannot spend a fresh one
+     * @param  float|null  $deadline  The job's remaining budget, so this cannot spend a fresh one.
      */
     public function fetch(string $url, ?float $deadline = null): LinkMetadata
     {
