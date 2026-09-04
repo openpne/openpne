@@ -24,17 +24,15 @@ class DirectMessageRouteParity extends RouteParity
             new RouteMap('readReceiveMessage', '/message/read/:id', 'message.receive.show', 'GET', op3Action: 'show'),
             new RouteMap('readSendMessage', '/message/check/:id', 'message.send.show', 'GET', op3Action: 'show'),
             new RouteMap('readDustMessage', '/message/checkDelete/:id', 'message.trash.show', 'GET', op3Action: 'show'),
-            // Compose / reply / draft edit. OpenPNE 3 reached these via the module/action fallback
-            // (no named route), so they bind to no inventory entry but still derive a body id.
+            // Compose / reply / draft edit: reached through the module/action fallback in OpenPNE 3,
+            // so no named route.
             new RouteMap(null, null, 'message.compose', 'GET', op3Action: 'sendToFriend'),
             new RouteMap(null, null, 'message.compose.store', 'POST'),
             new RouteMap(null, null, 'message.reply', 'GET', op3Action: 'reply'),
             new RouteMap(null, null, 'message.draft.edit', 'GET', op3Action: 'edit'),
             new RouteMap(null, null, 'message.draft.update', 'POST'),
-            // Trash. The move-to-trash and purge submits are CSRF form posts (POST in the inventory),
-            // not bookmarkable URLs; the single purge has a GET confirm page. Restore and the bulk
-            // list action have no named OpenPNE 3 route (module/action fallback), so they bind to no
-            // inventory entry. The bulk route derives the list body id for its confirmation page.
+            // Trash: restore and bulk are fallback-reached (no named route), and bulk carries the list
+            // action because its confirmation page renders under page_message_list.
             new RouteMap('deleteReceiveMessage', '/message/deleteReceiveMessage/:id', 'message.receive.trash', 'POST'),
             new RouteMap('deleteSendMessage', '/message/deleteSendMessage/:id', 'message.send.trash', 'POST'),
             new RouteMap('deleteConfirmDustMessage', '/message/deleteConfirm/:id', 'message.trash.purge.confirm', 'GET', op3Action: 'deleteConfirm'),
@@ -46,9 +44,8 @@ class DirectMessageRouteParity extends RouteParity
 
     protected function layouts(): array
     {
-        // OpenPNE 3 message module is layoutB (its view.yml `all:`): the four box lists and the
-        // per-box show carry the message sidemenu. The compose/reply/draft-edit forms and the
-        // delete-confirm pages keep layoutC (decorate_with on the confirms, no sidemenu).
+        // OpenPNE 3's message view.yml sets layoutB module-wide but layoutC on sendToFriendInput, and
+        // the confirms decorate_with('layoutC').
         return [
             'message.receive' => 'B',
             'message.send' => 'B',
@@ -63,9 +60,7 @@ class DirectMessageRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            // Smartphone-only thread view; OpenPNE 4 has no mobile surface.
             'messageChain' => 'Smartphone-only message thread; OpenPNE 4 has no mobile surface.',
-            // JSON message API (compose / search / recent) — not ported.
             'message_post' => 'JSON compose API; not ported.',
             'message_search' => 'JSON conversation search API; not ported.',
             'recent_message_list' => 'JSON recent-messages API; not ported.',
@@ -81,9 +76,6 @@ class DirectMessageRouteParity extends RouteParity
         return true;
     }
 
-    /**
-     * Surface elements per OpenPNE 3 message template, against resources/views/message/*.blade.php.
-     */
     public function screens(): array
     {
         return [
@@ -173,8 +165,8 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('owner-only and not-yet-sent guard', L::Two, S::Ported, 'forward404If getIsSend + forward404Unless isDraftOwner'),
                 new ScreenElement('friend localNav for the recipient', L::Two, S::Missing, 'executeEdit setFriendNav($this->sendMember->getId())', 'the compose screens keep the default localNav'),
             ],
-            // deleteConfirmSuccess.php (layoutC) → message/purge_confirm.blade.php. Its bulk sibling
-            // deleteListConfirmSuccess.php renders from the list action, so it is inventoried there.
+            // deleteConfirmSuccess.php (layoutC) → message/purge_confirm.blade.php; the bulk
+            // deleteListConfirmSuccess.php renders from the list action, so it is inventoried under `list`
             'deleteConfirm' => [
                 new ScreenElement('delete confirmation form', L::One, S::Ported, '$form->renderFormTag(url_for($deleteButton)) + Delete submit', "POST message.trash.purge; purge revokes the viewer's copy only"),
                 new ScreenElement('heading + question paragraph', L::Two, S::Ported, "'Delete this message' / 'Do you delete this message?'"),

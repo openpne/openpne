@@ -3,12 +3,8 @@
 namespace App\Compat;
 
 /**
- * One surface element of an OpenPNE 3 screen (a rendered field, link, widget, or behavior),
- * with its Classic-adapter porting status. The third parity axis: route parity says the URL
- * resolves and upgrade matrix says the data moves; this says the screen's content is present.
- *
- * `op3Source` names where the element comes from in the OpenPNE 3 template/helper, so the
- * inventory is auditable against the real template rather than asserted from memory.
+ * `op3Source` names the OpenPNE 3 template or helper the element comes from, so the inventory
+ * can be checked against the real template.
  */
 final class ScreenElement
 {

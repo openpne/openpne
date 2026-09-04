@@ -20,9 +20,8 @@ class FriendRouteParity extends RouteParity
             // The pending-request queues are OpenPNE 4-native: OpenPNE 3 had no such page — its
             // requests were answered from the notification center and the home cautions.
             new RouteMap(null, null, 'friend.requests', 'GET', op3Action: 'requests'),
-            // OpenPNE 3 reaches link through the global /:module/:action fallback (no named
-            // route); executeLink serves the form on GET and the request submit on POST.
-            // OpenPNE 4 splits them into explicit routes.
+            // link is fallback-reached in OpenPNE 3 (no named route), one action serving the form on
+            // GET and the submit on POST.
             new RouteMap(null, null, 'friend.link.show', 'GET', op3Action: 'link'),
             new RouteMap(null, null, 'friend.link', 'POST'),
             // One OpenPNE 3 route (sf_method get,post) splits into a GET confirm + POST submit.
