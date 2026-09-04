@@ -19,9 +19,8 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The branding editor. The upload fields cannot be driven from a Livewire test (no real temp upload),
- * so the file behaviour lives in Tests\Feature\Branding\SaveBrandingSettingsTest; what is asserted
- * here is the color round-trip and that the page exposes only its own state.
+ * The upload fields cannot be driven from a Livewire test (no real temp upload), so only the color
+ * round-trip and the page's own state are asserted here.
  */
 class BrandingSettingsTest extends TestCase
 {

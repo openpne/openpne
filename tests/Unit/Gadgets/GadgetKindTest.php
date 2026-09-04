@@ -17,9 +17,8 @@ class GadgetKindTest extends TestCase
      */
     public static function partIdCases(): array
     {
-        // OpenPNE 3 part ids, verified against the pc_frontend component templates. The prefix is
-        // often not the gadget name (information, friendList, communityList, searchLine); profileListBox
-        // used a fixed `profile`; bare-form kinds had no id.
+        // OpenPNE 3 part ids from the pc_frontend component templates: the prefix is often not the
+        // gadget name, profileListBox used a fixed `profile`, and bare-form kinds had no id.
         return [
             'freeArea' => ['freeArea', 'freeArea_7'],
             'informationBox' => ['informationBox', 'information_7'],

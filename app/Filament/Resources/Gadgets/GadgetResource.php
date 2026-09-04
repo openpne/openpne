@@ -89,9 +89,7 @@ class GadgetResource extends Resource
     }
 
     /**
-     * Existing gadgets in a context as `zone => [label, ...]` in render order, for the placement picker's
-     * chips. Null sort_order sorts last (matching GadgetService and the table). An unregistered kind falls
-     * back to its stored name.
+     * Rows are in render order (null sort_order last, as in GadgetService).
      *
      * @return array<string, list<string>>
      */

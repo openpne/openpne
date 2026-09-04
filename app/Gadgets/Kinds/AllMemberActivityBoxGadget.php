@@ -9,9 +9,8 @@ use App\Gadgets\GadgetKind;
 use App\Support\Feature;
 
 /**
- * OpenPNE 3 allMemberActivityBox: the whole SNS's members-only activity, home-only. Shares OpenPNE 3's
- * activityBox_ DOM id with activityBox (a common partial built the id), so custom CSS targets one
- * selector. is_viewable_activity_form toggles the post entry point (the ported inline post form).
+ * OpenPNE 3 allMemberActivityBox; it shares the activityBox_ DOM id with activityBox (a common partial
+ * built the id), so custom CSS targets one selector.
  */
 class AllMemberActivityBoxGadget extends GadgetKind
 {

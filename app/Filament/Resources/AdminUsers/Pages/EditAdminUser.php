@@ -32,10 +32,8 @@ class EditAdminUser extends EditRecord
         ];
     }
 
-    // Password change is a dedicated action (OpenPNE 3 editPassword parity), available only for
-    // your own account — no cross-admin password change in the panel. The modal lays the fields
-    // out one per row (current → new → confirm), all required, so the required markers are honest
-    // rather than appearing only once you start typing.
+    // Own account only (OpenPNE 3 editPassword parity): there is no cross-admin password change in
+    // the panel.
     private function changePasswordAction(): Action
     {
         return Action::make('changePassword')
@@ -72,10 +70,9 @@ class EditAdminUser extends EditRecord
                 // The `password` cast hashes the plaintext on save.
                 $record->update(['password' => $data['password']]);
 
-                // Keep the current session authenticated: AuthenticateSession compares the session's
-                // stored password hash against the user's current hash and logs out on mismatch.
-                // Sync the in-memory authenticated user (so the end-of-request re-store uses the new
-                // hash) and the session value directly.
+                // AuthenticateSession logs out when the session's stored password hash differs from
+                // the user's, so both the in-memory user (re-stored at request end) and the session
+                // value get the new hash.
                 $authUser = auth('admin')->user();
                 if ($authUser instanceof AdminUser && $authUser->getKey() === $record->getKey()) {
                     $authUser->forceFill(['password' => $record->getAuthPassword()]);

@@ -17,10 +17,8 @@ class BannerImagesTable
     {
         return $table
             ->columns([
-                // The image is the always-present, identifying column — Label/Link/Placements are all
-                // optional, so a picture-only row would otherwise be blank. Fixed height with auto width
-                // (not square) so long/wide banners read as long/wide instead of being cropped square.
-                // Click opens the shared lightbox at full size (the thumbnails are all downscaled).
+                // Fixed height with auto width, not square, so long or wide banners keep their shape
+                // instead of being cropped square.
                 ImageColumn::make('image')
                     ->label(__('Image'))
                     ->getStateUsing(fn (BannerImage $record): ?string => $record->file !== null

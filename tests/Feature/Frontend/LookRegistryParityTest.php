@@ -8,10 +8,9 @@ use App\Support\Look;
 use Tests\TestCase;
 
 /**
- * A look is declared twice — App\Support\Look decides which page components render, the LOOKS
- * registry in member-chrome.ts decides which chrome, ground and rail the shell draws — so the two
- * key sets must be the same set. Drift either way ships a look with half its answers: unified pages
- * under standard chrome, or standard pages under a chrome built for the other ones.
+ * A look is declared twice — App\Support\Look picks the page components, the LOOKS registry in
+ * member-chrome.ts picks the shell's chrome — so the two key sets must be equal. Drift ships a look
+ * with half its answers.
  */
 class LookRegistryParityTest extends TestCase
 {

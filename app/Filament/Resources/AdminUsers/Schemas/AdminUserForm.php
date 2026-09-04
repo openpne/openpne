@@ -25,10 +25,7 @@ class AdminUserForm
                         ignoreRecord: true,
                     ),
 
-                // The initial password is set only at creation. Changing an existing admin's
-                // password is the dedicated "Change password" action (own account only), mirroring
-                // OpenPNE 3's separate editPassword screen. The model casts `password` as `hashed`,
-                // so the raw value is hashed once on save — never call Hash::make() here.
+                // The model casts `password` as `hashed`; hashing here would double-hash it.
                 TextInput::make('password')
                     ->label(__('Password'))
                     ->password()

@@ -11,9 +11,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
-// Admin member moderation. List-only: admins read/search, freeze logins (is_login_rejected),
-// and withdraw members. No detail/edit page, mirroring OpenPNE 3 which kept member operations
-// on the list.
+// No detail or edit page: OpenPNE 3 kept member operations on the list.
 class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;

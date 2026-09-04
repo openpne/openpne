@@ -9,59 +9,17 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Guards the Modern surface's emphasis rule: font weight has exactly two jobs — naming a region
- * (headings) and marking unread state — and every other text is 400, so a row's hierarchy comes from
- * size and color. Decorative weight is what made the dashboard read as "bold everywhere".
- *
- * Files are budgeted, never skipped. An owner file is allowed the weights its role implementation
- * spells and no more, because the ones that hold a role also hold ordinary text: top-nav carries the
- * bar label next to a guest sign-in link, auth-layout the brand beside a page heading. Waving a whole
- * file through would let any later weight in it stay green forever — the hole this design exists to
- * close.
- *
- * Four budgets:
- *  - ROLE_OWNERS      the canonical implementation of an allowed role. Permanent.
- *  - OUT_OF_SCOPE     identity marks: the brand lockup and the initial badge. Not body text, so the
- *                     rule does not reach them. Permanent.
- *  - EARNED_EXCEPTIONS weight kept after a component was tried at 400 and the on-device comparison
- *                     rejected it. Permanent once earned; every entry carries the route and state it
- *                     was judged in and which axis it failed, so it can be re-judged rather than
- *                     inherited on trust. Empty — nothing has earned a place.
- *  - DEBT_BASELINE    not yet migrated. Empty, and meant to stay that way: the migration is finished,
- *                     which is what makes the first check a complete gate.
- *
- * So a weight that fails the gate has one of two honest answers, and "add it to DEBT_BASELINE" is
- * neither. Either it is naming a region or marking unread, and belongs in the recipe that owns that
- * role; or it does not, and comes out. A component that genuinely needs to keep weight goes through
- * the on-device comparison and lands in EARNED_EXCEPTIONS with its reason. Parking one in the debt
- * list is only for splitting a large migration across PRs, and then only with the removal PR already
- * identified — otherwise the list quietly becomes the exceptions list without the reasons.
- *
- * The finished gate still budgets by count, for the five permanent owner and identity files. A count
- * cannot see a removal and an addition inside one of them cancelling out; occurrence fingerprints
- * would. Move to those if that failure mode ever actually appears.
- *
- * Out of reach entirely, so it stays a review question rather than a test: semantic <strong> in
- * anything rendered through RichBody (the author's emphasis, not ours — member bodies as well as the
- * admin-written login message and policy pages), plain CSS in app.css, and inline styles.
+ * Weight occurrences under resources/js are counted per file against a budget (docs/internals/typography.md):
+ * a weight in a file with no budget, a count above its budget, or a count below it fails. A budgeted
+ * file is not a skipped file; owners get an exact count because they also hold ordinary text.
  */
 class FontWeightGuardTest extends TestCase
 {
     /**
-     * Every Tailwind weight utility except `font-normal` — 400 is the rule, so naming it is not a
-     * violation — plus every escape hatch that compiles to a font-weight:
-     *
-     *   font-[550]                   arbitrary value
-     *   [font-weight:700]            arbitrary property
-     *   font-(weight:--x)            custom property, typed
-     *   font-(--x)                   custom property, shorthand — weight is what the bare form means
-     *
-     * Verified against the installed Tailwind (4.3.3) rather than assumed: the last two both emit
-     * `font-weight: var(--x)`.
-     *
-     * Family utilities share the prefix and are deliberately not matched — `font-sans`, and
-     * `font-(family-name:--x)`, which is why the custom-property branch requires `--` or `weight:`
-     * right after the paren instead of accepting any `font-(`.
+     * Every weight utility except `font-normal` (400 is the rule) plus the escape hatches that compile
+     * to a font-weight; the bare `font-(--x)` form counts because Tailwind 4 emits `font-weight: var(--x)`
+     * for it. Family utilities share the prefix and are deliberately not matched, so the custom-property
+     * branch requires `--` or `weight:` right after the paren.
      */
     private const WEIGHT_CLASS = '/\bfont-(?:thin|extralight|extrabold|semibold|medium|light|black|bold)\b|\bfont-\[|\[font-weight:|\bfont-\((?:weight:)?--/';
 
@@ -91,8 +49,8 @@ class FontWeightGuardTest extends TestCase
     private const EARNED_EXCEPTIONS = [];
 
     /**
-     * Files still carrying decorative weight. Empty, and see the class docblock before adding one:
-     * this is a migration ledger, not a second exceptions list.
+     * Files still carrying decorative weight: a migration ledger, not a second exceptions list, and
+     * empty is its finished state.
      *
      * @var array<string, int>
      */
@@ -110,11 +68,9 @@ class FontWeightGuardTest extends TestCase
     }
 
     /**
-     * Weight occurrences per source file under resources/js, keyed by path relative to it.
-     *
-     * `.ts` counts as UI source, not just `.tsx`: `compose/editor-extensions.ts` holds the class
-     * string ProseMirror's editable is rendered with, so a scan limited to components would read
-     * past it. Node test files are excluded — their fixtures are not shipped markup.
+     * `.ts` counts as UI source, not just `.tsx`: `compose/editor-extensions.ts` holds the class string
+     * ProseMirror's editable is rendered with. Only `.test.ts` files are excluded; a `.test.tsx` fixture
+     * is scanned like any component.
      */
     private function occurrences(): array
     {

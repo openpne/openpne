@@ -10,15 +10,10 @@ use Illuminate\Contracts\Support\Htmlable;
 use SensitiveParameter;
 
 /**
- * Administrators log in by username, not email (OpenPNE 3 has no administrator
- * email). The form keeps Filament's `email` field key but presents it as a
- * username input, and the credentials passed to the `admin` guard are keyed by
- * `username` so the provider looks up the `admin_users.username` column.
- *
- * "Remember me" is dropped: a recaller cookie authenticates through the guard
- * middleware, which never presents the TOTP challenge, so a long-lived remember
- * cookie would silently bypass admin two-factor auth. A privileged panel signs
- * in per session instead.
+ * The form keeps Filament's `email` field key but the credentials are keyed by `username`:
+ * OpenPNE 3 administrators have no email. "Remember me" is omitted because a recaller cookie
+ * authenticates through the guard middleware without the TOTP challenge, bypassing admin
+ * two-factor auth.
  */
 class Login extends BaseLogin
 {

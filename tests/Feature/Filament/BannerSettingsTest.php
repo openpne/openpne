@@ -13,10 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The per-placement banner page: each placement is either image mode (pick from the shared pool) or
- * operator HTML.
- */
 class BannerSettingsTest extends TestCase
 {
     use RefreshDatabase;

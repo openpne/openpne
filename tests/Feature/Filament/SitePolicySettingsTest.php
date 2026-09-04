@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-/**
- * The site policy editor. The Markdown is stored verbatim (not trimmed — an indented first line is
- * a code block) and bounded by the TEXT column's byte size, not a character count.
- */
 class SitePolicySettingsTest extends TestCase
 {
     use RefreshDatabase;

@@ -63,9 +63,8 @@ class MembersTable
                 self::banAction(),
                 self::unbanAction(),
                 self::sendMfaResetAction(),
-                // Withdrawal is permanent member deletion; the panel guard authorizes it, so the
-                // author-less WithdrawMember service runs directly. Hidden for the primary member.
-                // Return truthy: DeleteAction reports failure when the using() result is falsy.
+                // The panel guard authorizes, so the author-less WithdrawMember runs directly; the truthy
+                // return is required because DeleteAction reports failure on a falsy using() result.
                 DeleteAction::make()
                     ->label(__('Withdraw'))
                     ->hidden(fn (Member $record): bool => ! MemberResource::canDelete($record))
@@ -121,12 +120,9 @@ class MembersTable
     }
 
     /**
-     * Mail the member a link to reset their two-factor authentication (lockout recovery the admin can
-     * offer without the CLI). Deliberately no takeover ability: the link reaches only the member's
-     * registered mailbox and needs the member's own password to act. So there is no primary-member gate
-     * (there is nothing to seize) and no is_login_rejected gate (a ban is enforced at login; recovery and
-     * moderation are orthogonal). Only offered when a LIVE factor exists (nothing to reset otherwise) and
-     * a registered address exists (members.email is nullable — nowhere to send).
+     * The link reaches only the member's registered mailbox and needs the member's own password, so
+     * it cannot take over an account. Hence no primary-member gate and no is_login_rejected gate: a
+     * ban is enforced at login, and recovery is orthogonal to moderation.
      */
     private static function sendMfaResetAction(): Action
     {
@@ -155,9 +151,8 @@ class MembersTable
                 try {
                     app(RequestMfaReset::class)($record);
                 } catch (MfaResetUnavailable) {
-                    // The true modal-mounted race: the factor (or address) was invalidated between
-                    // before() and here. RequestMfaReset's locked recheck is the correctness backstop;
-                    // degrade to the same graceful warning instead of a 500.
+                    // The factor or address was invalidated between before() and here; RequestMfaReset's
+                    // locked recheck is the backstop, so degrade to the warning instead of a 500.
                     Notification::make()
                         ->title(__('Two-factor authentication is no longer active for this member'))
                         ->warning()

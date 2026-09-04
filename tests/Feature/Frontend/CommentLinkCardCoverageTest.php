@@ -10,17 +10,9 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * A screen that draws a subordinate body's words draws its link card too — on both surfaces.
- *
- * The server side of a card is four separate pieces — a column, a write hook, a read trigger, a
- * serializer field — and all four can land with nothing on screen. That shipped once, for timeline
- * replies, on Modern and Classic alike: a payload assertion sees `linkCard` on the row and says
- * nothing about whether anyone renders it.
- *
- * Keyed on the row's own name (`comment`, `reply`) rather than on a list of files, so the next
- * subordinate body cannot arrive without either drawing the card or changing this rule. The bodies
- * that are a page's subject — a diary, a topic, a post — are covered by LinkCardRenderingTest
- * instead, which renders each of them and looks for the card.
+ * A screen that draws a subordinate body's words (`comment`, `reply`) must draw its link card too, on
+ * both surfaces. Keyed on the row's name rather than a list of files, so the next subordinate body
+ * cannot arrive without either drawing the card or changing this rule.
  */
 class CommentLinkCardCoverageTest extends TestCase
 {

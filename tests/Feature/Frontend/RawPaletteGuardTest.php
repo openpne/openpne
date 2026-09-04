@@ -8,16 +8,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Guards the Modern surface against raw Tailwind palette classes: numbered shades (slate-200,
- * blue-600, …) and the bare white/black classes (text-white, bg-white, bg-black) are banned in favor
- * of the semantic design tokens (bg-background / bg-card / text-foreground / text-muted-foreground /
- * border-border / bg-primary / text-primary-foreground / …), so a component is dark-correct and
- * re-themeable by construction. Catching white/black too matters because a converted button can drop
- * its numbered bg but keep a raw `text-white` that should be a `-foreground` token.
- *
- * ALLOWLIST holds the screens not yet migrated to tokens; it must only shrink. Exceptions: an
- * opacity black/white (bg-black/50 dialog scrims, overlays) is allowed, and BrandMark's admin-chosen
- * color is an inline style, not a class.
+ * Raw Tailwind palette classes (numbered shades, bare white/black) are banned in .tsx under
+ * resources/js in favor of the semantic design tokens, so a component is dark-correct and
+ * re-themeable by construction. White/black is caught too: a converted button can drop its numbered
+ * bg yet keep a raw `text-white` meant to be a `-foreground` token.
  */
 class RawPaletteGuardTest extends TestCase
 {
@@ -37,8 +31,7 @@ class RawPaletteGuardTest extends TestCase
             || preg_match(self::PALETTE_WHITEBLACK, $contents) === 1;
     }
 
-    /** Screens still on raw palette. Now empty: every Modern page is tokenized. Add an entry only to
-     * consciously exempt a new screen, and remove it once it is tokenized. */
+    /** Screens still on raw palette; empty is the finished state, and an entry only exempts a new screen until it is tokenized. */
     private const ALLOWLIST = [];
 
     /** @return list<string> */

@@ -6,11 +6,7 @@ namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetKind;
 
-/**
- * OpenPNE 3 birthdayBox: a birthday greeting image rendered by context. On the home it appears only
- * on the viewer's own birthday; on a profile it appears on the owner's birthday and the three days
- * before. No config, and OpenPNE 3 emitted no wrapper id (base partId null).
- */
+/** OpenPNE 3 birthdayBox; it emitted no wrapper id, so partId stays null. */
 class BirthdayBoxGadget extends GadgetKind
 {
     public function name(): string

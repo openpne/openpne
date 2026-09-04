@@ -8,12 +8,7 @@ use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 use App\Support\Feature;
 
-/**
- * OpenPNE 3 activityBox: a server-rendered activity list placed on both the home and a profile. The
- * one kind behaves differently by context — on the home it shows the viewer + friends feed, on a
- * profile the owner's timeline — so the component branches on the render context. Both contexts share
- * OpenPNE 3's activityBox_ DOM id, so custom CSS targets a single selector.
- */
+/** OpenPNE 3 activityBox; both contexts share its activityBox_ DOM id, so custom CSS targets one selector. */
 class ActivityBoxGadget extends GadgetKind
 {
     public function name(): string

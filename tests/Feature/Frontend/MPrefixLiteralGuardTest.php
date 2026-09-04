@@ -21,11 +21,7 @@ class MPrefixLiteralGuardTest extends TestCase
     /** PHP variant: no template literals, and a backtick in a docblock is markdown, not a string. */
     private const M_PREFIX_LITERAL_PHP = '~[\'"]/m(?:/|[\'"])~';
 
-    /**
-     * The two homes of the permanent /m/ compat surface. Only shrink this list.
-     * - routes/web.php: the compat redirects themselves (reshaped GETs + the catch-all).
-     * - MPrefixRedirectTest: drives those redirects.
-     */
+    /** The two homes of the permanent /m/ compat surface (the redirects and the test that drives them); only shrink this list. */
     private const ALLOWLIST = [
         'routes/web.php',
         'tests/Feature/Compat/MPrefixRedirectTest.php',

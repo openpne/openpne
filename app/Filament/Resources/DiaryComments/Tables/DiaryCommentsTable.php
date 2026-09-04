@@ -42,8 +42,8 @@ class DiaryCommentsTable
                     ->sortable(),
             ])
             ->recordActions([
-                // Admin delete runs DeleteComment's author-less core; the panel guard gates access.
-                // Return truthy: DeleteAction reports failure when the using() result is falsy.
+                // The panel guard authorizes, so purge() skips DeleteComment's author check; the truthy
+                // return is required because DeleteAction reports failure on a falsy using() result.
                 DeleteAction::make()
                     ->using(function (DiaryComment $record): bool {
                         app(DeleteComment::class)->purge($record);
