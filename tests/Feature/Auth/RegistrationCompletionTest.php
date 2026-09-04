@@ -190,8 +190,8 @@ class RegistrationCompletionTest extends TestCase
 
     public function test_an_address_claimed_since_issuance_is_sent_to_sign_in(): void
     {
-        // A member took the address between the token being issued and the form being completed
-        // (admin creation, or an earlier completion). Nothing to create — go log in, token consumed.
+        // The address was claimed between issuance and completion (admin creation, or an earlier
+        // completion).
         $token = $this->issueToken('taken@example.com');
         Member::factory()->create(['email' => 'taken@example.com']);
 
@@ -206,10 +206,8 @@ class RegistrationCompletionTest extends TestCase
 
     public function test_an_address_claimed_during_validation_is_sent_to_sign_in(): void
     {
-        // The up-front check passes (no member yet), but the address is claimed before the create's
-        // unique rule runs, so creation fails on `email` (a ValidationException, not a QueryException).
-        // The form has no email field to show it, so the dead token is consumed and the user is sent
-        // to sign in — the same outcome as the other races.
+        // The mock stands in for the race between the up-front check and the create's unique rule,
+        // which surfaces as a ValidationException on `email` rather than a QueryException.
         $token = $this->issueToken('newcomer@example.com');
 
         $this->mock(CompleteRegistration::class)

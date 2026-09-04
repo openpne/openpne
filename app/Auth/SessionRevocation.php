@@ -10,20 +10,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Drop a principal's authenticated footholds: rotate remember_token (invalidates
- * every "remember me" cookie) and, on the database session driver, delete their
- * server-side session rows. Other drivers keep no queryable per-user store; there
- * the auth.session middleware is the best-effort fallback where a password change
- * is involved.
- *
- * Table names come from the stable session.member_table / session.admin_table keys,
- * never session.table — that key is pinned per request to the serving realm
- * (UseAdminSessionStore), so reading it from an admin-realm action that revokes a
- * member (a ban) would target the wrong table.
- *
- * The purge-only methods exist for callers that already rotate the token in their
- * own persistence step (a reset's combined save, an email-change commit) or whose
- * principal row no longer exists (withdrawal).
+ * Only the database driver keeps a queryable per-user session store; on other drivers the purge is
+ * a no-op and the auth.session middleware is the best-effort fallback after a password change.
+ * Tables are read from session.member_table / session.admin_table, never session.table, which is
+ * pinned per request to the serving realm (docs/internals/sessions.md).
  */
 final class SessionRevocation
 {
@@ -39,6 +29,10 @@ final class SessionRevocation
         self::purgeAdminSessions((int) $admin->getAuthIdentifier(), $exceptSessionId);
     }
 
+    /**
+     * Purge without rotating remember_token, for a caller that rotates it in its own save or whose
+     * principal row is already gone.
+     */
     public static function purgeMemberSessions(int $memberId, ?string $exceptSessionId = null): void
     {
         self::purge((string) config('session.member_table'), $memberId, $exceptSessionId);
@@ -50,10 +44,9 @@ final class SessionRevocation
     }
 
     /**
-     * A stored token of null is already the end state: retrieveByToken() requires one to compare
-     * against, so no remember-me cookie can validate against such a row and there is nothing to
-     * invalidate. Skipping it is also what keeps a ban working on an AI account, whose row the
-     * members CHECK forbids any credential — a rotation there would abort the whole freeze.
+     * A null token is already the end state, since retrieveByToken() needs a stored token to compare
+     * against. Skipping it also keeps a ban working on an AI account, whose row the members CHECK
+     * forbids any credential, so a rotation there would abort the whole freeze.
      */
     private static function rotateRememberToken(Model&Authenticatable $user): void
     {
