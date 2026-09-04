@@ -157,8 +157,8 @@ class FileBinMigrationTest extends TestCase
 
     public function test_move_renames_a_prefixed_same_database_file_bin(): void
     {
-        // A --source-prefix run: the bytes live in `op_file_bin`, not the empty app file_bin. Moving it
-        // (not no-oping the empty app one) is what keeps the BLOBs from being silently left behind.
+        // A --source-prefix run: the bytes live in `op_file_bin`, so no-oping on the empty app
+        // file_bin would silently leave the BLOBs behind.
         $ids = $this->seedPrefixed();
 
         (new FileBinMigration)->move('op_', null, $this->out($lines));

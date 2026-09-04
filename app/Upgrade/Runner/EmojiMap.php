@@ -3,18 +3,11 @@
 namespace App\Upgrade\Runner;
 
 /**
- * OpenPNE 3 body text stores carrier emoji as [i:N] (DoCoMo), [e:N] (au/KDDI),
- * [s:N] (SoftBank). This table chains the OpenPNE 3 KtaiEmoji PUA tables
- * (lib/vendor/OpenPNE2/KtaiEmoji/{Docomo,Au,Softbank}.php) with Google's
- * emoji4unicode dataset (github.com/google/emoji4unicode,
- * data/emoji4unicode.xml @ 5019c2da8c4fa80286ae9cca7d89e062fb8704be); fallback (">"-prefixed) carrier entries
- * are excluded. Coverage: i 245/252, e 633/641, s 470/471 ids mapped — the
- * remainder are carrier brand glyphs with no Unicode equivalent and stay
- * literal at runtime.
- *
- * Values are normalized to RGI fully-qualified sequences per Unicode
- * emoji-test.txt v17.0; non-emoji exceptions are listed in {@see self::NON_EMOJI}.
- * Third-party data attribution is in the repository NOTICE file.
+ * OpenPNE 3 carrier-emoji codes [i:N] (DoCoMo) / [e:N] (au) / [s:N] (SoftBank) → Unicode, chained
+ * from the OpenPNE 3 KtaiEmoji PUA tables through Google's emoji4unicode (data/emoji4unicode.xml @
+ * 5019c2da8c4fa80286ae9cca7d89e062fb8704be, attribution in NOTICE) and normalized to RGI
+ * fully-qualified sequences per emoji-test.txt v17.0. Brand glyphs with no Unicode equivalent are
+ * absent and stay literal; NON_EMOJI lists the non-emoji values.
  */
 final class EmojiMap
 {

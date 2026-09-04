@@ -47,9 +47,8 @@ class VerifierAbsentOptionalTest extends TestCase
 
     public function test_an_uninstalled_optional_plugin_passes(): void
     {
-        // opDiary not installed: `diary` is absent. The runner ensure-exists'd an empty diary, ran 0
-        // rows, and dropped it — a legitimate completed state with target 0. `member` is core and
-        // present either way: diary.member_id is checked against it before the run starts.
+        // opDiary not installed: the runner ran DiaryUpgrade against an empty ensure-existed `diary`
+        // and dropped it, so target 0 is a legitimate completed state; `member` is core and present.
         DB::statement(SourceSchema::default()->createStatement('member', withoutForeignKeys: true));
 
         (new UpgradeRunner(new InsertSelectCompiler, [new DiaryUpgrade]))->run(new RunOptions);
@@ -62,8 +61,8 @@ class VerifierAbsentOptionalTest extends TestCase
 
     public function test_a_partial_plugin_group_is_reported_not_thrown(): void
     {
-        // opDiary present (`diary`) but missing `diary_image` — an old/corrupt plugin. verify must report
-        // it, not throw on the missing table.
+        // opDiary present but missing `diary_image` (an old or corrupt plugin) must be reported, not
+        // thrown on.
         DB::statement(SourceSchema::default()->createStatement('diary', withoutForeignKeys: true));
 
         [$report, $out] = $this->verify([new DiaryUpgrade, new DiaryImageUpgrade]);

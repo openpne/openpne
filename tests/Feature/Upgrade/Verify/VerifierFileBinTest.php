@@ -17,11 +17,10 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Check B: file_bin byte integrity (files/file_bin count parity, byte_size == LENGTH(bin), FK rewired).
- * A files-targeting step gates the check on; the source `file` + upgrade-state make Check A pass so the
- * assertions isolate Check B. The step's columns also read an optional plugin table (diary_image), so a
- * passing case doubles as the regression that a core FROM with an absent optional owner column still
- * counts its rows rather than being zeroed.
+ * Check B (file_bin byte integrity), isolated by a files-targeting step whose source `file` rows and
+ * upgrade state make Check A pass. The step's columns read an optional plugin table (diary_image), so
+ * the passing case also pins that a core FROM with an absent optional owner column still counts its
+ * rows.
  */
 class VerifierFileBinTest extends TestCase
 {
@@ -145,9 +144,9 @@ class VerifierFileBinTest extends TestCase
             {
                 return [
                     'id' => Column::source('id'),
-                    // Resolves an owner from an optional plugin table (opDiary's diary_image), like
-                    // FileUpgrade. With opDiary absent, verify must still COUNT the core `file` source
-                    // (the count reads only FROM + filter), not treat the whole step as 0 rows.
+                    // Reads an owner from opDiary's diary_image like FileUpgrade, so with opDiary absent
+                    // verify must still COUNT the core `file` source (FROM + filter only) rather than
+                    // zero the step.
                     'owner' => Column::expr(SourceRef::table('diary_image').'.`member_id`', uses: []),
                 ];
             }

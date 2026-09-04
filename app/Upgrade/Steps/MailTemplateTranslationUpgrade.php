@@ -8,11 +8,9 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `notification_mail_translation` → OpenPNE 4 `mail_template_translations` (the per-locale
- * subject/body). OpenPNE 3 keys the translation by (id, lang) where id is the notification_mail id, so it
- * maps onto mail_template_id; OpenPNE 4 adds its own surrogate id. The body/subject copy verbatim so a
- * migrated template renders byte-for-byte. Restricted to the templates MailTemplateUpgrade imports, so a
- * translation never references a mail_templates row that was filtered out.
+ * OpenPNE 3 `notification_mail_translation` → OpenPNE 4 `mail_template_translations`, keyed by the
+ * notification_mail id (mail_template_id) and restricted to the templates MailTemplateUpgrade
+ * imports. Subject and body copy verbatim so a migrated template renders byte-for-byte.
  */
 class MailTemplateTranslationUpgrade extends UpgradeStep
 {
@@ -46,19 +44,16 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // `id` is OpenPNE 4's own surrogate key (auto-increment); created_at / updated_at have no OpenPNE 3
-        // source. All three rely on their schema default.
+        // `id` is OpenPNE 4's own surrogate key and created_at / updated_at have no OpenPNE 3 source,
+        // so all three rely on the schema default.
         return ['id', 'created_at', 'updated_at'];
     }
 
     /**
-     * OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the OpenPNE 4 locale slug, matching MemberUpgrade. An
-     * unrecognised lang is kept verbatim, not mis-folded into ja/en: it satisfies the NOT NULL column and
-     * stays inert (MailTemplateService only ever looks up ja/en), rather than silently mislabelling a row.
-     *
-     * Public and static because MailTemplatePreflight has to fold by the SAME expression to predict what
-     * this step will write: LIKE runs under the source collation (usually case-insensitive), so folding
-     * again in PHP would disagree with the INSERT on inputs like `JA_JP`.
+     * OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the locale slug, an unrecognised value kept verbatim
+     * so it satisfies NOT NULL and stays inert rather than mislabelled. Public and static because
+     * MailTemplatePreflight must fold by the same expression: LIKE runs under the source collation,
+     * so a PHP fold would disagree on inputs like `JA_JP`.
      */
     public static function localeExpr(): string
     {

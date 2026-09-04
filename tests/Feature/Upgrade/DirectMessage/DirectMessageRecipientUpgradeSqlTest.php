@@ -14,13 +14,8 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled `message_send_list` → `direct_message_recipients` INSERT...SELECT against the real
- * OpenPNE 3 DDL. DirectMessageUpgrade runs first to populate the `direct_messages` parent (the direct_message_id FK) and
- * to fold draft recipients away. Checks that a receipt is created only for a delivered personal
- * parent (the "receipt == delivered" invariant), the is_read→read_at and deleted_message folds, and
- * that draft / orphan / non-personal send-list rows are quarantined.
- *
- * MySQL only: the set-based copy, the source DDL and the correlated subqueries are MySQL features.
+ * Runs the compiled `message_send_list` step against the real OpenPNE 3 DDL, after DirectMessageUpgrade
+ * has populated the parents and folded the draft recipients away; MySQL only.
  */
 class DirectMessageRecipientUpgradeSqlTest extends TestCase
 {
@@ -94,8 +89,6 @@ class DirectMessageRecipientUpgradeSqlTest extends TestCase
 
     public function test_a_draft_send_list_row_creates_no_receipt(): void
     {
-        // The draft's recipient is folded onto direct_messages.draft_recipient_id; no receipt exists (a
-        // receipt means delivered). The recipient-side query never reaches a draft.
         $sender = Member::factory()->create();
         $recipient = Member::factory()->create();
         $this->seedMessage(600, $sender->id, ['is_send' => 0]);

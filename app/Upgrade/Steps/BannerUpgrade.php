@@ -6,10 +6,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `banner` → OpenPNE 4 `banners` (fixed top/side placements, operator HTML or an image pool).
- *
- * OpenPNE 3's banner has no timestamps; OpenPNE 4's are nullable, so they rely on their default. The
- * I18n caption (banner_translation) is not carried — it was an admin-only label, never rendered.
+ * OpenPNE 3 `banner` → OpenPNE 4 `banners`. The I18n caption (banner_translation) is not carried: it
+ * was an admin-only label, never rendered.
  */
 class BannerUpgrade extends UpgradeStep
 {

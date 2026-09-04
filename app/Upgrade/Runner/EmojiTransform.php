@@ -9,22 +9,10 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Post-walk pass that rewrites OpenPNE 3 carrier-emoji codes ([i:N] / [e:N] / [s:N]) to Unicode in
- * every migrated member-authored text column (EmojiMap::convert). The rewrite is a per-row PHP
- * transform, not expressible in an INSERT...SELECT, so — like PasswordWrap — it runs after the walk,
- * once every text table is populated.
- *
- * Unlike PasswordWrap it cannot re-query a predicate down to empty: 16 carrier-logo ids have no
- * Unicode equivalent and stay literal by design, so a "contains a code" predicate never drains.
- * Progress is an id cursor instead. Each chunk is `id > cursor`, narrowed by a code REGEXP, and the
- * cursor advances to the chunk's last id whether or not any row changed — an unmapped code is passed
- * over exactly once and never re-seen. The cursor is persisted as metadata->last_id after each chunk
- * commits; a RUNNING / FAILED checkpoint resumes from it. The transform is idempotent either way —
- * mapped codes vanish on the first pass and unmapped codes are no-ops — so restarting a checkpoint
- * from 0 is equally safe.
- *
- * MySQL only (the REGEXP narrowing and the utf8mb4 preflight). The runner reaches this pass only on
- * MySQL: UpgradeFromThreeCommand guards the driver before invoking the runner.
+ * Post-walk pass rewriting OpenPNE 3 carrier-emoji codes to Unicode in member-authored text
+ * (docs/internals/upgrade.md, "Post-walk passes"); MySQL only (REGEXP, utf8mb4 preflight). Progress
+ * is an id cursor, not a draining predicate: unmapped codes stay literal, so the cursor advances past
+ * every fetched chunk whether or not a row changed, and restarting from 0 is still idempotent.
  */
 final class EmojiTransform
 {
@@ -49,8 +37,8 @@ final class EmojiTransform
         'direct_messages' => ['subject', 'body'],
     ];
 
-    // Matches one [i|e|s:NNN] code; narrows a chunk to rows carrying at least one. Double-escaped so
-    // the MySQL string literal yields \[ ... \] for the regex engine (literal brackets, not a class).
+    // Double-escaped so the MySQL string literal yields `\[` and `\]` for the regex engine, literal
+    // brackets rather than a character class.
     private const CODE_REGEXP = '\\\\[[ies]:[0-9]{1,3}\\\\]';
 
     // Bounds the per-transaction row count; progress is the id cursor, not a draining predicate.
@@ -110,8 +98,8 @@ final class EmojiTransform
     private function transformTable(string $table, array $columns, string $key, Closure $out): bool
     {
         try {
-            // Resume from a prior run's cursor; a fresh checkpoint starts at 0. The RUNNING write below
-            // omits metadata, so this last_id survives it.
+            // The RUNNING write below omits metadata, so a prior run's last_id cursor survives it and
+            // the resume starts there.
             $metadata = UpgradeState::query()->where('step_key', $key)->value('metadata');
             $cursor = is_array($metadata) ? (int) ($metadata['last_id'] ?? 0) : 0;
 

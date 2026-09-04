@@ -11,23 +11,11 @@ use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Verifies the live OpenPNE 3 source before the runner walks the steps, bridging the gap between the
- * assumed fixture schema (OpenPNE 3.10.19 + canonical plugins) and a real site:
- *
- *  - a CORE source table or a consumed FROM column missing → hard error (incomplete dump, an
- *    OpenPNE 3 older than 3.6.x, or a customisation that dropped it). The run aborts before any write.
- *  - an OPTIONAL plugin group (StepRegistry::optionalPluginSources) fully absent → the plugin is not
- *    installed → its tables are created empty (ensureExists) so the steps no-op and FileUpgrade's
- *    owner subqueries resolve against an empty table.
- *  - an OPTIONAL plugin group partially present → an old/corrupt plugin → hard error naming its floor.
- *
- * It also counts the KV config rows whose `name` the upgrade does not recognise. That is a warning,
- * not an error: a third-party plugin or a source customisation is a legitimate reason for the source
- * to hold names OpenPNE 4 has no home for, and the operator decides whether losing them matters.
- *
- * Introspection is read-only via information_schema qualified by the source database + prefix:
- * Schema::hasTable() binds to the connection's own (empty-prefix) database and cannot see a
- * --source-prefix / --source-database table. MySQL-only, like the runner.
+ * Verifies the live OpenPNE 3 source before the runner writes: a missing core table or column, or a
+ * partial optional plugin group, aborts, and a fully absent optional group is created empty so its
+ * steps no-op (docs/internals/upgrade.md, "Source preflight"). Introspection goes through
+ * information_schema qualified by the source database and prefix, because Schema::hasTable() sees
+ * only the connection's own database.
  */
 final class SourcePreflight
 {
@@ -39,9 +27,9 @@ final class SourcePreflight
 
     /**
      * The source tables scanned for names the upgrade does not recognise, each with the one name prefix
-     * it recognises without enumerating (or null). notification_mail is not a KV table, but its step
-     * carries only the names in a `name IN (…)` filter — so a name outside the recognised set is just as
-     * invisible per-step as an unrecognised config key, and gets the same warning.
+     * recognised without enumerating (or null). notification_mail is not a KV table, but its step
+     * carries only the names in a `name IN (…)` filter, so an unrecognised name is just as invisible
+     * per step.
      */
     private const NAME_SCAN_TABLES = [
         'member_config' => null,
@@ -187,10 +175,9 @@ final class SourcePreflight
             }
         }
 
-        // inactiveMemberReferences() resolves every REFUSE entry against `member`, so a step set that
-        // reads one needs the table even when no step's own SQL names it (a guard puts it there; a
-        // content step does not). Declaring it here makes a source without it abort on the structural
-        // check, rather than blow up mid-count or skip the validation unnoticed.
+        // A REFUSE check resolves against `member` even when no step's own SQL names it (a content step
+        // has no guard), so declaring it here makes a source without it abort on the structural check
+        // instead of mid-count.
         foreach (ActiveMember::references() as $reference => $meta) {
             [$table] = explode('.', $reference);
             if ($meta['treatment'] === ActiveMember::REFUSE && isset($tables[$table])) {
@@ -216,22 +203,18 @@ final class SourcePreflight
             }
         }
 
-        // consumedSourceColumns() attributes every column to the step's own FROM table, so a table
-        // reached only by correlated subquery gets no column check — and both KV config tables are
-        // read that way (community_config always, member_config whenever the step set excludes the
-        // ones that select FROM it). Their `name` is read by those subqueries and by the scan below,
-        // so require it here rather than letting either be where a customised source blows up.
+        // A table reached only by correlated subquery gets no per-step column check, and both KV config
+        // tables can be, so their `name` (read by those subqueries and by the unknown-name scan) is
+        // required here.
         foreach (self::CONFIG_NAME_TABLES as $table) {
             if (isset($present[$table])) {
                 $required[$table]['name'] = true;
             }
         }
 
-        // Everything the active-member machinery reads is invisible to the per-step check above: a
-        // guard reaches `member` by correlated subquery, and a REFUSE entry's table may be no step's
-        // FROM at all (community_member_position). Without these, a step subset without MemberUpgrade
-        // reaches inactiveMemberReferences() with nothing verified — and a missing column surfaces as
-        // a SQL exception, or as a check that silently counts nothing.
+        // The active-member checks read columns the per-step check never attributes (a guard reaches
+        // `member` by subquery; a REFUSE table may be no step's FROM), so they are required here instead
+        // of surfacing as a SQL exception or a silent count.
         $readTables = $this->readTables();
         $readsMember = false;
 
@@ -276,13 +259,10 @@ final class SourcePreflight
     }
 
     /**
-     * Row counts per unrecognised `name`, for the scanned tables this run reads. A name outside the
-     * recognised set is invisible to the per-step column audit — the KV tables have no per-name column
-     * and notification_mail's step filters by name — which is what this replaces at run time.
-     *
-     * Deliberately not part of inspect(): the scan itself reads `name`, so a source missing that
-     * column has to reach inspect()'s structural verdict — call this only once that comes back
-     * clean. That also keeps it off verify-upgrade, which has no use for the warning.
+     * Row counts per unrecognised `name` in the scanned tables this run reads; a name outside the
+     * recognised set is invisible to the per-step column audit, and this is its run-time replacement.
+     * Not part of inspect(): the scan reads `name`, so call it only on a clean structural verdict
+     * (verify has no use for it either).
      *
      * @return array<string, array<string, int>> table => name => rows, busiest name first
      */
@@ -327,14 +307,10 @@ final class SourcePreflight
     }
 
     /**
-     * The member references this run cannot migrate, counted before the first write: rows a REFUSE
-     * ledger entry covers whose member is not an activated one, and rows a step's guard would drop
-     * whose member is missing from the source altogether. The first is an assumption violation the
-     * upgrade will not resolve silently; the second is a broken source that would otherwise vanish
-     * into the same guard. Both abort.
-     *
-     * Deliberately not part of inspect(), like unknownSourceNames(): it reads columns whose presence
-     * inspect() is what establishes — call it only on a clean structural verdict.
+     * The member references this run cannot migrate, counted before the first write: REFUSE rows
+     * whose member is not activated, and guarded rows whose member is missing from the source (a
+     * broken dump the guard would otherwise swallow). Not part of inspect(): it reads columns
+     * inspect() establishes, so call it only on a clean structural verdict.
      *
      * @return array{refused: array<string, int>, dangling: array<string, int>} reference => rows
      */
@@ -366,11 +342,9 @@ final class SourcePreflight
             }
         }
 
-        // One count per reference over the union of its steps' filters, not one per step: several
-        // steps can guard the same column with different filters (member_config feeds preferences and
-        // notification settings), and counting them separately would report the first step's slice as
-        // if it were the total. filter(), not effectiveFilter(): the guards are what this looks
-        // behind, and scoping by them would exclude exactly the rows a missing member produces.
+        // One count per reference over the union of its steps' filter() (not effectiveFilter(), whose
+        // guards would exclude exactly these rows): several steps can guard one column with different
+        // filters, and a per-step count would report one slice as the total.
         $filtersByReference = [];
         foreach ($this->steps as $step) {
             foreach ($step->memberRefs() as $column) {

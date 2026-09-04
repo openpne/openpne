@@ -13,22 +13,10 @@ use App\Upgrade\Steps\MailTemplateUpgrade;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Render-tests the OpenPNE 3 mail templates before the upgrade copies them.
- *
- * The translation step is an INSERT...SELECT, so a body reaches OpenPNE 4 without ever being parsed: an
- * admin customisation using a construct outside the supported dialect, or an `app_url_for` route with no
- * OpenPNE 4 mapping, stays invisible until the first send after the cutover fails. This walks the source
- * rows the step will carry and renders each one the way the application will, so the operator sees the
- * breakage while the OpenPNE 3 site is still serving.
- *
- * Two passes per row, because the faults are not distinguishable from one exception type (see
- * MailTemplateFault): a lenient render reproduces production and reports what will actually throw, then a
- * strict render of what survived reports a referenced-but-absent variable — the only difference
- * strict_variables makes.
- *
- * Locales are folded by the step's own expression rather than re-folded in PHP: LIKE runs under the
- * source collation, so `JA_JP` folds to `ja` in the INSERT while str_starts_with would disagree. Every
- * verdict here — collision, column width, inert, renderable — is keyed off that same folded value.
+ * Render-tests the OpenPNE 3 mail templates the translation step will copy unparsed, so an operator
+ * sees a template OpenPNE 4 cannot render before the cutover (docs/internals/upgrade.md, "Source
+ * preflight"). Locales are folded by the step's own expression: LIKE under the source collation
+ * folds `JA_JP` to `ja`, where a PHP fold would not.
  */
 final class MailTemplatePreflight
 {
@@ -67,9 +55,9 @@ final class MailTemplatePreflight
             }
 
             if (! in_array($folded, self::READ_LOCALES, true)) {
-                // Inert: OpenPNE 4 folds the RECIPIENT locale to ja/en before looking a row up, so this one
-                // is never read. Rendering it would also misfire — TermService has no terms for it, so every
-                // `op_term.*` reference would look like a missing variable.
+                // Never read (OpenPNE 4 folds the recipient locale to ja/en before the lookup) and not
+                // render-tested, since TermService has no terms for it and every `op_term.*` reference
+                // would look like a missing variable.
                 $warnings[] = self::inertLocaleMessage($name, (string) $row->lang, $folded);
 
                 continue;
@@ -129,12 +117,9 @@ final class MailTemplatePreflight
     }
 
     /**
-     * The source rows the import carries, id => the template they become.
-     *
-     * Both the filter and the name→template mapping are the step's own SQL, so this covers exactly the
-     * rows the step will insert. Resolving names in PHP instead would only approximate it: the source
-     * collation is case-insensitive and PAD SPACE, so a name the step's `IN` and `CASE` both match can
-     * be one a PHP comparison does not — and that row would migrate untested.
+     * The source rows the import carries, id => the template they become, resolved by the step's own
+     * filter and key CASE. A PHP name comparison would cover a different row set: the source collation
+     * is case-insensitive and PAD SPACE.
      *
      * @return array<int, MailTemplate>
      */

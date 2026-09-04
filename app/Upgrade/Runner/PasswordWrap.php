@@ -10,19 +10,10 @@ use Illuminate\Support\Facades\Hash;
 use Throwable;
 
 /**
- * Post-walk pass that removes bare OpenPNE 3 MD5 hashes at rest: every imported
- * 32-hex password becomes bcrypt(md5hex) with password_scheme = md5_bcrypt, so the
- * stored form is always a bcrypt string and login verifies flagged rows as
- * Hash::check(md5($attempt), $hash) until the first success rehashes to a plain
- * bcrypt (App\Actions\Fortify\AuthenticateMember / App\Auth\LegacyEloquentUserProvider).
- *
- * bcrypt cannot be computed in SQL, so this runs in PHP after the INSERT...SELECT
- * walk — the FileBinMigration precedent for work a step cannot express. The bare-MD5
- * predicate never matches a wrapped row, so the pass is idempotent and a failed run
- * resumes by simply rescanning; no progress cursor is needed. rows_affected on the
- * checkpoint counts rows wrapped by the completing run (a resume records the
- * remainder), which verify-upgrade does not consume — its invariant is the terminal
- * state, zero bare-MD5 rows.
+ * Post-walk pass wrapping every imported bare OpenPNE 3 MD5 as bcrypt(md5hex) with password_scheme =
+ * md5_bcrypt, so no bare MD5 rests in the target (docs/internals/upgrade.md, "Post-walk passes"). The
+ * bare-MD5 predicate never matches a wrapped row, so the pass is idempotent and a failed run resumes
+ * by rescanning.
  */
 final class PasswordWrap
 {
@@ -33,10 +24,11 @@ final class PasswordWrap
     // Each row costs a full bcrypt; the chunk bounds the per-transaction time, not memory.
     private const CHUNK = 200;
 
-    // Wrap-only cost: 10 meets the password-storage floor while keeping a whole-fleet
-    // import tractable (cost 12 would quadruple the CPU time); the first successful
-    // login rehashes to the app default. Explicitly bcrypt — the scheme is named
-    // md5_bcrypt, so a future default-hasher change must not alter what this produces.
+    /**
+     * Explicitly bcrypt, since the scheme is named md5_bcrypt and a default-hasher change must not
+     * alter what this produces. Cost 10 meets the password-storage floor while keeping a whole-fleet
+     * import tractable (12 would quadruple the CPU time); the first login rehashes to the app default.
+     */
     private const WRAP_COST = 10;
 
     public function plan(Closure $out): void

@@ -7,12 +7,8 @@ use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `community_event_member` (opCommunityTopicPlugin RSVP pivot) → OpenPNE 4
- * `group_event_members`.
- *
- * Row presence is the whole signal — a row means the member is attending; there is no status column.
- * Both FKs cascade in OpenPNE 3, so deleting the event or the member removes the RSVP; member_id is
- * NOT NULL here (unlike events/comments, which keep withdrawn-author rows). timestamps are the original
- * join dates, not the upgrade run's clock.
+ * `group_event_members`. Row presence is the whole signal (no status column), and member_id is NOT
+ * NULL because both OpenPNE 3 FKs cascade.
  */
 class GroupEventMemberUpgrade extends UpgradeStep
 {

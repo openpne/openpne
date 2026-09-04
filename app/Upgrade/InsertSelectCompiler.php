@@ -5,12 +5,8 @@ namespace App\Upgrade;
 use LogicException;
 
 /**
- * Compiles an UpgradeStep into the `INSERT ... SELECT` the upgrade runs.
- *
- * Set-based copy inside one MySQL instance (the tool's chosen mechanism), not a
- * row-by-row PHP loop. A table prefix is concatenated to the table name; an optional
- * database qualifies it as `db`.`table`, covering the 1-DB-in-place, table-prefix,
- * and same-instance/different-database workflows.
+ * Compiles an UpgradeStep into the `INSERT ... SELECT` the upgrade runs: a set-based copy inside one
+ * MySQL instance, source and target qualified by an optional table prefix and database.
  */
 final class InsertSelectCompiler
 {
@@ -41,9 +37,8 @@ final class InsertSelectCompiler
             array_values($columns),
         ));
 
-        // The FROM table is aliased to its original name so a step's correlated subqueries can keep
-        // referencing the outer row by that bare name even when the physical table is prefixed / in
-        // another database; SourceRef tokens carry the same qualification into those subqueries.
+        // The FROM table is aliased to its bare name so a step's correlated subqueries reference the
+        // outer row by that name under a prefix or another database.
         $source = self::qualify($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
         $target = self::qualify($targetDatabase, $targetPrefix, $step->targetTable());
 
@@ -73,8 +68,8 @@ final class InsertSelectCompiler
     }
 
     /**
-     * The backtick-quoted source/target table name: `prefixtable`, or `db`.`prefixtable`. Public so
-     * the preflight creates/drops an ensure-exists table at exactly the name a compiled query reads.
+     * The backtick-quoted table name, database-qualified when given; public so the preflight creates
+     * an ensure-exists table at exactly the name a compiled query reads.
      */
     public static function qualify(?string $database, string $prefix, string $table): string
     {

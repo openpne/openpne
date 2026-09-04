@@ -6,9 +6,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member_relationship` (is_access_block) → OpenPNE 4 `member_blocks`.
- *
- * A block is one directed row (member_id_from = blocker, member_id_to = blocked). Maps directly.
+ * OpenPNE 3 `member_relationship` (is_access_block) → OpenPNE 4 `member_blocks`, one directed row per
+ * block (member_id_from = blocker).
  */
 class MemberBlockUpgrade extends UpgradeStep
 {

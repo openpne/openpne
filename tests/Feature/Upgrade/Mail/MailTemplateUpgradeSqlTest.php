@@ -12,14 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/**
- * Runs the compiled notification_mail(+_translation) → mail_templates(+_translations) copy against the
- * real OpenPNE 3 DDL: the in-scope templates carry over with the key remap, required mails are forced on
- * while a configurable one keeps its OpenPNE 3 flag, the unsupported / mobile names drop, the per-locale
- * wording migrates with the lang fold, and a migrated customized body renders byte-for-byte.
- *
- * MySQL only, like the other upgrade SQL tests.
- */
+/** Runs the compiled notification_mail (+ translation) copy against the real OpenPNE 3 DDL; MySQL only. */
 class MailTemplateUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;

@@ -7,27 +7,10 @@ namespace App\Upgrade\Runner;
 use League\HTMLToMarkdown\HtmlConverter;
 
 /**
- * Rewrites an OpenPNE 3 site-policy body (sns_config user_agreement / privacy_policy) as Markdown,
- * so it reads on OpenPNE 4 the way it read on OpenPNE 3.
- *
- * OpenPNE 3 printed the stored value as `nl2br($op_config[…])` with output escaping switched off
- * (`sfOutputEscaper::markClassAsSafe('opConfig')`) — the value was raw HTML with newlines honoured.
- * App\Support\MarkdownText escapes raw HTML and reads Markdown punctuation, so a verbatim copy would
- * show an operator's `<h2>` as literal text and turn a line starting with `#` into a heading. Hence
- * two paths, both aiming at "renders the same as OpenPNE 3 did":
- *
- *   - no tags (the common case): escape the Markdown constructs so every character stays literal.
- *     Newlines are left alone — MarkdownText renders a soft break as `<br>`, which is OpenPNE 3's
- *     nl2br. Deliberately not HtmlConverter: it collapses whitespace runs inside a text node and
- *     escapes only `*_[]` and a leading `#`, so `> quoted` and `- item` lines would change meaning.
- *   - tags present: nl2br first (reproducing what OpenPNE 3 emitted), then convert that HTML to
- *     Markdown. Markup with no Markdown equivalent is stripped rather than kept, matching what the
- *     OpenPNE 4 sanitizer would drop from the rendered output anyway.
- *
- * One deliberate difference from OpenPNE 3: MarkdownText autolinks, so a bare URL, a `www.` host and
- * an email address come out as links where OpenPNE 3 left them as text. Suppressing that would mean
- * escaping the colon, the dots and the `@` in the stored body — an operator editing the text later
- * would meet `https\://…` — and every other body in OpenPNE 4 links its URLs.
+ * Rewrites an OpenPNE 3 site-policy body (raw HTML printed through nl2br with escaping off) as
+ * Markdown that App\Support\MarkdownText renders the same way (docs/internals/upgrade.md, "Site
+ * policy bodies"). Deliberate difference: MarkdownText autolinks bare URLs, `www.` hosts and email
+ * addresses, which OpenPNE 3 left as text.
  */
 final class Op3PolicyMarkdown
 {
@@ -46,15 +29,19 @@ final class Op3PolicyMarkdown
         return preg_match('~<[a-z!/][^>]*>~i', $text) === 1;
     }
 
+    /**
+     * Not HtmlConverter: it collapses whitespace runs and escapes only `*_[]` and a leading `#`, so a
+     * `> quoted` or `- item` line would change meaning.
+     */
     private static function escapePlain(string $text): string
     {
-        // Inline constructs. The backslash goes first so the escapes added here are not re-escaped.
+        // The backslash goes first so the escapes added below are not re-escaped.
         $text = (string) preg_replace('/([\\\\`*_\[\]~])/u', '\\\\$1', $text);
         // Block starters, which only bite at the head of a line: ATX heading, blockquote, bullet
         // (`*` was already escaped above).
         $text = (string) preg_replace('/^(\h*)([#>+-])/mu', '$1\\\\$2', $text);
-        // An ordered list marker. The backslash goes on the punctuation, not in front of the digits:
-        // a backslash escape only holds before ASCII punctuation, so `\1.` would render literally.
+        // The backslash goes on the list marker's punctuation, not before the digits: an escape only
+        // holds before ASCII punctuation, so `\1.` would render literally.
         $text = (string) preg_replace('/^(\h*\d+)([.)])/mu', '$1\\\\$2', $text);
 
         // A line of `=` alone turns the line above it into a setext heading.

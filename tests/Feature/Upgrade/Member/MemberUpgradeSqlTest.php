@@ -12,13 +12,8 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled member INSERT...SELECT against the real OpenPNE 3 `member` +
- * `member_config` DDL, exercising the credential subqueries (email fallback, verbatim
- * MD5, login-impossible NULLs).
- *
- * MySQL only, like the other upgrade SQL tests: the correlated subqueries and source DDL
- * (TEXT, utf8mb3, DATETIME) are MySQL features. MigratesUpgradeTargetsOnce because creating the
- * source tables is DDL, which implicitly commits.
+ * Runs the compiled member step against the real OpenPNE 3 `member` + `member_config` + `sns_config`
+ * DDL; MySQL only, MigratesUpgradeTargetsOnce because creating the source tables is DDL.
  */
 class MemberUpgradeSqlTest extends TestCase
 {
@@ -216,9 +211,8 @@ class MemberUpgradeSqlTest extends TestCase
 
     public function test_a_registration_that_never_activated_is_not_a_member(): void
     {
-        // OpenPNE 3's opActivateBehavior hides is_active = 0 from every query, and isSNSMember() is
-        // that same flag — the account exists but is neither visible nor usable. OpenPNE 4 has no
-        // such state, so carrying the row over would publish a member OpenPNE 3 never had.
+        // OpenPNE 3's opActivateBehavior hides is_active = 0 from every query and isSNSMember() is the
+        // same flag, so carrying the row over would publish a member OpenPNE 3 never had.
         $this->seedMember(50, 'Activated');
         $this->seedInactiveMember(51, 'AdminInvitePending');
 
@@ -229,10 +223,8 @@ class MemberUpgradeSqlTest extends TestCase
 
     public function test_an_abandoned_signup_does_not_arrive_with_working_credentials(): void
     {
-        // The OpenPNE 3 register form saves the nickname, password and promoted address at
-        // member/registerInput, one request before member/registerEnd activates. Someone who never
-        // reached that second request is inactive *with* credentials — and OpenPNE 4 gates login on
-        // the password and is_login_rejected alone, so migrating them would hand out an account.
+        // The OpenPNE 3 register form saves nickname, password and address one request before
+        // activation, so an abandoned signup is inactive with working credentials OpenPNE 4 would accept.
         $this->seedInactiveMember(52, 'Abandoned');
         $this->seedConfig(52, 'pc_address', 'abandoned@pc.example');
         $this->seedConfig(52, 'password', md5('secret'));

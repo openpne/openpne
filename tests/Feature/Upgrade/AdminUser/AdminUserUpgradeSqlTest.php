@@ -9,11 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/**
- * Runs the compiled admin_user → admin_users copy against the real OpenPNE 3 `admin_user` DDL. The row
- * carries over with the OpenPNE 3 MD5 password verbatim (INSERT...SELECT bypasses the model's `hashed`
- * cast), to be rehashed to bcrypt on first login. MySQL only, like the other upgrade SQL tests.
- */
+/** Runs the compiled admin_user copy against the real OpenPNE 3 DDL; MySQL only. */
 class AdminUserUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;

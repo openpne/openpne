@@ -24,11 +24,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The source preflight: an absent optional plugin group is created empty so its steps no-op; a
- * missing CORE table, a missing consumed column, or a partial plugin group aborts before any write;
- * a KV config name outside the recognised set is reported with its row count and migrated past.
- */
+/** The source preflight's verdicts, driven through UpgradeRunner::run() on MySQL. */
 class SourcePreflightTest extends TestCase
 {
     use DatabaseMigrations;
@@ -58,8 +54,8 @@ class SourcePreflightTest extends TestCase
 
     public function test_absent_optional_plugin_group_is_created_empty_and_dropped(): void
     {
-        // opDiary not installed: `diary` is absent. The step no-ops against an empty ensure-existed
-        // table, and the table is dropped afterwards (the source namespace is left clean).
+        // opDiary not installed (`diary` absent): the step no-ops against the empty ensure-existed
+        // table, which is dropped afterwards.
         $this->createSource('member');
         [$ok, $output] = $this->runSteps([new DiaryUpgrade]);
 
@@ -148,8 +144,8 @@ class SourcePreflightTest extends TestCase
 
     public function test_force_restart_with_a_bad_source_keeps_existing_data(): void
     {
-        // Existing target rows + a checkpoint from an earlier run; --force-restart would normally clear both.
-        // Target rows only: the run aborts on the preflight, so no step reads a source member.
+        // Existing target rows and a checkpoint that --force-restart would normally clear; target rows
+        // only, since the run aborts on the preflight before any step reads a source member.
         [$a, $b] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert(['member_id' => $a->id, 'friend_id' => $b->id]);
         UpgradeState::create(['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);

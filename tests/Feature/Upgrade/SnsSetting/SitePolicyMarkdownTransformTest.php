@@ -82,8 +82,8 @@ class SitePolicyMarkdownTransformTest extends TestCase
     {
         $this->seedSetting('user_agreement', '# 見出しではない');
 
-        // The output closure throws after the rewrite committed. The checkpoint has to stand: a
-        // FAILED overwrite here would send the resume through the rewrite a second time.
+        // The output closure throws after the rewrite committed; the checkpoint has to stand, or the
+        // resume would rewrite a second time.
         try {
             (new SitePolicyMarkdownTransform)->run(['sns_settings'], function (string $line): void {
                 if (str_starts_with($line, 'DONE')) {

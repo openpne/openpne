@@ -4,11 +4,7 @@ namespace App\Upgrade;
 
 use RuntimeException;
 
-/**
- * Reads the OpenPNE 3 source DDL fixture (database/upgrade/openpne3-schema.sql).
- * Lets the seed tests create source tables from the real dump and lets the matrix
- * audit check mappings against the actual source columns.
- */
+/** Reads the OpenPNE 3 source DDL fixture (database/upgrade/openpne3-schema.sql). */
 final class SourceSchema
 {
     public function __construct(private readonly string $path) {}
@@ -52,11 +48,8 @@ final class SourceSchema
     }
 
     /**
-     * Every `table.column` that is a foreign key onto `file`(id), in fixture order. A file owner can
-     * be a join table (member_image, *_image) or a plain column on another table (community.file_id),
-     * so coverage of the upload binaries is a column-level question, not a table-level one — this is
-     * what the matrix audit checks each reference against (owned, on an unstepped table, or
-     * declared unowned).
+     * Every `table.column` that is a foreign key onto `file.id`, in fixture order. Coverage is per
+     * column, not per table: a file owner can be a join table or a plain column on another table.
      *
      * @return list<string>
      */
@@ -66,9 +59,7 @@ final class SourceSchema
     }
 
     /**
-     * Every `table.column` that is a foreign key onto `member`(id), in fixture order. What the
-     * upgrade owes each one is either a row-dropping guard or a preflight refusal (ActiveMember);
-     * the matrix audit checks the list against both so a new step cannot leave one unhandled.
+     * Every `table.column` that is a foreign key onto `member.id`, in fixture order.
      *
      * @return list<string>
      */

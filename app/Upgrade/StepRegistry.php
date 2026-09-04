@@ -154,10 +154,8 @@ final class StepRegistry
     }
 
     /**
-     * Dispositions for OpenPNE 3 source tables the upgrade accounts for without a standalone
-     * source→target step — flattened into another table via correlated subquery, handled by
-     * the runner outside the step pipeline, or deliberately not carried. Not an inventory of
-     * every unmigrated source table: an entry is recorded where its absence from the step list
+     * OpenPNE 3 source tables accounted for without a standalone step, each with its disposition.
+     * Not an inventory of every unmigrated table: an entry exists where absence from the step list
      * would read as a silent omission in the matrix or the coverage audits.
      *
      * @return array<string, string> source table => reason
@@ -171,19 +169,17 @@ final class StepRegistry
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
-            // File-owning tables whose rows are not migrated. FileUpgrade still migrates their
-            // binaries (every `file` row is kept) with a null owner.
+            // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
             'activity_image' => 'OpenPNE 3 activity (timeline) images. The activity rows themselves are not migrated, so there is no owner to point at; the binaries are kept with a null owner.',
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];
     }
 
     /**
-     * OpenPNE 3 plugins whose source tables the upgrade reads but which are legitimately absent when
-     * the plugin is not installed, each with the minimum plugin version that has all those tables.
-     * The source preflight treats a fully-absent group as "plugin not installed" (it ensure-exists's
-     * the tables empty so the steps no-op), and a partially-present group as an old/corrupt plugin (a
-     * hard error naming the floor). Every other read source table is core and required.
+     * OpenPNE 3 plugins whose source tables are legitimately absent when the plugin is not installed,
+     * each with the minimum plugin version that has all of them. A fully absent group is created
+     * empty so its steps no-op; a partially present group aborts as an old or corrupt plugin, naming
+     * the floor.
      *
      * @return array<string, array{floor: string, tables: list<string>}>
      */
@@ -211,12 +207,8 @@ final class StepRegistry
     }
 
     /**
-     * file_id columns that sit on an otherwise-migrated table but are intentionally left without a
-     * file owner, with the reason. Distinct from unsteppedSourceTables() (whole tables with no step):
-     * the table migrates, but FileUpgrade assigns its file no related_entity. The matrix coverage
-     * audit treats these as accounted-for so the column is not read as a silent drop.
-     *
-     * Currently empty: every migrated table's file column is owned by FileUpgrade.
+     * file_id columns on a migrated table that FileUpgrade deliberately leaves without an owner, with
+     * the reason; the coverage audit treats them as accounted for. Empty is a valid state.
      *
      * @return array<string, string> "table.column" => reason
      */
@@ -226,11 +218,9 @@ final class StepRegistry
     }
 
     /**
-     * Disposition of each known OpenPNE 3 `member_config` name. member_config is a KV table read
-     * by several steps via subquery (not one source→target step), so the per-step column audit
-     * cannot show which names migrate and which are dropped; this is that per-name coverage.
-     * A name absent from this map is an unrecognised custom config (third-party plugin or source
-     * customisation) the upgrade does not migrate.
+     * Disposition of each known OpenPNE 3 `member_config` name: the table is read by subquery, so this
+     * is the per-name coverage the per-step column audit cannot give (docs/internals/upgrade.md). A
+     * name absent here is an unrecognised custom config the upgrade does not migrate.
      *
      * @return array<string, string> member_config name => where it goes / why it is dropped
      */
@@ -271,11 +261,8 @@ final class StepRegistry
 
     /**
      * Every literal `member_config` name the upgrade recognises, for the preflight's unknown-name
-     * scan. Three sources, unioned so none of them is a second list that can drift:
-     * memberConfigDispositions() carries the dropped names and the ones MemberUpgrade reads by
-     * subquery, while the migrated preference and notification keys come from the registries the
-     * steps themselves build their filters from — registering a key there keeps it recognised even
-     * if the narrative map lags.
+     * scan. Unioned from memberConfigDispositions() and the registries the steps build their filters
+     * from, so registering a key keeps it recognised even when the disposition map lags.
      *
      * @return list<string>
      */
@@ -311,10 +298,9 @@ final class StepRegistry
     }
 
     /**
-     * Disposition of each known OpenPNE 3 `community_config` name. Like member_config, this is a KV
-     * table read by subquery (GroupUpgrade), not a source→target step, so the per-step column
-     * audit cannot show which names migrate; this is that per-name coverage. A name absent from this
-     * map is an unrecognised custom/plugin config the upgrade does not migrate.
+     * Disposition of each known OpenPNE 3 `community_config` name, the per-name coverage for a table
+     * read only by subquery (GroupUpgrade). A name absent here is an unrecognised custom config the
+     * upgrade does not migrate.
      *
      * @return array<string, string> community_config name => where it goes / why it is dropped
      */
@@ -334,11 +320,9 @@ final class StepRegistry
     }
 
     /**
-     * Disposition of each OpenPNE 3 `notification_mail` name. MailTemplateUpgrade copies the table but its
-     * `name IN (…)` filter only carries the templates OpenPNE 4 sends, so the per-step column audit cannot
-     * show why the other names are dropped; this is that per-name coverage. The migrated entries are
-     * hand-written (each carries its own is_enabled / signature reason); a registry-consistency test pins
-     * them to MailTemplate::importable() so adding an import origin cannot leave this map behind.
+     * Disposition of each OpenPNE 3 `notification_mail` name: the step's `name IN (…)` filter carries
+     * only the templates OpenPNE 4 sends, so this is the per-name coverage for the rest. The migrated
+     * entries must track MailTemplate::importable().
      *
      * @return array<string, string> notification_mail name => where it goes / why it is dropped
      */

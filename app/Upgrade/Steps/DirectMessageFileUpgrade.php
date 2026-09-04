@@ -7,13 +7,9 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message_file` → OpenPNE 4 `direct_message_files` (a personal message's image attachments).
- *
- * Only attachments of a migrated personal message are kept (the same type filter DirectMessageUpgrade and
- * FileUpgrade's message arm use); non-personal message types are not migrated. OpenPNE 3 has no slot
- * column, so `number` is synthesized 1..N by id within the message (the order the attachments were
- * added). file.id is preserved by FileUpgrade, so file_id copies verbatim; OpenPNE 4's join row has
- * no timestamps, so the source ones are dropped.
+ * OpenPNE 3 `message_file` → OpenPNE 4 `direct_message_files`, attachments of migrated personal
+ * messages only (the DirectMessageUpgrade type filter). OpenPNE 3 has no slot column, so `number` is
+ * synthesized 1..N by id within the message.
  */
 class DirectMessageFileUpgrade extends UpgradeStep
 {

@@ -10,12 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/**
- * Runs the compiled diary-comment-image step against the real OpenPNE 3 DDL: the join rows copy
- * verbatim (diary_comment_id / file_id, no number column). FileUpgrade preserves file.id.
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
- */
+/** Runs the compiled step against the real OpenPNE 3 `diary_comment_image` DDL; MySQL only. */
 class DiaryCommentImageUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;

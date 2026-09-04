@@ -19,13 +19,7 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
-/**
- * Runs the compiled community steps against the real OpenPNE 3 DDL, checking the KV config flattens
- * onto typed columns, the position rows fold into the role, the dropped category root nulls its
- * references, and the is_pre flag splits community_member into confirmed members / pending requests.
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
- */
+/** Runs the compiled community steps against the real OpenPNE 3 DDL; MySQL only. */
 class GroupUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
@@ -170,9 +164,8 @@ class GroupUpgradeSqlTest extends TestCase
 
     public function test_default_community_rows_for_a_member_who_never_activated_are_dropped(): void
     {
-        // OpenPNE 3's register form joins the default groups in the same save that writes the
-        // profile — one request before activation — so an abandoned signup leaves a membership row
-        // behind. Both halves of the is_pre split must drop it.
+        // OpenPNE 3's register form joins the default groups one request before activation, so an
+        // abandoned signup leaves a membership row behind for both halves of the is_pre split to drop.
         $joined = $this->activeMember();
         $abandoned = $this->inactiveSourceMember(9100);
 

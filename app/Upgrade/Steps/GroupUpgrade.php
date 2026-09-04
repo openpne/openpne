@@ -10,30 +10,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `community` → OpenPNE 4 `groups`.
- *
- * `register_policy` and `description` are not community-table columns in OpenPNE 3 — they live in
- * the `community_config` KV table — so they are pulled in with correlated subqueries (the
- * member_config → members treatment):
- *
- *  - register_policy: community_config[register_policy] ('open' | 'close') → JoinPolicy. The CASE
- *    reads the runtime enum so it cannot drift; a missing/empty/unknown value falls to Open, which
- *    is OpenPNE 3's own config default ("open").
- *  - topic_read_access / topic_post_authority: community_config[public_flag] / [topic_authority]
- *    → TopicReadAccess / TopicPostAuthority (the topic board's read/post gates), the same
- *    KV→typed-column flatten, defaulting to the OpenPNE 3 config default ("public").
- *  - description: community_config[description], or NULL when absent.
- *  - pending_admin_member_id: the single community_member_position[name=admin_confirm] member (the
- *    pending target of an admin transfer); NULL when none.
- *  - group_category_id: from the source community_category_id, nulled when it points at a category that was not migrated — the
- *    OpenPNE 3 root (lft=1) is dropped by GroupCategoryUpgrade — so the target FK holds.
- *
- * The top-image file_id is copied verbatim onto groups.file_id, preserving which file each
- * group used (FileUpgrade keeps file.id, so the FK resolves, and assigns the file its
- * `community` owner).
- *
- * The subqueries use the latest row per name where the KV table has no uniqueness, so duplicates
- * resolve deterministically.
+ * OpenPNE 3 `community` → OpenPNE 4 `groups`. register_policy, description, the topic gates,
+ * is_default and the join-notification flag live in the `community_config` KV table and
+ * pending_admin_member_id in community_member_position, so they are pulled in by correlated
+ * subquery, latest row per name (docs/internals/upgrade.md, "KV config tables").
  */
 class GroupUpgrade extends UpgradeStep
 {
@@ -76,9 +56,8 @@ class GroupUpgrade extends UpgradeStep
     }
 
     /**
-     * community_config[register_policy] → JoinPolicy. 'close' = approval; 'open'/missing/empty/
-     * unknown = open (OpenPNE 3's config default). Each branch reads the runtime enum so it cannot
-     * drift.
+     * community_config[register_policy] → JoinPolicy: 'close' = Approval; 'open', missing, empty or
+     * unknown = Open, OpenPNE 3's config default.
      */
     private function registerPolicyExpr(): string
     {
@@ -112,9 +91,8 @@ class GroupUpgrade extends UpgradeStep
     }
 
     /**
-     * community_config[public_flag] → TopicReadAccess. 'auth_commu_member' = members-only;
-     * 'public'/missing/empty/unknown = everyone (OpenPNE 3's config default). Runtime enum so it
-     * cannot drift.
+     * community_config[public_flag] → TopicReadAccess: 'auth_commu_member' = MembersOnly; 'public',
+     * missing, empty or unknown = Everyone, OpenPNE 3's config default.
      */
     private function topicReadAccessExpr(): string
     {
@@ -128,9 +106,8 @@ class GroupUpgrade extends UpgradeStep
     }
 
     /**
-     * community_config[topic_authority] → TopicPostAuthority. 'admin_only' = admins-only;
-     * 'public'/missing/empty/unknown = members (OpenPNE 3's config default). Runtime enum so it
-     * cannot drift.
+     * community_config[topic_authority] → TopicPostAuthority: 'admin_only' = AdminsOnly; 'public',
+     * missing, empty or unknown = Members, OpenPNE 3's config default.
      */
     private function topicPostAuthorityExpr(): string
     {
@@ -145,10 +122,9 @@ class GroupUpgrade extends UpgradeStep
 
     /**
      * SQL boolean: this `community_member_position` row is the one whose member becomes its
-     * community's pending_admin_member_id. The UNIQUE is on (community_member_id, name), not
-     * (community_id, name), so a community can hold several admin_confirm rows and only the latest
-     * counts. Public because ActiveMember's preflight must count over exactly this row and no other —
-     * an older, unread duplicate is not something to refuse a migration over.
+     * community's pending_admin_member_id — the latest admin_confirm row, since the UNIQUE is on
+     * (community_member_id, name) and a community can hold several. Public because ActiveMember's
+     * preflight scope must count exactly this row.
      */
     public static function pendingAdminRowSelector(): string
     {

@@ -6,11 +6,9 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `community_member` (is_pre=1, pending) → OpenPNE 4 `group_join_requests`.
- *
- * The other half of the is_pre split (GroupMemberUpgrade takes is_pre=0). A pending applicant
- * carries only the join request — community_id, member_id, created_at — with no role or mail flags;
- * those source columns are consumed/gapped by the confirmed-member step reading the same table.
+ * OpenPNE 3 `community_member` (is_pre=1, pending) → OpenPNE 4 `group_join_requests`, the other half
+ * of the is_pre split with GroupMemberUpgrade. The role and mail-flag source columns are consumed or
+ * gapped by that step, which reads the same table.
  */
 class GroupJoinRequestUpgrade extends UpgradeStep
 {

@@ -9,18 +9,11 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 notification-extension opt-in rows (in `member_config`) → OpenPNE 4
- * `member_notification_settings`.
- * The migrated source names are derived from NotificationKind × NotificationChannel
- * (NotificationKind::op3ConfigName()), so registering a kind is all it takes to migrate its two
- * keys — there is no second list here to drift. Every importable kind imports, wired or not:
- * the upgrade is one-shot, so an unwired kind's stored choice must be preserved regardless
- * of whether a sender exists. A kind native to OpenPNE 4 has no source key and is passed over.
- *
- * Values are copied verbatim in the source's own semantics: '0' is the only opt-out, anything
- * else means enabled (the fail-open default the source form wrote). member_config is a KV table
- * without a (member_id, name) unique, so the filter keeps only the latest row per
- * (member_id, name) to satisfy the target's unique index.
+ * OpenPNE 3 `member_config` opt-in rows → OpenPNE 4 `member_notification_settings`, for every
+ * importable NotificationKind × NotificationChannel source name (a native kind has none and is passed
+ * over; an unwired kind imports, since the upgrade is one-shot). '0' is the only opt-out (the
+ * source's fail-open default); the filter keeps the latest row per (member_id, name), as
+ * member_config has no such unique.
  */
 class MemberNotificationSettingUpgrade extends UpgradeStep
 {

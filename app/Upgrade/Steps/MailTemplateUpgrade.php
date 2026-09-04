@@ -7,13 +7,10 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `notification_mail` → OpenPNE 4 `mail_templates`, for the templates the MailTemplate registry
- * imports (those with an OpenPNE 3 source name). The migrated names and the name→key remap are both
- * derived from MailTemplate::importable(), so giving a case an import origin is all it takes — no second
- * list to drift. `id` is carried verbatim so MailTemplateTranslationUpgrade can FK the per-locale wording.
- *
- * is_enabled is honored only for configurable templates; required/security mails (registration, email
- * change) are forced on so an OpenPNE 3 `is_enabled=0` can never break those flows after the upgrade.
+ * OpenPNE 3 `notification_mail` → OpenPNE 4 `mail_templates`, for the cases MailTemplate::importable()
+ * gives an OpenPNE 3 source name (the filter and the name → key CASE derive from it). is_enabled is
+ * honoured only for configurable templates; required mails are forced on so an OpenPNE 3
+ * `is_enabled=0` cannot break registration or email change.
  */
 class MailTemplateUpgrade extends UpgradeStep
 {

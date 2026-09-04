@@ -6,13 +6,7 @@ use App\Support\Visibility;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
-/**
- * OpenPNE 3 `diary` (opDiaryPlugin) → OpenPNE 4 `diaries`.
- *
- * id is preserved because other OpenPNE 3 tables reference diary.id; timestamps are
- * preserved because they are the original post dates, not the upgrade run's clock.
- * title/body are TEXT → TEXT, so long content round-trips untruncated.
- */
+/** OpenPNE 3 `diary` (opDiaryPlugin) → OpenPNE 4 `diaries`, ids and timestamps verbatim. */
 class DiaryUpgrade extends UpgradeStep
 {
     protected string $source = 'diary';
@@ -35,10 +29,8 @@ class DiaryUpgrade extends UpgradeStep
     }
 
     /**
-     * `link_card_id` / `link_card_synced_at` are left at their schema default (null) rather than
-     * mapped: OpenPNE 3 has no equivalent, and a null `link_card_synced_at` is exactly the "never
-     * examined" state the read path looks for — so migrated records pick up cards on first view, if
-     * the operator has the feature on at all.
+     * link_card_id / link_card_synced_at stay at their null default: OpenPNE 3 has no equivalent, and
+     * a null link_card_synced_at is the "never examined" state the read path fetches a card for.
      */
     public function targetDefaults(): array
     {
@@ -54,12 +46,10 @@ class DiaryUpgrade extends UpgradeStep
     }
 
     /**
-     * public_flag + is_open → Visibility. Every branch's value comes from the runtime
-     * enum, so this CASE cannot drift from it. OpenPNE 3 normalises web-public as
-     * public_flag=1 + is_open=1 (older data may carry the legacy PUBLIC_FLAG_OPEN=4);
-     * is_open on friend/private rows is anomalous, so the restrictive flag wins. An
-     * unrecognised flag yields NULL, which the NOT NULL column rejects — the upgrade
-     * fails loudly rather than storing an out-of-range visibility.
+     * public_flag + is_open → Visibility, each branch from the runtime enum. OpenPNE 3 normalises
+     * web-public as public_flag=1 + is_open=1 (older data may carry the legacy PUBLIC_FLAG_OPEN=4),
+     * is_open on a friend/private row is anomalous so the restrictive flag wins, and an unrecognised
+     * flag yields NULL so the NOT NULL column rejects it.
      */
     private function visibilityCase(): string
     {

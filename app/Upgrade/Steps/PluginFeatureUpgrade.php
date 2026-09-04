@@ -7,16 +7,10 @@ use App\Support\SnsSettingKey;
 use App\Upgrade\Column;
 
 /**
- * OpenPNE 3 `plugin` (is_enabled) → the OpenPNE 4 feature flags in `sns_settings`.
- *
- * OpenPNE 3 switched a feature off by disabling its plugin, and wrote a `plugin` row lazily — an
- * absent row is an enabled plugin — so only `is_enabled = 0` rows are copied (see FeatureFlagUpgrade).
- * The OpenPNE 3 plugin directory names live here and nowhere else; each names the unit it becomes and
- * the unit supplies the target key, so there is no second list of setting keys to drift.
- *
- * The events unit rides the same opCommunityTopicPlugin row through
- * GroupEventPluginFeatureUpgrade: OpenPNE 3 shipped the topic board and events in one plugin,
- * OpenPNE 4 toggles them separately.
+ * OpenPNE 3 `plugin` (is_enabled) → the OpenPNE 4 feature flags in `sns_settings`; OpenPNE 3 wrote a
+ * `plugin` row lazily, so only `is_enabled = 0` rows are copied (FeatureFlagUpgrade). The plugin
+ * directory names live in pluginFeatures() alone, and GroupEventPluginFeatureUpgrade reads the same
+ * opCommunityTopicPlugin row since OpenPNE 3 shipped topics and events in one plugin.
  */
 class PluginFeatureUpgrade extends FeatureFlagUpgrade
 {

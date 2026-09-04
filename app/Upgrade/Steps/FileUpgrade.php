@@ -8,25 +8,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `file` (upload metadata) → OpenPNE 4 `files`.
- *
- * id is preserved verbatim: the bytes table (`file_bin`) keeps its rows and only re-points its
- * file_id FK from `file` onto `files`, and every owning row (member_images, *_images, direct_message_files,
- * banner_images, groups) carries the same file_id — so the whole graph resolves by id without a
- * BLOB copy. `name` (the opaque storage/URL token) is likewise verbatim, keeping OpenPNE 3 image URLs
- * resolvable. `filesize` becomes `byte_size`.
- *
- * OpenPNE 3 `file` has no owner column — ownership lives in whichever table points at the file. Since
- * the compiler is one INSERT...SELECT per source table (no later UPDATE pass), related_entity_type /
- * related_entity_id are resolved here by reading those owning tables with correlated subqueries (the
- * member_config / message_send_list treatment). ownedFileReferences() is the single source of truth:
- * the CASE arms are built from it, and the matrix coverage audit checks it against the fixture's file
- * FKs, so an owning table cannot be wired into one without the other.
- *
- * Files an owner cannot be found for keep a null owner, which the FilePolicy resolves fail-closed
- * (private). Those are the references this step does not own: activity / oauth-consumer images (no
- * successor surface) and attachments on non-personal messages (those messages are not migrated). All
- * `file` rows migrate regardless, so no binary is lost.
+ * OpenPNE 3 `file` → OpenPNE 4 `files`, id and `name` (the storage/URL token) verbatim so file_bin
+ * and every owning row resolve by id. OpenPNE 3 has no owner column, so the owner is resolved by
+ * correlated subquery over ownedFileReferences(); a file no owner claims keeps a null owner, which
+ * FilePolicy resolves as private.
  */
 class FileUpgrade extends UpgradeStep
 {
@@ -51,9 +36,8 @@ class FileUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // No per-file visibility override on migration; null = inherit from the owning entity.
-        // OpenPNE 3 does not record image dimensions, so width/height arrive null and are filled
-        // afterwards by `openpne:backfill-image-dimensions` (which reads the bytes).
+        // A null explicit_visibility inherits from the owner; OpenPNE 3 records no image dimensions,
+        // so width/height arrive null for `openpne:backfill-image-dimensions` to fill.
         return ['explicit_visibility', 'width', 'height'];
     }
 
@@ -67,9 +51,8 @@ class FileUpgrade extends UpgradeStep
     public function ownedFileReferences(): array
     {
         return [
-            // Only an activated member owns their avatar: MemberImageUpgrade drops the row for a
-            // skipped one, so claiming ownership here would leave related_entity_id pointing at no
-            // member. The file itself still migrates, ownerless (FilePolicy resolves that private).
+            // Only an activated member owns the avatar: MemberImageUpgrade drops the join row for a
+            // skipped one, so claiming it here would point related_entity_id at no member.
             'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id',
                 'extra' => ' AND '.ActiveMember::referenceGuard('member_image', 'member_id')],
             // The group top image is a direct column on `community` (not a join table): the owner

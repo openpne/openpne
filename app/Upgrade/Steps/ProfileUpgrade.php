@@ -7,11 +7,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `profile` → OpenPNE 4 `profiles` (profile field definitions).
- *
- * id is preserved (profile_options, member_profiles, and the translation tables reference
- * it). OpenPNE 3's public_flag scale maps to App\Support\Visibility for default_visibility
- * (web=4→Open, friend=2→Friends, private=3→Private, SNS=1 and the invalid 0 default→Members).
+ * OpenPNE 3 `profile` → OpenPNE 4 `profiles`. default_public_flag maps onto Visibility, with SNS=1
+ * and the invalid 0 default falling to Members.
  */
 class ProfileUpgrade extends UpgradeStep
 {

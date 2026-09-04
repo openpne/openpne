@@ -7,19 +7,10 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message_send_list` (MessageSendList, opMessagePlugin) → OpenPNE 4 `direct_message_recipients`.
- *
- * A receipt means "delivered", so only send-list rows whose parent is a migrated, sent personal
- * message are copied (filter). Excluded, by construction, are: draft parents (their recipient is
- * folded onto direct_messages.draft_recipient_id by DirectMessageUpgrade, no receipt), non-`message` types (the
- * notification mechanism, not migrated), and orphans whose parent is absent (the direct_message_id FK could
- * not hold anyway). id is preserved so the deleted_message pointer resolves by message_send_list_id.
- *
- * Folded in with correlated subqueries (mirroring DirectMessageUpgrade's sender side):
- *  - read_at: OpenPNE 3 is_read (a flag) becomes a timestamp; the row's updated_at approximates when
- *    it was read. NULL = unread.
- *  - recipient_deleted_at / recipient_purged_at: the same trash model as the sender side, but the
- *    deleted_message pointer is keyed by message_send_list_id.
+ * OpenPNE 3 `message_send_list` (opMessagePlugin) → OpenPNE 4 `direct_message_recipients`. A receipt
+ * means delivered, so only rows whose parent is a sent, migrated personal message are copied: a
+ * draft's recipient is folded onto direct_messages.draft_recipient_id by DirectMessageUpgrade
+ * instead, and OpenPNE 3's is_read flag becomes read_at from the row's updated_at.
  */
 class DirectMessageRecipientUpgrade extends UpgradeStep
 {

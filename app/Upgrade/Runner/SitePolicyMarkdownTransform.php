@@ -12,14 +12,10 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Post-walk pass that rewrites the imported site-policy bodies as Markdown (Op3PolicyMarkdown).
- * The walk copies `sns_config.value` verbatim because an INSERT...SELECT cannot reformat text; this
- * runs right after it, like PasswordWrap and EmojiTransform.
- *
- * Unlike those two the rewrite is NOT idempotent — escaping an already-escaped body doubles its
- * backslashes — so the completed checkpoint is what makes a resume safe, not a predicate that
- * drains. Both rows are rewritten in one transaction under one checkpoint: a partial pass would
- * otherwise leave no record of which of the two was already converted.
+ * Post-walk pass rewriting the imported site-policy bodies as Markdown (Op3PolicyMarkdown), since an
+ * INSERT...SELECT cannot reformat text (docs/internals/upgrade.md, "Post-walk passes"). Not
+ * idempotent — escaping an escaped body doubles its backslashes — so the completed checkpoint is
+ * what makes a resume safe, and both rows are rewritten under one checkpoint in one transaction.
  */
 final class SitePolicyMarkdownTransform
 {
@@ -48,9 +44,8 @@ final class SitePolicyMarkdownTransform
             return true;
         }
 
-        // Only the write is guarded. Anything after the commit — the progress lines — stays outside,
-        // or a throwing output closure would flip a committed COMPLETED to FAILED and the resume
-        // would run this non-idempotent rewrite over its own output.
+        // The progress lines stay outside the try: a throwing output closure would otherwise flip a
+        // committed COMPLETED to FAILED, and the resume would rewrite the already-converted bodies.
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_RUNNING,
@@ -60,10 +55,8 @@ final class SitePolicyMarkdownTransform
                 'error' => null,
             ]);
 
-            // The rewrite and its COMPLETED checkpoint commit together: completed if and only if the
-            // converted bodies landed. Marking completion in a later statement would let a crash in
-            // between leave converted rows with no checkpoint, and the resume — this pass is not
-            // idempotent — would escape the escapes a second time.
+            // The rewrite and its COMPLETED checkpoint commit together, so a crash cannot leave
+            // converted rows without a checkpoint for the non-idempotent resume to convert again.
             $converted = DB::transaction(function (): int {
                 $converted = $this->rewrite();
 
@@ -113,9 +106,8 @@ final class SitePolicyMarkdownTransform
                 continue;
             }
 
-            // Escapes and Markdown syntax make the text longer, so a body that just fit OpenPNE 3's
-            // TEXT column can outgrow OpenPNE 4's. Fail with the key and the size rather than let the
-            // column truncate a legal document mid-sentence; the whole pass rolls back with it.
+            // Escaping lengthens the text, so a body that fit OpenPNE 3's TEXT column can outgrow the
+            // target; failing (and rolling the pass back) beats letting the column truncate a legal document.
             $bytes = strlen($markdown);
             if ($bytes > $setting->maxBytes()) {
                 // The walk has already completed, so it will not re-copy a shortened OpenPNE 3 value:

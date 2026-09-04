@@ -11,12 +11,8 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled navigation INSERT...SELECT against the real OpenPNE 3 `navigation` +
- * `navigation_translation` DDL, exercising the uri normalization CASE (route-name / module-action /
- * already-URL / unresolved) and the PC-type filter.
- *
- * MySQL only, like the other upgrade SQL tests: the source DDL (TEXT, utf8mb3, DATETIME) and the
- * set-based copy are MySQL features. MigratesUpgradeTargetsOnce because creating the source tables is DDL.
+ * Runs the compiled navigation (+ translation) copy against the real OpenPNE 3 DDL; MySQL only,
+ * MigratesUpgradeTargetsOnce because creating the source tables is DDL.
  */
 class NavigationUpgradeSqlTest extends TestCase
 {
@@ -69,8 +65,8 @@ class NavigationUpgradeSqlTest extends TestCase
 
     public function test_keeps_an_id_bearing_route_name(): void
     {
-        // A route name fixes its URL, so @member_profile normalizes the same in any context — even a
-        // global type. The renderer (not the upgrade) hides such a row where no subject id exists.
+        // A route name fixes its URL regardless of type, so @member_profile normalizes the same in a
+        // global context; the renderer, not the upgrade, hides a row with no subject id.
         $this->seedNav(1, 'friend', '@member_profile');
         $this->seedNav(2, 'secure_global', '@member_profile');
 
@@ -106,13 +102,11 @@ class NavigationUpgradeSqlTest extends TestCase
 
     public function test_resolves_ported_message_links(): void
     {
-        // OpenPNE 3 links the inbox by route name (@receiveList, smartphone nav) and by
-        // module/action (message/index, the PC default nav). Both normalize to the URL now that
-        // message is ported — leaving them verbatim would let NavigationUri hide the link.
+        // OpenPNE 3 links the inbox by route name (@receiveList) and by module/action (message/index),
+        // and the friend nav's message/sendToFriend has no named route, so it maps to its literal
+        // fallback URL with the :id slot.
         $this->seedNav(1, 'secure_global', '@receiveList');
         $this->seedNav(2, 'default', 'message/index');
-        // The friend nav's message/sendToFriend (compose) has no named OpenPNE 3 route; it maps to
-        // its literal fallback URL with the :id slot the renderer threads the subject id into.
         $this->seedNav(3, 'friend', 'message/sendToFriend');
 
         $this->runUpgrade();

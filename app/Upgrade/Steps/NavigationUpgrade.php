@@ -8,31 +8,10 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `navigation` → OpenPNE 4 `navigations`, normalizing `uri` to the URL form the Classic
- * renderer expects (App\Services\NavigationService) and keeping the original in `source_uri` for
- * DOM-id compatibility.
- *
- * OpenPNE 3 stored a navigation link as a route name (`@homepage`), an already-formed URL
- * (`/path`, `http(s)://…`), or a bare `module/action`. The normalization is a SQL CASE built from
- * the route inventory (openpne3-pc-frontend-routes.php) and the module/action map
- * (openpne3-module-actions.php):
- *
- *  - an already-formed URL is kept as-is;
- *  - a `@name` is looked up in the inventory (the name fixes the URL, so this is
- *    type-independent), keeping the `:id` placeholder the renderer threads the subject id into;
- *  - a bare `module/action` is type-aware — the friend/community contexts resolve to the
- *    id-bearing route, the others to the id-less route — because the same pair maps to different
- *    routes by context (e.g. diary/listMember → /diary/listMember vs /diary/listMember/:id).
- *
- * A value that matches nothing (an unported plugin's route, a custom action) is kept verbatim;
- * the renderer then treats it as unresolved and hides it. Only the five PC navigation types are
- * copied (see filter()); mobile/smartphone/backend rows are out of the Classic scope.
- *
- * The source type `community` lands as `group` (SOURCE_TYPES / typeExpr): the OpenPNE 3 word is
- * what the filter and the type-aware uri CASE read, the OpenPNE 4 word is what is stored. A route
- * whose OpenPNE 4 canonical moved — with that rename, or on its own like the policy pages — is
- * carried across by RENAMED_URLS, so an upgraded nav row links to the canonical instead of
- * permanently through a compatibility redirect.
+ * OpenPNE 3 `navigation` → OpenPNE 4 `navigations`, normalizing `uri` to the URL the Classic renderer
+ * expects and keeping the original in `source_uri` for DOM-id compatibility. An unresolved value
+ * stays verbatim for the renderer to hide, `community` lands as `group`, and RENAMED_URLS points a
+ * moved route at its OpenPNE 4 canonical rather than a redirect.
  */
 class NavigationUpgrade extends UpgradeStep
 {
@@ -44,9 +23,9 @@ class NavigationUpgrade extends UpgradeStep
     private const SOURCE_TYPES = ['group' => 'community'];
 
     /**
-     * Inventory URLs whose OpenPNE 4 canonical moved. The normalization otherwise emits the
-     * OpenPNE 3 URL, which is now only a redirect. `:id` marks where the renderer threads the
-     * context id in — OpenPNE 3 spelled some of these as a bare path plus `?id=`.
+     * Inventory URLs whose OpenPNE 4 canonical moved; the normalization would otherwise emit the
+     * OpenPNE 3 URL, now only a redirect. `:id` marks where the renderer threads the context id in,
+     * where OpenPNE 3 spelled some of these as a bare path plus `?id=`.
      */
     private const RENAMED_URLS = [
         '/userAgreement' => '/terms',
@@ -171,10 +150,10 @@ class NavigationUpgrade extends UpgradeStep
     }
 
     /**
-     * `module/action` → URL. For the id-bearing contexts the id route is preferred (falling back to
-     * the id-less one); for the id-less contexts only the id-less route is used. A mapping value that
-     * begins with `/` is a literal URL (an action reached via the OpenPNE 3 module/action fallback,
-     * which has no named route to resolve), used as-is; any other value is an inventory route name.
+     * `module/action` → URL, id-bearing contexts preferring the id route (falling back to the id-less
+     * one) because the same pair maps to different routes by context, and id-less contexts using only
+     * the id-less route. A value beginning with `/` is a literal URL (an action with no named OpenPNE 3
+     * route); any other is an inventory route name.
      *
      * @return array<string, string>
      */

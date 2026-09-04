@@ -8,15 +8,9 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `community_member` (is_pre=0, confirmed) → OpenPNE 4 `group_members`.
- *
- * One source table feeds two targets by the is_pre flag: confirmed members here, pending applicants
- * in GroupJoinRequestUpgrade — the friendships / friend_requests split. Keeping the pending set
- * out of group_members is what makes a confirmed-member read safe without an extra filter.
- *
- * OpenPNE 3 modelled roles as separate community_member_position rows; the role column is recovered
- * with a correlated EXISTS per role, strongest first (admin beats sub_admin), driven by the runtime
- * GroupRole enum so the mapping cannot drift.
+ * OpenPNE 3 `community_member` (is_pre=0, confirmed) → OpenPNE 4 `group_members`; the pending
+ * applicants (is_pre=1) go to GroupJoinRequestUpgrade, so a group_members read needs no extra
+ * filter. OpenPNE 3 modelled roles as community_member_position rows, recovered by roleExpr().
  */
 class GroupMemberUpgrade extends UpgradeStep
 {
@@ -62,9 +56,8 @@ class GroupMemberUpgrade extends UpgradeStep
 
     /**
      * The talk columns are OpenPNE 4's own and stay at their schema defaults: an upgraded site has
-     * no talk history yet, so "read up to now, nothing muted" is the true state of every membership
-     * it creates. When history does arrive, the transfer that brings it re-establishes the cursors —
-     * the defaults are a backstop, not the initialization (docs/internals/group-talk.md).
+     * no talk history, so "read up to now, nothing muted" is the true state of every membership it
+     * creates (docs/internals/group-talk.md).
      */
     public function targetDefaults(): array
     {
@@ -72,9 +65,9 @@ class GroupMemberUpgrade extends UpgradeStep
     }
 
     /**
-     * community_member_position rows → the role int. A member with an `admin` position is Admin,
-     * else `sub_admin` is SubAdmin, else a plain Member (OpenPNE 3 had no position row for members).
-     * Built from GroupRole so a role/name change stays in one place; strongest role wins.
+     * community_member_position rows → the role int, strongest first (admin beats sub_admin), else
+     * Member — OpenPNE 3 had no position row for a plain member. Built from GroupRole so the mapping
+     * cannot drift.
      */
     private function roleExpr(): string
     {

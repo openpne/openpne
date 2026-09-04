@@ -7,12 +7,10 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `gadget` → OpenPNE 4 `gadgets`: splits `type` into `context` + `zone` (a pair of CASEs
- * from GadgetLayout::op3TypeMap()) and keeps only the types that map into a ported PC context.
- *
- * `name` is carried verbatim except for the builtin kinds OpenPNE 4 renamed (RENAMED_NAMES): an
- * exact-match CASE, never a substring rewrite, so an unknown plugin gadget keeps its own name and
- * stays Unsupported rather than being mangled into a kind it is not.
+ * OpenPNE 3 `gadget` → OpenPNE 4 `gadgets`: `type` splits into `context` + `zone` via
+ * GadgetLayout::op3TypeMap(), and only types mapping into a ported PC context are kept. Renamed
+ * builtin kinds (RENAMED_NAMES) are matched exactly, never by substring, so an unknown plugin gadget
+ * keeps its own name and stays Unsupported.
  */
 class GadgetUpgrade extends UpgradeStep
 {

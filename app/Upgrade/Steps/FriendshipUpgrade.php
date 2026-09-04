@@ -6,14 +6,9 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member_relationship` (is_friend) → OpenPNE 4 `friendships`.
- *
- * OpenPNE 3 already stores a friendship as two mirrored rows — MemberRelationship::setFriend()
- * sets is_friend on both the from→to row and its to→from instance — so each is_friend row maps
- * directly to one friendships row; no UNION is needed to build OpenPNE 4's bidirectional mirror.
- *
- * The relation tables key on (member_id, friend_id) and track only created_at, so the source
- * surrogate id and updated_at are dropped; those gaps are recorded here for the shared table.
+ * OpenPNE 3 `member_relationship` (is_friend) → OpenPNE 4 `friendships`. OpenPNE 3 already stores a
+ * friendship as two mirrored is_friend rows (MemberRelationship::setFriend()), so each maps to one
+ * friendships row with no UNION.
  */
 class FriendshipUpgrade extends UpgradeStep
 {

@@ -3,9 +3,9 @@
 namespace App\Upgrade\Runner;
 
 /**
- * The upgrade runner's inputs. Only the source is parameterised: the target is always the current
- * app connection's database at its configured (empty) prefix, because the running app reads those
- * tables. sourcePrefix / sourceDatabase are validated as identifiers by the command before this.
+ * Only the source is parameterised: the target is always the app connection's database at its empty
+ * prefix, because the running app reads those tables. sourcePrefix / sourceDatabase are validated as
+ * identifiers by the command.
  */
 final class RunOptions
 {
