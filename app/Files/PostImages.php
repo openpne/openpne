@@ -11,13 +11,9 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Stores image bytes for a "post with attachments" (community topic/comment, event/comment) so the
- * bytes roll back with the surrounding DB transaction.
- *
- * A disk backend's byte write is not part of the transaction, so on rollback the File rows vanish
- * but the bytes would be orphaned — and FileUploader only undoes its own inner failure, not a later
- * one in the outer transaction. So compensating() tracks every File it stores and deletes their
- * bytes best-effort if the transaction fails.
+ * A disk backend's byte write is not part of the surrounding transaction, so compensating() tracks
+ * every File it stores and deletes their bytes best-effort when that transaction fails. FileUploader
+ * only undoes a failure inside its own call, never a later one in the outer transaction.
  */
 class PostImages
 {
@@ -30,10 +26,6 @@ class PostImages
     ) {}
 
     /**
-     * Run $work in a transaction. $work receives a `store(upload, type, id): File` that persists
-     * bytes and tracks the File; if the transaction throws, every tracked File's bytes are deleted
-     * best-effort before the exception propagates. Returns $work's result.
-     *
      * @template T
      *
      * @param  callable(callable(UploadedFile, string, int): File): T  $work
@@ -91,11 +83,9 @@ class PostImages
     }
 
     /**
-     * Turn a fail-closed strip into a validation error on the field the member submitted, so the
-     * form shows an inline message instead of a 500. The `images[]` forms key `images.{slot}` (the
-     * shared picker surfaces both `images` and `images.N`); the single-image forms key `image`. A
-     * related type with no member field (e.g. bannerImage from the admin panel) keeps the raw
-     * exception, which its own Filament caller converts.
+     * The shared picker surfaces both `images` and `images.N`, so a multi-image form keys
+     * `images.{slot}` where a single-image form keys `image`. A related type with no member-facing
+     * field keeps the raw exception, which its own Filament caller converts.
      */
     private function stripFailed(string $relatedType, int $slot, ImageMetadataStripException $e): Throwable
     {

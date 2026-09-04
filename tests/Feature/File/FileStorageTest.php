@@ -14,11 +14,6 @@ use RuntimeException;
 use Tests\TestCase;
 use Throwable;
 
-/**
- * Exercises the default DB-BLOB file storage backend. Runs on both supported
- * engines — SQLite (the default test lane) and MySQL (the second lane) — covering
- * the same behavior. The local-disk backend is exercised as a control.
- */
 class FileStorageTest extends TestCase
 {
     use RefreshDatabase;
@@ -137,10 +132,7 @@ class FileStorageTest extends TestCase
 
     public function test_name_collision_on_save_does_not_remove_the_existing_files_bytes(): void
     {
-        // A `name` unique-constraint violation means the generated name already
-        // belongs to another file, so the failed upload's compensation must NOT
-        // delete by that name (it would destroy the existing file's bytes on a
-        // disk backend). Force the collision by pinning the random token.
+        // The collision is forced by pinning the random token.
         config()->set('openpne.files.disk', 'local');
         Storage::fake('local');
         Str::createRandomStringsUsing(fn (int $length): string => str_repeat('a', $length));

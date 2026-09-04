@@ -18,15 +18,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fans a new diary out to its audience off the request. The audience (DiaryPostedRecipients) is walked
- * in id-ordered chunks so a public diary's member-wide reach never loads at once; each chunk resolves
- * every recipient's channels from ONE opt-out query (the fanout index) rather than a per-recipient
- * cold read, then queues one DiaryPostedNotification per recipient with the decided channels.
- *
- * The two catalog kinds compose as the OpenPNE 3 notification extension did (a union, which realises
- * dependOnNot): a recipient is mailed/fed if diary-new-post is on, OR they are one of the author's
- * friends and the friends-only variant is on. Rows are absent-means-on, so only the opted-out set
- * is loaded.
+ * The chunked walk, the single opt-out query and the union of the two catalog kinds are in
+ * [notifications.md](../../docs/internals/notifications.md) § Broadcast fan-out.
  */
 class BroadcastDiaryPosted implements ShouldQueue
 {

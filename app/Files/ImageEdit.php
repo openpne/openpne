@@ -6,11 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 
 /**
- * The single definition of a "post with images" edit delta — the new uploads to add and the image
- * ids to remove — shared by the four features that let a member edit an existing post's attachments
- * (diary, community topic, community event, message draft). Both the Update FormRequests (kept-count
- * cap check) and the Update Actions read the same normalized delta through this value object, so the
- * cap semantics can't drift between where it is validated and where it is applied.
+ * The Update FormRequests check the image cap and the Update Actions apply it from this same
+ * normalized delta, so the two cannot drift.
  */
 final class ImageEdit
 {

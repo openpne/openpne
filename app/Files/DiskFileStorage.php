@@ -7,13 +7,8 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 /**
- * File storage backend for self-hosters who keep bytes on a Laravel filesystem
- * disk (local FS or S3) instead of the DB. Bytes are addressed by File::name (the
- * backend-agnostic storage key); file_id stays internal to the DB-BLOB backend.
- *
- * The disk is one declared in config/filesystems.php and selected by
- * openpne.files.disk (anything other than 'blob'). Register an s3 disk there
- * before pointing openpne.files.disk at it.
+ * The disk is one declared in `config/filesystems.php` and named by `openpne.files.disk` — anything
+ * other than `blob` ([file-storage.md](../../docs/internals/file-storage.md) § The two backends).
  */
 class DiskFileStorage implements FileStorage
 {
@@ -21,9 +16,8 @@ class DiskFileStorage implements FileStorage
 
     public function writeStream(File $file, $stream): void
     {
-        // Pin private visibility. Delivery always streams through the app controller
-        // (never a bare disk URL), but an object must still not be world-readable if a
-        // disk or route is later misconfigured.
+        // Visibility is pinned private because nothing addresses an object by disk URL, so a
+        // world-readable one could only ever be reached around the policy.
         if (Storage::disk($this->disk)->writeStream($file->name, $stream, ['visibility' => 'private']) === false) {
             throw new RuntimeException("Unable to write file [{$file->name}] to disk [{$this->disk}].");
         }

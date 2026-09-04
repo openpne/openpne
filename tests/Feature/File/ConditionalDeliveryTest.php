@@ -15,11 +15,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/**
- * Thumbnails and originals carry a validator, so a browser's copy is confirmed with a 304 instead of
- * the bytes again. The tag is computed, never read from storage, and only after the policy has let the
- * viewer through — a denied viewer learns nothing from a tag they happen to hold.
- */
 class ConditionalDeliveryTest extends TestCase
 {
     use RefreshDatabase;

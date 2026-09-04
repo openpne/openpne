@@ -3,11 +3,9 @@
 namespace App\Files;
 
 /**
- * The size image bytes render at — the container's declared size with EXIF Orientation applied.
- *
- * Delivery decodes through intervention/image, which auto-orients before it scales, so a photo
- * shot sideways comes out with its sides swapped relative to what the container declares. The
- * recorded size has to be the one that will be drawn, or a reserved box is the wrong shape.
+ * Delivery decodes through intervention/image, which auto-orients before it scales, so a size is
+ * only useful to a caller if EXIF Orientation is applied to it first
+ * ([images.md](../../docs/internals/images.md) § files.width / files.height).
  */
 final class ImageDimensions
 {

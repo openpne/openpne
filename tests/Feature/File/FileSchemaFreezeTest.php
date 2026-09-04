@@ -7,11 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Guards the MySQL column shape that the upgrade tool's metadata-only file_bin
- * migration depends on. Asserted against information_schema actual values (not the
- * DDL string), since signedness and the PK-implied NOT NULL do not appear in a
- * CREATE TABLE the way the freeze requires checking. MySQL lane only — SQLite has
- * no signed/unsigned distinction and stores BLOB without a size class.
+ * Asserted against information_schema rather than the DDL string, since signedness and the
+ * PK-implied NOT NULL do not appear in a CREATE TABLE the way this freeze checks them.
  */
 class FileSchemaFreezeTest extends TestCase
 {

@@ -20,11 +20,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/**
- * Every surface that carries an attachment serializes it the same way, so one client component
- * renders an image wherever it is placed: the OpenPNE 3-era 120px square, the fit and crop ladders
- * a Modern grid picks from, and the stored intrinsic size (docs/internals/images.md).
- */
 class AttachmentImageSerializationTest extends TestCase
 {
     use RefreshDatabase;
@@ -62,8 +57,8 @@ class AttachmentImageSerializationTest extends TestCase
     /** @return iterable<string, array{callable(): array<string, mixed>}> */
     public static function orphanedImages(): iterable
     {
-        // A row whose File is gone. The FK cascades, so no stored row can reach this state — the
-        // serializers guard it anyway, and an unsaved model is how the guard gets exercised.
+        // The FK cascades, so no stored row can reach this state; an unsaved model is how the
+        // guard gets exercised.
         yield 'timeline' => [fn (): array => TimelinePostSerializer::image(new TimelinePostImage)];
         yield 'diary' => [fn (): array => DiarySerializer::image(new DiaryImage)];
         yield 'group topic' => [fn (): array => GroupTopicSerializer::image(new GroupTopicImage)];

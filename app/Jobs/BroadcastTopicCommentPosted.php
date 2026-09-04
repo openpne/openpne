@@ -51,9 +51,8 @@ class BroadcastTopicCommentPosted implements ShouldQueue
             return;
         }
 
-        // The author + co-commenters (who get Reply / Related) are excluded using the set captured when
-        // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
-        // drop its author out of the exclusion and double-notify them (Related then Group).
+        // The exclusion is the set captured when the comment was posted, never one re-read here: a
+        // comment deleted since would drop its own author out of it.
         $audience = $recipients->viewers($topic->group, $commenter)->whereNotIn('id', $this->excludedMemberIds);
         $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
