@@ -3,10 +3,9 @@
 namespace App\Auth;
 
 /**
- * How a stored password hash was produced. The column (`password_scheme`) is null for
- * the default scheme — bcrypt over the plaintext — and non-null only for transitional
- * forms that need different verification. Login clears the scheme by rehashing to the
- * default on the first successful authentication.
+ * `password_scheme` is null for the default scheme (bcrypt over the plaintext) and non-null only
+ * for a transitional form that needs different verification. The first successful login rehashes
+ * to the default and clears it.
  */
 enum PasswordScheme: string
 {

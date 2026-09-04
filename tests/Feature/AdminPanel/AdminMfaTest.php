@@ -78,9 +78,8 @@ class AdminMfaTest extends TestCase
 
     public function test_the_setup_qr_code_is_a_single_valid_data_uri_without_imagick(): void
     {
-        // Force the SVG backend (the imagick-absent path, common on shared hosting). Filament's
-        // parent double-base64-wraps the already-complete data URI there, yielding an image whose
-        // decoded content starts with "data:" instead of "<svg" — the reported "Start tag expected".
+        // The SVG backend is forced because that is the imagick-absent path on which Filament's
+        // parent double-base64-wraps the already complete data URI.
         $this->actingAs(AdminUser::factory()->create(), 'admin');
         $google2fa = new Google2FA(
             (new Bacon)->setImageBackend(new SvgImageBackEnd),

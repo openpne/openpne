@@ -45,9 +45,8 @@ class SanctumTokenGuardTest extends TestCase
     {
         $this->getJson(self::PROBE)->assertUnauthorized();
 
-        // A browser-shaped request meets the app-wide guest redirect instead of a 401; the token
-        // surface is JSON, so 401 is the contract that matters. Asserted so the difference is a
-        // recorded fact rather than a surprise.
+        // A browser-shaped request meets the app-wide guest redirect instead of a 401; asserted so the
+        // difference is a recorded fact rather than a surprise.
         $this->get(self::PROBE)->assertRedirect(route('login'));
     }
 

@@ -22,12 +22,6 @@ use PragmaRX\Google2FA\Google2FA;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
-/**
- * Inline password re-authentication ("sudo mode") for the three admin MFA management actions.
- * All three demand the account password on top of their existing code requirements; the wrong or
- * missing password fails fast so a recovery code is never consumed, and the check is throttled by a
- * shared per-admin limiter. See App\Auth\AdminMfaPasswordReauth and docs/internals/security.md.
- */
 class AdminMfaReauthTest extends TestCase
 {
     use CapturesSecurityLog, RefreshDatabase;
@@ -163,11 +157,8 @@ class AdminMfaReauthTest extends TestCase
             ->assertHasNoActionErrors()
             ->assertWizardCurrentStep(2);
 
-        // Then the QR/code step advances on a valid code, landing on the recovery-codes step, and
-        // the submit runs from there — the complete real UI path. goToWizardStep(3) rather than
-        // goToNextWizardStep: the browser tracks the current step client-side and passes it to
-        // nextStep, but the server-side index is not persisted between test calls, so the "next"
-        // helper would re-validate step 1 forever.
+        // goToWizardStep(3) rather than goToNextWizardStep: the current step is tracked client-side and
+        // not persisted between test calls, so the next helper would re-validate step 1 forever.
         $page->set('mountedActions.0.data.code', $this->currentCode($admin, $secret))
             ->goToWizardStep(3)
             ->assertHasNoActionErrors()
@@ -359,10 +350,8 @@ class AdminMfaReauthTest extends TestCase
 
     public function test_the_wizard_password_step_is_throttled_where_the_action_limit_does_not_apply(): void
     {
-        // Wizard::nextStep validates the step's schema directly, bypassing the action-level
-        // ->rateLimit(5) that only runs in callMountedAction — so the rule-internal per-admin limiter
-        // is the sole guard against unlimited password guesses here. Five wrong guesses on one mount
-        // then a sixth on a fresh mount (budget survives the remount) is throttled even when correct.
+        // Wizard::nextStep bypasses the action-level rateLimit, so the rule's own limiter is the only
+        // guard here; the sixth guess is made on a fresh mount to show the budget survives a remount.
         $admin = AdminUser::factory()->create(['password' => 'secret-pass-1']);
 
         $page = $this->page($admin);

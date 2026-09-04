@@ -60,9 +60,8 @@ class LoginScreenMessageTest extends TestCase
 
     public function test_classic_login_neither_shows_the_message_nor_loads_its_cache_tier(): void
     {
-        // The message is a Modern-only slot (Classic carries this copy in its login gadgets), and
-        // the read is lazy inside the Modern closure: a Classic render must not warm the tier.
-        // Pins the Fortify closure against a future eager read.
+        // Pins the lazy read inside the Modern closure: a Classic render (which carries this copy in
+        // its login gadgets) must not warm the settings tier.
         config()->set('openpne.surface_mode', 'classic_default');
         $this->setSnsSetting(SnsSettingKey::LoginMessage, 'Members only. Ask an administrator.');
 

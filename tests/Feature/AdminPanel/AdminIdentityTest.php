@@ -10,11 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The admin realm identifies itself: the brand name carries the admin-panel suffix (rendered
- * in the header and in every browser title) and the login page announces itself as the
- * administrator login. The heading and the title are pinned separately — the title comes from
- * getTitle() + brand name, not from the heading — and the MFA challenge must keep the vendor
- * heading the override would otherwise mask.
+ * The title and the heading are pinned separately, since the title comes from getTitle() plus the
+ * brand name, not from the heading. The MFA challenge must keep the vendor heading that the login
+ * heading override would otherwise mask.
  */
 class AdminIdentityTest extends TestCase
 {

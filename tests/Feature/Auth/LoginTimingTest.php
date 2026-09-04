@@ -13,13 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-/**
- * Credential rejections that skip hash verification must burn an equivalent hash, or
- * the response time (a bcrypt is hundreds of milliseconds; the skip is microseconds)
- * tells an attacker whether the account exists. These tests pin that the equalizing
- * hash actually runs on each fast-fail path — timing itself is not asserted, the
- * hash call is.
- */
+/** Timing itself is not asserted; the equalizing hash call is, on each fast-fail path. */
 class LoginTimingTest extends TestCase
 {
     use RefreshDatabase;

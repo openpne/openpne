@@ -13,12 +13,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Creates the member for a confirmed registration and consumes its token in one transaction, so a
- * token can never outlive the account it created (single-use) nor leave a member without burning the
- * token. The token's email is authoritative — it is forced onto the input, overriding anything the
- * form posted, since the address was proven by the mailed link, not re-entered. A member-invite token
- * also auto-friends the new member with its inviter, here at completion (OpenPNE 3 friended at invite
- * time, but there is no member to reference until completion).
+ * The member is created and the token consumed in one transaction, so a token never outlives the
+ * account it created and a failure never leaves a member without burning the token. The token's
+ * email is forced over whatever the form posted: the address was proven by the mailed link, not
+ * re-entered.
  */
 class CompleteRegistration
 {
@@ -46,10 +44,9 @@ class CompleteRegistration
     }
 
     /**
-     * Friends the new member with the member-invite's inviter (bidirectional mirror, the same shape as
-     * accepting a request). The inviter is null on a self/admin token or once the inviter is deleted
-     * (the FK nulls inviter_id); the existence check also covers a store with FK enforcement off, so a
-     * deleted inviter never leaves a friendship pointing at no one.
+     * Friended at completion rather than at invite time as OpenPNE 3 did, since no member exists to
+     * reference until now. The existence check covers a store with FK enforcement off, so a deleted
+     * inviter never leaves a friendship pointing at no one.
      */
     private function autoFriendInviter(RegistrationToken $pending, Member $member): void
     {

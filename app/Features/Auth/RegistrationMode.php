@@ -57,10 +57,9 @@ enum RegistrationMode: string
     }
 
     /**
-     * Whether a token of this origin may still complete in the current mode. The mode gates issuance,
-     * but this re-check at completion is what makes a tightened mode retroactive: switching to
-     * admin_only stops outstanding self/member links from completing, not just new issuance. Closed
-     * makes every branch false, so all tokens are dead.
+     * Re-checked at completion so a tightened mode is retroactive: switching to admin_only stops
+     * outstanding self and member links from completing. Closed makes every branch false, so every
+     * outstanding token is dead.
      */
     public function allows(RegistrationTokenSource $source): bool
     {

@@ -5,14 +5,9 @@ namespace App\Features\Auth;
 use Illuminate\Http\Request;
 
 /**
- * Two JS-free bot filters for the registration entry, both failing *silently* — the caller still
- * shows the neutral "check your mail" screen, so a bot gets no signal it was caught (the same shape
- * as the enumeration-safe no-op for a known address):
- *  - a honeypot field a real person never sees and never fills;
- *  - a minimum fill time: the form-open instant is stamped in the session on GET and consumed on the
- *    POST (one-shot), so a submit that arrives implausibly fast, or with no fresh form render of its
- *    own, is a script rather than a person.
- * This is the floor that works without JavaScript; ALTCHA is the stronger JS-based layer on top.
+ * Both JS-free filters fail silently: the caller shows the neutral screen either way, so a bot gets
+ * no signal it was caught. The form-open stamp is consumed by the POST (one-shot), so a submit
+ * without a fresh render of its own, or one arriving implausibly fast, fails.
  */
 class SpamTrap
 {

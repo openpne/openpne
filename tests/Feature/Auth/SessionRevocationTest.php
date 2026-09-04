@@ -12,10 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * SessionRevocation targets the stable per-realm tables. The colliding-id cases pin
- * the reason those keys exist: sessions.user_id / admin_sessions.user_id are plain
- * integers, so member id N and admin id N are different principals and revoking one
- * must never touch the other's rows.
+ * The colliding-id cases give a member and an admin the same integer id, since revoking one must
+ * never touch the other's rows.
  */
 class SessionRevocationTest extends TestCase
 {

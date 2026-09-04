@@ -16,12 +16,6 @@ use Livewire\Livewire;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
-/**
- * Changing the MFA factor set is a credential change, so it revokes the admin's other
- * sessions — consistent with a password change (App\Auth\SessionRevocation). The set-up
- * and disable actions keep the current session; regenerating recovery codes does not
- * revoke. The CLI disable revokes all.
- */
 class AdminMfaSessionRevocationTest extends TestCase
 {
     use CapturesSecurityLog, RefreshDatabase;
@@ -129,8 +123,8 @@ class AdminMfaSessionRevocationTest extends TestCase
 
     public function test_the_setup_description_is_product_neutral_without_a_region_locked_link(): void
     {
-        // Our override of Filament's default: no US-fixed App Store link, and not a single
-        // product. The vendor default deep-links itunes.apple.com/us/... for Google Authenticator.
+        // The vendor default deep-links a US-only App Store URL for one product, which the override
+        // must not carry.
         foreach (['ja', 'en'] as $locale) {
             $description = trans('filament-panels::auth/multi-factor/app/actions/set-up.modal.description', [], $locale);
             $this->assertStringNotContainsString('itunes.apple.com/us', $description, $locale);

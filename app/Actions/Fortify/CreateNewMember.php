@@ -41,8 +41,7 @@ class CreateNewMember implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ];
         foreach ($profiles as $profile) {
-            // No member to exclude from a unique field's check — it does not exist yet. A
-            // member-editable field also accepts a per-value visibility (OpenPNE 3 registers it).
+            // No member to exclude from a unique field's check: it does not exist yet.
             $rules += $this->fieldRules->forValue($profile) + $this->fieldRules->visibilityRule($profile);
         }
 
@@ -55,16 +54,13 @@ class CreateNewMember implements CreatesNewUsers
                 'password' => Hash::make($validated['password']),
             ]);
 
-            // Promote the guest's explicit pre-login language choice (POST /locale stores it in the
-            // session) to the durable per-member locale. forceFill — locale is deliberately not
-            // mass-assignable; same write as locale.switch.
+            // The session key is the guest's explicit choice written by POST /locale, promoted with
+            // forceFill because locale is deliberately not mass-assignable.
             $locale = session('locale');
             if (is_string($locale) && in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
                 $member->forceFill(['locale' => $locale])->save();
             }
 
-            // Only is_disp_regist fields are saved (saveFields ignores other keys). A submitted
-            // visibility is kept for member-editable fields; otherwise it follows the field default.
             $this->saveProfile->saveFields($member, $profiles, new ProfileFormData(
                 name: $validated['name'],
                 values: $validated['profile'] ?? [],

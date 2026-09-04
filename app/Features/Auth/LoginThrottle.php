@@ -5,11 +5,9 @@ namespace App\Features\Auth;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Counts failed logins per client IP and decides when the login form must carry a CAPTCHA. This is a
- * soft escalation, not a lockout: a tripped IP is asked to solve a challenge, never blocked, so it
- * cannot be used to lock a victim out. It complements the per-(email, IP) rate limiter, which a single
- * IP guessing across many addresses slips past — each address is a fresh bucket, but the failures all
- * land on the same IP here.
+ * A tripped IP is asked for a CAPTCHA, never blocked, so this cannot be used to lock a victim out.
+ * It is keyed by IP alone because the per-(email, IP) login limiter gives one IP a fresh bucket
+ * for every address it tries.
  */
 class LoginThrottle
 {

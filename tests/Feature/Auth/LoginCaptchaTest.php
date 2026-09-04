@@ -14,10 +14,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * After repeated failures from one IP the login form requires a CAPTCHA — a soft escalation, never a
- * lockout. CAPTCHA is off in the test baseline (Tests\TestCase), so this turns it on (with a cheap
- * proof-of-work and a low threshold) and drives the failure counter. The widget's browser-side solving
- * is reproduced with the library itself, the same serialization the widget posts.
+ * CAPTCHA is off in the test baseline, so setUp turns it on with a cheap proof-of-work and a low
+ * threshold. The widget's browser-side solving is reproduced with the library itself, in the
+ * serialization the widget posts.
  */
 class LoginCaptchaTest extends TestCase
 {

@@ -10,14 +10,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Issues an email-confirmation registration token and mails its link. Enumeration-safe: if the
- * address already belongs to a Member it returns AlreadyMember without issuing or mailing, so the
- * self-service screen (which ignores the result) cannot reveal whether an address is registered. The
- * email is normalized here (Fortify's lowercase_usernames is applied by its own controller, which
- * this flow bypasses) and the token's email is authoritative from here on.
- *
- * A token may originate from self-service, a member invite, or an admin invite; `source` and the
- * member-invite `inviter` are stored so completion can both re-check the mode and auto-friend.
+ * A known address returns AlreadyMember without issuing or mailing, so a caller that shows the same
+ * screen either way reveals nothing about which addresses are registered. The email is lowercased
+ * here because Fortify's lowercase_usernames runs only in Fortify's own controller, which this flow
+ * bypasses.
  */
 class IssueRegistrationToken
 {
@@ -36,10 +32,9 @@ class IssueRegistrationToken
             return IssueResult::AlreadyMember;
         }
 
-        // One row per email (the column is unique): a re-request refreshes the token in place. upsert
-        // is a single atomic statement so two concurrent first requests cannot race the unique index
-        // into a 500 and break the neutral-response contract. source/inviter_id are written on every
-        // issuance (last-writer-wins) so a self re-request never inherits a prior invite's provenance.
+        // A single atomic upsert, so two concurrent first requests cannot race the unique index into a
+        // 500, and source/inviter_id are overwritten on every issuance so a self re-request never
+        // inherits a prior invite's provenance.
         $raw = Str::random(40);
         RegistrationToken::upsert(
             [[

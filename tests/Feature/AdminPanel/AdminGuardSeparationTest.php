@@ -40,10 +40,8 @@ class AdminGuardSeparationTest extends TestCase
     {
         $admin = AdminUser::factory()->create();
 
-        // Authenticate on the `admin` guard only, leaving the default guard
-        // (member) untouched — actingAs() would also switch the default guard,
-        // masking the separation. /dashboard's `auth` middleware resolves the
-        // member guard, where an admin-only session is still a guest.
+        // setUser on the admin guard only: actingAs() would also switch the default guard, masking
+        // the separation this asserts.
         $this->app['auth']->guard('admin')->setUser($admin);
 
         $this->get('/dashboard')->assertRedirect('/login');

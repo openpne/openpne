@@ -8,10 +8,9 @@ use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * One identical neutral response for both the success and failure (unknown address / throttled)
- * Fortify contracts, so the forgot-password endpoint never reveals which addresses are registered.
- * Bound for both contracts in FortifyServiceProvider. A malformed-email validation error is raised
- * before the broker and reveals nothing about existence, so it is left untouched.
+ * One identical response for the success and the failure contract, so the forgot-password
+ * endpoint never reveals which addresses are registered. A malformed-email validation error is
+ * raised before the broker and reveals nothing, so it is left as is.
  */
 class NeutralPasswordResetLinkResponse implements FailedPasswordResetLinkRequestResponse, SuccessfulPasswordResetLinkRequestResponse
 {
