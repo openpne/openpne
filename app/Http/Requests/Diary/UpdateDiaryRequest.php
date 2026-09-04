@@ -10,12 +10,7 @@ use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Contracts\Validation\Validator;
 
-/**
- * Edit a diary. Ownership is checked in authorize() before validation, so a non-owner's invalid
- * payload gets the same 404 as a valid one and doesn't leak existence. Editing adds new images into
- * free slots and removes selected ones (remove_images[]); the total after the edit may not exceed
- * the cap.
- */
+/** Ownership is checked in authorize(), before validation, so a non-owner's invalid payload gets the same 404 as a valid one. */
 class UpdateDiaryRequest extends StoreDiaryRequest
 {
     public function authorize(): bool

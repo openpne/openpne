@@ -7,17 +7,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Baseline response security headers for every web response, member and admin alike. The Filament
- * panel keeps its own middleware stack (it does not inherit the `web` group), so this middleware is
- * registered there too — otherwise the admin pages, the highest-value clickjacking target, would ship
- * none of these.
- *
- * The CSP is only the clickjacking floor (`frame-ancestors`); it carries no content CSP
- * (script-src) — the Vite/Inertia bundle has no nonce/hash wiring — and that absence is what lets
- * the panel's inline Livewire/Alpine scripts run unrestricted. `Referrer-Policy` is set non-destructively so token
- * screens can tighten it to `no-referrer` (NoReferrer). HSTS is emitted only under force_https, so a
- * plain-HTTP dev host is not pinned to a scheme it cannot serve. Cross-Origin-Resource-Policy is
- * deliberately omitted: web-public avatars and banners are served for cross-origin embedding.
+ * Registered in the `web` group and again on the Filament panel stack, which does not inherit `web`.
+ * `Referrer-Policy` and the CSP are set only when absent so a token screen can tighten them
+ * (NoReferrer); what is deliberately not set is in docs/internals/security.md.
  */
 class SecurityHeaders
 {

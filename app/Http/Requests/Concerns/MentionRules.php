@@ -3,22 +3,16 @@
 namespace App\Http\Requests\Concerns;
 
 /**
- * Validation and normalization for the `mentions[]` payload a timeline post or reply carries,
- * shared so both forms bound and read it the same way.
- *
- * Two layers of failure, deliberately split: the payload is only ever produced by the compose
- * form's mention picker, so a *structural* violation (a missing key, a negative offset, more rows
- * than the cap) means a broken client or tampering — the whole post is rejected here. A row that
- * merely stopped describing reality (the member was renamed, blocked, deleted) is dropped one row
- * at a time by App\Features\Timeline\Actions\ResolveMentions, because the member wrote a message,
- * not a mention list.
+ * A structural violation (a missing key, a negative offset, more rows than the cap) rejects the whole
+ * post, because only the compose form's picker produces this payload. A row that merely stopped
+ * describing reality (a renamed, blocked or deleted member) is instead dropped one row at a time by
+ * ResolveMentions.
  */
 final class MentionRules
 {
     /**
-     * @param  int  $bodyMax  the composing surface's body cap in code points — the timeline's 140,
-     *                        talk's 5,000. Only the arithmetic below depends on it; every other rule
-     *                        is the same wherever a picker submits.
+     * @param  int  $bodyMax  the composing surface's body cap in code points; only the offset and
+     *                        length bounds depend on it
      * @return array<string, mixed>
      */
     public static function rules(int $bodyMax = 140): array
@@ -28,8 +22,8 @@ final class MentionRules
             // ResolveMentions makes over the payload.
             'mentions' => ['sometimes', 'array', 'max:10'],
             'mentions.*.member_id' => ['required', 'integer'],
-            // Bounded by the body cap: a mention starts inside the body and is at least "@x" long.
-            // Whether it actually fits *this* body is ResolveMentions' check.
+            // Bounded by the body cap (a mention starts inside the body and is at least "@x" long);
+            // whether it fits this body is ResolveMentions' check.
             'mentions.*.offset' => ['required', 'integer', 'min:0', 'max:'.($bodyMax - 1)],
             'mentions.*.length' => ['required', 'integer', 'min:2', 'max:'.$bodyMax],
         ];

@@ -11,9 +11,9 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Create/update a community. One request for both: OpenPNE 3 serves a single /community/edit,
- * so `?id=` (present on update) switches the unique-name ignore. Whether the actor may edit, and
- * whether the chosen category is member-creatable, are enforced in the controller/action.
+ * One request for create and update, as OpenPNE 3 serves a single /community/edit; `?id=` switches
+ * the unique-name ignore. Whether the actor may edit, and whether the category is member-creatable,
+ * are enforced in the action.
  */
 class GroupRequest extends FormRequest
 {
@@ -35,8 +35,7 @@ class GroupRequest extends FormRequest
             'topic_post_authority' => ['required', 'string', Rule::in(array_map(static fn (TopicPostAuthority $a): string => $a->slug(), TopicPostAuthority::cases()))],
             'group_category_id' => ['nullable', 'integer', 'exists:group_categories,id'],
             'is_join_notification_enabled' => ['boolean'],
-            // Single top image (OpenPNE 3 CommunityFileForm), with a remove toggle. The bytes are
-            // handled in the action, not the DTO — same split as the topic/event image uploads.
+            // Single top image (OpenPNE 3 CommunityFileForm); the bytes are handled in the action, not the DTO.
             'image' => PostImageRules::single(),
             'remove_image' => ['boolean'],
         ];
@@ -51,9 +50,8 @@ class GroupRequest extends FormRequest
             description: $validated['description'] ?? null,
             registerPolicy: JoinPolicy::fromSlug($validated['register_policy']),
             categoryId: isset($validated['group_category_id']) ? (int) $validated['group_category_id'] : null,
-            // Default on (OpenPNE 3 treats an absent value as on): both edit forms always submit the
-            // field (Modern sends the boolean, Classic via a hidden 0), so an absent value is a non-form
-            // caller, which should still get the default rather than a silent off.
+            // Default on, as OpenPNE 3 treats an absent value: both forms always submit the field, so
+            // an absent value is a non-form caller that should still get the default, not a silent off.
             isJoinNotificationEnabled: $this->boolean('is_join_notification_enabled', true),
             topicReadAccess: TopicReadAccess::fromSlug($validated['topic_read_access']),
             topicPostAuthority: TopicPostAuthority::fromSlug($validated['topic_post_authority']),

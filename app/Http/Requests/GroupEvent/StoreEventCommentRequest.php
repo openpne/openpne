@@ -9,9 +9,8 @@ use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Post an event comment. In OpenPNE 3 the comment body is required even when the submit is an RSVP
- * (participate/cancel) — the same form carries both, so joining always comes with a comment.
- * Membership + event existence are gated in authorize() for a uniform 404.
+ * In OpenPNE 3 the comment body is required even when the submit is an RSVP, so joining always comes
+ * with a comment. Membership and event existence are gated in authorize() for a uniform 404.
  */
 class StoreEventCommentRequest extends FormRequest
 {

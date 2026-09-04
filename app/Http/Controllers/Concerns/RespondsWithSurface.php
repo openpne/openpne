@@ -11,12 +11,9 @@ use Inertia\Response as InertiaResponse;
 trait RespondsWithSurface
 {
     /**
-     * Render the surface (Classic Blade or Modern Inertia) that SurfaceResolver picks for $feature.
-     *
      * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     * @param  string|null  $bodyIdRoute  Derive the Classic body id from this canonical route name
-     *                                    instead of the current one (e.g. an empty search renders the
-     *                                    list page id). Still parity-derived, so no literal copy.
+     * @param  string|null  $bodyIdRoute  canonical route name whose Classic body id is used instead of
+     *                                    the current route's (an empty search renders the list page id)
      */
     private function respondWith(Request $request, string $feature, array $responders, ?string $bodyIdRoute = null): View|InertiaResponse
     {

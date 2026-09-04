@@ -5,11 +5,7 @@ namespace App\Http\Requests\Member;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Self-service account withdrawal. Re-authenticates with the current password (current_password:member)
- * and requires an explicit confirmation checkbox. The primary member (id 1) is never withdrawable —
- * rejected here so it is a 403, not the RuntimeException (500) WithdrawMember would throw.
- */
+/** The primary member (id 1) is refused in authorize() so it is a 403, not the RuntimeException WithdrawMember would throw. */
 class WithdrawalRequest extends FormRequest
 {
     public function authorize(): bool

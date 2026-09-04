@@ -11,11 +11,7 @@ use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The Classic screens stop offering a switched-off unit, so a member never follows a link into the
- * 404 the gate answers. The navigation and the gadgets carry their own tests (NavigationServiceTest,
- * GadgetServiceTest); this covers the blocks each page hard-codes.
- */
+/** The navigation and the gadgets carry their own tests (NavigationServiceTest, GadgetServiceTest); this covers the blocks each page hard-codes. */
 class ClassicFeatureSuppressionTest extends TestCase
 {
     use RefreshDatabase;

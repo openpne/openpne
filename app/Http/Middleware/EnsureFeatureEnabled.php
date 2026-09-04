@@ -8,12 +8,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Gates a feature unit's routes: 404 while the unit — or the unit it lives inside — is switched
- * off, as OpenPNE 3 answered a disabled plugin's URLs. The routes stay registered (the parity
- * audits assert every mapped route exists), so the gate is this middleware, not the route table.
- *
- * The answer is the same for a guest and for a member, so the toggle state never leaks a
- * difference; inside an `auth` group a guest still meets the login redirect first.
+ * 404 while the unit or an ancestor is off, as OpenPNE 3 answered a disabled plugin's URLs; the
+ * routes stay registered, so this middleware, not the route table, is the gate. Inside an `auth`
+ * group a guest meets the login redirect first, so toggle state is never observable to a guest.
  */
 class EnsureFeatureEnabled
 {

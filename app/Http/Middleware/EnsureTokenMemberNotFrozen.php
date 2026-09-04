@@ -12,16 +12,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The second belt on a frozen member: a ban deletes every personal access token in the same
- * transaction as the flag (App\Features\Member\Actions\RejectMemberLogin), so a token presented here
- * should already be gone. This refuses one that somehow is not — a token minted from a stale read, a
- * row restored from a backup — for the same reason the freeze ends sessions rather than trusting the
- * next login check.
- *
- * "Frozen" reaches the owner: banning a member also ends the tokens of the AI accounts they own, so
- * the caller's own flag is not the whole question. The question is asked through
- * App\Features\AiAccount\TokenActorEligibility rather than inline, so every path that has to answer
- * it answers the same.
+ * A ban deletes every token in the same transaction as the flag, so this refuses only a token that
+ * sweep did not reach (a stale read, a row restored from a backup). "Frozen" reaches the owner: an AI
+ * account's token also ends when its owning member is banned, so the question goes through
+ * TokenActorEligibility rather than the caller's own flag.
  */
 class EnsureTokenMemberNotFrozen
 {

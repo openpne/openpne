@@ -8,11 +8,7 @@ use App\Models\DirectMessage;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Compose a new message (compose or reply). The recipient (`to`) and the reply links
- * (parent_id / thread_id) come as hidden fields; the action re-checks the recipient and the
- * send gate. `action=draft` saves a draft, otherwise it sends.
- */
+/** Only the shape of `to` is validated here: the action re-checks the recipient and the send gate. */
 class ComposeDirectMessageRequest extends FormRequest
 {
     public function authorize(): bool
