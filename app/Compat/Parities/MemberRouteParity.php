@@ -8,10 +8,7 @@ use App\Compat\RouteParity;
 use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
-/**
- * A moved OpenPNE 3 member URL is mapped to its named redirect route where routes/web.php declares
- * one, and recorded in compatRedirects() otherwise.
- */
+/** OpenPNE 3 `member` module. */
 class MemberRouteParity extends RouteParity
 {
     protected string $module = 'member';
