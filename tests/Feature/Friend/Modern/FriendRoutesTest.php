@@ -107,7 +107,6 @@ class FriendRoutesTest extends TestCase
     {
         $alice = Member::factory()->create();
 
-        // Modern folded roster management into friend/list; the OpenPNE 3 URL forwards there.
         $this->actingAs($alice)->get('/friend/manage')->assertRedirect(route('friend.list'));
     }
 
@@ -255,7 +254,6 @@ class FriendRoutesTest extends TestCase
 
     public function test_modern_unlink_post_redirects_to_list_on_error(): void
     {
-        // No GET confirm page guards non-friends anymore; the POST action redirects with an error.
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
 

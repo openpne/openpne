@@ -213,8 +213,6 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_a_viewer_who_blocks_the_owner_gets_no_friend_entry(): void
     {
-        // The reverse direction (owner blocks viewer) 404s the whole page; this one still renders
-        // the profile, and the friend-link form would reject the request — so no entry at all.
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $owner->getKey()]);
@@ -366,8 +364,6 @@ class MemberProfileRoutesTest extends TestCase
         $this->actingAs($viewer)->get("/member/profile/id/{$other->getKey()}/extra")->assertRedirect("/member/{$other->getKey()}");
     }
 
-    // --- Modern digest (bio promotion + viewer-scoped stats/previews) ---
-
     public function test_modern_promotes_the_self_introduction_to_bio(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
@@ -380,7 +376,6 @@ class MemberProfileRoutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.bio', 'Hello, I am Owner')
-                // The self-introduction is gone from the dl (only the regular field remains).
                 ->has('profile.fields', 1)
                 ->where('profile.fields.0.value', 'a-regular-value')
             );

@@ -117,8 +117,6 @@ class ProfileEditTest extends TestCase
 
     public function test_an_unchanged_age_visibility_still_persists_an_explicit_row(): void
     {
-        // Deliberate always-save: the form showed a concrete value and submitting affirms it, even
-        // when it equals the (hardcoded) default — there is no operator default to keep following.
         $member = Member::factory()->create();
         Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_edit_public_flag' => false]);
 
@@ -149,8 +147,6 @@ class ProfileEditTest extends TestCase
 
     public function test_age_visibility_is_ignored_without_a_birthday_item(): void
     {
-        // The block is never offered without a birthday item, so a crafted value validates but
-        // persists nothing (the write is gated server-side).
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/edit/profile', [

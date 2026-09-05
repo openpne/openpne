@@ -43,10 +43,8 @@ use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The member's own settings page, Classic + Modern. Each section is its
- * own submit so saving one never rewrites another — in particular, the diary section shows the
- * read-time clamped default (DiaryVisibility::defaultFor), which must not be written back on an
- * unrelated change (it would collapse a stored Open once web-public is off).
+ * Each section is its own submit, so saving one never writes back another's read-time clamped
+ * default — a stored Open would collapse once web-public is off.
  */
 class MemberConfigController extends Controller
 {
@@ -56,14 +54,13 @@ class MemberConfigController extends Controller
 
     public function show(Request $request, BirthdayFieldExists $birthdayExists, MutedTalkRooms $mutedTalkRooms): View|InertiaResponse|RedirectResponse
     {
-        // OpenPNE 3 access-block lived at /member/config?category=accessBlock; preserve that URL by
-        // resolving just that category to the canonical Block list.
+        // OpenPNE 3's access-block URL (docs/internals/classic-compatibility.md, "URLs are canonical,
+        // not Classic-only").
         if ($request->query('category') === 'accessBlock') {
             return redirect()->route('block.list');
         }
 
-        // OpenPNE 3 split the mail-address change into pcAddress/mobileAddress; OpenPNE 4 has a single
-        // email category (no mobile email). Redirect the known legacy key so a bookmarked URL lands.
+        // OpenPNE 3 split this into pcAddress/mobileAddress; OpenPNE 4 has one email category.
         if ($request->query('category') === 'pcAddress') {
             return redirect()->route('member.config', ['category' => MemberConfigCategory::Email->value]);
         }
@@ -72,10 +69,7 @@ class MemberConfigController extends Controller
         $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
 
         return $this->respondWith($request, 'member', [
-            // Classic paginates by ?category= (OpenPNE 3 member/config). An absent / non-string /
-            // unrecognized value resolves to null = the "select an item" landing (no 404 — OpenPNE 4
-            // keeps unknown categories renderable; only accessBlock redirects, handled above). Resolved
-            // inside the Classic closure so the Modern single page never sees ?category=.
+            // An absent or unrecognized `?category=` is the landing, never a 404.
             SurfaceResolver::CLASSIC => function () use ($viewer, $currentSurface, $request, $birthdayExists, $mutedTalkRooms) {
                 $raw = $request->query('category');
                 $category = is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null;
@@ -134,11 +128,6 @@ class MemberConfigController extends Controller
         ]);
     }
 
-    /**
-     * Modern-only detail pages for the consequential account changes. The settings page shows a
-     * compact row per item; the actual forms live one level deeper so a validation error returns
-     * to a short, focused page instead of the bottom of the settings list.
-     */
     public function editEmail(): InertiaResponse
     {
         return Inertia::render('member/config/email', ['email' => $this->viewer()->email]);
@@ -162,12 +151,11 @@ class MemberConfigController extends Controller
         return $this->savedRedirect($request, MemberConfigCategory::Diary, flashOnModern: false);
     }
 
-    // Classic-only since the Modern setter moved next to the birthday on the profile-edit form
-    // (the Modern sibling route was removed with it).
+    // Classic-only: the Modern setter lives on the profile-edit form.
     public function updateAge(UpdateAgeVisibilityRequest $request, BirthdayFieldExists $birthdayExists): RedirectResponse
     {
-        // Same gate as every surface that offers the setting: without a birthday item there is no
-        // age, so a crafted POST persists nothing and lands where the hidden category's URL does.
+        // Without a birthday item a crafted POST persists nothing, landing where the hidden
+        // category's URL does.
         if (! $birthdayExists()) {
             return redirect()->route('member.config');
         }
@@ -189,30 +177,21 @@ class MemberConfigController extends Controller
             'remember_token' => Str::random(60),
         ])->save();
 
-        // Keep this device, drop the others. The new hash makes every session's stored password hash
-        // stale; auth.session (AuthenticateSession) re-stores THIS session's hash after the response so
-        // the current device survives, and bounces the others on their next protected request.
-        // logoutOtherDevices re-hashes the just-set password and fires the other-device-logout event —
-        // it verifies against the current hash, so it runs after the save. Neither this nor auth.session
-        // deletes DB session rows; that is ResetMemberPassword's compromise-path behavior, not an
-        // in-session change's.
+        // After the save, since it verifies against the current hash: the other devices are bounced on
+        // their next request rather than having their session rows deleted.
         Auth::guard('member')->logoutOtherDevices($newPassword);
 
-        // The other-device sweep, one step out: a token minted for an AI account this member owns is
-        // reached with the old password's authority, so it drops with the other devices rather than
-        // outliving them. Same treatment as the reset path's.
+        // A token minted for an owned AI account carries the old password's authority, so it drops
+        // with the other devices.
         AiAccountTokens::revokeOwnedBy($viewer);
 
-        // Compensating control for the notify-only email change: a stolen-password attacker could have
-        // requested an email change, so a password change must void any pending one — otherwise the
-        // attacker still holds a live confirmation token for the new address.
+        // A stolen-password attacker could have requested an email change, so a password change voids
+        // any pending one.
         EmailChangeRequest::where('member_id', $viewer->getKey())->delete();
 
-        // Log before the alert: enqueueing the notification is fallible and must not be able to
-        // suppress the audit record of a change that is already durable.
+        // Logged before the fallible enqueue, which must not suppress the audit record.
         SecurityLog::event('password.changed', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
-        // Security alert to the member's own address (takeover detection).
         $viewer->notify(new PasswordChangedNotification($viewer->locale ?? app()->getLocale()));
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);
@@ -222,11 +201,8 @@ class MemberConfigController extends Controller
     {
         $viewer = $this->viewer();
         $newEmail = (string) $request->validated('new_email');
-        // email.change_requested is logged inside the action, between the durable token write and
-        // the fallible notification sends.
         $requestChange($viewer, $newEmail);
 
-        // members.email is unchanged until confirmation; tell the member to open the link just mailed.
         $params = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC
             ? ['category' => MemberConfigCategory::Email->value]
             : [];
@@ -239,16 +215,13 @@ class MemberConfigController extends Controller
     {
         $member = $this->viewer();
 
-        // Log out BEFORE deleting. A full logout cycles remember_token through the user provider (a
-        // save()); running it after the row is gone would re-insert the just-withdrawn member. Logging
-        // out first also nulls the guard user, so auth.session's post-response hook does nothing.
+        // Before the delete: a logout cycles `remember_token` through the provider, which afterwards
+        // would re-insert the withdrawn row.
         Auth::guard('member')->logout();
 
         $withdraw($member);
 
-        // Drop the member's other devices too: sessions.user_id carries no FK to members, so deleting
-        // the member leaves its session rows behind (purge-only — the member row is gone, and logout
-        // above already cycled remember_token). Then reset the current session.
+        // `sessions.user_id` carries no FK to members, so the delete leaves its session rows behind.
         SessionRevocation::purgeMemberSessions((int) $member->getKey());
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -261,28 +234,22 @@ class MemberConfigController extends Controller
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
     {
-        // Hard gate, not just a hidden picker: under modern_only a crafted POST could otherwise write a
-        // latent preferred_surface=classic row that would fire if the site later switches to a coexistence
-        // mode. Classic is unavailable, so there is no surface to pin.
+        // Hard gate, not just a hidden picker: a crafted POST under `modern_only` would write a latent
+        // `preferred_surface=classic` that fires if the site later allows Classic.
         abort_unless(SurfaceResolver::classicAvailable(), 403);
 
         $chosen = Surface::from($request->validated('preferred_surface'));
         $viewer = $this->viewer();
 
-        // Pin only an actual change. Saving the surface the member is already on (their stored choice,
-        // or the gate/default they currently follow when unset) is a no-op, so it neither pins an
-        // unset member nor strips the operator's ability to move them later — the binary UI's stand-in
-        // for a "disabled until changed" button, enforced the same way on both surfaces. canonicalSurface
-        // honours modern_status/modern_only, so a member already forced onto a surface is never pinned.
+        // Only an actual change pins: saving the surface the member already follows would strip the
+        // operator's ability to move them later.
         $changed = $chosen->value !== SurfaceResolver::canonicalSurface($request, 'member');
         if ($changed) {
             $viewer->setPreferredSurface($chosen);
             $request->session()->flash('status', __('Settings updated.'));
         }
 
-        // Land on the config page through a full page load (Inertia::location below): the
-        // just-written preference resolves the chosen surface there, and the full load re-renders
-        // the whole shell — an XHR redirect would keep the Modern SPA alive on a Classic choice.
+        // A full load, since an XHR redirect would keep the Modern SPA alive on a Classic choice.
         $target = $chosen === Surface::Modern
             ? route('member.config')
             : route('member.config', ['category' => MemberConfigCategory::General->value]);
@@ -290,15 +257,10 @@ class MemberConfigController extends Controller
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }
 
-    /**
-     * The layout picker: a detail page that describes what each look does differently, since a look
-     * is a way around the site rather than something a radio label can name.
-     */
     public function editLook(): InertiaResponse|RedirectResponse
     {
-        // The same gate as the hub row, which is absent for the same reason: with one selectable
-        // look there is nothing to choose between. Lands on the settings page rather than 404ing,
-        // like every other member-config section whose gate closes under a member.
+        // With one selectable look there is nothing to choose, and a closed gate lands on the settings
+        // page rather than 404ing.
         if (count(LookResolver::selectable()) < 2) {
             return redirect()->route('member.config');
         }
@@ -308,7 +270,7 @@ class MemberConfigController extends Controller
         ]);
     }
 
-    /** Keep the chosen look. `default` clears the choice, back to following the site's. */
+    /** `default` clears the choice, back to following the site's look. */
     public function updateLook(UpdateLookRequest $request): Response
     {
         $look = $request->look();
@@ -321,14 +283,12 @@ class MemberConfigController extends Controller
 
         $request->session()->flash('status', __('Settings updated.'));
 
-        // Back to the picker, where the whole shell re-rendering in the chosen look is the
-        // confirmation the page itself cannot give.
         return $this->fullLoad($request, route('member.config.look.edit'));
     }
 
     /**
-     * Land on $target through a full page load. Every look POST changes what the whole shell renders,
-     * and an XHR redirect would leave the running SPA drawing the previous one.
+     * Every look POST changes what the whole shell renders, so an XHR redirect would leave the running
+     * SPA drawing the previous one.
      */
     private function fullLoad(Request $request, string $target): Response
     {
@@ -336,12 +296,8 @@ class MemberConfigController extends Controller
     }
 
     /**
-     * Redirect back to the just-saved section: the Classic category page (`?category=`), or the bare
-     * Modern config page on Modern (single page, no category). Gating the param to the Classic route
-     * keeps the Modern redirect category-free. An instant-apply preference (diary/age) passes
-     * `flashOnModern: false` — Modern announces those saves inline next to the control, so the page
-     * flash would say the same thing twice; Classic always keeps the flash (its category pages have
-     * no inline indicator).
+     * `flashOnModern: false` suits an instant-apply preference, which Modern announces inline; Classic
+     * always keeps the flash.
      */
     private function savedRedirect(Request $request, MemberConfigCategory $category, bool $flashOnModern = true): RedirectResponse
     {

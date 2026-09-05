@@ -6,11 +6,6 @@ use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * Modern surface shapes for Friend feature. Member models must not cross
- * the network through Eloquent `toArray()`; they go through here so the
- * exposed columns stay explicit.
- */
 class FriendSerializer
 {
     /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */

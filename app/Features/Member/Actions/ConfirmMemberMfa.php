@@ -10,16 +10,8 @@ use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 
 /**
- * Confirm a pending set-up: prove authenticator possession with a TOTP code, stamp the factor live,
- * and revoke the member's other sessions (a factor change is a credential change) — all in one
- * transaction so it cannot half-apply. The pending guard and the secret-match check re-evaluate
- * against the row locked FOR UPDATE, so a concurrent enable/confirm cannot slip a rotated secret in
- * between: confirming a stale secret's code would stamp the factor live against a secret the member
- * never scanned.
- *
- * Fortify raises an invalid code in its `confirmTwoFactorAuthentication` named bag; the controller
- * translates that into the default bag (and owns the re-auth window, flash, and alert). The
- * fail-closed mismatch thrown here is already default-bag and reaches the member unchanged.
+ * Fortify raises an invalid code in its `confirmTwoFactorAuthentication` error bag, which the
+ * controller translates; the mismatch thrown here is already default-bag.
  */
 class ConfirmMemberMfa
 {
@@ -34,8 +26,8 @@ class ConfirmMemberMfa
             abort_if($fresh->hasEnabledTwoFactorAuthentication(), 403);
             abort_if(blank($fresh->two_factor_secret), 403);
 
-            // Fail closed if a concurrent enable rotated the pending secret out from under the loaded
-            // viewer. The stored ciphertext is stable per row, so raw equality is exact.
+            // Fail closed if a concurrent enable rotated the pending secret: the compared ciphertext
+            // is the stored one, stable per row.
             if ($viewer->two_factor_secret !== $fresh->two_factor_secret) {
                 throw ValidationException::withMessages([
                     'code' => __('Your two-factor settings changed while this page was open. Please try again.'),
@@ -45,8 +37,8 @@ class ConfirmMemberMfa
             ($this->confirm)($fresh, $code);
             SessionRevocation::revokeMember($fresh, $exceptSessionId);
 
-            // Defense-in-depth for invalidation contract (a): the newly live factor must never inherit
-            // a reset link issued against an earlier factor.
+            // A reset link must never survive a change in the factor's lifecycle
+            // (docs/internals/security.md, "Member two-factor authentication").
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;

@@ -36,7 +36,6 @@ class RandomMembersTest extends TestCase
         $this->assertNotContains($blocker->getKey(), (new RandomMembers)($viewer)->pluck('id')->all());
     }
 
-    /** The block is one-directional, as in SearchMembers: it hides the blocker from the blocked, not the reverse. */
     public function test_includes_a_member_the_viewer_blocks(): void
     {
         $viewer = Member::factory()->create();
@@ -46,7 +45,6 @@ class RandomMembersTest extends TestCase
         $this->assertContains($blocked->getKey(), (new RandomMembers)($viewer)->pluck('id')->all());
     }
 
-    /** is_login_rejected gates logging in and receiving, not being seen (as in SearchMembers). */
     public function test_includes_a_member_whose_login_is_rejected(): void
     {
         $viewer = Member::factory()->create();

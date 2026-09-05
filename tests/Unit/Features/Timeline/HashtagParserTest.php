@@ -6,8 +6,8 @@ use App\Features\Timeline\HashtagParser;
 use PHPUnit\Framework\TestCase;
 
 /**
- * What a body yields as hashtags. The stored `tag` is the normalized lookup key; `offset`/`length`
- * are code-point ranges over the raw body, the same unit timeline_post_mentions uses.
+ * The stored `tag` is the normalized lookup key; `offset`/`length` are code-point ranges over the raw
+ * body, the same unit `timeline_post_mentions` uses.
  */
 class HashtagParserTest extends TestCase
 {

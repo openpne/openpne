@@ -117,8 +117,6 @@ class MemberSearchTest extends TestCase
         $viewer = Member::factory()->create();
         Member::factory()->count(2)->create();
 
-        // No birthday field: the age parameter is dropped (neither applied nor echoed), so a stale
-        // URL does not pin the form to an inescapable zero-match state.
         $this->actingAs($viewer)->get('/member/search?age[min]=20&age[max]=30')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('showAge', false)
@@ -209,8 +207,7 @@ class MemberSearchTest extends TestCase
 
     public function test_birthday_year_cannot_be_searched(): void
     {
-        // A date range on the birthday field is ignored — the birth year (= age) cannot be probed,
-        // closing the AgeVisibility bypass. Both May-born members remain regardless of birth year.
+        // A date range on the birthday is ignored, so the birth year cannot be probed.
         $viewer = Member::factory()->create();
         $birthday = Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
         $young = $this->memberWithValue($birthday, '', ['value_datetime' => '2000-05-03 00:00:00']);
@@ -303,8 +300,6 @@ class MemberSearchTest extends TestCase
         $this->assertNotContains($forced->getKey(), $names);
         $this->assertContains($normal->getKey(), $names);
     }
-
-    // --- Self-introduction column (gated by the same field visibility as the profile page) ---
 
     public function test_members_visible_self_introduction_is_returned_to_any_logged_in_member(): void
     {
@@ -402,11 +397,8 @@ class MemberSearchTest extends TestCase
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // The intro column resolves for the whole page in one query (plus one field lookup), so adding
-        // result rows must not add queries. Bounded below the eight-member steady state + a per-row
-        // read (which would push it to 25), so a lapsed batch resolve trips this instead of hiding.
-        // One higher since the group-talk cutover: the shell's talk badge now runs its query on every
-        // page instead of being answered zero by a switched-off unit.
+        // Bounded just above the steady state, so a per-row read (which would reach 25) trips this
+        // instead of hiding.
         $this->assertLessThan(21, $queries, "member search ran {$queries} queries — the self-introduction is likely resolving per row");
     }
 
@@ -488,8 +480,6 @@ class MemberSearchTest extends TestCase
             ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
         ]);
     }
-
-    // --- Age-range search (derived from the birthday, gated by AgeVisibility) ---
 
     public function test_age_search_matches_a_members_visible_age(): void
     {

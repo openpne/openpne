@@ -14,17 +14,12 @@ use App\Support\Feature;
 use Illuminate\Support\Collection;
 
 /**
- * The unified member page (Look::Unified): the same grammar as the unified group page,
- * about a member. Viewer and owner are separate parameters, so every source below is a query that
- * takes both and resolves the owner's rows at the viewer's clearance rather than at the owner's.
- *
- * The gates that decide whether this page may be drawn at all (the owner→viewer block, the
- * guest/web-public rule) and the profile fields' own visibility are the controller's, already applied:
- * what arrives here is what the viewer may see, and this only shapes it.
+ * A source that varies by viewer takes both viewer and owner, so the owner's rows resolve at the
+ * viewer's clearance. The page-level gates and the fields' own visibility are the controller's,
+ * already applied.
  */
 final class UnifiedMemberSerializer
 {
-    /** Rows in the "recent %diaries%" list — a lead-in to the archive, not the archive. */
     private const DIARY_ROWS = 3;
 
     /** Group cards: two full rows of three. */
@@ -55,11 +50,8 @@ final class UnifiedMemberSerializer
 
         return [
             'profile' => self::profile($owner, $fields, $lang, $isSelf, $age, $friendStatus),
-            // The resume-like field rows member/show shows; without them the unified page would make
-            // a member's declared profile unreachable while the switch is on.
             'fields' => ProfileSerializer::fieldRows($fields, $lang),
-            // The owner's memberships, as the profile digest lists them: a joined group is public to
-            // anyone who may open the page.
+            // A joined group is public to anyone who may open the page, so this takes no viewer.
             'groups' => UnifiedSections::groups(Feature::Group->enabled()
                 ? (new ListMemberGroups)->take($owner, self::GROUPS)
                 : collect()),
@@ -74,9 +66,7 @@ final class UnifiedMemberSerializer
     }
 
     /**
-     * The identity block, plus what the action row under it is drawn from. The two avatar sizes are
-     * the hero's `srcset` rungs — a wide crop across the whole content column, which the 180px the
-     * digest profile screen's round face uses would not survive.
+     * The two avatar sizes are the hero's `srcset` rungs, a wide crop across the content column.
      *
      * @param  Collection<int, ProfileFieldValue>  $fields
      * @return array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: string|null, isAi: bool, bio: string|null, age: int|null, isSelf: bool, friendStatus: string|null}

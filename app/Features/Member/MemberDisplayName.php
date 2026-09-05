@@ -7,13 +7,9 @@ namespace App\Features\Member;
 use App\Models\Member;
 
 /**
- * A member's name for a sink that can hold nothing but a string — a notification sentence, a push
- * body, a mail template variable. Site policy is that an AI account is recognisable as one wherever
- * it speaks, and those sinks have no chip to draw beside the name, so the marker travels inside the
- * string. A surface that renders components ships `isAi` instead ({@see Serializers\MemberRefSerializer})
- * and never sees this suffix, so no name is ever marked twice.
- *
- * Null-transparent: a withdrawn actor has no name here either, and the caller's own fallback stands.
+ * A string-only sink carries the AI marker inside the name, having no chip to draw beside it. A
+ * surface that renders components ships `isAi` instead ({@see Serializers\MemberRefSerializer}), so
+ * no name is marked twice.
  */
 final class MemberDisplayName
 {
