@@ -135,7 +135,7 @@ queue, and a mail carries the post body to whoever is eligible at *delivery* tim
 
 `SnsSettingKey::TimelinePostingEnabled` (OpenPNE 3 `is_allow_post_activity`, on by default) is the
 site-wide "may members write" switch. Off, [`EnsureTimelinePostingEnabled`](../../app/Http/Middleware/EnsureTimelinePostingEnabled.php)
-answers the compose page, the post route and the reply route with 404 — OpenPNE 3 forwarded its
+answers the compose page, the post route, the reply route and the mention picker with 404 — OpenPNE 3 forwarded its
 posting action to 404 and refused the API's activity POST, which its timeline plugin used for
 comments as well, so replies are gated with posts. It sits after the auth gate and before the
 throttle in the middleware priority list, so a refused POST consumes no limiter. Every compose and
