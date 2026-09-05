@@ -27,6 +27,9 @@ the admin-user list shows which administrators have it enabled.
   the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
   the same trust boundary as `openpne:admin:reset-password`, since an admin has
   no email for a self-service reset.
+- **Admin passwords at the CLI.** `openpne:admin:create` and `openpne:admin:reset-password` prompt
+  twice, or read `OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no
+  `--password` option, which would leak the secret into shell history and the process list.
 - **Session revocation.** Enabling or disabling MFA revokes the admin's other
   sessions (`App\Auth\AdminAppAuthentication` decorates the set-up/disable
   actions, keeping the current session; the CLI revokes all), consistent with a

@@ -9,7 +9,6 @@ use App\Compat\ScreenStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
 
-/** See docs/internals/classic-compatibility.md "Audit". */
 class ScreenParityCommand extends Command
 {
     protected $signature = 'openpne:screen-parity';

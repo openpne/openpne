@@ -16,7 +16,7 @@ use stdClass;
 use Symfony\Component\Finder\Finder;
 
 /**
- * See docs/internals/i18n.md "CI gate".
+ * See docs/internals/i18n.md "CI gate" and "Omission policy ("key === text" pruning)".
  */
 class CheckTranslationsCommand extends Command
 {
@@ -1044,8 +1044,8 @@ class CheckTranslationsCommand extends Command
 
     private function pruneIdentityEntries(string $base): int
     {
-        // A regular ja entry matching its key is a legitimate Japanese translation and is kept; only
-        // pure-placeholder identity rows go, the term layer resolving those at render time.
+        // Every en identity entry is redundant, but a regular ja entry matching its key is a legitimate
+        // translation and is kept; only pure-placeholder ja identity rows go.
         foreach (['ja', 'en'] as $lang) {
             $path = $base."/lang/{$lang}.json";
             if (! is_file($path)) {

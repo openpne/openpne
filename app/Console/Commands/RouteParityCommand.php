@@ -7,7 +7,6 @@ use App\Compat\RouteParityRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
 
-/** See docs/internals/classic-compatibility.md "Audit". */
 class RouteParityCommand extends Command
 {
     protected $signature = 'openpne:route-parity';
