@@ -574,6 +574,9 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             aria-label={t('Formatting')}
             data-testid="compose-toolbar"
             // No vertical padding: the buttons carry 44px touch targets of their own.
+
+            // The host Panel has to pass `overflow="visible"`, or the sticky resolves against the
+            // clipped card instead of the page.
             className="sticky top-[var(--modern-top-offset)] z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (

@@ -79,7 +79,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <LeftNav />
                 {/* The key remounts the column on every navigation into or within compose, so the
                     sheet plays its entry each time. */}
-                {/* A validation POST keeps the URL and so the key, which is what keeps the form's state. */}
+                {/* A validation POST keeps the URL and so the key, which is what keeps the form's state;
+                    a preserveState visit that changed the URL inside compose would break that. */}
                 <div
                     key={compose ? url : 'chrome'}
                     // Closed: the column is on its way off the screen, so it stops taking input while

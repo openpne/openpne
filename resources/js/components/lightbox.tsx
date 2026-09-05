@@ -179,6 +179,8 @@ export function Lightbox({
                     )}
 
                     {/* Only where there is a pointer to aim: a touch device turns pages by swiping. */}
+                    {/* The chrome fade belongs on this wrapper, not on the buttons, whose own opacity is
+                        how an end of the deck reads as an end. */}
                     {/* aria-disabled, not disabled: a focused button that turns disabled drops focus to
                         body, which would kill arrow-key navigation at either end. */}
                     {/* Faint by ink, never by the element's opacity, which would take the focus ring

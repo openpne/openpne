@@ -143,12 +143,12 @@ test('tier-3: GFM task marker is kept as literal text (no TaskList node)', () =>
     assert.equal(roundTrip('- [x] done'), '- \\[x\\] done');
 });
 
-test('tier-3 (gate b): image source preserved, alt/title round-trip, syntax kept safe', () => {
+test('tier-3: image source preserved, alt/title round-trip, syntax kept safe', () => {
     assert.equal(roundTrip('![alt](https://example.com/x.png)'), '![alt](https://example.com/x.png)');
     assert.equal(roundTrip('![alt](https://example.com/x.png "cap")'), '![alt](https://example.com/x.png "cap")');
     // An escaped `]` in the alt stays escaped, so it can't close the alt early and expose image syntax.
     assert.equal(roundTrip('![a\\]b](https://example.com/a.png "cap")'), '![a\\]b](https://example.com/a.png "cap")');
-    // `<tag>` in the alt is entity-encoded (no raw `<tag`, gate c) — not exact, but the server renders
+    // `<tag>` in the alt is entity-encoded (no raw `<tag`) — not exact, but the server renders
     // `![&lt;b&gt;x]` and `![<b>x]` to the identical visible alt (verified against MarkdownText.php).
     assert.equal(roundTrip('![<b>x](https://e.com/y.png)'), '![&lt;b&gt;x](https://e.com/y.png)');
 });
@@ -163,7 +163,7 @@ test('tier-3: non-http link schemes are preserved by the editor (server drops th
     assert.equal(roundTrip('[r](/relative/path)'), '[r](/relative/path)');
 });
 
-test('tier-3 (gate a): raw inline HTML stays literal, serialized as escaped entities', () => {
+test('tier-3: raw inline HTML stays literal, serialized as escaped entities', () => {
     assert.equal(roundTrip('<b>x</b>'), '&lt;b&gt;x&lt;/b&gt;');
     assert.equal(roundTrip('<strong>x</strong>'), '&lt;strong&gt;x&lt;/strong&gt;');
 });
@@ -196,7 +196,7 @@ test('tier-3: loose task item keeps the marker inside its first paragraph', () =
     assert.equal(roundTrip(once), once);
 });
 
-// ─── tier 4: no raw HTML in serialized output (gate c) ───────────────────────────────────────────
+// ─── tier 4: no raw HTML in serialized output ────────────────────────────────────────────────────
 
 const programmaticDocs: Array<[string, (e: Editor) => void]> = [
     ['bold', (e) => e.chain().insertContent('x').selectAll().toggleBold().run()],

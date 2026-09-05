@@ -219,7 +219,8 @@ export function MentionTextarea({
                 aria-activedescendant={open ? `${listId}-${active}` : undefined}
             />
             {/* Rendered even while closed, so `aria-controls` always names a real element. */}
-            {/* Uncapped: the endpoint answers with at most MentionCandidates::LIMIT one-line rows. */}
+            {/* Uncapped: the endpoint answers with at most MentionCandidates::LIMIT one-line rows, so a
+                max-height would only add a scroll region no keyboard can reach. */}
             <ul
                 id={listId}
                 role="listbox"
