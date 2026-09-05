@@ -10,6 +10,7 @@ use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -34,6 +35,14 @@ class BannerImageResourceTest extends TestCase
     public function test_the_create_page_loads(): void
     {
         Livewire::test(CreateBannerImage::class)->assertOk();
+    }
+
+    public function test_the_image_field_follows_the_configured_cap(): void
+    {
+        config()->set('openpne.images.max_upload_kilobytes', 123);
+
+        Livewire::test(CreateBannerImage::class)
+            ->assertFormFieldExists('image', checkFieldUsing: fn (FileUpload $field): bool => $field->getMaxSize() === 123);
     }
 
     public function test_creating_requires_an_image(): void

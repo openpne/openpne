@@ -217,7 +217,8 @@ just passed `ShowDiary` on, so a comment of another entry refuses exactly as one
 everything that can be settled before the decode is
 ([`DecodesImageUploads`](../../app/Mcp/Tools/Concerns/DecodesImageUploads.php)): the argument is a
 list of at most three strings, and each is held to an exact length — four base64 characters carry at
-most three bytes, so a longer string cannot decode to something the 5 MB cap would accept, and
+most three bytes, so a longer string cannot decode to something the per-file cap
+([images](images.md), "Upload size") would accept, and
 `base64_decode()` allocates its output from the length of its input. Only standard base64 is decoded
 (`strict`), so a `data:` prefix or the url-safe alphabet is refused rather than read as something
 else; padding is optional and line breaks are skipped, which is the decoder's own latitude. What a

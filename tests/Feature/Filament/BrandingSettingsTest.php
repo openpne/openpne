@@ -12,6 +12,7 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -135,5 +136,23 @@ class BrandingSettingsTest extends TestCase
             ->assertSee('会員画面')
             ->assertDontSee('クラシック')
             ->assertDontSee('モダン');
+    }
+
+    public function test_the_upload_fields_follow_the_configured_cap(): void
+    {
+        config()->set('openpne.images.max_upload_kilobytes', 123);
+
+        Livewire::test(BrandingSettings::class)
+            ->assertFormFieldExists(SnsSettingKey::BrandLogoFile->value, checkFieldUsing: fn (FileUpload $field): bool => $field->getMaxSize() === 123)
+            ->assertFormFieldExists(SnsSettingKey::BrandFaviconFile->value, checkFieldUsing: fn (FileUpload $field): bool => $field->getMaxSize() === 123);
+    }
+
+    public function test_the_favicon_keeps_its_own_ceiling_under_a_larger_cap(): void
+    {
+        config()->set('openpne.images.max_upload_kilobytes', 20480);
+
+        Livewire::test(BrandingSettings::class)
+            ->assertFormFieldExists(SnsSettingKey::BrandLogoFile->value, checkFieldUsing: fn (FileUpload $field): bool => $field->getMaxSize() === 20480)
+            ->assertFormFieldExists(SnsSettingKey::BrandFaviconFile->value, checkFieldUsing: fn (FileUpload $field): bool => $field->getMaxSize() === 1024);
     }
 }

@@ -70,8 +70,10 @@ qualified by the source database and prefix, because `Schema::hasTable()` sees o
 connection's own database. A missing core table or consumed FROM column, or a partially present
 optional plugin group (`StepRegistry::optionalPluginSources()`), aborts; a fully absent optional
 group is created empty from the DDL fixture so its steps no-op, and dropped after the run. The
-unknown-name scan and the member-reference counts read columns the structural check guards, so
-they run only on a clean structural verdict.
+unknown-name scan, the member-reference counts and the `UncopiedSettingsNotice` (the
+`sns_config` values that live in `.env` here, printed with the value to set) read columns the
+structural check guards, so they run only on a clean structural verdict; the notice also runs only
+when a step has `sns_config` as its source table.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. Two passes per row: a lenient render reports what

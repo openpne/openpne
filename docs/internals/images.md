@@ -86,6 +86,37 @@ the `FileStorage` seam. Run it after an OpenPNE 3 upgrade. It selects only null 
 idempotent and an interrupted run resumes by being re-run; a file whose bytes are gone or undecodable
 is left null and reported as skipped rather than stopping the run.
 
+## Upload size
+
+Every image upload — a member's avatar or post images, an admin's banner, logo or public asset, and
+a picture posted over MCP — is held to one per-file cap,
+[`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default,
+the favicon alone keeping its own 1 MB ceiling under it. The admin forms
+upload through Livewire's temporary endpoint before Filament validates, so
+`FilesServiceProvider` sets that endpoint's rule to the same cap; unconfigured, Livewire's own
+12288 KB would silently be the admin cap above that size. That rule is global to Livewire uploads,
+which is fine while every one of them is an image; a non-image admin upload would need its own.
+
+The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
+limits are not folded in, because they belong to the deployment and differ between the FPM pool
+that serves uploads and the CLI that runs tests and commands. Those limits, and the reverse proxy's,
+are prerequisites the operator sets alongside the cap, and the shipped `docker/` stack sizes them
+for the default only. `upload_max_filesize` must be at least the cap: above it PHP discards the
+file before validation runs, and the form reports a failed upload rather than the size.
+`post_max_size` bounds the whole request, and a compose form carries up to `PostImages::MAX_IMAGES`
+files plus its fields, so it must hold the cap times that count with room for the rest of the body;
+over it the answer is a bare 413 from `ValidatePostSize`, the composed post lost with it. The proxy's
+body limit (nginx `client_max_body_size`, 1 MB unconfigured) sits in front of both and fails the same
+way, out of the app's sight.
+
+The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes again; it never touches
+`$_FILES`, and the decoded file is then run through the compose forms' own rules, so the same cap
+is applied to the encoded length before the decode. That pre-decode bound scales with the cap: the
+base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it is refused.
+
+The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
+set, or says the OpenPNE 3 value could not be read as a size.
+
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and

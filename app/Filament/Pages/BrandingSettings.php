@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Features\Branding\Actions\SaveBrandingSettings;
 use App\Files\FormUpload;
 use App\Files\ImageMetadataStripException;
+use App\Files\UploadLimit;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
 use App\Support\SnsSettingKey;
@@ -107,7 +108,7 @@ class BrandingSettings extends Page
                         ->label(__('Upload a new logo'))
                         ->image()
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-                        ->maxSize(5120)
+                        ->maxSize(UploadLimit::kilobytes())
                         ->rules(['dimensions:max_width='.self::maxDimension().',max_height='.self::maxDimension()])
                         ->storeFiles(false),
                     'remove_brand_logo',
@@ -127,7 +128,7 @@ class BrandingSettings extends Page
                         // PNG only: App\Http\Controllers\PublicFileController serves .ico / .svg as an
                         // attachment, which a <link rel="icon"> cannot use.
                         ->acceptedFileTypes(['image/png'])
-                        ->maxSize(1024)
+                        ->maxSize(min(1024, UploadLimit::kilobytes()))
                         ->rules(['dimensions:ratio=1,max_width='.self::maxDimension().',max_height='.self::maxDimension()])
                         ->storeFiles(false),
                     'remove_brand_favicon',
