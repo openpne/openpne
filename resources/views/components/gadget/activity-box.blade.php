@@ -1,7 +1,8 @@
-{{-- OpenPNE 3 activityBox (default/_activityBox via op_include_box): a server-rendered activity list.
-     OpenPNE 3 drew the box when it had activities or a form, and the home supplied the form only
-     while is_allow_post_activity was on; the form becomes a post-page link under the same rule, so an
-     empty box with posting off is dropped, as a profile activityBox (never a form) always was. --}}
+{{-- OpenPNE 3 activityBox (friend/_activityBox, the gadget's entry template, over default/_activityBox
+     via op_include_box): a server-rendered activity list. That entry template drew the box only with
+     activities or a form, and the home supplied the form only while is_allow_post_activity was on;
+     the form becomes a post-page link under the same rule, so an empty box with posting off is
+     dropped, as a profile activityBox (never a form) always was. --}}
 @php($offersPost = $context === 'home' && \App\Features\Timeline\TimelinePosting::enabled())
 @if ($posts->isNotEmpty() || $offersPost)
     <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
