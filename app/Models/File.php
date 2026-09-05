@@ -7,20 +7,15 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-// Metadata of an uploaded file (the `files` table).
-//
-// The bytes are NOT an Eloquent relation on this model: they live in `file_bin`
-// and are reached only through the App\Files\FileStorage contract, so there is a
-// single access path to the content regardless of the storage backend
-// (DB-BLOB / local / S3). `id` is a signed INT (see the create_files migration:
-// it must match file_bin.file_id for the upgrade tool's metadata-only FK rewire).
+// The bytes are deliberately not a relation on this model: they are reached only through the
+// App\Files\FileStorage contract, whatever the backend.
 #[Fillable(['name', 'type', 'original_filename', 'related_entity_type', 'related_entity_id', 'explicit_visibility', 'byte_size', 'width', 'height'])]
 class File extends Model
 {
     /** @use HasFactory<FileFactory> */
     use HasFactory;
 
-    /** explicit_visibility value that makes a file web-readable regardless of owner (FilePolicy). */
+    /** The one `explicit_visibility` value that makes a file web-readable regardless of owner. */
     public const VISIBILITY_PUBLIC = 'public';
 
     protected $table = 'files';
@@ -39,9 +34,7 @@ class File extends Model
     }
 
     /**
-     * The app route that serves this file's bytes, keyed by the opaque `name` token.
-     * Always an in-app URL (never a direct disk URL) so FileController + FilePolicy
-     * gate every fetch.
+     * Always an in-app URL, never a disk URL, so every fetch passes the policy.
      */
     public function url(): string
     {
@@ -49,15 +42,14 @@ class File extends Model
     }
 
     /**
-     * Login-free URL for a file marked explicit_visibility='public' (an admin asset). Served by the
-     * public PublicFileController, unlike url() which is behind the authed FileController.
+     * Login-free, and valid only for a file marked `explicit_visibility` public.
      */
     public function publicUrl(): string
     {
         return route('file.public', ['file' => $this->name]);
     }
 
-    /** The image format token (jpg/png/gif/webp) from the MIME type, or null if not a supported image. */
+    /** Null when the type is not a supported image. */
     public function imageFormat(): ?string
     {
         return match ($this->type) {
@@ -70,13 +62,8 @@ class File extends Model
     }
 
     /**
-     * URL of a thumbnail variant, in the OpenPNE 3-compatible /cache/img form. The size
-     * must be whitelisted (config openpne.images.allowed_sizes) to resolve.
-     *
-     * Where CSS sizes the image (every Modern surface), the size asked for here is one candidate
-     * in a srcset, not the painted box — see docs/internals/images.md for picking it.
-     * Classic is the exception: its `<img>` carries no dimensions, so the size requested here
-     * *is* the rendered size and changing it moves the layout.
+     * The size must be whitelisted in `openpne.images.allowed_sizes` to resolve. On Classic the
+     * requested size is the rendered size (docs/internals/images.md, "Classic is not part of this").
      */
     public function thumbnailUrl(int $width, int $height, bool $square = false): string
     {

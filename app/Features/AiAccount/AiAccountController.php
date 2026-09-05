@@ -49,16 +49,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * A member's own AI accounts: the list they may create into, and one account's page — its identity,
- * its groups, its access tokens, and its delete button.
- *
- * Only creation asks the site setting. Everything else here answers to ownership alone, so an
- * operator who switches AI accounts off closes the door without stranding what is behind it: the
- * owner can still revoke a token, take an account out of every group, and delete it.
- *
- * This is the owner half of the token trust boundary the CLI holds the operator half of
- * (App\Console\Commands\McpTokenCommand): an owner mints only for accounts they own, and only after
- * proving it is them again (AiTokenRequest).
+ * Only creation asks the site setting: everything else here answers to ownership alone, so switching
+ * AI accounts off closes the door without stranding what is behind it.
  */
 class AiAccountController extends Controller
 {
@@ -67,8 +59,7 @@ class AiAccountController extends Controller
     public function __construct(private readonly AiAccountSettings $settings) {}
 
     /**
-     * Modern-only, like the email/password/two-factor detail pages: Classic reaches the same list
-     * through /member/config?category=ai, which MemberConfigController renders.
+     * Modern-only: Classic reaches the same list through the member-config category page.
      */
     public function index(): InertiaResponse
     {
@@ -78,9 +69,8 @@ class AiAccountController extends Controller
     }
 
     /**
-     * One account's management page. Dual-surface: unlike the other config detail pages this is the
-     * only way to give an account's group seats up, so Classic gets it too rather than being left
-     * with a list it cannot act on.
+     * Dual-surface unlike the other config detail pages: this is the only way to give an account's
+     * group seats up.
      */
     public function show(
         Request $request,
@@ -94,8 +84,7 @@ class AiAccountController extends Controller
         // Not a cast: `?keyword[]=` hands us an array, and casting one is a fatal, not a search.
         $raw = $request->query('keyword');
         $keyword = is_string($raw) ? $raw : '';
-        // The group panels are the group unit's, so they go with it: a switched-off unit leaves the
-        // page as identity plus delete, and the POSTs behind them 404 on their own gate.
+        // The POSTs behind these panels have their own gate; hiding them is not the check.
         $groupsOn = Feature::Group->enabled();
         /** @var EloquentCollection<int, Group> $joined */
         $joined = $groupsOn ? $joinedGroups->all($member) : new EloquentCollection;
@@ -105,7 +94,7 @@ class AiAccountController extends Controller
             : new EloquentCollection;
         $browse = $groupsOn ? $searchGroups($keyword) : null;
         $tokens = AiAccountSerializer::tokens($member, $request->session());
-        // Doctrine I18n lang for the current locale, as everywhere a profile caption is rendered.
+        // OpenPNE 3's Doctrine I18n lang code.
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
         $selfIntroduction = AiAccountSerializer::selfIntroduction($member, $selfIntroductionField(), $lang);
 
@@ -133,9 +122,8 @@ class AiAccountController extends Controller
                     $props['groups'] = [
                         'joined' => array_map([GroupSerializer::class, 'summary'], $joined->all()),
                         'pending' => array_map([GroupSerializer::class, 'summary'], $pending->all()),
-                        // Every group, not only the joinable ones: the client marks a row it is
-                        // already in or waiting on, so the browse list stays the whole catalogue
-                        // and its pager keeps telling the truth about how big that is.
+                        // Every group, not only the joinable ones, so the pager keeps telling the
+                        // truth about how big the catalogue is.
                         'browse' => GroupSerializer::detailPaginator($browse),
                         'joinedIds' => $joined->modelKeys(),
                         'pendingIds' => $pending->modelKeys(),
@@ -160,9 +148,8 @@ class AiAccountController extends Controller
     }
 
     /**
-     * Rename the account and rewrite its self-introduction. Unlike the token pair and the delete
-     * below it asks for no password: this is the same edit a person makes to their own name and
-     * bio, and the site setting stays out of it — switched off, an owner may still correct a typo.
+     * No password, unlike the token pair and the delete below: this is the same edit a person makes
+     * to their own name and bio.
      */
     public function update(UpdateAiAccountRequest $request, Member $member, UpdateAiAccountIdentity $update): RedirectResponse
     {
@@ -173,7 +160,6 @@ class AiAccountController extends Controller
         return $this->accountRedirect($member)->with('status', __('AI account updated.'));
     }
 
-    /** The account's image, through the same upload the member avatar editor runs. */
     public function updateAvatar(AvatarRequest $request, Member $member, SetAvatar $action): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
@@ -181,8 +167,8 @@ class AiAccountController extends Controller
         try {
             $action($member, $request->file('image'));
         } catch (ImageMetadataStripException) {
-            // SetAvatar uses FileUploader directly (no PostImages), so convert the fail-closed strip
-            // to a validation error on the submitted field ('image', the file picker) here.
+            // SetAvatar uses FileUploader directly, so the fail-closed strip arrives raw and is
+            // turned into a field error here.
             throw ValidationException::withMessages(['image' => [ImageMetadataStripException::userMessage()]]);
         }
 
@@ -198,10 +184,6 @@ class AiAccountController extends Controller
         return $this->accountRedirect($member)->with('status', __('Profile image removed.'));
     }
 
-    /**
-     * Re-authenticated by DeleteAiAccountRequest, behind the route's ownership gate — which is where
-     * the 404 for someone else's account has to come from, ahead of the password check.
-     */
     public function destroy(DeleteAiAccountRequest $request, Member $member, DeleteAiAccount $delete): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
@@ -215,11 +197,6 @@ class AiAccountController extends Controller
         return $this->listRedirect($request)->with('status', __('AI account deleted.'));
     }
 
-    /**
-     * Mint a token for one of the viewer's own accounts. The plaintext lands in the flash and is
-     * rendered by the redirect target — once, from the session, never from a row: what is stored is
-     * a hash of it, and a lost token is replaced rather than recovered.
-     */
     public function storeToken(AiTokenRequest $request, Member $member, IssueMcpToken $issue): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
@@ -234,8 +211,7 @@ class AiAccountController extends Controller
             return $back->with('error', $this->messageFor($e->reason));
         }
 
-        // After the Action's commit, so a rolled-back mint is never recorded as one. `via` is what
-        // separates this line from the CLI's: the same event, a different trust boundary.
+        // After the Action's commit, so a rolled-back mint is never recorded as one.
         SecurityLog::event('token.issued', [
             'member_id' => (int) $member->getKey(),
             'owner_id' => $this->viewer()->getKey(),
@@ -244,18 +220,12 @@ class AiAccountController extends Controller
             'via' => 'owner',
         ]);
 
-        // Flashed with whose it is, not as a bare string: the session carries one such key, and the
-        // next page rendered from it is not always this account's.
         return $back->with(AiAccountSerializer::NEW_TOKEN, [
             'member_id' => (int) $member->getKey(),
             'token' => $token->plainTextToken,
         ])->with('status', __('Access token issued.'));
     }
 
-    /**
-     * Retire one token. An id that is not this account's, or names a token minted for something
-     * else, answers 404 — the same refusal an id naming nothing gets, as everywhere else here.
-     */
     public function destroyToken(AiTokenRequest $request, Member $member, int $token, RevokeMcpToken $revoke): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
@@ -276,8 +246,7 @@ class AiAccountController extends Controller
     }
 
     /**
-     * Open the window when the password was actually asked for, not on every request inside it:
-     * the fifteen minutes run from the proof, rather than sliding forward with each token minted.
+     * The window runs from the proof rather than sliding forward with each token minted.
      */
     private function stampReauth(AiTokenRequest $request): void
     {
@@ -303,10 +272,6 @@ class AiAccountController extends Controller
         return $this->groupAction($request, $member, fn () => $cancel($member, $group), __('Join request cancelled.'));
     }
 
-    /**
-     * The three group POSTs differ only in which action runs and what to say afterwards. Each lands
-     * back on the account's page, whose panels are the record of what just happened.
-     */
     private function groupAction(Request $request, Member $member, callable $action, string $status): RedirectResponse
     {
         Gate::authorize('manageAiAccount', $member);
@@ -322,16 +287,11 @@ class AiAccountController extends Controller
         return $back->with('status', $status);
     }
 
-    /** The account's own page, which every POST about one account lands back on. */
     private function accountRedirect(Member $member): RedirectResponse
     {
         return redirect()->route('member.config.ai.show', ['member' => $member->getKey()]);
     }
 
-    /**
-     * The list every create/delete lands back on, which is a different page per surface: Modern has
-     * its own, Classic reads the same list inside the member-config category page.
-     */
     private function listRedirect(Request $request): RedirectResponse
     {
         return SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC

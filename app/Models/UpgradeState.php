@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * A row in openpne4_upgrade_state: the upgrade runner's per-step checkpoint. completed ⟺ the step's
- * copy committed (the runner writes it inside the step's transaction), so a re-run skips it.
+ * See docs/internals/upgrade.md, "Checkpoints and resume".
  */
 class UpgradeState extends Model
 {

@@ -35,16 +35,16 @@ class DiaryComment extends Model
         return $this->belongsTo(Member::class);
     }
 
-    /** @return HasMany<DiaryCommentImage, $this> Attached images, insertion-ordered (no slot column). */
+    /** @return HasMany<DiaryCommentImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(DiaryCommentImage::class)->orderBy('id');
     }
 
     /**
-     * OpenPNE 3 lets the comment author or the diary author delete a comment. A withdrawn
-     * author (member_id null) can no longer act, so only the diary author can then remove it.
-     * A guest (null) never can — the thread is readable on a web-public diary, not actionable.
+     * OpenPNE 3 lets the comment author or the diary author delete a comment; a withdrawn author
+     * (member_id null) can no longer act. A guest never can, though the thread is readable on a
+     * web-public diary.
      */
     public function isDeletableBy(?Member $member): bool
     {

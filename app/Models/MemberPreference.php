@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One member's stored value for one App\Support\PreferenceKey. The `key` column holds the
- * PreferenceKey case value; `value` is that key's codec output. The typed read/write goes
- * through the Member accessors (preference()/setPreference() and the per-key typed pairs),
- * not this model directly.
+ * See docs/internals/member-preferences.md, "The typed registry".
  */
 #[Fillable(['member_id', 'key', 'value'])]
 class MemberPreference extends Model

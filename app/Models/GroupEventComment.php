@@ -35,7 +35,7 @@ class GroupEventComment extends Model
         return $this->belongsTo(Member::class);
     }
 
-    /** @return HasMany<GroupEventCommentImage, $this> Attached images, in slot (number) order. */
+    /** @return HasMany<GroupEventCommentImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(GroupEventCommentImage::class, 'post_id')->orderBy('number');

@@ -8,8 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// One image attached to an event, pointing at a stored File. A join row only — no timestamps;
-// the bytes and their timestamps belong to the File, which cascades this row away when deleted.
+// No timestamps; deleting the File cascades this row away.
 #[Fillable(['post_id', 'file_id', 'number'])]
 class GroupEventImage extends Model
 {

@@ -11,12 +11,8 @@ use App\Models\Member;
 use App\Support\SecurityLog;
 
 /**
- * Retire an AI account at its owner's request.
- *
- * Deletion is member withdrawal — the account IS a member, and its group seats, content, tokens and
- * feed rows have to go the same way anyone else's do — so this action is the ownership check plus a
- * hand-off, never a second delete path. Deliberately not gated on the site setting: an operator who
- * switched AI accounts off must not thereby trap the ones already out there.
+ * Deletion is member withdrawal rather than a second delete path, and is deliberately not gated on
+ * the site setting: switching AI accounts off must not trap the ones already out there.
  */
 class DeleteAiAccount
 {
@@ -32,8 +28,8 @@ class DeleteAiAccount
 
         ($this->withdrawMember)($aiAccount);
 
-        // Beside the `member.withdrawn` the withdrawal itself logs: that one records the row going
-        // away, this one records whose account it was.
+        // Beside the `member.withdrawn` the withdrawal logs: that one records the row going away,
+        // this one whose account it was.
         SecurityLog::event('ai_account.deleted', [
             'member_id' => $aiAccountId,
             'owner_id' => $owner->getKey(),

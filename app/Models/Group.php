@@ -31,8 +31,7 @@ class Group extends Model
     }
 
     /**
-     * Confirmed members only. Pending applicants live in group_join_requests
-     * (see applicants()), so this relation never includes them.
+     * Confirmed members only: a pending applicant is a `group_join_requests` row, not one of these.
      *
      * @return HasMany<GroupMember, $this>
      */
@@ -42,9 +41,6 @@ class Group extends Model
     }
 
     /**
-     * Members with a pending join request (Approval policy), via the group_join_requests
-     * pivot. Distinct from members(): an applicant is not yet a member.
-     *
      * @return BelongsToMany<Member, $this>
      */
     public function applicants(): BelongsToMany
@@ -53,19 +49,19 @@ class Group extends Model
             ->withPivot('created_at');
     }
 
-    /** @return HasMany<GroupTopic, $this> The topic board. */
+    /** @return HasMany<GroupTopic, $this> */
     public function topics(): HasMany
     {
         return $this->hasMany(GroupTopic::class);
     }
 
-    /** @return HasMany<GroupEvent, $this> The event board. */
+    /** @return HasMany<GroupEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(GroupEvent::class);
     }
 
-    /** @return HasMany<GroupMessage, $this> The group's talk, oldest first is the query's job. */
+    /** @return HasMany<GroupMessage, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(GroupMessage::class);

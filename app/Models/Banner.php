@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-// A design banner: a fixed placement (top/side, before/after login) showing either operator
-// HTML (is_use_html) or one of its associated images, chosen at random per request.
 #[Fillable(['name', 'is_use_html', 'html'])]
 class Banner extends Model
 {
@@ -27,7 +25,6 @@ class Banner extends Model
         return $this->belongsToMany(BannerImage::class, 'banner_use_images')->withTimestamps();
     }
 
-    /** One of the banner's images at random, or null when it has none. */
     public function randomImage(): ?BannerImage
     {
         return $this->images()->inRandomOrder()->first();

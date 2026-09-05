@@ -10,8 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A choice for a custom select/radio/checkbox profile field. Labels are localised in
- * `profile_option_translations` keyed by (id, lang). Preset fields do not use this table.
+ * Preset fields do not use this table; their choices come from the catalog.
  */
 class ProfileOption extends Model
 {

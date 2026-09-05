@@ -42,10 +42,8 @@ class Member extends Authenticatable
     use TwoFactorAuthenticatable;
 
     /**
-     * A used recovery code is deleted, not silently swapped for a fresh one (the Fortify
-     * default). Codes are displayed exactly once here, so the member could never see the
-     * replacement — swapping would keep the unused count at a phantom "8" while the codes in
-     * their safe actually dwindle. Deleting keeps the count honest; regenerating refills the set.
+     * A used code is deleted rather than swapped for a fresh one as Fortify does by default
+     * (docs/internals/security.md, "Member two-factor authentication").
      *
      * @param  string  $code
      */
@@ -72,16 +70,14 @@ class Member extends Authenticatable
         ];
     }
 
-    /** Queue the reset mail (constant-time response) and carry the request-time locale. */
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token, app()->getLocale()));
     }
 
     /**
-     * `friendships` is a bidirectional mirror: a friendship between A and B
-     * is two rows (A→B and B→A). This accessor only sees rows anchored on
-     * `$this`, so it relies on the mirror being maintained.
+     * `friendships` is a bidirectional mirror — one friendship is two rows — and this relation only
+     * sees the rows anchored on `$this`.
      *
      * @return BelongsToMany<Member, $this>
      */
@@ -119,10 +115,6 @@ class Member extends Authenticatable
             ->withPivot('created_at');
     }
 
-    /**
-     * A page that read this member's side of the pair in bulk has already answered it
-     * (ViewerRelations); an unread pair asks as it always has.
-     */
     public function isFriendsWith(self $other): bool
     {
         return app(ViewerRelations::class)->isFriend($this, $other)
@@ -153,9 +145,6 @@ class Member extends Authenticatable
     }
 
     /**
-     * Groups this member has a pending join request to, via the group_join_requests
-     * pivot (confirmed memberships are groupMemberships()).
-     *
      * @return BelongsToMany<Group, $this>
      */
     public function groupJoinRequests(): BelongsToMany
@@ -170,11 +159,6 @@ class Member extends Authenticatable
         return $this->hasMany(MemberPreference::class, 'member_id');
     }
 
-    /**
-     * The member's Visibility value for $key, or the key default when unset. Reads the loaded
-     * `preferences` relation (lazy-loaded once and cached), so repeated calls share one query.
-     * Only Visibility-scaled keys go through here; the typed Surface key has its own accessor.
-     */
     public function preference(PreferenceKey $key): Visibility
     {
         $value = $key->decode($this->storedPreference($key));
@@ -183,27 +167,17 @@ class Member extends Authenticatable
         return $value;
     }
 
-    /**
-     * Store an explicit value for $key (even one equal to the default). Returning to
-     * default-following is resetPreference(), not setPreference($default).
-     */
     public function setPreference(PreferenceKey $key, Visibility $value): void
     {
         $this->writePreference($key, $value);
     }
 
-    /** Drop any stored value for $key so reads fall back to the key default. */
     public function resetPreference(PreferenceKey $key): void
     {
         $this->preferences()->where('key', $key->value)->delete();
         $this->unsetRelation('preferences');
     }
 
-    /**
-     * The member's durable surface choice, or null when unset (an absent row means "no choice —
-     * defer to SurfaceResolver's session override / mode default"). Separate from preference() so the
-     * Surface value type stays type-safe at the call site.
-     */
     public function preferredSurface(): ?Surface
     {
         $value = PreferenceKey::PreferredSurface->decode($this->storedPreference(PreferenceKey::PreferredSurface));
@@ -217,18 +191,11 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::PreferredSurface, $surface);
     }
 
-    /** Drop the surface choice so resolution falls back to the session override / the mode's default surface. */
     public function resetPreferredSurface(): void
     {
         $this->resetPreference(PreferenceKey::PreferredSurface);
     }
 
-    /**
-     * The member's durable look choice, or null when unset (an absent row means "no choice — defer
-     * to the site default"). Separate from preference() so the Look value type stays type-safe at
-     * the call site. A row naming a look the site no longer offers is ignored on read (LookResolver)
-     * and deleted when the administrator narrows the set.
-     */
     public function preferredLook(): ?Look
     {
         $value = PreferenceKey::PreferredLook->decode($this->storedPreference(PreferenceKey::PreferredLook));
@@ -242,16 +209,11 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::PreferredLook, $look);
     }
 
-    /** Drop the look choice so resolution falls back to the site default. */
     public function resetPreferredLook(): void
     {
         $this->resetPreference(PreferenceKey::PreferredLook);
     }
 
-    /**
-     * The member's compose-editor choice, or the registry default (Rich) when unset. Separate from
-     * preference() so the ComposeEditor value type stays type-safe at the call site.
-     */
     public function composeEditor(): ComposeEditor
     {
         $value = PreferenceKey::ComposeEditor->decode($this->storedPreference(PreferenceKey::ComposeEditor));
@@ -265,11 +227,6 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::ComposeEditor, $editor);
     }
 
-    /**
-     * Whether this member's subscribed devices are nudged by web push, or the registry default
-     * (Enabled) when unset. Separate from preference() so the PushDelivery value type stays
-     * type-safe at the call site.
-     */
     public function pushDelivery(): PushDelivery
     {
         $value = PreferenceKey::PushDelivery->decode($this->storedPreference(PreferenceKey::PushDelivery));
@@ -303,21 +260,11 @@ class Member extends Authenticatable
         return $this->hasMany(MemberNotificationSetting::class, 'member_id');
     }
 
-    /**
-     * Whether this member receives $kind on $channel. An absent row means the kind's default for
-     * that channel. Reads the loaded `notificationSettings` relation (lazy-loaded once and cached),
-     * so a notification's per-channel checks share one query.
-     */
     public function wantsNotification(NotificationKind $kind, NotificationChannel $channel): bool
     {
         return $this->notificationSetting($kind, $channel)?->is_enabled ?? $kind->defaultEnabled($channel);
     }
 
-    /**
-     * Whether the value wantsNotification() answers with is this member's own rather than the kind's
-     * default. Only a channel whose default can move under them (NotificationKind::hasSiteDefault)
-     * makes the distinction worth showing.
-     */
     public function hasNotificationSetting(NotificationKind $kind, NotificationChannel $channel): bool
     {
         return $this->notificationSetting($kind, $channel) !== null;
@@ -330,11 +277,8 @@ class Member extends Authenticatable
     }
 
     /**
-     * Store an explicit opt-in/out for $kind on $channel, even one equal to the default — except on a
-     * channel whose default is a site setting (NotificationKind::hasSiteDefault), where a row is an
-     * OVERRIDE and a value equal to the current default deletes it instead. The Classic settings form
-     * posts every kind on every save, so without that exception the site default would be frozen into
-     * a row per member and an administrator's later flip would silently pass them by.
+     * On a channel whose default is a site setting a row is an override, so a value equal to the
+     * current default deletes the row instead of storing it.
      */
     public function setNotificationSetting(NotificationKind $kind, NotificationChannel $channel, bool $enabled): void
     {
@@ -350,8 +294,7 @@ class Member extends Authenticatable
     }
 
     /**
-     * The member's profile image (avatar), or null. One per member, enforced by the
-     * member_images.member_id unique key.
+     * One per member, enforced by the `member_images.member_id` unique key.
      *
      * @return HasOne<MemberImage, $this>
      */
@@ -361,9 +304,6 @@ class Member extends Authenticatable
     }
 
     /**
-     * The member who owns this one, or null for an ordinary member. Eloquent answers null without a
-     * query when the column is null, so reading it on a human costs nothing.
-     *
      * @return BelongsTo<Member, $this>
      */
     public function owner(): BelongsTo
@@ -372,8 +312,6 @@ class Member extends Authenticatable
     }
 
     /**
-     * The AI accounts this member owns.
-     *
      * @return HasMany<Member, $this>
      */
     public function aiAccounts(): HasMany

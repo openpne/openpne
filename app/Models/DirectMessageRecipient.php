@@ -9,11 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * One recipient's receipt of a message, carrying that side's read state and trash state.
- * read_at null = unread; the *_at columns mirror the sender-side
- * trash columns on DirectMessage.
- */
 #[Fillable(['direct_message_id', 'recipient_id', 'read_at'])]
 class DirectMessageRecipient extends Model
 {
@@ -42,9 +37,7 @@ class DirectMessageRecipient extends Model
     }
 
     /**
-     * Receipts of delivered (non-draft) messages. A receipt is created only when a message is sent
-     * (see SendDirectMessage / UpdateDraft), so this normally holds for every receipt; it stays as the
-     * single guard against a stray draft receipt ever surfacing to its recipient.
+     * A draft has no receipt, so this states `is_draft = false` only as a belt against a stray one.
      *
      * @param  Builder<DirectMessageRecipient>  $query
      */
@@ -54,8 +47,7 @@ class DirectMessageRecipient extends Model
     }
 
     /**
-     * A live receipt: in an active box, neither trashed nor purged. (Active boxes exclude purged too,
-     * so a stray purged-without-trashed row never resurfaces.)
+     * Purged is excluded as well as trashed, so a stray purged-without-trashed row never resurfaces.
      *
      * @param  Builder<DirectMessageRecipient>  $query
      */
@@ -65,8 +57,6 @@ class DirectMessageRecipient extends Model
     }
 
     /**
-     * A receipt in the trash: moved to trash, not yet purged.
-     *
      * @param  Builder<DirectMessageRecipient>  $query
      */
     public function scopeRecipientTrashed(Builder $query): void

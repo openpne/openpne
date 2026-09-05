@@ -9,11 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * A pending admin-issued two-factor reset. `token` holds the SHA-256 hash of the raw token the reset URL
- * carries (mailed to the member's registered address); the raw token only ever lives in that emailed
- * link. Only created_at is tracked (expiry is derived from it), so timestamps are off. One row per member
- * (the column is unique); it cascades away with the member. There is no cancel token: consuming a reset
- * link needs the account password (see the migration docblock).
+ * `token` holds a SHA-256 hash; the raw token exists only in the emailed link. There is no cancel
+ * token because consuming a reset link also demands the account password.
  *
  * @property int $id
  * @property int $member_id
@@ -41,8 +38,6 @@ class MfaResetRequest extends Model
     }
 
     /**
-     * Expired pending resets are dead state (the link no longer works), so prune them past the TTL.
-     *
      * @return Builder<MfaResetRequest>
      */
     public function prunable(): Builder

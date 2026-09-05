@@ -16,12 +16,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
-/**
- * The token Actions, which the CLI and the owner's settings screen share. They hold no
- * authorization — that is each caller's — so what is pinned here is what neither caller may differ
- * on: the abilities are named, a banned actor (or a banned owner behind one) is refused, and a
- * revocation reaches only this endpoint's tokens on the member it was asked about.
- */
 class McpTokenActionsTest extends TestCase
 {
     use RefreshDatabase;
@@ -75,9 +69,8 @@ class McpTokenActionsTest extends TestCase
 
     public function test_an_ai_account_whose_owner_is_frozen_is_refused(): void
     {
-        // The eligibility question is asked of the owner as well as of the account, on the rows this
-        // transaction locked. Drop that re-read and a mint slips past a ban that committed while
-        // the form was open — which is the hole the freeze sweep exists to close.
+        // Drop the re-read under the lock and a mint slips past a ban that committed while the
+        // form was open.
         $owner = Member::factory()->create(['is_login_rejected' => true]);
         $aiAccount = Member::factory()->aiAccount($owner)->create();
 
@@ -108,10 +101,8 @@ class McpTokenActionsTest extends TestCase
 
     public function test_an_address_that_stopped_naming_the_member_is_refused_by_both_acts(): void
     {
-        // The CLI names a member by address, and the act re-asks that under its row lock. Serialized
-        // here: the rename commits between the lookup and the act, which is what the race leaves
-        // behind — and the act must refuse rather than mint for, or revoke from, an id the address
-        // no longer belongs to.
+        // Serialized: the rename commits between the lookup and the act, which is what the race
+        // leaves behind.
         $member = Member::factory()->create(['email' => 'pilot@example.com']);
         $selector = MemberSelector::foundByEmail($member, 'pilot@example.com');
         ($this->issue())($member);

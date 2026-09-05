@@ -20,11 +20,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * What happens to an owner's AI accounts when something happens to the owner. Each case is the same
- * rule stated once: an AI account is a foothold its owner holds, so it ends when the owner's own
- * footholds do, and it goes when the owner goes.
- */
 class AiAccountLifecycleTest extends TestCase
 {
     use RefreshDatabase;
@@ -63,9 +58,8 @@ class AiAccountLifecycleTest extends TestCase
 
     public function test_an_admin_can_freeze_an_ai_account_directly(): void
     {
-        // A ban ends every foothold, and the remember-token rotation it does that with would be a
-        // credential write on a row the members constraint admits none on. An AI account holds no
-        // remember-me cookie to invalidate in the first place, so the rotation is skipped, not fudged.
+        // The ban's remember-token rotation would be a credential write on a row the members
+        // constraint admits none on.
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $aiAccount->createToken('mcp', ['mcp:read']);
@@ -193,9 +187,8 @@ class AiAccountLifecycleTest extends TestCase
 
     public function test_an_account_created_mid_withdrawal_is_still_retired(): void
     {
-        // The window the final lock exists for, without real concurrency: a one-shot listener on the
-        // diary purge phase creates an AI account after the first drain has already run. The
-        // verify+delete loop must find it and drain again, rather than meeting the RESTRICT FK.
+        // Concurrency without concurrency: a one-shot listener on the diary purge phase creates an
+        // AI account after the first drain has already run.
         $owner = Member::factory()->create();
         Diary::factory()->create(['member_id' => $owner->getKey()]);
 
@@ -218,8 +211,6 @@ class AiAccountLifecycleTest extends TestCase
 
     public function test_deleting_an_owner_row_with_a_live_account_fails_loud(): void
     {
-        // The belt behind the explicit drain: a delete that skipped WithdrawMember must abort on the
-        // foreign key rather than orphan the account or silently cascade it away.
         $owner = Member::factory()->create();
         Member::factory()->aiAccount($owner)->create();
 

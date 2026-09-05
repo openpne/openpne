@@ -113,7 +113,8 @@ state, not the count. `EmojiTransform` aborts on a non-utf8mb4 connection, which
 
 OpenPNE 3 stores upload bytes in `file_bin`, one row per `file` row under DB-blob storage; a count
 mismatch is rejected by `FileBinMigration::preflight()`. The bytes are never copied: `FileUpgrade`
-keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file` onto `files`. A
+keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file` onto `files`, and
+`files.id` is a signed INT because it has to match `file_bin.file_id` for that rewire. A
 `--source-prefix` / `--source-database` run first RENAMEs the source `file_bin` onto the app's (an
 `.ibd` move) after dropping the source FK. `snapshot()` records `MAX(file.id)` as the bound for a
 post-switchover rollback.
