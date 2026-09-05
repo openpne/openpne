@@ -81,7 +81,7 @@ class MemberConfigController extends Controller
                 // weight, hidden from the nav and folded into the landing where OpenPNE 3 always showed it.
                 $ageAvailable = $birthdayExists();
                 $profileChoice = ProfilePageVisibility::memberMayChoose();
-                $publicFlagAvailable = ProfilePageVisibility::privacyCategoryAvailable();
+                $publicFlagAvailable = ProfilePageVisibility::privacyCategoryAvailable($ageAvailable);
                 if ($category === MemberConfigCategory::PublicFlag && ! $publicFlagAvailable) {
                     $category = null;
                 }

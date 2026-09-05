@@ -135,10 +135,15 @@ class ProfileVisibilityPolicyTest extends TestCase
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
 
+        $link = 'href="'.route('member.config', ['category' => 'publicFlag']).'"';
         $this->actingAs($owner)->get(route('member.config.ai.show', $aiAccount))
             ->assertOk()
             ->assertSee('id="pageNav"', false)
-            ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
+            ->assertDontSee($link, false);
+
+        $this->policy(ProfileVisibilityPolicy::MemberChoice);
+
+        $this->actingAs($owner)->get(route('member.config.ai.show', $aiAccount))->assertOk()->assertSee($link, false);
     }
 
     public function test_the_classic_box_keeps_only_the_age_form_when_the_policy_decides(): void
