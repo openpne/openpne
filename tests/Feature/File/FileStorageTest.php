@@ -174,6 +174,21 @@ class FileStorageTest extends TestCase
         Storage::disk('local')->assertMissing($file->name);
     }
 
+    public function test_local_disk_delete_is_idempotent(): void
+    {
+        config()->set('openpne.files.disk', 'local');
+        Storage::fake('local');
+        $storage = app(FileStorage::class);
+        $file = File::factory()->create();
+
+        // Never written: FileUploader's compensation and FileObserver::deleting both reach here for
+        // bytes that may never have landed.
+        $storage->delete($file);
+
+        $this->assertFalse($storage->exists($file));
+        Storage::disk('local')->assertMissing($file->name);
+    }
+
     private function readAll(FileStorage $storage, File $file): string
     {
         $stream = $storage->readStream($file);
