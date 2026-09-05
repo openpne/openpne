@@ -4,10 +4,8 @@ import { Timestamp } from '@/components/timestamp';
 import type { DiarySummary } from '../diary/types';
 
 /**
- * One member's recent writing, title first. The canonical DiaryRow leads with the author's face
- * and name, which on a page that is entirely about one member says the same thing three times over;
- * here the title leads and the byline is gone. Weight is not what makes it lead — size and color are,
- * as everywhere on this surface.
+ * Title-first rather than the canonical DiaryRow: on a page entirely about one member the byline
+ * says the same thing three times over.
  */
 export function DiaryCards({ diaries }: { diaries: DiarySummary[] }) {
     return (

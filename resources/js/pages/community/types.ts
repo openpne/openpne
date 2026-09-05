@@ -6,7 +6,6 @@ export interface CommunityCategory {
     name: string;
 }
 
-/** The member a list belongs to: identity plus what it takes to draw their avatar in the chrome. */
 export interface MemberRef {
     id: number;
     name: string;
@@ -118,8 +117,8 @@ export interface PaginatedTopics {
     meta: PaginationMeta;
 }
 
-// The comment thread pager: id-ordered, fixed page size, reversible. `ascending` is the
-// current order; olderPage/newerPage are null when that direction has no more pages.
+// `ascending` is the current order; olderPage/newerPage are null when that direction has no more
+// pages.
 export interface TopicThread {
     comments: TopicComment[];
     total: number;
@@ -132,7 +131,6 @@ export interface TopicThread {
     newerPage: number | null;
 }
 
-// Event comment / thread shapes are identical to the topic board's.
 export type EventComment = TopicComment;
 export type EventThread = TopicThread;
 

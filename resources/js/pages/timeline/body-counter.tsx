@@ -11,11 +11,9 @@ export function overBodyLimit(body: string): boolean {
 }
 
 /**
- * What is left of the cap, on the field's label row. The field carries no `maxLength`: the attribute
- * measures UTF-16 units, so it would block a body of 140 astral code points that this counter and
- * the server both accept. The submit is the gate instead, as on Classic
- * (public/js/classic-timeline-compose.js) — a paste that overshoots can then be trimmed rather than
- * silently truncated.
+ * The field carries no `maxLength`: the attribute measures UTF-16 units, so it would block a body of
+ * 140 astral code points that this counter and the server both accept. The submit is the gate
+ * instead, so a paste that overshoots can be trimmed rather than silently truncated.
  */
 export function BodyCounter({ id, body }: { id: string; body: string }) {
     const t = useT();

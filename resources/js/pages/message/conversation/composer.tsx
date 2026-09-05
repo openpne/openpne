@@ -22,17 +22,9 @@ function imageErrorIn(errors: Record<string, string>): string {
 }
 
 /**
- * The write end of the conversation, held at the foot of the page (sticky, so it stays reachable
- * while the reader scrolls back through the history and still gives its space back on a short
- * conversation). Plain text and up to MAX_POST_IMAGES images — a direct message carries no mentions,
- * so this is a plain field rather than talk's MentionTextarea.
- *
- * The bar is one line at rest and every accessory on it is an icon; the thumbnails appear as a strip
- * above the input row only while something is picked, so the idle shape never changes.
- *
- * The draft survives a refusal — nothing is cleared until the message is actually written, and the
- * picked files are kept with the body, so a retry after a rate limit, a block or a rejected file
- * still carries everything the composer had.
+ * A direct message carries no mentions, so this is a plain field rather than talk's MentionTextarea.
+ * The draft survives a refusal: nothing is cleared until the message is written, so a retry still
+ * carries the body and the picked files.
  */
 export function ConversationComposer({ counterpartName, onSend }: { counterpartName: string; onSend: (body: string, images: File[]) => Promise<void> }) {
     const t = useT();
@@ -43,18 +35,12 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
     const [shrinking, setShrinking] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    // The cap's own note, cleared by anything that changes the selection. The server's verdict
-    // outranks it below: a stale count message must not mask why the message was refused.
     const [capNote, setCapNote] = useState<string | null>(null);
-    // Keyed by field, so the attachments show the server's verdict on the files rather than the
-    // composer showing one message for everything that can go wrong.
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const fileInput = useRef<HTMLInputElement>(null);
     const field = useRef<HTMLTextAreaElement>(null);
-    // Mirrors the selection for the shrinks running over it: one that lands after a removal, a send
-    // or a later pick re-applies against what is held now instead of resurrecting what it started
-    // from. Written through select() rather than on render, so an await resuming before the next
-    // render still reads the current selection.
+    // Mirrors the selection for the shrinks running over it, and written through select() rather than
+    // on render, so an await resuming before the next render still reads what is held now.
     const held = useRef<File[]>([]);
 
     useAutoGrow(field, body);
@@ -104,7 +90,6 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         select(held.current.filter((_, i) => i !== index));
     };
 
-    // A picture is a message: the bar sends words, attachments, or both — it is only idle with neither.
     const nothingToSend = body.trim() === '' && images.length === 0;
 
     const submit = async (event: FormEvent) => {
@@ -142,16 +127,14 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
             ref={form}
             onSubmit={submit}
             // Flush with the screen's foot, with the home-indicator strip taken as the last of its own
-            // padding rather than left below it: stuck at that strip's height instead, the bar would
-            // have the conversation scrolling through the band under it.
-            //
-            // The transition is for the look whose bottom bar stands here while the room is read and
-            // leaves when someone writes: the var jumps, but the length it computes to is what
-            // animates, matching the bar's own 200ms. Inert elsewhere — no other look moves it.
+            // padding: stuck at that strip's height instead, the bar would have the conversation
+            // scrolling through the band under it.
             className={cn(
                 // The card's own edges, from the card: below lg both run to the screen, at lg both
                 // come back inside the frame — they are one surface split by a border, not two.
                 BLEED_EDGES,
+                // The transition is for the look whose bottom bar leaves when someone writes: the var
+                // jumps, but the length it computes to is what animates.
                 'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
             )}
         >
@@ -210,8 +193,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                 </Tip>
                 <div className="min-w-0 flex-1">
                     {/* No HTML maxlength: it counts UTF-16 units while the server's cap counts code
-                        points, so it would cut astral-heavy text off early. The server's 422 reaches
-                        the reader through `error` above. */}
+                        points, so it would cut astral-heavy text off early. */}
                     <Textarea
                         ref={field}
                         aria-label={t('Message')}
@@ -219,11 +201,9 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                         rows={1}
                         value={body}
                         onChange={(event) => setBody(event.target.value)}
-                        // The stated line-height and padding add up to the 44px the buttons beside it
-                        // stand at; past five lines the box scrolls. The radius needs its `!`: the
-                        // base rounded-field outranks it by source order, whatever this list says.
-                        // The placeholder must hold to one line: wrapped, it would either inflate the
-                        // idle bar or peek out clipped under the empty box's fixed height.
+                        // The line-height and padding add up to the 44px the buttons beside it stand
+                        // at, and the radius needs its `!` because the base rounded-field outranks it
+                        // by source order.
                         className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-[9px] leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>

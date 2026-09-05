@@ -15,7 +15,6 @@ export interface ArchiveYearRow {
     months: ArchiveMonthCell[]; // always 12, January..December
 }
 
-/** Append the active archive keyword to a listMember path so month links keep the filter. */
 export function withKeyword(path: string, keyword?: string): string {
     if (!keyword) {
         return path;
@@ -24,7 +23,6 @@ export function withKeyword(path: string, keyword?: string): string {
     return `${path}?${new URLSearchParams({ keyword }).toString()}`;
 }
 
-/** Fixed heat buckets for the cell shading: 0 / 1-2 / 3-5 / 6-9 / 10+. */
 export function countBucket(count: number): 0 | 1 | 2 | 3 | 4 {
     if (count <= 0) return 0;
     if (count <= 2) return 1;
@@ -46,13 +44,9 @@ export function selectedBeyondRecentYears(rows: ArchiveYearRow[], selected: { ye
 }
 
 /**
- * Expand sparse monthly counts into a year-descending grid: every year from the earliest counted
- * year through max(currentYear, latest counted year) — so the current year is always shown — each
- * zero-filled to 12 month cells, and the selected year is kept in range even without matches. A
- * month with entries links to its archive; an empty month (incl. the current year's not-yet-reached
- * months) is a non-linked cell. Empty counts → [] (grid hidden).
- *
- * `currentYear` is passed in rather than read from Date here so the expansion stays pure/testable.
+ * Empty counts give `[]`, which hides the grid; a month with entries links to its archive and every
+ * other cell is non-linked. `currentYear` is a parameter rather than read from `Date` here so the
+ * expansion stays pure.
  */
 export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ownerId: number, keyword?: string, selected: { year: number } | null = null): ArchiveYearRow[] {
     if (counts.length === 0) {

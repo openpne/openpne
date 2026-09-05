@@ -7,10 +7,8 @@ import { renderWithProviders } from '@/lib/test-render';
 
 const inertia = vi.hoisted(() => ({ page: {} as { props: Record<string, unknown> } }));
 
-// The real dictionaries, not `fakeT`: what this is about is that the dateline reads as a sentence
-// about a day in the site's language, and a stub returning the English key would assert nothing
-// about it. Keys are English source text, so `en` resolves through the fallback the app relies on;
-// replacements are substituted the way Laravel does.
+// The real dictionaries, not `fakeT`: a stub returning the English key would assert nothing about a
+// dateline reading as a sentence in the site's language.
 const dictionaries: Record<string, Record<string, string>> = { en, ja };
 const translate = (key: string, replacements: Record<string, string | number> = {}): string =>
     Object.entries(replacements).reduce(

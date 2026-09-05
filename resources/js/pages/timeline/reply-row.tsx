@@ -8,11 +8,8 @@ import { Link } from '@inertiajs/react';
 import type { TimelinePostEntry } from './types';
 
 /**
- * One reply in a thread.
- *
- * A row of its own rather than markup inside the page, for the reason `post-card` is: it is the
- * thing a test can render. A reply carries a link card like any other body, and that was shipped
- * once with the server side wired and no card drawn — a payload assertion cannot see the difference.
+ * A row of its own rather than markup inside the page, so a test can render it: a payload assertion
+ * cannot see whether a reply's link card is drawn.
  */
 export function TimelineReplyRow({ reply, viewerId, onDelete }: { reply: TimelinePostEntry; viewerId: number; onDelete: (id: number) => void }) {
     const t = useT();

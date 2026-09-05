@@ -9,14 +9,11 @@ export interface VisibilityOption {
     label: string;
 }
 
-/** Minimal author reference: id + name only. */
 export interface DiaryAuthor {
     id: number;
     name: string;
 }
 
-/** An author reference that carries an avatar — the diary byline (feed/detail), comment authors, and
- *  the archive `owner`, whose avatar the chrome shows as the page's scope. */
 export interface DiaryAvatarAuthor extends DiaryAuthor {
     imageUrl: string | null;
     avatarColor: string | null;
@@ -43,7 +40,7 @@ export interface DiaryDetail extends DiarySummary {
     images: GridImage[];
 }
 
-/** The older/newer pager target: identity + title + createdAt as an offset-bearing ISO instant. */
+/** `createdAt` is an offset-bearing ISO instant. */
 export interface DiaryNeighbor {
     id: number;
     title: string;

@@ -11,11 +11,6 @@ import { cn } from '@/lib/utils';
  */
 export const HOME_CARD = 'overflow-hidden rounded-[1.25rem] bg-card text-card-foreground';
 
-/**
- * A section of the unified layout, in the mock's grammar: the heading is bold and inside the card with
- * no band or hairline under it, an optional accent icon marks the section, and the way out is a muted
- * "view all ›" on the heading line.
- */
 export function HomeSection({
     title,
     icon: Icon,
@@ -57,7 +52,6 @@ export function HomeSection({
     );
 }
 
-/** A titled block inside a section — the two halves of "recent". */
 export function SubSection({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
     return (
         <section>

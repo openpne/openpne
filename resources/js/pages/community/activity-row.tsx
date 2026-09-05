@@ -12,9 +12,8 @@ export interface CommunityActivityEntry {
     updatedAt: string;
 }
 
-/** One row of the cross-community activity digest (dashboard + /community/recent). The group —
- *  not a member — is the byline subject: updated_at bumps on any comment, so an author byline would
- *  misattribute the row. */
+/** The group, not a member, is the byline subject: updated_at bumps on any comment, so an author
+ *  byline would misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (

@@ -4,13 +4,7 @@ import type { ChatPage, ChatReactionChip, ChatStreamRow, ChatUnreadSnapshot } fr
 import type { MentionEntity } from '@/lib/entity-split';
 import type { MemberRef } from '@/pages/community/types';
 
-/**
- * The message this one answers, as the server reads it now (GroupMessageSerializer): null when it
- * answers nothing, a live reference the row draws a header from, or `{ deleted: true }` when the id
- * names a row that is gone. `excerpt` is payload-bounded server-side — the visible cut is the
- * client's clip — and may be the "Image" stand-in. One level travels: a parent that is itself a
- * reply describes only its own text.
- */
+/** One level travels: a parent that is itself a reply describes only its own text. */
 export type TalkReplyReference =
     | { deleted: false; id: number; cursor: string; author: MemberRef | null; excerpt: string; thumbnailUrl: string | null }
     | { deleted: true };
@@ -41,13 +35,15 @@ export interface TalkReactorGroup {
 
 export type TalkPage = ChatPage<TalkMessage>;
 
-/** Where the unread boundary stood when the page was rendered — see the divider note in index.tsx. */
+/**
+ * Where the unread boundary stood when the page was rendered, fixed for the visit
+ * (docs/internals/group-talk.md, "The divider is a snapshot, and the banner is what it cannot draw").
+ */
 export type TalkUnreadSnapshot = ChatUnreadSnapshot;
 
 /**
- * What the reader missed while they were away, as the catch-up card states it. Shipped only for a
- * backlog past the server's threshold, so the prop is absent rather than empty on an ordinary visit
- * (App\Features\GroupTalk\Queries\TalkAbsenceDigest).
+ * Shipped only for a backlog past the server's threshold, so the prop is absent rather than empty on
+ * an ordinary visit.
  */
 export interface TalkUnreadDigest {
     /** The snapshot's own count — the same number the divider and the jump stand for. */

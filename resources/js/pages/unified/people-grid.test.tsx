@@ -59,12 +59,8 @@ test('a count past the second row keeps alternating', () => {
     ]);
 });
 
-/**
- * The seats of a row are spans over one forty-column grid, so a row of four sits at a wider pitch than
- * a row of five and starts two columns in — the two together are the stagger — while the faces stay one
- * list. Four nines from column three end at column 38, which is what wraps the fifth seat to a row of
- * its own.
- */
+/** Four nines from column three end at column 38, which is what wraps the fifth seat to a row of its
+ *  own. */
 test('a row of four seats faces wider than a row of five, and held off the edge', () => {
     const { container } = render(<PeopleGrid people={people(6)} />);
     const seats = [...container.querySelectorAll('li')].map((li) => li.className);

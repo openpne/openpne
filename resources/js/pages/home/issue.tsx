@@ -16,19 +16,12 @@ import { WelcomePanel } from './welcome';
 
 const storyKey = (story: IssueStory): string => `${story.kind}-${story.id}`;
 
-/** How many stories are cards beside the lead before the rest become rows. */
+/** How many stories are cards beside the lead, not a duration. */
 const SECONDS = 2;
 
 /**
- * The day's stories, ranked by how much room each gets rather than by how much of it is printed.
- *
- * Three placements, and the rank alone decides which: the lead over the width of the page, a pair of
- * cards under it, then rows. No band between them announces the change — a reader who has ever seen a
- * front page reads size and position as the ranking, and a heading saying "more stories" would be the
- * page explaining its own layout.
- *
- * A lone second takes the full width instead of half of it: two columns with one card in them is a
- * gap where the eye looks for the other story.
+ * Rank alone decides the placement (docs/internals/home-issues.md, "Rendering"). A lone second takes
+ * the full width instead of half of it.
  */
 function Stories({ stories }: { stories: IssueStory[] }) {
     const [lead, ...rest] = stories;
@@ -67,20 +60,9 @@ function Stories({ stories }: { stories: IssueStory[] }) {
 }
 
 /**
- * The site's front page: one issue (号), published once a day and the same for every member.
- *
- * Serves two screens. At `/` it is whatever the latest issue is; at a dated URL it is that day's,
- * through `home/archive`, which is this component under another name so the chrome can differ (an
- * archived issue crumbs back to the run; the current one is the hub top). Nothing else about them
- * differs, which is the point: a member linking someone a day's front page hands them the page they
- * read, not a rendering of it.
- *
- * **Every story is a way in.** The rank decides how much room it gets — the lead across the page, a
- * pair of cards, then rows — and each block is one link to the page the story is actually read on.
- * Nothing here prints a body: a front page is where a reader chooses, not where they read.
- *
- * Every optional section is drawn exactly when its key is present. Nothing counts to zero and says
- * so — an empty section is a section the issue does not have.
+ * One issue (号), the same for every member, serving `/` and a dated URL through `home/archive`.
+ * Every optional section is drawn exactly when its key is present
+ * (docs/internals/home-issues.md, "Rendering").
  */
 export default function HomeIssue() {
     const t = useT();

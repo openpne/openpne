@@ -11,21 +11,15 @@ export interface HomePhoto {
     image: GridImage;
 }
 
-/** How many pictures lead the mosaic at the wider shape. */
 const LEAD = 2;
 
 const LEAD_SIZES = '(min-width: 40rem) 18.75rem, 46vw';
 const TILE_SIZES = '(min-width: 40rem) 12rem, 31vw';
 
 /**
- * One member's latest pictures, newest first. A tile opens the content the picture was posted with
- * rather than the picture alone: there is no gallery here, only a shorter way back into what it
- * illustrates.
- *
- * The newest two are given the wider shape and the rest fall into thirds, so the block reads as
- * "here is what you just posted, and here is the while before it" rather than as an undifferentiated
- * contact sheet. One list at six columns rather than two lists: the pictures are one sequence, and a
- * span is all that separates the two shapes.
+ * A tile opens the content the picture was posted with rather than the picture alone: there is no
+ * gallery here. One list at six columns rather than two: the pictures are one sequence, and a span
+ * is all that separates the two shapes.
  */
 export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
     const t = useT();

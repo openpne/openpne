@@ -13,7 +13,6 @@ interface Props {
     value: string | string[];
     onChange: (next: string | string[]) => void;
     error?: string;
-    /** Trailing content on the caption row (the per-field visibility control). */
     labelRight?: ReactNode;
 }
 
@@ -21,11 +20,7 @@ interface Props {
 const radioClass =
     'size-4 shrink-0 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-/**
- * Polymorphic profile field control, rendering the input that matches the field's form_type.
- * Option ids are strings throughout (a custom field's option id, a preset's choice key, or a
- * country/region code), so a single string comparison drives selection state.
- */
+/** Option ids are strings throughout, so a single string comparison drives selection state. */
 export function ProfileFieldInput({ field, value, onChange, error, labelRight }: Props) {
     const t = useT();
     const id = `profile-${field.id}`;
@@ -40,13 +35,11 @@ export function ProfileFieldInput({ field, value, onChange, error, labelRight }:
         const isRadio = field.form_type === 'radio';
         const errorId = error ? `${id}-error` : undefined;
         return (
-            // aria-labelledby pins the group's accessible name to the caption span, so the trailing
-            // visibility control living in the legend flex row does not leak into it (a bare fieldset
-            // would fold the select's value into the group name, e.g. "血液型 全会員").
+            // aria-labelledby pins the group's name to the caption span, so the visibility control
+            // living in the legend row does not leak into it.
             <fieldset className="space-y-2" aria-labelledby={`${id}-legend`} aria-invalid={error ? true : undefined} aria-describedby={errorId}>
-                {/* aria-required is not valid on a group/fieldset, so the required cue rides the legend's
-                    text: the visual star is decorative and the translated word is sr-only. The legend is
-                    a flex row so the visibility control sits on the caption line. */}
+                {/* aria-required is not valid on a group/fieldset, so the required cue rides the
+                    legend's text: the star is decorative and the translated word is sr-only. */}
                 <legend className="flex w-full items-center justify-between gap-2 text-sm text-foreground">
                     <span id={`${id}-legend`}>
                         {field.caption}

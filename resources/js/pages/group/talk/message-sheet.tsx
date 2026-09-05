@@ -11,15 +11,13 @@ import type { TalkMessage } from './types';
 const SHEET_ITEM =
     'flex min-h-12 w-full items-center gap-3 px-3 text-left text-base transition hover:bg-accent focus-visible:outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ring';
 
-/** The frame the items stand in: a bounded panel reads as pressable where a bare row on the sheet does not. */
 const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-card divide-y divide-border';
 
 /**
- * Whether this body can be offered for copying — and so whether it alone earns the row a press. One
- * answer for the sheet's item and the row's gate: split, the gate can open a sheet with nothing in it.
- * Feature-detected rather than assumed: the clipboard is a secure-context API, and a site served over
- * plain http — a self-hosted one on a local network — has no `navigator.clipboard` at all. Absent,
- * the item is not offered, because an offer that silently does nothing is worse than none.
+ * One answer for the sheet's item and the row's gate: split, the gate can open a sheet with nothing
+ * in it. Feature-detected because the clipboard is a secure-context API — a site served over plain
+ * http has no `navigator.clipboard` at all, and an offer that silently does nothing is worse than
+ * none.
  */
 export function canCopyText(body: string): boolean {
     return body.trim() !== '' && typeof navigator.clipboard?.writeText === 'function';
@@ -31,9 +29,8 @@ export function canCopyLink(): boolean {
 }
 
 /**
- * The address of one message: this conversation's own URL carrying only `m` — the same deep link a
- * notification hands out, built from the page itself so a sub-directory install needs no telling.
- * Any other query is dropped: `context` names this visit's position, not the message's.
+ * Built from the page itself, so a sub-directory install needs no telling. Any other query is
+ * dropped: `context` names this visit's position, not the message's.
  */
 export function messageLink(id: number): string {
     const url = new URL(window.location.href);
@@ -45,13 +42,9 @@ export function messageLink(id: number): string {
 }
 
 /**
- * Everything one message offers, where there is no cursor to reveal it with: the sheet a long press
- * on the row opens. The same choices the row's own controls carry, plus the one the press took away —
- * a finger cannot select text on a row that suppresses the selection lens, so copying it is offered
- * here instead, to everyone, including a reader who may not post and has nothing else to do here.
- *
- * The page owns which message this is for and hands it in whole, so a message deleted while the sheet
- * stands over it takes the sheet with it rather than leaving stale actions pointing at nothing.
+ * A finger cannot select text on a row that suppresses the selection lens, so copying is offered here
+ * to everyone, a reader who may not post included. The page hands the message in whole, so one
+ * deleted while the sheet stands over it takes the sheet with it.
  */
 export function TalkMessageSheet({
     message,
@@ -91,10 +84,8 @@ export function TalkMessageSheet({
                 side="bottom"
                 closeLabel={t('Close')}
                 aria-describedby={undefined}
-                // The trap's default first stop is the first emoji, reached while the opening press
-                // is still on the glass — and a focus ring drawn there reads as "you hold this one"
-                // on a tile nobody pressed. The sheet itself takes the focus instead: announced
-                // whole by its title, drawing nothing (the content has no ring of its own).
+                // The trap's default first stop is the first emoji, and a focus ring drawn there
+                // reads as "you hold this one" on a tile nobody pressed.
                 onOpenAutoFocus={(event) => {
                     event.preventDefault();
                     // preventScroll, as the default this stands in for would have passed it.
@@ -109,18 +100,13 @@ export function TalkMessageSheet({
                 <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
 
                 {canReact && (
-                    // Four to a row, each spread in a column of its own: wrapping left the last row
-                    // short and the block padded unevenly against the sheet's two edges, and a set
-                    // meant to be scanned should not change shape with its own length.
+                    // Four to a row rather than wrapping: a set meant to be scanned should not
+                    // change shape with its own length.
                     <div className="grid grid-cols-4 justify-items-center gap-y-2 pb-2">
                         <TalkReactionPickerGrid
                             chips={chips}
                             vocabulary={vocabulary}
-                            // Each emoji on a tile of its own: on a sheet a thumb reaches for, a
-                            // character floating on the background does not read as something to
-                            // press. The border is the chip row's own, so what is pressable speaks
-                            // one language — the fill alone is a shade too close to the sheet's. A
-                            // held one keeps its own colours — written after these, they replace
+                            // A held one keeps its own colours: written after these, they replace
                             // rather than sit under.
                             buttonClassName="size-12 text-2xl border-input bg-muted"
                             onPick={(emoji, mine) => {
@@ -168,9 +154,8 @@ export function TalkMessageSheet({
                                 type="button"
                                 className={SHEET_ITEM}
                                 onClick={() => {
-                                    // A refusal — the permission denied, the document not focused — leaves
-                                    // the message where it is. There is nothing to say about it that the
-                                    // reader cannot see for themselves when they go to paste.
+                                    // A refusal — the permission denied, the document not focused —
+                                    // leaves the message where it is.
                                     void navigator.clipboard.writeText(message.body).catch(() => {});
                                     onClose();
                                 }}

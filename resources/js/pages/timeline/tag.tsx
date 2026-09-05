@@ -12,8 +12,8 @@ interface TagProps extends PageProps {
     posts: PaginatedTimelinePosts;
 }
 
-// One hashtag's posts. A reading page: the home feed's list with no compose box, since nothing here
-// says which tag a new post would carry. The heading is the frame's (member-chrome.ts).
+// A reading page: the home feed's list with no compose box, since nothing here says which tag a new
+// post would carry.
 export default function TimelineTag() {
     const t = useT();
     const { tag, viewerId, posts } = usePage<TagProps>().props;

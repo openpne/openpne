@@ -12,7 +12,6 @@ import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
 
-/** The hero's identity block, plus what the action row under it is drawn from. */
 export interface UnifiedMemberProfile extends UnifiedProfile, MemberActionsProfile {
     age: number | null;
 }
@@ -26,13 +25,7 @@ interface UnifiedMemberProps extends PageProps {
     recentDiaries: DiarySummary[];
 }
 
-/**
- * The unified member page (Look::Unified): who a member is, who they are here with, what they have
- * posted lately, read vertically — the grammar the unified group page speaks about a group, turned
- * on a person, so a member moving between the two reads one surface rather than two.
- *
- * Every deep link carries the owner's id, since these lists are theirs and not the viewer's.
- */
+/** Every deep link carries the owner's id, since these lists are theirs and not the viewer's. */
 export default function UnifiedMember() {
     const t = useT();
     const { profile, fields, groups, friends, recentPhotos, recentDiaries, enabledFeatures } = usePage<UnifiedMemberProps>().props;
@@ -46,8 +39,7 @@ export default function UnifiedMember() {
 
             <ProfileHeader profile={profile} as="h1" actions={<MemberActions profile={profile} />} />
 
-            {/* Self-declared identity next to the header, resume-like, before the activity —
-                member/show's ordering kept in the unified grammar. */}
+            {/* member/show's ordering, kept in the unified grammar: identity before activity. */}
             {fields.length > 0 && (
                 <HomeSection title={t('Profile')} icon={IdCard}>
                     <dl className="divide-y divide-border">

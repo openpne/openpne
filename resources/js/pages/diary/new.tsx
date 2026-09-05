@@ -46,9 +46,9 @@ export default function DiaryNew({
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
                         e.preventDefault();
-                        // No forceFormData: Inertia switches to multipart only when a File is
-                        // attached. A fileless save posts JSON, keeping the body's LF line endings
-                        // byte-stable (multipart encoding normalizes LF to CRLF — body-text.md).
+                        // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
+                        // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is
+                        // attached.
                         post('/diary/create');
                     }}
                     className="space-y-4"

@@ -3,10 +3,6 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-/**
- * What the home says to a member with nothing to read yet: the next steps that end the empty state,
- * one per unit that is switched on.
- */
 export function WelcomePanel({ name, enabledFeatures }: { name: string; enabledFeatures: PageProps['enabledFeatures'] }) {
     const t = useT();
 

@@ -8,16 +8,6 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { MessageMember } from './types';
 
-/**
- * Who to write to, before there is a conversation to write in. Picking someone opens their
- * conversation — empty ones render with their composer — so nothing is written here and nothing is
- * submitted: the row is a link, not a choice to confirm.
- *
- * The search is the whole screen rather than a popup over a field, since choosing a person is the
- * only thing this screen does. What it may offer is RecipientCandidates: friends first, and the rest
- * of the site once there is a term to search by.
- */
-
 /** Long enough that typing a name is one search, short enough that the list feels like it is following. */
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -27,9 +17,8 @@ export default function MessageNew() {
     // Null until the first answer lands: an empty state before anything has been asked would tell the
     // member there is nobody to write to.
     const [candidates, setCandidates] = useState<MessageMember[] | null>(null);
-    // A failed search is not "no members found" — the rate limiter alone makes a refusal an ordinary
-    // event under fast typing, and choosing a person is this screen's only job, so a dead end has to
-    // say it can be retried. The next keystroke (or the same term settling) asks again.
+    // A failed search is not "no members found": the rate limiter alone makes a refusal an ordinary
+    // event under fast typing, so the dead end has to say it can be retried.
     const [failed, setFailed] = useState(false);
 
     useEffect(() => {

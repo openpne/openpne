@@ -22,7 +22,6 @@ function imageErrorIn(errors: Record<string, string>): string {
         .join(' ');
 }
 
-/** The one-line glimpse of the message being answered: its trimmed text, or that it was a picture. */
 function replyPreview(message: TalkMessage, imageLabel: string): string {
     const body = message.body.trim();
 
@@ -30,21 +29,9 @@ function replyPreview(message: TalkMessage, imageLabel: string): string {
 }
 
 /**
- * The write end of the conversation, held at the foot of the page (sticky, so it stays reachable
- * while the reader scrolls back through the history and still gives its space back on a short
- * conversation). Plain text, @mentions and up to MAX_POST_IMAGES images.
- *
- * The bar is one line at rest and every accessory on it is an icon; the thumbnails appear as a strip
- * above the input row only while something is picked, so the idle shape never changes.
- *
- * The draft survives a refusal — nothing is cleared until the message is actually written, and the
- * mention drafts, the picked files and any staged reply are kept with the body, so a retry after a
- * rate limit or a rejected file still carries everything the composer had instead of silently
- * posting the handles as plain text, dropping the attachments, or answering nobody.
- *
- * `replyTo` is the message a new post answers; the page owns it (rows and the sheet stage it, the
- * send consumes its id). The composer only shows it and offers to take it back — clearing on a
- * successful send is the page's, since the reply id rides that send.
+ * The draft survives a refusal: nothing is cleared until the message is written, so a retry still
+ * carries the body, the mention drafts, the picked files and the staged reply. `replyTo` is the
+ * page's — clearing it on a successful send is the page's too, since the reply id rides that send.
  */
 export function TalkComposer({
     groupId,
@@ -68,17 +55,11 @@ export function TalkComposer({
     const [shrinking, setShrinking] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    // The cap's own note, cleared by anything that changes the selection. The server's verdict
-    // outranks it below: a stale count message must not mask why the message was refused.
     const [capNote, setCapNote] = useState<string | null>(null);
-    // Keyed by field, so the attachments show the server's verdict on the files rather than the
-    // composer showing one message for everything that can go wrong.
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const fileInput = useRef<HTMLInputElement>(null);
-    // Mirrors the selection for the shrinks running over it: one that lands after a removal, a send
-    // or a later pick re-applies against what is held now instead of resurrecting what it started
-    // from. Written through select() rather than on render, so an await resuming before the next
-    // render still reads the current selection.
+    // Mirrors the selection for the shrinks running over it, and written through select() rather than
+    // on render, so an await resuming before the next render still reads what is held now.
     const held = useRef<File[]>([]);
 
     const select = (next: File[]) => {
@@ -93,9 +74,8 @@ export function TalkComposer({
         return () => urls.forEach((url) => URL.revokeObjectURL(url));
     }, [images]);
 
-    // Starting or switching a reply puts the caret in the box ready to write it. The textarea keeps
-    // no ref of its own (MentionTextarea holds it private), so the composer's form is the handle that
-    // reaches it; preventScroll is unneeded — the composer is sticky at the foot of the screen.
+    // MentionTextarea keeps its textarea ref private, so the composer's form is the handle that
+    // reaches the caret.
     useEffect(() => {
         if (replyTo === null) {
             return;
@@ -137,7 +117,6 @@ export function TalkComposer({
         select(held.current.filter((_, i) => i !== index));
     };
 
-    // A picture is a message: the bar sends words, attachments, or both — it is only idle with neither.
     const nothingToSend = body.trim() === '' && images.length === 0;
 
     const submit = async (event: FormEvent) => {
@@ -174,8 +153,6 @@ export function TalkComposer({
     // The server's verdict first: it explains why the message was refused, which a cap note does not.
     const attachmentNote = imageError || capNote;
 
-    // Who and what a staged reply answers, derived client-side from the chosen message — a withdrawn
-    // author keeps the established label, a picture-only message names itself.
     const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('Withdrawn member'));
     const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'));
 
@@ -184,16 +161,14 @@ export function TalkComposer({
             ref={form}
             onSubmit={submit}
             // Flush with the screen's foot, with the home-indicator strip taken as the last of its own
-            // padding rather than left below it: stuck at that strip's height instead, the bar would
-            // have the conversation scrolling through the band under it.
-            //
-            // The transition is for the look whose bottom bar stands here while the room is read and
-            // leaves when someone writes: the var jumps, but the length it computes to is what
-            // animates, matching the bar's own 200ms. Inert elsewhere — no other look moves it.
+            // padding: stuck at that strip's height instead, the bar would have the conversation
+            // scrolling through the band under it.
             className={cn(
                 // The card's own edges, from the card: below lg both run to the screen, at lg both
                 // come back inside the frame — they are one surface split by a border, not two.
                 BLEED_EDGES,
+                // The transition is for the look whose bottom bar leaves when someone writes: the var
+                // jumps, but the length it computes to is what animates.
                 'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
             )}
         >
@@ -203,8 +178,6 @@ export function TalkComposer({
                 </p>
             )}
             {replyTo !== null && (
-                // Its own bordered row above the input, next to where the image strip sits: a reply is
-                // staged, not sent, and stays through a refusal until the member takes it back or resends.
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 py-1.5 pr-1.5 pl-3 text-sm">
                     <Reply className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                     <span className="shrink-0">{t('Replying to :name', { name: replyName })}</span>
@@ -270,8 +243,7 @@ export function TalkComposer({
                 </Tip>
                 <div className="min-w-0 flex-1">
                     {/* No HTML maxlength: it counts UTF-16 units while the server's cap counts code
-                        points, so it would cut astral-heavy text off early (the timeline textarea pins
-                        the same rule). The server's 422 reaches the reader through `error` above. */}
+                        points, so it would cut astral-heavy text off early. */}
                     <MentionTextarea
                         aria-label={t('Message')}
                         placeholder={t('Message :name', { name: groupName })}
@@ -285,11 +257,9 @@ export function TalkComposer({
                         onMentionsChange={setMentions}
                         // The room is the mentionable set, so the endpoint is the room's own.
                         candidatesUrl={`/groups/${groupId}/talk/mention-candidates`}
-                        // The stated line-height and padding add up to the 44px the buttons beside it
-                        // stand at; past five lines the box scrolls. The radius needs its `!`: the
-                        // base rounded-field outranks it by source order, whatever this list says.
-                        // The placeholder must hold to one line: wrapped, it would either inflate the
-                        // idle bar or peek out clipped under the empty box's fixed height.
+                        // The line-height and padding add up to the 44px the buttons beside it stand
+                        // at, and the radius needs its `!` because the base rounded-field outranks it
+                        // by source order.
                         className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-[9px] leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>

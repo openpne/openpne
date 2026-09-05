@@ -10,8 +10,8 @@ import type { TalkMessage } from './types';
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
 afterEach(cleanup);
-// vitest shares the environment across a file, so a clipboard shadow left in place would be what
-// every later test in it sees. Deleting the own property restores happy-dom's prototype getter.
+// vitest shares the environment across a file, so deleting the own property puts happy-dom's
+// prototype getter back for every later test.
 afterEach(() => delete (navigator as { clipboard?: unknown }).clipboard);
 
 const VOCABULARY = ['👍', '🎉', '❤️', '😂', '😮', '🙏', '👀', '🔥'];
@@ -72,8 +72,6 @@ test('the link is offered whenever the clipboard is, and copies this conversatio
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
-    // The page's URL carrying only `m`: `context` names this visit's position, and the fragment
-    // is this visit's scroll, not the message's.
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
     expect(spies.onClose).toHaveBeenCalled();
     window.history.replaceState(null, '', '/');
@@ -111,7 +109,6 @@ test('the sheet offers a reply, and taking it closes the sheet then stages it', 
 
     fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
 
-    // Closed before staged: the composer the reply focuses sits where the sheet stood.
     expect(spies.onClose).toHaveBeenCalled();
     expect(spies.onReply).toHaveBeenCalled();
 });
@@ -181,7 +178,6 @@ test('deleting is offered only to someone who may', () => {
     const spies = open({ canDelete: true });
     fireEvent.click(screen.getByRole('button', { name: 'Delete message' }));
 
-    // The sheet leaves first: the question the page asks next is a modal of its own.
     expect(spies.onClose).toHaveBeenCalled();
     expect(spies.onDelete).toHaveBeenCalled();
 });

@@ -3,11 +3,9 @@ import { Select } from '@/components/ui/select';
 import { useT } from '@/lib/i18n';
 
 /**
- * The audience control that annotates a profile field's caption row. Subordinate to the caption by
- * design: a compact min-height (≈ the label line, not the 44px input target — 28px still clears WCAG
- * 2.2 SC 2.5.8's 24px) plus no shadow, so it doesn't outweigh or vertically drag the field name it
- * annotates. min-h (not a fixed height) lets it grow with zoom/text spacing. Option labels are
- * translation keys.
+ * A compact min-height (28px, which still clears WCAG 2.2 SC 2.5.8's 24px) rather than the 44px
+ * input target, and a min-height rather than a fixed one so it grows with zoom and text spacing.
+ * Option labels are translation keys.
  */
 export function VisibilitySelect({
     options,

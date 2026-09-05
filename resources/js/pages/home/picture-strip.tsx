@@ -9,14 +9,9 @@ const PICTURE_SIZES = '6rem';
 const PICTURES = 3;
 
 /**
- * A row of small squares: what was posted with something, beside the words rather than above them.
- *
- * The form an issue gives every picture it is not leading with — a story below the fold, a message
- * in a talk excerpt. Decorative throughout: whatever the pictures hang under already carries the
- * link that says what they are, and a square of a photograph is not a thing to name.
- *
- * A square crops rather than fits, which the fit ladder still serves — the `w` descriptors are the
- * candidates' own widths, not the box's.
+ * Decorative throughout: whatever the pictures hang under already carries the link that says what
+ * they are. A square crops rather than fits, which the fit ladder still serves — the `w` descriptors
+ * are the candidates' own widths, not the box's.
  */
 export function PictureStrip({ images, className }: { images: GridImage[]; className?: string }) {
     const pictures = images.slice(0, PICTURES);

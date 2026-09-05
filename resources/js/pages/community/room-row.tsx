@@ -10,11 +10,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { TalkRoomRow } from './types';
 
-/**
- * One conversation, wherever rooms are listed (the joined-group list and the dashboard digest). The
- * row is a single link and it goes to the talk, not to the group top: a list ordered by what was
- * last said is asking "where is the conversation", not "what is this group".
- */
+/** The row is a single link, and it goes to the talk rather than to the group top. */
 export function RoomRow({ room }: { room: TalkRoomRow }) {
     const t = useT();
     const latest = room.latest;
@@ -27,11 +23,9 @@ export function RoomRow({ room }: { room: TalkRoomRow }) {
             <CommunityImage name={room.name} src={room.imageUrl} className="size-12" textClassName="text-base" decorative />
             <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
-                    {/* The link is named by the group and its count, and by nothing else: the preview
-                        beside it is the room's newest line, which changes under the reader and never
-                        names where the row goes. The count joins the name here because the pill that
-                        prints it sits in the other column, outside this link, where its number would
-                        belong to nothing. */}
+                    {/* The link is named by the group and its count and nothing else: the preview
+                        changes under the reader, and the pill that prints the count sits in the
+                        other column, outside this link. */}
                     <span className="truncate text-base text-foreground">
                         <Link href={`/groups/${room.id}/talk`} className={stretchedLink}>
                             {room.name}

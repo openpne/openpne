@@ -7,7 +7,6 @@ import { useT } from '@/lib/i18n';
 export interface BoardCardRow {
     id: number;
     href: string;
-    /** What the entry is called — the line that leads the card. */
     name: string;
     /** The date slot: a `<Timestamp>` / `<CivilDate>`, with whatever label the board gives it. */
     date: ReactNode;
@@ -17,10 +16,8 @@ export interface BoardCardRow {
 }
 
 /**
- * A board's latest entries on the group page, title first. The canonical EntryRow leads with the
- * author's face, which is right on a board where the question is who is posting; here the card sits
- * inside a section about one group and the question is what is being discussed, so the title leads
- * and the byline is gone — the same trade the unified layout's diary cards make.
+ * Title-first rather than the canonical EntryRow: inside a section about one group the question is
+ * what is being discussed, not who is posting.
  */
 export function BoardCards({ rows, icon: Icon }: { rows: BoardCardRow[]; icon: LucideIcon }) {
     const t = useT();

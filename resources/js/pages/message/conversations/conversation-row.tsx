@@ -9,9 +9,8 @@ import { useT } from '@/lib/i18n';
 import type { ConversationRowData } from '../types';
 
 /**
- * One conversation on the list, built as the room list's row is: the row is a single link into the
- * conversation, named by the person alone — the preview beside it changes under the reader and never
- * says where the row goes.
+ * The row is a single link named by the person alone: the preview beside it changes under the reader
+ * and never says where the row goes.
  */
 export function ConversationRow({ conversation }: { conversation: ConversationRowData }) {
     const t = useT();
@@ -29,8 +28,7 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
                         <Link href={href} className={stretchedLink}>
                             {name}
                             {/* The pill is in the other column, outside this link, so its number
-                                would belong to nothing. The row is what the count is about, and this
-                                is the row. */}
+                                would belong to nothing. */}
                             {unread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, unread)}</span>}
                         </Link>
                     </p>

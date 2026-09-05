@@ -78,7 +78,7 @@ function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) 
     );
 }
 
-/** Titled digest section with a "View all" link. `flush` for a List body; padded otherwise (grids). */
+/** `flush` for a List body; padded otherwise (grids). */
 function SectionPanel({ title, viewAllHref, flush, children }: { title: string; viewAllHref: string; flush?: boolean; children: ReactNode }) {
     const t = useT();
     return (
@@ -147,8 +147,8 @@ export default function MemberShow() {
                     </div>
                 )}
 
-                {/* Primary relationship actions. Gated on an authenticated viewer: the targets need a
-                    login, so a guest must not see them. Friend request is primary, message secondary. */}
+                {/* Gated on an authenticated viewer: the targets need a login, so a guest must not
+                    see them. */}
                 {auth.user && !isSelf && (friendEntry || messageEntry) && (
                     <div className="flex flex-wrap items-center gap-3">
                         {friendEntry && (

@@ -5,24 +5,12 @@ import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { requestUnreadRefresh } from '@/lib/unread-refresh';
 
-/** How long a spoken confirmation stays before the control speaks for itself again. */
 const SPOKEN_MS = 3000;
 
 /**
- * Per-group quiet, sitting above the conversation as a small text action rather than in the page
- * heading — the heading is the chrome's, shared by every group subpage.
- *
- * It states the state it is moving to, not a bare flip, so a double tap settles instead of racing.
- * On success the page reloads only this prop and rings the shell: the nav badge and the sidebar row
- * for this room are the shell's, and quiet changes both — so its own refresh is what corrects them,
- * rather than this page patching props it does not own (lib/unread-refresh.ts).
- *
- * Muting states what it did and what it did not: what stops and what still arrives is the one thing
- * every product that ships this control writes down, because a member cannot otherwise tell a mute
- * that is working from one that never had anything to stop. It stays for as long as the mute does —
- * it is the room's state, not an acknowledgement — and is the button's description. Both directions
- * also get a short spoken line, since whether a changed description is re-read differs by screen
- * reader.
+ * The state to move to is posted, not a flip, so a double tap settles (docs/internals/group-talk.md,
+ * "Mute"). Both directions also get a spoken line, since whether a changed description is re-read
+ * differs by screen reader.
  */
 export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boolean }) {
     const t = useT();

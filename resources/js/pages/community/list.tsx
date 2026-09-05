@@ -8,9 +8,8 @@ import { RoomRow } from './room-row';
 import type { MemberRef, PaginatedCommunities, PaginatedTalkRooms } from './types';
 
 /**
- * Two screens behind one route. `rooms` is the viewer's own conversations, ordered by what was last
- * said; `grid` is the plain membership grid another member's list (or a site with talk off) gets.
- * The server picks, and says so — the client never infers the shape from which props arrived.
+ * Two screens behind one route: the server picks and says so, and the client never infers the shape
+ * from which props arrived.
  */
 type ListProps = PageProps & { owner: MemberRef; isOwner: boolean } & (
         | { view: 'rooms'; rooms: PaginatedTalkRooms }
@@ -40,7 +39,6 @@ export default function CommunityList() {
     );
 }
 
-/** The viewer's conversations, whole: the same rows the dashboard digest leads with, with a pager. */
 function TalkRooms({ rooms }: { rooms: PaginatedTalkRooms }) {
     return (
         <>
@@ -56,7 +54,6 @@ function TalkRooms({ rooms }: { rooms: PaginatedTalkRooms }) {
     );
 }
 
-/** Another member's memberships, or any list on a site with talk switched off: a plain group grid. */
 function CommunityGrid({ groups }: { groups: PaginatedCommunities }) {
     return (
         <>

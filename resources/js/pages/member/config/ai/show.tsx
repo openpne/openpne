@@ -70,7 +70,6 @@ interface AiShowProps extends PageProps {
     tokens: Tokens;
 }
 
-/** One group row: image, name linking to the group, member count, and whatever this page can do to it. */
 function GroupRowItem({ group, action }: { group: GroupRow; action: React.ReactNode }) {
     const t = useT();
 
@@ -101,9 +100,8 @@ function GroupRowItem({ group, action }: { group: GroupRow; action: React.ReactN
 }
 
 /**
- * The credential, on the one render it exists. Dashed frame + an explicit "only this once" lead, the
- * same shape the recovery-code list takes: a moment to act on, not page furniture that would still
- * be here next visit.
+ * Shown on the one render the credential exists, so it reads as a moment to act on rather than page
+ * furniture that would still be here next visit.
  */
 function NewToken({ value }: { value: string }) {
     const t = useT();
@@ -127,11 +125,7 @@ function NewToken({ value }: { value: string }) {
     );
 }
 
-/**
- * The account's face: its picture, its name, and what it says about itself. Three writes, so three
- * posts — the image ones stand apart from the text one because a file upload is its own submit, and
- * removing the picture is a button rather than a nested form.
- */
+/** Three writes, so three posts: a file upload is its own submit. */
 function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; selfIntroduction: SelfIntroduction | null }) {
     const t = useT();
     const identity = useForm({ name: account.name, self_introduction: selfIntroduction?.value ?? '' });
@@ -231,9 +225,8 @@ function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; self
 }
 
 /**
- * The account's tokens: what it holds, and the form that mints one more. The issue button and every
- * revoke button post the same form, so the password is asked for once per panel rather than once per
- * row, and its error has one place to appear.
+ * The issue button and every revoke button post the same form, so the password is asked for once per
+ * panel rather than once per row, and its error has one place to appear.
  */
 function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens }) {
     const t = useT();
@@ -243,9 +236,7 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
     const [busy, setBusy] = useState<string | null>(null);
 
     // No onSuccess reset of the password: useForm's callbacks close over the data as it was at
-    // submit time, so resetting from one would quietly undo a choice made after it (a read-only box
-    // ticked for the next token). A successful post re-renders with the window fresh, which takes
-    // the field off the page anyway.
+    // submit time, so resetting from one would quietly undo a choice made after it.
     const submit = (url: string, key: string) =>
         form.post(url, {
             preserveScroll: true,
@@ -312,9 +303,8 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
                     </ul>
                 )}
 
-                {/* The password sits with the controls it guards rather than above the list, so the
-                    panel reads as "what this account holds, then what you can do about it". Its help
-                    names revoking too: the buttons up there post this same field. */}
+                {/* The password sits with the controls it guards; its help names revoking too, since
+                    the buttons above post this same field. */}
                 <div className="space-y-4 border-t border-border pt-5">
                     {tokens.requiresPassword && (
                         <Field
