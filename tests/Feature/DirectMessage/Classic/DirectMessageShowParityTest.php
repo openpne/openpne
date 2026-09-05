@@ -11,10 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The message detail against OpenPNE 3 showSuccess.php: the counterpart's photo cell spanning the
- * From/To, date and subject rows — and only when there is exactly one counterpart to show.
- */
+/** The message detail against OpenPNE 3 showSuccess.php. */
 class DirectMessageShowParityTest extends TestCase
 {
     use RefreshDatabase;
@@ -64,10 +61,7 @@ class DirectMessageShowParityTest extends TestCase
             ->assertDontSee('class="photo"', false);
     }
 
-    /**
-     * A message written as chat may be nothing but pictures, and the mailbox shows it too. The
-     * paragraph is left out rather than drawn empty — its height would read as a body that is there.
-     */
+    /** A message written as chat may be nothing but pictures, and the mailbox shows it too. */
     public function test_a_picture_only_message_draws_no_empty_paragraph(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();

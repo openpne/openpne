@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * A message attachment inherits the message's privacy through FilePolicy: only the sender and a
- * recipient of a delivered (non-draft) message may fetch its bytes.
- */
 class DirectMessageAttachmentPolicyTest extends TestCase
 {
     use RefreshDatabase;

@@ -7,11 +7,6 @@ use App\Models\DirectMessage;
 use App\Models\Member;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * `?m=` — a link into a conversation. The page opens on the slice the named message sits in and says
- * which one it was; anything the link cannot name resolves to the ordinary newest page, because a
- * stale link still leads to a conversation worth arriving in.
- */
 class ConversationAnchorTest extends ConversationTestCase
 {
     public function test_the_page_opens_on_the_slice_the_named_message_sits_in(): void
@@ -44,9 +39,8 @@ class ConversationAnchorTest extends ConversationTestCase
     }
 
     /**
-     * A message id names a row in *this* conversation. One from elsewhere is not a position to be
-     * borrowed the way a pagination cursor is — it would open a page of this conversation around
-     * another one's instant — so it is no anchor at all.
+     * Unlike a pagination cursor, an id from elsewhere is no position to borrow: it would open this
+     * conversation around another one's instant.
      */
     public function test_a_message_from_another_conversation_is_no_anchor(): void
     {

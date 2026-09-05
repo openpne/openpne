@@ -28,7 +28,6 @@ enum DirectMessageRowStatus
         };
     }
 
-    /** The icon's alt text. */
     public function label(): string
     {
         return match ($this) {

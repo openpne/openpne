@@ -12,10 +12,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Resolve one message for a box's show page (OpenPNE 3 message/show), or null when the viewer may
- * not read it in that box. Box membership and the prev/next pager both derive from boxMessageIds, the
- * one place that says what each box contains (via the model scopes). Opening a received message marks
- * it read (OpenPNE 3 isReadable side effect).
+ * Null when the viewer may not read the message in that box. Opening a received one marks it read,
+ * the side effect OpenPNE 3's isReadable had.
  */
 class ShowDirectMessage
 {
@@ -46,13 +44,11 @@ class ShowDirectMessage
         );
     }
 
-    /** Whether the message is in the viewer's box — the single definition the list and pager share. */
     private function inBox(Member $viewer, DirectMessageBox $box, int $messageId): bool
     {
         return DB::query()->fromSub($this->boxMessageIds($viewer, $box), 'box')->where('id', $messageId)->exists();
     }
 
-    /** Opening a received message marks the viewer's live receipt read. */
     private function markRead(Member $viewer, DirectMessage $message): void
     {
         $receipt = $message->recipients->first(fn (DirectMessageRecipient $r): bool => (int) $r->recipient_id === (int) $viewer->getKey()
@@ -67,8 +63,8 @@ class ShowDirectMessage
     }
 
     /**
-     * From/To members (OpenPNE 3 fromOrToMembers): the To set when the viewer is the sender (the
-     * draft recipient for an unsent draft, the receipts otherwise), the single From member otherwise.
+     * OpenPNE 3 fromOrToMembers: the To set when the viewer is the sender, the single From member
+     * otherwise.
      *
      * @return list<Member>
      */
@@ -83,7 +79,6 @@ class ShowDirectMessage
             : $message->recipients->map(fn (DirectMessageRecipient $r) => $r->recipient)->filter()->values()->all();
     }
 
-    /** The adjacent message id within the box: the nearest older (id <) or newer (id >) one. */
     private function adjacentId(Member $viewer, DirectMessageBox $box, int $messageId, bool $older): ?int
     {
         // Wrap in a subquery so the id filter applies to the whole box set, including the trash UNION.
@@ -96,7 +91,6 @@ class ShowDirectMessage
         return $row !== null ? (int) $row->id : null;
     }
 
-    /** Message ids in the box for this viewer (the box conditions live in the model scopes). @return QueryBuilder */
     private function boxMessageIds(Member $viewer, DirectMessageBox $box): QueryBuilder
     {
         $id = $viewer->getKey();
@@ -111,6 +105,7 @@ class ShowDirectMessage
                 ->unionAll(
                     DirectMessage::query()->senderTrashed()->where('sender_id', $id)->select('id')->toBase()
                 ),
+            // A draft has no show page, so no id is in this box.
             DirectMessageBox::Draft => DirectMessage::query()->whereRaw('1 = 0')->select('id')->toBase(),
         };
     }

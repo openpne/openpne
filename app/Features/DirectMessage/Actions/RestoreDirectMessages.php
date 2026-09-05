@@ -8,11 +8,8 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Restore the viewer's side of each trashed message back to its box. The viewer is on exactly
- * one side per message (self-addressing is
- * forbidden), so the two updates are disjoint per id: the sender side clears on direct_messages, the
- * recipient side on direct_message_recipients. A purged side stays gone — only a trashed-not-purged row
- * restores.
+ * The viewer is on exactly one side of a message, self-addressing being forbidden, so the two
+ * updates are disjoint per id and their counts add up.
  */
 class RestoreDirectMessages
 {

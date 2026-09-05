@@ -8,11 +8,8 @@ use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 
 /**
- * Move the viewer's side of each message in a box to the trash. The box fixes the side: the
- * inbox trashes the receipt, the sent and
- * draft boxes trash the authored message. Set-based so one call covers a single message or a bulk
- * selection, and idempotent — an already-trashed row keeps its first moved-to-trash time, the column
- * the trash box sorts on.
+ * Idempotent: an already-trashed row keeps its first moved-to-trash time, which is the column the
+ * trash box sorts on.
  */
 class TrashDirectMessages
 {
@@ -36,8 +33,7 @@ class TrashDirectMessages
                 ->where('recipient_id', $viewerId)
                 ->whereIn('direct_message_id', $ids)
                 ->update(['recipient_deleted_at' => now()]),
-            // The sender owns both their sent box and their drafts; each box trashes only its own kind,
-            // so a sent id submitted as a draft (or vice versa) cannot cross boxes.
+            // Each box trashes only its own kind, so a sent id submitted as a draft matches nothing.
             DirectMessageBox::Sent, DirectMessageBox::Draft => DirectMessage::query()
                 ->senderLive()
                 ->where('sender_id', $viewerId)

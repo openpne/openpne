@@ -6,9 +6,7 @@ use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 
 /**
- * How many delivered messages sit unread in this member's inbox. Shares the inbox's box predicate
- * (delivered, live) with ListDirectMessages::received so the badge and the inbox agree on what counts;
- * unread is read_at IS NULL.
+ * The badge reads the inbox box's own scopes, so it cannot disagree with the box about what counts.
  */
 class CountUnreadDirectMessages
 {

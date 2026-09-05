@@ -30,24 +30,15 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Private messages, the OpenPNE 3 message module: the four boxes, the per-message show, composing
- * (compose/reply/send), draft editing, and the trash actions (single-message and bulk
- * trash/restore/purge).
- *
- * **The reading pages are Classic's alone.** A Modern viewer reads the same store as chat
- * (ConversationController), so every GET here that has a chat equivalent answers them with a
- * redirect into it rather than a second reading of the same rows — the URLs stay OpenPNE 3's,
- * durable and already in members' mail. What Modern still renders from this controller is the draft
- * form, which no conversation holds; what Classic still renders is every page, unchanged, through
- * the classic() helper with the OpenPNE 3 page_message_* body id.
- *
- * The write actions are surface-agnostic and redirect on the surface they came from.
+ * Every GET with a chat equivalent redirects a Modern viewer into it, the draft form being the one
+ * page Modern still renders here
+ * (`docs/internals/direct-messages.md`, "Modern reads the store as chat").
  */
 class DirectMessageController extends Controller
 {
     use RespondsWithSurface;
 
-    /** OpenPNE 3 message/index forwards to the inbox (staying on the request's surface). */
+    /** OpenPNE 3 message/index forwards to the inbox; under chat it lands on the conversation list. */
     public function index(Request $request): RedirectResponse
     {
         return $this->isModern($request)
@@ -90,15 +81,14 @@ class DirectMessageController extends Controller
         return $this->show($request, DirectMessageBox::Trash, $message, $query);
     }
 
-    /** Compose a new message to a member (OpenPNE 3 sendToFriend?id=). */
+    /** OpenPNE 3 sendToFriend?id=. */
     public function compose(Request $request): View|RedirectResponse
     {
         $recipient = Member::find((int) $request->query('id'));
 
         if ($this->isModern($request)) {
-            // Chat writes in the conversation, so this is a way into one. A missing or self-addressed
-            // recipient names no conversation and lands on the list — there is nothing here for a
-            // 404 to tell the member to do.
+            // A missing or self-addressed recipient names no conversation and lands on the list
+            // rather than on the Classic branch's 404.
             return $recipient === null || $this->viewer()->is($recipient)
                 ? redirect()->route('message.chat.index')
                 : redirect()->route('message.chat.show', ['member' => $recipient->getKey()]);
@@ -120,19 +110,17 @@ class DirectMessageController extends Controller
         return $this->afterWrite($message->is_draft);
     }
 
-    /** Reply to a received message: compose to its sender, carrying the thread links (OpenPNE 3 reply). */
+    /** OpenPNE 3 reply. */
     public function reply(Request $request, int $message): View|RedirectResponse
     {
         if ($this->isModern($request)) {
-            // Answering is writing in the conversation, and the quote and the thread links are the
-            // mailbox form's own — a conversation is linear and reads neither.
+            // A conversation is linear, so the quote and the thread links stay the mailbox form's.
             return $this->conversationOf($message);
         }
 
         $original = DirectMessage::with('recipients')->findOrFail($message);
         $viewer = $this->viewer();
-        // Reply is an inbox action: only on a live received message. A trashed or purged receipt has
-        // left the inbox, so its body must not resurface as a quote (purge revokes the viewer's view).
+        // A trashed or purged receipt has left the inbox, so its body must not resurface as a quote.
         abort_unless(! $original->is_draft && $this->hasLiveInboxReceipt($original, $viewer), 404);
         abort_if($original->sender === null, 404); // a withdrawn sender cannot be replied to
 
@@ -140,13 +128,12 @@ class DirectMessageController extends Controller
             $original->sender,
             parentId: (int) $original->getKey(),
             threadId: $original->thread_id !== null ? (int) $original->thread_id : (int) $original->getKey(),
-            // Reply prefills "Re:" + the original subject and the body quoted line-by-line.
             subject: 'Re:'.(string) $original->subject,
             body: $this->quote((string) $original->body),
         );
     }
 
-    /** Edit one of the viewer's own drafts (OpenPNE 3 edit). */
+    /** OpenPNE 3 edit. */
     public function edit(Request $request, int $message): View|InertiaResponse
     {
         $draft = DirectMessage::with(['files.file', 'draftRecipient'])->findOrFail($message);
@@ -182,7 +169,7 @@ class DirectMessageController extends Controller
         return $this->afterWrite($draft->is_draft);
     }
 
-    /** Move a received message to the trash (OpenPNE 3 deleteReceiveMessage). */
+    /** OpenPNE 3 deleteReceiveMessage. */
     public function trashReceived(Request $request, int $message, TrashDirectMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), DirectMessageBox::Receive, [$message]) === 0, 404);
@@ -190,7 +177,7 @@ class DirectMessageController extends Controller
         return redirect()->route('message.receive')->with('status', __('The message was moved to the trash.'));
     }
 
-    /** Move a sent message to the trash (OpenPNE 3 deleteSendMessage). */
+    /** OpenPNE 3 deleteSendMessage. */
     public function trashSent(Request $request, int $message, TrashDirectMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), DirectMessageBox::Sent, [$message]) === 0, 404);
@@ -198,7 +185,7 @@ class DirectMessageController extends Controller
         return redirect()->route('message.send')->with('status', __('The message was moved to the trash.'));
     }
 
-    /** Restore a trashed message to its box (OpenPNE 3 restore). */
+    /** OpenPNE 3 restore. */
     public function restore(Request $request, int $message, RestoreDirectMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
@@ -206,7 +193,7 @@ class DirectMessageController extends Controller
         return redirect()->route('message.trash')->with('status', __('The message was restored.'));
     }
 
-    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Modern has no trash screen. */
+    /** OpenPNE 3 deleteConfirmDustMessage; Modern has no trash screen to confirm on. */
     public function purgeConfirm(Request $request, int $message, ShowDirectMessage $query): View|RedirectResponse
     {
         if ($this->isModern($request)) {
@@ -219,7 +206,7 @@ class DirectMessageController extends Controller
         return $this->classic('message.purge_confirm', ['message' => $view->message]);
     }
 
-    /** Purge a single trashed message (OpenPNE 3 deleteDustMessage). */
+    /** OpenPNE 3 deleteDustMessage. */
     public function purge(Request $request, int $message, PurgeDirectMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
@@ -227,12 +214,7 @@ class DirectMessageController extends Controller
         return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
     }
 
-    /**
-     * Bulk action over a list's checked rows (OpenPNE 3 MessageDeleteForm): trash from the
-     * receive/send/draft boxes, restore or purge from the trash box. Classic gates a purge behind a
-     * confirmation page (first submit renders it, confirmed submit carries it out); Modern confirms
-     * inline, so its purge always arrives confirmed. Every redirect stays on the request's surface.
-     */
+    /** OpenPNE 3 MessageDeleteForm. */
     public function bulk(BulkDirectMessageRequest $request, TrashDirectMessages $trash, RestoreDirectMessages $restore, PurgeDirectMessages $purge): View|RedirectResponse
     {
         $viewer = $this->viewer();
@@ -257,8 +239,8 @@ class DirectMessageController extends Controller
         }
 
         if (! $request->confirmed()) {
-            // Classic renders the confirm page; a Modern purge is always confirmed, so an unconfirmed
-            // one here is a client error — nothing is purged.
+            // A Modern purge is always confirmed, so an unconfirmed one here is a client error and
+            // nothing is purged.
             if (SurfaceResolver::resolve($request, 'directMessage') === SurfaceResolver::CLASSIC) {
                 return $this->classic('message.bulk_purge_confirm', ['ids' => $ids]);
             }
@@ -289,7 +271,6 @@ class DirectMessageController extends Controller
         return $body === '' ? '' : '> '.str_replace("\n", "\n> ", $body);
     }
 
-    /** A draft the viewer may edit: their own, still a draft, and not trashed/purged. */
     private function ownsLiveDraft(DirectMessage $draft): bool
     {
         return (int) $draft->sender_id === (int) $this->viewer()->getKey()
@@ -298,7 +279,6 @@ class DirectMessageController extends Controller
             && $draft->sender_purged_at === null;
     }
 
-    /** After a write: the sent box for a sent message, the draft box for a saved draft (same surface). */
     private function afterWrite(bool $isDraft): RedirectResponse
     {
         return $isDraft
@@ -316,7 +296,6 @@ class DirectMessageController extends Controller
         abort(404); // too many images: a payload past the cross-field cap
     }
 
-    /** The viewer has a live inbox receipt (delivered, not trashed, not purged) for this message. */
     private function hasLiveInboxReceipt(DirectMessage $message, Member $viewer): bool
     {
         return $message->recipients->contains(
@@ -326,22 +305,14 @@ class DirectMessageController extends Controller
         );
     }
 
-    /** Whether this request is answered as chat rather than as the mailbox. */
     private function isModern(Request $request): bool
     {
         return SurfaceResolver::resolve($request, 'directMessage') === SurfaceResolver::MODERN;
     }
 
     /**
-     * Where a mailbox URL naming one message lands on the chat surface: the conversation it belongs
-     * to, seen from the viewer's side — the counterpart is the recipient of what they sent and the
-     * sender of what they received, and a null one is the withdrawn bucket. `$anchor` carries the
-     * message on as `?m=`, which the conversation honours best-effort.
-     *
-     * 404 unless the viewer is a party to the message. These ids are sequential and the URLs are
-     * public, so a redirect that named the other side would answer "who is member N corresponding
-     * with" for any id — something the boxes' own gates never let through. A draft belongs to no
-     * conversation at all, only to the form that is still writing it.
+     * 404 unless the viewer is a party to the message: the ids are sequential and the URLs public, so
+     * a redirect naming the other side would answer "who is member N corresponding with" for any id.
      */
     private function conversationOf(int $messageId, bool $anchor = false): RedirectResponse
     {
@@ -357,9 +328,8 @@ class DirectMessageController extends Controller
             404,
         );
 
-        // An upgraded multi-recipient send sits in several conversations; a URL can land in one. The
-        // lowest receipt id — the first delivery written — is the rule, fixed here rather than left
-        // to whatever order the relation loaded in.
+        // An upgraded multi-recipient send sits in several conversations, so the lowest receipt id
+        // fixes which one a URL lands in rather than the order the relation loaded in.
         $counterpartId = $viewerIsSender
             ? $message->recipients->sortBy('id')->first()?->recipient_id
             : $message->sender_id;
@@ -372,11 +342,9 @@ class DirectMessageController extends Controller
 
     private function list(Request $request, DirectMessageBox $box, ListDirectMessages $query): View|RedirectResponse
     {
-        // The boxes are the mailbox's reading of the store; chat's is the conversation list, which
-        // carries the drafts box as a section of itself.
         if ($this->isModern($request)) {
             // A submit still lands on its box and is forwarded from here, so the flash it wrote has
-            // to survive the extra hop — otherwise every write on this surface loses its answer.
+            // to survive the extra hop.
             $request->session()->reflash();
 
             return redirect()->route('message.chat.index');
@@ -390,9 +358,8 @@ class DirectMessageController extends Controller
 
     private function show(Request $request, DirectMessageBox $box, int $messageId, ShowDirectMessage $query): View|RedirectResponse
     {
-        // Resolved before the box query, which marks a received message read: the conversation draws
-        // its own unread boundary, and a read stamped on the way past would erase the line the
-        // reader is being sent to.
+        // Resolved before the box query, which marks a received message read: a read stamped on the
+        // way past would erase the unread line the reader is being sent to.
         if ($this->isModern($request)) {
             return $this->conversationOf($messageId, anchor: true);
         }

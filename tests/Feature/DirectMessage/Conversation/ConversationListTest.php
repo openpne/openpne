@@ -9,10 +9,6 @@ use App\Models\Member;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 
-/**
- * The conversation list: who the viewer is corresponding with, in the order they last wrote, with
- * what each leads with and what is waiting in it.
- */
 class ConversationListTest extends ConversationTestCase
 {
     private function list(Member $viewer, int $perPage = ConversationList::PER_PAGE): array
@@ -63,10 +59,8 @@ class ConversationListTest extends ConversationTestCase
 
     public function test_a_shared_latest_still_cuts_pages_without_loss_or_repeat(): void
     {
-        // An upgraded multi-recipient send is the shared latest of every conversation it landed in,
-        // so (latest_at, latest_id) ties across rows and the counterpart is the final tie-break —
-        // active conversations by id descending, the withdrawn bucket last. A one-per-page walk must
-        // meet every conversation exactly once, whatever the engine's own tie order.
+        // An upgraded multi-recipient send ties (latest_at, latest_id) across rows, so a one-per-page
+        // walk has to meet every conversation exactly once whatever the engine's own tie order.
         [$viewer, $a, $b] = Member::factory()->count(3)->create();
         $a->forceFill(['name' => 'a'])->save();
         $b->forceFill(['name' => 'b'])->save();

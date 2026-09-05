@@ -10,16 +10,11 @@ use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Modern surface shapes for what the mailbox still owns under chat: the drafts box and the draft
- * form. counterparty/recipient is null for a withdrawn member (a deleted account leaves the row),
- * and datetimes are ISO strings the client formats.
+ * `counterparty` / `recipient` is null for a withdrawn member, a deleted account leaving the row.
  */
 class DirectMessageSerializer
 {
     /**
-     * A box-list row (DirectMessageListItem): the counterparty (From for the inbox, To otherwise), the
-     * subject, the box-appropriate date, and unread (only ever true in the inbox).
-     *
      * @return array{id: int, counterparty: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, subject: string, date: string, unread: bool}
      */
     public static function row(DirectMessageListItem $item): array
@@ -34,8 +29,7 @@ class DirectMessageSerializer
     }
 
     /**
-     * The draft edit-form shape: the editable text, the fixed recipient (null if withdrawn), and the
-     * current images (each removable by id). Callers eager-load files.file and draftRecipient.
+     * Callers eager-load `files.file` and `draftRecipient`.
      *
      * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}
      */
@@ -51,10 +45,8 @@ class DirectMessageSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
-     * all FilePolicy-gated. See docs/internals/images.md for which one a surface takes and why the
-     * intrinsic size travels with them. Tolerates a row whose File is gone (defensive; the join
-     * cascades with it).
+     * The thumbnail sources a surface picks from (`docs/internals/images.md`, "The two ladders"). A
+     * row whose File is gone yields empty urls rather than throwing.
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */
@@ -109,7 +101,7 @@ class DirectMessageSerializer
         return $member === null ? null : self::memberRef($member);
     }
 
-    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
     public static function memberRef(Member $member): array
     {
         return MemberRefSerializer::ref($member);

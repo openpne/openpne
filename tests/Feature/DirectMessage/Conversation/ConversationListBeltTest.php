@@ -11,13 +11,8 @@ use App\Models\Member;
 use Illuminate\Support\Carbon;
 
 /**
- * The belt between the list and the conversations it lists.
- *
- * ConversationScope is the single definition of what a conversation contains, but the list correlates
- * its arms to each row's counterpart instead of a bound member — a shape the scope's builder cannot be
- * reused in. So the two readings are held together here rather than by shared code: over one seeded
- * matrix, every row the list draws must say what opening that conversation says, and the rows it
- * draws must be exactly the conversations that have anything in them.
+ * The list and the per-conversation reads share no code, so one seeded matrix holds them together:
+ * every row the list draws must say what opening that conversation says.
  */
 class ConversationListBeltTest extends ConversationTestCase
 {

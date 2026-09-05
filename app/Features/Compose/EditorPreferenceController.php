@@ -7,10 +7,7 @@ use App\Http\Requests\Compose\UpdateComposeEditorRequest;
 use App\Support\ComposeEditor;
 use Illuminate\Http\Response;
 
-/**
- * Persists a member's compose input-method choice (Rich/Markdown/Plain) for the Modern compose
- * forms. The client is a fire-and-forget fetch, not an Inertia visit, so it returns 204 with no body.
- */
+/** The client is a fire-and-forget fetch rather than an Inertia visit, so this answers 204 with no body. */
 class EditorPreferenceController extends Controller
 {
     public function update(UpdateComposeEditorRequest $request): Response

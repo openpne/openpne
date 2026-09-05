@@ -10,8 +10,8 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Shared setup for the chat reading of the message store. The chat screens render Inertia whatever
- * the site's surface, but the shared Modern props they assert on come from a Modern session.
+ * The chat screens render Inertia whatever the site's surface, but the shared Modern props they
+ * assert on come from a Modern session.
  */
 abstract class ConversationTestCase extends TestCase
 {

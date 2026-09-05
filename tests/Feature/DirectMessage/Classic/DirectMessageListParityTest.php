@@ -9,10 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The message box list against OpenPNE 3 listSuccess.php: the row status icons, the legend band the
- * inbox fills, a pager above and below the table, and the check-all pair under it.
- */
+/** The message box list against OpenPNE 3 listSuccess.php. */
 class DirectMessageListParityTest extends TestCase
 {
     use RefreshDatabase;

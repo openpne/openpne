@@ -7,7 +7,6 @@ use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Member;
 
-/** The chat shape of a stored message: what the mailbox holds, as a conversation reads it. */
 class ConversationSerializerTest extends ConversationTestCase
 {
     public function test_a_mailbox_subject_is_carried_and_a_chat_message_has_none(): void
@@ -22,7 +21,6 @@ class ConversationSerializerTest extends ConversationTestCase
         $this->assertNull($page['messages'][1]['subject']);
     }
 
-    /** The storage keeps null and '' distinct, so the wire does too; the screen draws neither. */
     public function test_an_empty_subject_is_carried_as_the_empty_string(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
