@@ -35,13 +35,8 @@ use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * The four talk tools, called the way an MCP client calls them: the token decides who the caller is,
- * and every refusal a room can produce comes back as the one message that names nothing.
- */
 class TalkToolsTest extends McpTestCase
 {
-    /** Sign in as $member with the abilities their token carries. */
     private function acting(Member $member, array $abilities = [McpAbilities::READ, McpAbilities::WRITE]): Member
     {
         return Sanctum::actingAs($member, $abilities);
@@ -87,8 +82,6 @@ class TalkToolsTest extends McpTestCase
 
         $this->acting($member);
 
-        // Page two exists at all only because the tool names the page: there is no URL here for the
-        // paginator's own resolver to read one off.
         OpenPneServer::tool(ListTalkRoomsTool::class, ['page' => 2])
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json->where('page', 2)->where('lastPage', 2)->count('rooms', 1)->etc());
@@ -223,8 +216,6 @@ class TalkToolsTest extends McpTestCase
 
     public function test_an_ai_authors_message_says_so(): void
     {
-        // The chip a reader sees, as a field: a reading agent must be able to tell a colleague's
-        // words from another agent's without inferring it from the name.
         $group = $this->group();
         $member = $this->memberOf($group);
         $aiAccount = Member::factory()->aiAccount($member)->create();
@@ -304,8 +295,6 @@ class TalkToolsTest extends McpTestCase
         $member = $this->memberOf($group);
         $this->acting($member, [McpAbilities::READ]);
 
-        // Not hidden, unlike a missing room: the caller can act on it, and it discloses nothing
-        // about what exists.
         OpenPneServer::tool(PostTalkMessageTool::class, ['group_id' => $group->getKey(), 'body' => 'nope'])
             ->assertHasErrors([McpAbilities::WRITE]);
         OpenPneServer::tool(MarkTalkReadTool::class, ['group_id' => $group->getKey(), 'message_id' => 1])
@@ -319,8 +308,8 @@ class TalkToolsTest extends McpTestCase
 
     public function test_posting_to_a_room_the_caller_has_not_joined_is_refused(): void
     {
-        // Readable by anyone signed in, writable only by its members — so the refusal comes from the
-        // write, and says no more than a missing room would.
+        // Readable by anyone signed in but writable only by its members, so the refusal comes from
+        // the write.
         $group = $this->group(TopicReadAccess::Everyone);
         $this->acting(Member::factory()->create());
 
@@ -338,8 +327,8 @@ class TalkToolsTest extends McpTestCase
         // on one, so the assertion can name the field it is about.
         $this->app->setLocale('en');
 
-        // The direct tool path meets no HTTP middleware, so each of these reaches the tool exactly
-        // as written — which is why the tool holds the blank-body contract itself.
+        // The tool path meets no HTTP middleware, so each of these reaches the tool exactly as
+        // written.
         foreach (['', '   ', "\n\n", "\r\n", " \t "] as $blank) {
             OpenPneServer::tool(PostTalkMessageTool::class, ['group_id' => $group->getKey(), 'body' => $blank])
                 ->assertHasErrors(['body']);
@@ -400,7 +389,6 @@ class TalkToolsTest extends McpTestCase
 
         $this->assertSame($second->getKey(), $this->readCursor($group, $member));
 
-        // Replaying an older id is a no-op rather than a rewind.
         OpenPneServer::tool(MarkTalkReadTool::class, [
             'group_id' => $group->getKey(),
             'message_id' => $first->getKey(),
@@ -442,8 +430,7 @@ class TalkToolsTest extends McpTestCase
         $this->acting($this->memberOf($group));
         $this->setSnsSetting(Feature::GroupTalk->settingKey(), false);
 
-        // Not an error about the room: the tool is not there at all, which is what the room list and
-        // the navigation say on every other surface too.
+        // Not an error about the room: the tool is not there at all.
         OpenPneServer::tool(ListTalkRoomsTool::class)->assertHasErrors(['not found']);
         OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
             ->assertHasErrors(['not found']);
@@ -469,8 +456,6 @@ class TalkToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('message.body', '@あかり rain, probably')
                 ->where('message.mentions', [$asker->getKey()])
-                // Two different questions: which message this answers, and who was spoken to. The
-                // reference is what the room draws; the mention is what notifies.
                 ->where('message.inReplyTo', ['id' => $question->getKey(), 'authorId' => $asker->getKey()])
                 ->etc());
 
@@ -479,15 +464,13 @@ class TalkToolsTest extends McpTestCase
         $mention = DB::table('group_message_mentions')->where('group_message_id', $posted->getKey())->sole();
 
         $this->assertSame(0, (int) $mention->offset);
-        // The separating space is outside the range, so what it covers is exactly the handle — the
-        // equality ResolveMentions checks, and the only thing that makes the row survive the write.
+        // The separating space is outside the range, so what it covers is exactly the handle.
         $this->assertSame(1 + mb_strlen($asker->name), (int) $mention->length);
         $this->assertSame('@'.$asker->name, mb_substr($posted->body, (int) $mention->offset, (int) $mention->length));
 
         Notification::assertSentTo($asker, GroupTalkMentionedNotification::class);
     }
 
-    /** The range the server composed is the range the web surface splits the body on. */
     public function test_the_composed_range_is_the_one_the_web_surface_renders(): void
     {
         $group = $this->group();
@@ -530,11 +513,6 @@ class TalkToolsTest extends McpTestCase
         ];
     }
 
-    /**
-     * Nobody to address is not a failure to post: the message goes in as written, and the empty
-     * `mentions` is what tells the caller no one was named. The reference is written all the same —
-     * what this answers does not depend on whether anyone could be spoken to.
-     */
     #[DataProvider('unaddressable')]
     public function test_an_answer_with_nobody_to_address_posts_as_a_plain_message(string $situation): void
     {
@@ -579,11 +557,6 @@ class TalkToolsTest extends McpTestCase
         Notification::assertNothingSent();
     }
 
-    /**
-     * What a reading agent decides "is this for me" from. `authorId` is who the answer is owed to, so
-     * a parent nobody is behind — deleted, or its author withdrawn — reports null rather than two
-     * states that would lead to the same decision.
-     */
     public function test_a_read_says_what_each_message_answers(): void
     {
         $group = $this->group();
@@ -613,7 +586,6 @@ class TalkToolsTest extends McpTestCase
                 ->etc());
     }
 
-    /** Being answered is being spoken to, so the room says it is waiting on the caller. */
     public function test_the_room_list_counts_an_answer_to_something_the_caller_said(): void
     {
         $group = $this->group();
@@ -666,10 +638,6 @@ class TalkToolsTest extends McpTestCase
         $this->assertSame(0, GroupMessage::query()->where('group_id', $group->getKey())->count());
     }
 
-    /**
-     * The cap is measured again after the handle is prefixed, because the handle is the server's
-     * addition and nothing downstream re-checks the body.
-     */
     public function test_a_reply_the_handle_no_longer_leaves_room_for_is_refused(): void
     {
         $group = $this->group();
@@ -698,10 +666,6 @@ class TalkToolsTest extends McpTestCase
         $this->assertSame(2, GroupMessage::query()->where('group_id', $group->getKey())->count());
     }
 
-    /**
-     * Nothing changed between composing the handle and resolving it, so nothing lands here: the
-     * write goes in on the first attempt, and the room is left holding one message.
-     */
     public function test_a_block_landing_between_the_handle_and_the_write_posts_the_answer_plain(): void
     {
         Notification::fake();
@@ -736,7 +700,6 @@ class TalkToolsTest extends McpTestCase
         Notification::assertNothingSent();
     }
 
-    /** A rename is the one race worth composing again for: there is still someone to address. */
     public function test_a_rename_between_the_handle_and_the_write_is_composed_again(): void
     {
         Notification::fake();
@@ -771,7 +734,6 @@ class TalkToolsTest extends McpTestCase
         Notification::assertSentTo($asker, GroupTalkMentionedNotification::class);
     }
 
-    /** What the addressed member sees for it: the answer waiting, counted as one that names them. */
     public function test_an_answer_reaches_the_addressed_members_unread_mention_count(): void
     {
         $group = $this->group();
@@ -809,7 +771,6 @@ class TalkToolsTest extends McpTestCase
                 ->etc());
     }
 
-    /** A caller racing every attempt is answered as one with nobody to address: posted, unaddressed. */
     public function test_a_rename_on_every_attempt_gives_up_and_posts_plain(): void
     {
         Notification::fake();
@@ -896,7 +857,6 @@ class TalkToolsTest extends McpTestCase
             'message_id' => $addressedToSomeoneElse->getKey(),
         ])->assertOk();
 
-        // Read is read: the mention count is the same unread, narrowed, so the cursor clears both.
         OpenPneServer::tool(ListTalkRoomsTool::class)
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json

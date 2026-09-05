@@ -18,7 +18,6 @@ class McpTokenCommandTest extends TestCase
 {
     use CapturesSecurityLog, RefreshDatabase;
 
-    /** Run the command and return its captured stdout. */
     private function runCommand(array $parameters): array
     {
         $exitCode = Artisan::call('openpne:mcp:token', $parameters);
@@ -26,7 +25,6 @@ class McpTokenCommandTest extends TestCase
         return [$exitCode, Artisan::output()];
     }
 
-    /** The plaintext credential the command printed: `{id}|{random}`, alone on its line. */
     private function plainTextTokenIn(string $output): string
     {
         $this->assertSame(1, preg_match('/^\d+\|\S+$/m', $output, $matches), "no token line in output:\n{$output}");
@@ -46,7 +44,6 @@ class McpTokenCommandTest extends TestCase
         $this->assertSame(['mcp:read', 'mcp:write'], $token->abilities);
         $this->assertTrue($token->tokenable->is($member));
 
-        // The printed string must be the credential itself, not a truncated or re-hashed echo of it.
         $this->assertTrue(PersonalAccessToken::findToken($this->plainTextTokenIn($output))?->is($token));
     }
 
@@ -90,8 +87,6 @@ class McpTokenCommandTest extends TestCase
 
     public function test_an_address_that_moves_after_the_lookup_issues_nothing(): void
     {
-        // The lookup is not the decision: the mint confirms the address on the row it locks, so a
-        // rename that lands in the gap refuses instead of handing a token to the id this read saw.
         $member = Member::factory()->create(['email' => 'pilot@example.com']);
         $this->renameOnceLookedUp($member, 'renamed@example.com');
 
@@ -128,7 +123,6 @@ class McpTokenCommandTest extends TestCase
 
         $this->assertSame(0, $exitCode);
         $this->assertStringContainsString('Revoked 1', $output);
-        // A PAT minted for some other purpose is not collateral damage of an MCP revocation.
         $this->assertSame([$other->getKey()], PersonalAccessToken::pluck('id')->all());
     }
 
@@ -178,15 +172,12 @@ class McpTokenCommandTest extends TestCase
 
     public function test_the_id_option_reaches_an_account_that_has_no_email_address(): void
     {
-        // The whole reason --id exists: an AI account is a member row with a null email, so there
-        // is no address to name it by.
         $aiAccount = Member::factory()->aiAccount()->create();
 
         [$exitCode, $output] = $this->runCommand(['--id' => (string) $aiAccount->getKey()]);
 
         $this->assertSame(0, $exitCode);
         $this->assertTrue(PersonalAccessToken::sole()->tokenable->is($aiAccount));
-        // The id stands in for the address in what the command says about the member.
         $this->assertStringContainsString("#{$aiAccount->getKey()}", $output);
         $this->assertTrue(PersonalAccessToken::findToken($this->plainTextTokenIn($output))?->tokenable->is($aiAccount));
     }
@@ -205,8 +196,6 @@ class McpTokenCommandTest extends TestCase
 
     public function test_refuses_to_issue_to_an_ai_account_whose_owner_is_frozen(): void
     {
-        // The owner's ban is the AI account's ban: the account is a foothold held under a second
-        // name, so the CLI must not hand it back what the sweep took away.
         $owner = Member::factory()->create(['is_login_rejected' => true]);
         $aiAccount = Member::factory()->aiAccount($owner)->create();
 
@@ -254,7 +243,6 @@ class McpTokenCommandTest extends TestCase
         $this->assertSame('mcp:read mcp:write', $issued['abilities']);
         $this->assertSame('1', $this->assertOneSecurityEvent('token.revoked')['count']);
 
-        // The audit trail records that a token exists, never what it is.
         $this->assertStringNotContainsString(
             $plainTextToken,
             json_encode($this->securityRecords(), JSON_THROW_ON_ERROR),

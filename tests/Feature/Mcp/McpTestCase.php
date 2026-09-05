@@ -15,9 +15,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Shared setup for the MCP suites: the endpoint's own unit, and the units its tools reach into. All
- * are on by default; they are set explicitly so a suite reads as independent of whatever an install
- * default happens to be, and so switching one off inside a test is visibly the exception.
+ * Every unit here is on by default and set explicitly anyway, so a suite reads as independent of
+ * the install default and switching one off inside a test is visibly the exception.
  */
 abstract class McpTestCase extends TestCase
 {
@@ -45,7 +44,6 @@ abstract class McpTestCase extends TestCase
         return $member;
     }
 
-    /** One message in the room, written by $author. */
     protected function say(Group $group, Member $author, string $body): GroupMessage
     {
         return GroupMessage::factory()->create([
@@ -55,7 +53,6 @@ abstract class McpTestCase extends TestCase
         ]);
     }
 
-    /** The plain-text token an MCP client would present. */
     protected function token(Member $member, array $abilities = [McpAbilities::READ, McpAbilities::WRITE]): string
     {
         return $member->createToken(McpAbilities::TOKEN_NAME, $abilities)->plainTextToken;

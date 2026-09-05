@@ -7,7 +7,6 @@ use App\Compat\RouteParityRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
 
-/** Renders the OpenPNE 3 → Laravel route parity (all modules) as Markdown. */
 class RouteParityCommand extends Command
 {
     protected $signature = 'openpne:route-parity';
@@ -20,12 +19,9 @@ class RouteParityCommand extends Command
 
         foreach (RouteParityRegistry::all() as $parity) {
             $module = $parity->module();
-            $inventoryModule = $parity->openpne3Module(); // the inventory binding; null for a native feature
+            $inventoryModule = $parity->openpne3Module(); // null for a native feature
             $this->line("## `{$module}`");
             $this->line('');
-            // 🔗 = GET-reachable, under the URL-compatibility contract (bookmarks/mail/links).
-            // ↪ = POST-only form submit, tracked for completeness but outside URL compatibility.
-            // 🆕 = no named OpenPNE 3 route (reached via the global fallback, or OpenPNE 4-native).
             $this->line('| scope | OpenPNE 3 route | OpenPNE 3 URL | method | Laravel route | Laravel URL | note |');
             $this->line('|---|---|---|---|---|---|---|');
 

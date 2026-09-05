@@ -40,10 +40,8 @@ class ReadTalkMessagesTool extends TalkTool
         }
 
         $mode = $validated['mode'] ?? 'latest';
-        // A cursor the server did not hand out is refused rather than ignored: the web surface reads
-        // an unparseable one as "no cursor" because dropping a page is worse than a 422 on a screen,
-        // but a caller told "here is the newest page" when it asked for what came before would read
-        // the same messages forever.
+        // A cursor the server did not hand out is refused rather than read as "no cursor" the way the
+        // web surface reads one.
         $cursor = $mode === 'latest' ? null : GroupTalkCursor::tryParse($validated['cursor'] ?? null);
         if ($mode !== 'latest' && $cursor === null) {
             return $this->refused();

@@ -14,15 +14,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * The operator's way to mint and retire the personal access token an MCP client presents. A token
- * stands in for one member and carries that member's own reach; server access is the trust boundary
- * here, as it is for the other member CLIs. An AI account's owner has a second way in, from their
- * own settings screen (App\Features\AiAccount\AiAccountController) — bounded to the accounts they
- * own, and re-authenticated. Both mint through the same Action, so neither can drift from the
- * other's contract.
- *
- * The member is named by email or by `--id`, exactly one of the two: an AI account has no email
- * address, so the id is the only way to reach one from here.
+ * See docs/internals/mcp.md, "Tokens and abilities".
  */
 class McpTokenCommand extends Command
 {
@@ -66,8 +58,7 @@ class McpTokenCommand extends Command
             'via' => 'cli',
         ]);
 
-        // The only moment the credential is legible: the row keeps a SHA-256 of it, and it is kept
-        // out of every log. A lost token is replaced, never recovered.
+        // The only moment the credential is legible: the row keeps a SHA-256 of it and no log carries it.
         $this->info("Token issued for member [{$this->label($member)}]. Copy it now — it is not shown again.");
         $this->line($token->plainTextToken);
 
@@ -98,12 +89,8 @@ class McpTokenCommand extends Command
     }
 
     /**
-     * The member named by the email argument or by `--id`, exactly one of which must be given.
-     * Both or neither is a typo worth refusing rather than guessing at.
-     *
      * This lookup only decides what to say about an id that names nobody: what is acted on is decided
-     * by the act, which locks the row and confirms the address there ({@see MemberSelector}), so an
-     * address changing hands between this read and the mint is refused rather than followed.
+     * by the act, which locks the row and confirms the address there ({@see MemberSelector}).
      */
     private function resolveMember(): ?MemberSelector
     {
@@ -127,10 +114,7 @@ class McpTokenCommand extends Command
         return $email !== '' ? MemberSelector::foundByEmail($member, $email) : MemberSelector::of($member);
     }
 
-    /**
-     * Case-insensitive so an upgraded verbatim mixed-case address is still found on a
-     * case-sensitive store (IssueRegistrationToken precedent).
-     */
+    /** Case-insensitive so an upgraded verbatim mixed-case address is still found on a case-sensitive store. */
     private function byEmail(string $email): ?Member
     {
         return Member::whereRaw('lower(email) = ?', [Str::lower($email)])->first();

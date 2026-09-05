@@ -33,19 +33,12 @@ use RuntimeException;
 use Tests\Fixtures\CountedByteStream;
 use Tests\Fixtures\CountingFileStorage;
 
-/**
- * Pictures across the diary tools: the bytes behind the counts the other tools report, and the
- * base64 a caller posts to put them there.
- */
 class DiaryImageToolsTest extends McpTestCase
 {
-    /** The read tools' own per-response cap, as a caller experiences it. */
+    /** A copy of the trait's own cap, which is private to it. */
     private const CAP = 8 * 1024 * 1024;
 
-    /**
-     * The longest base64 one picture may arrive as, written out rather than recomputed: four
-     * characters per three bytes of the 5 MB a picture may decode to.
-     */
+    /** Written out rather than recomputed: four characters per three bytes of the 5 MB cap. */
     private const MAX_ENCODED = 6990508;
 
     protected function setUp(): void
@@ -73,7 +66,6 @@ class DiaryImageToolsTest extends McpTestCase
         ]);
     }
 
-    /** A stored picture in slot $number of $diary. */
     private function attach(Diary $diary, int $number, int $width = 800, int $height = 400): File
     {
         $file = $this->store('diary', (int) $diary->getKey(), $width, $height);
@@ -87,7 +79,6 @@ class DiaryImageToolsTest extends McpTestCase
         return $file;
     }
 
-    /** A stored picture on $comment, which numbers its pictures by position rather than by a column. */
     private function attachToComment(DiaryComment $comment, int $width = 800, int $height = 400): File
     {
         return $this->link($comment, $this->store('diaryComment', (int) $comment->getKey(), $width, $height));
@@ -112,7 +103,6 @@ class DiaryImageToolsTest extends McpTestCase
         );
     }
 
-    /** A file row owned by $type/$id that holds no picture at all. */
     private function notAPicture(string $type, int $id): File
     {
         return File::factory()->create([
@@ -122,7 +112,6 @@ class DiaryImageToolsTest extends McpTestCase
         ]);
     }
 
-    /** The bytes as stored, which is what the original size answers with. */
     private function stored(File $file): string
     {
         $stream = app(FileStorage::class)->readStream($file);
@@ -152,7 +141,6 @@ class DiaryImageToolsTest extends McpTestCase
         return OpenPneServer::tool(ReadDiaryImagesTool::class, $arguments);
     }
 
-    /** One picture as a caller sends it: the file's own bytes, base64-encoded. */
     private function encodedImage(int $width = 40, int $height = 30): string
     {
         // Held in a variable: a fake upload deletes its temporary file with the object.
@@ -253,11 +241,7 @@ class DiaryImageToolsTest extends McpTestCase
             ->assertStructuredContent(['images' => []]);
     }
 
-    /**
-     * A comment's pictures carry no slot column (OpenPNE 3 has none), so they are numbered by their
-     * position in the comment. Never by their row id: the rows here start well past 1, so a tool
-     * reading `number` as an id would answer the wrong picture — or refuse the right one.
-     */
+    /** The rows here start well past 1, so a tool reading `number` as a row id answers the wrong picture. */
     public function test_a_comments_pictures_are_numbered_by_position_and_never_by_row_id(): void
     {
         // A comment elsewhere, so the rows under test are not the first ones written.
@@ -271,9 +255,8 @@ class DiaryImageToolsTest extends McpTestCase
         $first = $this->attachToComment($comment, 800, 400);
         $second = $this->attachToComment($comment, 400, 800);
 
-        // Not exact ids: MySQL's auto-increment does not rewind on the per-test rollback, so what
-        // they are depends on which tests shared the process (the CI shard composition). The decoy's
-        // two rows always precede these, which is all the guard needs.
+        // Not exact ids: MySQL's auto-increment does not rewind on the per-test rollback, so only the
+        // decoy's two rows preceding these is guaranteed.
         $this->assertGreaterThan(2, min($comment->images()->pluck('id')->all()), 'the fixture must not number rows 1..N');
 
         $this->acting(Member::factory()->create());
@@ -309,10 +292,7 @@ class DiaryImageToolsTest extends McpTestCase
         }
     }
 
-    /**
-     * The comment is looked up inside the entry the caller passed the gate on. Both entries here are
-     * readable, so a global lookup would answer with the other one's picture rather than refuse.
-     */
+    /** Both entries here are readable, so a global lookup would answer with the other one's picture. */
     public function test_a_comment_of_another_entry_is_no_more_findable_than_one_that_is_not_there(): void
     {
         $author = Member::factory()->create();
@@ -324,7 +304,6 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->acting(Member::factory()->create());
 
-        // The other entry is readable in its own right, which is what makes this a scoping test.
         $this->read(['diary_id' => $elsewhere->getKey(), 'comment_id' => $strayed->getKey(), 'size' => 'original'])
             ->assertOk()
             ->assertSee($this->wire($this->stored($secret)));
@@ -359,11 +338,7 @@ class DiaryImageToolsTest extends McpTestCase
         }
     }
 
-    /**
-     * The same rule inside an entry as between them, and the position a comment's pictures are
-     * counted at is the row's, settled before any row is judged: dropping the middle one from the
-     * numbering would let a caller tell "not a picture" from "no picture at all".
-     */
+    /** Dropping the middle row from the numbering would let a caller tell "not a picture" from "no picture at all". */
     public function test_a_number_that_holds_no_picture_is_refused_when_named_and_passed_over_when_not(): void
     {
         $author = Member::factory()->create();
@@ -493,7 +468,6 @@ class DiaryImageToolsTest extends McpTestCase
         $file = $diary->images()->with('file')->first()->file;
         $this->assertSame('diary', $file->related_entity_type);
         $this->assertSame($diary->getKey(), $file->related_entity_id);
-        // The name is the server's own; nothing a caller sent decides it.
         $this->assertSame('upload', $file->original_filename);
 
         $this->read(['diary_id' => $diary->getKey(), 'size' => 'original'])
@@ -532,7 +506,6 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame('diaryComment', $file->related_entity_type);
         $this->assertSame($comment->getKey(), $file->related_entity_id);
 
-        // The count is what tells a reader the comment is worth asking for pictures on.
         OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $diary->getKey()])
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json->where('diary.comments.0.imageCount', 1)->etc());
@@ -572,13 +545,7 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, File::query()->count());
     }
 
-    /**
-     * The bound is on the base64 that arrives, checked before it is decoded — base64_decode()
-     * allocates its output from the length of its input, so a string judged afterwards is a string
-     * already in memory. Line breaks are skipped by the decoder rather than refused by it, so at the
-     * bound this is still one small picture, and a single character more is refused whatever it
-     * would have decoded to.
-     */
+    /** Line breaks are skipped by the decoder, so at the bound this is still one small picture. */
     public function test_a_picture_longer_than_a_picture_may_be_is_refused_before_it_is_decoded(): void
     {
         $this->acting(Member::factory()->create());
@@ -597,12 +564,7 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(1, DiaryImage::query()->count());
     }
 
-    /**
-     * The bound above is stated in encoded characters, which settles every picture but one: base64
-     * carries three bytes per four characters, so a string at the bound can still decode to a single
-     * byte over the 5 MB cap. That last byte is the shared rules' own `max`, measuring the decoded
-     * file.
-     */
+    /** A string at the encoded bound can still decode to a single byte over the 5 MB cap. */
     public function test_a_picture_over_the_size_cap_is_refused_by_the_rule_that_measures_it(): void
     {
         $this->acting(Member::factory()->create());
@@ -617,7 +579,6 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, File::query()->count());
     }
 
-    /** What a picture is is decided by reading it, whatever the caller called it. */
     public function test_bytes_that_are_not_a_picture_are_refused(): void
     {
         $this->acting(Member::factory()->create());
@@ -636,11 +597,6 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, File::query()->count());
     }
 
-    /**
-     * Standard base64 and nothing else. A `data:` prefix and the url-safe alphabet carry characters
-     * the decoder refuses, so neither is quietly read as something else; padding and line breaks are
-     * the decoder's own latitude, and both post.
-     */
     public function test_anything_but_standard_base64_is_refused(): void
     {
         $this->acting(Member::factory()->create());
@@ -693,10 +649,6 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, DiaryImage::query()->count());
     }
 
-    /**
-     * A picture that passes the rules and then fails the metadata strip is a field error on the
-     * picture, never a 500 — the same conversion the web forms get (PostImages::stripFailed).
-     */
     public function test_a_picture_that_cannot_be_stripped_is_refused_as_an_error_on_that_picture(): void
     {
         $this->acting(Member::factory()->create());
@@ -712,10 +664,6 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, DiaryImage::query()->count());
     }
 
-    /**
-     * A disk write is not transactional, so the bytes of a picture stored before a later one failed
-     * are compensated when the transaction rolls back — and the temporary files go either way.
-     */
     public function test_a_failed_second_picture_leaves_neither_bytes_nor_rows_behind(): void
     {
         config(['openpne.files.disk' => 'local']);
@@ -756,8 +704,8 @@ class DiaryImageToolsTest extends McpTestCase
     }
 
     /**
-     * Record the temporary file behind every upload that reaches the store, and assert while it is
-     * being stored that it is still there — the other half of "gone afterwards".
+     * Records the temporary file behind every upload and asserts, while it is being stored, that it
+     * is still there — the other half of "gone afterwards".
      *
      * @param  array<int, string>  $paths
      */

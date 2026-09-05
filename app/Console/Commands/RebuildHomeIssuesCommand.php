@@ -14,15 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Republishes the archive from a day onwards, each day over its own window.
- *
- * For when what qualifies has changed: an issue is a ledger of what the rules admitted on the day it
- * was written, and it does not re-read them. Every issue from the day on is dropped and each day
- * republished oldest first, so the never-again ledger is rebuilt in the order it would have been
- * written and the numbers count on from the issues left standing.
- *
- * One transaction end to end: an archive with half its issues dropped is not an archive. That also
- * makes the dry run exact — it runs the whole rebuild, numbers included, and rolls it back.
+ * See docs/internals/home-issues.md, "Schedule and idempotency".
  */
 class RebuildHomeIssuesCommand extends Command
 {
@@ -97,8 +89,8 @@ class RebuildHomeIssuesCommand extends Command
 
     private function rebuild(PublishHomeIssue $publish, CarbonImmutable $from, CarbonImmutable $latest, CarbonImmutable $boundary, bool $dryRun): void
     {
-        // Every issue whose window ends after the boundary starts on or after it (the straddling
-        // check above), so this is exactly the stretch being rebuilt. Items go with the cascade.
+        // The straddling check above makes this exactly the stretch being rebuilt; items go with the
+        // cascade.
         $dropping = HomeIssue::query()->where('published_at', '>', $boundary);
         $dropped = $dropping->clone()->orderBy('issue_date')->pluck('issue_date');
         $dropping->delete();
@@ -120,7 +112,6 @@ class RebuildHomeIssuesCommand extends Command
 
         for ($day = $from; $day->lessThanOrEqualTo($latest); $day = $day->addDay()) {
             $window = HomeIssueDay::window($day);
-            // As of the morning the issue would have gone out, as a backfill is (PublishHomeIssueCommand).
             $issue = $publish($window->end, null, $window);
 
             if ($issue === null) {
@@ -145,7 +136,6 @@ class RebuildHomeIssuesCommand extends Command
         ));
     }
 
-    /** The day the rebuild starts on, or null with the reason printed. */
     private function firstDay(): ?CarbonImmutable
     {
         $from = $this->option('from');
