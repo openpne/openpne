@@ -33,9 +33,9 @@ final class ProfilePageVisibility
     }
 
     /** Whether the privacy category has anything to set: an age to gate, or the profile-page choice. */
-    public static function privacyCategoryAvailable(): bool
+    public static function privacyCategoryAvailable(?bool $ageAvailable = null): bool
     {
-        return app(BirthdayFieldExists::class)() || self::memberMayChoose();
+        return ($ageAvailable ?? app(BirthdayFieldExists::class)()) || self::memberMayChoose();
     }
 
     public static function rule(): Enum
