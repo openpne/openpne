@@ -65,6 +65,7 @@ class PostingSwitchTest extends TestCase
         $html = $this->actingAs($this->member)->get(route('timeline.index'))->assertOk()->getContent();
 
         // The own row keeps "削除 | timestamp" while another member's row is the timestamp alone, with no leading separator.
+        $this->assertStringContainsString('theirs', $html);
         $this->assertStringContainsString('| <a href="'.route('timeline.show', $this->post).'">', $html);
         $this->assertStringNotContainsString('| <a href="'.route('timeline.show', $other).'">', $html);
     }
