@@ -11,11 +11,8 @@ use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The feed rows for received messages, spent by the receipts they point at.
- *
- * The receipt is what both read paths agree on — the mailbox opens one message, the conversation
- * marks everything up to a position — so the rows are matched against `read_at` after the fact
- * rather than against whichever ids the caller believes it just covered.
+ * Rows are matched against `read_at` after the fact rather than against the ids the caller believes
+ * it just covered, since the receipt is the only thing both read paths agree on.
  */
 class DirectMessageNotificationRows
 {

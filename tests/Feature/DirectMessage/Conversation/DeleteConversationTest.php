@@ -15,10 +15,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 
-/**
- * Deleting a conversation: everything it holds leaves the viewer's screens at once, and nothing of
- * the counterpart's moves.
- */
 class DeleteConversationTest extends ConversationTestCase
 {
     private function deleteConversation(Member $viewer, ?Member $counterpart): int

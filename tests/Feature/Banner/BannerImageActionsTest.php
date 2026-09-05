@@ -39,8 +39,7 @@ class BannerImageActionsTest extends TestCase
         $this->assertTrue($image->banners->contains($banner));
         $this->assertSame('https://ad.example.test', $image->url);
 
-        // Public: a guest can fetch the bytes through the banner delivery route, served inline as the
-        // raster image type.
+        // Banners show to guests, so the delivery route is not auth-gated.
         $response = $this->get(route('banner.image', $file->name));
         $response->assertOk();
         $this->assertStringContainsString('image/', (string) $response->headers->get('Content-Type'));
@@ -75,8 +74,7 @@ class BannerImageActionsTest extends TestCase
 
     public function test_update_with_null_placements_leaves_them_untouched(): void
     {
-        // The image edit form no longer manages placements (they are chosen on the Banner page), so a
-        // null placements argument must preserve the existing associations.
+        // Null placements is what an edit that does not touch them passes.
         $banner = Banner::create(['name' => 'top_before']);
         $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('x.png', 10, 10), 'https://old.test', 'Old', [$banner->getKey()]);
 

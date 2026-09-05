@@ -8,22 +8,9 @@ use App\Models\Member;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * What a conversation between the viewer and one counterpart contains — the single definition every
- * chat read path narrows by.
- *
- * The mailbox stores a message once (direct_messages) and its delivery per recipient
- * (direct_message_recipients); a conversation is the two directions of that pair composed back
- * together. Both arms select from direct_messages and test the receipts with EXISTS, rather than
- * unioning two derived tables in the FROM clause: a keyset page has to order and slice the composed
- * set, and a UNION subquery cannot be indexed for that on SQLite and MySQL alike.
- *
- * A null counterpart is the **withdrawn bucket**: the FKs are nullOnDelete, so every conversation
- * whose other side has left the site collapses into one, and the comparison switches to IS NULL
- * rather than binding a null that would make every row UNKNOWN.
- *
- * Visibility is per-side and nothing else. The sent arm reads only the sender's own columns and the
- * received arm only the recipient's own, so trashing your copy never removes it from theirs. Block is
- * deliberately not consulted — see docs/internals/direct-messages.md.
+ * The single definition of what a conversation contains: a read path that narrows further is
+ * answering a different question
+ * (`docs/internals/direct-messages.md`, "A conversation is two arms over one table").
  */
 class ConversationScope
 {
@@ -34,8 +21,7 @@ class ConversationScope
      */
     public static function apply(Builder $query, Member $viewer, ?Member $counterpart): Builder
     {
-        // A draft belongs to neither arm — it has no receipt at all, so it is invisible to the
-        // recipient and stays in the sender's drafts box rather than in the conversation.
+        // A draft has no receipt, so this is a belt against a stray one rather than what excludes it.
         return $query
             ->where('is_draft', false)
             ->where(fn (Builder $conversation) => $conversation
@@ -44,9 +30,8 @@ class ConversationScope
     }
 
     /**
-     * The message half of the received arm: delivered, and written by the counterpart. Public
-     * because unread asks the same set from the receipt side — what is unread, and what a report may
-     * mark read, is what this conversation received — and the two readings must not drift apart.
+     * Public because unread and mark-read ask the same set from the receipt side, and the two
+     * readings must not drift apart.
      *
      * @param  Builder<DirectMessage>  $query
      */
@@ -57,9 +42,8 @@ class ConversationScope
     }
 
     /**
-     * The message half of the sent arm: written by the viewer, and delivered to the counterpart.
-     * Public for the reason inbound is — deleting a conversation moves the viewer's own side of
-     * exactly these rows, and the two readings must not drift apart.
+     * Public because deleting a conversation moves the viewer's own side of exactly these rows, and
+     * the two readings must not drift apart.
      *
      * @param  Builder<DirectMessage>  $query
      */
@@ -71,7 +55,6 @@ class ConversationScope
             ->whereHas('recipients', fn (Builder $receipt) => self::isCounterpart($receipt, 'recipient_id', $counterpart));
     }
 
-    /** What the viewer sent to the counterpart, minus what the viewer has trashed or purged. */
     private static function sent(Builder $query, Member $viewer, ?Member $counterpart): void
     {
         self::outbound($query, $viewer, $counterpart);
@@ -79,7 +62,6 @@ class ConversationScope
         $query->whereNull('sender_deleted_at')->whereNull('sender_purged_at');
     }
 
-    /** What the counterpart sent the viewer, minus what the viewer has trashed or purged. */
     private static function received(Builder $query, Member $viewer, ?Member $counterpart): void
     {
         self::inbound($query, $counterpart);

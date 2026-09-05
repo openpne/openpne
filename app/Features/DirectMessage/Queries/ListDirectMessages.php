@@ -13,11 +13,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * One member's view of a message box, newest first, as normalized
- * DirectMessageListItems. Each box draws from the side that owns its state: the inbox and the recipient
- * half of trash from direct_message_recipients; sent/draft and the sender half of trash from direct_messages. The
- * box conditions live in model scopes (DirectMessage::senderLive/Trashed, DirectMessageRecipient::ofDelivered/
- * recipientLive/Trashed) so every query here, ShowDirectMessage, and the trash actions agree on them.
+ * The box conditions live in the model scopes rather than here, so every reader of a box states them
+ * once.
  */
 class ListDirectMessages
 {
@@ -25,9 +22,8 @@ class ListDirectMessages
     public const PER_PAGE = 20;
 
     /**
-     * $withRepliedStatus opts into the inbox replied lookup (one extra query) — only the Classic
-     * status icons read it, so only that surface pays for it. $pageName names the query parameter
-     * the page number is read from, for a screen that shows a box beside another paged list.
+     * `$withRepliedStatus` costs one extra query per page, so it is opt-in. `$pageName` moves the
+     * page parameter, so a screen showing this box beside another paged list pages them separately.
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */
@@ -49,8 +45,7 @@ class ListDirectMessages
             ->recipientLive()
             ->where('recipient_id', $viewer->getKey())
             ->with('directMessage.sender.avatar.file')
-            // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message,
-            // so a message delivered later sorts by its delivery time, not its authoring time.
+            // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message.
             ->orderByDesc('created_at')
             ->paginate($perPage, ['*'], $pageName);
 
@@ -73,9 +68,9 @@ class ListDirectMessages
     }
 
     /**
-     * Which of these messages the viewer has replied to (OpenPNE 3 is_hensin: a sent message of
-     * theirs whose return_message_id points back, folded onto parent_id here). Trash state does not
-     * clear it — OpenPNE 3 keeps the sender's row when the reply is trashed. One query per page.
+     * OpenPNE 3 is_hensin: a sent message of the viewer's whose return_message_id points back, folded
+     * onto `parent_id` here. Trash state does not clear it, as OpenPNE 3 keeps the sender's row when
+     * the reply is trashed.
      *
      * @param  list<int>  $messageIds
      * @return array<int, true>
@@ -98,8 +93,7 @@ class ListDirectMessages
     }
 
     /**
-     * Sent box (draft=false) or draft box (draft=true): messages this member authored. A draft has no
-     * receipt, so its recipient is read from the draft_recipient_id column.
+     * A draft has no receipt, so its recipient is read from the `draft_recipient_id` column.
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */
@@ -123,8 +117,8 @@ class ListDirectMessages
     }
 
     /**
-     * Trash mixes both sides: messages this member trashed as sender and receipts trashed as
-     * recipient, newest first. Paginated through a UNION of the two id sets, then hydrated.
+     * The trash box mixes both sides, so it pages a UNION of the two id sets rather than one table's
+     * rows.
      *
      * @return LengthAwarePaginator<int, DirectMessageListItem>
      */

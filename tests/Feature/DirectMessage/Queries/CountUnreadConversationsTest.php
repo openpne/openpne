@@ -10,10 +10,7 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The Modern badge counts conversations with something new; the Classic home caution keeps counting
- * messages. Two questions about the same receipts, so both are asserted over the same fixtures.
- */
+/** Two questions about the same receipts, so both are asserted over the same fixtures. */
 class CountUnreadConversationsTest extends TestCase
 {
     use RefreshDatabase;

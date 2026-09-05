@@ -8,11 +8,6 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The mailbox URLs under chat. Every OpenPNE 3 reading page has a chat equivalent, so a Modern
- * viewer is sent there rather than shown a second reading of the same rows — the URLs themselves are
- * durable and stay exactly as they are, which is what Classic still renders them as.
- */
 class DirectMessageRoutesTest extends TestCase
 {
     use RefreshDatabase;
@@ -71,7 +66,6 @@ class DirectMessageRoutesTest extends TestCase
     }
 
     /**
-     * A message URL names a message; the conversation it belongs to is where that message is read.
      * The counterpart is seen from the viewer's side, so the same row sends the two of them to each
      * other rather than both to the sender.
      */
@@ -171,10 +165,6 @@ class DirectMessageRoutesTest extends TestCase
             ->assertRedirect(route('message.chat.index'));
     }
 
-    /**
-     * The message ids are sequential and the URLs are public, so a redirect naming the other side
-     * would answer "who is member N corresponding with" for any id. Only a party gets one.
-     */
     public function test_a_stranger_gets_no_redirect_naming_the_parties(): void
     {
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();

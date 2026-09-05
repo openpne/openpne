@@ -18,9 +18,8 @@ use RuntimeException;
 use Tests\TestCase;
 
 /**
- * The branding save. The Filament FileUpload field cannot be driven through a Livewire test (no real
- * temp upload), so the file behaviour is exercised at the action the page delegates to — the seam
- * that owns the compensation, the superseded-token lookup and the delete-after-commit ordering.
+ * The Filament FileUpload field cannot be driven through a Livewire test (no real temp upload), so
+ * the file behaviour is exercised at the action the page delegates to.
  */
 class SaveBrandingSettingsTest extends TestCase
 {

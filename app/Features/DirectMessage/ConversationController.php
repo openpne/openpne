@@ -28,27 +28,15 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * The message store read as chat: the list of conversations, and each one with one member — the
- * stored mailbox rows composed back into the two directions of a single thread (ConversationScope).
- * The trash and the draft form are the mailbox's still.
- *
- * Renders Inertia directly rather than through SurfaceResolver: chat has no OpenPNE 3 counterpart, so
- * there is no Classic screen to be compatible with, as a group's talk takes the same shape.
- *
- * The page ships the newest slice, or the one a `?m=` deep link lands in; everything after it moves
- * over JSON — "load older" walks back by keyset, a poll asks what has arrived since, and a send comes
- * back as the one message it wrote.
+ * Renders Inertia directly rather than through SurfaceResolver: chat has no OpenPNE 3 counterpart,
+ * so there is no Classic screen to be compatible with
+ * (`docs/internals/direct-messages.md`, "Modern reads the store as chat").
  */
 class ConversationController extends Controller
 {
     /** The drafts pager's own page parameter, so paging one list never moves the other. */
     private const DRAFT_PAGE = 'draft_page';
 
-    /**
-     * Every conversation the viewer is in, most recently written in first, with the mailbox's drafts
-     * under them: a draft has no receipt, so it is in neither arm of any conversation and has
-     * nowhere else to be found.
-     */
     public function index(ConversationList $conversations, ListDirectMessages $drafts): InertiaResponse
     {
         $viewer = $this->viewer();
@@ -61,16 +49,11 @@ class ConversationController extends Controller
         ]);
     }
 
-    /**
-     * Who to write to, chosen before there is a conversation to write in. A screen rather than a
-     * dialog: it is the hub's primary action, and on a phone it is the whole sheet.
-     */
     public function new(): InertiaResponse
     {
         return Inertia::render('message/new');
     }
 
-    /** What the picker's search reads (JSON), on the keystroke-rate limiter the mention pickers use. */
     public function recipients(Request $request, RecipientCandidates $query): JsonResponse
     {
         $request->validate(['q' => ['nullable', 'string', 'max:100']]);
@@ -87,21 +70,15 @@ class ConversationController extends Controller
         return $this->conversation($request, $this->counterpart($member), $query, $unread);
     }
 
-    /**
-     * Everyone whose account is gone, as one conversation. The FKs are nullOnDelete, so a withdrawn
-     * member leaves no id to key a conversation by, and a per-person room could not be addressed.
-     */
     public function showWithdrawn(Request $request, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
         return $this->conversation($request, null, $query, $unread);
     }
 
     /**
-     * Write into the conversation. There is no such route for the withdrawn bucket: it names no
-     * member to deliver to, so that conversation is read-only by construction.
-     *
-     * Returns the message it wrote, in the shape the paging endpoint uses, so the composer appends it
-     * rather than re-reading the page.
+     * There is no such route for the withdrawn bucket, which names no member to deliver to. The
+     * message comes back in the shape the paging endpoint uses, so the composer appends it rather
+     * than re-reading the page.
      */
     public function store(StoreChatMessageRequest $request, Member $member, SendDirectMessage $action): JsonResponse
     {
@@ -111,31 +88,24 @@ class ConversationController extends Controller
         try {
             $message = $action(
                 $viewer,
-                // A message written here has no subject and no lineage: the conversation is linear,
-                // and the screen has nothing to show for either.
                 new DirectMessageComposeData($counterpart->getKey(), subject: null, body: $request->validated('body')),
                 asDraft: false,
                 images: $request->pickedImages(),
             );
         } catch (DirectMessageActionException) {
-            // A block or a ban, which is the same refusal the mailbox's compose gets. Reported
-            // against `body` so the composer shows it over the message it is still holding.
+            // Reported against `body` so the composer keeps the whole draft it is still holding.
             throw ValidationException::withMessages(['body' => __('Cannot send the message.')]);
         }
 
-        // The sender is the viewer; hand the model over rather than re-reading the row just written.
         $message->setRelation('sender', $viewer->loadMissing('avatar.file'));
-        // PostImages creates the join rows through the relation, which does not populate it, and the
-        // receipt is what answers `read` — load both rather than letting the serializer lazy-load.
+        // PostImages creates the join rows through the relation without populating it, so both are
+        // loaded here rather than lazily in the serializer.
         $message->load(['files.file', 'recipients']);
 
         return response()->json(ConversationMessageSerializer::message($message, $viewer, $counterpart), 201);
     }
 
-    /**
-     * "I have read this conversation as far as this message." Fire-and-forget from the reader's
-     * side: it carries no body back, and the shell's own refresh is what moves the badge.
-     */
+    /** Fire-and-forget: no body comes back, and the shell's own refresh is what moves the badge. */
     public function read(MarkConversationReadRequest $request, Member $member, MarkConversationRead $action, DirectMessageNotificationRows $feedRows): Response
     {
         return $this->markRead($request, $this->counterpart($member), $action, $feedRows);
@@ -146,10 +116,7 @@ class ConversationController extends Controller
         return $this->markRead($request, null, $action, $feedRows);
     }
 
-    /**
-     * Take this conversation off the viewer's screens. Never a 404 for an empty one: the member asked
-     * for it to be gone, and it is.
-     */
+    /** An empty conversation is not a 404: the member asked for it to be gone, and it is. */
     public function delete(Member $member, DeleteConversation $action): RedirectResponse
     {
         return $this->deleteConversation($this->counterpart($member), $action);
@@ -161,10 +128,8 @@ class ConversationController extends Controller
     }
 
     /**
-     * One page either side of a cursor the client was handed: `after` for the poll, `before` for
-     * "load older", `context` for the page a position sits in. A cursor that does not parse is simply
-     * no cursor — pagination is a position, not a permission, and the conversation's own predicate
-     * already decided which rows exist for this reader.
+     * A cursor that does not parse is read as no cursor: pagination is a position, not a permission,
+     * and the conversation's own predicate already decided which rows exist for this reader.
      */
     public function messages(Request $request, Member $member, ConversationMessages $query): JsonResponse
     {
@@ -176,7 +141,7 @@ class ConversationController extends Controller
         return $this->page($request, null, $query);
     }
 
-    /** A conversation is with someone else; there is no room to be in with yourself (OpenPNE 3 404s a self-addressed message). */
+    /** Self-addressing is a 404, as OpenPNE 3 answered it. */
     private function counterpart(Member $member): Member
     {
         abort_if($this->viewer()->is($member), 404);
@@ -201,12 +166,10 @@ class ConversationController extends Controller
                 $counterpart,
             ),
             'anchor' => $anchor === null ? null : (int) $anchor->getKey(),
-            // Whether this conversation has a composer at all. The withdrawn bucket never does — it
-            // names no member to deliver to — and a blocked or banned counterpart is refused at the
-            // same gate the mailbox's compose uses, so the bar is not offered rather than shown dead.
+            // A refused pair gets no composer rather than one shown dead.
             'canSend' => $counterpart !== null && DirectMessageAccess::canSend($viewer, $counterpart),
-            // Where the reader stands in this conversation, independent of the slice `?m=` opened:
-            // a link names a message, the boundary names what has not been read.
+            // Independent of the slice `?m=` opened: a link names a message, the boundary names what
+            // has not been read.
             'unreadSnapshot' => ConversationMessageSerializer::unreadSnapshot($unread($viewer, $counterpart)),
         ]);
     }
@@ -215,8 +178,6 @@ class ConversationController extends Controller
     {
         $action($this->viewer(), $counterpart);
 
-        // The list, not the room that was just emptied: what the delete left behind is a screen with
-        // nothing on it.
         return redirect()->route('message.chat.index')->with('status', __('Deleted the conversation.'));
     }
 
@@ -225,8 +186,8 @@ class ConversationController extends Controller
         try {
             $action($this->viewer(), $counterpart, (int) $request->validated('messageId'));
         } catch (DirectMessageActionException) {
-            // A message trashed from the mailbox between rendering and this call is an ordinary
-            // race, and so is a stale id from another conversation; neither is worth its own answer.
+            // A stale id — trashed from the mailbox mid-visit, or another conversation's — is an
+            // ordinary race rather than an error worth its own answer.
             abort(404);
         }
 
@@ -254,13 +215,8 @@ class ConversationController extends Controller
     }
 
     /**
-     * The message `?m=` asked to open on, or null for the ordinary newest page.
-     *
-     * Best-effort by contract, and resolved through the conversation's own predicate: a link naming a
-     * message from another conversation, a draft, one the viewer's own side has trashed or purged, or
-     * nothing that parses opens the newest page instead. (The counterpart's trash never hides a row
-     * here — visibility is per-side.) A stale link is a link to a conversation that has moved on, and
-     * arriving in it beats being refused.
+     * Best-effort: a `?m=` this conversation cannot see, or one that does not parse, opens the newest
+     * page rather than refusing.
      */
     private function anchor(Member $viewer, ?Member $counterpart, mixed $id): ?DirectMessage
     {

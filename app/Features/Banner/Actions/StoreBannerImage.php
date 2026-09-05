@@ -7,12 +7,8 @@ use App\Models\BannerImage;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Adds an image to the banner pool from an uploaded file and associates it with placements.
- *
- * Wrapped in PostImages::compensating so a failure after the bytes are stored (creating the row,
- * back-linking the File, syncing placements) does not orphan them on a disk backend. The File is
- * stored first (banner_images.file_id is NOT NULL), then the owner id is back-linked once the row
- * exists, so FilePolicy can resolve the image as its (public) owner.
+ * The File is stored before the row because `banner_images.file_id` is NOT NULL, so its owner id is
+ * back-linked afterwards for FilePolicy to resolve the image by.
  */
 class StoreBannerImage
 {

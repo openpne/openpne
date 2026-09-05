@@ -5,7 +5,6 @@ namespace Tests\Feature\DirectMessage\Conversation;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 
-/** Who may open a conversation at all. */
 class ConversationGateTest extends ConversationTestCase
 {
     public function test_a_guest_is_sent_to_the_login_screen(): void

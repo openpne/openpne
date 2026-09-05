@@ -18,9 +18,8 @@ use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
- * The delivery-time re-check. The mail carries the message body, and the queued job outlives the
- * facts it was enqueued under — so every case here changes the world *between* the send and the
- * delivery, and asks what actually reached the transport and the feed.
+ * Every case here changes the world between the send and the delivery, and asks what reached the
+ * transport and the feed.
  */
 class DirectMessageDeliveryReCheckTest extends TestCase
 {
@@ -116,7 +115,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Either direction: a block means these two are not to be put in front of each other. */
     public function test_a_block_by_the_sender_stops_both_channels_too(): void
     {
         $jobs = $this->queuedSend();
@@ -141,7 +139,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Purge revokes reading, so the body must not follow the recipient out by mail. */
     public function test_a_receipt_purged_before_delivery_stops_both_channels(): void
     {
         $jobs = $this->queuedSend();
@@ -152,7 +149,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Trash is not purge: a trashed message is still the recipient's, and still restorable. */
     public function test_a_receipt_only_trashed_before_delivery_still_arrives(): void
     {
         $jobs = $this->queuedSend();
@@ -174,11 +170,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /**
-     * The one fact the two channels answer differently: a feed row for a message already read would
-     * stand the bell over something the recipient has read, while the mail is a copy of the message
-     * rather than a badge, and still goes.
-     */
     public function test_a_message_read_before_delivery_keeps_the_mail_and_writes_no_feed_row(): void
     {
         $jobs = $this->queuedSend();
@@ -190,7 +181,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertDatabaseCount('notifications', 0);
     }
 
-    /** A sender or a message gone before delivery takes the queued job with it. */
     public function test_the_job_is_dropped_when_its_models_are_missing(): void
     {
         $jobs = $this->queuedSend();

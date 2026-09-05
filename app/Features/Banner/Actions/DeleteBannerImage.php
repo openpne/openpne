@@ -6,12 +6,9 @@ use App\Models\BannerImage;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Removes a banner image and its stored File.
- *
- * The banner_use_images placements cascade off the row, but the File does not (the FK cascade runs
- * files→banner_images, not the reverse), so it is deleted explicitly: the row is locked then
- * dropped inside the transaction (so a concurrent replace can't leave its File orphaned) and the
- * File — bytes irreversible on a disk backend — is purged after commit.
+ * The FK cascade runs files→banner_images and not the reverse, so dropping the row leaves its File
+ * behind to be deleted here. The row is locked and dropped inside one transaction so a concurrent
+ * replace cannot orphan its File.
  */
 class DeleteBannerImage
 {
@@ -30,6 +27,7 @@ class DeleteBannerImage
             return $file;
         });
 
+        // After the commit: a disk backend's byte deletion cannot be rolled back.
         $file?->delete();
     }
 }

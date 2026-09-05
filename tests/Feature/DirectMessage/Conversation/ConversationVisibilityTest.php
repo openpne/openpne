@@ -6,10 +6,6 @@ use App\Models\DirectMessage;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
-/**
- * What a conversation contains: the two arms of the stored pair, narrowed by each side's own trash
- * columns and by nothing else.
- */
 class ConversationVisibilityTest extends ConversationTestCase
 {
     public function test_a_conversation_holds_both_directions_of_the_pair(): void
@@ -76,11 +72,7 @@ class ConversationVisibilityTest extends ConversationTestCase
         $this->assertSame(['sent, purged by me', 'received, purged by me', 'still here'], $this->bodies($theirs));
     }
 
-    /**
-     * A purge always follows a trash, so the trash column alone would answer for both — except for a
-     * stray row that carries only the purge, which the model scopes guard against too. Purged is
-     * purged whichever way the row got there.
-     */
+    /** These rows carry only the purge, which a check on the trash column alone would miss. */
     public function test_a_purge_without_a_trash_is_still_a_purge(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
@@ -109,10 +101,6 @@ class ConversationVisibilityTest extends ConversationTestCase
         $this->assertSame([], $this->bodies($this->actingAs($other)->getJson("/messages/{$viewer->getKey()}/messages")->json()));
     }
 
-    /**
-     * History is the record of what was said. A block stops the two being put in front of each other
-     * again — it does not edit what already happened.
-     */
     public function test_a_block_hides_nothing(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

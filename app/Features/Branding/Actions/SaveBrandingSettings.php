@@ -15,17 +15,10 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Applies one admin save of the branding settings: the brand color plus, per file setting, a new
- * upload, a removal, or no change.
- *
- * The uploads are stored before the settings transaction (FileUploader commits its own), so every
- * File stored during this save is tracked and deleted again if anything later throws — including the
- * fail-closed ImageMetadataStripException, which still propagates for the caller to turn into a
- * message. The superseded token is re-read under a row lock inside the transaction, not taken from
- * the form the admin rendered, so a concurrent save cannot leave its file orphaned. Replaced files
- * are purged only after commit (their bytes are irreversible on a disk backend), and only when they
- * are still the ownerless public assets this page uploads — a corrupted setting pointing at someone
- * else's file must not take it down with it.
+ * Every File stored during this save is deleted again if anything later throws, the fail-closed
+ * ImageMetadataStripException included — that one still propagates for the caller to report. The
+ * superseded token is re-read under a row lock inside the transaction rather than taken from the form
+ * the admin rendered, so a concurrent save cannot leave its file orphaned.
  */
 class SaveBrandingSettings
 {
@@ -78,6 +71,7 @@ class SaveBrandingSettings
         // be handed a file that is already gone.
         $this->settings->clearCache();
 
+        // After the commit: a disk backend's byte deletion cannot be rolled back.
         foreach ($superseded as $token) {
             $file = File::where('name', $token)->first();
 
@@ -88,10 +82,8 @@ class SaveBrandingSettings
     }
 
     /**
-     * Write every Branding key and report the file tokens this save superseded.
-     *
      * @param  array<string, string>  $tokens
-     * @return list<string>
+     * @return list<string> the file tokens this save superseded
      */
     private function persist(string $brandColor, array $tokens): array
     {
@@ -122,7 +114,7 @@ class SaveBrandingSettings
         return $superseded;
     }
 
-    /** Whether the file is one of this page's own uploads, rather than something a member owns. */
+    /** Only this page's own ownerless public uploads are purged: a setting corrupted into pointing at a member's file must not take it down. */
     private function isOwnerlessPublicAsset(File $file): bool
     {
         return $file->explicit_visibility === File::VISIBILITY_PUBLIC

@@ -13,9 +13,8 @@ use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
- * What the OpenPNE 3 compose flow still does under chat. The GET forms redirect into the
- * conversation (DirectMessageRoutesTest covers where); the submits are surface-agnostic and land
- * back in the mailbox's own boxes, which redirect on from there.
+ * The GET forms redirect into the conversation; this pins the submits, which are surface-agnostic
+ * and land back in the mailbox's own boxes.
  */
 class DirectMessageComposeTest extends TestCase
 {

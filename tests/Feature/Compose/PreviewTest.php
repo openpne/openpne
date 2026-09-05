@@ -6,10 +6,6 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The shared Markdown preview endpoint: authenticated-only, renders through the same sanitized
- * pipeline as a stored body, and throttled on its own limiter.
- */
 class PreviewTest extends TestCase
 {
     use RefreshDatabase;

@@ -2,10 +2,6 @@
 
 namespace App\Features\DirectMessage;
 
-/**
- * The four message boxes. Centralises each box's route names and labels so the controller,
- * queries, list view, and sidemenu agree.
- */
 enum DirectMessageBox: string
 {
     case Receive = 'receive';
@@ -13,7 +9,6 @@ enum DirectMessageBox: string
     case Draft = 'draft';
     case Trash = 'trash';
 
-    /** The list route. */
     public function listRoute(): string
     {
         return match ($this) {
@@ -24,10 +19,7 @@ enum DirectMessageBox: string
         };
     }
 
-    /**
-     * The route that opens a message from this box: the show page, or the edit form for a
-     * draft (OpenPNE 3 also opens a draft in the compose form — a draft has no show page).
-     */
+    /** A draft has no show page, so the draft box opens its edit form as OpenPNE 3 did. */
     public function openRoute(): string
     {
         return match ($this) {
@@ -48,7 +40,6 @@ enum DirectMessageBox: string
         };
     }
 
-    /** The counterparty column header: Sender (inbox), Recipient (sent/draft), Sender/Recipient (trash mixes sides). */
     public function counterpartyHeading(): string
     {
         return match ($this) {

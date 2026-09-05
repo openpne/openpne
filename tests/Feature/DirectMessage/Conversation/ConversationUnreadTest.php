@@ -6,10 +6,6 @@ use App\Models\DirectMessage;
 use App\Models\Member;
 use Illuminate\Support\Carbon;
 
-/**
- * The unread boundary a conversation opens on: the oldest message still waiting, counted over the
- * same rows the screen draws.
- */
 class ConversationUnreadTest extends ConversationTestCase
 {
     /** @return array<string, mixed> the rendered page's props */
@@ -50,11 +46,7 @@ class ConversationUnreadTest extends ConversationTestCase
         $this->assertSame((int) $first->getKey(), $snapshot['firstUnread']['id']);
     }
 
-    /**
-     * The reason the boundary is the first unread rather than a read-through position: the mailbox
-     * opens messages one at a time, so read state has holes in it, and only the oldest thing still
-     * waiting says where reading has to resume.
-     */
+    /** The mailbox opens messages one at a time, so the fixture's read state has a hole in it. */
     public function test_a_newer_message_read_from_the_mailbox_leaves_the_boundary_behind_it(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
@@ -133,7 +125,6 @@ class ConversationUnreadTest extends ConversationTestCase
         $this->assertSame('message 0', $page['messages'][0]['body']);
     }
 
-    /** A deep link names a message; the boundary names what has not been read. Neither answers for the other. */
     public function test_an_anchor_link_does_not_move_the_boundary(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

@@ -8,8 +8,7 @@ use App\Support\ChatPreview;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Modern surface shape for the conversation list. `counterpart` is null for the withdrawn bucket,
- * which the client addresses by its own literal — the row needs no id of its own.
+ * `counterpart` is null for the withdrawn bucket, which the client addresses by its own literal.
  */
 class ConversationListSerializer
 {
@@ -51,10 +50,8 @@ class ConversationListSerializer
     }
 
     /**
-     * The line the row leads with: the message's body, its subject when a mailbox message carries
-     * only one (a message written as chat has no subject, and an upgraded one may have no body), and
-     * failing both a message with nothing but pictures saying so. ConversationList supplies
-     * `files_exists`.
+     * An upgraded row may hold no body and a message written as chat no subject, so both are offered
+     * before the picture stand-in. `ConversationList` supplies `files_exists`.
      */
     private static function preview(DirectMessage $latest): string
     {

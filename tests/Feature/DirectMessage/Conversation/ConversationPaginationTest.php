@@ -7,11 +7,6 @@ use App\Models\Member;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The (created_at, id) keyset. Ordering by id alone would be wrong on upgraded content — rows arrive
- * in transfer order, not chronological order — and created_at alone is not a total order at MySQL's
- * one-second timestamp resolution.
- */
 class ConversationPaginationTest extends ConversationTestCase
 {
     public function test_the_page_opens_on_the_newest_messages_oldest_first(): void

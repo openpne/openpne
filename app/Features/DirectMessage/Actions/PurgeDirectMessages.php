@@ -8,11 +8,10 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Purge the viewer's side of each trashed message. Purge
- * only ever follows trash, so it sets *_purged_at where *_deleted_at is already set — keeping the
- * purge⇒deleted invariant the boxes rely on. The row and any attached file bytes stay: the other
- * side may still hold the message, and a purged side simply loses its view (OpenPNE 3 left the bytes
- * too). Only the per-side timestamps move; nothing is physically deleted.
+ * Purge only ever follows trash, so it sets `*_purged_at` where `*_deleted_at` already is, keeping
+ * the purged ⇒ deleted invariant the boxes read by. The row and any attached file bytes stay, since
+ * the other side may still hold the message and a purged side only loses its view (OpenPNE 3 left
+ * the bytes too).
  */
 class PurgeDirectMessages
 {

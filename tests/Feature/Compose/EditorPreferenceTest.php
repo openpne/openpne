@@ -7,10 +7,6 @@ use App\Support\ComposeEditor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The compose input-method endpoint: authenticated-only, persists a member's input-method
- * choice and answers 204 (a fire-and-forget fetch, not an Inertia visit).
- */
 class EditorPreferenceTest extends TestCase
 {
     use RefreshDatabase;
