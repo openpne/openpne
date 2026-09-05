@@ -5,6 +5,7 @@ namespace App\Features\Member;
 use App\Features\Member\Actions\RemoveAvatar;
 use App\Features\Member\Actions\SetAvatar;
 use App\Files\ImageMetadataStripException;
+use App\Files\UploadLimit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\AvatarRequest;
@@ -27,7 +28,7 @@ class MemberAvatarController extends Controller
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn (): View => view('member.avatar', [
                 'avatar' => $this->viewer()->avatar?->file,
-                'maxUploadBytes' => AvatarRequest::MAX_KILOBYTES * 1024,
+                'maxUploadBytes' => UploadLimit::bytes(),
             ]),
             SurfaceResolver::MODERN => fn (): InertiaResponse => Inertia::render('member/avatar', [
                 'avatar' => $this->avatarImage(),

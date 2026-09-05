@@ -86,6 +86,24 @@ the `FileStorage` seam. Run it after an OpenPNE 3 upgrade. It selects only null 
 idempotent and an interrupted run resumes by being re-run; a file whose bytes are gone or undecodable
 is left null and reported as skipped rather than stopping the run.
 
+## Upload size
+
+Every image upload — a member's avatar or post images, an admin's banner, logo or public asset, and
+a picture posted over MCP — is held to one per-file cap,
+[`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default.
+It is read as configured; PHP's ini limits are not folded in, because they belong to the deployment
+and differ between the FPM pool that serves uploads and the CLI that runs tests and commands.
+
+They are prerequisites the operator sets alongside it. `upload_max_filesize` must be at least the
+cap: above it PHP discards the file before validation runs, and the form reports a failed upload
+rather than the size. `post_max_size` bounds the whole request, and a compose form carries up to
+`PostImages::MAX_IMAGES` files plus its fields, so it must hold the cap times that count with room
+for the rest of the body. The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes
+again; it never touches `$_FILES`, and the decoded file is then run through the compose forms' own
+rules, so the same cap is applied to the encoded length before the decode.
+
+The upgrade does not copy OpenPNE 3's `image_max_filesize`; the dry run prints the value to set.
+
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and

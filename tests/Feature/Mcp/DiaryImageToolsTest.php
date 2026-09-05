@@ -38,7 +38,7 @@ class DiaryImageToolsTest extends McpTestCase
     /** A copy of the trait's own cap, which is private to it. */
     private const CAP = 8 * 1024 * 1024;
 
-    /** Written out rather than recomputed: four characters per three bytes of the 5 MB cap. */
+    /** Written out rather than recomputed: four characters per three bytes of the shipped 5120 KB cap. */
     private const MAX_ENCODED = 6990508;
 
     protected function setUp(): void
@@ -564,7 +564,7 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(1, DiaryImage::query()->count());
     }
 
-    /** A string at the encoded bound can still decode to a single byte over the 5 MB cap. */
+    /** A string at the encoded bound can still decode to a single byte over the shipped cap. */
     public function test_a_picture_over_the_size_cap_is_refused_by_the_rule_that_measures_it(): void
     {
         $this->acting(Member::factory()->create());

@@ -7,6 +7,7 @@ use App\Filament\Resources\Pages\ListPage;
 use App\Files\FileUploader;
 use App\Files\FormUpload;
 use App\Files\ImageMetadataStripException;
+use App\Files\UploadLimit;
 use App\Models\File;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -37,7 +38,7 @@ class ListFiles extends ListPage
                         ->label(__('Image'))
                         ->image()
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-                        ->maxSize(5120)
+                        ->maxSize(UploadLimit::kilobytes())
                         ->rules(["dimensions:max_width={$maxDimension},max_height={$maxDimension}"])
                         ->storeFiles(false)
                         ->required(),
