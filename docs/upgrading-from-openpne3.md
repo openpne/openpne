@@ -210,6 +210,10 @@ change from a problem when you go through it.
   gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment
   variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value
   to set, or tells you the OpenPNE 3 value could not be read as a size.
+- **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
+  (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
+  member's own choice stays on their account, applying whenever the site setting lets members choose.
+  A site that never had the setting starts members-only.
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how

@@ -474,6 +474,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])
         ->middleware(EnsureFeatureEnabled::class.':diary')->name('member.config.diary');
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
+    Route::post('/member/config/profile-visibility', [MemberConfigController::class, 'updateProfileVisibility'])->name('member.config.profile_visibility');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     // The layout choice (docs/internals/looks.md); its picker is the GET detail page below.
     Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -23,9 +25,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the member-privacy policy settings (currently: whether members may make their age visible to
- * web guests). `sns_settings` is authoritative; every field is stored verbatim on save and resolves
- * to its fail-closed default (age not web-public) while no row exists.
+ * Edit the member-privacy policy settings (whether members may make their age visible to web guests,
+ * and who may see a profile page). `sns_settings` is authoritative; every field is stored verbatim
+ * on save and resolves to its fail-closed default (age not web-public, pages members-only) while no row exists.
  *
  * @property-read Schema $form
  */
@@ -132,6 +134,14 @@ class MemberPrivacySettings extends Page
             ->schema([
                 Toggle::make(SnsSettingKey::AllowWebPublicAge->value)
                     ->label(SnsSettingKey::AllowWebPublicAge->label()),
+                Radio::make(SnsSettingKey::ProfileVisibilityPolicy->value)
+                    ->label(SnsSettingKey::ProfileVisibilityPolicy->label())
+                    ->options(array_combine(
+                        array_column(ProfileVisibilityPolicy::cases(), 'value'),
+                        array_map(static fn (ProfileVisibilityPolicy $policy): string => $policy->label(), ProfileVisibilityPolicy::cases()),
+                    ))
+                    ->helperText(__('A member\'s own choice is kept while the site decides for everyone, and applies again once members may choose.'))
+                    ->required(),
             ]);
     }
 }

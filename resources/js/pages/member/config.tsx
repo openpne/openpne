@@ -28,6 +28,8 @@ interface Option {
 interface ConfigForm {
     // Absent while diaries are switched off — nothing is left for the default audience to apply to.
     diary?: { value: string; options: Option[] };
+    // Absent unless the site policy lets each member choose their profile page's audience.
+    profileVisibility?: { value: string; options: Option[] };
     email: { value: string };
     mfa: { enabled: boolean };
     locale: { value: string; options: Option[] };
@@ -96,12 +98,14 @@ export default function MemberConfig() {
     // One form per preference so saving one never resubmits another; the hooks run unconditionally,
     // and a fallback is inert because each optional section renders only when its key is present.
     const diary = useForm({ diary_default_visibility: form.diary?.value ?? '' });
+    const profile = useForm({ profile_visibility: form.profileVisibility?.value ?? '' });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closures below.
     const diaryField = form.diary;
+    const profileField = form.profileVisibility;
     const surfaceField = form.surface;
     const lookField = form.look;
 
@@ -110,6 +114,10 @@ export default function MemberConfig() {
     const saveDiary = (value: string) => {
         diary.setData('diary_default_visibility', value);
         diary.post('/member/config/diary', { preserveScroll: true });
+    };
+    const saveProfileVisibility = (value: string) => {
+        profile.setData('profile_visibility', value);
+        profile.post('/member/config/profile-visibility', { preserveScroll: true });
     };
     // The locale switch responds with a hard navigation (the page reloading in the chosen language
     // is the feedback), so no SavedIndicator here.
@@ -148,36 +156,64 @@ export default function MemberConfig() {
                 </SettingsGroup>
             )}
 
-            {/* Privacy holds the diary default alone, so the whole group goes with it. */}
-            {diaryField && (
+            {/* Privacy holds the diary default and the profile-page audience; the group goes when both are absent. */}
+            {(diaryField || profileField) && (
                 <SettingsGroup title={t('Privacy')}>
-                    <GroupItem>
-                        <FormSection
-                            title={t('Default audience for new %diaries%')}
-                            headingLevel="h3"
-                            description={t('Applies to %diaries% you write from now on. Existing %diaries% keep their audience.')}
-                        >
-                            <RadioCardGroup
-                                legend={t('Default audience for new %diaries%')}
-                                error={diary.errors.diary_default_visibility}
+                    {diaryField && (
+                        <GroupItem>
+                            <FormSection
+                                title={t('Default audience for new %diaries%')}
+                                headingLevel="h3"
+                                description={t('Applies to %diaries% you write from now on. Existing %diaries% keep their audience.')}
                             >
-                                <div className="flex flex-wrap gap-2">
-                                    {diaryField.options.map((opt) => (
-                                        <RadioPill
-                                            key={opt.value}
-                                            name="diary_default_visibility"
-                                            value={opt.value}
-                                            checked={diary.data.diary_default_visibility === opt.value}
-                                            disabled={diary.processing}
-                                            onChange={(e) => saveDiary(e.target.value)}
-                                            label={t(opt.label)}
-                                        />
-                                    ))}
-                                </div>
-                            </RadioCardGroup>
-                            <SavedIndicator show={diary.recentlySuccessful} />
-                        </FormSection>
-                    </GroupItem>
+                                <RadioCardGroup
+                                    legend={t('Default audience for new %diaries%')}
+                                    error={diary.errors.diary_default_visibility}
+                                >
+                                    <div className="flex flex-wrap gap-2">
+                                        {diaryField.options.map((opt) => (
+                                            <RadioPill
+                                                key={opt.value}
+                                                name="diary_default_visibility"
+                                                value={opt.value}
+                                                checked={diary.data.diary_default_visibility === opt.value}
+                                                disabled={diary.processing}
+                                                onChange={(e) => saveDiary(e.target.value)}
+                                                label={t(opt.label)}
+                                            />
+                                        ))}
+                                    </div>
+                                </RadioCardGroup>
+                                <SavedIndicator show={diary.recentlySuccessful} />
+                            </FormSection>
+                        </GroupItem>
+                    )}
+                    {profileField && (
+                        <GroupItem>
+                            <FormSection
+                                title={t('Who can see your profile page')}
+                                headingLevel="h3"
+                                description={t('Each field on it still keeps its own audience.')}
+                            >
+                                <RadioCardGroup legend={t('Who can see your profile page')} error={profile.errors.profile_visibility}>
+                                    <div className="flex flex-wrap gap-2">
+                                        {profileField.options.map((opt) => (
+                                            <RadioPill
+                                                key={opt.value}
+                                                name="profile_visibility"
+                                                value={opt.value}
+                                                checked={profile.data.profile_visibility === opt.value}
+                                                disabled={profile.processing}
+                                                onChange={(e) => saveProfileVisibility(e.target.value)}
+                                                label={t(opt.label)}
+                                            />
+                                        ))}
+                                    </div>
+                                </RadioCardGroup>
+                                <SavedIndicator show={profile.recentlySuccessful} />
+                            </FormSection>
+                        </GroupItem>
+                    )}
                     {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
                 </SettingsGroup>
             )}
