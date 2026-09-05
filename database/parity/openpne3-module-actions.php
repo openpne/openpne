@@ -35,8 +35,6 @@ return [
     'communityTopic/search' => ['no_id' => 'communityTopic_search_all', 'with_id' => 'communityTopic_search'],
     'communityEvent/listCommunity' => ['with_id' => 'communityEvent_list_community'],
 
-    // sendToFriend has no named OpenPNE 3 route, so its value is a literal URL (leading `/`) the
-    // upgrade uses directly instead of an inventory route-name lookup.
     'message/index' => ['no_id' => 'receiveList'],
     'message/sendToFriend' => ['with_id' => '/message/sendToFriend?id=:id'],
 ];

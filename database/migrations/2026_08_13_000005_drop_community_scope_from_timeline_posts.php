@@ -22,6 +22,8 @@ return new class extends Migration
                 ->delete();
         } while ($deleted > 0);
 
+        // The posts' image Files and their bytes are left behind: a migration does not delete disk objects.
+
         // Matched on the stored FQCN because the notification class is deleted in this change.
         DB::table('notifications')
             ->where('type', 'App\Notifications\Timeline\TimelineCommunityPostedNotification')

@@ -21,6 +21,7 @@ return new class extends Migration
         Schema::create('push_subscriptions', function (Blueprint $table) use ($mysql) {
             $table->bigIncrements('id');
             $table->morphs('subscribable', 'push_subscriptions_subscribable_morph_idx');
+            // 500 keeps the utf8mb4 unique index under MySQL's 3072-byte key limit.
             $endpoint = $table->string('endpoint', 500);
             if ($mysql) {
                 $endpoint->collation('utf8mb4_bin');

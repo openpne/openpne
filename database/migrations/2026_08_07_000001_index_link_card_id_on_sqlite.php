@@ -6,8 +6,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * InnoDB creates a backing index for every foreign key and SQLite creates none, so this one is
- * added on the SQLite lane only.
+ * InnoDB backs every foreign key with an index and SQLite backs none, so this one is added on the
+ * SQLite lane only; the schemas differ by an index, acceptable since each engine,
+ * `openpne:copy-database` included, is migrated from scratch.
  */
 return new class extends Migration
 {

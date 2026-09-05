@@ -17,8 +17,7 @@ return new class extends Migration
             // foreignId() emits BIGINT UNSIGNED and the FK fails to create.
             $table->integer('id', true, false);
 
-            // An opaque random token (OpenPNE 3 generated it the same way), serving as the URL
-            // token and the disk backend's key.
+            // An opaque random token, as OpenPNE 3 generated it.
             $table->string('name', 64)->unique();
             $table->string('type', 64);
             // OpenPNE 3 `file.original_filename` is TEXT, so TEXT here keeps a >255-char name from

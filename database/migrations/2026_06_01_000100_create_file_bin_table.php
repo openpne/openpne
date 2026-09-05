@@ -6,9 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Frozen to OpenPNE 3's four columns: the upgrade migrates this table by a metadata-only ALTER,
- * and adding or dropping one would turn that into a full rebuild (docs/internals/upgrade.md,
- * "file_bin").
+ * Frozen to OpenPNE 3's four columns: neither upgrade path runs this CREATE, so a column added here
+ * would exist on fresh installs only (docs/internals/upgrade.md, "file_bin").
  */
 return new class extends Migration
 {
