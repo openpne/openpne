@@ -10,7 +10,6 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 
-/** The muted-room list the notification settings page shows as the exceptions to its toggles. */
 class MutedTalkRoomsTest extends TalkTestCase
 {
     private function mutedRooms(): MutedTalkRooms
@@ -56,7 +55,6 @@ class MutedTalkRoomsTest extends TalkTestCase
         $this->assertSame([], ($this->mutedRooms())($member));
     }
 
-    /** The flag survives the switch, but a room with no talk screen to open is not an exception to offer. */
     public function test_the_list_is_empty_while_the_unit_is_off(): void
     {
         $member = Member::factory()->create();

@@ -7,30 +7,20 @@ use App\Models\GroupMessage;
 use Illuminate\Support\Collection;
 
 /**
- * The messages a page's replies answer, in one read.
- *
- * A reply carries an id and nothing else — no snapshot of what it answers — so the header a client
- * draws is read from the parent row every time, and a parent that has been deleted simply has no row
- * to return. That absence is the placeholder state, which is why the map keys what was found rather
- * than reporting what was missing.
- *
- * **The lookup is bound to the group**, so an id belonging to another conversation comes back missing
- * and reads as deleted. Structural, not a defensive branch: no eager-load path off the model may be
- * used for this, since an unscoped one would answer with the foreign row.
+ * The lookup is bound to the group, so an id from another conversation comes back missing and reads
+ * as deleted — and no `belongsTo` eager load may stand in for it, since an unscoped one would answer
+ * with the foreign row. A parent that has been deleted simply has no key in the result, which is the
+ * state the client draws.
  */
 class ReplyReferences
 {
-    /**
-     * What the Modern surface draws off a parent — its author's byline and the picture it leads with.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     public const WITH = ['author.avatar.file', 'images.file'];
 
     /**
      * @param  Collection<int, GroupMessage>  $messages
-     * @param  list<string>  $with  relations the caller's shape reads off a parent. The MCP wire names
-     *                              none: it carries the author's id, which is a column of the parent row
+     * @param  list<string>  $with  relations the caller's shape reads off a parent; the MCP wire names
+     *                              none
      * @return array<int, GroupMessage> parents by id; an id that is not a live message of $group has no
      *                                  key at all
      */
@@ -57,8 +47,6 @@ class ReplyReferences
     }
 
     /**
-     * One message's own reference, for a write that answers with the row it just stored.
-     *
      * @param  list<string>  $with
      * @return array<int, GroupMessage>
      */

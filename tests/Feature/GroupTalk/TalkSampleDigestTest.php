@@ -21,12 +21,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
-/**
- * The reusable half of a talk digest: what a window of a conversation is, and what is said about the
- * rows it returns. A window is named by two instants and by nothing else — no cursor, no reader — so
- * most of what is pinned here is which messages fall inside one, in what order, and how far a read
- * of one is allowed to go.
- */
 class TalkSampleDigestTest extends TestCase
 {
     use RefreshDatabase;
@@ -103,10 +97,6 @@ class TalkSampleDigestTest extends TestCase
 
     // --- what a window is ---
 
-    /**
-     * (since, until]: the start instant belongs to the window that ended on it, the end instant to
-     * this one — so two consecutive windows never count the same message twice.
-     */
     public function test_the_window_is_open_at_its_start_and_closed_at_its_end(): void
     {
         $author = $this->member();
@@ -122,10 +112,6 @@ class TalkSampleDigestTest extends TestCase
         );
     }
 
-    /**
-     * Talk's total order is (created_at, id), and a migrated room's ids do not follow its clock: the
-     * id only breaks a tie between two messages written in the same second.
-     */
     public function test_the_order_is_the_clock_and_then_the_id(): void
     {
         $author = $this->member();
@@ -141,9 +127,8 @@ class TalkSampleDigestTest extends TestCase
     }
 
     /**
-     * Two messages written in the same second come back in id order on any driver only because the
-     * query says so — a fixture cannot show the tiebreak on SQLite, whose rowid order already is id
-     * order, so the ORDER BY itself is what is pinned.
+     * A fixture cannot show the tiebreak on SQLite, whose rowid order already is id order, so the
+     * `ORDER BY` itself is what is pinned.
      */
     public function test_the_order_is_asked_of_the_database_not_left_to_it(): void
     {
@@ -182,7 +167,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([], $afterwards, 'the sample costs a query per row it summarizes');
     }
 
-    /** The sample is bounded and the count is not: the number is what the sample is a summary OF. */
     public function test_the_count_is_the_whole_window_however_bounded_the_sample_is(): void
     {
         $author = $this->member();
@@ -198,13 +182,12 @@ class TalkSampleDigestTest extends TestCase
 
     // --- the tail, for an excerpt ---
 
-    /** Six turns, spelled out: home-issues.md and the issue page both promise a reader six. */
+    /** Six turns, spelled out: the issue page promises a reader six (docs/internals/home-issues.md, "Rendering"). */
     public function test_an_excerpt_is_six_turns(): void
     {
         $this->assertSame(6, TalkSampleDigest::EXCERPT);
     }
 
-    /** (since, until] again, and the LAST of it: the end of a stretch is what an excerpt is. */
     public function test_the_excerpt_is_the_end_of_the_window_oldest_first(): void
     {
         $author = $this->member();
@@ -227,7 +210,6 @@ class TalkSampleDigestTest extends TestCase
         );
     }
 
-    /** Everything an excerpt draws comes with the rows: a line must not cost a query to print. */
     public function test_the_excerpt_brings_its_authors_pictures_and_mentions_with_it(): void
     {
         $viewer = $this->member();
@@ -265,12 +247,10 @@ class TalkSampleDigestTest extends TestCase
 
         $this->assertSame($author->getKey(), $excerpt[0]['author']['id']);
         $this->assertSame($first->body, $excerpt[0]['body']);
-        // The ranges EntityText splits the body on, in the shape the stream ships them.
         $this->assertSame([['memberId' => $author->getKey(), 'offset' => 0, 'length' => 4]], $excerpt[0]['mentions']);
         $this->assertSame([$file->url()], array_column($excerpt[0]['images'], 'url'));
     }
 
-    /** The message stays and the person is gone — the turn keeps its place with no author on it. */
     public function test_a_withdrawn_author_keeps_their_turn_in_an_excerpt(): void
     {
         $at = $this->start->addSecond();
@@ -291,7 +271,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame('gone', $excerpt[0]['body']);
     }
 
-    /** A picture the reader may not have leaves nothing behind: no placeholder, no gap, no count. */
     public function test_a_refused_picture_is_skipped_in_an_excerpt_too(): void
     {
         $viewer = $this->member();
@@ -311,7 +290,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$served->url()], array_column($excerpt[0]['images'], 'url'));
     }
 
-    /** A borrowed file is not this message's picture, wherever the picture is being drawn. */
     public function test_an_excerpt_leaves_out_a_file_owned_by_another_message(): void
     {
         $viewer = $this->member();
@@ -326,11 +304,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$mine->url()], array_column($excerpt[1]['images'], 'url'));
     }
 
-    /**
-     * A row of squares under a line is a glimpse, not an album — and the cap is on the slots looked
-     * at, so a message whose first pictures are refused shows fewer rather than reaching further
-     * down for replacements.
-     */
     public function test_an_excerpts_pictures_stop_at_the_cap(): void
     {
         $viewer = $this->member();
@@ -410,7 +383,6 @@ class TalkSampleDigestTest extends TestCase
         );
     }
 
-    /** Equal counts keep the order they were met in, so the row is stable between two renders. */
     public function test_authors_who_said_as_much_are_ordered_by_who_spoke_first(): void
     {
         $first = $this->member();
@@ -439,7 +411,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertCount(TalkSampleDigest::PARTICIPANTS, $this->digest->participants($sample));
     }
 
-    /** No face for somebody who is no longer there, and no blank one standing in for them either. */
     public function test_a_withdrawn_author_brings_no_face_however_much_they_said(): void
     {
         $author = $this->member();
@@ -462,7 +433,6 @@ class TalkSampleDigestTest extends TestCase
 
     // --- pictures ---
 
-    /** The policy that guards the bytes is asked per file, and a refusal leaves no trace. */
     public function test_a_refused_file_is_skipped_in_silence(): void
     {
         $viewer = $this->member();
@@ -481,10 +451,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$served->url()], array_column($this->digest->thumbnails($viewer, $sample), 'url'));
     }
 
-    /**
-     * A join row names a file, but only the file names its owner. One pointing at another message's
-     * picture is not this message's, whatever the policy would say about it on its own terms.
-     */
     public function test_a_join_row_borrowing_another_messages_file_is_left_out(): void
     {
         $viewer = $this->member();
@@ -499,7 +465,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$mine->url()], array_column($this->digest->thumbnails($viewer, $sample), 'url'));
     }
 
-    /** A file filed under some other kind of parent is not this message's picture, whatever id it names. */
     public function test_a_file_owned_by_another_kind_of_parent_is_left_out(): void
     {
         $viewer = $this->member();
@@ -525,7 +490,6 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$mine->url()], array_column($this->digest->thumbnails($viewer, $sample), 'url'));
     }
 
-    /** The pictures are bounded twice: the rows read as candidates, and the pictures shown from them. */
     public function test_the_pictures_are_bounded_by_contract(): void
     {
         $viewer = $this->member();

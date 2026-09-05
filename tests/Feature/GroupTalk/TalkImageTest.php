@@ -21,10 +21,6 @@ use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
-/**
- * Up to PostImages::MAX_IMAGES per message, numbered in pick order. The schema numbers slots past
- * that so migrated content can carry more.
- */
 class TalkImageTest extends TalkTestCase
 {
     private function upload(string $name = 'shot.png'): UploadedFile
@@ -60,8 +56,8 @@ class TalkImageTest extends TalkTestCase
     }
 
     /**
-     * The single-image wire this endpoint spoke before images[]: a talk tab open across the deploy
-     * keeps sending it, and its attachment must land rather than be silently dropped with a 201.
+     * A tab open across the deploy keeps sending the single-image wire, and its attachment must land
+     * rather than be dropped with a 201.
      */
     public function test_the_legacy_single_image_wire_still_attaches(): void
     {
@@ -78,7 +74,6 @@ class TalkImageTest extends TalkTestCase
         $this->assertNotNull($this->attachedFile($message));
     }
 
-    /** No client speaks both wires at once; a request that does is malformed, not a bigger cap. */
     public function test_the_two_wires_refuse_to_combine(): void
     {
         $group = $this->group();
@@ -118,7 +113,6 @@ class TalkImageTest extends TalkTestCase
         $this->assertSame([1, 2, 3], GroupMessage::findOrFail($id)->images()->orderBy('number')->pluck('number')->all());
     }
 
-    /** Over the cap the whole message is refused — nothing half-posts and the composer keeps its draft. */
     public function test_a_fourth_image_takes_the_whole_message_down(): void
     {
         $group = $this->group();
@@ -136,7 +130,6 @@ class TalkImageTest extends TalkTestCase
         $this->assertDatabaseCount('files', 0);
     }
 
-    /** The attach shares the write, so the sender's cursor still passes their own message. */
     public function test_the_cursor_still_advances_when_an_image_rides_along(): void
     {
         $group = $this->group();
@@ -216,12 +209,8 @@ class TalkImageTest extends TalkTestCase
     }
 
     /**
-     * The compensating flow owns the outermost transaction, so a failure after the bytes are stored
-     * must take both the row and the bytes with it. A byte write is not transactional: without
-     * compensation the rollback would drop the `files` row and leave the bytes orphaned on disk.
-     *
-     * Driven against a real disk backend, because that is the only backend where the two can come
-     * apart — asserting over `files` rows alone would pass even with no compensation at all.
+     * Driven against a real disk backend, the only one where the row and the bytes can come apart:
+     * asserting over `files` rows alone would pass with no compensation at all.
      */
     public function test_a_failure_after_the_bytes_are_stored_leaves_no_message_and_no_bytes(): void
     {
@@ -238,11 +227,10 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group();
         $author = $this->memberOf($group);
 
-        // Fail the join-row insert: the one step that runs after the bytes have already landed.
-        // Matched without identifier quotes — sqlite emits `"` and MySQL emits a backtick, and a
-        // grammar-bound match silently never fires on the other engine (this test then swallowed
-        // its own fail(): AssertionFailedError IS a RuntimeException, hence the exact-message check).
+        // Matched without identifier quotes: sqlite emits `"` and MySQL a backtick, and a
+        // grammar-bound match would silently never fire on the other engine.
         DB::listen(function ($query) {
+            // The join-row insert is the one step that runs after the bytes have landed.
             if (str_starts_with($query->sql, 'insert') && str_contains($query->sql, 'group_message_images')) {
                 throw new RuntimeException('boom');
             }
@@ -252,6 +240,8 @@ class TalkImageTest extends TalkTestCase
             app(CreateGroupMessage::class)($author, $group, 'look', [], [$this->upload()]);
             $this->fail('the write should have thrown');
         } catch (RuntimeException $e) {
+            // AssertionFailedError is itself a RuntimeException, so the message is what tells the
+            // two apart.
             $this->assertSame('boom', $e->getMessage(), 'the write failed for the wrong reason');
         }
 
@@ -285,7 +275,6 @@ class TalkImageTest extends TalkTestCase
         }
     }
 
-    /** The group cascade drops the join rows but never the bytes — DeleteGroup has to reclaim them all. */
     public function test_deleting_the_group_purges_every_slots_talk_bytes(): void
     {
         $group = $this->group();
@@ -378,7 +367,7 @@ class TalkImageTest extends TalkTestCase
 
     // --- a picture is a message ---
 
-    /** The body is what the attachment stands in for; it is stored empty, not null. */
+    /** The body is stored empty, not null. */
     public function test_a_message_can_be_pictures_alone(): void
     {
         $group = $this->group();
@@ -435,9 +424,6 @@ class TalkImageTest extends TalkTestCase
     }
 
     /**
-     * The empty body is normalized back to a string for the write; a body that is not a string is
-     * left for the `string` rule to refuse, so an attachment cannot carry one past validation.
-     *
      * @param  array<string, mixed>  $payload
      */
     #[DataProvider('bodiesThatAreNotStrings')]
@@ -465,10 +451,6 @@ class TalkImageTest extends TalkTestCase
         ];
     }
 
-    /**
-     * A picture-only message has no text for a range to describe, so a forged one resolves to
-     * nothing — the row is dropped and nobody is told about a mention that was never written.
-     */
     public function test_a_forged_mention_on_a_picture_only_message_stores_and_notifies_nothing(): void
     {
         Notification::fake();
@@ -491,7 +473,6 @@ class TalkImageTest extends TalkTestCase
 
     // --- validation ---
 
-    /** Keyed by slot, so the composer can put the message under the picture it belongs to. */
     public function test_a_refused_file_is_a_422_naming_its_slot(): void
     {
         $group = $this->group();
@@ -509,9 +490,8 @@ class TalkImageTest extends TalkTestCase
     }
 
     /**
-     * The multipart trap from the timeline campaign: FormData encodes the textarea's LF newlines as
-     * CRLF in transit, so a mention offset computed over the LF value would be one position short
-     * per preceding line break. The form request re-normalizes before it measures anything.
+     * FormData encodes the textarea's LF newlines as CRLF in transit, so an offset computed over the
+     * LF value would be one position short per preceding line break.
      */
     public function test_a_multipart_send_with_newlines_keeps_its_mention_offsets(): void
     {

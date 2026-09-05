@@ -10,11 +10,6 @@ use App\Models\Member;
 use App\Models\Reaction;
 use App\Support\SnsSettingKey;
 
-/**
- * Reacting to a talk message: who may, what a repeat does, and what takes the rows away again.
- * Reading is the group's read gate and writing is membership, as everything else in the talk is;
- * a refusal is always the same 404.
- */
 class TalkReactionTest extends TalkReactionTestCase
 {
     public function test_a_non_member_cannot_react_to_a_conversation_it_may_read(): void
@@ -58,7 +53,6 @@ class TalkReactionTest extends TalkReactionTestCase
         ]);
     }
 
-    /** `mine` is the asker's own answer, so the same row reads differently to the two of them. */
     public function test_someone_elses_reaction_counts_but_is_not_mine(): void
     {
         $group = $this->group();
@@ -90,7 +84,6 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->assertSame($version, $this->seq($group), 'a no-op moved the reaction version');
     }
 
-    /** The key is wide by decision: a second emoji joins the first rather than replacing it. */
     public function test_a_second_emoji_from_the_same_member_is_an_addition(): void
     {
         $group = $this->group();
@@ -147,10 +140,6 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /**
-     * The other half of that rule: what may be added is the vocabulary, what may be removed is
-     * whatever the member is holding — otherwise narrowing the set would strand its reactions.
-     */
     public function test_a_reaction_outside_the_vocabulary_can_still_be_removed(): void
     {
         $group = $this->group();
@@ -192,11 +181,6 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->actingAs($member)->getJson($path)->assertNotFound();
     }
 
-    /**
-     * A withdrawn member's reactions go with them (the FK cascades) and the version deliberately does
-     * not move: an open tab is told about reactions through it, so live agreement is given up here
-     * rather than pay a seq bump per group on every withdrawal. A reload heals it.
-     */
     public function test_a_withdrawing_member_takes_their_reactions_but_not_the_version(): void
     {
         $group = $this->group();
@@ -228,7 +212,6 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /** No foreign key backs `reactable_id`, so nothing cascades these away — DeleteGroup sweeps them. */
     public function test_deleting_a_group_leaves_no_orphan_reactions(): void
     {
         $group = $this->group();
@@ -270,10 +253,6 @@ class TalkReactionTest extends TalkReactionTestCase
             ->assertJsonCount(1, 'groups.1.members');
     }
 
-    /**
-     * The names are the one part of a reaction that grows with the room, so the list is bounded and
-     * the count is not: past the cap a dialog knows how many there are and shows the first of them.
-     */
     public function test_the_reactor_list_caps_the_names_but_not_the_count(): void
     {
         $group = $this->group();

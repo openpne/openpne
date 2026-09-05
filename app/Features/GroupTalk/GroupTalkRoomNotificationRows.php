@@ -10,14 +10,9 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * The room's feed row: at most one `notifications` row per (member, group) for the talk broadcast,
- * read or unread. A chat that left a row per message would bury every other notification, so the new
- * row replaces the room's previous ones and reading the room marks the survivor read.
- *
- * `data` is a TEXT column, so the group is matched in PHP rather than in SQL. No index covers `type`,
- * so the SQL narrows by what the notifiable indexes do cover: markRead() runs in the request (and
- * inside the posting transaction), so it reads only the member's unread rows; deleteOthers() needs
- * the read ones too and runs in the queued job, where reading the member's whole feed is affordable.
+ * `data` is a TEXT column and no index covers `type`, so the SQL narrows by the notifiable index and
+ * the group is matched in PHP. `markRead()` runs in a request, and inside the posting transaction,
+ * so it reads only unread rows; `deleteOthers()` needs the read ones too and runs in the queued job.
  */
 class GroupTalkRoomNotificationRows
 {
@@ -35,9 +30,8 @@ class GroupTalkRoomNotificationRows
     }
 
     /**
-     * Drop the room's other rows, keeping $keepId — run AFTER the new row is written, so a lost
-     * listener or a vetoed send can never leave the member with nothing. Read rows go too: the row is
-     * the room's, not the message's.
+     * Run after the new row is written, so a lost listener or a vetoed send can never leave the
+     * member with nothing.
      */
     public function deleteOthers(int $memberId, int $groupId, string $keepId): void
     {
@@ -51,11 +45,6 @@ class GroupTalkRoomNotificationRows
         }
     }
 
-    /**
-     * Mark the room's row read. Called unconditionally on every read of the room, cursor moved or
-     * not: another tab may have moved it already, and an update over an already-read row costs
-     * nothing.
-     */
     public function markRead(int $memberId, int $groupId): void
     {
         $ids = $this->rowsFor($memberId, $groupId, unreadOnly: true)

@@ -11,10 +11,6 @@ use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\DB;
 
-/**
- * What counts as unread, and the two numbers built from it: the per-group count on the group list,
- * and the nav badge's count of groups with something waiting.
- */
 class UnreadTalkTest extends TalkTestCase
 {
     private function countsFor(Member $viewer): array
@@ -27,7 +23,6 @@ class UnreadTalkTest extends TalkTestCase
         return app(CountGroupsWithUnreadTalk::class)($viewer);
     }
 
-    /** Somebody else wrote it, and it is newer than the cursor. */
     public function test_another_member_s_message_is_unread(): void
     {
         $group = $this->group();
@@ -54,11 +49,6 @@ class UnreadTalkTest extends TalkTestCase
         $this->assertSame(0, $this->navCount($viewer));
     }
 
-    /**
-     * The load-bearing NULL arm. `member_id != ?` is UNKNOWN for a withdrawn author's row, so
-     * without the explicit IS NULL the count would silently skip exactly the messages the talk page
-     * still shows under "Withdrawn member".
-     */
     public function test_a_withdrawn_author_s_message_still_counts_as_unread(): void
     {
         $group = $this->group();
@@ -85,7 +75,6 @@ class UnreadTalkTest extends TalkTestCase
         $this->assertSame(1, $this->countsFor($viewer)[$group->getKey()]['count']);
     }
 
-    /** The cursor holds copied values, not a reference, so deleting the message it names is a no-op. */
     public function test_deleting_the_message_the_cursor_names_leaves_the_count_alone(): void
     {
         $group = $this->group();
@@ -114,7 +103,6 @@ class UnreadTalkTest extends TalkTestCase
         $this->assertSame(0, $this->navCount($outsider));
     }
 
-    /** Mute is about the nav badge, not about hiding the conversation's own number. */
     public function test_muting_drops_a_group_from_the_nav_badge_but_keeps_its_own_count(): void
     {
         $group = $this->group();
@@ -223,7 +211,6 @@ class UnreadTalkTest extends TalkTestCase
                 ->where('rooms.data.0.muted', false));
     }
 
-    /** Another member's group list is not the viewer's unread; the grid ships no such prop. */
     public function test_someone_else_s_group_list_carries_no_unread(): void
     {
         $group = $this->group();

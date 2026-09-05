@@ -9,12 +9,6 @@ use App\Support\SnsSettingKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 
-/**
- * The talk entrance on a group's top page. It asks its own two questions — the unit, and this
- * group's read gate — rather than borrowing the topic board's "may the viewer read the boards"
- * seam: the two units are switched independently, and a site running talk without the board would
- * otherwise have a readable conversation with nothing linking to it.
- */
 class GroupTalkEntranceTest extends TalkTestCase
 {
     public function test_a_reader_of_an_everyone_group_gets_the_entrance(): void
@@ -35,9 +29,7 @@ class GroupTalkEntranceTest extends TalkTestCase
         $this->actingAs($this->memberOf($group))
             ->get("/groups/{$group->getKey()}")
             ->assertInertia(fn ($page) => $page
-                // The board's own card is gone…
                 ->where('recentTopics', null)
-                // …and talk's entrance is not.
                 ->where('canViewTalk', true));
     }
 
@@ -123,7 +115,7 @@ class GroupTalkEntranceTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkPreview.body', __('Image')));
     }
 
-    /** "0" is a message. The fallback to the stand-in tests emptiness strictly, not PHP's truthiness. */
+    /** "0" is a message: the stand-in fallback tests emptiness strictly, not PHP's truthiness. */
     public function test_a_body_of_zero_is_previewed_as_itself(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -142,7 +134,6 @@ class GroupTalkEntranceTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkPreview', null)->where('talkUnread', 0));
     }
 
-    /** A non-member reader holds no membership row, so no cursor — zero, not "everything". */
     public function test_a_non_member_reader_sees_the_preview_with_no_unread(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -156,7 +147,6 @@ class GroupTalkEntranceTest extends TalkTestCase
                 ->where('talkUnread', 0));
     }
 
-    /** Mute silences the nav badge, not the group's own card. */
     public function test_a_muted_group_still_shows_its_unread_on_the_card(): void
     {
         $group = $this->group();
@@ -170,7 +160,6 @@ class GroupTalkEntranceTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkUnread', 2));
     }
 
-    /** The preview carries a member's words, so the gate is asked before the conversation is read. */
     public function test_the_conversation_is_not_read_when_the_gate_refuses(): void
     {
         $group = $this->group(TopicReadAccess::MembersOnly);

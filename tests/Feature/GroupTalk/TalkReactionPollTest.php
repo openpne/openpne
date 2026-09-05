@@ -7,11 +7,6 @@ use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Testing\TestResponse;
 
-/**
- * How an open tab hears about a reaction. The message poll reads forward from a (created_at, id)
- * position, which a reaction never moves, so the group's reaction version is the second watermark
- * the same request carries.
- */
 class TalkReactionPollTest extends TalkReactionTestCase
 {
     public function test_each_change_of_state_moves_the_version_forward(): void
@@ -56,11 +51,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
         $this->poll($member, $group, $body['reactionsVersion'])->assertJsonCount(0, 'touched');
     }
 
-    /**
-     * A capped page reports the last row it returned rather than the pre-query snapshot: moving the
-     * watermark to the snapshot would step over everything the cap left behind, and nothing would ask
-     * for it again.
-     */
     public function test_more_touched_messages_than_a_page_are_collected_across_polls(): void
     {
         $group = $this->group();
@@ -85,7 +75,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
         $this->assertSame($ids, [...array_column($first['touched'], 'id'), ...array_column($second['touched'], 'id')]);
     }
 
-    /** A row's version is replaced, not appended to, so a busy message arrives once at its latest state. */
     public function test_repeated_changes_to_one_message_arrive_as_one_row(): void
     {
         $group = $this->group();
@@ -117,7 +106,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
             ->assertJsonMissingPath('reactionsVersion');
     }
 
-    /** An unparseable watermark is no watermark, exactly as an unparseable cursor is no cursor. */
     public function test_a_malformed_watermark_is_read_as_none(): void
     {
         $group = $this->group();
@@ -129,10 +117,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
             ->assertJsonMissingPath('touched');
     }
 
-    /**
-     * The page ships the watermark it was rendered at, and a reaction that lands after it is still
-     * waiting on the next poll — which is why the version is read before the page, not after.
-     */
     public function test_the_page_ships_a_watermark_the_next_poll_can_continue_from(): void
     {
         $group = $this->group();
@@ -155,7 +139,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
             ->assertJsonPath('touched.0.reactions.0.count', 2);
     }
 
-    /** What the picker draws, so the client never holds a vocabulary of its own. */
     public function test_the_page_ships_the_vocabulary(): void
     {
         $group = $this->group();
@@ -165,10 +148,6 @@ class TalkReactionPollTest extends TalkReactionTestCase
             ->assertInertia(fn ($page) => $page->where('reactionVocabulary.0', $this->emoji(0)));
     }
 
-    /**
-     * Reactions are not messages: they create no row the unread predicate can see, and no unread read
-     * looks at the version. A badge that counted them would make a room look unread for a thumbs-up.
-     */
     public function test_reacting_moves_no_unread_count(): void
     {
         $group = $this->group();

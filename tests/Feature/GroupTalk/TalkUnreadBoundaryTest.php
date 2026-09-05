@@ -12,10 +12,6 @@ use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Carbon;
 
-/**
- * The unread boundary as a place the reader can go: the snapshot the talk page renders with, and the
- * page that opens on it.
- */
 class TalkUnreadBoundaryTest extends TalkTestCase
 {
     /** @return list<GroupMessage> $count messages by someone else, one per minute, oldest first */
@@ -34,10 +30,8 @@ class TalkUnreadBoundaryTest extends TalkTestCase
             ]);
         }
 
-        // Factory memberships take talk_read_at from its DB default — the wall clock, which no PHP
-        // time mock reaches. Against these literal instants that made every test here depend on the
-        // time of day it ran (green only before 09:00 UTC). Pin every member of the room to a cursor
-        // before the conversation instead: none of it has been read, deterministically.
+        // Factory memberships take talk_read_at from a DB default no time mock reaches, so every
+        // member of the room is pinned to a cursor before the conversation.
         GroupMember::query()
             ->where('group_id', $group->getKey())
             ->update(['talk_read_at' => Carbon::parse('2026-08-14 08:00:00'), 'talk_read_message_id' => 0]);
@@ -66,11 +60,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
                 ->where('talkUnreadSnapshot.readThrough.id', (int) $messages[2]->getKey()));
     }
 
-    /**
-     * The client finds the first row past the boundary by comparing the two directly, so they have to
-     * come out of the same conversion — a differently spelled instant would put the divider in the
-     * wrong place, or nowhere.
-     */
     public function test_the_boundary_instant_is_spelled_as_a_message_timestamp_is(): void
     {
         $group = $this->group();
@@ -83,7 +72,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertSame($props['page']['messages'][1]['createdAt'], $props['talkUnreadSnapshot']['readThrough']['at']);
     }
 
-    /** No membership row, no cursor: a boundary of zero would claim they had read the group. */
     public function test_a_non_member_reader_gets_no_boundary(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -94,7 +82,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkUnreadSnapshot', null));
     }
 
-    /** The screen goes with its unit, and the boundary with the screen. */
     public function test_the_page_is_gone_while_the_unit_is_switched_off(): void
     {
         $group = $this->group();
@@ -106,11 +93,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}/talk")->assertNotFound();
     }
 
-    /**
-     * The snapshot is a position, the badge is a live count, and reading moves one without the other.
-     * A page rendered before the read still names the line the reader opened on; the next render is
-     * where the boundary has moved.
-     */
     public function test_reading_moves_the_badge_and_leaves_the_rendered_boundary_behind(): void
     {
         $group = $this->group();
@@ -133,7 +115,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkUnreadSnapshot.count', 0));
     }
 
-    /** The two shapes of one position: the tuple the divider compares, and the cursor the jump uses. */
     public function test_the_boundary_travels_as_a_cursor_the_client_never_assembles(): void
     {
         $group = $this->group();
@@ -195,10 +176,8 @@ class TalkUnreadBoundaryTest extends TalkTestCase
     }
 
     /**
-     * The regression this whole shape exists for. Mark-read fires seconds after the page opens and
-     * moves the stored cursor to the foot of the conversation; a jump that asked the server to
-     * resolve "where have I read to" would then answer with the end of the group and land the reader
-     * nowhere. The snapshot is a position taken at render time, so it still opens on the boundary.
+     * The regression this whole shape exists for: mark-read moves the stored cursor to the foot of
+     * the conversation seconds after the page opens.
      */
     public function test_the_jump_still_lands_on_the_boundary_after_mark_read_has_moved_the_cursor(): void
     {
@@ -222,7 +201,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertSame('message 20', $page['messages'][GroupTalkMessages::CONTEXT]['body']);
     }
 
-    /** A position, not a row reference: deleting the message it was taken from changes nothing. */
     public function test_a_context_cursor_survives_the_message_it_names_being_deleted(): void
     {
         $group = $this->group();
@@ -239,7 +217,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertSame(['message 0', 'message 1', 'message 3', 'message 4', 'message 5'], array_column($page['messages'], 'body'));
     }
 
-    /** The established rule for every cursor parameter: unparseable is absent, and absent is latest. */
     public function test_a_malformed_context_cursor_is_read_as_no_cursor(): void
     {
         $group = $this->group();
@@ -255,11 +232,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertCount(GroupTalkMessages::PER_PAGE, $page['messages']);
     }
 
-    /**
-     * A cursor is a place in time, not a claim on a row: one taken from another group's message
-     * names an instant here too, and the query's own group binding is what keeps the answer this
-     * conversation's. Nothing leaks either way.
-     */
     public function test_a_cursor_from_another_group_is_only_a_position(): void
     {
         $group = $this->group();
@@ -283,7 +255,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertSame(['message 0', 'message 1', 'message 2', 'message 3', 'message 4', 'message 5'], $bodies);
     }
 
-    /** Pagination is a position, not a permission: a reader the gate admits may ask from anywhere. */
     public function test_a_non_member_reader_may_open_a_context_page(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -296,7 +267,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
             ->assertJsonPath('messages.'.(GroupTalkMessages::CONTEXT - 1).'.body', 'message 20');
     }
 
-    /** What "load newer" reads: the same forward page the poll takes, now saying whether it capped. */
     public function test_a_forward_page_reports_whether_more_remain_behind_it(): void
     {
         $group = $this->group();
@@ -317,7 +287,6 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         $this->assertFalse($rest['hasNewer'], 'the conversation runs out inside this page');
     }
 
-    /** Nothing follows the newest page, and nothing the asker lacks follows a "load older" one. */
     public function test_the_backwards_reads_report_nothing_newer_to_fetch(): void
     {
         $group = $this->group();

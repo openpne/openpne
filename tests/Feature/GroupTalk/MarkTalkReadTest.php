@@ -8,7 +8,6 @@ use App\Models\Member;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/** "I have read as far as this message": the server resolves the tuple, and only ever forward. */
 class MarkTalkReadTest extends TalkTestCase
 {
     private function cursorOf(int $groupId, int $memberId): object
@@ -31,10 +30,6 @@ class MarkTalkReadTest extends TalkTestCase
         $this->assertSame((int) $messages[1]->getKey(), (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
     }
 
-    /**
-     * The cursor is what the client says it has SEEN, never the group's current newest — otherwise a
-     * message that arrived between the page loading and this call would be marked read unseen.
-     */
     public function test_marking_read_does_not_jump_to_messages_that_arrived_since(): void
     {
         $group = $this->group();
@@ -51,7 +46,6 @@ class MarkTalkReadTest extends TalkTestCase
         $this->assertNotSame((int) $arrivedSince->getKey(), (int) $cursor->talk_read_message_id);
     }
 
-    /** Idempotent: replaying an older position — a retry, a second tab behind — changes nothing. */
     public function test_replaying_an_older_message_never_moves_the_cursor_back(): void
     {
         $group = $this->group();
@@ -114,7 +108,6 @@ class MarkTalkReadTest extends TalkTestCase
             ->assertNotFound();
     }
 
-    /** A reader with no membership row has no cursor to hold, whatever they may read. */
     public function test_a_non_member_reader_cannot_mark_read(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -156,11 +149,6 @@ class MarkTalkReadTest extends TalkTestCase
         $this->assertSame((int) $messages[2]->getKey(), (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
     }
 
-    /**
-     * "Latest" is resolved at the moment the cursor moves, not by the client beforehand — which is
-     * why the client sends no tuple at all. A message written after the tap has been on nobody's
-     * screen and stays waiting.
-     */
     public function test_a_message_written_after_the_catch_up_stays_unread(): void
     {
         $group = $this->group();
@@ -179,7 +167,6 @@ class MarkTalkReadTest extends TalkTestCase
         );
     }
 
-    /** A second tap on a card that has not gone away yet settles rather than racing. */
     public function test_marking_all_read_twice_settles_on_the_same_position(): void
     {
         $group = $this->group();
@@ -193,11 +180,6 @@ class MarkTalkReadTest extends TalkTestCase
         $this->assertSame((int) $messages[2]->getKey(), (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
     }
 
-    /**
-     * Forward only, like every other advance. A request whose read of "latest" is behind the cursor —
-     * one that lost a race, or one whose newest message has since been deleted — cannot pull it back
-     * over messages already marked read.
-     */
     public function test_a_catch_up_that_reads_an_older_latest_cannot_regress_the_cursor(): void
     {
         $group = $this->group();
@@ -215,7 +197,6 @@ class MarkTalkReadTest extends TalkTestCase
         $this->assertSame($newest, (int) $this->cursorOf($group->getKey(), $member->getKey())->talk_read_message_id);
     }
 
-    /** The same refusal the named-id path gives: no membership row, no cursor to spend. */
     public function test_a_non_member_reader_cannot_mark_everything_read(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -228,7 +209,6 @@ class MarkTalkReadTest extends TalkTestCase
             ->assertNotFound();
     }
 
-    /** Leaving the group takes the cursor with it, so the catch-up has nothing left to move. */
     public function test_a_membership_lost_since_the_page_rendered_is_refused(): void
     {
         $group = $this->group(TopicReadAccess::Everyone);
@@ -241,7 +221,6 @@ class MarkTalkReadTest extends TalkTestCase
             ->assertNotFound();
     }
 
-    /** Writing is reading — and it happens with the insert, not on the next page load. */
     public function test_sending_a_message_advances_the_sender_s_own_cursor(): void
     {
         $group = $this->group();

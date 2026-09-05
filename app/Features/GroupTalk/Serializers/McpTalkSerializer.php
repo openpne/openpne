@@ -13,20 +13,15 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * What the MCP tools put on the wire. A separate shape from the Modern surface's
- * ({@see GroupMessageSerializer}, {@see TalkRoomSerializer}) rather than a reuse of it: those carry
- * `/file` and `/cache/img` URLs, which a bearer client cannot fetch — the file routes are
- * session-guarded — so shipping them would be shipping links that always 404.
- *
- * Text is all it carries. Pictures are reported as a count, so a reader knows the message is not
- * only what it says, and their bytes are fetched by naming the message — the `read-talk-message-images`
- * tool — rather than by following a link.
+ * A separate shape from the Modern surface's ({@see GroupMessageSerializer}, {@see TalkRoomSerializer})
+ * rather than a reuse of it: those carry `/file` and `/cache/img` URLs, which a bearer client cannot
+ * fetch because the file routes are session-guarded. Pictures are therefore reported as a count, and
+ * their bytes are fetched by naming the message.
  */
 class McpTalkSerializer
 {
     /**
-     * @param  array<int, GroupMessage>  $parents  the answered messages of this read, as ReplyReferences
-     *                                             read them
+     * @param  array<int, GroupMessage>  $parents
      * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>, inReplyTo: array{id: int, authorId: int|null}|null}
      */
     public static function message(GroupMessage $message, array $parents): array
@@ -36,12 +31,8 @@ class McpTalkSerializer
         return [
             'id' => (int) $message->getKey(),
             'body' => $message->body,
-            // Null for a withdrawn author (the FK sets it null), which is a fact about the row rather
-            // than a gap to paper over.
             'authorId' => $message->author?->getKey(),
             'authorName' => $message->author?->name,
-            // A reading agent gets the same answer a reader's eye does off the chip. False for a
-            // withdrawn author: there is no account left to be one.
             'authorIsAi' => (bool) $message->author?->isAiAccount(),
             'createdAt' => CarbonImmutable::instance($message->created_at)->toIso8601String(),
             'cursor' => (string) GroupTalkCursor::of($message),
@@ -56,13 +47,8 @@ class McpTalkSerializer
     }
 
     /**
-     * What this message answers. Carried as a shape rather than a bare id because "is this addressed
-     * to me" is a question an agent answers from the message payload alone, as it already does from
-     * `mentions`.
-     *
-     * `authorId` is who the answer is owed to, so it is null when there is nobody behind the parent —
-     * it was deleted, or its author has withdrawn. The two are deliberately not distinguished: a
-     * caller asks this to decide whom to answer, and in both cases the answer is nobody.
+     * `authorId` is null when there is nobody behind the parent — deleted, or its author withdrawn —
+     * and the two are deliberately not distinguished: in both cases there is nobody to answer.
      *
      * @param  array<int, GroupMessage>  $parents
      * @return array{id: int, authorId: int|null}|null
@@ -79,9 +65,8 @@ class McpTalkSerializer
     }
 
     /**
-     * A page of the conversation, oldest first. `nextCursor` / `previousCursor` are the two positions
-     * a caller asks the next page from, lifted out of the rows so a client never has to know which end
-     * of the list to read them off.
+     * `nextCursor` / `previousCursor` are lifted out of the rows so a client never has to know which
+     * end of the list to read them off.
      *
      * @param  array<int, GroupMessage>  $parents
      * @return array{messages: list<array<string, mixed>>, hasOlder: bool, hasNewer: bool, previousCursor: string|null, nextCursor: string|null}
@@ -100,10 +85,8 @@ class McpTalkSerializer
     }
 
     /**
-     * `unreadMentions` is how many of `unread` are addressed to the caller — named in, or an answer
-     * to something they said — the number a polling agent reads to decide whether a room wants an
-     * answer, without paging the messages to find out. Null only for a read that did not ask for it;
-     * the tool always does.
+     * `unreadMentions` counts the unread that name the caller or answer something they said, and is
+     * null only for a read that did not ask for it.
      *
      * @return array{groupId: int, name: string, unread: int, unreadMentions: int|null, muted: bool, lastMessageAt: string|null}
      */

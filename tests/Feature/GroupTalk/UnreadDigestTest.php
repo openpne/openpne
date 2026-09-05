@@ -14,12 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
-/**
- * The absence digest: what the talk page says a member missed, and what it costs to say it.
- *
- * The whole shape is bounded on purpose — a sample rather than the backlog — so most of what is
- * pinned here is what the page does NOT read.
- */
+/** Most of what is pinned here is what the page does not read. */
 class UnreadDigestTest extends TalkTestCase
 {
     private Carbon $start;
@@ -148,7 +143,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame([], $this->sampleReads(), 'a page under the threshold paid for a digest');
     }
 
-    /** The bound is the contract: a backlog many times the sample still costs one capped read. */
     public function test_a_huge_backlog_runs_exactly_one_bounded_sample(): void
     {
         $group = $this->group();
@@ -203,7 +197,6 @@ class UnreadDigestTest extends TalkTestCase
 
     // --- what the card says ---
 
-    /** The snapshot's number, never a recount: the card and the divider name the same backlog. */
     public function test_the_count_is_the_whole_backlog_even_though_the_sample_is_bounded(): void
     {
         $group = $this->group();
@@ -218,7 +211,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame($props['talkUnreadSnapshot']['count'], $props['unreadDigest']['count']);
     }
 
-    /** The period starts where the reader left off — the same instant the boundary is spelled with. */
     public function test_the_period_starts_at_the_boundary(): void
     {
         $group = $this->group();
@@ -235,7 +227,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame($props['talkUnreadSnapshot']['readThrough']['at'], $props['unreadDigest']['since']);
     }
 
-    /** Busiest first, and the viewer's own messages are not in the backlog to begin with. */
     public function test_the_faces_are_the_authors_of_the_sample_busiest_first(): void
     {
         $group = $this->group();
@@ -257,7 +248,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame(12, $digest['count']);
     }
 
-    /** Equal counts keep the order they were met in, so the row is stable between two renders. */
     public function test_authors_who_said_as_much_are_ordered_by_who_spoke_first(): void
     {
         $group = $this->group();
@@ -286,7 +276,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertCount(TalkAbsenceDigest::PARTICIPANTS, $this->digestOf($viewer, $group)['participants']);
     }
 
-    /** No face for somebody who is no longer there, and no blank one standing in for them either. */
     public function test_a_withdrawn_author_brings_no_face(): void
     {
         $group = $this->group();
@@ -339,10 +328,6 @@ class UnreadDigestTest extends TalkTestCase
         );
     }
 
-    /**
-     * A join row names a file, but only the file names its owner. One pointing at another message's
-     * picture is not this message's, whatever the policy would say about it on its own terms.
-     */
     public function test_a_join_row_borrowing_another_messages_file_is_left_out(): void
     {
         $group = $this->group();
@@ -357,7 +342,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame([$mine->url()], array_column($digest['thumbnails'], 'url'));
     }
 
-    /** The policy that guards the bytes is asked per file, and a refusal leaves no trace on the card. */
     public function test_a_refused_file_is_skipped_in_silence(): void
     {
         $group = $this->group();
@@ -378,7 +362,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame([$served->url()], array_column($digest['thumbnails'], 'url'));
     }
 
-    /** Nothing readable attached is an empty list, not a missing key: the card simply shows no strip. */
     public function test_a_backlog_with_no_pictures_ships_an_empty_strip(): void
     {
         $group = $this->group();
@@ -403,9 +386,8 @@ class UnreadDigestTest extends TalkTestCase
 
     public function test_a_message_hoarding_attachments_cannot_widen_the_read(): void
     {
-        // The sample bounds parents, not attachments: one migrated message may carry any number of
-        // pictures, and the strip's read has to stay capped whatever that number is — even when
-        // every early candidate is refused, the refill stops at the candidate cap.
+        // The fixture refuses every early candidate, so the refill has to stop at the candidate cap
+        // rather than reach past it.
         $group = $this->group();
         $viewer = $this->memberOf($group);
         $messages = $this->say($group, $this->memberOf($group), TalkAbsenceDigest::THRESHOLD);
@@ -427,10 +409,8 @@ class UnreadDigestTest extends TalkTestCase
         ));
         DB::disableQueryLog();
 
-        // Two picture reads on the page: the message list's own eager-load (pre-existing, bounded by
-        // the visible page) and the digest's candidate query. The digest's is the capped one; the
-        // refused pile fills its window, so nothing is refilled from past it — fewer pictures, never
-        // a wider read.
+        // Two picture reads on the page: the message list's own eager-load, and the digest's capped
+        // candidate query.
         $this->assertCount(2, $reads);
         $capped = array_values(array_filter(
             $reads,
@@ -443,10 +423,6 @@ class UnreadDigestTest extends TalkTestCase
 
     // --- the boundaries the digest does NOT follow ---
 
-    /**
-     * Quiet is about being interrupted, not about being told. Mute silences the nav badge and the
-     * notifications; opening the room still says what was missed.
-     */
     public function test_a_muted_room_still_shows_its_digest(): void
     {
         $group = $this->group();
@@ -463,11 +439,7 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame(14, $props['unreadDigest']['count']);
     }
 
-    /**
-     * The card is drawn at the separator or in the banner's place, and which of the two depends on
-     * where the boundary fell in the rendered slice — so the payload must not. Same fixture, the two
-     * renders that produce the two placements, one digest.
-     */
+    /** Same fixture, the two renders that produce the two placements, one digest. */
     public function test_both_placements_ship_the_same_payload(): void
     {
         $group = $this->group();
@@ -485,7 +457,6 @@ class UnreadDigestTest extends TalkTestCase
         $this->assertSame($offPage, $onPage);
     }
 
-    /** A reader with no membership row holds no cursor, so there is no absence to describe. */
     public function test_a_non_member_reader_gets_no_digest(): void
     {
         $group = $this->group();

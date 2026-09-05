@@ -13,16 +13,7 @@ use Illuminate\Support\Facades\DB;
 class RemoveMessageReaction
 {
     /**
-     * Take one of this member's reactions back, or do nothing if it is not there. Authorization is
-     * the caller's, as it is for {@see AddMessageReaction}, and the message is re-read under the
-     * same {@see TalkWriteLock} — a delete could not orphan anything, but taking the lock in one
-     * order across both writes is what keeps them from deadlocking against a teardown.
-     *
-     * $emoji is deliberately unchecked against the vocabulary: a member must be able to undo a
-     * reaction the site has since stopped offering, so what may be added and what may be removed are
-     * different questions.
-     *
-     * Only an actual deletion moves the version, for the same reason the add does.
+     * Authorization is the caller's.
      *
      * @throws GroupTalkActionException
      */

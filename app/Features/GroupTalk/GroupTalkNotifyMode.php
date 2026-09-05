@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Features\GroupTalk;
 
 /**
- * How much of a talk a site notifies about by default: only the messages that name you, or every
- * message. It is the site's answer, not a member's — a member's own catalog row overrides it
- * (docs/internals/notifications.md), and muting a room takes that room out either way.
- *
- * Stored in SnsSettingKey::GroupTalkNotifyDefault; read through GroupTalkNotifyDefault.
+ * The site's answer, which a member's own catalog row overrides (docs/internals/notifications.md,
+ * "The per-member catalog"). `label()` and `description()` return translation keys, translated in
+ * the reader's locale.
  */
 enum GroupTalkNotifyMode: string
 {
@@ -17,7 +15,6 @@ enum GroupTalkNotifyMode: string
 
     case All = 'all';
 
-    /** Label as a translation key, like Look: the consumer translates in the reader's locale. */
     public function label(): string
     {
         return match ($this) {
@@ -26,7 +23,6 @@ enum GroupTalkNotifyMode: string
         };
     }
 
-    /** One-line description for the picker, as a translation key. */
     public function description(): string
     {
         return match ($this) {
