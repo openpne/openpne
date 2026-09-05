@@ -91,18 +91,26 @@ is left null and reported as skipped rather than stopping the run.
 Every image upload — a member's avatar or post images, an admin's banner, logo or public asset, and
 a picture posted over MCP — is held to one per-file cap,
 [`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default.
-It is read as configured; PHP's ini limits are not folded in, because they belong to the deployment
-and differ between the FPM pool that serves uploads and the CLI that runs tests and commands.
+The one exception is the favicon, which keeps its own 1 MB ceiling under the cap. The admin forms
+upload through Livewire's temporary endpoint before Filament validates, so
+`FilesServiceProvider` sets that endpoint's rule to the same cap; unconfigured, Livewire's own
+12288 KB would silently be the admin cap above that size.
 
-They are prerequisites the operator sets alongside it. `upload_max_filesize` must be at least the
-cap: above it PHP discards the file before validation runs, and the form reports a failed upload
-rather than the size. `post_max_size` bounds the whole request, and a compose form carries up to
-`PostImages::MAX_IMAGES` files plus its fields, so it must hold the cap times that count with room
-for the rest of the body. The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes
-again; it never touches `$_FILES`, and the decoded file is then run through the compose forms' own
-rules, so the same cap is applied to the encoded length before the decode.
+The cap is read as configured; PHP's ini limits are not folded in, because they belong to the
+deployment and differ between the FPM pool that serves uploads and the CLI that runs tests and
+commands. Those ini limits are prerequisites the operator sets alongside the cap.
+`upload_max_filesize` must be at least the cap: above it PHP discards the file before validation
+runs, and the form reports a failed upload rather than the size. `post_max_size` bounds the whole
+request, and a compose form carries up to `PostImages::MAX_IMAGES` files plus its fields, so it
+must hold the cap times that count with room for the rest of the body.
 
-The upgrade does not copy OpenPNE 3's `image_max_filesize`; the dry run prints the value to set.
+The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes again; it never touches
+`$_FILES`, and the decoded file is then run through the compose forms' own rules, so the same cap
+is applied to the encoded length before the decode. That pre-decode bound scales with the cap: the
+base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it is refused.
+
+The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
+set, or says the OpenPNE 3 value could not be read as a size.
 
 ## Classic is not part of this
 

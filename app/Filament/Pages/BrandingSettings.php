@@ -128,7 +128,7 @@ class BrandingSettings extends Page
                         // PNG only: App\Http\Controllers\PublicFileController serves .ico / .svg as an
                         // attachment, which a <link rel="icon"> cannot use.
                         ->acceptedFileTypes(['image/png'])
-                        ->maxSize(1024)
+                        ->maxSize(min(1024, UploadLimit::kilobytes()))
                         ->rules(['dimensions:ratio=1,max_width='.self::maxDimension().',max_height='.self::maxDimension()])
                         ->storeFiles(false),
                     'remove_brand_favicon',

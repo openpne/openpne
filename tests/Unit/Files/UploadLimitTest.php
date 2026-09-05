@@ -3,6 +3,8 @@
 namespace Tests\Unit\Files;
 
 use App\Files\UploadLimit;
+use App\Providers\FilesServiceProvider;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Tests\TestCase;
 
 class UploadLimitTest extends TestCase
@@ -25,5 +27,15 @@ class UploadLimitTest extends TestCase
         config()->set('openpne.images.max_upload_kilobytes', -1);
 
         $this->assertSame(0, UploadLimit::kilobytes());
+    }
+
+    public function test_the_livewire_temporary_upload_rule_follows_the_cap(): void
+    {
+        // Above Livewire's own 12288 KB, so the shipped rule cannot be what the assertion sees.
+        config()->set('openpne.images.max_upload_kilobytes', 20480);
+
+        (new FilesServiceProvider($this->app))->register();
+
+        $this->assertContains('max:20480', FileUploadConfiguration::rules());
     }
 }

@@ -558,7 +558,7 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->assertSame(1, DiaryImage::query()->count());
 
-        $this->postDiary(['images' => ["\n".$atTheBound]])->assertHasErrors(['base64 characters']);
+        $this->postDiary(['images' => ["\n".$atTheBound]])->assertHasErrors(['at most 5120 KB, which is '.self::MAX_ENCODED.' base64 characters']);
 
         $this->assertSame(1, Diary::query()->count());
         $this->assertSame(1, DiaryImage::query()->count());

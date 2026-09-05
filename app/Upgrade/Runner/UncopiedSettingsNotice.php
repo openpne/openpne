@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * The OpenPNE 3 sns_config values that live in .env on OpenPNE 4, each reported with the value to set
  * so the operator carries it by hand. Reads the source table the structural preflight guards, so it
- * runs only after that verdict and only in a run whose steps read sns_config.
+ * runs only after that verdict and only in a run with a step whose source table is sns_config.
  */
 final class UncopiedSettingsNotice
 {
@@ -36,7 +36,7 @@ final class UncopiedSettingsNotice
         ];
     }
 
-    /** OpenPNE 3 opValidatorImageFile: a trailing K or M scales the integer prefix, anything else is bytes. */
+    /** OpenPNE 3 opValidatorImageFile scaled a trailing K or M and cast anything else to bytes; the other shapes are refused here rather than guessed. */
     public static function kilobytes(string $value): ?int
     {
         if (! preg_match('/^\s*(\d+)\s*([kKmM]?)\s*$/', $value, $m)) {
