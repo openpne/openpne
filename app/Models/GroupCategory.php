@@ -23,9 +23,8 @@ class GroupCategory extends Model
     }
 
     /**
-     * Whether an ordinary member may create a group in category $id. Null = no category
-     * (always allowed); a missing or admin-only category is rejected. OpenPNE 3 hid non-allowed
-     * categories from members and refused them on save.
+     * Null means no category and is always allowed; a missing or admin-only category is refused.
+     * OpenPNE 3 hid non-allowed categories from members and refused them on save.
      */
     public static function memberCreatable(?int $id): bool
     {

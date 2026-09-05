@@ -30,7 +30,6 @@ class CreateAiAccountTest extends TestCase
         return app(CreateAiAccount::class)($owner, $name);
     }
 
-    /** The reason carried by the refusal, or null when the call succeeded. */
     private function refusal(callable $call): ?AiAccountActionFailure
     {
         try {
@@ -143,9 +142,9 @@ class CreateAiAccountTest extends TestCase
 
     public function test_a_name_is_held_to_the_length_an_ordinary_members_name_is(): void
     {
-        // The column is 255 wide and registration says so; the action has to say it too, or a caller
-        // that is not the form truncates (MySQL, non-strict) or aborts at the write. Counted in
-        // characters, as the column is, so a multibyte name is not refused for its byte length.
+        // The action states the 255-character limit too, or a non-form caller truncates (MySQL,
+        // non-strict) or aborts at the write; counted in characters, so a multibyte name is not
+        // refused for its byte length.
         $owner = Member::factory()->create();
 
         $atTheLimit = $this->create($owner, str_repeat('あ', 255));
@@ -165,8 +164,6 @@ class CreateAiAccountTest extends TestCase
     {
         $owner = Member::factory()->create();
 
-        // Ordinary member creation must not be able to declare itself owned — the link is set by
-        // CreateAiAccount alone, and never changed afterwards.
         $member = Member::create([
             'name' => 'Impostor',
             'email' => 'impostor@example.test',

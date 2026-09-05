@@ -20,9 +20,7 @@ use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
 /**
- * Where an AI account is named in a sink that can hold nothing but a string — a mail template
- * variable, a push body, a notification sentence — the marker travels inside the name. These are the
- * surfaces no AiChip can reach, and they are the ones that carry a message out of the site.
+ * The surfaces covered here are the ones no chip can reach: a sink that holds nothing but a string.
  */
 class AiAccountDisplayNameTest extends TestCase
 {
@@ -38,7 +36,6 @@ class AiAccountDisplayNameTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    /** An AI account named $name, joined to $group alongside its owner. */
     private function aiAccountIn(Group $group, string $name): Member
     {
         $aiAccount = Member::factory()->aiAccount()->create(['name' => $name]);
@@ -119,8 +116,6 @@ class AiAccountDisplayNameTest extends TestCase
         $feed = NotificationFeedSerializer::paginator($rows);
 
         $this->assertSame(__(':name sent you a message.', ['name' => __(':name (AI)', ['name' => 'Shirabe'])]), $feed['data'][0]['label']);
-        // The row's own actor object keeps the bare name: the client draws the chip from `isAi`, and
-        // a name marked twice is the thing this split exists to prevent.
         $this->assertSame('Shirabe', $feed['data'][0]['actor']['name']);
         $this->assertTrue($feed['data'][0]['actor']['isAi']);
     }
@@ -131,7 +126,6 @@ class AiAccountDisplayNameTest extends TestCase
         $reader = Member::factory()->create();
         $this->deliver($aiAccount, $reader);
 
-        // Classic draws the actor's name as text beside the avatar, with no chip to carry the fact.
         $rows = NotificationFeedSerializer::centerRows($reader->notifications()->get(), []);
 
         $this->assertSame(__(':name (AI)', ['name' => 'Shirabe']), $rows->first()->actorName);
@@ -154,10 +148,9 @@ class AiAccountDisplayNameTest extends TestCase
 
     public function test_every_notification_mail_that_names_an_actor_marks_an_ai_one(): void
     {
-        // A guard rather than a suite per notification: the marker is applied at each actor-name
-        // context, and what breaks that is a new mail pasting a bare `->name` in. Deny by default —
-        // a property not on the list of things that are not members counts as one — so an actor
-        // named something nobody thought of fails here instead of shipping unmarked.
+        // Deny by default: a property not on this list of things that are not members counts as
+        // one, so an actor named something nobody thought of fails here instead of shipping
+        // unmarked.
         $notMembers = ['group', 'topic', 'event', 'post', 'diary', 'message', 'comment'];
 
         $unmarked = [];
@@ -190,7 +183,6 @@ class AiAccountDisplayNameTest extends TestCase
         $this->actingAs($reader)
             ->get('/groups/mine')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                // The name stays bare: the row draws the chip from the fact beside it.
                 ->where('rooms.data.0.latest.authorName', 'Shirabe')
                 ->where('rooms.data.0.latest.authorIsAi', true));
     }

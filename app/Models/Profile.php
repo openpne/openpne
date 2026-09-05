@@ -13,11 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A member-profile field definition.
- *
- * Captions/info are localised in `profile_translations` keyed by (id, lang); preset fields
- * fall back to the config/preset_profile.php caption via __(). `op_preset_*` fields source
- * their choices from the catalog, custom fields from `profile_options`.
+ * See docs/internals/member-profile.md, "Field definitions vs values".
  */
 #[Fillable(['name', 'is_required', 'is_unique', 'is_edit_public_flag', 'default_visibility', 'form_type', 'value_type', 'is_disp_regist', 'is_disp_config', 'is_disp_search', 'is_public_web', 'value_regexp', 'value_min', 'value_max', 'sort_order'])]
 class Profile extends Model
@@ -25,7 +21,7 @@ class Profile extends Model
     /** @use HasFactory<ProfileFactory> */
     use HasFactory;
 
-    /** Translation lang code (OpenPNE/Doctrine I18n) for each app locale. */
+    /** The lang codes OpenPNE 3's Doctrine I18n tables use. */
     private const TRANSLATION_LANG = ['ja' => 'ja_JP', 'en' => 'en'];
 
     protected function casts(): array
@@ -61,10 +57,6 @@ class Profile extends Model
     }
 
     /**
-     * The per-value visibility choices offered when editing this field, when is_edit_public_flag
-     * is set. Open (guest-visible) is offered only for a web-public field, matching OpenPNE 3's
-     * profile editor which hid "Public to Web" unless the field allowed it.
-     *
      * @param  Visibility|null  $current  audience the member already stores for this field, kept
      *                                    offered so re-posting the form cannot widen it
      * @return list<Visibility>
@@ -75,8 +67,7 @@ class Profile extends Model
     }
 
     /**
-     * OpenPNE 3 Profile::isMultipleSelect(): a custom date (year/month/day) or a checkbox.
-     * Preset date (birthday) is a single value.
+     * OpenPNE 3 `Profile::isMultipleSelect()`.
      */
     public function isMultipleSelect(): bool
     {
@@ -84,9 +75,8 @@ class Profile extends Model
     }
 
     /**
-     * Selectable choices for a select/radio/checkbox field as [['id' => ..., 'caption' => ...]].
-     * A preset takes catalog choices (the key is stored in member_profiles.value); a custom field
-     * uses its profile_options (the option id is stored). Empty for non-option fields.
+     * A preset's choice key is stored in `member_profiles.value`, a custom field's option id in
+     * `member_profiles.profile_option_id`.
      *
      * @return list<array{id: string, caption: string}>
      */
@@ -129,7 +119,6 @@ class Profile extends Model
         return $this->translations->firstWhere('lang', $lang)?->info;
     }
 
-    /** Upsert this field's localised caption (and optional info) for a translation lang. */
     public function setTranslation(string $lang, string $caption, ?string $info = null): void
     {
         DB::table('profile_translations')->updateOrInsert(

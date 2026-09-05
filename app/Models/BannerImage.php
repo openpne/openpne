@@ -11,10 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Throwable;
 
-// A banner image in the shared pool, pointing at a stored File. The File's bytes are public
-// (FilePolicy), since a banner shows to guests.
-// Deleting the row leaves the File; the delete action purges it explicitly (the files→banner_images
-// cascade only runs the other way).
+// Deleting this row leaves the File behind: the cascade only runs from `files`, so the caller purges
+// the File itself.
 #[Fillable(['file_id', 'url', 'name'])]
 class BannerImage extends Model
 {
@@ -39,9 +37,9 @@ class BannerImage extends Model
     private bool $dimensionsResolved = false;
 
     /**
-     * Pixel dimensions of the stored image ([width, height]), or null when the bytes are missing or
-     * not a readable image (e.g. a non-raster file imported by the OpenPNE 3 upgrade). Reads the
-     * bytes on demand (memoized per instance) — fine for the small, admin-only banner pool.
+     * Null when the bytes are missing or are not a readable image, such as a non-raster file
+     * imported by the OpenPNE 3 upgrade. Reading the bytes on demand is deliberate: the banner pool
+     * is small and admin-only.
      *
      * @return array{0: int, 1: int}|null
      */
@@ -75,7 +73,6 @@ class BannerImage extends Model
         return $this->dimensions = $size !== false ? [$size[0], $size[1]] : null;
     }
 
-    /** "W × H" for display, or null when the dimensions can't be read. */
     public function dimensionsLabel(): ?string
     {
         $dimensions = $this->dimensions();

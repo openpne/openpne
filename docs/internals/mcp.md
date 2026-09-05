@@ -287,6 +287,21 @@ account itself has no credential of its own. Revoking is deliberately never gate
 `ai_accounts_enabled` or on the `mcp` unit: whatever an operator has switched off, an owner must
 still be able to take an outstanding token away.
 
+**The owner's row is the lock, and it is taken before the account's.** A creation locks the owner and
+counts the accounts under it, a mint locks the owner and then the account, and the sweep a ban or a
+password change runs ([`AiAccountTokens`](../../app/Features/AiAccount/AiAccountTokens.php)) locks the
+owner and then every account it owns; `WithdrawMember` takes the same order when it drains an owner.
+Everything judged is re-read from those locked rows, so a creation cannot slip past a freeze that
+committed while the form was open, two creations cannot both see room under the cap, and a mint
+cannot hand back reach a freeze has just taken away. Two carve-outs are deliberate: revoking every
+token of one member takes that member's row and no other, and revoking a single token by id takes no
+lock at all — one delete of one named row, which a mint racing it does not touch.
+
+Where a caller found the member by address rather than by key, the address travels with the row
+([`MemberSelector`](../../app/Features/AiAccount/MemberSelector.php)) and is asked again under the
+lock: an address that changed hands between the lookup and the write refuses the act rather than
+retargeting it to the id the lookup returned.
+
 There is no push: nothing notifies an MCP client that a message arrived, so a client that wants to
 answer mentions polls — `list-talk-rooms`, whose `unreadMentions` answers "is anyone asking me
 anything" for every room in one call, and then `read-talk-messages` only for the rooms that say yes.

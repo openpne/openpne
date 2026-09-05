@@ -15,11 +15,9 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * An AI account never holds a login, by any of the three doors into a member row: a password
- * attempt, a session carrying its id, and a remember-me cookie. The first two doors are structurally
- * shut (no email to look up, no password to verify) and the members constraint keeps them that way;
- * these pin the refusals that still stand when the constraint is lifted, and the third door — which
- * needs no credential at all, only an id.
+ * Three doors into a member row: a password attempt, a session carrying its id, and a remember-me
+ * cookie. The members constraint shuts only the first and the third, so these pin the refusals that
+ * still stand with it lifted and the session door, which needs no credential at all.
  */
 class AiAccountLoginTest extends TestCase
 {
@@ -36,11 +34,9 @@ class AiAccountLoginTest extends TestCase
     }
 
     /**
-     * The DB belt refuses the writes these tests need, which is the point: the row a guard exists for
-     * is only reachable with the belt lifted. Lifting it is DDL — transactional on SQLite, where the
-     * test's own transaction rolls it back, but an implicit COMMIT on MySQL that would leave the
-     * constraint off for the rest of that worker's tests. The guards are plain PHP, so the SQLite
-     * lane covers them for both.
+     * The row a guard exists for is only reachable with the belt lifted. Lifting it is DDL —
+     * transactional on SQLite, but an implicit COMMIT on MySQL that would leave the constraint off
+     * for the rest of that worker's tests — so this runs on SQLite alone.
      */
     private function liftTheCredentialConstraint(): void
     {
@@ -54,7 +50,6 @@ class AiAccountLoginTest extends TestCase
         ));
     }
 
-    /** The session key the member guard stores its authenticated id under. */
     private function sessionKey(): string
     {
         return Auth::guard('member')->getName();
@@ -97,9 +92,8 @@ class AiAccountLoginTest extends TestCase
 
     public function test_a_session_carrying_an_ai_accounts_id_signs_nobody_in(): void
     {
-        // The door the login form's refusal does not cover: session restore asks the provider for an
-        // id and never looks at a credential, so an id written into a session — by a bug, or by
-        // anything that hands the guard an AI account — would otherwise be a full member session.
+        // The door the form's refusal does not cover: session restore asks the provider for an id
+        // and never looks at a credential.
         $aiAccount = Member::factory()->aiAccount()->create();
 
         $this->withSession([$this->sessionKey() => $aiAccount->getKey()])
@@ -123,9 +117,8 @@ class AiAccountLoginTest extends TestCase
 
     public function test_a_remember_me_cookie_for_an_ai_account_restores_nobody(): void
     {
-        // The other credential-free door: a recaller cookie is matched against members.remember_token
-        // alone. The constraint now forbids an AI account from holding one — this is the refusal that
-        // still stands for a row that somehow does.
+        // The other credential-free door: a recaller is matched against `members.remember_token`
+        // alone, and this pins the refusal for a row that somehow holds one.
         $this->liftTheCredentialConstraint();
 
         $aiAccount = Member::factory()->aiAccount()->create();

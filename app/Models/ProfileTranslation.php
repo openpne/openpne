@@ -6,9 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Localised caption/info for a Profile, keyed by (id, lang) — the OpenPNE 3 Doctrine I18n
- * table shape. `id` is the profile id (not auto-incrementing), so reads go through the
- * Profile::translations relation and writes use updateOrInsert (composite key).
+ * The OpenPNE 3 Doctrine I18n shape: the key is (id, lang) and `id` is not an autoincrement, so a
+ * write is an upsert.
  */
 class ProfileTranslation extends Model
 {

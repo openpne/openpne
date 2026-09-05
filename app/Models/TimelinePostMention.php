@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// One @mention in a timeline post's body: the half-open code-point range [offset, offset+length)
-// that names a member. A join row only — no timestamps; the post carries them.
 #[Fillable(['timeline_post_id', 'member_id', 'offset', 'length'])]
 class TimelinePostMention extends Model
 {

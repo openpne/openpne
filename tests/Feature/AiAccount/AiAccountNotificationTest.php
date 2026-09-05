@@ -15,19 +15,15 @@ use NotificationChannels\WebPush\WebPushMessage;
 use Tests\TestCase;
 
 /**
- * An AI account has nobody to interrupt: the outbound channels are shut for it, the feed row is not.
- *
- * Asserted on NotificationSent (dispatched once a channel has been given the notification) rather
- * than on a delivered mail: the account's address column is null, so the mail channel would drop it
- * anyway — that absence would pass with the listener deleted, and this has to fail without it.
+ * Asserted on NotificationSent rather than on a delivered mail: the account's address column is
+ * null, so the mail channel would drop it anyway and the absence would pass with the listener
+ * deleted.
  */
 class AiAccountNotificationTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * The channels the notification actually reached, in send order.
-     *
      * @param  list<string>  $via
      * @return list<string>
      */
@@ -54,8 +50,6 @@ class AiAccountNotificationTest extends TestCase
 
     public function test_the_feed_row_is_still_written(): void
     {
-        // The delivery is suppressed, not the fact: the row is what an MCP client reads to find out
-        // something happened to it.
         $aiAccount = Member::factory()->aiAccount()->create();
 
         $aiAccount->notify(new ChannelProbeNotification(['mail', 'database']));
