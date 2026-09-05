@@ -28,12 +28,14 @@ class SnsSettingUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return sprintf('`name` IN (%s)', $this->nameList());
+        // A NULL value is not copied: OpenPNE 3 read it as unset (opConfig::get fell to the default),
+        // which is what a missing sns_settings row means here.
+        return sprintf('`name` IN (%s) AND `value` IS NOT NULL', $this->nameList());
     }
 
     public function filterColumns(): array
     {
-        return ['name'];
+        return ['name', 'value'];
     }
 
     /**

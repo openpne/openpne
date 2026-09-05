@@ -190,12 +190,23 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertSame($before, DB::table('sns_settings')->count());
     }
 
+    public function test_a_null_value_is_left_to_the_openpne4_default(): void
+    {
+        $this->seedConfig('sns_name', null);
+        $this->seedConfig('sns_title', 'Welcome');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'sns_name']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_title', 'value' => 'Welcome']);
+    }
+
     private function runUpgrade(): void
     {
         DB::statement((new InsertSelectCompiler)->compile(new SnsSettingUpgrade));
     }
 
-    private function seedConfig(string $name, string $value): void
+    private function seedConfig(string $name, ?string $value): void
     {
         DB::table('sns_config')->insert(['name' => $name, 'value' => $value]);
     }
