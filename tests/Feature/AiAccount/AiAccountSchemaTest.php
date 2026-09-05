@@ -78,7 +78,6 @@ class AiAccountSchemaTest extends TestCase
 
     public function test_an_existing_member_with_credentials_cannot_be_given_an_owner(): void
     {
-        // The other direction of the same rule.
         $owner = Member::factory()->create();
         $member = Member::factory()->create();
 

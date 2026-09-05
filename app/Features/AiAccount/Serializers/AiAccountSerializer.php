@@ -68,7 +68,7 @@ class AiAccountSerializer
     }
 
     /**
-     * Null when the install has no such field, the same null that keeps the POST from writing one.
+     * Null whenever SelfIntroductionField answers null, the same null that keeps the POST from writing one.
      *
      * @return array{label: string, value: string, maxLength: int|null}|null
      */

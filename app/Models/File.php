@@ -49,7 +49,6 @@ class File extends Model
         return route('file.public', ['file' => $this->name]);
     }
 
-    /** Null when the type is not a supported image. */
     public function imageFormat(): ?string
     {
         return match ($this->type) {

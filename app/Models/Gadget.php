@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** OpenPNE 3 `gadget`; `name` holds the gadget kind. */
+/** OpenPNE 3 `gadget`. */
 class Gadget extends Model
 {
     protected $fillable = ['context', 'zone', 'name', 'source_type', 'sort_order'];

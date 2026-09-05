@@ -211,7 +211,8 @@ class AiAccountController extends Controller
             return $back->with('error', $this->messageFor($e->reason));
         }
 
-        // After the Action's commit, so a rolled-back mint is never recorded as one.
+        // After the Action's commit, so a rolled-back mint is never recorded as one; `via` is what
+        // separates this line from the CLI's, so the audit line stays the caller's to write.
         SecurityLog::event('token.issued', [
             'member_id' => (int) $member->getKey(),
             'owner_id' => $this->viewer()->getKey(),

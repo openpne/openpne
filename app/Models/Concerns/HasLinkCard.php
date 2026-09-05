@@ -17,7 +17,8 @@ trait HasLinkCard
 
     /**
      * Must run inside the same transaction as the body write. Clearing `link_card_synced_at` too is
-     * what offers the record to the read path again: a non-null value means "examined, no URL".
+     * what offers the record to the read path again: with `link_card_id` null, a non-null value there
+     * means "examined, no URL".
      */
     public function clearLinkCard(): void
     {
