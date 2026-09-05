@@ -117,6 +117,31 @@ class PostingSwitchTest extends TestCase
         $response->assertDontSee('data-timeline-compose', false);
     }
 
+    public function test_an_activity_box_with_nothing_to_show_and_no_form_is_dropped_whole(): void
+    {
+        // OpenPNE 3 drew the box for activities or a form; off, with no activities, there is neither.
+        $this->post->delete();
+        foreach (['activityBox', 'allMemberActivityBox'] as $index => $kind) {
+            Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => $kind, 'sort_order' => $index]);
+        }
+        app(GadgetService::class)->clearCache();
+
+        $this->actingAs($this->member)->get(route('home'))->assertOk()->assertSee('activityBox homeRecentList', false);
+
+        $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
+
+        $this->actingAs($this->member)->get(route('home'))->assertOk()->assertDontSee('activityBox homeRecentList', false);
+    }
+
+    public function test_the_mention_picker_endpoint_closes_with_the_switch(): void
+    {
+        $this->actingAs($this->member)->get(route('timeline.mention_candidates', ['q' => 'a']))->assertOk();
+
+        $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
+
+        $this->actingAs($this->member)->get(route('timeline.mention_candidates', ['q' => 'a']))->assertNotFound();
+    }
+
     public function test_modern_pages_carry_the_switch(): void
     {
         $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);

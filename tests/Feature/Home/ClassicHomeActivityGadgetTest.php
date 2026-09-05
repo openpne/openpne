@@ -91,8 +91,8 @@ class ClassicHomeActivityGadgetTest extends TestCase
 
     public function test_activity_box_keeps_its_frame_and_post_link_when_empty(): void
     {
-        // OpenPNE 3's home activityBox always carried the inline post form (is_allow_post_activity is
-        // a global default-on switch), so the frame never disappeared; the ported box keeps the frame
+        // OpenPNE 3's home activityBox carried the inline post form while is_allow_post_activity (on by
+        // default) allowed it, and a box with a form never disappeared; the ported box keeps the frame
         // and offers the post link even with no visible activities.
         $viewer = Member::factory()->create();
         $gadget = $this->makeGadget('activityBox');

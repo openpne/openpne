@@ -427,7 +427,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/member/{member}/timeline/rows', 'memberRows')->whereNumber('member')->name('timeline.member.rows');
         Route::get('/timeline/new', 'new')->middleware(EnsureTimelinePostingEnabled::class)->name('timeline.new');
         // What the compose form's @mention picker reads (JSON), on a keystroke-rate limiter like the preview's.
-        Route::get('/timeline/mention-candidates', 'mentionCandidates')->middleware('throttle:mention-search')->name('timeline.mention_candidates');
+        Route::get('/timeline/mention-candidates', 'mentionCandidates')->middleware([EnsureTimelinePostingEnabled::class, 'throttle:mention-search'])->name('timeline.mention_candidates');
         // The tag is percent-encoded in the URL and reaches the action decoded.
         Route::get('/timeline/tag/{tag}', 'tag')->name('timeline.tag');
         Route::get('/timeline/tag/{tag}/rows', 'tagRows')->name('timeline.tag.rows');
