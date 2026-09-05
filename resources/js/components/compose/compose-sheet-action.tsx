@@ -14,18 +14,13 @@ import {
 import { createPortal } from 'react-dom';
 
 /**
- * What the mobile compose sheet shares between the shell, its header and the page: the header's
- * action slot, and the exit the close control fires. The slot is a portal rather than chrome data,
- * because the button carries page state (pending, disabled, label) React must keep updating.
+ * The header's action slot is a portal rather than chrome data, because the button carries page
+ * state React must keep updating.
  */
 
 /**
- * The id every compose form carries. A form that submits natively pairs it with
- * `type="submit" form={COMPOSE_FORM_ID}` on its header action, keeping it a real submitter: the
- * browser runs the form's constraint validation and fires its submit event, where calling the
- * page's handler from the header would skip both. The message forms post from their buttons'
- * own click handlers instead (they never had a native submit path), so there the id is only the
- * seam for switching later.
+ * A form that submits natively pairs this with `type="submit" form={COMPOSE_FORM_ID}` on its header
+ * action, so the browser still runs the form's constraint validation and fires its submit event.
  */
 export const COMPOSE_FORM_ID = 'compose-form';
 
@@ -36,7 +31,6 @@ interface Sheet {
     element: HTMLElement | null;
     attach: (element: HTMLElement | null) => void;
     exit: ComposeExit;
-    /** Reports that a conversation's composer holds focus — see {@link useComposerEngaged}. */
     setComposerEngaged: (engaged: boolean) => void;
 }
 
@@ -49,10 +43,9 @@ export const SHEET_EXIT_ANIMATION = 'modern-sheet-out';
 const EXIT_FALLBACK_MS = 450;
 
 /**
- * How long a landed exit waits for its navigation to arrive before it brings the sheet back. A
- * canceled visit or a popstate that never comes would otherwise leave an inert column held off the
- * bottom of the screen forever; on a slow network the restore may race a still-inflight arrival,
- * which costs a re-played entry — visibly odd, but never stuck.
+ * A canceled visit or a popstate that never comes would otherwise leave an inert column held off the
+ * bottom of the screen forever. On a slow network the restore may race a still-inflight arrival,
+ * which costs a re-played entry.
  */
 const EXIT_RESTORE_MS = 2000;
 
@@ -67,16 +60,13 @@ export interface ComposeExitState {
 }
 
 /**
- * The sheet's exit, owned by the shell: the close control asks for it, the column plays it, and the
- * navigation it was given runs at the end. Only a sliding sheet waits — anywhere the slide does not
- * happen (a page that is not compose, lg and up, reduced motion) the navigation is immediate, so no
+ * Only a sliding sheet waits: anywhere the slide does not happen the navigation is immediate, so no
  * path can strand the reader on a screen that never leaves.
  */
 export function useComposeExitState(compose: boolean): ComposeExitState {
     const { url } = usePage();
     const [state, setState] = useState({ exiting: false, url });
-    // The navigation waiting on the animation. Also the in-flight guard: a second close during the
-    // slide is the same exit, not another one.
+    // Also the in-flight guard: a second close during the slide is the same exit, not another one.
     const pending = useRef<(() => void) | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const restore = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,17 +93,14 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
             return;
         }
         navigate();
-        // The navigation is on its way; if it never arrives (a canceled visit, a popstate that was
-        // not answered), bring the sheet back rather than hold an inert column offscreen forever.
         restore.current = setTimeout(() => {
             restore.current = null;
             setState((s) => (s.exiting ? { exiting: false, url: s.url } : s));
         }, EXIT_RESTORE_MS);
     }, []);
 
-    // The URL moved on — by the exit's own navigation or by one that beat it. Every leftover goes
-    // with it: a stale timer must not fire a second navigation, and stale `exiting` must not greet
-    // a revisit of the same URL as a surface already off the bottom of the screen.
+    // Every leftover goes with the URL: a stale timer must not fire a second navigation, and stale
+    // `exiting` must not greet a revisit of the same URL as a surface already offscreen.
     useEffect(() => {
         if (state.url === url) {
             return;
@@ -167,9 +154,8 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
 }
 
 /**
- * Holds the sheet for the shell, so the header (producer) and the page (consumer) share one. The
- * engagement setter comes from the shell for the same reason `exit` does: what it moves — the bottom
- * bar and the space reserved for it — is the shell's, and the shell cannot read its own context.
+ * The engagement setter comes from the shell for the same reason `exit` does: the shell cannot read
+ * its own context.
  */
 export function ComposeSheetProvider({
     exit,
@@ -194,30 +180,20 @@ export function ComposeSheetProvider({
 
 const noop = () => {};
 
-/** The ref the sheet header puts on its action slot. */
 export function useComposeSlotRef(): (element: HTMLElement | null) => void {
     const sheet = useContext(ComposeSheetContext);
 
     return sheet?.attach ?? noop;
 }
 
-/** How the sheet's close control leaves: play the exit, then navigate. */
 export function useComposeExit(): ComposeExit {
     return useContext(ComposeSheetContext)?.exit ?? immediate;
 }
 
 /**
- * Tells the shell whether someone is writing in this conversation, for the look that keeps its
- * bottom bar standing while the room is being read: put the returned ref on the composer's form.
- *
- * Focus is watched at the form, not at the field. Tapping send or attach moves focus within the same
- * form, and a field-level blur would take that for leaving — the bar would flap out and back on
- * every accessory tap. `relatedTarget` inside the form is therefore still engaged. These are
- * listeners beside whatever the field already does (MentionTextarea keeps its own onBlur), not a
- * replacement for it.
- *
- * Unmounting clears the flag: leaving the room takes its composer along, and a bar left hidden for
- * the page after would have nothing to bring it back.
+ * Put the returned ref on the composer's form, not on the field: tapping send or attach moves focus
+ * within the same form, and a field-level blur would take that for leaving. Unmounting clears the
+ * flag, because the page after would have nothing to bring the bar back.
  */
 export function useComposerEngaged(): RefObject<HTMLFormElement | null> {
     const form = useRef<HTMLFormElement>(null);
@@ -249,7 +225,6 @@ export function useComposerEngaged(): RefObject<HTMLFormElement | null> {
     return form;
 }
 
-/** Renders the page's compose actions in the sheet header; nothing at all where there is no sheet. */
 export function ComposeSheetAction({ children }: { children: ReactNode }) {
     const sheet = useContext(ComposeSheetContext);
 

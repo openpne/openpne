@@ -1,17 +1,10 @@
 import { InitialBadge } from '@/components/initial-badge';
 
-/**
- * Square group image. Renders the image when `src` is set, otherwise a neutral initial badge.
- * The rounded-square shape distinguishes a group (place) from the circular member Avatar
- * (person).
- */
+/** The rounded-square shape is what distinguishes a group from the circular member Avatar. */
 type Props = {
     name: string;
-    /** Image URL, or null to fall back to the initial badge. */
     src: string | null;
-    /** Outer size classes (e.g. `size-14`, `w-full aspect-square`). */
     className?: string;
-    /** Badge font size when falling back to the initial. */
     textClassName?: string;
     /** Set when the name is already shown as adjacent text (list rows, tiles): the image becomes
      *  decorative so it isn't announced twice (avoids the image-redundant-alt a11y warning). */

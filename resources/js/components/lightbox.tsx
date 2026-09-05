@@ -11,15 +11,9 @@ interface LightboxImage {
 }
 
 /**
- * Full-size image viewer over the current page — the Modern counterpart of the admin
- * image-lightbox (same interaction contract: overlay/Esc/close dismiss, plus an
- * open-the-original escape hatch). Built on the same Radix Dialog primitive as the nav
- * drawer and confirm dialog: it supplies the focus trap, dismissal, scroll lock and focus
- * restore.
- *
- * Controlled multi-image viewer: the parent owns which of `images` is shown via `index`
- * (null = closed) and moves it with `onNavigate`. Navigation is bounded — no wrap — so the
- * prev/next affordances and the position readout only exist for a set of more than one.
+ * Controlled: the parent owns which of `images` is shown through `index` (null = closed) and moves it
+ * with `onNavigate`. Navigation is bounded, never wrapping, so the affordances exist only for a set
+ * of more than one.
  */
 export function Lightbox({
     images,
@@ -85,15 +79,14 @@ export function Lightbox({
                             goNext();
                         }
                     }}
-                    // Scrim-mounted, not a panel: every pixel the frame kept was one the image lost.
-                    // `fixed inset-0` also retires the 100dvh arithmetic this replaces — on iOS a
-                    // fixed inset resolves against the small viewport, and the URL bar cannot move
-                    // while the dialog holds the scroll lock.
+                    // On iOS a fixed inset resolves against the small viewport, and the URL bar
+                    // cannot move while the dialog holds the scroll lock.
+
                     // The chrome heights are declared once here and read by the bar, the dots and the
                     // slide padding, so a tall image can never end up under either of them.
+
                     // touch-action pinch-zoom, with no pan: the browser keeps two-finger zoom and
-                    // hands over every one-finger pan, because a drag in any direction is ours —
-                    // sideways turns the page, up or down closes the viewer.
+                    // hands over every one-finger pan, because a drag in any direction is ours.
                     style={
                         {
                             '--lb-chrome-top': 'calc(3.5rem + env(safe-area-inset-top))',
@@ -136,34 +129,28 @@ export function Lightbox({
                                             if (e.target !== e.currentTarget) {
                                                 return;
                                             }
-                                            // A finger already has a way out — drag the picture aside —
-                                            // and tapping for it would race double-tap zoom and
-                                            // press-and-hold save. Anything else keeps click-outside,
-                                            // pen included: the drag is built on touch events, which a
-                                            // pen does not have to produce.
+                                            // Touch is excluded because a tap would race double-tap
+                                            // zoom and a drag already dismisses; a pen keeps
+                                            // click-outside, the drag being built on touch events it
+                                            // need not produce.
                                             const pointerType = (e.nativeEvent as PointerEvent).pointerType;
                                             if (pointerType === 'touch' || deck.draggedRecently()) {
                                                 return;
                                             }
                                             onClose();
                                         }}
-                                        // No side padding of its own: the picture runs to the screen
-                                        // edges, and only a landscape cutout pushes it in.
                                         // From sm up the wide padding is the chevrons' own lane, so
-                                        // the image never runs under them. Below sm they overlap
-                                        // instead: a cursor in a phone-width window would otherwise
-                                        // spend a third of the width on two buttons, and a cursor has
-                                        // no swipe to fall back on, so the arrows have to stay.
+                                        // the image never runs under them; below sm they overlap, a
+                                        // cursor having no swipe to fall back on.
                                         className="lightbox-slide flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
                                     >
                                         <img
                                             src={image.url}
                                             alt=""
                                             draggable={false}
-                                            // Every image is in the DOM, so the browser fetches the set
-                                            // on open (three at most, PostImages::MAX_IMAGES). Raise
-                                            // that ceiling and this needs to become a window around
-                                            // `index` instead.
+                                            // Every image is in the DOM, so the browser fetches the
+                                            // whole set on open; past PostImages::MAX_IMAGES this has
+                                            // to become a window around `index` instead.
                                             fetchPriority={i === index ? 'high' : 'auto'}
                                             className="max-h-full max-w-full"
                                         />
@@ -173,10 +160,8 @@ export function Lightbox({
                         </div>
                     </div>
 
-                    {/* Dots rather than a counter: at three images a glanceable shape beats reading a
-                        fraction, and it frees the bar of a third element that pushed the readout off
-                        centre. Past a handful of images this stops scaling — swap it back for the
-                        number. The screen-reader readout is the sr-only text beside it. */}
+                    {/* Dots stop scaling past a handful of images — swap them back for the number;
+                        the screen-reader readout is the sr-only text beside them. */}
                     {many && index !== null && (
                         <div className="lightbox-chrome pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-[var(--lb-chrome-bottom)] items-center justify-center pb-[env(safe-area-inset-bottom)]">
                             <span aria-live="polite" aria-atomic="true" className="sr-only">
@@ -193,17 +178,13 @@ export function Lightbox({
                         </div>
                     )}
 
-                    {/* Only where there is a pointer to aim: a touch device turns pages by swiping, and
-                        a viewport-width rule would have put chevrons back on a phone held sideways.
-                        The chrome fade belongs on this wrapper, not on the buttons: an opacity of
-                        their own is how an end of the deck reads as an end, and one element cannot
-                        carry both.
-                        aria-disabled, not disabled: a focused button that turns disabled drops focus
-                        to body, which would kill arrow-key navigation at either end — measured, and
-                        the same is true of hiding it. So the unusable side stays put and says so by
-                        losing its button: no fill, and an arrow faint enough not to invite the click.
-                        Faint by ink, never by the element's opacity — that would take the focus ring
-                        down with it, on the one button that has to stay focusable. */}
+                    {/* Only where there is a pointer to aim: a touch device turns pages by swiping. */}
+                    {/* The chrome fade belongs on this wrapper: one element cannot carry both it and the
+                        end of the deck. */}
+                    {/* aria-disabled, not disabled: a focused button that turns disabled drops focus to
+                        body, which would kill arrow-key navigation at either end. */}
+                    {/* Faint by ink, never by the element's opacity, which would take the focus ring
+                        down with it. */}
                     {many && (
                         <div className="lightbox-chrome pointer-events-none absolute inset-0">
                             <Tip label={t('Previous image')}>

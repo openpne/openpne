@@ -11,12 +11,9 @@ import { lookSpec } from '@/lib/member-chrome';
 import type { PageProps } from '@/types';
 
 /**
- * The mobile bar's icon-control shape: a bare 24px glyph in a box as tall as the bar. The box is
- * the whole tap target and paints nothing, so the bar's only filled marks are identity (brand,
- * avatar) — a glyph and a face are never mistaken for each other the way two filled circles of
- * different diameters were. 48 is the bar's height, so the target is as large as it can be without
- * reaching into the page below, and comfortably past the 44 floor the rest of the app holds to
- * (min-h-11). Shared by the hamburger here and the detail bar's back/close control (top-nav.tsx).
+ * The box is the whole tap target and paints nothing: 48 is the bar's height, so the target is as
+ * large as it can be without reaching into the page below, and past the 44px floor the rest of the
+ * app holds to.
  */
 export const BAR_CONTROL =
     '-ml-1 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';

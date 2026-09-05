@@ -14,15 +14,8 @@ import { useT } from '@/lib/i18n';
 import type { InputMethod } from './editor-mode';
 
 /**
- * The compose forms' input-method control: a settings button on the body label row that opens the
- * three ways to write a body. Progressive disclosure on purpose — a member who never opens it is
- * never shown the words "Markdown" or "formatting mode", and simply writes in the default editor.
- * Sliders rather than the overflow "…": the formatting toolbar right below owns that glyph, and two
- * identical dots a few pixels apart say nothing about which one changes what.
- *
- * Radix (unlike the editor's own formatting overflow, which must not steal focus from the live
- * selection) is the right base here: picking an item rebuilds the editor anyway, so keyboard
- * navigation, ESC, and the menuitemradio semantics matter more than holding the soft keyboard.
+ * Radix here, unlike the editor's own formatting overflow: picking an item rebuilds the editor
+ * anyway, so menu semantics matter more than holding the soft keyboard open.
  */
 export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSelect: (next: InputMethod) => void }) {
     const t = useT();
@@ -85,10 +78,6 @@ export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSel
     );
 }
 
-/**
- * Current input method, shown only when it is not the default — so the closed form stays wordless for
- * everyone else, while a member who chose otherwise (or opened a record stored that way) can see it.
- */
 export function InputMethodBadge({ method }: { method: InputMethod }) {
     const t = useT();
 

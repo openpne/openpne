@@ -19,16 +19,10 @@ import {
 import { cn } from '@/lib/utils';
 
 /**
- * A body field whose `@` opens a member picker. The draft it maintains alongside the text is the
- * only source of mentions: nothing here or on the server parses a body for `@name`
- * (docs/internals/timeline.md), so a handle typed by hand is text and stays text.
- *
- * The popup is an absolutely positioned child, not a portal: below lg these forms render inside the
- * compose sheet, whose column carries a transform, and a fixed or portalled layer would resolve
- * against the wrong box (compose-sheet-action.tsx).
- *
- * The field itself is form-agnostic — it reports the text and the draft, and the page decides what
- * to submit.
+ * The draft maintained alongside the text is the only source of mentions: nothing here or on the
+ * server parses a body for `@name` (docs/internals/timeline.md, "A mention is a range, not text").
+ * The popup is a positioned child, not a portal: the compose sheet's column carries a transform a
+ * fixed layer would resolve against.
  */
 
 /** A member the picker may offer (MemberRefSerializer::ref). */
@@ -40,7 +34,9 @@ interface Candidate {
     isAi: boolean;
 }
 
-/** Long enough that typing a name is one search, short enough to feel like the list is following. */
+/**
+ * Long enough that typing a name is one search, short enough to feel like the list is following.
+ */
 const SEARCH_DEBOUNCE_MS = 200;
 
 type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
@@ -54,7 +50,6 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
      * the picker has no way to check it guessed the parameter name right (candidatesUrlFor).
      */
     candidatesUrl?: string;
-    /** Track the text's own height instead of standing at `rows`, for a bar that opens one line tall. */
     autoGrow?: boolean;
     /**
      * Which side the candidate list opens on. The call site owns it the way it owns candidatesUrl:
@@ -223,8 +218,8 @@ export function MentionTextarea({
                 aria-autocomplete="list"
                 aria-activedescendant={open ? `${listId}-${active}` : undefined}
             />
-            {/* Rendered even while closed so `aria-controls` always names a real element. Uncapped:
-                the endpoint answers with at most MentionCandidates::LIMIT one-line rows, so a
+            {/* Rendered even while closed, so `aria-controls` always names a real element. */}
+            {/* Uncapped: the endpoint answers with at most MentionCandidates::LIMIT one-line rows, so a
                 max-height would only add a scroll region no keyboard can reach. */}
             <ul
                 id={listId}

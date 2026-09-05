@@ -30,7 +30,9 @@ const user: AuthUser = { id: 1, name: 'Viewer', email: 'viewer@example.com', ima
 
 const cyclists = { id: 7, name: 'Cyclists', imageUrl: '/img/cyclists.png' };
 
-/** Land on a screen the way the layout does: the frame reads the page its chrome was resolved from. */
+/**
+ * Land on a screen the way the layout does: the frame reads the page its chrome was resolved from.
+ */
 function arrive(component: string, props: Record<string, unknown> = {}) {
     inertia.page = {
         component,
@@ -59,9 +61,9 @@ const trail = () => screen.queryByRole('navigation', { name: 'Breadcrumb' });
 const placeBar = () => screen.queryByTestId('place-bar');
 
 /**
- * The fold is a claim that the mobile bar is showing the title instead. Three bars stand over a hub
- * and only one of them does: the shipped hub bar. A guest's is brand + sign-in, and the unified
- * layout's is the tab pair — fold under either and the hub has a visible name nowhere on a phone.
+ * The fold is a claim that the mobile bar is showing the title instead, and only the shipped hub bar
+ * does. A guest's is brand + sign-in and the unified layout's is the tab pair, so folding under
+ * either leaves the hub with a visible name nowhere on a phone.
  */
 test('a hub folds its heading under the bar that carries the title', () => {
     expect(hubHeadingRow({})?.className).toContain('max-lg:sr-only');

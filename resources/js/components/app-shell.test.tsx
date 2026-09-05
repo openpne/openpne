@@ -23,8 +23,8 @@ vi.mock('@inertiajs/react', () => ({
     router: { visit: () => {}, post: () => {}, on: () => () => {} },
 }));
 
-// The shell's other furniture. None of it is what these tests are about, and each brings its own
-// page reads and effects; the two bars stay real, since where they stand is the subject.
+// Mocked because each brings its own page reads and effects; the two bars stay real, since where
+// they stand is the subject.
 vi.mock('@/components/left-nav', () => ({ LeftNav: () => null }));
 // A marker rather than null: whether the shell seats the rail at all is one of the wiring answers.
 vi.mock('@/components/right-rail', () => ({ RightRail: () => <div data-testid="right-rail" /> }));
@@ -61,13 +61,9 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
 }
 
 /**
- * A composer that reports its focus the way the conversation composers do.
- *
- * A div stands in for their `<form>`, and only because of the runner: happy-dom hands out a Proxy
- * for a form element whose `contains()` answers false for its own children (`div.contains()` is
- * fine), which would fail the containment check here for a reason no browser has. The mechanics
- * under test — where the listeners go, and what `relatedTarget` means — are the element's, not the
- * tag's.
+ * A div stands in for the composers' `<form>` because of the runner: happy-dom hands out a Proxy for
+ * a form element whose `contains()` answers false for its own children, which no browser does. The
+ * mechanics under test — where the listeners go, and what `relatedTarget` means — are the element's.
  */
 function StubComposer() {
     const form = useComposerEngaged();
@@ -97,14 +93,12 @@ const header = () => document.querySelector('header');
 
 /**
  * Wiring, not values: LookSpec fields whose value vectors coincide are indistinguishable to a
- * registry-value test, so a consumer reading the wrong one of them surfaces only in what the shell
- * renders. The bottom offset rides along because its value is a look's answer too; that the length
- * it reserves is the length the bar stands at is a different claim, made below.
+ * registry-value test, so a consumer reading the wrong one surfaces only in what the shell renders.
+ * The bottom offset rides along because its value is a look's answer too.
  */
 test.each([
     // Null = no desktop override at all: the unified bar stands at every width, so the phone's
-    // reserved height is the desktop's too. The two that drop it differ by what is left above the
-    // page — nothing, or the site-color line.
+    // reserved height is the desktop's too.
     ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', width: 'max-w-6xl xl:max-w-7xl', bottom: '3.625rem' }],
     ['unified', { ground: true, rail: false, line: false, desktopOffset: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3rem' }],
     ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
@@ -128,10 +122,8 @@ test.each([
 
 /**
  * The bar's height is written in bottom-nav.tsx and reserved again here, and the two disagreeing is
- * not a visible bug but a permanent one: a bar taller than its reservation stands over the page's
- * last rows at every scroll position. So this reads the reserved length back off the shell and
- * requires the row that stands in it to be exactly that tall — the literals are compared, not two
- * copies of one expectation.
+ * not a visible bug but a permanent one, so this reads the reserved length back off the shell and
+ * requires the row that stands in it to be exactly that tall.
  */
 test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length its own row stands at', (look) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
@@ -201,8 +193,7 @@ test('an accessory tap inside the composer is not leaving it', () => {
     const field = screen.getByLabelText('Message');
 
     fireEvent.focusIn(field);
-    // What a field-level blur would read as leaving: focus moved to the button beside it, inside the
-    // same form. The bar must not flap out and back on every attach or send.
+    // What a field-level blur would read as leaving: focus moved to a button inside the same form.
     fireEvent.focusOut(field, { relatedTarget: screen.getByRole('button', { name: 'Attach' }) });
 
     expect(bar()?.className).toContain('translate-y-full');
@@ -217,8 +208,7 @@ test('an accessory tap inside the composer is not leaving it', () => {
  * long backlog takes both away, and one scroll up brings both back.
  */
 test('a tabbed conversation holds its chrome still through a scroll', async () => {
-    // Dogfooding reversed the recede here: the composer pins the screen's foot, so hiding the bar
-    // frees nothing, and the header is what names the room. Only writing takes the bar away.
+    // Only writing takes the bar away: the composer pins the screen's foot, so hiding it frees nothing.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
     room('tabbed');
 

@@ -6,18 +6,14 @@ import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /**
- * Mobile (< lg) primary action: the screen's registry action, floating above the bottom bar. It
- * carries its label because a bare icon reads as one fixed global verb and so misleads on whichever
- * screen it happens to float over; it collapses to the icon on the same signal that takes the bars
- * away, spending the width only while the reader is not reading. A screen with no registry action
- * shows nothing. Desktop keeps the same action as the heading-row button, so this is hidden at lg+.
+ * It carries its label because a bare icon reads as one fixed global verb and so misleads on
+ * whichever screen it floats over; it collapses to the icon on the signal that takes the bars away.
  */
 export function ActionFab({ chrome, extended }: { chrome: Chrome; extended: boolean }) {
     const { props } = usePage<PageProps>();
 
     // The frame's gate verbatim: the heading-row button and this are one action at two widths, and a
-    // guest (a web-public profile is reachable signed out) gets neither. A screen that draws no
-    // floating action says so in the registry, not here.
+    // guest gets neither.
     if (!chrome.action || !props.auth.user) {
         return null;
     }

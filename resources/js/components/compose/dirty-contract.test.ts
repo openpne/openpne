@@ -6,12 +6,6 @@ import { test } from 'node:test';
 import { Editor } from '@tiptap/core';
 import { createComposeEditorOptions, serializeMarkdown } from './editor-extensions.ts';
 
-/**
- * The dirty-signal contract, exercised against the production options factory: onChange is the host
- * form's "field is dirty" signal, so it must fire only on a real document edit — never from parsing
- * the initial content (even when the parse normalizes it) and never from a bare cursor move.
- */
-
 function build(initialMarkdown: string, onChange: (md: string) => void): Editor {
     return new Editor({
         element: document.createElement('div'),
@@ -54,8 +48,6 @@ test('holding the selection paints it without dirtying the document', () => {
 });
 
 test('a blur nobody asked to hold paints nothing', () => {
-    // Chromium keeps a contenteditable's selection painted when focus moves to a button and drops it
-    // for a text field; painting on every blur would override that, so the hold is explicit.
     const editor = build('hello world', () => {});
     editor.commands.setTextSelection({ from: 1, to: 6 });
     editor.view.dom.dispatchEvent(new FocusEvent('blur'));

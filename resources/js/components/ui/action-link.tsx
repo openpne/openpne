@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 // buttonVariants size — drop it in favor of the variant prop.
 type Props = Omit<ComponentProps<typeof Link>, 'size'> & VariantProps<typeof buttonVariants>;
 
-/** An Inertia Link styled as a button (a navigation action, e.g. "Reply"), reusing buttonVariants. */
 export function ActionLink({ className, variant, size, ...props }: Props) {
     return <Link className={cn(buttonVariants({ variant, size }), className)} {...props} />;
 }

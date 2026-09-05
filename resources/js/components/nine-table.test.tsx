@@ -20,10 +20,8 @@ const item = (over: Partial<NineTableItem> = {}): NineTableItem => ({
 });
 
 /**
- * A tile has no room for an AiChip, so the marker is the avatar's corner tag (aria-hidden) plus the
- * link's accessible name. The grid drew neither for a while: the serializers threaded isAi through
- * and this component never read it, which is invisible to axe — the link is named, just not as an AI
- * account.
+ * A marker that lands outside the link's accessible name is invisible to axe either way: the link is
+ * named, just not as an AI account.
  */
 test('an AI tile is named as one', () => {
     render(<NineTable items={[item({ isAi: true })]} shape="round" />);

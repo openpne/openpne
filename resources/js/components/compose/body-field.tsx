@@ -25,10 +25,9 @@ import { saveComposeEditor } from './save-compose-editor';
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
 /**
- * Label row to control. Wider than a plain field's gap because the input-method trigger's touch
- * target overhangs the row by 12px: anything less and the control below — an opaque toolbar that
- * paints over the trigger, or a textarea the trigger paints over — overlaps it, and one of the two
- * takes taps meant for the other. Both branches share it so switching method moves nothing.
+ * Wider than a plain field's gap because the input-method trigger's touch target overhangs the row
+ * by 12px, and anything less lets the control below take taps meant for the trigger. Both branches
+ * share it, so switching method moves nothing.
  */
 const FIELD_GAP = 'space-y-3';
 
@@ -40,22 +39,19 @@ interface BodyFieldProps {
     error?: string;
     rows?: number;
     required?: boolean;
-    /** undefined ⇔ op3 record: the page omitted `format` from its form; renders the OpenPNE 3 note. */
+    /**
+     * undefined ⇔ op3 record: the page omitted `format` from its form; renders the OpenPNE 3 note.
+     */
     format?: ComposeFormat;
     onFormatChange?: (format: ComposeFormat) => void;
-    /** The member's saved input method; picks the initial state for a markdown/create body. */
     editorPreference: ComposeEditorPreference;
-    /** The stored record format (undefined = create); read once to pick the initial state. */
+    /** Read once, to pick the initial state: a later change has no effect. */
     recordFormat?: RecordFormat;
 }
 
 /**
- * The single body-authoring block shared by the compose forms. One member-facing choice — the input
- * method behind the "…" on the label row — selects between the WYSIWYG editor, a Markdown textarea
- * (with live preview), and an unformatted textarea; internally that is `mode × format`, which the UI
- * never exposes. The choice is remembered per member (PreferenceKey::ComposeEditor) and only an
- * explicit pick persists. A plain record always opens unformatted and an op3 record
- * (`format === undefined`) gets no control at all — see editor-mode.ts and docs/internals/body-text.md.
+ * The body-authoring block shared by the compose forms (docs/internals/body-text.md, "Authoring:
+ * the input method").
  */
 export function BodyField({
     id,
@@ -81,8 +77,8 @@ export function BodyField({
 
     const errorId = error ? `${id}-error` : undefined;
 
-    // op3: unchanged. `format === undefined` is the op3 signal (the page omitted the field so the
-    // server preserves the stored format); show the static note, no menu, no editor choice.
+    // `format === undefined` is the op3 signal: the page omitted the field, so the server preserves
+    // the stored format.
     if (format === undefined) {
         return (
             <>
@@ -113,8 +109,8 @@ export function BodyField({
         ) {
             return;
         }
-        // The switch never rewrites the form value, so an unedited body still submits unchanged — the
-        // conversion is in `format` alone (dirty-contract.test.ts covers the parse side).
+        // The switch never rewrites the form value, so an unedited body still submits unchanged; the
+        // conversion is in `format` alone.
         if (applied.format !== format) {
             onFormatChange?.(applied.format);
         }
@@ -125,16 +121,10 @@ export function BodyField({
         saveComposeEditor(next);
     };
 
-    // One skeleton for both editors: the label row (and therefore the input-method control) sits in
-    // the same place whichever is showing, so switching never moves it. Field's clone-injection is not
-    // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
-    // wiring, and the error are rendered by hand for both branches alike.
+    // Field's clone-injection cannot reach the contenteditable through <Suspense>, so the label, the
+    // aria-* wiring and the error are rendered by hand in both branches.
     const header = (
-        // The trigger's touch target is taller than the label text, so let it overhang the row
-        // instead of setting the row's height: otherwise this field's label sits further from its
-        // control than every other field's does. FIELD_GAP pays for the overhang below.
-        // The control sits next to the label rather than across the row: at the far edge, with a
-        // field above and a field below, proximity said nothing about which one it belonged to.
+        // The trigger's touch target overhangs this fixed-height row; FIELD_GAP below pays for it.
         <div className="flex h-5 items-center gap-1">
             <Label htmlFor={id}>{label}</Label>
             <InputMethodMenu value={method} onSelect={selectMethod} />

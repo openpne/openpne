@@ -8,12 +8,8 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
- * Desktop-only (xl+) right rail: a member search box and a faces grid. Hidden below xl and for
- * guests; mobile reaches the same lists through the nav. The rail is nav chrome, so it lives in the
- * shell, not on any one page.
- *
- * It carries no groups: the sidebar's room list is the same memberships, ordered by what was last
- * said and carrying their unread, so a second grid of the same names said less on both sides.
+ * Nav chrome, so it lives in the shell rather than on any one page. It carries no groups: the
+ * sidebar's room list is the same memberships, ordered by what was last said.
  */
 export function RightRail() {
     const t = useT();
