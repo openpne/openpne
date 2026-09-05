@@ -5,9 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Event participants (OpenPNE 3 `community_event_member`): the RSVP pivot. A row's presence is the
- * whole signal — OpenPNE 3 has no status column, just joined-or-not. Both FKs cascade: a row is
- * meaningless once its event or member is gone.
+ * OpenPNE 3 has no RSVP status column, so a row's presence is the whole signal.
  */
 return new class extends Migration
 {
@@ -19,8 +17,6 @@ return new class extends Migration
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
             $table->timestamps();
 
-            // Membership lookup (isParticipant) and the participant-count cap check both key on
-            // (event, member); the participant roster pages by event.
             $table->index(['group_event_id', 'member_id']);
         });
     }

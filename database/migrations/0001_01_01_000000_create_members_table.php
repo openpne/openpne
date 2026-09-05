@@ -11,23 +11,16 @@ return new class extends Migration
         Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            // Nullable so a member upgraded from OpenPNE 3 without a usable address/credential
-            // is kept as a login-impossible row. Unique still admits many NULLs (NULLs are
-            // distinct) on both MySQL and SQLite.
+            // Nullable so an OpenPNE 3 member without a usable address upgrades to a login-impossible
+            // row; unique still admits many NULLs (NULLs are distinct) on both MySQL and SQLite.
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
-            // OpenPNE 3 member.is_login_rejected: an admin ban that refuses login. Carried by the
-            // upgrade (MemberUpgrade) so a banned member stays banned; AuthenticateMember enforces it.
+            // Copied verbatim from OpenPNE 3 member.is_login_rejected, so a banned member stays banned.
             $table->boolean('is_login_rejected')->default(false);
-            // Whether this member's profile page is reachable, on the App\Support\Visibility
-            // scale: Open = web-public (guests may view it), otherwise login-required. Default
-            // Members keeps profiles SNS-internal until the member opts into web-public.
             $table->unsignedTinyInteger('profile_visibility')->default(1); // Visibility::Members
-            // Member-facing UI language (one of SetLocale::SUPPORTED_LOCALES) or null to fall
-            // back to the session/Accept-Language chain. A typed column, not a member_preferences
-            // row, because it is read in middleware on every member-facing request and is an
-            // identity-ish attribute (cf. email/password) rather than a feature preference.
+            // A column rather than a member_preferences row because it is read in middleware on
+            // every member-facing request.
             $table->string('locale')->nullable();
             $table->rememberToken();
             $table->timestamps();
@@ -39,10 +32,9 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
-        // Laravel's database session handler writes the authenticated id to a
-        // hard-coded `user_id` column (DatabaseSessionHandler::addUserInformation),
-        // so this column keeps its framework name even though the authenticatable
-        // is a Member. There is no FK to the members table.
+        // Laravel's database session handler writes the authenticated id to a hard-coded `user_id`
+        // column (DatabaseSessionHandler::addUserInformation), so the column keeps the framework
+        // name and has no FK to members.
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();

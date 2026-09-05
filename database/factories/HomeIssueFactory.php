@@ -32,8 +32,7 @@ class HomeIssueFactory extends Factory
         // issue dated tomorrow is a state the publisher cannot produce.
         $date = CarbonImmutable::today(config('app.timezone'))->subDays(365)->addDays($number - 1);
 
-        // The day's own stretch, so the row satisfies the invariant every reader of an issue leans
-        // on: an issue is dated by the last day its window covers, not the first.
+        // The day's own stretch: an issue is dated by the last day its window covers, not the first.
         $window = HomeIssueDay::window($date);
 
         return [

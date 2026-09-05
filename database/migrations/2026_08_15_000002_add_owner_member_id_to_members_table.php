@@ -6,20 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * `owner_member_id` names the member who created this one and answers for it. A non-null owner is
- * what makes a row an AI account — the single, positive test; nothing infers it from a missing
- * email, so a member without an address stays an ordinary (login-impossible) member and a future
- * address-less human member is not retroactively reclassified. An AI account carries no credential
- * of its own and reaches the site only through a personal access token its owner mints; the
- * constraint below holds that at rest — no email, no password and no remember-me token — behind the
- * application's refusals (an owned row is invisible to App\Auth\MemberUserProvider, so no session
- * id, remember-me cookie or credential lookup produces one, and App\Actions\Fortify\AuthenticateMember
- * rejects it a second time).
- *
- * RESTRICT, not CASCADE: removing a member has to run App\Features\Member\Actions\WithdrawMember
- * (group seats, file bytes, tokens, feed rows), and a DB cascade would delete the row while skipping
- * every one of them. Withdrawal therefore retires the owned accounts explicitly and this FK is the
- * fail-loud belt behind it.
+ * A non-null owner is the single positive test for an AI account; nothing infers one from a missing
+ * email.
  */
 return new class extends Migration
 {
@@ -28,11 +16,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('members', function (Blueprint $table) {
+            // RESTRICT, not CASCADE: removing a member has to run WithdrawMember (group seats, file
+            // bytes, tokens, feed rows), which a DB cascade would skip.
             $table->foreignId('owner_member_id')->nullable()->constrained('members')->restrictOnDelete();
 
-            // InnoDB backs every foreign key with an index; SQLite backs none, and "which accounts
-            // does this member own?" is asked on the withdrawal and freeze paths. Indexed only there,
-            // so MySQL is not given a second index over the same column (see the link-card sibling).
+            // InnoDB backs every foreign key with an index and SQLite backs none, so the index is
+            // added on the SQLite lane only.
             if ($this->onSqlite()) {
                 $table->index('owner_member_id');
             }

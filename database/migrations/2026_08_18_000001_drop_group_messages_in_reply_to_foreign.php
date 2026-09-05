@@ -7,13 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * `group_messages.in_reply_to_id` becomes the reply reference the room draws, and that is why the
- * foreign key goes (docs/internals/group-talk.md#replies).
- *
- * `nullOnDelete` would erase the reference the moment the answered message was deleted, and "this
- * answers nothing" and "the message this answers is gone" are two different things on screen. So a
- * dangling id is a *meaningful* state rather than a leak — nothing collects it — and every writer
- * validates a live same-group parent in place of the engine.
+ * A dangling reply reference is a meaningful state, so every writer validates a live same-group
+ * parent in place of the engine (docs/internals/group-talk.md, "Replies").
  */
 return new class extends Migration
 {
@@ -29,8 +24,8 @@ return new class extends Migration
             return;
         }
 
-        // InnoDB's backing index outlives the constraint it was created for, and nothing reads
-        // in_reply_to_id leading. After the key, never before (errno 1553); SQLite never had one.
+        // InnoDB's backing index outlives the constraint, so it goes after the key and never before
+        // (errno 1553); SQLite never had one.
         Schema::table('group_messages', function (Blueprint $table): void {
             $table->dropIndex('group_messages_in_reply_to_id_foreign');
         });
@@ -38,8 +33,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // The constraint cannot come back over references the promotion made legal. Selected, then
-        // updated by key: MySQL refuses a subquery naming the table being updated.
+        // Dangling references are nulled first, selected then updated by key because MySQL refuses a
+        // subquery naming the table being updated.
         do {
             $dangling = DB::table('group_messages')
                 ->whereNotNull('in_reply_to_id')

@@ -5,9 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Admin-configurable Classic gadgets (OpenPNE 3 `gadget` + `gadget_config`). The OpenPNE 3 `type`
- * (e.g. `profileSideMenu`) is split into `context` + `zone`; `source_type` keeps the original so a
- * site's custom CSS still matches.
+ * The OpenPNE 3 `type` (e.g. `profileSideMenu`) is split into `context` + `zone`; `source_type`
+ * keeps the original so a site's custom CSS still matches.
  */
 return new class extends Migration
 {
@@ -25,7 +24,6 @@ return new class extends Migration
             $table->index(['context', 'zone', 'sort_order']);
         });
 
-        // name/value KV per gadget (no timestamps).
         Schema::create('gadget_configs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gadget_id')->constrained('gadgets')->cascadeOnDelete();

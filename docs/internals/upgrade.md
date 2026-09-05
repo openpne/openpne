@@ -118,6 +118,12 @@ keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file
 `.ibd` move) after dropping the source FK. `snapshot()` records `MAX(file.id)` as the bound for a
 post-switchover rollback.
 
+The table's four columns are frozen because the fresh-install schema must equal the upgrade
+target: neither upgrade path keeps the table the app's `CREATE TABLE` makes (a same-database dump
+keeps its own `file_bin`, a source-database run drops the empty app table and RENAMEs the source in),
+so a column added to the migration would exist on fresh installs only. Every column is charset-neutral (INT / LONGBLOB / DATETIME), so
+the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
+
 ## Verify
 
 `openpne:verify-upgrade` re-counts source and target without trusting the runner's report.

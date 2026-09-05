@@ -22,7 +22,6 @@ class GroupMessageFactory extends Factory
         ];
     }
 
-    /** A message whose author has since withdrawn from the SNS (member_id set null by the FK). */
     public function withdrawnAuthor(): static
     {
         return $this->state(fn (): array => ['member_id' => null]);
