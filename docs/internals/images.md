@@ -90,11 +90,12 @@ is left null and reported as skipped rather than stopping the run.
 
 Every image upload — a member's avatar or post images, an admin's banner, logo or public asset, and
 a picture posted over MCP — is held to one per-file cap,
-[`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default.
-The one exception is the favicon, which keeps its own 1 MB ceiling under the cap. The admin forms
+[`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default,
+the favicon alone keeping its own 1 MB ceiling under it. The admin forms
 upload through Livewire's temporary endpoint before Filament validates, so
 `FilesServiceProvider` sets that endpoint's rule to the same cap; unconfigured, Livewire's own
-12288 KB would silently be the admin cap above that size.
+12288 KB would silently be the admin cap above that size. That rule is global to Livewire uploads,
+which is fine while every one of them is an image; a non-image admin upload would need its own.
 
 The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool

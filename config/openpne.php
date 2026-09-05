@@ -1,5 +1,7 @@
 <?php
 
+use App\Files\UploadLimit;
+
 return [
 
     /*
@@ -50,7 +52,7 @@ return [
         'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', 5000),
         // Per-file cap for every image upload, in kilobytes; keep PHP's upload_max_filesize at or
         // above it (App\Files\UploadLimit, docs/internals/images.md).
-        'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', 5120),
+        'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', UploadLimit::DEFAULT_KILOBYTES),
         // Strip EXIF/GPS (and XMP/comments) from uploaded jpeg/png/webp losslessly at ingestion, so
         // shared photos don't leak location. On by default (privacy); opt out to retain EXIF, e.g. a
         // photography community. See docs/internals/security.md.

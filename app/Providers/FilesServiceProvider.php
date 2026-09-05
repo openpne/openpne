@@ -22,8 +22,8 @@ class FilesServiceProvider extends ServiceProvider
         // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
-        // The admin forms upload through Livewire's temporary endpoint first, whose own rule
-        // (12288 KB unconfigured) would otherwise be the real cap above that size.
+        // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
+        // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
         config(['livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.UploadLimit::kilobytes()]]);
 
         // Bound (not singleton) so each resolution reflects the current
