@@ -51,7 +51,9 @@ class McpEndpointTest extends McpTestCase
         $this->rpc($this->token($member), 'tools/list')
             ->assertOk()
             ->assertSee('list-talk-rooms')
-            ->assertSee('post-talk-message');
+            ->assertSee('post-talk-message')
+            // The picture cap is stated in KB: a cap under 1 MB must not read as "0 MB".
+            ->assertSee('at most 5120 KB once decoded');
     }
 
     public function test_a_tool_call_writes_through_the_endpoint(): void

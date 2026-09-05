@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Concerns;
 
 use App\Files\PostImages;
+use App\Files\UploadLimit;
 
 /** Shared by every form that takes an `images[]` upload, so the cap and the decompression-bomb guard cannot diverge. */
 final class PostImageRules
@@ -49,6 +50,6 @@ final class PostImageRules
     {
         $max = (int) config('openpne.images.max_upload_dimension');
 
-        return ['file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:5120'];
+        return ['file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:'.UploadLimit::kilobytes()];
     }
 }

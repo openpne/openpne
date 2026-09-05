@@ -207,4 +207,23 @@ class DiaryImagesTest extends TestCase
         $this->assertDatabaseCount('diary_images', 0);
         $this->assertEmpty(Storage::disk('local')->allFiles());
     }
+
+    public function test_the_configured_cap_bounds_a_post_image(): void
+    {
+        $author = Member::factory()->create();
+        $payload = fn (): array => [
+            'title' => 'Capped',
+            'body' => 'Body',
+            'visibility' => Visibility::Members->value,
+            'images' => [UploadedFile::fake()->image('two.png', 20, 20)->size(2)],
+        ];
+
+        // Both caps sit below any php.ini upload_max_filesize, so only the configured value decides.
+        config()->set('openpne.images.max_upload_kilobytes', 1);
+        $this->actingAs($author)->post(route('diary.store'), $payload())->assertSessionHasErrors('images.0');
+
+        config()->set('openpne.images.max_upload_kilobytes', 4);
+        $this->actingAs($author)->post(route('diary.store'), $payload())->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('diaries', 1);
+    }
 }

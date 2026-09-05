@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BannerImages\Schemas;
 
 use App\Filament\Resources\BannerImages\BannerImageResource;
+use App\Files\UploadLimit;
 use App\Models\BannerImage;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -57,7 +58,7 @@ class BannerImageForm
                     ->image()
                 // Raster types only (no SVG), matching the avatar upload rules.
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-                    ->maxSize(5120)
+                    ->maxSize(UploadLimit::kilobytes())
                     ->rules(["dimensions:max_width={$maxDimension},max_height={$maxDimension}"])
                     ->storeFiles(false)
                     ->required(fn (string $operation): bool => $operation === 'create')

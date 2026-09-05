@@ -38,7 +38,7 @@ class DiaryImageToolsTest extends McpTestCase
     /** A copy of the trait's own cap, which is private to it. */
     private const CAP = 8 * 1024 * 1024;
 
-    /** Written out rather than recomputed: four characters per three bytes of the 5 MB cap. */
+    /** Written out rather than recomputed: four characters per three bytes of the shipped 5120 KB cap. */
     private const MAX_ENCODED = 6990508;
 
     protected function setUp(): void
@@ -558,13 +558,26 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->assertSame(1, DiaryImage::query()->count());
 
-        $this->postDiary(['images' => ["\n".$atTheBound]])->assertHasErrors(['base64 characters']);
+        $this->postDiary(['images' => ["\n".$atTheBound]])->assertHasErrors(['at most 5120 KB, which is '.self::MAX_ENCODED.' base64 characters']);
 
         $this->assertSame(1, Diary::query()->count());
         $this->assertSame(1, DiaryImage::query()->count());
     }
 
-    /** A string at the encoded bound can still decode to a single byte over the 5 MB cap. */
+    public function test_the_pre_decode_bound_follows_the_configured_cap(): void
+    {
+        $this->acting(Member::factory()->create());
+        $this->app->setLocale('en');
+        config()->set('openpne.images.max_upload_kilobytes', 1);
+
+        // 1 KB encodes to intdiv(1024 + 2, 3) * 4 = 1368 characters; one more is refused unread.
+        $this->postDiary(['images' => [str_repeat('A', 1369)]])
+            ->assertHasErrors(['at most 1 KB, which is 1368 base64 characters']);
+
+        $this->assertSame(0, Diary::query()->count());
+    }
+
+    /** A string at the encoded bound can still decode to a single byte over the shipped cap. */
     public function test_a_picture_over_the_size_cap_is_refused_by_the_rule_that_measures_it(): void
     {
         $this->acting(Member::factory()->create());

@@ -7,6 +7,7 @@ use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * A gate rather than a report: any failed check fails the command.
@@ -43,7 +44,7 @@ class VerifyUpgradeCommand extends Command
         }
 
         $json = (bool) $this->option('json');
-        $report = app(UpgradeVerifier::class)->verify($options, $json ? null : fn (string $line) => $this->line($line));
+        $report = app(UpgradeVerifier::class)->verify($options, $json ? null : fn (string $line) => $this->line(OutputFormatter::escape($line)));
 
         if ($json) {
             $this->line(json_encode($report, JSON_PRETTY_PRINT));

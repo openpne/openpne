@@ -4,7 +4,6 @@ namespace Tests\Feature\Member;
 
 use App\Features\Member\Actions\SetAvatar;
 use App\Files\FileStorage;
-use App\Http\Requests\Member\AvatarRequest;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,13 +29,13 @@ class AvatarTest extends TestCase
 
     public function test_the_edit_page_states_the_upload_limit_and_the_content_warning(): void
     {
-        // The stated byte limit is derived from the rule the upload is actually validated against.
-        $bytes = AvatarRequest::MAX_KILOBYTES * 1024;
+        // The stated byte limit follows the configured cap the upload is validated against.
+        config()->set('openpne.images.max_upload_kilobytes', 123);
 
         $this->actingAs(Member::factory()->create())
             ->get(route('member.avatar.edit'))
             ->assertOk()
-            ->assertSee('<li>Please upload a GIF, JPEG or PNG within '.$bytes.' bytes.</li>', escape: false)
+            ->assertSee('<li>Please upload a GIF, JPEG or PNG within '.(123 * 1024).' bytes.</li>', escape: false)
             ->assertSee('infringe copyright or portrait rights')
             // OpenPNE 3's three-photo note has no counterpart on a single-avatar model.
             ->assertDontSee('3 photos');
@@ -234,6 +233,19 @@ class AvatarTest extends TestCase
 
         $this->actingAs($member)
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('huge.png')->size(6000)])
+            ->assertSessionHasErrors('image');
+
+        $this->assertSame(0, $member->avatar()->count());
+    }
+
+    public function test_the_configured_cap_bounds_the_upload(): void
+    {
+        // A cap below any php.ini upload_max_filesize, so the ini clamp cannot be what rejects it.
+        config()->set('openpne.images.max_upload_kilobytes', 1);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('two.png')->size(2)])
             ->assertSessionHasErrors('image');
 
         $this->assertSame(0, $member->avatar()->count());
