@@ -9,21 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Migrates one OpenPNE 3 site's data into the OpenPNE 4 schema. The OpenPNE 3 source tables must
- * already be present on the app's connection (restored from a dump in the same database, or a
- * separate database on the same MySQL instance via --source-database). The target is always the
- * app's own database; the running app reads those tables.
- *
- * The relational steps plus file_bin (the BLOBs) and admin_user. file_bin: in-place (same database, no
- * prefix) rewires its FK onto `files`; a --source-prefix / --source-database run instead RENAMEs the
- * source file_bin onto the app's (source-destructive — needs a disposable dump and DROP/RENAME rights
- * on the source). Admin accounts migrate with their OpenPNE 3 password, which the admin guard accepts
- * and rehashes to bcrypt on first login (App\Auth\LegacyEloquentUserProvider).
- *
- * A source preflight runs first: a recognized optional source table (an uninstalled OpenPNE 3 plugin)
- * is created empty and its step is skipped, but a missing required table/column aborts — upgrade the
- * OpenPNE 3 source to a supported version (core >= 3.6.x) first, or use --source-database (a separate
- * database) for a customised source whose tables would clash with OpenPNE 4's.
+ * See docs/internals/upgrade.md; the operator guide is docs/upgrading-from-openpne3.md.
  */
 class UpgradeFromThreeCommand extends Command
 {
@@ -55,9 +41,8 @@ class UpgradeFromThreeCommand extends Command
             return self::FAILURE;
         }
 
-        // OpenPNE 3 DATETIMEs are wall-clock in whatever zone that server ran in, and every step copies
-        // them through unchanged — so the site zone has to match it already. There is deliberately no
-        // conversion afterwards (docs/internals/runtime.md), which makes this the last chance to notice.
+        // OpenPNE 3 DATETIMEs are copied through unchanged, so APP_TIMEZONE must already name the zone
+        // the source ran in (docs/internals/runtime.md "Upgrading from OpenPNE 3").
         $this->line('Site timezone: '.config('app.timezone').' — migrated timestamps are read as this zone, unconverted.');
 
         $runner = app(UpgradeRunner::class);
@@ -74,8 +59,8 @@ class UpgradeFromThreeCommand extends Command
         $prefix = (string) $this->option('source-prefix');
         $database = $this->option('source-database');
 
-        // A non-empty prefix / database is interpolated into backticked SQL, so restrict it to a
-        // table-name charset. Empty prefix / null database is the default same-database workflow.
+        // A non-empty prefix or database is interpolated into backticked SQL, so restrict it to a
+        // table-name charset.
         if ($prefix !== '' && ! preg_match('/^[A-Za-z0-9_]+$/', $prefix)) {
             $this->error('--source-prefix must match [A-Za-z0-9_]+.');
 

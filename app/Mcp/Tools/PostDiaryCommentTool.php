@@ -49,8 +49,6 @@ class PostDiaryCommentTool extends DiaryTool
             ],
         )->validate();
 
-        // Commenting requires viewing the entry, so the gate is the one the web surface reuses too
-        // (DiaryCommentController): whoever may read it may answer it.
         $diary = $show($member, (int) $validated['diary_id']);
         if ($diary === null) {
             return $this->refused();

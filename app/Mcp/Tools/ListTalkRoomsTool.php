@@ -26,10 +26,7 @@ class ListTalkRoomsTool extends TalkTool
     {
         $validated = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
 
-        // The page is named rather than read off a URL: there is none here, so the query's own
-        // resolver would answer page one every time. The addressed count is asked for here and
-        // nowhere else — it is the whole reason an agent can poll one call instead of reading every
-        // room.
+        // There is no URL here, so the query's own page resolver would answer page one every time.
         $page = $rooms(
             $this->member($request),
             JoinedTalkRooms::PER_PAGE,

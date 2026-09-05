@@ -16,23 +16,7 @@ use stdClass;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Detect translation key references in code that are missing from lang/{ja,en}.json,
- * and enforce a canonical key order.
- *
- *   php artisan i18n:check                  # CI gate: missing keys + key order + marker en
- *   php artisan i18n:check --unused         # also list defined-but-unused JSON keys
- *   php artisan i18n:check --duplicates     # also list keys sharing an identical ja value
- *   php artisan i18n:check --update-baseline # snapshot current gaps to lang/.i18n-baseline.json
- *   php artisan i18n:check --prune-identity  # strip k === v entries from lang/{ja,en}.json
- *   php artisan i18n:check --sort            # rewrite lang/{ja,en}.json in canonical key order
- *   php artisan i18n:check --sort=lang/ja.json # ... restricted to a single file
- *
- * Omission policy: English-source codebase, so `key === English text`. Both `__()`
- * and `laravel-react-i18n` return the key verbatim when no entry is found, so
- * en.json entries that match the key are redundant and always optional. ja.json
- * normally requires a Japanese value, with one exception: keys composed solely
- * of `%name%` placeholders (e.g. `%Friend%`) round-trip through the term
- * substitution layer regardless of locale, so a JSON entry adds no value.
+ * See docs/internals/i18n.md "CI gate".
  */
 class CheckTranslationsCommand extends Command
 {
@@ -45,20 +29,11 @@ class CheckTranslationsCommand extends Command
 
     protected $description = 'Detect missing translation keys and enforce canonical key order in lang/ja.json / lang/en.json';
 
-    /**
-     * JSON dictionaries whose key order is enforced and rewritten by --sort.
-     */
     private const SORTABLE_FILES = ['lang/ja.json', 'lang/en.json'];
 
     private const COLLISION_ALLOWLIST_FILE = 'lang/.i18n-collision-allowlist.json';
 
-    /**
-     * PHP namespace groups laravel-lang's publisher (`lang:add` / `lang:update`)
-     * owns. The app must not author or edit these, nor reuse the names. A group
-     * outside the three lists fails {@see reportUnknownGroups} so a new
-     * publisher group (added by `lang:update`) or a misplaced app file gets a
-     * deliberate classification rather than silently joining the catalog.
-     */
+    /** laravel-lang's publisher owns these: the app must not author or edit them, nor reuse the names. */
     private const PUBLISHER_GROUPS = ['validation', 'auth', 'passwords', 'pagination', 'http-statuses', 'actions'];
 
     /**
@@ -68,10 +43,8 @@ class CheckTranslationsCommand extends Command
     private const APP_UI_GROUPS = ['terms'];
 
     /**
-     * App-authored PHP groups that tolerate source fallback / partial coverage
-     * (e.g. `regions`: `lang/en/regions.php` is empty and RegionListService
-     * falls back to the English source name). Boundary/collision checks still
-     * apply; the en+ja coverage requirement does not.
+     * App-authored PHP groups that tolerate source fallback: boundary and collision checks still
+     * apply, the en+ja coverage requirement does not.
      */
     private const APP_REFERENCE_GROUPS = ['regions'];
 
@@ -81,18 +54,15 @@ class CheckTranslationsCommand extends Command
     private const BASELINE_FILE = 'lang/.i18n-baseline.json';
 
     /**
-     * Terms whose default value is too generic to gate as a bare literal. post_activity renders
-     * "post" / "ポスト", which occurs in ordinary prose — and in the retained `%activity% posts`
-     * phrasing — everywhere. Every other term's value is distinctive enough to flag.
+     * post_activity renders "post" / "ポスト", which occurs in ordinary prose; every other term's
+     * value is distinctive enough to gate as a bare literal.
      */
     private const TERM_LITERAL_GENERIC_TERMS = ['post_activity'];
 
     /**
-     * Registries whose captions/help strings reach __() through a variable, so the code scanner
-     * never sees them. Each exposes two static accessors the gates read directly: `sourceStrings():
-     * list<string>` (ALL raw strings, scanned by the term-literal gate) and `coverageStrings():
-     * list<string>` (the rendered subset, folded into the missing-key coverage gate via
-     * {@see coverageSourceStrings}). A new such registry must be added here or its literals go ungated.
+     * Registries whose captions reach __() through a variable, so the code scanner never sees them:
+     * each exposes `sourceStrings()` for the term-literal gate and `coverageStrings()` for the
+     * coverage gate. A new such registry must be added here or its literals go ungated.
      *
      * @var list<class-string>
      */
@@ -103,15 +73,14 @@ class CheckTranslationsCommand extends Command
     ];
 
     /**
-     * Strings exempt from the term-literal gate (exact match against a source string or ja value).
-     * Data-only — every translatable string is expected to term-ize; an entry records a
-     * exception is a data addition here, not a code change or a weakened gate.
+     * Matched exactly against a source string or a ja value: an exception is a data addition here,
+     * never a code change or a weakened gate.
      */
     private const TERM_LITERAL_ALLOWLIST_FILE = 'lang/.i18n-term-literal-allowlist.json';
 
     /**
-     * Files that legitimately mention `__('...')` / `t('...')` strings without intending them as
-     * real translation references (e.g. this command's own docblocks). Skip when extracting.
+     * Files that mention `__('...')` / `t('...')` without intending a real reference, skipped when
+     * extracting.
      */
     private const SELF_REFERENCE_FILES = [
         'app/Console/Commands/CheckTranslationsCommand.php',
@@ -177,11 +146,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Canonical key comparator: ASCII case-insensitive, with a byte-order
-     * tiebreak so the order is total — case-only variants (`Cancel`/`cancel`)
-     * get a single deterministic position. ASCII `strtolower` keeps it
-     * locale/ICU-independent; non-ASCII bytes are settled by the tiebreak.
-     * This is lexicographic, not numeric-aware: `Page 10` sorts before `Page 2`.
+     * ASCII `strtolower` with a byte-order tiebreak, so the order is total and independent of
+     * locale and ICU. Lexicographic, not numeric-aware: `Page 10` sorts before `Page 2`.
      */
     public static function localeKeyCompare(string $a, string $b): int
     {
@@ -195,9 +161,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Resolve the --sort target(s). Empty value means both dictionaries;
-     * a path is normalised and validated against the allow-list. Returns
-     * null for an out-of-list path (caller reports the error).
+     * Null for a path outside SORTABLE_FILES, which the caller reports.
      *
      * @return list<string>|null
      */
@@ -249,9 +213,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Rewrite a JSON dictionary with keys in canonical order, preserving the
-     * encoding the rest of the tooling uses (unescaped unicode/slashes, pretty,
-     * trailing newline).
+     * The encoding stays the one the rest of the tooling writes: unescaped unicode and slashes,
+     * pretty, trailing newline.
      *
      * @param  array<string, mixed>  $data
      */
@@ -263,8 +226,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: fail when a dictionary's keys are not in canonical order.
-     * Uses the same comparator as --sort so the fixer's output always passes.
+     * The same comparator as --sort, so the fixer's output always passes this gate.
      *
      * @return int number of files out of order
      */
@@ -280,8 +242,8 @@ class CheckTranslationsCommand extends Command
                 continue;
             }
             $raw = (string) file_get_contents($path);
-            // Enforce the JSON-object shape: a `[]` array (or scalar/invalid)
-            // is not a dictionary. `{}` decodes to an empty stdClass and passes.
+            // A `[]` array, a scalar or invalid JSON is not a dictionary; `{}` decodes to an empty
+            // stdClass and passes.
             if (! json_decode($raw, false) instanceof stdClass) {
                 $unordered++;
                 $this->error("{$rel} is not a JSON object.");
@@ -315,12 +277,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Advisory (never fails): list case-fold key collisions in lang/ja.json so
-     * inconsistent translations of near-identical keys surface for review. The
-     * canonical sort separates first-letter case variants, so this is the
-     * deterministic net the adjacency cannot guarantee. Groups recorded in
-     * COLLISION_ALLOWLIST_FILE (matched on the exact key set) are accepted and
-     * suppressed; after normalisation the steady state is empty.
+     * Advisory: the canonical sort separates first-letter case variants, so adjacency alone cannot
+     * surface these.
      */
     private function reportCollisions(string $base): void
     {
@@ -391,9 +349,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Order-independent signature of a collision group: the exact set of keys.
-     * Matching on the full set (not the folded key) means adding a third
-     * variant later re-surfaces the group instead of staying suppressed.
+     * Matching on the full key set rather than the folded key means adding a third variant later
+     * re-surfaces the group instead of staying suppressed.
      *
      * @param  list<string>  $keys
      */
@@ -405,14 +362,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Advisory (never fails): near-fold key pairs — label keys whose singularised,
-     * lowercased form matches (singular/plural/light derivation) but whose
-     * Japanese differs (e.g. `Link` リンク vs `Links` リンク集). Only `[differ]`
-     * groups surface; same-ja folds (`Diary`/`Diaries`→日記) are benign and
-     * omitted. Uses Str::singular (not naive s/es stripping) so `Status`,
-     * `Address`, `News` keep a stable stem. Restricted to plain ASCII label
-     * keys so sentences and `%name%`/`:count` strings never group. Intentional
-     * pairs are recorded in COLLISION_ALLOWLIST_FILE, same as case-fold groups.
+     * Advisory: only groups whose Japanese differs surface, a same-ja fold (`Diary`/`Diaries`→日記)
+     * being benign.
      */
     private function reportNearFold(string $base): void
     {
@@ -435,7 +386,7 @@ class CheckTranslationsCommand extends Command
         $flagged = [];
         foreach ($byStem as $group) {
             if (count($group) < 2 || count(array_unique($group)) === 1) {
-                continue; // single key, or a benign same-ja fold
+                continue;
             }
             if (isset($allow[$this->collisionSignature(array_keys($group))])) {
                 continue;
@@ -459,13 +410,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: a homograph marker key (`Word (noun)` / `(verb)` /
-     * `(adjective)` / `(adverb)`) must render a real translation in BOTH
-     * locales — never the key itself. A missing entry falls back to the key,
-     * and an identity entry (value === key) IS the key, so either one leaks the
-     * `(context)` tag into the UI. (`--prune-identity` is not part of the
-     * default gate, so the value is checked here.) The closed vocabulary keeps
-     * this from catching display parentheticals like `Caption (English)`.
+     * A missing entry falls back to the key and an identity entry is the key, so either one leaks
+     * the `(context)` tag into the UI.
      *
      * @return int number of marker keys that would leak the tag
      */
@@ -489,10 +435,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Advisory, opt-in (`--duplicates`): keys sharing an identical ja value are
-     * consolidation candidates (`Order` / `Sort Order` → 並び順). Off by default
-     * because many identical-value groups are legitimately distinct keys; this
-     * is a manual review aid, not a gate.
+     * Off by default: many identical-value groups are legitimately distinct keys, so this is a
+     * review aid rather than a gate.
      */
     private function reportDuplicateValues(string $base): void
     {
@@ -521,11 +465,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: `lang/{locale}/` must hold flat `*.php` group files only. The
-     * laravel-react-i18n Vite parser recurses subdirectories into `dir.file.key`
-     * dotted keys, but Laravel's backend loader reads only `{group}.php` at the
-     * top level — so a subdirectory resolves on the frontend and 404s on the
-     * backend. Express hierarchy with nested PHP arrays, not directories.
+     * The laravel-react-i18n Vite parser recurses subdirectories into `dir.file.key` keys while
+     * Laravel's loader reads only top-level `{group}.php`, so a subdirectory diverges between them.
      *
      * @return int number of offending subdirectories
      */
@@ -561,12 +502,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: a flat JSON key must not fall under a PHP namespace group.
-     * laravel-react-i18n merges `php_{locale}.json` AFTER `{locale}.json`, so a
-     * PHP-namespace key silently wins over a colliding JSON key — exactly the
-     * Laravel "Key/File" rule. `[overrides]` = the PHP key exists today (active
-     * silent override); `[shadows]` = the group exists but not (yet) this key
-     * (latent — adding it later would shadow the JSON entry).
+     * laravel-react-i18n merges `php_{locale}.json` after `{locale}.json`, so a PHP-namespace key
+     * silently wins over a colliding JSON key.
      *
      * @return int number of colliding JSON keys
      */
@@ -615,10 +552,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: every PHP group must be classified as publisher, app-ui, or
-     * app-reference. An unrecognised group means `lang:update` published a new
-     * framework group (add to PUBLISHER_GROUPS) or an app file was added without
-     * a classification (add to APP_UI_GROUPS / APP_REFERENCE_GROUPS).
+     * A group outside the three lists fails, so one newly published by `lang:update` and a
+     * misplaced app file both get a deliberate classification rather than joining the catalog.
      *
      * @return int number of unrecognised groups
      */
@@ -642,9 +577,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: app-ui group keys must exist in BOTH ja and en (structured
-     * keys have no "key === English text" omission). app-reference groups are
-     * exempt (source fallback). A group absent from both locales is skipped.
+     * app-reference groups are exempt, and a group absent from both locales is skipped.
      *
      * @return int number of one-sided keys across app-ui groups
      */
@@ -676,14 +609,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: a React `t()` call may not reference a key under a PHP namespace
-     * group. The React provider loads only `lang/*.json`, so PHP dotted keys are
-     * unreachable from the frontend and render raw — yet the coverage gate counts
-     * them as defined (they exist in `lang/{locale}/*.php`), so the miss would
-     * otherwise pass. This is a standing invariant: app UI strings live in the
-     * flat source-text JSON dictionary, and PHP namespaces are reserved for
-     * framework/reference groups the frontend does not consume — so the
-     * laravel-react-i18n Vite php-namespace plugin is intentionally not wired.
+     * The React provider loads only `lang/*.json`, so a PHP dotted key renders raw there while the
+     * coverage gate counts it as defined. The Vite php-namespace plugin is deliberately not wired.
      *
      * @return int number of unreachable React references
      */
@@ -715,14 +642,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate: no translatable string may carry a term-vocabulary word (diary, friend,
-     * community, topic, timeline, nickname) as a bare literal — it must sit inside a `%term%`
-     * placeholder so an admin's term override reaches every surface (PHP, React, Blade all run the
-     * same substitution). English words are matched against source strings — scanner-extracted
-     * keys, ja.json keys, and dynamic-registry captions/help that reach __() via a variable (so the
-     * code scanner never sees them, {@see DYNAMIC_SOURCE_REGISTRIES}). Japanese words are matched
-     * against ja.json values. `%placeholder%` and `:param` tokens are stripped before matching. The
-     * allowlist is data-only (genuinely generic uses): every other string is expected to term-ize.
+     * A term word must sit inside a `%term%` placeholder so an admin's override reaches every
+     * surface. English words are matched against source strings, Japanese words against ja values.
      *
      * @param  array<string, list<string>>  $found  extracted key => [file:line, ...]
      * @return int number of offending strings
@@ -734,7 +655,6 @@ class CheckTranslationsCommand extends Command
         $enWords = self::termLiteralWords('en');
         $jaWords = self::termLiteralWords('ja');
 
-        // English side: source strings, each with one origin for the report.
         $sources = [];
         foreach ($found as $key => $locations) {
             $sources[(string) $key] ??= $locations[0] ?? 'code';
@@ -757,7 +677,6 @@ class CheckTranslationsCommand extends Command
             }
         }
 
-        // Japanese side: ja.json values.
         foreach ($ja as $key => $value) {
             $value = (string) $value;
             if (isset($allow[$value]) || isset($allow[(string) $key])) {
@@ -811,9 +730,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}) that reach
-     * __() through a variable, mapped to their registry class for reporting. These never enter the
-     * code scanner, so the term-literal gate reads them here directly.
+     * Every registry's raw `sourceStrings()`, which the term-literal gate reads here because they
+     * never enter the code scanner.
      *
      * @return array<string, class-string> source string => registry class
      */
@@ -830,10 +748,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Surfaced source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}), mapped
-     * to the registry class for the missing-key report's synthetic location. The coverage counterpart
-     * to dynamicSourceStrings(): each registry's coverageStrings() is the rendered subset the coverage
-     * gate requires a ja translation for.
+     * Every registry's `coverageStrings()` — the rendered subset the coverage gate requires a ja
+     * translation for.
      *
      * @return array<string, class-string> surfaced source string => registry class
      */
@@ -850,10 +766,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Words the term-literal gate flags for a locale: the shipped term default values
-     * (lang/{locale}/terms.php), minus the generic ones ({@see TERM_LITERAL_GENERIC_TERMS}), plus
-     * English plurals. Derived from the same source as the placeholder exemption ({@see termNames})
-     * so adding a term extends the gate with no second list to maintain.
+     * Derived from the shipped term defaults, so adding a term extends the gate with no second list
+     * to maintain.
      *
      * @return list<string>
      */
@@ -873,10 +787,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Term-vocabulary words appearing as a bare literal in $text — outside any `%placeholder%` and
-     * not part of a `:param` token. ASCII words match on word boundaries (English); non-ASCII words
-     * match as substrings (Japanese has no word boundaries). Returns the matched words, empty when
-     * clean.
+     * Matches outside any `%placeholder%` and outside a `:param` token. ASCII words match on word
+     * boundaries; non-ASCII words match as substrings, Japanese having none.
      *
      * @param  list<string>  $words
      * @return list<string>
@@ -899,8 +811,6 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Sorted union of PHP group (file) names across both locales.
-     *
      * @return list<string>
      */
     private function phpGroupNames(string $base): array
@@ -922,8 +832,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Dotted keys per PHP group for one locale, as the Vite parser flattens
-     * them (`{group}.{nested.path}`).
+     * Flattened as the Vite parser flattens them, `{group}.{nested.path}`.
      *
      * @return array<string, list<string>> group => dotted keys
      */
@@ -951,9 +860,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * JSON keys whose first dot-segment is a PHP group name (`terms.x`, or the
-     * bare group `terms`). Sentence keys whose first segment is not a group
-     * (`%Community% deleted.`) are unaffected.
+     * A sentence key whose first segment is not a group (`%Community% deleted.`) is unaffected.
      *
      * @param  list<string>  $jsonKeys
      * @param  list<string>  $groupNames
@@ -972,8 +879,6 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * PHP groups present on disk but not in the known classification.
-     *
      * @param  list<string>  $present
      * @param  list<string>  $known
      * @return list<string>
@@ -984,9 +889,6 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * One-sided keys between two locales of a group (each side's keys absent on
-     * the other).
-     *
      * @param  list<string>  $jaKeys
      * @param  list<string>  $enKeys
      * @return array{missing_en: list<string>, missing_ja: list<string>}
@@ -1013,10 +915,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Only plain ASCII label keys take part in near-fold grouping — letters,
-     * spaces, and `/` (`Sender/Recipient`). This excludes sentences (which end
-     * in punctuation), `%name%` placeholders, `:count` strings, and the
-     * `(context)` markers, none of which are singular/plural label pairs.
+     * Plain ASCII label keys only, so sentences, `%name%` placeholders, `:count` strings and
+     * `(context)` markers never group.
      */
     public static function isNearFoldCandidate(string $key): bool
     {
@@ -1033,9 +933,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Singular/plural/derivation-insensitive stem for near-fold grouping. Uses
-     * Str::singular rather than naive suffix stripping so `Status`, `Address`,
-     * `News` keep a stable stem.
+     * Str::singular rather than naive suffix stripping, so `Status`, `Address` and `News` keep a
+     * stable stem.
      */
     public static function nearFoldStem(string $key): string
     {
@@ -1043,10 +942,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Marker keys that would leak the `(context)` tag: the value is missing
-     * (falls back to the key) or identity (equals the key) in ja or en. Checked
-     * against full key→value maps, not just key presence — an identity entry
-     * passes a presence check but still renders the tag.
+     * Checked against full key→value maps, not key presence: an identity entry passes a presence
+     * check but still renders the tag.
      *
      * @param  array<string, string>  $ja
      * @param  array<string, string>  $en
@@ -1094,11 +991,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * True when the key consists only of `%name%` placeholders (plus
-     * whitespace) and every placeholder name resolves to a configured term.
-     * Validating against the term set is what catches typos like `%Firend%`
-     * — the runtime would leave those raw, and the exemption without a name
-     * check would silently classify them as "no translation needed".
+     * Validating each placeholder against the term set is what catches a typo like `%Firend%`,
+     * which the runtime leaves raw and the exemption would otherwise excuse.
      *
      * @param  list<string>  $knownTermNames
      */
@@ -1144,19 +1038,14 @@ class CheckTranslationsCommand extends Command
     private ?array $termNames = null;
 
     /**
-     * Keys referenced from React `t()` (JS/TS), with one sample location, as
-     * populated by {@see extractUsedKeys}. Used by {@see reportReactPhpGroupKeys}.
-     *
      * @var array<string, string> key => "file:line"
      */
     private array $jsReferencedKeys = [];
 
     private function pruneIdentityEntries(string $base): int
     {
-        // en: every identity entry is redundant. ja: only pure-placeholder
-        // identity entries are redundant (the term layer resolves those at
-        // render time); regular ja entries that happen to match their key
-        // are legitimate Japanese translations and must be kept.
+        // A regular ja entry matching its key is a legitimate Japanese translation and is kept; only
+        // pure-placeholder identity rows go, the term layer resolving those at render time.
         foreach (['ja', 'en'] as $lang) {
             $path = $base."/lang/{$lang}.json";
             if (! is_file($path)) {
@@ -1407,11 +1296,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Reports JSON keys not referenced by the app-code scan. Informational and NOT a deletion
-     * list: lang/*.json mixes app-authored keys with laravel-lang publisher keys that the
-     * framework/vendor renders at runtime (pagination "to"/"results", validation, http-statuses,
-     * ...) which this scan cannot see. PHP-namespace defaults are likewise kept. See
-     * docs/internals/i18n.md.
+     * Never a deletion list: lang/*.json also holds publisher keys the framework renders at
+     * runtime, which this scan cannot see (docs/internals/i18n.md "Ownership: publisher-managed vs app-authored").
      *
      * @param  array<string, list<string>>  $found
      */

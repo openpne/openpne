@@ -26,11 +26,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 
-/**
- * The four diary tools, called the way an MCP client calls them. The token decides who the caller
- * is, the audience decides what they reach, and every entry they may not have answers with the one
- * refusal that names nothing.
- */
 class DiaryToolsTest extends McpTestCase
 {
     /** The web-public tier is a site decision the audience list reads, so every suite states it. */
@@ -41,7 +36,6 @@ class DiaryToolsTest extends McpTestCase
         $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, true);
     }
 
-    /** Sign in as $member with the abilities their token carries. */
     private function acting(Member $member, array $abilities = [McpAbilities::READ, McpAbilities::WRITE]): Member
     {
         return Sanctum::actingAs($member, $abilities);
@@ -88,7 +82,6 @@ class DiaryToolsTest extends McpTestCase
                 ->where('diaries.0.diaryId', $newer->getKey())
                 ->where('diaries.0.title', 'For members')
                 ->where('diaries.0.excerpt', 'members only')
-                // A slug, never the stored int — Open is 0, which reads as "no audience".
                 ->where('diaries.0.visibility', 'members')
                 ->where('diaries.0.commentCount', 1)
                 ->where('diaries.0.imageCount', 0)
@@ -103,11 +96,6 @@ class DiaryToolsTest extends McpTestCase
                 ->etc());
     }
 
-    /**
-     * The divergence worth pinning: the feed is the site's, the row gate is the caller's. What the
-     * feed carries is the all-members tier, so a caller's own narrower entries are not in it — the
-     * web feed says the same — and read-diary reads one by id all the same.
-     */
     public function test_the_feed_leaves_out_the_callers_own_narrower_entries_which_read_diary_still_reads(): void
     {
         $viewer = Member::factory()->create();
@@ -139,18 +127,13 @@ class DiaryToolsTest extends McpTestCase
 
         $this->acting(Member::factory()->create());
 
-        // Page two exists at all only because the tool names the page: there is no URL here for the
-        // paginator's own resolver to read one off.
         OpenPneServer::tool(ListDiariesTool::class, ['page' => 2])
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json
                 ->where('page', 2)->where('lastPage', 2)->count('diaries', 1)->etc());
     }
 
-    /**
-     * An AI account is friends with nobody, which is the ordinary case for a bot: it reads the two
-     * tiers the membership at large reads and nothing narrower.
-     */
+    /** An AI account is friends with nobody, which is the ordinary case for a bot. */
     public function test_an_entry_the_caller_may_not_read_is_refused_without_saying_it_exists(): void
     {
         $owner = Member::factory()->create();
@@ -192,7 +175,6 @@ class DiaryToolsTest extends McpTestCase
                 ->etc());
     }
 
-    /** The friends tier is a live audience, not a hole: a friend reads what a stranger cannot. */
     public function test_a_friend_reads_the_friends_tier(): void
     {
         $author = Member::factory()->create();
@@ -243,7 +225,6 @@ class DiaryToolsTest extends McpTestCase
                 ->etc());
     }
 
-    /** No format's markup reaches the wire: what comes back is the text a reader would see. */
     public function test_a_body_arrives_flattened_whatever_it_is_stored_as(): void
     {
         $author = Member::factory()->create();
@@ -303,7 +284,6 @@ class DiaryToolsTest extends McpTestCase
         Event::assertDispatched(DiaryPosted::class);
     }
 
-    /** A markdown body is stored as its source and read back flattened — no lossy round trip. */
     public function test_a_markdown_entry_is_stored_as_written_and_read_back_as_text(): void
     {
         Notification::fake();
@@ -325,7 +305,6 @@ class DiaryToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json->where('diary.body', 'bold and plain')->etc());
     }
 
-    /** op3 is never author-able: it exists only on bodies the upgrade wrote. */
     public function test_the_migrated_format_cannot_be_authored(): void
     {
         $this->acting(Member::factory()->create());
@@ -340,10 +319,6 @@ class DiaryToolsTest extends McpTestCase
         $this->assertSame(0, Diary::query()->count());
     }
 
-    /**
-     * The audience an omitted `visibility` takes is the member's own default — the value the compose
-     * form pre-selects — which is their stored preference clamped to what the site currently offers.
-     */
     public function test_an_omitted_audience_is_the_members_own_default_clamped_to_what_is_offered(): void
     {
         Notification::fake();
@@ -366,10 +341,6 @@ class DiaryToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json->where('diary.visibility', 'members')->etc());
     }
 
-    /**
-     * An audience the site does not offer is a validation error naming the field, not the single
-     * refusal: it is the caller's own choice, and says nothing about what exists.
-     */
     public function test_an_audience_the_site_does_not_offer_is_refused_by_name(): void
     {
         Notification::fake();
@@ -390,7 +361,6 @@ class DiaryToolsTest extends McpTestCase
             ->assertOk();
     }
 
-    /** The cap is the TEXT column's, so it counts bytes — a Japanese character costs three of them. */
     public function test_the_body_cap_counts_bytes_not_characters(): void
     {
         Notification::fake();
@@ -408,18 +378,13 @@ class DiaryToolsTest extends McpTestCase
                 ->assertHasErrors(['body']);
         }
 
-        // The title lives in a TEXT column too; the web form leaves it to the column, the tool
-        // refuses it as validation rather than letting the insert fail.
         OpenPneServer::tool(PostDiaryTool::class, ['title' => str_repeat('t', 65536), 'body' => 'x', 'visibility' => 'private'])
             ->assertHasErrors(['title']);
 
         $this->assertSame(2, Diary::query()->count());
     }
 
-    /**
-     * The direct tool path meets no HTTP middleware, so each of these reaches the tool exactly as
-     * written — which is why the tool trims the text itself rather than leaving it to TrimStrings.
-     */
+    /** The tool path meets no HTTP middleware, so each of these reaches the tool exactly as written. */
     public function test_an_entry_of_nothing_is_refused_whatever_it_is_made_of(): void
     {
         Notification::fake();
@@ -499,7 +464,6 @@ class DiaryToolsTest extends McpTestCase
         Notification::assertNotSentTo($bot, DiaryCommentedNotification::class);
     }
 
-    /** Whoever may read an entry may answer it — and whoever may not, may not. */
     public function test_commenting_on_an_entry_the_caller_may_not_read_is_refused(): void
     {
         $stranger = Member::factory()->create();
@@ -521,8 +485,8 @@ class DiaryToolsTest extends McpTestCase
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
 
-        // The direct tool path meets no HTTP middleware, so each of these reaches the tool exactly as
-        // written — which is why the tool holds the blank-body contract itself.
+        // The tool path meets no HTTP middleware, so each of these reaches the tool exactly as
+        // written.
         foreach (['', '   ', "\n\n", " \t ", 42] as $blank) {
             OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => $blank])
                 ->assertHasErrors(['body']);
@@ -542,8 +506,7 @@ class DiaryToolsTest extends McpTestCase
         $this->acting(Member::factory()->create());
         $this->setSnsSetting(Feature::Diary->settingKey(), false);
 
-        // Not an error about the entry: the tools are not there at all, which is what the navigation
-        // says on every other surface too.
+        // Not an error about the entry: the tools are not there at all.
         OpenPneServer::tool(ListDiariesTool::class)->assertHasErrors(['not found']);
         OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $diary->getKey()])->assertHasErrors(['not found']);
         OpenPneServer::tool(PostDiaryTool::class, ['title' => 'x', 'body' => 'x'])->assertHasErrors(['not found']);

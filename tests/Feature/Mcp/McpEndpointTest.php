@@ -18,10 +18,8 @@ use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 
 /**
- * The endpoint itself: the third realm, reached by bearer token alone and holding no session. The
- * tools it exposes are exercised in TalkToolsTest; what is pinned here is the gate every one of
- * them sits behind — including on the two methods that only ever answer 405, which the package
- * registers beside the POST and which a middleware chained onto Mcp::web()'s return value misses.
+ * The gate is pinned on the two 405 stubs as well: the package registers them beside the POST,
+ * where a middleware chained onto Mcp::web()'s return value would miss them.
  */
 class McpEndpointTest extends McpTestCase
 {
@@ -83,9 +81,8 @@ class McpEndpointTest extends McpTestCase
             // The framework's JSON refusal, pinned because docs/internals/mcp.md names it.
             ->assertExactJson(['message' => 'Unauthenticated.']);
 
-        // Also for a request that does not ask for JSON: the guest redirect is skipped for this path
-        // (bootstrap/app.php), so a browser pointed at the endpoint gets a bodiless 401 — the null
-        // redirect target renders as noContent — instead of a login form.
+        // A request that does not ask for JSON gets a bodiless 401 rather than a login form: the
+        // guest redirect is skipped for this path (bootstrap/app.php).
         $this->freshRequestState();
         $response = $this->post('/mcp', $this->envelope('tools/list'))->assertUnauthorized();
         $this->assertSame('', $response->getContent());
@@ -140,9 +137,8 @@ class McpEndpointTest extends McpTestCase
 
     public function test_a_wildcard_token_passes_the_ability_gate(): void
     {
-        // Sanctum's own semantics: `*` answers every `can`. The first-party way to mint a token is
-        // `openpne:mcp:token`, which always issues named abilities — so this is a contract about
-        // what a hand-minted wildcard does, not a hole in the gate. See docs/internals/mcp.md.
+        // Sanctum answers every `can()` with true for a wildcard token, which neither mint path can
+        // produce (docs/internals/mcp.md "Tokens and abilities").
         $token = Member::factory()->create()->createToken('mcp', ['*'])->plainTextToken;
 
         $this->rpc($token, 'tools/list')->assertOk();
@@ -214,10 +210,8 @@ class McpEndpointTest extends McpTestCase
                 fn (string $m): bool => in_array($m, $expected, true),
             ));
 
-            // The order is not the one the group declares by itself: the framework's priority list
-            // re-sorts Authenticate, the feature gate and ThrottleRequests among themselves, and
-            // this is the arrangement that comes out — brute force bounded before authentication,
-            // the toggle read after it so its state never leaks, the token's own cap last.
+            // Not the order the group declares: the framework's priority list re-sorts Authenticate,
+            // the feature gate and ThrottleRequests among themselves, and this is what comes out.
             $this->assertSame($expected, $resolved, "{$route->methods()[0]} /mcp");
         }
 

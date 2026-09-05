@@ -9,11 +9,7 @@ use App\Compat\ScreenStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
 
-/**
- * Renders the per-screen surface-element parity (the third axis: intra-screen content) as
- * Markdown. Route parity says a screen's URL resolves; this says how much of that screen's
- * OpenPNE 3 content the Classic adapter renders, and what is still missing or deferred.
- */
+/** See docs/internals/classic-compatibility.md "Audit". */
 class ScreenParityCommand extends Command
 {
     protected $signature = 'openpne:screen-parity';

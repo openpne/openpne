@@ -11,22 +11,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes link cards no body points at any more.
- *
- * Editing a post away from the URL it used to carry, or deleting the post, leaves its card behind:
- * cards are keyed by URL and shared, so nothing can drop one at the moment a single record stops
- * referencing it without checking every other record first. Doing that check inline would put a
- * count-and-delete race on the posting path — two records dropping the same URL at once could both
- * see zero references, and a record picking that URL up again at the same moment could have its
- * card deleted underneath it. So the sweep is deliberate and out of band.
- *
- * A card that does go takes its image with it — deleted explicitly, not by a cascade: the foreign key
- * runs from the card to the File, so the database would sooner null the reference than remove the
- * row. That deletion is the only way those bytes become collectable at all, since a File referenced
- * by a living card is by definition still in use.
- *
- * On the weekly schedule (routes/console.php): weekly rather than daily because an unreferenced card
- * is cache, and the sweep walks every one of them.
+ * See docs/internals/link-cards.md "Cleaning up".
  */
 class PruneLinkCardsCommand extends Command
 {
@@ -73,24 +58,8 @@ class PruneLinkCardsCommand extends Command
     }
 
     /**
-     * Delete $card, but only if nothing has claimed it since it was selected as a candidate.
-     *
      * The conditions are repeated inside the DELETE rather than trusted from the earlier SELECT,
-     * because a card can be adopted between the two: cards are keyed by URL, so a new post of a URL
-     * that has been unreferenced for weeks picks up the *existing* row rather than making one. The
-     * window between selecting candidates and deleting them is exactly when that can happen, and
-     * `cardFor` does not touch `updated_at`, so the grace period does not cover it.
-     *
-     * Leaving it to the database to order the two writes is what makes both outcomes safe:
-     *
-     *  - the attach commits first — `NOT EXISTS` sees the reference and this deletes nothing;
-     *  - the delete commits first — the attach's UPDATE names an id that no longer exists and fails
-     *    on the foreign key, so its marker is never written and the next view retries it.
-     *
-     * Getting this wrong is not a lost card but a *permanently* lost one: the attach writes
-     * `link_card_id` and `link_card_synced_at` together, so a delete landing between them leaves the
-     * body marked examined with no card, which the read path reads as "this body has no link" and
-     * never revisits.
+     * because a card can be adopted between the two (docs/internals/link-cards.md "Cleaning up").
      */
     private function deleteIfStillUnreferenced(LinkCard $card, CarbonImmutable $cutoff): bool
     {
@@ -106,21 +75,19 @@ class PruneLinkCardsCommand extends Command
             return false;
         }
 
-        // Only now, and only for a row that really went: deleting the card is what makes its image
-        // unreachable, and deleting the File takes its bytes and cached thumbnails (FileObserver).
+        // Deleted explicitly rather than by cascade: the foreign key runs from the card to the File, so
+        // the database would null the reference instead of removing the row.
         $image?->delete();
 
         return true;
     }
 
     /**
-     * A subquery matching any body that still points at the card.
+     * The tables come from CardContext and nothing else: a filter meant for serving one record would
+     * read a row still holding a card as no reference at all.
      *
-     * Every table a card can be referenced from, taken from CardContext so that adding a kind cannot
-     * leave this behind — but the *tables*, never that enum's queries: see CardContext::table().
-     *
-     * `unionAll`, not `union`: this only ever asks whether a row exists, and de-duplicating the
-     * matches costs a temporary B-tree per card for an answer that cannot change.
+     * `unionAll`, not `union`: this only asks whether a row exists, and de-duplicating the matches
+     * costs a temporary B-tree per card.
      */
     private function anyReference($query): void
     {

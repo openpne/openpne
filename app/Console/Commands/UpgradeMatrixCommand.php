@@ -6,7 +6,6 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\StepRegistry;
 use Illuminate\Console\Command;
 
-/** Renders the OpenPNE 3 → 4 upgrade mapping matrix (all steps) as Markdown. */
 class UpgradeMatrixCommand extends Command
 {
     protected $signature = 'openpne:upgrade-matrix';

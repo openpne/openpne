@@ -14,12 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
 /**
- * Publishes a day's home issue.
- *
- * Without `--date` the window chains from the previous issue and closes on the last 06:00 boundary,
- * which is the scheduled run. With one it is the named day's own stretch instead, for filling an
- * archive in — oldest day first, since the never-again ledger remembers whatever the runs before it
- * featured.
+ * See docs/internals/home-issues.md "Schedule and idempotency".
  */
 class PublishHomeIssueCommand extends Command
 {
@@ -43,9 +38,8 @@ class PublishHomeIssueCommand extends Command
             return self::FAILURE;
         }
 
-        // As of the morning the issue goes out — the boundary the window closes on, not the clock:
-        // the calendar band looks forward from here, and a run filling in a missed morning would
-        // otherwise list gatherings by the day it happened to run on.
+        // As of the boundary the window closes on, not the clock: the calendar band looks forward
+        // from here.
         $asOf = $window->end;
 
         $existing = $publish->publishedOn($window->lastDay());
@@ -100,11 +94,8 @@ class PublishHomeIssueCommand extends Command
     }
 
     /**
-     * The stretch a `--date` run covers, or null with the reason printed.
-     *
-     * A day whose window has not closed yet is refused: its issue is the one the schedule is about
-     * to publish, and dating it now would report a stretch that is still running — which is also
-     * what makes "today" unavailable, since today's 06:00 boundary lies ahead.
+     * A day whose window has not closed yet is refused, today included: today's 06:00 boundary lies
+     * ahead.
      */
     private function backfillWindow(string $date, CarbonImmutable $now): ?HomeIssueWindow
     {
@@ -132,13 +123,8 @@ class PublishHomeIssueCommand extends Command
     }
 
     /**
-     * True when no published issue already reports part of $window, the reason printed when one does.
-     *
-     * A backfill names every day it wants, so two named days never share an instant — but a chained
-     * issue's window is as long as the gap it closed (the first one reaches back
-     * {@see PublishHomeIssue::FIRST_WINDOW_DAYS} days), and a day inside that stretch has already
-     * been reported. Publishing it again would print the same happenings twice under two datelines,
-     * which the unique on `issue_date` cannot see.
+     * A chained issue's window is as long as the gap it closed, so a named day can fall inside a
+     * stretch already reported — which the unique on `issue_date` cannot see.
      */
     private function windowIsClear(string $date, HomeIssueWindow $window): bool
     {

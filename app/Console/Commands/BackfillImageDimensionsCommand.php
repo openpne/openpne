@@ -12,15 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Throwable;
 
 /**
- * Records files.width / files.height for the image rows that carry none.
- *
- * An upload measures itself, so this is for the rows that never passed through it: files stored
- * before the columns existed, and files the OpenPNE 3 upgrade brings in — run it after an upgrade.
- *
- * A row whose bytes are gone or do not decode is left NULL and the run continues, because a
- * corrupt file must not stall the rest; consumers already treat NULL as unknown
- * (docs/internals/images.md). Idempotent: only NULL rows are selected, so re-running it picks up
- * exactly what an interrupted run did not reach.
+ * See docs/internals/images.md "files.width / files.height".
  */
 class BackfillImageDimensionsCommand extends Command
 {

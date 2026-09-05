@@ -11,26 +11,13 @@ use Illuminate\Support\Facades\Schema;
 use PDO;
 
 /**
- * Copies a whole OpenPNE 4 database onto another connection — the supported way to move a site
- * between MySQL and SQLite, in either direction.
- *
- * A dump cannot do this. mysqldump writes MySQL's own backslash string escapes, which SQLite reads as
- * literal characters, and --hex-blob writes `0x…` blob literals, which SQLite parses as *integers*
- * without error — file_bin bytes would become a number rather than fail loudly. So the schema here
- * comes from `migrate` (no DDL is translated) and the rows move through PDO, which leaves escaping
- * and BLOB binding to the driver.
- *
- * Run it with nothing writing to the source: the copy is one snapshot per table, not a consistent
- * point in time across all of them.
+ * See docs/changing-database-engine.md "Copying the database".
  */
 class CopyDatabaseCommand extends Command
 {
     use ConfirmableTrait;
 
-    /**
-     * Placeholders per INSERT. SQLite's SQLITE_MAX_VARIABLE_NUMBER was 999 before 3.32; a one-off copy
-     * is not throughput-bound, so stay under the older limit rather than probe for it.
-     */
+    /** SQLite's SQLITE_MAX_VARIABLE_NUMBER was 999 before 3.32, and this stays under it rather than probe. */
     private const PLACEHOLDER_BUDGET = 900;
 
     /** A batch holds every BLOB in it in PHP memory at once, so binary tables get a much smaller one. */
@@ -103,7 +90,6 @@ class CopyDatabaseCommand extends Command
         return $this->verify($from, $to, array_keys($plans)) ? self::SUCCESS : self::FAILURE;
     }
 
-    /** Point a connection at a different database for this run only. */
     private function overrideDatabase(string $connection, mixed $database): void
     {
         if ($database === null || $database === '') {
@@ -114,7 +100,6 @@ class CopyDatabaseCommand extends Command
         DB::purge($connection);
     }
 
-    /** Whether two connection names address the same physical database. */
     private function sameDatabase(string $a, string $b): bool
     {
         $address = fn (string $name) => array_map(
@@ -125,7 +110,6 @@ class CopyDatabaseCommand extends Command
         return $address($a) === $address($b);
     }
 
-    /** Create the target schema if it has none, then require both sides to be at the same version. */
     private function prepareTarget(string $from, string $to): bool
     {
         if (! Schema::connection($to)->hasTable('migrations')) {
@@ -157,10 +141,8 @@ class CopyDatabaseCommand extends Command
     }
 
     /**
-     * Every read this command makes is a decision about the copy — what to copy, whether the target
-     * is safe to write into, whether the result matches the source. A read/write split would answer
-     * them from a replica that lags the database actually being copied, so all of them are pinned to
-     * the write connection. (Laravel's schema listings already read from it.)
+     * Every read here decides something about the copy, so all of them are pinned to the write
+     * connection rather than a replica that lags the database being copied.
      */
     private function authoritative(Connection $connection, string $table): QueryBuilder
     {
@@ -175,8 +157,8 @@ class CopyDatabaseCommand extends Command
     }
 
     /**
-     * Every table the schema defines on both sides. `migrations` is excluded: the target wrote its own
-     * when it migrated, and that record — not the source's — describes the schema the rows land in.
+     * `migrations` is excluded: the target wrote its own when it migrated, and that record — not the
+     * source's — describes the schema the rows land in.
      *
      * @return list<string>
      */
@@ -197,10 +179,8 @@ class CopyDatabaseCommand extends Command
     }
 
     /**
-     * Once both sides agree on their migrations the schemas must match, with one allowance: the source
-     * may hold extra tables, which after an OpenPNE 3 upgrade are the restored OpenPNE 3 ones. Those
-     * are named rather than silently left out. A table only the target has is drift — the source has
-     * been altered by hand — and copying would leave it holding something the source never had.
+     * The source may hold extra tables — after an OpenPNE 3 upgrade the restored OpenPNE 3 ones —
+     * which are named rather than silently left out.
      */
     private function requireMatchingTables(string $from, string $to): bool
     {
@@ -265,9 +245,8 @@ class CopyDatabaseCommand extends Command
             $names = array_column($columns, 'name');
             $targetNames = array_column(Schema::connection($to)->getColumns($table), 'name');
 
-            // Only reachable on a hand-altered site. A column the target has no home for would be
-            // dropped, losing exactly the data nobody else has a copy of; one only the target defines
-            // would be filled with a default the source never held. Both are drift, neither is silent.
+            // Drift on a hand-altered site: a source-only column would be dropped and a target-only one
+            // filled with a default the source never held.
             $sourceOnly = array_diff($names, $targetNames);
             $targetOnly = array_diff($targetNames, $names);
 
@@ -320,8 +299,7 @@ class CopyDatabaseCommand extends Command
 
         try {
             // The PRAGMA a SQLite target needs is a no-op inside a transaction, so constraints go down
-            // first and the transaction opens within that. Order is then free, and a failure part-way
-            // leaves the target as empty as it started.
+            // first and the transaction opens within that.
             Schema::connection($to)->withoutForeignKeyConstraints(function () use ($source, $target, $plans) {
                 $target->transaction(function () use ($source, $target, $plans) {
                     foreach ($plans as $table => $plan) {
@@ -337,11 +315,8 @@ class CopyDatabaseCommand extends Command
 
     /**
      * A buffered MySQL result holds the whole table in PHP memory before the first row is read, which
-     * file_bin alone can outgrow. SQLite streams already.
-     *
-     * This unbuffers the write PDO, which is the one the reads are pinned to (copyTable), rather than
-     * whichever getReadPdo() would hand back: a read/write split would otherwise leave the reads
-     * buffered — and sourcing a whole site from a replica is not what this copies anyway.
+     * file_bin alone can outgrow. It is the write PDO that is unbuffered, that being the one the
+     * reads are pinned to.
      *
      * @return callable(): void puts the attribute back the way it was found
      */
@@ -375,8 +350,6 @@ class CopyDatabaseCommand extends Command
         $written = 0;
         $batch = [];
 
-        // Pinned to the write connection like every other read here (authoritative), which is also the
-        // PDO streamSource unbuffered.
         foreach ($this->authoritative($source, $table)->cursor() as $record) {
             $batch[] = (array) $record;
 

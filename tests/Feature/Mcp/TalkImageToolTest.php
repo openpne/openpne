@@ -24,13 +24,9 @@ use Laravel\Sanctum\Sanctum;
 use Tests\Fixtures\CountedByteStream;
 use Tests\Fixtures\CountingFileStorage;
 
-/**
- * read-talk-message-images: the bytes behind the count the other tools report, under the same
- * refusal, and under a cap that answers before a picture is in memory.
- */
 class TalkImageToolTest extends McpTestCase
 {
-    /** The tool's own per-response cap, as a caller experiences it. */
+    /** A copy of the trait's own cap, which is private to it. */
     private const CAP = 8 * 1024 * 1024;
 
     protected function setUp(): void
@@ -70,7 +66,6 @@ class TalkImageToolTest extends McpTestCase
         return $file;
     }
 
-    /** The bytes as stored, which is what the original size answers with. */
     private function stored(File $file): string
     {
         $stream = app(FileStorage::class)->readStream($file);

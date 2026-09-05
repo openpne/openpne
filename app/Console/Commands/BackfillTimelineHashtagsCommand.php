@@ -11,16 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Re-derives every timeline post's #hashtag rows from its body.
- *
- * Posting parses the body, so this is for the bodies that never passed through the parser: posts
- * written before the feature existed, and posts the OpenPNE 3 upgrade brings in — run it after an
- * upgrade. Mentions are deliberately not backfilled: a mention exists because someone picked a
- * member, never because a body was scanned (docs/internals/timeline.md).
- *
- * Idempotent, because a post's rows are dropped and re-derived together rather than added to. That
- * makes re-running it after a parser change the way a site adopts the change, and one post's
- * transaction the unit of work — an interrupted run leaves every post it reached consistent.
+ * See docs/internals/timeline.md "Bodies the parser never saw".
  */
 class BackfillTimelineHashtagsCommand extends Command
 {

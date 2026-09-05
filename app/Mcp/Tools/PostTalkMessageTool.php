@@ -34,18 +34,13 @@ class PostTalkMessageTool extends TalkTool
     {
         $member = $this->member($request);
 
-        // The endpoint only ever asked for mcp:read, so writing is checked again here — that is what
-        // makes a read-only token a read-only token.
         if (! $member->tokenCan(McpAbilities::WRITE)) {
             return Response::error(self::MISSING_WRITE);
         }
 
         $body = $request->get('body');
-        // Normalized here, not left to middleware: the direct tool path (Server::tool, and any
-        // future non-HTTP transport) never meets TrimStrings, so the contract has to live where the
-        // body is read. Anything that is not a string is left as it came for the `string` rule to
-        // refuse, rather than coerced into a body nobody wrote. Trimming happens before any handle
-        // is prefixed, so the space between the two survives.
+        // This path meets no TrimStrings middleware; a non-string is left as it came for the `string`
+        // rule to refuse rather than coerced.
         $body = is_string($body) ? trim(TalkBody::normalize($body)) : $body;
 
         /** @var array{group_id: int, body: string, reply_to_message_id?: int} $validated */
@@ -73,8 +68,8 @@ class PostTalkMessageTool extends TalkTool
         $replyTo = null;
 
         if (isset($validated['reply_to_message_id'])) {
-            // A live row of THIS room, resolved as MarkTalkRead resolves one: another room's message
-            // is not distinguishable here from an id that names nothing.
+            // A live row of this room: another room's message is not distinguishable here from an id
+            // that names nothing.
             $replyTo = GroupMessage::query()
                 ->where('group_id', $group->getKey())
                 ->whereKey((int) $validated['reply_to_message_id'])
@@ -88,7 +83,7 @@ class PostTalkMessageTool extends TalkTool
         try {
             $message = $this->post($create, $mentions, $member, $group, $validated['body'], $replyTo);
         } catch (GroupTalkActionException) {
-            // A room the caller may read but not write to. Same answer as a room that is not there.
+            // A room the caller may read but not write to answers as a room that is not there.
             return $this->refused();
         }
 
@@ -102,14 +97,8 @@ class PostTalkMessageTool extends TalkTool
     }
 
     /**
-     * The posted message, with the answered author addressed at its head when there is one to
-     * address.
-     *
-     * The handle is written optimistically and verified where it is resolved: `mentionsRequired`
-     * makes the write roll back rather than store a body whose handle names nobody, so the check and
-     * the write cannot disagree however long they are apart. Asking `isMentionable` up front instead
-     * would only narrow the window — talk has no edit, so a body that got through it is permanent.
-     * The ordinary answer therefore costs one mentionability query, the one inside the transaction.
+     * The handle is composed optimistically: `mentionsRequired` rolls the write back rather than
+     * storing a body whose handle names nobody, so the check and the write cannot disagree.
      *
      * @param  string  $body  already trimmed: trimming after the prefix would eat the separating
      *                        space and shift every range that follows it
@@ -124,10 +113,8 @@ class PostTalkMessageTool extends TalkTool
         string $body,
         ?GroupMessage $replyTo,
     ): GroupMessage {
-        // The only mentions here are the ones this tool composes: no body is ever parsed for `@`
-        // (docs/internals/group-talk.md), and this wire has no picker.
-        // Both branches write the reference: what this answers and who it speaks to are different
-        // questions, and only the second of them can end up with no answer.
+        // No body is ever parsed for `@` (docs/internals/group-talk.md "Key invariants"): the only
+        // mentions here are the ones this tool composes.
         $plain = fn (): GroupMessage => $create($member, $group, $body, inReplyTo: $replyTo);
         $addressing = function (Member $author) use ($create, $member, $group, $body, $replyTo): GroupMessage {
             [$addressed, $rows] = $this->addressed($author, $body);
@@ -151,9 +138,8 @@ class PostTalkMessageTool extends TalkTool
             }
         }
 
-        // The handle went stale while it was being written. Read the author again — now that there
-        // is a reason to — and ask the gate: gone, blocked or frozen leaves nobody to address; a
-        // rename leaves a new handle, which the write verifies in turn.
+        // The handle went stale: gone, blocked or frozen leaves nobody to address, and a rename
+        // leaves a new handle the write verifies in turn.
         $replyTo->unsetRelation('author');
         $author = $replyTo->author;
 
@@ -175,12 +161,9 @@ class PostTalkMessageTool extends TalkTool
     }
 
     /**
-     * The body with $author addressed at its head, and the single mention row that names them.
-     *
      * The handle is the stored name, never the display one: ResolveMentions matches the range
      * against `'@'.$name` character for character, so an "(AI)" suffix would leave the row silently
-     * dropped. The separating space sits outside the range, exactly where the composer's picker
-     * leaves it.
+     * dropped.
      *
      * @return array{0: string, 1: list<array{member_id: int, offset: int, length: int}>}
      */
