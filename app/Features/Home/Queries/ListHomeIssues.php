@@ -8,10 +8,8 @@ use App\Models\HomeIssue;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * The run of issues, newest first — the archive index.
- *
- * Rows only. An issue's ledger is not read here: the list names days and numbers, and resolving
- * every issue's sources to render a run of them would cost a page of gates per row.
+ * The run of issues, newest first. Rows only: resolving every issue's sources to render a list of
+ * them would cost a page of gates per row.
  */
 final class ListHomeIssues
 {

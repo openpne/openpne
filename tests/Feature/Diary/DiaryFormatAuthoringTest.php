@@ -9,10 +9,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * End-to-end authoring of the body format over HTTP: a markdown diary persists its format and
- * renders markdown on both surfaces; op3 is never author-able (422).
- */
 class DiaryFormatAuthoringTest extends TestCase
 {
     use RefreshDatabase;

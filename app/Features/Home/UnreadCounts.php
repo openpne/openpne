@@ -10,14 +10,10 @@ use App\Models\Member;
 use App\Support\Feature;
 
 /**
- * The shell's badge counts, aggregated from each feature's own count query. Both the nav badges
- * (shared on every page via HandleInertiaRequests) and the dashboard notices read this, so it is
- * bound request-scoped and memoizes per member — the underlying queries run once per request no
- * matter how many surfaces ask.
- *
- * friendRequests/unreadMessages are layer-1 counts (derived live from each source's own truth,
- * dropped by acting on the item); notifications is layer 3's own unread-row count (read_at-driven,
- * dropped by reading the feed). The two never feed each other — see docs/internals/notifications.md.
+ * The shell's badge counts, bound request-scoped and memoized per member so the underlying queries
+ * run once however many surfaces ask. friendRequests, unreadMessages and groupTalks are layer-1
+ * counts while notifications is layer 3's own unread-row count, and the two never feed each other
+ * (docs/internals/notifications.md, "The three layers").
  */
 class UnreadCounts
 {
@@ -38,12 +34,11 @@ class UnreadCounts
         // member to, so a badge would only point at a 404.
         return $this->cache[$viewer->getKey()] ??= [
             'friendRequests' => Feature::Friend->enabled() ? ($this->friendRequests)($viewer) : 0,
-            // Conversations with something new, not messages — see CountUnreadConversations, and the
-            // groups badge below, which counts rooms for the same reason.
+            // Conversations with something new, not messages.
             'unreadMessages' => Feature::DirectMessage->enabled() ? ($this->unreadMessages)($viewer) : 0,
             'notifications' => ($this->notifications)($viewer),
-            // Groups with something new, not messages — see CountGroupsWithUnreadTalk. Layer-1 like
-            // the two above: it falls by reading the conversation, not by dismissing anything.
+            // Groups with something new, not messages: it falls by reading the conversation rather
+            // than by dismissing anything.
             'groupTalks' => Feature::GroupTalk->enabled() ? ($this->groupTalks)($viewer) : 0,
         ];
     }

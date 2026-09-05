@@ -23,17 +23,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Whether one ledger row still resolves, for the member reading the issue.
- *
- * An issue is a ledger and never a copy ([home-issues.md](../../../docs/internals/home-issues.md)),
- * so this is where an issue becomes a page: every row is asked again, through the source's own rule,
- * against the reader in front of it. A row that does not answer is dropped in silence — no
- * placeholder and no count of what was withheld, because either would report the existence of
- * something the reader may not know exists.
- *
- * It answers with the item rather than with a boolean because the talk arm cannot say whether a row
- * still resolves without reading the room, and what that read returns is most of what the burst is
- * drawn from — handing back only a yes would throw it away and buy it again.
+ * Whether one ledger row still resolves for the member reading the issue: every row is asked again
+ * through the source's own rule, and one that does not answer is dropped in silence
+ * (docs/internals/home-issues.md, "Rendering"). It answers with the item rather than a boolean
+ * because the talk arm has to read the room to know.
  */
 final class HomeItemGate
 {
@@ -44,9 +37,8 @@ final class HomeItemGate
         $section = $item->section;
         $alias = (string) $item->source_type;
 
-        // Before anything is asked of the row: a section that does not hold this alias cannot be
-        // asked what gates it (HomeIssueSection::unit throws on the pair), and whatever wrote such a
-        // row, the front page is not the place to raise it.
+        // A section that does not hold this alias cannot be asked what gates it, and the front page
+        // is not the place to raise whatever wrote such a row.
         if (! $section->allowsSource($alias)) {
             return null;
         }
@@ -68,20 +60,16 @@ final class HomeItemGate
             HomeIssueSection::Talk => $this->burst($viewer, $item, $source),
             HomeIssueSection::Newcomers => $this->newcomer($viewer, $item, $source),
             // A new group is a door to knock on whatever its read access: this section shows none of
-            // its contents, and the group page is open to any signed-in member. Existing with the
-            // unit on, both settled above, is the whole test.
+            // its contents, and the group page is open to any signed-in member.
             HomeIssueSection::NewGroups => new HydratedItem($item, $source),
             HomeIssueSection::UpcomingEvents => $this->calendarEntry($item, $source),
         };
     }
 
     /**
-     * A story, through the rule its own feature applies to a single record.
-     *
-     * The eligibility half — every member may read it — is checked here as well as at publication,
-     * because it is what the section promises and an author may have narrowed the record since. The
-     * viewer half (a block, and the clearance the block would otherwise widen) is checked here for
-     * the first time: the publisher has no viewer to apply it for.
+     * A story, through the rule its own feature applies to a single record. The eligibility half is
+     * checked again here because an author may have narrowed the record since, and the viewer half —
+     * a block, and the clearance it would otherwise widen — for the first time.
      */
     private function story(Member $viewer, HomeIssueItem $item, Model $source): ?HydratedItem
     {
@@ -105,8 +93,6 @@ final class HomeItemGate
     }
 
     /**
-     * A run of talk, re-resolved live over the stretch the row recorded.
-     *
      * `topic_read_access` IS the gate here: an Everyone group's talk is readable by any member
      * (GroupTalkAccess), so asking that after this would be asking a question with one answer.
      */
@@ -124,7 +110,7 @@ final class HomeItemGate
         [$since, $until] = $window;
 
         // The stretch, not any message in it: the row stores no anchor, so a deleted message is
-        // simply not there rather than a hole. Nothing left in it is nothing to report.
+        // simply not there rather than a hole, and nothing left is nothing to report.
         $first = $this->talk->firstBetween($source, $since, $until);
         if ($first === null) {
             return null;
@@ -136,9 +122,9 @@ final class HomeItemGate
             // an issue pointing at an hour whose messages have all gone would land the reader in a
             // stretch nobody can read.
             'href' => "/groups/{$source->getKey()}/talk?m={$first->getKey()}",
-            // The END of the stretch, printed rather than summarized: an excerpt is read as where
-            // the conversation got to, and the first issue ever reaches back a week — its opening
-            // lines describe a room that has since moved on. Pictures are gated per file inside.
+            // The END of the stretch: an excerpt is read as where the conversation got to, and the
+            // first issue ever reaches back a week, whose opening lines describe a room that has
+            // since moved on.
             'messages' => $this->talk->excerpt($viewer, $this->talk->lastBetween($source, $since, $until)),
         ]);
     }
@@ -156,8 +142,6 @@ final class HomeItemGate
     }
 
     /**
-     * A calendar row, through its group's read access.
-     *
      * An event whose day has passed stays: an issue is a snapshot of the morning it went out, and a
      * back issue that quietly shed its calendar as the week went by would misreport that morning.
      */
@@ -175,10 +159,8 @@ final class HomeItemGate
     }
 
     /**
-     * The stretch a talk row describes, from the stats it froze, or null when it carries none.
-     *
-     * A burst IS its window — the row holds no message id — so a row without one describes nothing
-     * to re-resolve.
+     * A burst IS its window — the row holds no message id — so a row whose frozen stats carry none
+     * describes nothing to re-resolve.
      *
      * @return array{CarbonImmutable, CarbonImmutable}|null
      */

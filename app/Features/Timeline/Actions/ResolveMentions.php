@@ -8,13 +8,9 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Turn a compose form's mention payload into timeline_post_mentions rows.
- *
- * A row that no longer describes reality is dropped on its own and the post goes through: the
- * picker's selection can go stale between choosing a member and submitting (a rename, a fresh
- * block), and losing the whole message over a decoration nobody re-checked would be the wrong
- * trade. A dropped row simply leaves that range as the plain text it already is. Structural
- * nonsense never reaches here — App\Http\Requests\Concerns\MentionRules rejects the request.
+ * A row that no longer describes reality is dropped on its own and the post still goes through,
+ * while structural nonsense never reaches here at all (docs/internals/timeline.md, "Two layers of
+ * failure").
  */
 class ResolveMentions
 {
@@ -45,9 +41,8 @@ class ResolveMentions
             if ($mention['offset'] < $consumed || $bodyLength < $mention['offset'] + $mention['length']) {
                 continue;
             }
-            // The range must still read as the member's handle. This is the one check that enforces
-            // mentionability too: a member the query above excluded — gone, banned, blocked, the
-            // author — has no name here to match against.
+            // The one check that enforces mentionability too: a member the query above excluded —
+            // gone, banned, blocked, the author — has no name here to match against.
             $name = $names[$mention['member_id']] ?? null;
             if ($name === null || mb_substr($body, $mention['offset'], $mention['length']) !== '@'.$name) {
                 continue;
@@ -62,11 +57,8 @@ class ResolveMentions
 
     /**
      * Whether $author may mention this one member — the same gate resolution applies, asked before
-     * there is a body to resolve. A composer that writes the handle itself (the MCP reply tool) has
-     * to know the answer to decide whether to write it at all, and asking the query rather than
-     * restating its conditions is what keeps the pre-check and the write from disagreeing.
-     *
-     * False for $author themselves, since nobody mentions themselves.
+     * there is a body to resolve so a pre-check and the write cannot disagree. False for $author
+     * themselves.
      */
     public function isMentionable(Member $author, int $targetId, ?Group $group = null): bool
     {
@@ -99,9 +91,9 @@ class ResolveMentions
             ->whereIn('id', $ids)
             ->whereKeyNot($author->getKey())
             ->where('is_login_rejected', false)
-            // Callers resolve inside the post's insert transaction; the share lock holds each
-            // matched member in place until the mention rows are in, so a resolved id cannot
-            // vanish before its FK insert. A no-op on sqlite, whose writes serialize anyway.
+            // Callers resolve inside the post's insert transaction, so the share lock holds a
+            // matched member in place until its mention row is in — a no-op on sqlite, whose writes
+            // serialize anyway.
             ->sharedLock();
 
         // Inside a group, only its members are mentionable — the same set

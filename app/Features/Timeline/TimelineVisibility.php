@@ -9,13 +9,9 @@ use App\Support\VisibilityChoices;
 use Illuminate\Validation\Rules\Enum;
 
 /**
- * The audiences a member may choose when posting. Single source for the form options and the
- * request validation rule so the two cannot drift: both honour the SnsSettingKey::TimelineAllowWebPublic
- * setting (OpenPNE 3 op_activity_is_open) and the friend unit's state (VisibilityChoices). The form
- * default is Members (OpenPNE 3 public_flag SNS).
- *
- * A post is never edited (a reply copies its root's audience verbatim), so no form here re-posts a
- * stored audience and the sticky current its siblings take has no call site.
+ * Single source for the form options and the request validation rule so the two cannot drift; both
+ * honour SnsSettingKey::TimelineAllowWebPublic and the friend unit. A post is never edited, so no
+ * form here re-posts a stored audience and the sticky current its siblings take has no call site.
  */
 final class TimelineVisibility
 {

@@ -15,10 +15,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * Events announced in groups any member may read, ranked by comments plus RSVPs.
- *
- * Both count, because an event draws its interest in two ways and one of them is silent: a gathering
- * fifty people signed up for without saying a word is the bigger news.
+ * Comments and RSVPs both count, because an event draws its interest in two ways and one of them is
+ * silent: a gathering fifty people signed up for without saying a word is the bigger news.
  */
 final class EventStoryCandidates implements StoryCandidates
 {
@@ -34,10 +32,9 @@ final class EventStoryCandidates implements StoryCandidates
         HomeIssueLedger::excludeFeatured($query, HomeIssueSection::Stories, $this->alias(), 'group_events.id');
 
         return $query
-            // The sum, so the limit really does take the top $limit: ordering by the two counts in
-            // turn would rank 9 comments above 1 comment and 50 RSVPs. Both engines resolve a select
-            // alias inside an ORDER BY expression, which is what keeps the subqueries from being
-            // written out a second time here.
+            // The sum rather than the two counts in turn, which would rank 9 comments above 1
+            // comment and 50 RSVPs — both engines resolve a select alias inside an ORDER BY, so the
+            // subqueries are not written out a second time.
             ->orderByRaw('comments_count + participants_count desc')
             ->orderByDesc('group_events.created_at')
             ->orderByDesc('group_events.id')

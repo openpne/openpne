@@ -73,11 +73,6 @@ class HomeFeedTest extends TestCase
 
     // Friends switched off -------------------------------------------------------
 
-    /**
-     * The friend branch is a lens the friend unit owns, so the feed stops aggregating through the
-     * graph. Every other tier is untouched, and the friendships themselves stay (a friend opening
-     * that post directly still reads it — TimelineAccess).
-     */
     public function test_a_friends_friends_only_post_leaves_the_feed_while_friends_are_off(): void
     {
         [$viewer, $friend] = Member::factory()->count(2)->create()->all();

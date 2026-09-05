@@ -32,12 +32,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
-/**
- * The payload an issue page reads.
- *
- * Its subject is the shape: how much survived decides which keys are there, and an empty section is
- * a missing key rather than an empty list — so nothing on the page has to decide what `[]` means.
- */
+/** Its subject is the shape: how much survived decides which keys are there. */
 class HomeIssueSerializerTest extends TestCase
 {
     use RefreshDatabase;
@@ -155,12 +150,8 @@ class HomeIssueSerializerTest extends TestCase
     }
 
     /**
-     * A row whose File is gone is skipped rather than drawn as an empty box — and skipped, not
-     * fallen back on: the picture is the next one that still has bytes.
-     *
-     * The FK cascades a join row away with its file, so no stored row can reach that state; an
-     * unsaved row in the slot before a real one is how the guard gets exercised, as it is for every
-     * attachment serializer (AttachmentImageSerializationTest).
+     * The FK cascades a join row away with its file, so an unsaved row in the slot before a real one
+     * is how the guard gets exercised.
      */
     public function test_a_picture_whose_file_is_gone_is_skipped_for_the_next_one(): void
     {
@@ -232,10 +223,7 @@ class HomeIssueSerializerTest extends TestCase
         );
     }
 
-    /**
-     * The default fixture is a row the publisher could have written: dated by the last day of its
-     * own window. `number` is pinned only to stay off the one setUp already took.
-     */
+    /** `number` is pinned only to stay off the one setUp already took. */
     public function test_a_factory_issue_is_dated_by_the_last_day_it_covers(): void
     {
         $this->issue = HomeIssue::factory()->create(['number' => 99]);
@@ -312,7 +300,7 @@ class HomeIssueSerializerTest extends TestCase
 
     /**
      * A withdrawn author is a byline the page has lost, not a story it drops: the board keeps the
-     * record (ShowHomeIssueTest), and the front page prints it with nobody's name on it.
+     * record, and the front page prints it with nobody's name on it.
      */
     public function test_a_story_whose_author_has_withdrawn_carries_no_byline(): void
     {
@@ -484,9 +472,8 @@ class HomeIssueSerializerTest extends TestCase
     // --- the colophon and the pager ---
 
     /**
-     * "Current" is whether the page is showing what there is, not whether it is dated today: the
-     * issue a reader is handed all day covers the day before, and comparing it to the calendar
-     * would make every fresh front page announce itself as stale.
+     * "Current" is whether the page is showing what there is, not whether it is dated today: a fresh
+     * front page covers the day before.
      */
     public function test_an_issue_says_whether_it_is_the_freshest_there_could_be(): void
     {
@@ -566,9 +553,8 @@ class HomeIssueSerializerTest extends TestCase
     // --- the shell's props ---
 
     /**
-     * Page props win the Inertia merge, so a payload key named after a shared prop silently blanks
-     * it for every component on the page. The guard that scrapes literal render arrays cannot see a
-     * serializer-built payload, so this one asks the middleware itself.
+     * A payload key named after a shared prop silently blanks it, and the guard that scrapes literal
+     * render arrays cannot see a serializer-built payload — so this one asks the middleware itself.
      */
     public function test_no_payload_key_shadows_a_shared_prop(): void
     {

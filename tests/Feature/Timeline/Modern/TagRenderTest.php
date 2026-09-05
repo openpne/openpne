@@ -10,11 +10,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The Modern surface links tags client-side (entity-text.tsx), so the payload is the contract: the
- * ranges travel as code-point offsets over the untouched body, carrying the normalized tag the page
- * is addressed by.
- */
 class TagRenderTest extends TestCase
 {
     use RefreshDatabase;

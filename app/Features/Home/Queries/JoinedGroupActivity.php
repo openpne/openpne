@@ -11,12 +11,10 @@ use App\Support\Feature;
 use Illuminate\Support\Collection;
 
 /**
- * The home dashboard's cross-community activity digest: the viewer's joined groups' most recent
- * topics and events, merged newest-first. Each source is queried for $limit rows, so the merged top
- * $limit is correct across both. Also backs the /community/recent page with a larger cap.
- *
- * Each half follows its own feature unit here rather than at the call sites: this is the aggregate
- * that reaches across features, so the constraint belongs in the query (feature-modules.md invariant 2).
+ * The viewer's joined groups' most recent topics and events, merged newest-first: each source is
+ * queried for $limit rows, so the merged top $limit is correct across both. Each half follows its
+ * own feature unit here rather than at the call sites, this being the aggregate that reaches across
+ * units (docs/internals/feature-toggles.md, "Modern surface").
  */
 class JoinedGroupActivity
 {

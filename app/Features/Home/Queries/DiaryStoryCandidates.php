@@ -14,7 +14,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/** Diaries the whole membership may read, ranked by the comments they drew. */
 final class DiaryStoryCandidates implements StoryCandidates
 {
     public function alias(): string

@@ -9,11 +9,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Locks the OpenPNE 3 op_format_date display on the diary show page: entry and comment timestamps
- * both stack year / date / time in their dt columns (XDateTimeJaBr + nl2br) under the Japanese
- * locale; other locales keep the one-line form.
- */
+/** The expected stamps are OpenPNE 3's op_format_date (XDateTimeJaBr + nl2br under ja_JP). */
 class DiaryDateFormatTest extends TestCase
 {
     use RefreshDatabase;

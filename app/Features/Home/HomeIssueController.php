@@ -18,10 +18,9 @@ use Inertia\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * The published issues: the run of them, and one day's.
- *
- * Modern-only — OpenPNE 3 had no such page — so both render Inertia directly rather than resolving
- * a surface. See [home-issues.md](../../../docs/internals/home-issues.md).
+ * The published issues: the run of them, and one day's. Modern-only — OpenPNE 3 had no such page —
+ * so both render Inertia directly rather than resolving a surface (docs/internals/home-issues.md,
+ * "Routes").
  */
 class HomeIssueController extends Controller
 {
@@ -31,8 +30,6 @@ class HomeIssueController extends Controller
     }
 
     /**
-     * One day's issue, re-resolved for the member reading it.
-     *
      * A day with no issue is a 404 and not an empty page: an issue is published only where there was
      * something to say, and a day that got none never had a front page to show.
      */

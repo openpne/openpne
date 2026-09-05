@@ -11,7 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** The derived OpenPNE 3 diary comment history: other members' diaries the viewer commented on. */
 class DiaryCommentHistoryTest extends TestCase
 {
     use RefreshDatabase;
@@ -76,9 +75,8 @@ class DiaryCommentHistoryTest extends TestCase
 
     public function test_a_withdrawn_authors_null_comment_still_counts_as_non_owner(): void
     {
-        // Withdrawal null-fills diary_comments.member_id (nullOnDelete). On a surviving diary that is
-        // necessarily a non-owner comment; a bare != owner drops the NULL row under SQL three-valued
-        // logic and would rewind the box's time after the author withdraws.
+        // A bare `!= owner` drops the NULL member_id a withdrawal leaves under SQL three-valued
+        // logic, rewinding the box's time.
         $viewer = Member::factory()->create();
         $owner = Member::factory()->create();
         $withdrawn = Member::factory()->create();

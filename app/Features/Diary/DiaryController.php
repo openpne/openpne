@@ -61,8 +61,8 @@ class DiaryController extends Controller
                 'diaries' => $query($viewer, $owner),
             ]),
             SurfaceResolver::MODERN => function () use ($query, $owner, $viewer, $keyword) {
-                // Modern-only: eager-load the thumbnail sources here, not in the query, so Classic
-                // pays nothing. loadMissing forwards through the paginator to its collection.
+                // Eager-loaded here, not in the query, so Classic pays nothing for thumbnails it
+                // never draws.
                 $diaries = $query($viewer, $owner, keyword: $keyword);
                 $diaries->loadMissing('images.file');
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
@@ -83,14 +83,12 @@ class DiaryController extends Controller
     public function listMemberArchive(Request $request, ListDiaries $query, HasWebPublicDiary $publishes, Member $member): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewerOrGuest();
-        // Guest eligibility is the author's, not the window's: an empty month on an author who
-        // publishes still renders (OpenPNE 3 hasOpenDiary runs before the date is even read).
         if ($viewer === null && ! $publishes($member)) {
             return GuestLoginRedirect::response();
         }
 
         // Read the date off the route by name: a positional scalar would collide with the
-        // `surface` default on the /m/* route. Segments are digit-constrained by the route.
+        // `surface` default on the /m/* route.
         $day = $request->route('day');
         $period = ArchivePeriod::fromYearMonthDay(
             (int) $request->route('year'),
@@ -110,8 +108,6 @@ class DiaryController extends Controller
                 'archiveStart' => $period->start,
             ]),
             SurfaceResolver::MODERN => function () use ($request, $query, $member, $viewer, $period, $keyword) {
-                // period × keyword are orthogonal: the month range and the term filter stack, so the
-                // grid becomes a map of when this member wrote about the term.
                 $diaries = $query($viewer, $member, period: $period, keyword: $keyword);
                 $diaries->loadMissing('images.file');
                 $member->loadMissing('avatar.file');
@@ -145,9 +141,8 @@ class DiaryController extends Controller
         $viewer = $this->viewerOrGuest();
         $keyword = $this->keywordParam($request);
 
-        // OpenPNE 3 forwards an empty search to the list action — identical results, body id, and
-        // pager URL (@diary_list). Delegate so /diary/search renders exactly what /diary/list does,
-        // including pager links that point back at the list rather than at /diary/search.
+        // OpenPNE 3 forwards an empty search to the list action, so this delegates rather than
+        // rendering its own: identical results, body id, and pager links pointing at /diary/list.
         if (SearchDiaries::terms($keyword) === []) {
             return $this->feed(
                 $request,
@@ -168,7 +163,7 @@ class DiaryController extends Controller
 
     /**
      * OpenPNE 3 listSuccess.php: the all-member feed and search share one template carrying the
-     * search form; the friend feed drops it. The variant drives the heading and the form.
+     * search form; the friend feed drops it.
      *
      * @param  'recent'|'friends'|'search'  $variant
      * @param  LengthAwarePaginator<int, Diary>  $diaries
@@ -211,14 +206,11 @@ class DiaryController extends Controller
         // ShowDiary already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
-        // After the access decision, and only here: the feeds render many entries, and asking on
-        // each would queue a page's worth of jobs for someone scrolling past.
         $linkCards->ensure($found);
         if ($viewer !== null) {
             $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::diary((int) $found->getKey()));
         }
 
-        // Same viewer-scoped adjacency for both surfaces; hoisted so Modern gets it too.
         ['older' => $older, 'newer' => $newer] = $adjacent($viewer, $found);
 
         return $this->respondWith($request, 'diary', [
@@ -228,8 +220,7 @@ class DiaryController extends Controller
                 );
                 // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
                 $thread->comments->each->setRelation('diary', $found);
-                // The comments this page renders, as the diary was above: a comment is a body of its
-                // own, and this is the page it is read on (LinkCardSync::ensureAll).
+                // The comments too: a comment is a body of its own, and this is the page it is read on.
                 $linkCards->ensureAll($thread->comments);
 
                 // Classic keeps OpenPNE 3's previous(older)/next(newer) template vars for parity.

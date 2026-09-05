@@ -122,22 +122,17 @@ class TimelineController extends Controller
         // ShowTimelinePost already gated the block (null → 404 above); record what the page is
         // about for the Classic localNav.
         $this->markLocalNavSubject($post->member);
-        // Eager-load the replies' images, mentions and tags too: all three are read per reply when it
-        // renders, so loading only replies.member would fire a query per reply for each (an images
-        // load being empty, by the no-image contract, still costs the query).
-        // `replies.linkCard.image` for the same reason the rest are here: without it a reply that
-        // carries a card costs three queries of its own — the read trigger's freshness check, the
-        // serializer's card, and that card's picture.
+        // Every relation a reply renders is loaded here: leaving one out costs a query per reply,
+        // and an images load that comes back empty still costs it.
         $post->load([
             'member.avatar.file', 'replies.member.avatar.file', 'replies.images.file',
             'replies.mentions', 'replies.tags', 'replies.linkCard.image',
         ]);
-        // The thread, not only its root: a reply is a body of its own, and this page is where one is
-        // read — as a conversation page is for talk (LinkCardSync::ensureAll). Placed after the
-        // reply-permalink redirect above, so a request that never renders queues nothing. Two calls
-        // rather than one over a combined collection: `prepend` on a loaded relation mutates it in
-        // place, which put the root into the page's own reply list.
+        // The thread, not only its root — a reply is a body of its own, read on this page — and
+        // placed after the reply-permalink redirect, so a request that never renders queues nothing.
         $linkCards->ensure($post);
+        // Two calls rather than one over a combined collection: `prepend` on a loaded relation
+        // mutates it in place, which put the root into the page's own reply list.
         $linkCards->ensureAll($post->replies);
         // The whole thread, as the clearance above was read against it: a row about a reply is spent
         // by reading the page that reply is on, and this is that page.
@@ -228,12 +223,6 @@ class TimelineController extends Controller
             ->with('status', __('Reply posted.'));
     }
 
-    /**
-     * One root's whole reply list, as the rows the page would have drawn. Asked for when a reader
-     * opens the earlier comments a row's tail left out; the thread page is the no-JS answer, so the
-     * fragment carries no chrome and is never cached.
-     */
-    /** The next page of the home feed, as rows for the Classic load-more to append. */
     public function indexRows(Request $request, HomeFeed $query, RecentReplies $recentReplies): Response
     {
         $perPage = $this->rowsPerPage($request);
@@ -310,13 +299,6 @@ class TimelineController extends Controller
     }
 
     /**
-     * Attach each row's inline reply layer. Classic only — Modern's feed carries a reply count, not
-     * the replies — so it hangs off the surface closure rather than the feed queries.
-     *
-     * @param  LengthAwarePaginator<int, TimelinePost>  $posts
-     * @return LengthAwarePaginator<int, TimelinePost>
-     */
-    /**
      * A page of rows as a fragment, naming the page after it in a Link header. The URL is built by
      * route name rather than nextPageUrl(): the paginator's drops the query the request carried,
      * and a gadget's per_page has to survive to its third page.
@@ -337,7 +319,6 @@ class TimelineController extends Controller
         return $response;
     }
 
-    /** The page size a rows request asks for; the feed's own default when it names none. */
     private function rowsPerPage(Request $request): int
     {
         $validated = $request->validate([
@@ -348,10 +329,14 @@ class TimelineController extends Controller
         return (int) ($validated['per_page'] ?? RowsPage::DEFAULT);
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, TimelinePost>  $posts
+     * @return LengthAwarePaginator<int, TimelinePost>
+     */
     private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
     {
-        // items(), not getCollection(): only the former is on the contract the feed queries return.
-        // Both hand back the same model instances, so the rows the view walks gain the relation.
+        // items(), not getCollection(): only the former is on the contract the feed queries return,
+        // and both hand back the same instances the view walks.
         $recentReplies(new EloquentCollection($posts->items()));
 
         return $posts;

@@ -6,10 +6,6 @@ namespace App\Features\Home\Data;
 
 use App\Features\Home\HomeIssueSection;
 
-/**
- * What an issue would hold, decided but not yet written — the whole of the publisher's reading, so
- * a dry run and a publish answer from the same pass rather than from two.
- */
 final readonly class HomeIssuePlan
 {
     /**
@@ -35,12 +31,9 @@ final readonly class HomeIssuePlan
     }
 
     /**
-     * Whether nothing happened worth an issue (休刊).
-     *
      * Every section counts as a trigger except the calendar: upcoming events are listed until they
-     * happen, so an issue triggered by them alone would come out every day of a quiet month saying
-     * the same thing. Phrased as an exclusion rather than a list, so a section added later triggers
-     * by default — publishing a thin issue is the recoverable mistake, never publishing is not.
+     * happen, so an issue triggered by them alone would come out every day of a quiet month. Phrased
+     * as an exclusion, so a section added later triggers by default.
      */
     public function isBlank(): bool
     {

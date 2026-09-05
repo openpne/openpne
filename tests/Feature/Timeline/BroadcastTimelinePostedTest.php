@@ -19,12 +19,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * The new-post broadcast: audience by visibility (Open/Members = everyone, Friends = the author's
- * friends, Private = nobody), minus the author / banned / blocked / already mentioned; each
- * recipient's channels are the OpenPNE 3 union of timeline-new-post and (for friends)
- * timeline-new-post-only-friends, absent-means-on.
- */
 class BroadcastTimelinePostedTest extends TestCase
 {
     use RefreshDatabase;

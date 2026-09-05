@@ -9,11 +9,7 @@ use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Locks the OpenPNE 3 op_url_cmd(nl2br(...)) body rendering on diary.show: bare URLs become
- * links and HTML in the body is escaped (no stored XSS), for the diary body and comments alike.
- * An op3-format body additionally renders its <op:*> decoration as spans.
- */
+/** The expected rendering is OpenPNE 3's op_url_cmd(nl2br(...)) on diary.show. */
 class DiaryBodyFormatTest extends TestCase
 {
     use RefreshDatabase;

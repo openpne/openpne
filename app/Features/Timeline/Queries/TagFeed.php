@@ -11,12 +11,10 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * One hashtag's feed: HomeFeed narrowed to the top-level posts carrying the tag. The audience is the
- * home feed's, unchanged — a tag collects posts, it does not widen who may read them, so a
- * friends-only post reaches only the friends it always did.
- *
- * The lookup term goes through HashtagParser::normalize because the stored tag is normalized and the
- * column is byte-equal; `#Tag` and `#ＴＡＧ` are one topic only if the query says so too.
+ * HomeFeed narrowed to the top-level posts carrying the tag: the audience is the home feed's,
+ * unchanged, because a tag collects posts rather than widening who may read them. The term goes
+ * through {@see HashtagParser::normalize} since the stored tag is normalized and the column is
+ * byte-equal.
  */
 class TagFeed
 {

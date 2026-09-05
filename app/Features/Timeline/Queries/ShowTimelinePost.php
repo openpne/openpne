@@ -7,9 +7,8 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 
 /**
- * The thread root for a timeline post permalink, gated by the viewer's clearance. OpenPNE 3 opens
- * the thread at the top-level post, so a permalink addressing a reply (in_reply_to set) re-centers
- * to its parent; the caller detects the re-center by comparing the returned key to the requested id.
+ * A permalink addressing a reply re-centers to its parent, and the caller detects that by comparing
+ * the returned key to the requested id.
  */
 class ShowTimelinePost
 {

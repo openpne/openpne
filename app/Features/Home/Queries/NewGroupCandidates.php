@@ -13,12 +13,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
- * Groups founded in the window, newest first.
- *
- * Every group, whatever its read access. `topic_read_access` gates a group's contents, and this
- * section shows none of them — the group page itself is open to any signed-in member
- * (GroupPolicy::view is unconditionally true), so a new MembersOnly group is a door to knock on
- * rather than something withheld.
+ * Groups founded in the window, newest first — every group, whatever its read access, since this
+ * section shows none of a group's contents and the group page itself is open to any signed-in member
+ * (docs/internals/home-issues.md, "Eligibility: every member may read it").
  */
 final class NewGroupCandidates
 {

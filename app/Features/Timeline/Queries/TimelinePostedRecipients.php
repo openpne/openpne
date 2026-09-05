@@ -11,14 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The broadcast audience for a new timeline post: the members who can see it, chunked by the
- * fan-out job. Audience by visibility — Open/Members → every active member, Friends → the author's
- * friends, Private → nobody. The author is excluded, banned members (is_login_rejected, the receive
- * gate used across the catalog) are excluded, and either-direction blocks against the author are
- * excluded. Whether each recipient is also a friend (for the friends-only opt-in bucket) is decided
- * from friendIds(), not re-queried per member.
- *
- * Only top-level posts broadcast; a reply notifies through TimelineReplyNotificationRecipients.
+ * The broadcast audience for a new top-level post, chunked by the fan-out job
+ * (docs/internals/notifications.md, "Broadcast fan-out"). Whether a recipient is also a friend — the
+ * friends-only opt-in bucket — is decided from friendIds() rather than re-queried per member.
  */
 class TimelinePostedRecipients
 {
@@ -43,7 +38,6 @@ class TimelinePostedRecipients
         return $query;
     }
 
-    /** The author's friend member ids, for the friends-only bucket check inside the fan-out. */
     public function friendIds(Member $author): Collection
     {
         return DB::table('friendships')->where('member_id', $author->getKey())->pluck('friend_id');

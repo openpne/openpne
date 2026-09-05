@@ -38,8 +38,6 @@ use Tests\TestCase;
 use Throwable;
 
 /**
- * The publisher deciding what an issue holds, and committing that decision once.
- *
  * `$now` is always passed rather than read, because it is the only clock in the design: the window
  * closes on it, the issue is dated by it, and the calendar looks forward from it.
  */
@@ -54,13 +52,6 @@ class PublishHomeIssueTest extends TestCase
 
     // --- which day an issue is ---
 
-    /**
-     * The 06:00 run reports the day that has just ended, not the day it is standing in.
-     *
-     * A day of happenings runs 06:00 to 06:00 (HomeIssueDay), so the issue a reader is handed on the
-     * morning of the 28th is the 27th's — everything in it happened on the 27th, and dating it by
-     * the run would put the whole page under a date none of it belongs to.
-     */
     public function test_the_scheduled_run_dates_the_issue_to_the_day_that_just_ended(): void
     {
         $this->previousIssue($this->now()->subDay());
@@ -73,11 +64,6 @@ class PublishHomeIssueTest extends TestCase
         $this->assertTrue($this->now()->equalTo($issue->published_at), 'published_at is not the window end');
     }
 
-    /**
-     * A run by hand mid-afternoon publishes what the schedule would have — the day that closed this
-     * morning — and what has happened since waits for the next issue. Taking the afternoon as well
-     * would close a window off the boundary, which is what the test below refuses.
-     */
     public function test_a_run_by_hand_publishes_the_day_that_closed_this_morning(): void
     {
         $this->previousIssue($this->now()->subDay());
@@ -106,9 +92,8 @@ class PublishHomeIssueTest extends TestCase
     }
 
     /**
-     * The scheduled run lands a second or two past 06:00. Closed on the clock, its issue would be
-     * dated the day it went out (the window's last instant is past the boundary) and the next window
-     * would open a second late; closed on the boundary, neither happens.
+     * Closed on the clock, this issue would be dated the day it went out and the next window would
+     * open a second late.
      */
     public function test_a_scheduled_run_a_second_late_closes_on_the_boundary(): void
     {
@@ -125,7 +110,6 @@ class PublishHomeIssueTest extends TestCase
         $this->assertNotContains($this->ref($onTheSecond), $this->refs($issue, HomeIssueSection::Stories));
     }
 
-    /** The first issue's reach is measured from the boundary too, so it opens on one. */
     public function test_a_late_first_issue_reaches_back_from_the_boundary(): void
     {
         $this->at($this->now()->subDays(3), fn (): TimelinePost => TimelinePost::factory()->create());
@@ -310,8 +294,7 @@ class PublishHomeIssueTest extends TestCase
     public function test_the_calendar_runs_from_the_publish_days_own_midnight_to_seven_days_out(): void
     {
         // `open_date` is a date, so the day's own events sit at midnight — six hours behind the
-        // publishing instant. A calendar bounded by that instant would drop the one event a reader
-        // can still act on today.
+        // publishing instant a calendar bounded by it would drop them under.
         [$yesterday, $today, $tomorrow, $lastDay, $justPast] = $this->at(
             $this->now()->subDays(30),
             fn (): array => array_map(
@@ -393,10 +376,9 @@ class PublishHomeIssueTest extends TestCase
 
     public function test_a_score_tie_breaks_on_the_newer_story_even_when_it_carries_the_lower_id(): void
     {
-        // Two kinds, because the tiebreak only decides anything in the merge — inside one kind the
-        // query has already ordered by the same keys. The newer story is given an id no higher than
-        // the older one's explicitly: on MySQL the counters keep running across tests, so leaving it
-        // to the sequence would make the masking depend on what ran before.
+        // Two kinds, because the tiebreak only decides anything in the merge, and the newer story is
+        // given an explicit id — MySQL's counters run on across tests, so the sequence would make the
+        // masking depend on what ran before.
         $older = $this->at($this->now()->subHours(3), fn (): TimelinePost => $this->postWithReplies(2));
         $newer = $this->at($this->now()->subHours(2), function () use ($older): Diary {
             $diary = Diary::factory()->create(['id' => max(1, (int) $older->getKey() - 1)]);
@@ -605,9 +587,8 @@ class PublishHomeIssueTest extends TestCase
         $this->assertSame([], $this->planned($plan, HomeIssueSection::Talk));
         $this->assertSame([], $this->planned($plan, HomeIssueSection::UpcomingEvents));
 
-        // Flipping the one column admits all three, which is what makes the absences above the read
-        // gate rather than anything else about the group. Read twice at the same instant, so the
-        // window is held still and only the gate moves.
+        // Flipping the one column admits all three — read twice at the same instant, so the window is
+        // held still and only the gate moves.
         $group->update(['topic_read_access' => TopicReadAccess::Everyone]);
 
         $next = $this->action()->plan($this->now());
@@ -962,13 +943,11 @@ class PublishHomeIssueTest extends TestCase
     }
 
     /**
-     * Publish a rival issue for the day while the run is still reading — after its "is it published?"
-     * check and before its transaction, which is the only window the DB unique has to cover. Driven
-     * from inside the run because the suite has one connection: a row written after the transaction
-     * opened would roll back with it and prove nothing.
+     * Publish a rival issue after the run's "is it published?" check and before its transaction,
+     * which is the only window the DB unique has to cover. Driven from inside the run because the
+     * suite has one connection.
      *
-     * @param  (callable(): void)|null  $then  runs once the rival is in, for a test that also wants
-     *                                         to break the write that follows
+     * @param  (callable(): void)|null  $then  runs once the rival is in
      */
     private function raceInARivalIssue(?callable $then = null): void
     {
@@ -982,9 +961,8 @@ class PublishHomeIssueTest extends TestCase
 
             DB::table('home_issues')->insert([
                 'number' => 999,
-                // The day this run is about to date its issue to — the last one its window covers,
-                // never the day the run happens on — written the way the model writes it so the
-                // unique sees one value and not two spellings (see PublishHomeIssue::publishedOn).
+                // The day this run is about to date its issue to, written the way the model writes
+                // it so the unique sees one value and not two spellings.
                 'issue_date' => HomeIssueDay::of($this->now()->subSecond()),
                 'window_start' => $this->now()->subDay(),
                 'published_at' => $this->now(),
@@ -1019,15 +997,10 @@ class PublishHomeIssueTest extends TestCase
     }
 
     /**
-     * Stop the connection recognising a concurrency error, so a busy database can be simulated here
-     * at all.
-     *
-     * RefreshDatabase runs each test inside a transaction, which makes the publisher's a nested one —
-     * and the framework answers a concurrency error in a nested transaction with a DeadlockException
-     * instead of retrying it (ManagesTransactions::handleTransactionException). Switched off, the
-     * connection takes the path an unnested one reaches once its last attempt has failed: roll back,
-     * and rethrow the QueryException the driver raised. What the retry itself does is the framework's
-     * to test.
+     * RefreshDatabase runs each test inside a transaction, so the publisher's is nested — and the
+     * framework answers a concurrency error in a nested one with a DeadlockException instead of
+     * retrying (ManagesTransactions::handleTransactionException). Switched off, the connection takes
+     * the path an unnested one reaches once its last attempt has failed.
      */
     private function concurrencyDetectionOff(): void
     {

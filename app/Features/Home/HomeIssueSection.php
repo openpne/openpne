@@ -8,9 +8,6 @@ use App\Support\Feature;
 use InvalidArgumentException;
 
 /**
- * The bands a published issue is built from, and the rules that hold whichever way an issue is read:
- * the publisher choosing rows, and the page resolving them again at render time.
- *
  * The case value is what the ledger stores, so renaming one is a data migration.
  */
 enum HomeIssueSection: string
@@ -26,9 +23,8 @@ enum HomeIssueSection: string
     case UpcomingEvents = 'upcoming_events';
 
     /**
-     * How many items the section may hold. A cap, not a target: a quiet day publishes fewer, and the
-     * page never pads. The counts differ because the bands are read differently — a story is read,
-     * a face is glanced at.
+     * A cap, not a target: a quiet day publishes fewer and the page never pads
+     * (docs/internals/home-issues.md, "Ranking, caps and the tiebreak").
      */
     public function cap(): int
     {
@@ -42,12 +38,9 @@ enum HomeIssueSection: string
     }
 
     /**
-     * Whether the section may feature a source it has featured before.
-     *
      * True where the item is about a window or a calendar rather than about the thing itself: a busy
      * group is news again next week, and an event is worth listing until it happens. Everywhere else
-     * the item IS the thing, and showing it twice tells the reader something new happened when
-     * nothing did.
+     * the item IS the thing, and showing it twice would say something new happened when nothing did.
      */
     public function recurs(): bool
     {
@@ -58,7 +51,7 @@ enum HomeIssueSection: string
     }
 
     /**
-     * The sections the ledger is a never-again memory for — the complement of recurs().
+     * The complement of recurs(): the sections the ledger is a never-again memory for.
      *
      * @return list<self>
      */
@@ -88,15 +81,13 @@ enum HomeIssueSection: string
         return $sources[$sourceType];
     }
 
-    /** Whether this section may hold sources of the given morph alias. */
     public function allowsSource(string $sourceType): bool
     {
         return array_key_exists($sourceType, $this->sources());
     }
 
     /**
-     * Every alias this section may hold — what the publisher walks to collect candidates, and what
-     * the guards enumerate so an alias added below cannot go unexamined.
+     * Public so the guards can enumerate the aliases: one added below cannot then go unexamined.
      *
      * @return list<string>
      */

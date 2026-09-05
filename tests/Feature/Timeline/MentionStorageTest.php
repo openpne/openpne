@@ -12,11 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * What survives from a compose form's mention payload to timeline_post_mentions. Every row that
- * stopped describing reality is dropped on its own and the post is stored anyway; a structurally
- * broken payload never gets this far (MentionRequestTest).
- */
+/** The storage half of the mention contract; a structurally broken payload never gets this far (MentionRequestTest). */
 class MentionStorageTest extends TestCase
 {
     use RefreshDatabase;

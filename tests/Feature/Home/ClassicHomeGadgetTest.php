@@ -47,8 +47,8 @@ class ClassicHomeGadgetTest extends TestCase
         $member = Member::factory()->create(['name' => 'Hanako']);
         $gadget = $this->makeGadget('home', 'sideMenu', 'memberImageBox');
 
-        // Default home layout is layoutA: a sideMenu gadget fills #Left while the empty top zone just
-        // omits its div. The letter stays A from the setting (OpenPNE 3 setLayout), not B from content.
+        // Default home layout is layoutA: the letter comes from the setting (OpenPNE 3 setLayout),
+        // never from what the zones contain.
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('id="LayoutA"', false)

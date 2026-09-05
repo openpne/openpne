@@ -33,10 +33,7 @@ class RightRailSharedPropTest extends TestCase
             );
     }
 
-    /**
-     * The rail's groups grid moved to the sidebar's room list, which is the same memberships ordered
-     * by what was last said. Nothing here reads a group, so a joined member changes nothing.
-     */
+    /** Nothing here reads a group, so a joined member changes nothing. */
     public function test_rail_carries_no_communities(): void
     {
         $viewer = Member::factory()->create();

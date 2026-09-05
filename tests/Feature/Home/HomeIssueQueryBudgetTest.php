@@ -24,13 +24,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * A full issue costs a bounded number of reads.
- *
- * The page is bounded by the ledger's own caps, so the reads have to be bounded by the number of
- * SOURCE TABLES rather than by the number of rows — one read per table, plus one per relation the
- * eager loads name, plus one apiece for the blocks and friendships the gate asks about. Talk is the
- * exception the design accepts: a burst is a stretch of one room, and there is no read that
- * describes several rooms at once.
+ * A full issue costs a bounded number of reads: the page is bounded by the ledger's own caps, so the
+ * reads have to be bounded by the number of SOURCE TABLES rather than by the number of rows. Talk is
+ * the exception the design accepts, a burst being a stretch of one room.
  */
 class HomeIssueQueryBudgetTest extends TestCase
 {
@@ -39,17 +35,10 @@ class HomeIssueQueryBudgetTest extends TestCase
     private const NOW = '2026-08-27 06:00:00';
 
     /**
-     * Measured at 47 against the fixture below, with a little headroom for a relation an eager load
-     * skips here because the fixture leaves it null (an avatar's file).
-     *
-     * The shape of it: one read for the ledger and one apiece for the blocks and the friendships;
-     * one per source table and one per relation its eager loads name; three per burst — the anchor,
-     * the count and the excerpt — plus the excerpt's own author, picture and mention loads, which is
-     * the per-room cost talk's digest is by design.
-     *
-     * What the number guards is that none of it grows with the ROW counts, so the margin is kept
-     * BELOW the smallest per-item loop that could appear: the fixture fills every band to its cap,
-     * and one read per story (8), per face (12) or per group (6) each puts it past this.
+     * Measured at 47 against the fixture below, with a little headroom for a relation the fixture
+     * leaves null. The margin is kept BELOW the smallest per-item loop that could appear: the fixture
+     * fills every band to its cap, so one read per story (8), face (12) or group (6) puts it past
+     * this.
      */
     private const CEILING = 51;
 

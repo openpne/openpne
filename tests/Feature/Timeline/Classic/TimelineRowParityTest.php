@@ -16,10 +16,7 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The OpenPNE 3 timeline row DOM (timelineTemplate) and its component-driven stylesheets,
- * rendered server-side by the Classic adapter.
- */
+/** The expected DOM is OpenPNE 3's timelineTemplate. */
 class TimelineRowParityTest extends TestCase
 {
     use RefreshDatabase;
