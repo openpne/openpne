@@ -8,16 +8,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The chip row of every message on a page — each emoji, how many hold it, and whether the viewer is
- * one of them — in one grouped read.
- *
- * Counted in SQL rather than off a loaded relation. A chip row is a handful of numbers, but the rows
- * behind it are one per reactor per emoji, so hydrating a page's worth costs the room's size on
- * every page and every poll for something the payload never names. Who reacted is a separate
- * question, asked only when a dialog opens ({@see MessageReactors}).
- *
- * The order is the one the chips are drawn in — the emoji that appeared first, first — which is why
- * a group is sorted by its earliest row rather than by its count.
+ * Counted in SQL rather than off a loaded relation: the rows behind a chip row are one per reactor
+ * per emoji. Groups are ordered by their earliest row rather than by count, so the chips read in the
+ * order the emoji first appeared on the message.
  */
 class MessageReactionAggregates
 {
@@ -39,7 +32,6 @@ class MessageReactionAggregates
             ->whereIn('reactable_id', $ids)
             ->select('reactable_id', 'emoji')
             ->selectRaw('count(*) as total')
-            // The viewer's own answer off the same scan; a second query would read the same rows.
             ->selectRaw('max(case when member_id = ? then 1 else 0 end) as mine', [(int) $viewer->getKey()])
             ->groupBy('reactable_id', 'emoji')
             ->orderBy('reactable_id')
@@ -59,12 +51,7 @@ class MessageReactionAggregates
         return $chips;
     }
 
-    /**
-     * One message's chip row — its whole authoritative state, which is why the add and remove
-     * endpoints answer with this rather than a delta the client would have to apply.
-     *
-     * @return list<array{emoji: string, count: int, mine: bool}>
-     */
+    /** @return list<array{emoji: string, count: int, mine: bool}> */
     public function of(Member $viewer, GroupMessage $message): array
     {
         return $this($viewer, new Collection([$message]))[(int) $message->getKey()] ?? [];

@@ -16,28 +16,17 @@ use Carbon\CarbonImmutable;
 use DateTimeInterface;
 
 /**
- * Modern surface shapes for a group's talk. `author` is null for a withdrawn member (the FK SET
- * NULL) and the client renders the established "Withdrawn member" label. `isOwn` and `canDelete` are
- * the viewer's own answers, computed here so the client never re-derives authorization; both come
- * off one resolved GroupTalkPermissions, so serializing a page costs no query per row.
- *
- * Every message carries its `cursor` — its position in the keyset order. That is what the client
- * hands back to ask for the page before it or the messages after it, so the tuple encoding stays on
- * this side and a client never assembles one out of a timestamp and an id.
+ * Every message carries its own `cursor`, so the tuple encoding stays on this side and a client never
+ * assembles one out of a timestamp and an id.
  */
 class GroupMessageSerializer
 {
     /**
-     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row, as
-     *                                                                         MessageReactionAggregates counts it. Passed in rather than read off the model: the rows
-     *                                                                         behind a chip are one per reactor, and no page hydrates them.
-     * @param  array<int, GroupMessage>  $parents  the answered messages of the whole page, as
-     *                                             ReplyReferences read them. Required rather than defaulted: a caller that
-     *                                             forgot it would draw every reply as one whose parent was deleted
-     *
-     * The reader is taken off $permissions rather than passed alongside it — a card of one of this
-     * site's own pages is built against whoever is asking, and `$permissions->member` is already
-     * that person. Passing them twice would let the two disagree.
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row,
+     *                                                                         passed in rather than read off the model, which no page hydrates
+     * @param  array<int, GroupMessage>  $parents  the answered messages of the whole page; required
+     *                                             rather than defaulted, since a caller that omitted it would draw every
+     *                                             reply as one whose parent was deleted
      * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
@@ -59,14 +48,9 @@ class GroupMessageSerializer
     }
 
     /**
-     * The message this one answers: null when it answers nothing, `{deleted: true}` when the id names
-     * a row that is not there. Only one level travels — a parent that is itself a reply describes its
-     * own text here, never its own parent.
-     *
-     * Everything shown is read off the parent now rather than copied at write time, so an answer
-     * cannot go on quoting something that was retracted. `excerpt` is the same line every list in the
-     * app previews a message by ({@see ChatPreview}) — a payload bound, with the visible truncation
-     * left to the client's clip.
+     * Only one level travels: a parent that is itself a reply describes its own text here, never its
+     * own parent. `excerpt` is a payload bound ({@see ChatPreview}), with the visible truncation left
+     * to the client's clip.
      *
      * @param  array<int, GroupMessage>  $parents
      * @return array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null
@@ -94,13 +78,8 @@ class GroupMessageSerializer
     }
 
     /**
-     * The ranges EntityText splits the body on — ascending and non-overlapping, in the relation's own
-     * offset order. The same wire shape the timeline ships, so one client splitter serves both; talk
-     * simply has no second list, since it parses no hashtags.
-     *
-     * No display name travels with a range: the body already carries it, frozen at post time. A
-     * member whose account is gone has no row at all (the FK cascades) and the range renders as the
-     * plain text it always was — which is why no renderer needs a defensive branch.
+     * Ascending and non-overlapping, in the relation's own offset order. No display name travels with
+     * a range: the body already carries it, frozen at post time.
      *
      * @return list<array{memberId: int, offset: int, length: int}>
      */
@@ -117,8 +96,6 @@ class GroupMessageSerializer
     }
 
     /**
-     * A page of the conversation, oldest first, and what lies either side of it.
-     *
      * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  chip rows by message id;
      *                                                                                     a message nobody reacted to has no key
      * @param  array<int, GroupMessage>  $parents  the answered messages, by id
@@ -137,14 +114,8 @@ class GroupMessageSerializer
     }
 
     /**
-     * The unread boundary the page opened on: how many messages were waiting, and the position they
-     * start after, in the two shapes the client needs it in. Null for a reader with no membership
-     * row, who holds no cursor at all.
-     *
-     * `readThrough.at` goes out through {@see instant()}, the same conversion a message's `createdAt`
-     * takes, so the client can compare the two directly to find the first row past the boundary.
-     * `cursor` is that same tuple as an opaque pagination position, encoded here so the client can
-     * ask for the page it sits in without ever assembling a cursor of its own.
+     * `cursor` is the same position already encoded, so the client echoes it back rather than
+     * assembling one.
      *
      * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot
      * @return array{count: int, readThrough: array{at: string, id: int}, cursor: string}|null
@@ -169,10 +140,8 @@ class GroupMessageSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
-     * all FilePolicy-gated behind the talk's read access. See docs/internals/images.md for which
-     * one a surface takes and why the intrinsic size travels with them. Tolerates a row whose File
-     * is gone (defensive; the join cascades with it).
+     * Tolerates a row whose File is gone, though the join cascades with it. Every surface picks from
+     * the same two ladders (docs/internals/images.md, "The two ladders").
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */

@@ -6,16 +6,11 @@ use App\Models\Group;
 use App\Models\Member;
 
 /**
- * The nav's slice of the room list: the same rows in the same order as `/groups/mine`, stopping at
- * what a sidebar row draws — image, name, unread, mute. It is deliberately not the room list's read:
- * the nav shows no preview, so it does not hydrate the leading message or its author, and the two
- * queries those cost are the reason this is affordable on every page.
- *
- * `hasMore` comes from reading one row past the limit rather than a `count(*)` over the membership.
+ * No preview is drawn, so the leading message and its author are never hydrated — which is what
+ * makes this affordable on a prop every page evaluates.
  */
 class NavTalkRooms
 {
-    /** Rooms the sidebar holds; past that it hands the reader to the joined list. */
     public const LIMIT = 10;
 
     public function __construct(private readonly JoinedTalkRooms $rooms) {}

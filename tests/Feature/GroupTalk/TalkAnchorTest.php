@@ -11,11 +11,6 @@ use App\Models\Member;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * `?m=` — where a mention notification lands. The page opens on the slice the named message sits in
- * and says which one it was; anything the link cannot name resolves to the ordinary newest page,
- * because a stale link is a link to a conversation that has moved on.
- */
 class TalkAnchorTest extends TalkTestCase
 {
     /** @return list<GroupMessage> $count messages, one per minute, oldest first */
@@ -32,9 +27,8 @@ class TalkAnchorTest extends TalkTestCase
             ]);
         }
 
-        // Factory memberships take talk_read_at from its DB default — the wall clock, which no PHP
-        // time mock reaches. Pin every member of the room behind these literal instants, or unread
-        // math depends on the time of day the suite runs (see TalkUnreadBoundaryTest).
+        // Factory memberships take talk_read_at from a DB default no time mock reaches, so every
+        // member of the room is pinned behind these literal instants.
         GroupMember::query()
             ->where('group_id', $group->getKey())
             ->update(['talk_read_at' => Carbon::parse('2026-08-14 08:00:00'), 'talk_read_message_id' => 0]);
@@ -60,7 +54,6 @@ class TalkAnchorTest extends TalkTestCase
                 ->where('page.hasNewer', true));
     }
 
-    /** Nothing follows the page, so the client stands in the live window and the poll runs. */
     public function test_a_link_to_a_recent_message_lands_in_a_page_that_runs_to_the_newest(): void
     {
         $group = $this->group();
@@ -91,9 +84,8 @@ class TalkAnchorTest extends TalkTestCase
     }
 
     /**
-     * A message id names a row in *this* conversation. One from elsewhere is not a position to be
-     * borrowed the way a pagination cursor is — it would open a page of this group around another
-     * group's instant — so it is no anchor at all.
+     * Unlike a pagination cursor, an id from elsewhere is not a position to borrow: it would open
+     * this group around another group's instant.
      */
     public function test_a_message_from_another_group_is_no_anchor(): void
     {
@@ -114,7 +106,6 @@ class TalkAnchorTest extends TalkTestCase
                 ->where('page.messages.'.(GroupTalkMessages::PER_PAGE - 1).'.body', 'message 59'));
     }
 
-    /** The link outlives the message: the reader arrives in the conversation, at its live end. */
     public function test_a_deleted_message_is_no_anchor(): void
     {
         $group = $this->group();
@@ -156,7 +147,6 @@ class TalkAnchorTest extends TalkTestCase
                 ->where('page.messages.2.body', 'message 2'));
     }
 
-    /** The gate answers first: a link into a conversation the reader may not read is still a 404. */
     public function test_the_read_gate_is_unmoved_by_an_anchor(): void
     {
         $group = $this->group(TopicReadAccess::MembersOnly);
@@ -167,10 +157,7 @@ class TalkAnchorTest extends TalkTestCase
             ->assertNotFound();
     }
 
-    /**
-     * The boundary is where the reader had read to, not where they were sent — landing on a mention
-     * behind it must not report the backlog as smaller than it is.
-     */
+    /** Landing on a mention behind the boundary must not report the backlog as smaller than it is. */
     public function test_the_unread_snapshot_is_independent_of_the_anchor(): void
     {
         $group = $this->group();

@@ -9,11 +9,6 @@ use App\Models\Member;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The (created_at, id) keyset. Ordering by id alone would be wrong on migrated content — rows arrive
- * in transfer order, not chronological order — and ordering by created_at alone is not a total order
- * at MySQL's one-second timestamp resolution.
- */
 class GroupTalkPaginationTest extends TalkTestCase
 {
     /** @return list<GroupMessage> $count messages, one per minute, oldest first */
@@ -58,7 +53,6 @@ class GroupTalkPaginationTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page
                 ->has('page.messages', GroupTalkMessages::PER_PAGE)
                 ->where('page.hasOlder', true)
-                // The newest message is the last row of the newest page.
                 ->where('page.messages.'.(GroupTalkMessages::PER_PAGE - 1).'.body', 'message '.($total - 1)));
     }
 
@@ -127,10 +121,7 @@ class GroupTalkPaginationTest extends TalkTestCase
             ->assertJsonPath('messages.0.body', 'and one more');
     }
 
-    /**
-     * Same-second messages are what the id half of the tuple is for: created_at alone leaves their
-     * order to the engine, and a page boundary landing between two of them would drop or repeat one.
-     */
+    /** The fixture forces a same-second pair, whose order `created_at` alone leaves to the engine. */
     public function test_messages_written_in_the_same_second_keep_a_stable_order(): void
     {
         $group = $this->group();
@@ -161,7 +152,6 @@ class GroupTalkPaginationTest extends TalkTestCase
         );
     }
 
-    /** A page is one read plus the author fan-out, whatever its length. */
     public function test_reading_a_page_costs_no_query_per_message(): void
     {
         $group = $this->group();
@@ -182,9 +172,8 @@ class GroupTalkPaginationTest extends TalkTestCase
     }
 
     /**
-     * And no row per *reactor*: a chip row is a handful of numbers, but the rows behind it grow with
-     * the room, so the page counts them in SQL rather than hydrating them. A page that eager-loaded
-     * the relation would cost the same query count and read every reaction in the conversation.
+     * A page that eager-loaded the relation would cost the same query count, so the rows read are
+     * what is asserted.
      */
     public function test_reading_a_page_never_reads_a_reaction_row(): void
     {

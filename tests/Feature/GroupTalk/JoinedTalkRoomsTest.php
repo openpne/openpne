@@ -16,9 +16,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The room list's order and its numbers. Every ordering case here is built so that the group id —
- * what the membership grid sorted by — gives the wrong answer, because that is the whole point of
- * deciding the order in SQL before the page is cut.
+ * Every ordering case is built so that the group id — what the membership grid sorted by — gives the
+ * wrong answer.
  */
 class JoinedTalkRoomsTest extends TalkTestCase
 {
@@ -64,10 +63,7 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame([$loud->getKey(), $quiet->getKey()], $this->roomIds($viewer));
     }
 
-    /**
-     * Two rooms last spoken in during the same second. A MySQL timestamp is second-precise, so
-     * created_at alone is not a total order and the message id has to break the tie.
-     */
+    /** Two rooms last spoken in during the same second, which `created_at` alone cannot order. */
     public function test_rooms_last_spoken_in_within_the_same_second_are_separated_by_message_id(): void
     {
         $viewer = Member::factory()->create();
@@ -103,11 +99,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame([$mine->getKey()], $this->roomIds($viewer));
     }
 
-    /**
-     * The unread number is UnreadTalkScope's, which is why a withdrawn author's message counts:
-     * `member_id != ?` is UNKNOWN for that row, so a count without the IS NULL arm would skip
-     * exactly the messages the room still shows under "Withdrawn member".
-     */
     public function test_the_unread_count_holds_a_withdrawn_author_s_message_and_drops_the_viewer_s_own(): void
     {
         $group = $this->group();
@@ -122,10 +113,7 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame(2, $rooms[0]->unread);
     }
 
-    /**
-     * The mention count is the same unread, narrowed to the messages that name the viewer — and it
-     * counts messages, so being named twice in one line is one room waiting for an answer.
-     */
+    /** The fixture names the viewer twice in one message, which is one message waiting. */
     public function test_the_mention_count_narrows_the_unread_to_what_names_the_viewer(): void
     {
         $group = $this->group();
@@ -145,10 +133,7 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame(2, $room->unreadMentions);
     }
 
-    /**
-     * Being answered is being addressed, so one count covers both — and it is still a count of
-     * messages: a line that names the viewer *and* answers them is one message waiting.
-     */
+    /** The fixture both names and answers the viewer in one message, which counts once. */
     public function test_the_addressed_count_holds_replies_to_the_viewer_and_counts_a_message_once(): void
     {
         $group = $this->group();
@@ -168,11 +153,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertSame(3, $room->unreadMentions);
     }
 
-    /**
-     * The reference is only an id — no foreign key holds it to a live row of this room — so the parent
-     * is matched on its group as well as its id, and a message answering someone else is not the
-     * viewer's to be told about.
-     */
     public function test_an_answer_to_anyone_but_the_viewer_here_is_not_addressed_to_them(): void
     {
         $group = $this->group();
@@ -206,7 +186,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         ]);
     }
 
-    /** A read that did not ask holds no number at all, rather than a zero it never counted. */
     public function test_a_room_carries_no_mention_count_unless_the_read_asked_for_one(): void
     {
         $group = $this->group();
@@ -217,10 +196,7 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->assertNull(app(JoinedTalkRooms::class)->take($viewer, 5)->first()->unreadMentions);
     }
 
-    /**
-     * The subselect costs a probe per room, and the nav renders this query on every page — so it has
-     * to be absent unless a caller asked for it, not merely unread.
-     */
+    /** Absent from the SQL, not merely unread: the nav runs this query on every page. */
     public function test_the_mention_subselect_is_absent_unless_it_was_asked_for(): void
     {
         $viewer = Member::factory()->create();
@@ -263,7 +239,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         ]);
     }
 
-    /** Mute silences the nav badge, not the room's own number. */
     public function test_a_muted_room_keeps_its_count(): void
     {
         $group = $this->group();
@@ -330,10 +305,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         return array_map(fn ($room): int => $room->group->getKey(), $rooms);
     }
 
-    /**
-     * The cost is per page, not per room: the newest message rides along in the ordering, and the
-     * bodies for the page are one lookup by primary key afterwards.
-     */
     public function test_a_page_costs_the_same_whether_it_holds_one_room_or_twenty(): void
     {
         $one = Member::factory()->create();

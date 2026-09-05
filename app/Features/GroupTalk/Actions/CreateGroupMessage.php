@@ -19,11 +19,6 @@ use Illuminate\Http\UploadedFile;
 
 class CreateGroupMessage
 {
-    /**
-     * ResolveMentions is the timeline's, deliberately: it already narrows mentionability to a
-     * group's members when handed one, and duplicating its offset/overlap invariants is how the two
-     * would drift apart. The mention machinery is shared between the two surfaces by design.
-     */
     public function __construct(
         private readonly PostImages $images,
         private readonly ResolveMentions $mentions,
@@ -31,29 +26,9 @@ class CreateGroupMessage
     ) {}
 
     /**
-     * Say something in a group's talk. Membership is checked here rather than in the controller —
-     * the write is the one place it cannot be routed around.
-     *
-     * $body arrives normalized and bounded by the form request (LF newlines, at most 5,000 code
-     * points), and $mentions is the picker's raw selection, not yet checked against that body.
-     *
-     * $inReplyTo is the message this one answers, and resolving it is the caller's job — it is the
-     * caller that knows which group the request named. The same-group half of that is re-asserted
-     * here because this is the single write chokepoint, and a reference out of the room would render
-     * as a deleted parent forever. There is no foreign key behind the column: a reference to a
-     * message that has since been deleted is a state the screen draws, so nothing may erase it.
-     *
-     * PostImages::attach owns the transaction and everything else runs inside its persist callback.
-     * It must be the OUTERMOST layer: its compensation deletes the bytes it stored when the
-     * transaction throws, and a transaction wrapped around it would already have rolled back —
-     * committing the rollback while the bytes stayed on disk. Slots are numbered in the order the
-     * member picked them (1..N), which is the order they are read back in.
-     *
-     * $mentionsRequired is for a composer that wrote the handles into $body itself (the MCP reply
-     * tool): dropping one of its rows would leave a handle naming nobody in a message that cannot be
-     * edited, so the whole write rolls back instead and the caller re-composes from what it re-reads.
-     * The picker's path leaves it off — there the handle is the member's own text, and losing the
-     * message over a decoration is the wrong trade.
+     * $body arrives normalized and bounded by the caller (LF newlines, at most 5,000 code points),
+     * and $mentions is the picker's selection, not yet checked against that body. Nothing may wrap
+     * `PostImages::attach()` in a further transaction (docs/internals/group-talk.md, "Images").
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions
      * @param  array<int, UploadedFile>  $images
@@ -89,12 +64,8 @@ class CreateGroupMessage
                 ]);
 
                 // Resolved inside the transaction: resolution share-locks the members it matches, so
-                // one deleted mid-request fails resolution — the row is dropped and the message still
-                // posts — instead of failing the FK insert and rolling the message back.
-                //
-                // Held as the relation so the serializer that answers this write does not re-read
-                // them; createMany returns them in the order it was given, which resolution left
-                // ascending.
+                // one deleted mid-request drops its row and the message still posts, instead of
+                // failing the FK insert and rolling the message back.
                 $resolved = ($this->mentions)($author, $body, $mentions, $group);
 
                 // Thrown from inside the transaction on purpose: the body carrying the handle is
@@ -103,12 +74,12 @@ class CreateGroupMessage
                     throw new GroupTalkActionException(GroupTalkActionFailure::MentionDropped);
                 }
 
+                // createMany answers in the order it was given, so the relation keeps resolution's
+                // ascending offsets.
                 $message->setRelation('mentions', $message->mentions()->createMany($resolved));
 
-                // Writing is reading. In the same transaction as the insert, so the cursor can never
-                // be left behind a message the member wrote themselves — which would show as their
-                // own words arriving as unread. Still forward-only, so it is safe to run
-                // unconditionally.
+                // Inside the insert's transaction: a cursor left behind the author's own message
+                // would show their own words arriving as unread.
                 TalkReadCursor::advance(
                     (int) $group->getKey(),
                     (int) $author->getKey(),
@@ -116,8 +87,6 @@ class CreateGroupMessage
                     (int) $message->getKey(),
                 );
 
-                // Writing is reading here too: whatever the room was telling the author about, they
-                // have just been in it.
                 $this->rows->markRead((int) $author->getKey(), (int) $group->getKey());
 
                 // Dispatched from inside the write so the snapshot is the rows just stored; delivery

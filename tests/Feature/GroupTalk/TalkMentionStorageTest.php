@@ -12,11 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * The two-layer failure contract at the write. A structurally impossible payload is rejected whole
- * (MentionRequest test); a row that merely stopped describing reality is dropped on its own and the
- * message still posts, because a member wrote a message, not a mention list.
- */
 class TalkMentionStorageTest extends TalkTestCase
 {
     /** @return array{0: Group, 1: Member, 2: Member} group, author, mentionable member */
@@ -55,7 +50,6 @@ class TalkMentionStorageTest extends TalkTestCase
         ]);
     }
 
-    /** The body is stored exactly as typed — a mention adds a row, never a token or markup. */
     public function test_the_body_keeps_the_handle_as_plain_text(): void
     {
         [$group, $author, $target] = $this->conversation();
@@ -81,7 +75,6 @@ class TalkMentionStorageTest extends TalkTestCase
         $this->assertDatabaseCount('group_message_mentions', 0);
     }
 
-    /** A range is stored as a partition of the body, so it may not run off the end of one. */
     public function test_a_range_past_the_end_of_the_body_is_dropped(): void
     {
         [$group, $author, $target] = $this->conversation();
@@ -94,7 +87,6 @@ class TalkMentionStorageTest extends TalkTestCase
         $this->assertDatabaseCount('group_message_mentions', 0);
     }
 
-    /** The mentionable set is the room: someone outside it can neither read the message nor be named in it. */
     public function test_a_non_member_target_is_dropped(): void
     {
         $group = $this->group();
@@ -155,7 +147,6 @@ class TalkMentionStorageTest extends TalkTestCase
         $this->assertDatabaseCount('group_message_mentions', 0);
     }
 
-    /** Ranges partition the body: a second row reaching back into an accepted one cannot be stored. */
     public function test_an_overlapping_row_is_dropped(): void
     {
         [$group, $author, $target] = $this->conversation();
@@ -180,7 +171,6 @@ class TalkMentionStorageTest extends TalkTestCase
         $this->assertDatabaseCount('group_message_mentions', 0);
     }
 
-    /** The row cascades and the range renders as the plain text it always was — no defensive branch. */
     public function test_deleting_the_member_removes_the_mention_and_keeps_the_message(): void
     {
         [$group, $author, $target] = $this->conversation();
@@ -226,11 +216,6 @@ class TalkMentionStorageTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('page.messages.0.mentions', []));
     }
 
-    /**
-     * The other half of the two-layer contract: a caller that wrote the handle into the body itself
-     * cannot afford a silent drop, because the handle would stay in a message nobody can edit. So it
-     * asks for the message to go with the row.
-     */
     public function test_a_required_mention_that_drops_takes_the_whole_message_with_it(): void
     {
         [$group, $author, $target] = $this->conversation();

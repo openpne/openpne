@@ -7,7 +7,6 @@ use App\Models\GroupMessage;
 use App\Models\Member;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/** Saying something, and taking it back. */
 class GroupTalkWriteTest extends TalkTestCase
 {
     public function test_a_member_posts_and_gets_the_message_back(): void
@@ -28,7 +27,6 @@ class GroupTalkWriteTest extends TalkTestCase
             'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'body' => 'good morning',
-            // Lineage only: the composer never writes a parent.
             'in_reply_to_id' => null,
         ]);
     }
@@ -61,10 +59,6 @@ class GroupTalkWriteTest extends TalkTestCase
         $this->assertDatabaseCount('group_messages', 1);
     }
 
-    /**
-     * The cap counts code points, not bytes and not UTF-16 units: a body of astral emoji is as long
-     * as one of ASCII, and PHP's mb_strlen and JavaScript's Array.from() agree on the number.
-     */
     public function test_the_cap_counts_code_points_not_bytes_or_utf16_units(): void
     {
         $group = $this->group();
@@ -84,10 +78,7 @@ class GroupTalkWriteTest extends TalkTestCase
             ->assertJsonValidationErrorFor('body');
     }
 
-    /**
-     * A textarea submits CRLF; the body is stored with LF. The normalization runs before the length
-     * check, so a body is never measured a line break longer than the one that was typed.
-     */
+    /** A textarea submits CRLF, which is what the fixture sends. */
     public function test_crlf_is_normalized_to_lf_before_it_is_measured_and_stored(): void
     {
         $group = $this->group();
@@ -172,7 +163,6 @@ class GroupTalkWriteTest extends TalkTestCase
         $this->assertDatabaseHas('group_messages', ['id' => $message->getKey()]);
     }
 
-    /** The path names both, so a message reached through the wrong group is a malformed URL. */
     public function test_a_message_addressed_through_another_group_is_a_404(): void
     {
         $group = $this->group();

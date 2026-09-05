@@ -9,7 +9,6 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/** Who the picker offers, and the invariant that it can only offer names the submit will accept. */
 class TalkMentionCandidatesTest extends TalkTestCase
 {
     private function joined(Group $group, string $name): Member
@@ -134,10 +133,6 @@ class TalkMentionCandidatesTest extends TalkTestCase
         $this->get($this->url($group))->assertRedirect('/login');
     }
 
-    /**
-     * The invariant the two halves exist to keep: every name the picker offers must survive the
-     * resolver, or the composer would show a member whose mention silently vanishes on submit.
-     */
     public function test_every_offered_candidate_resolves(): void
     {
         $group = $this->group();

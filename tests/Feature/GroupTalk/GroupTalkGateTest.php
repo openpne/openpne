@@ -11,9 +11,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The unit gate. Deliberately does NOT extend TalkTestCase, which sets the flag explicitly: these
- * tests are about what an install resolves to on its own, and about the routes disappearing when an
- * operator switches the unit — or its parent — off.
+ * Deliberately does not extend TalkTestCase, which sets the flag explicitly: these tests are about
+ * what an install resolves to on its own.
  */
 class GroupTalkGateTest extends TestCase
 {
@@ -32,7 +31,6 @@ class GroupTalkGateTest extends TestCase
         return $member;
     }
 
-    /** Since the cutover talk is an ordinary unit: no row, and it runs. */
     public function test_a_fresh_install_runs_group_talk(): void
     {
         $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_group_talk_enabled']);

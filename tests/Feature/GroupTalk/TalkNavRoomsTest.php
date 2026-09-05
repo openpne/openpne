@@ -13,11 +13,6 @@ use App\Support\SnsSettingKey;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The sidebar's room list: a shared prop, so it is evaluated on every Inertia page and its cost is
- * the thing to hold down. What it must agree with is `/groups/mine` — same rooms, same order, same
- * numbers — and what it must not do is pay for the previews it does not draw.
- */
 class TalkNavRoomsTest extends TalkTestCase
 {
     private function joined(Member $member, ?string $name = null): Group
@@ -47,8 +42,6 @@ class TalkNavRoomsTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page
                 ->where('talkNavRooms.rooms.0.id', $group->getKey())
                 ->where('talkNavRooms.rooms.0.name', 'Book club')
-                // A sidebar row paints at 24px, so it asks for the smallest whitelisted size that
-                // covers 2x rather than the 180 the right rail's far larger tiles took.
                 ->where('talkNavRooms.rooms.0.imageUrl', $group->fresh()->image->thumbnailUrl(48, 48, square: true))
                 ->where('talkNavRooms.rooms.0.unread', 2)
                 ->where('talkNavRooms.rooms.0.muted', false)
@@ -57,7 +50,6 @@ class TalkNavRoomsTest extends TalkTestCase
                 ->missing('talkNavRooms.rooms.0.latest'));
     }
 
-    /** Muting silences the nav badge; the room's own number stays, as it does on the joined list. */
     public function test_a_muted_room_keeps_its_number(): void
     {
         $group = $this->group();
@@ -73,10 +65,7 @@ class TalkNavRoomsTest extends TalkTestCase
                 ->where('talkNavRooms.rooms.0.unread', 1));
     }
 
-    /**
-     * The nav is a slice of the joined list, not a second reading of the membership: the two are
-     * asserted against each other so an order settled differently here would fail.
-     */
+    /** The two are asserted against each other, so an order settled differently here would fail. */
     public function test_the_rooms_arrive_in_the_joined_list_s_own_order(): void
     {
         $viewer = Member::factory()->create();
@@ -141,7 +130,6 @@ class TalkNavRoomsTest extends TalkTestCase
         $this->get('/login')->assertInertia(fn ($page) => $page->where('talkNavRooms', null));
     }
 
-    /** A switched-off unit does not read the conversation it is hiding — on any page, not just its own. */
     public function test_talk_switched_off_carries_no_list_and_reads_no_message(): void
     {
         $viewer = Member::factory()->create();
@@ -165,9 +153,8 @@ class TalkNavRoomsTest extends TalkTestCase
     // --- The refresh the sidebar stays live on ---
 
     /**
-     * The badge and the rows under it come from one response, so the refresh that clears a room's
-     * pill is the same one that drops the badge. Reading them apart is what let a zeroed groups badge
-     * sit above a row still claiming two unread until the next navigation.
+     * Reading them apart is what let a zeroed groups badge sit above a row still claiming two unread
+     * until the next navigation.
      */
     public function test_a_mark_read_leaves_the_badge_and_the_room_row_agreeing(): void
     {
@@ -190,7 +177,6 @@ class TalkNavRoomsTest extends TalkTestCase
             ->assertJsonPath('talkNavRooms.rooms.0.unread', 0);
     }
 
-    /** Quiet moves both too: out of the badge, and into the row's own de-emphasized state. */
     public function test_muting_reaches_the_room_row_and_the_badge_in_one_read(): void
     {
         $group = $this->group();
@@ -221,10 +207,7 @@ class TalkNavRoomsTest extends TalkTestCase
             ->assertJsonPath('talkNavRooms', null);
     }
 
-    /**
-     * The endpoint runs every minute on every open tab, so what the room list adds to it is pinned:
-     * the rooms and one batched image fetch, and nothing that scales with how many rooms there are.
-     */
+    /** The endpoint runs every minute on every open tab, so what the room list adds to it is pinned. */
     public function test_the_refresh_pays_two_queries_for_the_room_list(): void
     {
         $viewer = Member::factory()->create();
@@ -267,11 +250,6 @@ class TalkNavRoomsTest extends TalkTestCase
         return $count;
     }
 
-    /**
-     * Two queries, whatever the list holds: the rooms with their numbers, and one batched fetch of
-     * their images. This is the whole reason the nav has its own read — the joined list's five
-     * include the previews and their authors, which no sidebar row draws.
-     */
     public function test_the_list_costs_two_queries_however_many_rooms_it_holds(): void
     {
         $one = Member::factory()->create();

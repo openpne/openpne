@@ -22,25 +22,9 @@ class MarkTalkRead
     ) {}
 
     /**
-     * Record that the member has read as far as $messageId — or, with no id, as far as the
-     * conversation goes.
-     *
-     * With an id the client names the last message it actually rendered, and the server resolves the
-     * tuple from that row itself. Neither half is incidental. Taking the group's current newest
-     * instead would mark read whatever arrived between the page loading and this call — messages
-     * nobody has seen. Trusting a timestamp or a tuple from the client would let a bad one erase
-     * future unread.
-     *
-     * Without an id the member is not reporting what they read but *declaring the backlog spent* —
-     * the catch-up button on the absence digest. Only there does the group's own newest become the
-     * right answer, and the server reads it here rather than accepting one the client fetched: a
-     * client-fetched latest opens a window between the fetch and this write in which a message can
-     * land, and it would be marked read having never been on anyone's screen. Read inside the same
-     * operation, "latest" means latest at the moment the cursor moves, and anything after that
-     * moment stays unread.
-     *
-     * The cursor lives on the membership row, so a reader without one — an Everyone group is
-     * readable by any member — has nothing to advance and is refused rather than silently ignored.
+     * A null $messageId means "read through the latest", which the server resolves here rather than
+     * taking one the client fetched (docs/internals/group-talk.md, "Mark-read is client-named,
+     * server-resolved, and monotonic").
      *
      * @throws GroupTalkActionException
      */
@@ -53,20 +37,14 @@ class MarkTalkRead
             throw new GroupTalkActionException(GroupTalkActionFailure::NotMember);
         }
 
-        // Reading the room is what marks its broadcast row read. Unconditional, and ahead of the
-        // cursor move: whether this particular call advances the cursor says nothing about whether
-        // the member has now seen the room (another tab may have moved it first).
+        // Unconditional and ahead of the cursor move: a call that advances nothing, because another
+        // tab moved the cursor first, still means the room has been seen.
         $this->rows->markRead($memberId, $groupId);
 
         if ($messageId === null) {
-            // Forward only, like every other advance: a slow request that read an older newest —
-            // the message it saw has since been deleted, or a concurrent one got there first —
-            // cannot pull the cursor back over messages already marked read.
             $latest = TalkReadCursor::snapshot($groupId);
             TalkReadCursor::advance($groupId, $memberId, $latest['talk_read_at'], $latest['talk_read_message_id']);
         } else {
-            // Live row of THIS group: a deleted message, or one belonging to another conversation,
-            // resolves to no tuple at all rather than to someone else's clock.
             $message = GroupMessage::query()
                 ->where('group_id', $groupId)
                 ->whereKey($messageId)
@@ -76,7 +54,6 @@ class MarkTalkRead
                 throw new GroupTalkActionException(GroupTalkActionFailure::UnknownMessage);
             }
 
-            // Forward only, so replaying an older id — a retry, a second tab a page behind — is a no-op.
             TalkReadCursor::advance($groupId, $memberId, CarbonImmutable::instance($message->created_at), (int) $message->getKey());
         }
 
@@ -84,13 +61,9 @@ class MarkTalkRead
     }
 
     /**
-     * Spend the feed rows for the mentions the cursor has now reached. A mention is one person's, so
-     * the room's own row is not the rule for it: being in the room is not having read what was said
-     * above where the reader stopped.
-     *
      * The position is read back from the membership rather than taken from this call, since the
      * advance is forward-only and may have moved nothing. A message deleted since has no position to
-     * compare and keeps its row for the feed's own mark-read.
+     * compare and keeps its row.
      */
     private function markMentionsRead(int $groupId, int $memberId): void
     {

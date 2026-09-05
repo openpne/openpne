@@ -3,18 +3,9 @@
 namespace App\Features\Reactions;
 
 /**
- * Which emoji may be reacted with. The one source: validation, the page prop the picker draws, and
- * the tests all read all(), and neither the set nor its size is written down anywhere else — so a
- * per-site vocabulary (this class reading an sns_settings key, an absent row meaning these) is a
- * change to this class and nothing beside it.
- *
- * The bytes are stored and the glyph is the reader's own font, so the selection rule is age rather
- * than taste: every entry is Unicode 6.1 (2012) or older, which is what keeps it from arriving as
- * tofu on a device that stopped receiving font updates.
- *
- * Removing an entry is safe: what is already written can always be taken back, and a picker rendered
- * before the change — the prop is fixed at render time, so a tab open across a deploy still holds
- * the old set — is refused by the add rule rather than writing a retired emoji.
+ * Every entry is Unicode 6.1 (2012) or older: the bytes are stored and the glyph is the reader's own
+ * font, so anything newer arrives as tofu on a device that stopped receiving font updates. The only
+ * place the set and its size are written down (docs/internals/group-talk.md, "Reactions").
  */
 final class ReactionVocabulary
 {

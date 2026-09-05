@@ -20,10 +20,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * Joining a group means everything already said counts as read. The cursor is snapshotted from the
- * group's newest message at the moment the membership row is written, by every path that writes one.
- */
 class TalkReadCursorSnapshotTest extends TalkTestCase
 {
     private function cursorOf(Group $group, Member $member): object
@@ -35,10 +31,8 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
     }
 
     /**
-     * The discriminator for the whole design. A bare DB default writes `(now(), 0)`, and a message
-     * created in the same wall-clock second has the tuple `(t, id)` with id > 0 — which compares
-     * GREATER than `(t, 0)` and would show up as unread the instant someone joined. Only reading the
-     * real latest tuple closes that second.
+     * The discriminator for the whole design: a bare DB default writes `(now(), 0)`, which compares
+     * less than a message written in the same wall-clock second.
      */
     public function test_a_message_written_in_the_same_second_as_the_join_counts_as_read(): void
     {
@@ -78,11 +72,7 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         ];
     }
 
-    /**
-     * Every path that writes a membership row must go through the snapshot. A path that forgets it
-     * falls back to the DB default, which is a second-precision approximation — the point of pinning
-     * all four here is that the next one added cannot quietly be the fifth.
-     */
+    /** All four paths are pinned here so that the next one added cannot quietly be the fifth. */
     #[DataProvider('membershipPaths')]
     public function test_every_membership_path_snapshots_the_cursor(string $path): void
     {
@@ -90,8 +80,8 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         [$group, $member] = $this->{$path}();
 
         $cursor = $this->cursorOf($group, $member);
-        // Newest by the (created_at, id) tuple — the conversation's order. Expecting by id alone
-        // would let a snapshot that also orders by id alone pass against out-of-order history.
+        // Expecting by id alone would let a snapshot that also orders by id alone pass against
+        // out-of-order history.
         $newest = GroupMessage::query()
             ->where('group_id', $group->getKey())
             ->orderByDesc('created_at')
@@ -158,7 +148,6 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         return [$group, $outsider];
     }
 
-    /** Rejoining is a fresh row, so the time away is read: an absence is not a backlog. */
     public function test_leaving_and_rejoining_resets_the_cursor(): void
     {
         $group = $this->group();

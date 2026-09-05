@@ -11,11 +11,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Which of the two shapes /groups/mine takes. The room list is the viewer's own conversations under
- * Modern with talk on; every other reading of the same route — another member's memberships,
- * Classic, talk switched off — keeps the membership grid, and must not read a message to do it.
- */
 class TalkRoomListTest extends TalkTestCase
 {
     private function joined(Member $member, ?string $name = null): Group
@@ -62,7 +57,6 @@ class TalkRoomListTest extends TalkTestCase
                 ->has('rooms.meta'));
     }
 
-    /** A row whose newest message is pictures alone says so, rather than trailing off after "Alice: ". */
     public function test_a_picture_only_message_previews_as_a_picture(): void
     {
         $viewer = Member::factory()->create();
@@ -76,7 +70,7 @@ class TalkRoomListTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', __('Image')));
     }
 
-    /** "0" is a message. The fallback to the stand-in tests emptiness strictly, not PHP's truthiness. */
+    /** "0" is a message: the stand-in fallback tests emptiness strictly, not PHP's truthiness. */
     public function test_a_body_of_zero_is_previewed_as_itself(): void
     {
         $viewer = Member::factory()->create();
@@ -128,7 +122,6 @@ class TalkRoomListTest extends TalkTestCase
                 ->where('rooms.data.0.latest.authorName', null));
     }
 
-    /** The row is one line: a body written over several must not be able to grow it. */
     public function test_the_preview_is_one_line(): void
     {
         $viewer = Member::factory()->create();
@@ -139,7 +132,6 @@ class TalkRoomListTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', 'first second third'));
     }
 
-    /** Another member's memberships: their order is not the viewer's conversation, so it stays a grid. */
     public function test_another_member_s_list_keeps_the_grid(): void
     {
         $owner = Member::factory()->create();
@@ -174,7 +166,6 @@ class TalkRoomListTest extends TalkTestCase
                 ->missing('talkUnread'));
     }
 
-    /** A switched-off unit does not read the conversation it is hiding — nor does anything Classic. */
     public function test_no_message_is_read_while_talk_is_off_or_the_surface_is_classic(): void
     {
         $viewer = Member::factory()->create();

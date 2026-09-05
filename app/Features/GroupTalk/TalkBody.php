@@ -7,12 +7,8 @@ namespace App\Features\GroupTalk;
 use App\Http\Requests\Concerns\MentionRules;
 
 /**
- * What a talk message's text has to be before it is stored, held apart from the browser form so a
- * second wire — the MCP tool — states the same contract instead of a similar one.
- *
- * It is deliberately only the cap and the newline rule. Everything else the form applies (trimming,
- * the `string` check) is middleware a browser request meets on its way in and a token request does
- * not, so each wire declares it where it applies.
+ * Deliberately only the cap and the newline rule: the rest of what the browser form applies is
+ * middleware a token request never meets.
  */
 final class TalkBody
 {

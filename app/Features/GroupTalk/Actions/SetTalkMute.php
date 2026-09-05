@@ -12,13 +12,6 @@ use Illuminate\Support\Facades\DB;
 class SetTalkMute
 {
     /**
-     * Mute or unmute a group's talk for one member.
-     *
-     * Like the cursor, the flag lives on the membership row, so only a member can hold one and
-     * leaving clears it. Muting takes the group out of the nav's "somewhere has something new"
-     * badge; the group's own unread count keeps showing, because the member asked for quiet, not
-     * for the conversation to be hidden.
-     *
      * @throws GroupTalkActionException
      */
     public function __invoke(Member $member, Group $group, bool $muted): void

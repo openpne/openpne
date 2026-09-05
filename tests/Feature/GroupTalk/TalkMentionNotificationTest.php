@@ -17,11 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * The notification every site sends, whatever its talk notification default. Eligibility is asked
- * twice — at enqueue and again in shouldSend() before each channel — because a mention mail carries
- * the message body and can outlive the facts it was enqueued under.
- */
 class TalkMentionNotificationTest extends TalkTestCase
 {
     private function joined(Group $group, string $name): Member
@@ -67,7 +62,6 @@ class TalkMentionNotificationTest extends TalkTestCase
         Notification::assertNothingSent();
     }
 
-    /** A mention is addressed to one person; being named outranks having asked the room for quiet. */
     public function test_a_muted_recipient_is_still_notified(): void
     {
         Notification::fake();
@@ -122,10 +116,7 @@ class TalkMentionNotificationTest extends TalkTestCase
         $this->assertFalse(GroupTalkNotificationEligibility::canReceive($author, $group, $author));
     }
 
-    /**
-     * The delivery-time re-check. The notification is built while the recipient is eligible, then the
-     * facts change before a channel runs — shouldSend must answer with the world as it is now.
-     */
+    /** The notification is built while the recipient is eligible, and the facts change before a channel runs. */
     public function test_should_send_re_evaluates_at_delivery_time(): void
     {
         $group = $this->group();
@@ -156,11 +147,6 @@ class TalkMentionNotificationTest extends TalkTestCase
         $this->assertFalse($notification->shouldSend($target, 'mail'));
     }
 
-    /**
-     * The feed row additionally waits on the reader's cursor, as the room's broadcast does: a row for
-     * a message they have already read is a bell over nothing. The mail still goes — a mention is
-     * worth telling someone about whether or not they were looking.
-     */
     public function test_a_mention_read_before_delivery_writes_no_feed_row_but_still_mails(): void
     {
         $group = $this->group();
@@ -177,7 +163,6 @@ class TalkMentionNotificationTest extends TalkTestCase
         $this->assertTrue($notification->shouldSend($target->fresh(), 'mail'));
     }
 
-    /** An author gone before delivery takes the queued job with them rather than arriving anonymous. */
     public function test_the_notification_is_dropped_when_its_author_is_missing(): void
     {
         $group = $this->group();

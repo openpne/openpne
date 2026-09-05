@@ -11,9 +11,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Shared setup for the talk suites. The unit is on by default since the cutover; it is still set
- * explicitly here so a suite reads as independent of whatever an install default happens to be, and
- * so switching it off inside a test is visibly the exception.
+ * The unit is set explicitly so a suite reads as independent of whatever an install default happens
+ * to be, and so switching it off inside a test is visibly the exception.
  */
 abstract class TalkTestCase extends TestCase
 {

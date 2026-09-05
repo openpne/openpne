@@ -6,11 +6,6 @@ use App\Features\GroupTalk\TalkRoom;
 use App\Support\ChatPreview;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * Modern surface shape for the room list. `id` is the group's — the row opens its talk, and the
- * group is the only thing a room is. `latest` is null while nothing has been said, which is the
- * seam the client renders "No messages yet." on.
- */
 class TalkRoomSerializer
 {
     /**
@@ -27,12 +22,11 @@ class TalkRoomSerializer
             'unread' => $room->unread,
             'muted' => $room->muted,
             'latest' => $latest === null ? null : [
-                // A message with nothing but pictures says so, rather than leaving the row's
-                // "author: " trailing into nothing. JoinedTalkRooms supplies `images_exists`.
+                // The room query's `images_exists` rides along, so a message with nothing but
+                // pictures says so rather than leaving the row trailing into nothing.
                 'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->images_exists),
-                // The preview names the speaker without a member reference to carry, so the AI
-                // fact travels beside the name rather than inside it — the row draws the same chip
-                // the talk screen does, and a name is never marked twice.
+                // The preview carries no member reference, so the AI fact travels beside the name
+                // rather than inside it.
                 'authorName' => $latest->author?->name,
                 'authorIsAi' => (bool) $latest->author?->isAiAccount(),
                 'createdAt' => $latest->created_at->toIso8601String(),

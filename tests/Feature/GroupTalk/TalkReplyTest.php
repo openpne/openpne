@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 
-/**
- * Answering a message: a reference to it, read back off the parent row every time. There is no
- * foreign key behind the column, so a parent that has been deleted leaves the id behind and the
- * answer says as much.
- */
 class TalkReplyTest extends TalkTestCase
 {
     private function say(Group $group, Member $author, string $body = 'hello', ?GroupMessage $inReplyTo = null): GroupMessage
@@ -30,7 +25,6 @@ class TalkReplyTest extends TalkTestCase
         ]);
     }
 
-    /** The page as the client reads it, oldest message first. */
     private function page(Member $viewer, Group $group): TestResponse
     {
         return $this->actingAs($viewer)->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk();
@@ -71,7 +65,6 @@ class TalkReplyTest extends TalkTestCase
         $this->assertDatabaseHas('group_messages', ['id' => $id, 'in_reply_to_id' => $question->getKey()]);
     }
 
-    /** The reference is what the composer sent, not something inferred: an ordinary message has none. */
     public function test_a_message_that_answers_nothing_carries_no_reference(): void
     {
         $group = $this->group();
@@ -85,10 +78,7 @@ class TalkReplyTest extends TalkTestCase
         $this->assertDatabaseHas('group_messages', ['body' => 'good morning', 'in_reply_to_id' => null]);
     }
 
-    /**
-     * The composer keeps the draft and is told why, rather than posting a message that quietly
-     * answers nothing. Another group's message is not distinguishable from one that never existed.
-     */
+    /** Another group's message is not distinguishable from one that never existed. */
     public function test_an_id_that_names_no_live_message_of_this_group_is_refused(): void
     {
         $group = $this->group();
@@ -108,12 +98,7 @@ class TalkReplyTest extends TalkTestCase
         $this->assertDatabaseMissing('group_messages', ['body' => 'answered']);
     }
 
-    /**
-     * The reply id is resolved against the group, so a non-member reaching that resolve would learn a
-     * message's existence from the 422 an unknown id draws, told apart from the 404 a live one draws.
-     * Posting is gated first: every id is one 404, whatever it names. The teeth — remove the gate in
-     * store() and the two answers split, which is the oracle this closes.
-     */
+    /** The teeth: remove the gate in `store()` and the two answers split, which is the oracle this closes. */
     public function test_a_non_member_cannot_probe_message_existence_through_the_reply_id(): void
     {
         $group = $this->group(TopicReadAccess::MembersOnly);
@@ -134,10 +119,8 @@ class TalkReplyTest extends TalkTestCase
     }
 
     /**
-     * The teeth of the foreign-key drop. `nullOnDelete` would clear the column here, and the answer
-     * would read as one that never answered anything — the state this feature has to tell apart from
-     * a parent that is gone. Reverting the drop migration restores the self-FK on both engines, and
-     * the SET NULL it brings back turns this red.
+     * The teeth of the foreign-key drop: `nullOnDelete` would clear the column here, and the answer
+     * would read as one that never answered anything.
      */
     public function test_deleting_the_answered_message_leaves_the_reference_behind_and_it_reads_as_deleted(): void
     {
@@ -158,7 +141,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.0.inReplyTo', ['deleted' => true]);
     }
 
-    /** Nothing else may produce a dangling reference, and the schema is what holds that. */
     public function test_the_column_carries_no_foreign_key_and_the_conversation_index_survived_the_rebuild(): void
     {
         $keys = collect(Schema::getForeignKeys('group_messages'))->pluck('columns');
@@ -172,10 +154,6 @@ class TalkReplyTest extends TalkTestCase
         $this->assertContains(['group_id', 'created_at', 'id'], $indexes->all());
     }
 
-    /**
-     * An id from another conversation reads as deleted rather than reaching across: the parent lookup
-     * is bound to the group, so nothing about a foreign room can be read off a reply.
-     */
     public function test_a_reference_into_another_group_reads_as_deleted(): void
     {
         $group = $this->group();
@@ -189,7 +167,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertDontSee('a secret');
     }
 
-    /** The excerpt is the line every list previews a message by, so a body cannot grow the header. */
     public function test_the_excerpt_flattens_a_multi_line_body_and_keeps_a_body_of_zero(): void
     {
         $group = $this->group();
@@ -204,11 +181,7 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.3.inReplyTo.excerpt', '0');
     }
 
-    /**
-     * The excerpt is bounded, not only flattened: a wall of text cannot grow the header. The bound is
-     * ChatPreview's, shared with every other list — pinned here so a change to it is noticed on the
-     * reply header too.
-     */
+    /** The bound is `ChatPreview`'s, pinned here so a change to it is noticed on the reply header too. */
     public function test_a_long_body_is_bounded_to_the_shared_preview_length(): void
     {
         $group = $this->group();
@@ -235,7 +208,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.1.inReplyTo.thumbnailUrl', $file->thumbnailUrl(120, 120, square: true));
     }
 
-    /** The same absence the message's own byline reads as: there is no account left to name. */
     public function test_a_parent_whose_author_has_withdrawn_reads_as_no_author(): void
     {
         $group = $this->group();
@@ -249,10 +221,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.1.inReplyTo.author', null);
     }
 
-    /**
-     * One level, always. An answer describes what it answers; whatever that message answered in turn
-     * is a place in the conversation, reachable by its cursor rather than by nesting.
-     */
     public function test_an_answer_to_an_answer_describes_only_its_own_parent(): void
     {
         $group = $this->group();
@@ -268,7 +236,6 @@ class TalkReplyTest extends TalkTestCase
         $this->assertSame(['deleted', 'id', 'cursor', 'author', 'excerpt', 'thumbnailUrl'], array_keys($reference));
     }
 
-    /** The cursor is the parent's own position, which is what a jump to it is asked for with. */
     public function test_the_reference_carries_the_cursor_the_page_around_it_is_read_with(): void
     {
         $group = $this->group();
@@ -285,10 +252,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('messages.0.id', $question->getKey());
     }
 
-    /**
-     * A touched row replaces the client's whole row, so it has to arrive with everything a page's row
-     * carries — otherwise a reply loses its header the moment somebody reacts to it.
-     */
     public function test_a_row_re_serialized_for_a_reaction_still_carries_its_reference(): void
     {
         $group = $this->group();
@@ -309,7 +272,6 @@ class TalkReplyTest extends TalkTestCase
             ->assertJsonPath('touched.0.inReplyTo.id', $question->getKey());
     }
 
-    /** The rendered page answers with the same shape the JSON reads do. */
     public function test_the_rendered_page_ships_the_reference(): void
     {
         $group = $this->group();
@@ -325,7 +287,6 @@ class TalkReplyTest extends TalkTestCase
                 ->where('page.messages.1.inReplyTo.excerpt', 'the question'));
     }
 
-    /** The parents of a page are one batched read, so the cost is per page rather than per reply. */
     public function test_a_page_costs_the_same_whether_it_holds_one_reply_or_ten(): void
     {
         $this->assertSame(

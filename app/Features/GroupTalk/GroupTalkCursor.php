@@ -8,14 +8,8 @@ use DateTimeInterface;
 use Throwable;
 
 /**
- * A position in a group's talk: the (created_at, id) tuple that orders it. Serialized as one opaque
- * `{iso8601}|{id}` string so the client only ever echoes a cursor the server handed it, and a page
- * boundary keeps working after the message it was taken from is deleted (the tuple is a position,
- * not a row reference).
- *
- * This is pagination only. The unread read cursor is a different thing with a different rule — the
- * client names a message id there and the server resolves the tuple itself — because that one
- * decides what counts as read.
+ * The pagination position, not the unread read cursor: this one is echoed back by the client and
+ * decides only which page is read.
  */
 final readonly class GroupTalkCursor
 {
@@ -26,7 +20,6 @@ final readonly class GroupTalkCursor
         return new self(CarbonImmutable::instance($message->created_at), $message->getKey());
     }
 
-    /** Parse a cursor the client echoed back, or null when it is absent or malformed. */
     public static function tryParse(?string $value): ?self
     {
         if ($value === null || ! str_contains($value, '|')) {

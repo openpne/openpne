@@ -6,7 +6,6 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
-/** Per-group quiet. Like the cursor, it lives on the membership row, so only a member holds one. */
 class TalkMuteTest extends TalkTestCase
 {
     private function isMuted(int $groupId, int $memberId): bool
@@ -28,7 +27,6 @@ class TalkMuteTest extends TalkTestCase
         $this->assertFalse($this->isMuted($group->getKey(), $member->getKey()));
     }
 
-    /** Explicit state, not a flip: two taps that race land on the same answer. */
     public function test_muting_twice_is_idempotent(): void
     {
         $group = $this->group();
@@ -79,7 +77,6 @@ class TalkMuteTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('isMember', false)->where('isMuted', false));
     }
 
-    /** Leaving takes the mute with the membership, so rejoining starts audible. */
     public function test_leaving_clears_the_mute(): void
     {
         $group = $this->group();

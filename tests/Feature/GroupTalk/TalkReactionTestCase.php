@@ -9,7 +9,6 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 
-/** Shared setup for the reaction suites: a message to react to, and the two writes over HTTP. */
 abstract class TalkReactionTestCase extends TalkTestCase
 {
     /** An emoji the site offers, by position — the vocabulary's size is never written down here. */
@@ -42,7 +41,6 @@ abstract class TalkReactionTestCase extends TalkTestCase
         );
     }
 
-    /** The group's reaction high-water mark. */
     protected function seq(Group $group): int
     {
         return (int) DB::table('groups')->where('id', $group->getKey())->value('talk_reaction_seq');
