@@ -9,9 +9,8 @@ use App\Notifications\Friend\FriendRequestedNotification;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The feed row for a %friend% request, spent by answering it — one requester's row, not the
- * requests page's worth, since the other requests are still waiting. The Classic notification
- * center answers inline and retires its own row; this gives the `/friend/*` forms the same meaning.
+ * Answering one requester spends that requester's rows only; the answerer's other pending requests
+ * are still waiting.
  */
 class FriendRequestNotificationRows
 {

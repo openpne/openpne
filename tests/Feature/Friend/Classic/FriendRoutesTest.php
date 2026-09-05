@@ -70,8 +70,6 @@ class FriendRoutesTest extends TestCase
 
         $first = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}");
         $first->assertOk();
-        // Without withQueryString, "Next" would drop ?id= and page 2 would silently
-        // become the viewer's own list.
         $first->assertSee('id='.$bob->getKey().'&amp;page=2', false);
 
         // Page 2 still shows Bob's 21-friend list (the viewer's own list has none).
@@ -260,11 +258,6 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Bob');
     }
 
-    /**
-     * OpenPNE 3's executeUnlink answers a member you cannot unlink with a notice on the manage
-     * page, never an error page — a vanished member included. Self and empty ids go home, and a
-     * non-numeric id is the one shape its route never matched.
-     */
     public function test_unlink_answers_who_it_cannot_unlink_with_a_notice_not_a_404(): void
     {
         $alice = Member::factory()->create();

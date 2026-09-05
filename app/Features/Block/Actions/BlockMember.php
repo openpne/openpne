@@ -40,7 +40,6 @@ class BlockMember
         ViewerRelations::flush();
     }
 
-    /** Blocking removes any friendship and cancels pending requests in both directions. */
     private function severFriendGraph(Member $blocker, Member $target): void
     {
         $aId = $blocker->getKey();

@@ -15,12 +15,9 @@ class ProfileTest extends TestCase
 
     public function test_is_multiple_select_is_checkbox_or_custom_date(): void
     {
-        // checkbox is always multi-select.
         $this->assertTrue($this->profile('hobbies', 'checkbox')->isMultipleSelect());
-        // A custom (non-preset) date is multi-select (year/month/day); preset date is not.
         $this->assertTrue($this->profile('anniversary', 'date')->isMultipleSelect());
         $this->assertFalse($this->profile('op_preset_birthday', 'date')->isMultipleSelect());
-        // Single-value types are not.
         $this->assertFalse($this->profile('op_preset_sex', 'select')->isMultipleSelect());
         $this->assertFalse($this->profile('bio', 'textarea')->isMultipleSelect());
     }

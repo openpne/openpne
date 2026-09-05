@@ -16,11 +16,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Member invitation. A logged-in member enters an address; this issues a
- * member-invite registration token (recording the inviter for the auto-friend on completion) and
- * mails the link. The mode gate lives in EnsureMemberInviteAllowed; the inviter is told whether the
- * address was already taken, which is fine — the caller is authenticated, so this is not the
- * enumeration leak that the anonymous self-service entry must avoid.
+ * The mode gate is EnsureMemberInviteAllowed, not this controller. Telling an authenticated inviter
+ * that the address is taken is not the enumeration leak the anonymous entry must avoid.
  */
 class InviteController extends Controller
 {

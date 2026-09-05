@@ -12,11 +12,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The per-value audience picker on a profile field: which tiers it offers, and which value it
- * pre-selects for a member. The edit form re-posts both on every save, so an unoffered pre-select
- * is how a stored audience gets rewritten.
- */
 class ProfileFieldVisibilityTest extends TestCase
 {
     use RefreshDatabase;

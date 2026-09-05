@@ -4,11 +4,7 @@ namespace App\Features\Friend\Queries;
 
 use App\Models\Member;
 
-/**
- * How many friend requests are awaiting this member's response (the received direction of
- * friend_requests). Drives the nav badge and the dashboard notice; the count only falls when the
- * member accepts or rejects, matching OpenPNE 3's "caution stays until you act on it" behavior.
- */
+/** Nothing ages the count out: it falls only when the request row goes, as OpenPNE 3's caution did. */
 class CountReceivedFriendRequests
 {
     public function __invoke(Member $viewer): int

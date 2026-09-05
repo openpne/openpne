@@ -49,8 +49,6 @@ class RejectMemberLoginTest extends TestCase
 
     public function test_revokes_live_sessions_and_rotates_the_remember_token(): void
     {
-        // The freeze flag only blocks the NEXT login; the action must also end what already
-        // exists — server-side sessions and remember-me cookies — immediately.
         config(['session.driver' => 'database']);
         $member = Member::factory()->create(['is_login_rejected' => false]);
         $member->forceFill(['remember_token' => Str::random(60)])->save();
@@ -69,8 +67,6 @@ class RejectMemberLoginTest extends TestCase
 
     public function test_deletes_every_personal_access_token(): void
     {
-        // A ban ends every foothold, and an API token is one the session purge cannot reach — so
-        // all of them go, whatever name they were minted under.
         $member = Member::factory()->create(['is_login_rejected' => false]);
         $member->createToken('mcp', ['mcp:read']);
         $member->createToken('other');
@@ -96,8 +92,7 @@ class RejectMemberLoginTest extends TestCase
 
     public function test_primary_member_cannot_have_login_rejected_and_leaves_no_side_effects(): void
     {
-        // Unreachable through the UI (the action is hidden and halted for id 1); the guard is the
-        // last line of defense, so it is asserted only here.
+        // Unreachable through the UI, which hides the action for id 1.
         config(['session.driver' => 'database']);
         $primary = Member::findOrFail(1);
         $primary->forceFill(['is_login_rejected' => false, 'remember_token' => Str::random(60)])->save();

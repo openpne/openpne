@@ -6,12 +6,8 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Clears a member's avatar, returning them to no profile image.
- *
- * The link row is dropped inside the transaction (so a failure rolls back cleanly), and
- * the File's bytes — irreversible on a disk backend — are purged only after commit. A row lock on the member serializes against a concurrent
- * replace. The row is read through a query (not the cached relation, which may be stale) so
- * its File is never missed. No-op when the member has no avatar.
+ * The row lock serializes against a concurrent replace. The replaced row is read by query, not
+ * through the cached relation, so its File is never missed.
  */
 class RemoveAvatar
 {
@@ -26,6 +22,7 @@ class RemoveAvatar
             return $replaced;
         });
 
+        // Bytes are irreversible on a disk backend; purge only now the delete is committed.
         $replaced?->file?->delete();
     }
 }

@@ -64,7 +64,6 @@ class ClassicProfileTimelineGadgetTest extends TestCase
         $viewer = Member::factory()->create();
         $this->makeGadget();
 
-        // No rows and no post link would leave an empty frame, so the whole box is dropped.
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertDontSee('profileTimeline', false);

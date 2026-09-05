@@ -9,19 +9,7 @@ use App\Services\PresetProfileService;
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
 
-/**
- * The owner's age in whole years if the viewer may see it, else null.
- *
- * OpenPNE 3 derives age from the op_preset_birthday field but gates it with a *separate*
- * age_public_flag (App\Support\PreferenceKey::AgeVisibility), independent of that field's own
- * visibility. The birth year is therefore exposed only here — the birthday field itself renders
- * month/day only (MemberProfile::displayValue).
- *
- * Web-public (Open) age is shown only while the SNS allows web-public age (AgeVisibility::allowsWebPublic,
- * OpenPNE 3 is_allow_web_public_flag_age); disabled, an Open age is shown to nobody — matching
- * OpenPNE 3's getAge(), which gates flag=4 on that config for every viewer. The owner always sees
- * their own age (self → Private clearance), an intentional divergence from OpenPNE 3's getAge(true).
- */
+/** See docs/internals/member-profile.md, "Age (derived from the birthday)". */
 class VisibleAge
 {
     public function __construct(private PresetProfileService $presets) {}
@@ -30,18 +18,13 @@ class VisibleAge
     {
         $ageVisibility = $owner->preference(PreferenceKey::AgeVisibility);
 
-        // A web-public (Open) age conveys visibility only while the SNS allows web-public age; when
-        // disabled it is shown to nobody (not even members), mirroring OpenPNE 3's getAge() gating
-        // flag=4 on is_allow_web_public_flag_age.
         if ($ageVisibility === Visibility::Open && ! AgeVisibility::allowsWebPublic()) {
             return null;
         }
 
         if ($viewer === null) {
-            $clearance = Visibility::Open; // a guest only ever reaches an Open age (gated above)
+            $clearance = Visibility::Open;
         } else {
-            // A blocked viewer must not see the owner's age (defense in depth; the profile
-            // page also 404s at the controller).
             if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
                 return null;
             }

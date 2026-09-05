@@ -50,8 +50,6 @@ class AgeVisibilityTest extends TestCase
 
     public function test_default_for_clamps_a_stored_web_public_to_members_when_disabled(): void
     {
-        // With web-public off the setter does not offer Open (it conveys no visibility then), so a
-        // stored Open pre-selects as Members.
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
 
@@ -94,8 +92,6 @@ class AgeVisibilityTest extends TestCase
 
     public function test_a_stored_friends_survives_the_unit_going_off(): void
     {
-        // The gate is the live audience of an age the member already has, so clamping it to Members
-        // here would widen it on the next profile save (the form re-posts what it shows).
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Friends);

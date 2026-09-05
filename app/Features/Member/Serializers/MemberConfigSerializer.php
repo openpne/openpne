@@ -13,11 +13,8 @@ use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 
 /**
- * Modern (Inertia) props for the member config page. Mirrors the Classic Blade sections: diary
- * default audience, language, and the binary Classic/Modern surface choice (preselected to the
- * member's current surface), plus a row into the layout picker, which has no Classic twin — a look
- * only changes how Modern renders. Visibility/Surface/Look labels and descriptions are translation
- * keys (run through t() on the client); locale labels are autonyms rendered verbatim.
+ * Labels and descriptions are translation keys, run through `t()` on the client; locale labels are
+ * autonyms rendered verbatim.
  */
 class MemberConfigSerializer
 {
@@ -52,16 +49,14 @@ class MemberConfigSerializer
             ];
         }
 
-        // Offered while the site offers AI accounts — and, because the setting is checked at creation
-        // only, to anyone who already owns one: switching it off must not lock an owner out of the
-        // page where they empty and delete what they have.
+        // The setting is checked at creation only, so switching it off must not lock an existing owner
+        // out of the page.
         if ($aiSettings->enabled() || $member->aiAccounts()->exists()) {
             $form['ai'] = ['count' => $member->aiAccounts()->count()];
         }
 
-        // The Classic/Modern picker is meaningful only where Classic is served; under modern_only it is
-        // omitted so a member is never offered a surface they cannot get. The client hides the section
-        // when this key is absent.
+        // Omitted under `modern_only`, since a member is never offered a surface they cannot get; the
+        // client hides the section when the key is absent.
         if (SurfaceResolver::classicAvailable()) {
             $form['surface'] = [
                 'value' => $currentSurface->value,
@@ -72,13 +67,11 @@ class MemberConfigSerializer
             ];
         }
 
-        // Offered only where there is a choice to make: with one selectable look the picker would be
-        // a single card the member cannot move off. The client hides the row when the key is absent.
+        // With one selectable look there is nothing to choose; the client hides the row when the key
+        // is absent.
         $selectable = LookResolver::selectable();
         if (count($selectable) >= 2) {
             $form['look'] = [
-                // Labels only — the row states the current choice and links out; the picker page
-                // carries the options and what separates them.
                 'current' => self::chosenLook($member, $selectable)?->label(),
                 'default' => LookResolver::siteDefault()->label(),
             ];
@@ -87,11 +80,7 @@ class MemberConfigSerializer
         return $form;
     }
 
-    /**
-     * The layout picker's own props: what may be chosen, and what is chosen now.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public static function lookForm(Member $member): array
     {
         $selectable = LookResolver::selectable();
@@ -112,10 +101,8 @@ class MemberConfigSerializer
     }
 
     /**
-     * The stored choice, not the resolved look: "follow the site default" is a choice of its own,
-     * and an undecided member must read as following rather than as having picked whatever they are
-     * currently shown. Filtered through the same set as the resolver, so a stored look the site no
-     * longer offers reads as following too — not as a card that is not there.
+     * The stored choice, not the resolved look: an undecided member reads as following the site
+     * default. A stored look the site no longer offers reads as following too.
      *
      * @param  list<Look>  $selectable
      */

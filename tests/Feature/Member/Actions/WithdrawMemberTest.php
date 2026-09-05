@@ -75,8 +75,8 @@ class WithdrawMemberTest extends TestCase
 
     public function test_deletes_personal_access_tokens_the_cascade_cannot_reach(): void
     {
-        // `tokenable` is polymorphic, so no foreign key sweeps these. Left behind they would
-        // outlive the member and follow a reused member id onto whoever inherits it.
+        // `tokenable` is polymorphic, so no foreign key sweeps these and a reused member id would
+        // inherit them.
         $member = Member::factory()->create();
         $member->createToken('mcp', ['mcp:read']);
         $bystander = Member::factory()->create();
@@ -231,9 +231,7 @@ class WithdrawMemberTest extends TestCase
 
     public function test_withdrawing_a_pending_nominee_clears_pending_and_removes_every_membership(): void
     {
-        // The withdrawing member is a plain member of two groups and the admin-transfer nominee of
-        // one. All memberships go through the locked leave path (not the FK cascade), and the dangling
-        // pending seat is cleared under the same lock.
+        // The withdrawing member is a plain member of two groups and the admin-transfer nominee of one.
         $leaving = Member::factory()->create();
 
         $nominated = Group::factory()->create();
@@ -257,10 +255,8 @@ class WithdrawMemberTest extends TestCase
 
     public function test_a_membership_racing_in_mid_withdrawal_cannot_strand_a_community_admin_less(): void
     {
-        // Simulate the mid-withdrawal window without real concurrency: a one-shot listener on the diary
-        // purge phase makes the withdrawing member B join community C, get nominated by admin A, and
-        // accept — becoming C's sole admin after the initial community drain has already run. The
-        // verify+delete loop must re-drain that membership so C keeps exactly one admin (A), not zero.
+        // Without real concurrency: a one-shot listener on the diary purge phase makes B join C and
+        // accept its sole-admin seat after the initial drain has run.
         $b = Member::factory()->create();
         Diary::factory()->create(['member_id' => $b->getKey()]);
 

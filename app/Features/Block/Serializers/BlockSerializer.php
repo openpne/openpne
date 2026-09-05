@@ -6,11 +6,6 @@ use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * Modern surface shapes for the Block feature. Member models go through here
- * so the columns crossing the network stay explicit rather than leaking via
- * Eloquent `toArray()`.
- */
 class BlockSerializer
 {
     /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */

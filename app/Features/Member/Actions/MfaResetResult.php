@@ -5,16 +5,9 @@ namespace App\Features\Member\Actions;
 use App\Models\Member;
 
 /**
- * The explicit outcome of {@see ConsumeMfaReset}: the action owns every state transition, so the
- * controller branches on this instead of on a nullable Member (which conflated "dead link" with
- * "already off"). Exactly one of the three named constructors is returned:
- *
- *  - reset(Member)  the live factor was cleared; the member is exposed for the log/alert/session teardown.
- *  - alreadyOff()   the factor was no longer live; the spent link was burned, nothing to disable.
- *  - invalid()      the link was gone, replaced, expired, or the member withdrawn — a dead link.
- *
- * A wrong password is NOT an outcome here: {@see ConsumeMfaReset} throws ValidationException so the whole
- * transaction rolls back with the token intact.
+ * Three outcomes, so the controller does not branch on a nullable Member, which conflated a dead link
+ * with an already-off factor. A wrong password is not among them: {@see ConsumeMfaReset} throws and
+ * the token survives.
  */
 final class MfaResetResult
 {

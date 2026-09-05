@@ -10,18 +10,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
 
-/**
- * The four headline counts on a member's profile digest, each scoped so the number never exceeds
- * what the viewer can actually open:
- * - diaries/activity reuse the shared visibility scopes, so they stay in lockstep with their
- *   previews (RecentMemberDiaries / MemberTimeline) instead of duplicating the clearance SQL;
- * - friends/groups carry no per-item visibility filter, matching ListFriends /
- *   ListMemberGroups. The owner→viewer block already 404s the whole page upstream.
- *
- * A count whose unit is switched off is zero and unqueried: the tile links into that unit, and this
- * query spans four of them, so each constraint lives here rather than at the call site
- * (feature-modules.md invariant 2).
- */
+/** Diaries and activity reuse their previews' visibility scopes, so a count never exceeds what the viewer can open. */
 class ProfileStats
 {
     /** @return array{diaries: int, activity: int, friends: int, groups: int} */

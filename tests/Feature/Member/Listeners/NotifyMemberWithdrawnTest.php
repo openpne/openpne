@@ -56,7 +56,6 @@ class NotifyMemberWithdrawnTest extends TestCase
         // A login-impossible member upgraded from OpenPNE 3 has no address (captured as '').
         app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Gone', '', 'ja', wasAiAccount: false));
 
-        // Only the admin notice — the empty-address receipt is skipped.
         Notification::assertCount(1);
         Notification::assertSentOnDemand(
             WithdrawalAdminNotification::class,
@@ -69,8 +68,6 @@ class NotifyMemberWithdrawnTest extends TestCase
         Notification::fake();
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
 
-        // No address to receipt, and the operator notice reports the membership moving — which an
-        // owner retiring their own AI account is not.
         app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Helper', '', 'ja', wasAiAccount: true));
 
         Notification::assertNothingSent();
@@ -96,7 +93,6 @@ class NotifyMemberWithdrawnTest extends TestCase
 
         app(WithdrawMember::class)($member);
 
-        // Scalars captured pre-delete, and the row is already gone when the event carries them.
         $this->assertModelMissing($member);
         Event::assertDispatched(
             MemberWithdrawn::class,

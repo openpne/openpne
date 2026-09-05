@@ -13,25 +13,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Member search over the configurable profile fields.
- *
- * Each field filter is an EXISTS subquery on member_profiles, AND-connected. Matching is per
- * form_type and follows the storage model: a preset select/radio matches the choice key in
- * `value`, a custom one matches `profile_option_id`; a checkbox matches any chosen option; a
- * custom date matches a range on `value`; country and region match `value`.
- *
- * The preset birthday is searched by month/day only (year stripped, like its display); the birth
- * year is exposed solely as the derived age, a separate criterion gated by AgeVisibility (not the
- * birthday field) — so a date range cannot infer the hidden age (mirrors VisibleAge).
- *
- * Privacy: a match only counts when the value is visible to the viewer — its effective
- * visibility (per-value flag or the field default) must be within the viewer's clearance for
- * that owner (self → all, friend → up to Friends, otherwise up to Members), so search cannot
- * probe a value the viewer could not otherwise see. Owners who block the viewer are excluded
- * entirely, and a forcibly-private field (default Private, not member-editable) is dropped from
- * the form because no one else can match on it.
- */
+/** See docs/internals/member-profile.md, "Member search". */
 class SearchMembers
 {
     public const PER_PAGE = 20;
@@ -57,17 +39,12 @@ class SearchMembers
             ->get();
     }
 
-    /** The registered profiles.name of the preset birthday field. */
     public function birthdayProfileName(): string
     {
         return $this->presets->nameForKey('birthday')['name'];
     }
 
-    /**
-     * Whether the age criterion is offered: the birthday field (the age's source) must exist and be
-     * admin-marked searchable — in OP3 the birthday's search UI was the age search, so is_disp_search
-     * governs both. AgeVisibility remains the per-member privacy gate on matches.
-     */
+    /** In OpenPNE 3 the birthday's search UI was the age search, so `is_disp_search` governs both. */
     public function ageSearchable(): bool
     {
         return (bool) $this->birthdayProfile()?->is_disp_search;
@@ -109,7 +86,6 @@ class SearchMembers
 
         $this->applyAgeFilter($query, $viewer, $ageRange);
 
-        // Hide owners who block the viewer (owner→viewer block).
         $query->whereNotExists(fn ($q) => $q->select(DB::raw(1))
             ->from('member_blocks')
             ->whereColumn('member_blocks.blocker_id', 'members.id')
@@ -135,7 +111,6 @@ class SearchMembers
         });
     }
 
-    /** The match closure for this field's input, or null when the field has no criterion. */
     private function matchFor(Profile $profile, mixed $value, mixed $range): ?callable
     {
         switch ($profile->form_type) {
@@ -179,9 +154,8 @@ class SearchMembers
             return null;
         }
 
-        // A preset date (birthday) lives in value_datetime (stored at 00:00:00); a custom date is
-        // the Y-m-d string in value. For value_datetime, stretch the upper bound to end-of-day so
-        // a date-only "to" still includes that day under both MySQL and SQLite string comparison.
+        // A preset date is stored at 00:00:00 in `value_datetime`, so a date-only upper bound is
+        // stretched to end-of-day for both MySQL and SQLite.
         $column = $profile->isPreset() ? 'member_profiles.value_datetime' : 'member_profiles.value';
         $toBound = ($profile->isPreset() && $to !== null) ? $to.' 23:59:59' : $to;
 
@@ -195,11 +169,6 @@ class SearchMembers
         };
     }
 
-    /**
-     * Constrain the matched value to one the viewer may see. effVis (per-value flag, or the field
-     * default when the field is not member-editable) must be within the viewer's clearance for the
-     * owner row: self → Private(3), friend → Friends(2), otherwise Members(1) on the Visibility scale.
-     */
     private function applyVisibility(QueryBuilder $sub, Profile $profile, Member $viewer): void
     {
         $viewerId = $viewer->getKey();
@@ -219,7 +188,6 @@ class SearchMembers
             .'ELSE 1 END)';
     }
 
-    /** The birthday field, matched on month/day only (year stripped, like its display) and gated by the field's visibility. */
     private function applyBirthdayFilter(Builder $query, Member $viewer, Profile $profile, mixed $monthDay): void
     {
         $match = $this->monthDayMatch($monthDay);
@@ -265,7 +233,6 @@ class SearchMembers
         };
     }
 
-    /** A 'MM-DD' bound from month/day inputs, or null when absent or not a real date (e.g. 2/31). */
     private function monthDayBound(mixed $month, mixed $day): ?string
     {
         $m = is_numeric($month) ? (int) $month : 0;
@@ -275,7 +242,6 @@ class SearchMembers
         return ($m >= 1 && $d >= 1 && checkdate($m, $d, 2000)) ? sprintf('%02d-%02d', $m, $d) : null;
     }
 
-    /** SQL extracting 'MM-DD' from the birthday value_datetime (the only cross-DB-divergent expression here). */
     private function monthDayExpr(): string
     {
         return DB::connection()->getDriverName() === 'sqlite'
@@ -284,9 +250,8 @@ class SearchMembers
     }
 
     /**
-     * Filter to members whose derived age is in [min, max], gated by AgeVisibility (not the birthday
-     * field). Age comes from the birthday; an absent min is treated as 0 so the upper bound is always
-     * today, excluding future birthdays (negative ages), matching VisibleAge.
+     * An absent min is treated as 0, so the upper bound is always today and a future birthday never
+     * matches, as in VisibleAge.
      *
      * @param  array{min?: mixed, max?: mixed}|null  $ageRange
      */
@@ -330,11 +295,7 @@ class SearchMembers
         $this->applyAgeVisibility($query, $viewer);
     }
 
-    /**
-     * Constrain to members whose age is visible to the viewer: the stored AgeVisibility (absent or
-     * malformed → Private, fail-closed) within the viewer's clearance, and a web-public (Open) age
-     * only when the SNS allows it — the same gate as VisibleAge, which must stay in agreement.
-     */
+    /** The same gate as VisibleAge, which this must stay in agreement with. */
     private function applyAgeVisibility(Builder $query, Member $viewer): void
     {
         $grammar = DB::connection()->getQueryGrammar();

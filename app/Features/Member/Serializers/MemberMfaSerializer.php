@@ -8,15 +8,13 @@ use Illuminate\Contracts\Session\Session;
 use Laravel\Fortify\Fortify;
 
 /**
- * Two-factor state for the member settings UI, shared by the Classic category page and the
- * Modern detail page. Secret material is scoped to the state that needs it: the otpauth QR and
- * setup key appear only while set-up is pending (inert until confirmed), and recovery codes
- * appear only on the request right after they were (re)generated — flagged by a session flash,
- * read from the member row, never stored in the session.
+ * Secret material is scoped to the state that needs it: the QR and setup key only while set-up is
+ * pending, the recovery codes only on the request after they were generated. That request is flagged
+ * by a session flash; the codes are read from the member row, never stored in the session.
  */
 class MemberMfaSerializer
 {
-    /** Flash key set by the controller right after confirm/regenerate mints fresh recovery codes. */
+    /** Flashed by the controller on the request that minted fresh recovery codes. */
     public const SHOW_RECOVERY_CODES = 'mfa.show_recovery_codes';
 
     /** @return array<string, mixed> */

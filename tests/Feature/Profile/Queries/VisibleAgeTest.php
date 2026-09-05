@@ -49,8 +49,6 @@ class VisibleAgeTest extends TestCase
 
     public function test_an_open_age_is_hidden_from_everyone_while_web_public_is_disabled(): void
     {
-        // Web-public age is off by default: an Open age conveys no visibility, not even to members,
-        // matching OpenPNE 3's getAge() gating flag=4 on is_allow_web_public_flag_age.
         $owner = Member::factory()->create();
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
         $this->giveBirthday($owner, '1990-06-23');
@@ -72,7 +70,6 @@ class VisibleAgeTest extends TestCase
 
     public function test_a_members_age_is_never_shown_to_a_guest_even_with_web_public_on(): void
     {
-        // Web-public only ever exposes an Open age; a Members age stays members-only.
         $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
         $owner = Member::factory()->create();
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);

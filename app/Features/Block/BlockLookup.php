@@ -7,14 +7,9 @@ use App\Support\ViewerRelations;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Visibility primitive owned by Block, consumed cross-feature. Direction
- * matters: a block is one-directional (blocker→blocked), so callers pick the
- * method that matches their gate.
- */
+/** See docs/internals/feature-modules.md, "Authorization and visibility". */
 class BlockLookup
 {
-    /** Bidirectional interaction gate: is either party blocking the other? */
     public static function hasAnyBlockBetween(Member $a, Member $b): bool
     {
         $aId = $a->getKey();
@@ -30,13 +25,6 @@ class BlockLookup
             ->exists();
     }
 
-    /**
-     * One-directional visibility: does the owner block this viewer?
-     *
-     * A caller drawing a whole page reads its owners in one go first, and this pair is then already
-     * answered (ViewerRelations). Nothing else changes: an unread pair asks the same question of the
-     * same table it always has.
-     */
     public static function ownerBlocksViewer(Member $owner, Member $viewer): bool
     {
         $known = app(ViewerRelations::class)->ownerBlocksViewer($owner, $viewer);
@@ -52,8 +40,8 @@ class BlockLookup
     }
 
     /**
-     * Set form of ownerBlocksViewer() for multi-owner feeds: drop rows whose owner blocks
-     * the viewer, so a feed never lists a diary whose show page would 404 for this viewer.
+     * Must answer as {@see ownerBlocksViewer()} does, or a feed lists a row whose own page 404s for
+     * this viewer.
      *
      * @param  string  $ownerColumn  qualified owner-id column on the query's table (e.g. `diaries.member_id`)
      */
@@ -70,8 +58,7 @@ class BlockLookup
     }
 
     /**
-     * Set form of hasAnyBlockBetween() for a broadcast audience: drop rows whose member has a block in
-     * either direction with $other, so a fan-out never reaches a blocked pair.
+     * Must answer as {@see hasAnyBlockBetween()} does, or a fan-out reaches a blocked pair.
      *
      * @param  string  $memberColumn  qualified member-id column on the query's table (e.g. `members.id`)
      */

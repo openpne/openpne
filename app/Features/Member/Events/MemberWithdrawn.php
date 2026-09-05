@@ -6,9 +6,8 @@ use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * A member was withdrawn (permanently deleted). The payload is scalar, captured before the delete: the
- * withdrawal mails address the now-gone member and the admin, and a serialized Member would be a
- * queued reference to a row that no longer exists. Dispatched after the delete commits.
+ * The payload is scalar and captured before the delete: a serialized Member would be a queued
+ * reference to a row that no longer exists.
  */
 class MemberWithdrawn implements ShouldDispatchAfterCommit
 {
@@ -19,7 +18,6 @@ class MemberWithdrawn implements ShouldDispatchAfterCommit
         public readonly string $name,
         public readonly string $email,
         public readonly string $locale,
-        /** Whether the withdrawn member was an AI account; the operator notice is not about those. */
         public readonly bool $wasAiAccount,
     ) {}
 }

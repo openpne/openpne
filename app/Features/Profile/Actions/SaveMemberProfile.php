@@ -12,18 +12,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Persists a member's profile-edit submission. Only is_disp_config fields are written (extra
- * posted keys are ignored), so a crafted payload cannot set hidden fields. Each field's rows are
- * replaced wholesale, which uniformly handles empties (delete), single↔multi transitions, and a
- * checkbox's variable row set. Storage shape per form_type matches MemberProfileUpgrade so
- * migrated and freshly edited data are read back the same way:
- *   - checkbox          one row per chosen option (profile_option_id)
- *   - custom select/radio   profile_option_id
- *   - preset select/radio   the choice key in value
- *   - preset date           value_datetime; custom date  the Y-m-d string in value
- *   - input/textarea/country/region   value
- * Per-value visibility is stored only for member-editable fields; otherwise null (the read layer
- * falls back to the field default).
+ * Only `is_disp_config` fields are written, so a crafted payload cannot set a hidden field. Each
+ * field's rows are replaced wholesale, in the storage shape the upgrade writes
+ * (docs/internals/member-profile.md, "Storage model").
  */
 class SaveMemberProfile
 {
@@ -38,9 +29,7 @@ class SaveMemberProfile
     }
 
     /**
-     * Replace the member's stored values for the given profile fields from the submission. Shared
-     * by profile-edit (is_disp_config) and registration (is_disp_regist); the caller chooses the
-     * field set and is responsible for the surrounding transaction.
+     * The caller chooses the field set and owns the surrounding transaction.
      *
      * @param  Collection<int, Profile>  $profiles
      */

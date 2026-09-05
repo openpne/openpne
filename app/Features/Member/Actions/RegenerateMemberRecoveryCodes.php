@@ -9,10 +9,9 @@ use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 /**
- * Replace a member's unused recovery codes with a fresh set, gated by a current TOTP code. The
- * factor's live state is re-confirmed against the row locked FOR UPDATE: a parallel disable would
- * otherwise let this mint codes for a factor that no longer exists (orphans). No session revocation —
- * the TOTP factor itself is unchanged (admin parity).
+ * The live factor is re-confirmed against the locked row: a parallel disable would otherwise mint
+ * codes for a factor that no longer exists. Nothing is revoked, since the factor itself is unchanged
+ * (docs/internals/security.md, "Member two-factor authentication").
  */
 class RegenerateMemberRecoveryCodes
 {
@@ -34,9 +33,7 @@ class RegenerateMemberRecoveryCodes
 
             ($this->generate)($fresh);
 
-            // Invalidation contract: regenerating just proved current authenticator possession, so any
-            // outstanding admin-issued lost-factor reset link is moot — drop it. Member is locked
-            // above; the global Member → mfa_reset_requests order holds.
+            // Regenerating proves current authenticator possession, so a lost-factor reset link is moot.
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;

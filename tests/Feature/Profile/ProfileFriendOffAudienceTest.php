@@ -17,9 +17,8 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * Saving a profile while the friend unit is off. The form re-posts every field's audience and the
- * age gate on each save, so anything the picker stopped offering would be rewritten by a save that
- * had nothing to do with it — the regression this pins.
+ * The form re-posts every field's audience and the age gate on each save, so anything the picker
+ * stopped offering would be rewritten by a save that had nothing to do with it.
  */
 class ProfileFriendOffAudienceTest extends TestCase
 {
@@ -164,11 +163,6 @@ class ProfileFriendOffAudienceTest extends TestCase
         ]);
     }
 
-    /**
-     * The visibility select is required, not nullable: an omitted key would store null and the read
-     * would fall back to the field's admin default — an audience change the offered list never
-     * approved (a default of Friends smuggled in, or a stored Friends widened to the default).
-     */
     public function test_omitting_the_audience_key_is_rejected_rather_than_read_as_the_default(): void
     {
         $member = Member::factory()->create();
@@ -191,8 +185,6 @@ class ProfileFriendOffAudienceTest extends TestCase
         $profile = Profile::factory()->create(['form_type' => 'input', 'default_visibility' => Visibility::Friends]);
         $token = $this->issueToken();
 
-        // Without the select's value the stored null would read as the admin default — Friends,
-        // which the registration form no longer offers.
         $this->post("/register/{$token}", [
             'name' => 'Newcomer',
             'password' => 'sufficiently-long-pw',
@@ -203,11 +195,6 @@ class ProfileFriendOffAudienceTest extends TestCase
         $this->assertDatabaseMissing('member_profiles', ['profile_id' => $profile->getKey()]);
     }
 
-    /**
-     * A non-editable field's audience is the administrator's forced policy, not a member pick, so
-     * the picker doctrine does not touch it: a forced default of Friends stays effective while the
-     * unit is off (reinterpreting it as Members would itself widen an audience nobody chose).
-     */
     public function test_a_forced_admin_default_of_friends_stays_effective(): void
     {
         $owner = Member::factory()->create();
@@ -265,7 +252,6 @@ class ProfileFriendOffAudienceTest extends TestCase
         ]);
     }
 
-    /** Issue a live pending registration and return the raw token its link would carry. */
     private function issueToken(): string
     {
         $raw = Str::random(40);

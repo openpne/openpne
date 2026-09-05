@@ -6,9 +6,8 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pair lock over `friend_requests`, owned by Friend (the table owner) but
- * consumed cross-feature: Block mutations touch the same pair, so they acquire
- * this lock to stay compatible with friend-request concurrency.
+ * The pair is locked as (low id, high id) whichever way the caller passes it, so two writers never
+ * wait on each other in opposite order.
  */
 class FriendRequestLock
 {

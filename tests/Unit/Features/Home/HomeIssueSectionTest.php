@@ -96,10 +96,8 @@ class HomeIssueSectionTest extends TestCase
 
     public function test_every_alias_a_section_holds_is_in_the_morph_map(): void
     {
-        // The ledger stores these strings and the page resolves them back through the morph map, so
-        // an alias spelled only here would write rows nothing can read. Walked from the enum rather
-        // than from the provider above: an alias added to the map and to nothing else is exactly the
-        // case this has to catch.
+        // Walked from the enum, not the provider: an alias spelled only here would write ledger rows
+        // the morph map cannot resolve back.
         foreach (HomeIssueSection::cases() as $section) {
             foreach ($section->sourceTypes() as $alias) {
                 $this->assertNotNull(

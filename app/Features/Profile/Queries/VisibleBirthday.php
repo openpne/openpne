@@ -10,16 +10,8 @@ use App\Support\Visibility;
 use Carbon\CarbonInterface;
 
 /**
- * The owner's birthday (op_preset_birthday) if the viewer may see the field, else null.
- *
- * Gated only by the birthday field's own visibility — its per-value flag when the field is
- * per-value editable, else the field default — under the viewer's clearance, plus the owner→viewer
- * block. This is the same field-visibility resolution as App\Features\Profile\Queries\ShowProfile.
- *
- * Deliberately independent of the age gate (App\Features\Profile\Queries\VisibleAge /
- * App\Support\PreferenceKey::AgeVisibility): OpenPNE 3 exposes month/day from the birthday field
- * itself and the birth year only through the separately-gated age, so the birthday box reads the
- * field, not the age.
+ * Gated by the birthday field's own visibility, never by the age gate
+ * (docs/internals/member-profile.md, "Age (derived from the birthday)").
  */
 class VisibleBirthday
 {

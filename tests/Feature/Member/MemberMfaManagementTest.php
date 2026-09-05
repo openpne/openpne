@@ -13,13 +13,6 @@ use PragmaRX\Google2FA\Google2FA;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
-/**
- * Member two-factor management: one password re-auth per flow (enable opens a window that
- * covers confirm; disabling a live factor and regenerating codes re-auth every time; cancelling
- * a pending set-up never does). Confirm and live-factor disable revoke the member's other
- * sessions (a factor change is a credential change); regenerating codes and cancelling a
- * pending set-up revoke nothing. Recovery codes render exactly once.
- */
 class MemberMfaManagementTest extends TestCase
 {
     use CapturesSecurityLog;
@@ -100,9 +93,6 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_enable_is_rejected_while_a_setup_is_pending(): void
     {
-        // Enable never rotates an existing secret in place: a parallel enable racing a confirm
-        // could otherwise stamp two_factor_confirmed_at against a secret the member never
-        // scanned. Restarting is cancel (disable) first, then enable.
         $member = $this->memberWithPendingSetup();
         $secret = $member->two_factor_secret;
 
@@ -115,10 +105,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_classic_routes_the_password_error_to_the_form_that_was_submitted(): void
     {
-        // The enabled page has two password forms sharing the error key; the flashed _mfa_form
-        // marker routes the error into the form that was actually submitted. No
-        // assertSessionHasErrors between the POST and the GET: reading the session in the
-        // assertion ages the flash, which would blank the very render under test.
+        // No assertSessionHasErrors between the POST and the GET: reading the session ages the flash
+        // and would blank the render under test.
         $member = $this->memberWithTwoFactor();
 
         $this->actingAs($member)
@@ -138,8 +126,6 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_disabling_a_live_factor_lands_on_the_modern_settings_hub(): void
     {
-        // The detail page's disabled state is the set-up form again — it reads as "do it again",
-        // not "it is now off". The hub announces the change without scrolling.
         config(['openpne.surface_mode' => 'modern_default']);
         $member = $this->memberWithTwoFactor();
 
@@ -210,13 +196,11 @@ class MemberMfaManagementTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        // Disabled: the set-up form.
         $this->actingAs($member)->get('/member/config?category=mfa')
             ->assertOk()
             ->assertSee('id="member_config_mfa"', false)
             ->assertSee(route('member.config.mfa.enable'), false);
 
-        // Pending: QR data URI, setup key, confirm form.
         app(EnableTwoFactorAuthentication::class)($member, force: true);
         $this->actingAs($member->fresh())->get('/member/config?category=mfa')
             ->assertOk()
@@ -224,7 +208,6 @@ class MemberMfaManagementTest extends TestCase
             ->assertSee('name="code"', false)
             ->assertSee(route('member.config.mfa.confirm'), false);
 
-        // Enabled: regenerate + disable controls, count instead of codes (nothing was just minted).
         $member->fresh()->forceFill(['two_factor_confirmed_at' => now()])->save();
         $this->actingAs($member->fresh())->get('/member/config?category=mfa')
             ->assertOk()
@@ -294,7 +277,6 @@ class MemberMfaManagementTest extends TestCase
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
         $this->assertNotSame('old-remember-token', $fresh->remember_token);
 
-        // The fresh recovery codes render exactly once (flash), then fall back to the count.
         $this->get('/member/config?category=mfa')->assertSee($fresh->recoveryCodes()[0], false);
         $this->get('/member/config?category=mfa')->assertDontSee($fresh->recoveryCodes()[0], false);
     }
@@ -308,7 +290,6 @@ class MemberMfaManagementTest extends TestCase
             ->post('/member/config/mfa/confirm', ['current_password' => 'password', 'code' => 'not-a-code'])
             ->assertSessionHasErrors('code');
 
-        // Default bag (not Fortify's named bag), still pending, and nothing was revoked.
         $this->assertNull($member->fresh()->two_factor_confirmed_at);
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
     }
@@ -346,9 +327,6 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_step_up_disable_drops_a_pending_admin_reset_link(): void
     {
-        // Invalidation contract (a): the member's own step-up disable drops any pending admin-issued
-        // reset link, so a "send → self-disable → re-enable within the TTL" sequence cannot leave the
-        // old link live.
         $member = $this->memberWithTwoFactor();
         MfaResetRequest::create([
             'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
@@ -376,9 +354,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_cancelling_a_pending_setup_clears_the_secret_without_a_password(): void
     {
-        // The pending secret gates nothing, so abandoning the wizard costs nothing to undo — and
-        // since the cancel is password-free it must also be side-effect-free: no session purge,
-        // no remember_token rotation a walked-up session could trigger for free.
+        // The cancel is password-free, so a walked-up session must not be able to trigger a purge or
+        // a token rotation.
         $member = $this->memberWithPendingSetup();
         $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
@@ -405,15 +382,12 @@ class MemberMfaManagementTest extends TestCase
         $fresh = $member->fresh();
         $this->assertNotEquals($oldCodes, $fresh->recoveryCodes());
         $this->assertCount(8, $fresh->recoveryCodes());
-        // The TOTP factor is unchanged, so nothing is revoked (admin parity).
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
         $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_regenerating_codes_drops_a_pending_admin_reset_link(): void
     {
-        // Invalidation contract: regenerating proves current authenticator possession, so an outstanding
-        // admin-issued lost-factor reset link is moot — the regenerate transaction drops it.
         $member = $this->memberWithTwoFactor();
         MfaResetRequest::create([
             'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
@@ -489,7 +463,6 @@ class MemberMfaManagementTest extends TestCase
     {
         $member = $this->memberWithTwoFactor();
 
-        // Password present, but no code and no recovery code — the second factor is required too.
         $this->actingAs($member)
             ->post('/member/config/mfa/disable', ['current_password' => 'password'])
             ->assertSessionHasErrors('code');
@@ -651,9 +624,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_disable_racing_a_confirm_fails_closed(): void
     {
-        // The FormRequest sees a stale pending instance (no password/proof demanded); a concurrent
-        // confirm makes the factor live before the controller locks the row. Removing a now-live
-        // factor without proof is refused.
+        // The FormRequest sees a stale pending instance, and a concurrent confirm makes the factor
+        // live before the controller locks the row.
         $member = $this->memberWithPendingSetup();
         $member->fresh()->forceFill(['two_factor_confirmed_at' => now()])->save();
 
@@ -668,10 +640,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_confirm_racing_a_secret_rotation_fails_closed_with_its_own_message(): void
     {
-        // The loaded viewer holds pending secret A; a concurrent cancel + re-enable rotates the
-        // row to secret B before the controller locks it. Confirming A's code against B would
-        // either fail confusingly or (worse) stamp the factor live against a secret the member
-        // never scanned — the controller refuses with the state-change message, not "invalid code".
+        // The loaded viewer holds pending secret A, and a concurrent cancel plus re-enable rotates
+        // the row to secret B before the controller locks it.
         $member = $this->memberWithPendingSetup();
         $staleOtp = $this->currentOtp($member);
         app(EnableTwoFactorAuthentication::class)($member->fresh(), force: true);
@@ -687,8 +657,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_regenerate_racing_a_disable_mints_no_orphan_codes(): void
     {
-        // The FormRequest sees a stale enabled instance; a concurrent disable removes the factor
-        // before the controller locks the row. Minting codes for the removed factor is refused.
+        // The FormRequest sees a stale enabled instance, and a concurrent disable removes the factor
+        // before the controller locks the row.
         $member = $this->memberWithTwoFactor();
         $member->fresh()->forceFill([
             'two_factor_secret' => null,
@@ -705,10 +675,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_an_enable_racing_a_disable_still_writes_a_pending_secret(): void
     {
-        // Stale enabled viewer; a parallel request disabled the factor. Fortify's enable re-checks
-        // the state of the model it is handed — handed the stale instance it would silently no-op
-        // while the controller reports success (the split-snapshot bug); handed the locked fresh
-        // row it writes the pending secret.
+        // Stale enabled viewer with the factor disabled in parallel: handed that instance, Fortify's
+        // enable would silently no-op.
         $member = $this->memberWithTwoFactor();
         $member->fresh()->forceFill([
             'two_factor_secret' => null,
@@ -727,9 +695,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_a_pending_cancel_racing_an_enable_still_clears_the_secret(): void
     {
-        // Stale disabled viewer; a parallel request started a set-up. The cancel must wipe the
-        // pending secret it finds under the lock — a stale-instance disable would no-op and strand
-        // the member unable to re-enroll (enable refuses while any secret is present).
+        // Stale disabled viewer with a set-up started in parallel: a stale-instance disable would
+        // no-op and strand the member unable to re-enroll.
         $member = Member::factory()->create();
         app(EnableTwoFactorAuthentication::class)($member->fresh(), force: true);
 

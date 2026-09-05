@@ -9,7 +9,6 @@ use App\Services\RegionListService;
 use App\Support\Visibility;
 use Illuminate\Support\Collection;
 
-/** Modern surface shape for the profile-edit form. */
 class ProfileFormSerializer
 {
     /**

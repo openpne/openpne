@@ -58,11 +58,7 @@ class FriendController extends Controller
         ]);
     }
 
-    /**
-     * OpenPNE 3's friend/manage: the member's own roster with an unlink column. Modern folded
-     * roster management into friend/list, so a Modern viewer is sent there — before the query,
-     * which a redirect would only throw away.
-     */
+    /** Classic-only: Modern folded OpenPNE 3's `friend/manage` roster into `friend/list`. */
     public function manage(Request $request, ListFriends $query): View|RedirectResponse
     {
         if (SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN) {
@@ -161,7 +157,7 @@ class FriendController extends Controller
             return $target;
         }
 
-        // Modern confirms unfriend inline (Radix AlertDialog) — send a Modern viewer to the profile.
+        // Modern has no confirm screen; it confirms on the profile.
         if (SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN) {
             return redirect()->route('member.profile.show', $target);
         }
@@ -188,9 +184,8 @@ class FriendController extends Controller
     }
 
     /**
-     * OpenPNE 3's executeUnlink gate: a missing or self id goes home, and a member who is not a
-     * %friend% — including one who no longer exists — is told so where the roster lives. Nothing
-     * here 404s: the answer to "you cannot unlink this" is a notice, not an error page.
+     * OpenPNE 3's executeUnlink gate: a missing or self id goes home, an absent or non-%friend%
+     * member to the roster with a notice; nothing here 404s.
      */
     private function unlinkTarget(Request $request, int $id): Member|RedirectResponse
     {
@@ -208,11 +203,6 @@ class FriendController extends Controller
         return $target;
     }
 
-    /**
-     * Where an unlink outcome lands: OpenPNE 3 always returned to friend/manage, which Classic
-     * keeps; Modern's roster lives on friend/list, and routing it through manage would only add
-     * a second redirect.
-     */
     private function unlinkReturnRoute(Request $request): string
     {
         return SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN
@@ -220,7 +210,6 @@ class FriendController extends Controller
             : 'friend.manage';
     }
 
-    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
     private function classic(string $view, array $data = []): View
     {
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));

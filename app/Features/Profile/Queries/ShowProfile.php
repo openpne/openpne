@@ -9,19 +9,7 @@ use App\Models\MemberProfile;
 use App\Support\Visibility;
 use Illuminate\Support\Collection;
 
-/**
- * The profile fields of $owner visible to $viewer, ordered by the field's sort order.
- *
- * Returns null when the owner blocks the viewer (the whole page is then a 404), matching
- * Diary's owner→viewer block. Each field's effective visibility (per-value flag, or the
- * field default when the field is not per-value editable / has no value flag) is compared
- * to the viewer's clearance via the shared monotonic Visibility scale. Fields whose
- * rendered value is empty are skipped.
- *
- * A guest (null viewer) has Open clearance and additionally only sees fields flagged
- * is_public_web — the page-level "is this profile guest-reachable" gate is the controller's
- * (it redirects to login otherwise).
- */
+/** Null means the owner blocks the viewer; the profile page turns that into a 404. */
 class ShowProfile
 {
     /** @return Collection<int, ProfileFieldValue>|null */

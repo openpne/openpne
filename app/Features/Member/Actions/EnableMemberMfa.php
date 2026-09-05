@@ -8,14 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 
 /**
- * Start a two-factor set-up: write a pending secret + recovery codes. Strictly a disabled-state
- * action — with any secret present (pending or confirmed) a parallel enable could rotate the stored
- * secret under a concurrent confirm, which then stamps two_factor_confirmed_at against a secret the
- * member never scanned (a lockout). The row lock makes the check-and-write atomic against that race;
- * restarting a pending set-up is cancel (disable) first, then enable — never a rotation in place.
- *
- * The account-password re-auth and the MfaSetupReauth stamp are the controller's concern; this owns
- * only the guarded state transition.
+ * Refused while any secret exists, pending or confirmed: rotating one under a concurrent confirm
+ * would stamp the factor live against a secret the member never scanned. Restarting a pending set-up
+ * is a cancel and then an enable, never a rotation in place.
  */
 class EnableMemberMfa
 {
@@ -35,9 +30,8 @@ class EnableMemberMfa
             // success — the exact split the lock exists to prevent.
             ($this->enable)($fresh);
 
-            // Defense-in-depth for invalidation contract (a): starting a fresh set-up drops any lingering
-            // reset link (the disable that preceded this already did, but a reset link must never carry
-            // across a factor's lifecycle).
+            // A reset link must never survive a change in the factor's lifecycle
+            // (docs/internals/security.md, "Member two-factor authentication").
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;

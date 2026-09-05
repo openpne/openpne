@@ -10,14 +10,10 @@ use App\Models\Member;
 use App\Services\PresetProfileService;
 use Illuminate\Support\Collection;
 
-/** Modern surface shape for a member's profile page. */
+/** Every `$fields` here is a ShowProfile result, already filtered to the viewer's clearance. */
 class ProfileSerializer
 {
     /**
-     * The self-introduction is promoted out of the field list into `bio` (rendered in the identity
-     * header); the remaining fields keep the dl. Visibility is already resolved upstream by
-     * ShowProfile, so `$fields` holds only viewer-visible values — no leak path here.
-     *
      * @param  'friend'|'sent'|'received'|'none'|null  $friendStatus  null = self or guest viewer
      * @param  Collection<int, ProfileFieldValue>  $fields
      * @return array{owner: array{id: int, name: string, avatarUrl: ?string, avatarColor: ?string, isAi: bool}, isSelf: bool, age: ?int, friendStatus: ?string, bio: ?string, fields: list<array{name: string, caption: string, value: string}>}
@@ -28,11 +24,11 @@ class ProfileSerializer
             'owner' => [
                 'id' => $owner->getKey(),
                 'name' => $owner->name,
-                // The profile header paints this at 80px, the largest avatar outside the editor.
+                // Sized for the header's 80px face.
                 'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(180, 180, square: true),
                 'avatarColor' => $owner->avatar_color?->hex(),
-                // Keyed avatarUrl rather than imageUrl (the header paints a larger crop), so the
-                // shape stays its own rather than a MemberRefSerializer::ref.
+                // Not a MemberRefSerializer::ref: the header paints a larger crop, so this shape
+                // keys avatarUrl.
                 'isAi' => $owner->isAiAccount(),
             ],
             'isSelf' => $isSelf,
@@ -44,8 +40,6 @@ class ProfileSerializer
     }
 
     /**
-     * The structured field rows, minus the self-introduction (that one is promoted to `bio`).
-     *
      * @param  Collection<int, ProfileFieldValue>  $fields
      * @return list<array{name: string, caption: string, value: string}>
      */
@@ -62,12 +56,7 @@ class ProfileSerializer
             ])->values()->all();
     }
 
-    /**
-     * The self-introduction as a header bio, or null when the field is absent, empty, or outside the
-     * viewer's clearance. Reads a ShowProfile result, so the visibility filtering already happened.
-     *
-     * @param  Collection<int, ProfileFieldValue>  $fields
-     */
+    /** @param Collection<int, ProfileFieldValue> $fields */
     public static function bio(Collection $fields, string $lang): ?string
     {
         $name = self::bioFieldName();
@@ -75,17 +64,14 @@ class ProfileSerializer
         return $fields->first(fn (ProfileFieldValue $field): bool => $field->profile->name === $name)?->display($lang);
     }
 
-    /** The `profiles.name` the self-introduction is stored under. */
     private static function bioFieldName(): string
     {
         return app(PresetProfileService::class)->nameForKey('self_introduction')['name'];
     }
 
     /**
-     * The digest shown to an authenticated viewer: viewer-scoped counts plus a preview of the owner's
-     * recent diaries, friends, and joined groups. Grid thumbnails are 320×320 — the profile body
-     * column is far wider than the shell's right rail, so RightRailSerializer::rail (sized for that
-     * rail) is deliberately not reused.
+     * Grid thumbnails are 320×320: the profile body column is wider than the shell's right rail, so
+     * RightRailSerializer::rail is not reused.
      *
      * @param  array{diaries: int, activity: int, friends: int, groups: int}  $stats
      * @param  Collection<int, Diary>  $recentDiaries  images.file eager-loaded by the caller (rich rows)

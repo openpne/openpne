@@ -10,11 +10,6 @@ use App\Services\PresetProfileService;
 use App\Support\Visibility;
 use Illuminate\Support\Collection;
 
-/**
- * The fields shown on a member's profile-edit form (is_disp_config, ordered by sort order),
- * each paired with the member's current value and per-value visibility. Used by both surfaces;
- * the Classic blade and the Modern serializer render the same EditableField list.
- */
 class EditProfileFields
 {
     public function __construct(private PresetProfileService $presets) {}
@@ -60,15 +55,11 @@ class EditProfileFields
     }
 
     /**
-     * @param  Collection<int, MemberProfile>|null  $rows
+     * The stored audience goes back as the sticky current, so a tier no longer offered (Friends once
+     * friends are off) stays selectable and an unrelated save cannot widen the row. Open stays
+     * clamped: on a field whose `is_public_web` was turned off it would post an out-of-range value.
      *
-     * The stored audience is passed back as the sticky current, so a tier the field no longer
-     * offers for new values (Friends, once friends are off) stays selectable on this member's row —
-     * without it, an unrelated profile save would re-post the clamp and widen the value. The clamp
-     * that remains is the Open one: on a field whose is_public_web was later turned off, Open would
-     * post an out-of-range value, and it differs from Members only by the guest visibility
-     * is_public_web already gates. A field the member has no row for is a new value, so the field
-     * default is clamped like any other new content.
+     * @param  Collection<int, MemberProfile>|null  $rows
      */
     private function currentVisibility(Profile $profile, ?Collection $rows): Visibility
     {

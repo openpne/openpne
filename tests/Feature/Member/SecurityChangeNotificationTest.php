@@ -16,11 +16,6 @@ use PragmaRX\Google2FA\Google2FA;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
-/**
- * The takeover-detection alerts: a mail to the member's own address when their password or two-factor
- * factor changes. Mail only, always sent. A pending set-up that is cancelled is not a credential
- * change, so it raises no "two-factor disabled" alert.
- */
 class SecurityChangeNotificationTest extends TestCase
 {
     use CapturesSecurityLog;

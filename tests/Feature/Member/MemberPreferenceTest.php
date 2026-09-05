@@ -50,8 +50,8 @@ class MemberPreferenceTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        // An explicit choice equal to the default is stored, not normalised away (OpenPNE 3
-        // recorded the explicit choice). resetPreference is the way back to default-following.
+        // OpenPNE 3 recorded an explicit choice equal to the default, so it is stored rather than
+        // normalised away.
         $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Members);
 
         $this->assertDatabaseHas('member_preferences', [

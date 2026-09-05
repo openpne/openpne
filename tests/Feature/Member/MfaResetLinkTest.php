@@ -22,11 +22,7 @@ use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
-/**
- * The admin-issued two-factor reset link flow: an admin mails the member's registered address a link; the
- * locked-out member (a guest) opens it and clears their factor with their account password. See
- * docs/internals/security.md for the boundary invariant and the invalidation contract.
- */
+/** See docs/internals/security.md, "Member two-factor authentication". */
 class MfaResetLinkTest extends TestCase
 {
     use CapturesSecurityLog;
@@ -37,8 +33,6 @@ class MfaResetLinkTest extends TestCase
         parent::setUp();
         $this->captureSecurityLog();
     }
-
-    // --- GET render ---------------------------------------------------------------------------------
 
     public function test_get_renders_the_classic_form_for_a_guest(): void
     {
@@ -91,7 +85,6 @@ class MfaResetLinkTest extends TestCase
         $raw = $this->seedLink($member, minutesAgo: (int) config('openpne.mfa_reset.token_ttl_minutes') + 1);
 
         $this->get("/member/mfa/reset/{$raw}")->assertRedirect(route('login'));
-        // Expired rows are left for the scheduled prune, not burned on read.
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 
@@ -124,8 +117,6 @@ class MfaResetLinkTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    // --- POST reset ---------------------------------------------------------------------------------
-
     public function test_post_resets_the_factor_and_revokes_sessions(): void
     {
         Notification::fake();
@@ -151,7 +142,6 @@ class MfaResetLinkTest extends TestCase
         $this->assertDatabaseMissing('sessions', ['id' => 'device']); // all revoked
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]); // burned
 
-        // Logged (via reset_link, and WITHOUT admin_username — the member acted, not the admin) then alerted.
         $context = $this->assertOneSecurityEvent('mfa.disabled');
         $this->assertSame('reset_link', $context['via']);
         $this->assertArrayNotHasKey('admin_username', $context);
@@ -169,7 +159,6 @@ class MfaResetLinkTest extends TestCase
             ->assertRedirect("/member/mfa/reset/{$raw}")
             ->assertSessionHasErrors('password');
 
-        // Nothing spent: the factor is intact, the token survives, and no disable was logged or alerted.
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
         $this->assertCount(0, $this->securityRecords('mfa.disabled'));
@@ -202,7 +191,6 @@ class MfaResetLinkTest extends TestCase
         $raw = $this->seedLink($member);
 
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'password'])->assertRedirect(route('login'));
-        // Reuse: the row is gone, so it is a dead link.
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'password'])->assertRedirect(route('login'));
     }
 
@@ -233,15 +221,14 @@ class MfaResetLinkTest extends TestCase
         $this->assertTrue($subject->fresh()->hasEnabledTwoFactorAuthentication());
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $subject->getKey()]);
 
-        // GET is likewise turned away; the other member keeps their session.
         $this->get("/member/mfa/reset/{$raw}")->assertRedirect(route('home'));
         $this->get('/member/config')->assertOk();
     }
 
     public function test_a_different_member_with_an_empty_password_still_hits_the_home_reject(): void
     {
-        // Pins the reorder: the different-member reject runs BEFORE password validation, so an empty
-        // password lands on the home reject — not a validation redirect that would leak the link is live.
+        // An empty password from a different member must land on the home reject, not a validation
+        // redirect that would leak that the link is live.
         $subject = $this->memberWithLiveFactor();
         $other = Member::factory()->create();
         $raw = $this->seedLink($subject);
@@ -270,9 +257,7 @@ class MfaResetLinkTest extends TestCase
 
     public function test_a_real_password_change_keeps_the_link_and_rebinds_the_proof(): void
     {
-        // The link binds to member_id, and the proof it demands is the CURRENT password: a password change
-        // does not void it (unlike an email change), but the old password no longer opens it. Driven as the
-        // real in-session member-config password change, not a forceFill.
+        // Driven as the real in-session member-config password change, not a forceFill.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
@@ -282,41 +267,30 @@ class MfaResetLinkTest extends TestCase
             'password_confirmation' => 'new-secret-pass',
         ])->assertSessionHasNoErrors();
 
-        // The pending link survives the password change.
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
 
-        // The old password no longer opens it, and spends nothing.
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'password'])->assertSessionHasErrors('password');
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
 
-        // The new password consumes it.
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'new-secret-pass'])->assertRedirect(route('login'));
         $this->assertFalse($member->fresh()->hasEnabledTwoFactorAuthentication());
     }
 
-    // --- invalidation contract ----------------------------------------------------------------------
-
     public function test_disabling_then_reenabling_within_the_ttl_kills_the_old_link(): void
     {
-        // Invalidation contract (a): send → disable → re-enable a new factor within the TTL must not
-        // leave the old link live against the new factor.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
-        // The member (or CLI) disables the factor — the row is dropped — then enrolls a fresh factor.
         app(ForceDisableMemberMfa::class)($member);
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
         $this->giveLiveFactor($member->fresh());
 
-        // The old link is dead.
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'password'])->assertRedirect(route('login'));
-        $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication()); // the new factor survives
+        $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
     }
 
     public function test_confirming_an_email_change_kills_the_old_link(): void
     {
-        // Invalidation contract (b): the address is the proof channel, so changing it voids a pending
-        // reset.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
@@ -332,15 +306,13 @@ class MfaResetLinkTest extends TestCase
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication()); // factor untouched
     }
 
-    // --- action-level guards (TOCTOU) ---------------------------------------------------------------
-
     public function test_request_mfa_reset_throws_and_mints_nothing_on_a_stale_live_factor(): void
     {
         Notification::fake();
         $member = $this->memberWithLiveFactor();
 
-        // The factor was disabled after the Filament visibility snapshot; the stale in-memory model still
-        // reports it live. The action re-checks under the lock and refuses (caller bug), minting nothing.
+        // The factor was disabled after the Filament snapshot, so the stale in-memory model still
+        // reports it live.
         Member::whereKey($member->getKey())->update(['two_factor_secret' => null, 'two_factor_confirmed_at' => null]);
 
         try {
@@ -446,8 +418,6 @@ class MfaResetLinkTest extends TestCase
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 
-    // --- prune --------------------------------------------------------------------------------------
-
     public function test_prune_removes_expired_links_and_keeps_live_ones(): void
     {
         $expiredMember = $this->memberWithLiveFactor();
@@ -472,8 +442,6 @@ class MfaResetLinkTest extends TestCase
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 
-    // --- helpers ------------------------------------------------------------------------------------
-
     private function memberWithLiveFactor(): Member
     {
         $member = Member::factory()->create();
@@ -488,7 +456,6 @@ class MfaResetLinkTest extends TestCase
         $member->forceFill(['two_factor_confirmed_at' => now()])->save();
     }
 
-    /** Seed a pending reset row and return the raw token the link would carry. */
     private function seedLink(Member $member, int $minutesAgo = 0): string
     {
         $raw = Str::random(40);

@@ -92,8 +92,7 @@ class MemberConfigTest extends TestCase
 
     public function test_an_unknown_category_renders_the_landing_not_404(): void
     {
-        // BlockRoutesTest locks /member/config?category=profile as OK; unknown categories fall
-        // through to the landing rather than 404 (only accessBlock redirects).
+        // An unknown category falls through to the landing rather than 404.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/member/config?category=profile')
@@ -116,7 +115,6 @@ class MemberConfigTest extends TestCase
                 ->where('form.surface.value', 'modern') // preselected to the current surface (mode default)
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options')
-                // Age visibility moved next to the birthday on the Modern profile-edit form.
                 ->missing('form.age')
             );
     }
@@ -170,8 +168,6 @@ class MemberConfigTest extends TestCase
 
     public function test_a_crafted_age_post_without_a_birthday_item_persists_nothing(): void
     {
-        // The category is not offered without a birthday item, so a direct POST writes nothing and
-        // lands where the hidden category's URL does (same gate as the Modern profile-edit write).
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/age', [
@@ -287,9 +283,7 @@ class MemberConfigTest extends TestCase
 
     public function test_modern_only_hides_the_surface_picker_and_rejects_a_posted_choice(): void
     {
-        // Under modern_only the Classic/Modern picker is not served (serializer omits it) and a crafted
-        // POST is rejected, so no latent preferred_surface row can be written that would fire if the
-        // site later switched to a coexistence mode.
+        // Both halves: the picker is not served, and a crafted POST is still rejected.
         config(['openpne.surface_mode' => 'modern_only']);
         $member = Member::factory()->create();
 
@@ -307,9 +301,8 @@ class MemberConfigTest extends TestCase
 
     public function test_saving_the_current_surface_is_a_no_op_so_an_unset_member_stays_unset(): void
     {
-        // Binary UI has no "follow default" option; instead, saving the surface the member is already
-        // on never pins them, so the operator can still move unset members later. Default is Modern
-        // here; an unset member saving Modern stays unset and keeps following the default.
+        // The default is Modern here, so an unset member saving Modern stays unset and keeps
+        // following it.
         config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
@@ -428,8 +421,6 @@ class MemberConfigTest extends TestCase
 
     public function test_a_validation_failure_returns_to_the_detail_page(): void
     {
-        // The detail page is short, so the redirected-back errors are visible without scrolling —
-        // the reason these forms are not inline on the settings hub.
         config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
@@ -511,7 +502,7 @@ class MemberConfigTest extends TestCase
     public function test_the_current_session_survives_a_password_change(): void
     {
         // logoutOtherDevices re-syncs the current session's stored hash, so the acting session stays
-        // authenticated (other devices are rejected on their next protected request, not tested here).
+        // authenticated.
         $member = Member::factory()->create();
         $this->actingAs($member);
 
@@ -555,10 +546,8 @@ class MemberConfigTest extends TestCase
 
     public function test_a_device_with_a_stale_password_hash_is_logged_out(): void
     {
-        // The contract behind "other devices are dropped": auth.session bounces any session whose
-        // stored password hash no longer matches the member's. Establish a session, change the hash
-        // out of band (stands in for another device's change), then the stale session must redirect
-        // to login on its next protected request.
+        // Changing the hash out of band stands in for another device's change, so the stale session
+        // must redirect to login.
         $member = Member::factory()->create();
         $this->actingAs($member)->get('/member/config')->assertOk();
 
@@ -743,8 +732,7 @@ class MemberConfigTest extends TestCase
             'token' => hash('sha256', $raw), 'created_at' => now(),
         ]);
 
-        // Reachable without auth (the link may be opened anywhere); GET only renders, does not commit.
-        // Rendered in the Classic shell as a pre-login page (insecure_page), not a bare standalone page.
+        // Reachable without auth, rendered as a pre-login page in the Classic shell.
         $this->get('/member/config/email/confirm/'.$raw)
             ->assertOk()
             ->assertSee('id="page_member_emailChangeConfirm"', false)
@@ -801,9 +789,8 @@ class MemberConfigTest extends TestCase
 
     public function test_confirming_while_logged_in_as_a_different_member_is_rejected(): void
     {
-        // The confirm link is the requester's action; opening it while logged in as a DIFFERENT member
-        // is turned away (so a mismatched identity is never shown and nothing is changed) — they can
-        // sign out and reopen it. The pending change/token stay intact; the viewer keeps their session.
+        // A different logged-in member is turned away, and the pending change, its token and their
+        // session all stay intact.
         Member::factory()->create(['id' => 1]);
         $requester = Member::factory()->create();
         $other = Member::factory()->create();
@@ -818,15 +805,12 @@ class MemberConfigTest extends TestCase
         // rather than being masked by re-authenticating each call.
         $this->actingAs($other);
 
-        // POST is rejected — redirected away, nothing committed, token intact.
         $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
         $this->assertNotSame('a-new@example.com', $requester->fresh()->email);
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $requester->id]);
 
-        // GET is likewise turned away (the confirm page is not shown to a different member).
         $this->get('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
 
-        // The viewer's session was never touched — still logged in on the same session.
         $this->get('/member/config')->assertOk();
     }
 
@@ -870,8 +854,6 @@ class MemberConfigTest extends TestCase
 
     public function test_a_password_change_voids_a_pending_email_change(): void
     {
-        // Compensating control: a password change must drop any pending email change so a stolen-password
-        // attacker's confirmation token cannot be used after the owner changes their password.
         $member = Member::factory()->create();
         EmailChangeRequest::create([
             'member_id' => $member->id, 'new_email' => 'pending@example.com',
@@ -889,8 +871,6 @@ class MemberConfigTest extends TestCase
 
     public function test_confirming_an_email_change_rotates_remember_token_and_purges_other_sessions(): void
     {
-        // Email is the login identifier, so confirming it drops every device: remember_token is rotated
-        // (kills remember-me cookies) and the member's other database sessions are purged.
         config()->set('session.driver', 'database');
         $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
         DB::table('sessions')->insert([
@@ -999,9 +979,8 @@ class MemberConfigTest extends TestCase
 
     public function test_a_confirm_race_with_a_cancel_does_not_change_the_email(): void
     {
-        // The confirm controller loads the pending row, then the action commits. If a cancel (or a
-        // password-change purge) deletes that row in between, the action must re-read it under a lock
-        // and no-op — otherwise the cancel would report success while the login identifier still flips.
+        // A cancel between the controller's load and the action's commit must leave the identifier
+        // unflipped.
         $member = Member::factory()->create(['email' => 'old@example.com']);
         $pending = EmailChangeRequest::create([
             'member_id' => $member->id, 'new_email' => 'new@example.com',
