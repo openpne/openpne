@@ -11,12 +11,9 @@ use App\Models\Member;
 use Illuminate\Http\UploadedFile;
 
 /**
- * The OpenPNE 3 merged comment endpoint: optionally toggle the roster, then post the (required)
- * comment with its images. Everything runs inside one outermost PostImages::compensating() callback,
- * so a roster guard, a failed image write, or even a commit failure rolls back the join, the comment
- * and the image rows together AND purges the already-written image bytes. Composing self-transacting
- * actions under a separate outer transaction would not — compensating() only undoes byte writes made
- * inside its own transaction, so a later outer failure would orphan them.
+ * One outermost PostImages::compensating() callback wraps the toggle and the comment, so a roster
+ * guard, a failed image write or a commit failure rolls back both and purges the bytes already
+ * written. A separate outer transaction would not: compensating() undoes only its own byte writes.
  */
 class SubmitEventComment
 {

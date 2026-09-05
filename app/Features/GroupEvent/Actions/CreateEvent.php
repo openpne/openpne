@@ -48,8 +48,6 @@ class CreateEvent
             relation: fn (GroupEvent $event) => $event->images(),
         );
 
-        // Fires after the image-attach transaction commits (ShouldDispatchAfterCommit); the fan-out job
-        // re-reads a durable event.
         EventPosted::dispatch($event, $author);
         SyncLinkCard::for($event);
 

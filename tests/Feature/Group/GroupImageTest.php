@@ -82,9 +82,8 @@ class GroupImageTest extends TestCase
 
     public function test_a_stale_instance_still_purges_the_current_image_on_replace(): void
     {
-        // Regression for the concurrency race: file_id is a mutable self-column, so an action handed
-        // a stale community (its in-memory file_id already overwritten by a concurrent edit) must
-        // read the *current* image under the lock, not the stale one, or the live image orphans.
+        // file_id is a mutable self-column, so an action handed a stale group must read the current
+        // image under the lock or the live image orphans.
         [$group, $admin] = $this->groupWithAdmin();
         app(UpdateGroup::class)($admin, $group, $this->data(), $this->fake('a.png'));
 

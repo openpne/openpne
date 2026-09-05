@@ -170,9 +170,8 @@ class GroupTopicImagesTest extends TestCase
 
     public function test_a_failed_later_image_compensates_the_earlier_images_bytes(): void
     {
-        // Drive a disk backend so writeStream lands real bytes, then fail the second write. The
-        // first image's bytes must be compensated off the disk when the outer transaction rolls
-        // back — a disk write is not transactional, so without compensation it would orphan.
+        // Drive a real disk backend so writeStream lands real bytes: a disk write is not
+        // transactional, so nothing but compensation would take them back.
         config(['openpne.files.disk' => 'local']);
         Storage::fake('local');
 

@@ -15,12 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/**
- * Topic comments, dual-surface for the write path. The action chokepoint (GroupTopicAccess)
- * enforces who may comment and who may delete; the controller maps its refusals to 404 and redirects
- * back to the topic on the surface the request came from. showDelete stays a Classic-only GET confirm
- * page (page_communityTopicComment_*) — Modern confirms delete inline (Radix AlertDialog).
- */
+/** A refusal from GroupTopicAccess is mapped to 404, so a topic's existence is not disclosed. */
 class GroupTopicCommentController extends Controller
 {
     public function store(StoreTopicCommentRequest $request, int $topic, CreateTopicComment $action): RedirectResponse
@@ -40,12 +35,10 @@ class GroupTopicCommentController extends Controller
     {
         abort_unless(GroupTopicAccess::canDeleteComment($comment, $this->viewer()), 404);
 
-        // Modern confirms deletion inline — send a Modern viewer back to the topic.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.topics.show', $comment->topic);
         }
 
-        // The confirm keeps the group context its topic pages carry.
         $this->markLocalNavGroup($comment->topic->group);
 
         return view('group-topic.comment-delete', [
@@ -67,7 +60,7 @@ class GroupTopicCommentController extends Controller
         return $this->redirectToTopic($request, $topic)->with('status', __('The comment was deleted.'));
     }
 
-    /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
+    /** Both surfaces key off {topic}, so $request selects nothing here. */
     private function redirectToTopic(Request $request, GroupTopic $topic): RedirectResponse
     {
         return redirect()->route('group.topics.show', $topic);

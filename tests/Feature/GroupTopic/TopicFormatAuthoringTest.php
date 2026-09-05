@@ -11,10 +11,6 @@ use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Body-format authoring on the shared topic compose form (group-topic/_fields): a markdown topic
- * persists its format; an op3 topic offers no format control (the edit preserves it).
- */
 class TopicFormatAuthoringTest extends TestCase
 {
     use RefreshDatabase;

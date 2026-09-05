@@ -52,22 +52,10 @@ use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-/**
- * Group core and management, both dual-surface: each action serves Classic Blade or Modern
- * Inertia per SurfaceResolver, preserving the Classic body id and the group localNav side
- * effect in the Classic branch. showJoin/showQuit/showDelete stay Classic-only GET confirm pages —
- * Modern confirms join/quit/delete inline (Radix AlertDialog) and POSTs directly.
- */
 class GroupController extends Controller
 {
     use RespondsWithSurface;
 
-    /**
-     * Rows in the community home's timeline box. OpenPNE 3's component asked for twenty, but it
-     * streamed them behind a load-more; rendered as a static block that many would bury the
-     * group's own details. Five, like the topic and event boxes beside it — the box's "show
-     * all" link carries the rest.
-     */
     public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
         $found = $query($group);
@@ -76,21 +64,18 @@ class GroupController extends Controller
         $viewer = $this->viewer();
         $role = GroupMembership::roleOf($found, $viewer);
         $isPending = GroupMembership::isPending($found, $viewer);
-        // The viewer is the pending admin-transfer nominee — the accept/reject banner is theirs.
         $isTransferNominee = $found->pending_admin_member_id !== null
             && (int) $found->pending_admin_member_id === (int) $viewer->getKey();
-        // The sidemenu member grid (3×3), admins first like ListGroupMembers.
-        // Shared by the Classic grid and the Modern member preview; only the Classic caption
-        // carries the friend count (getNameAndCount), so only it pays for the count.
+        // Only the Classic caption carries the friend count (OpenPNE 3 getNameAndCount), so only
+        // Classic pays for it.
         $countFriends = Feature::Friend->enabled() && SurfaceResolver::resolve($request, 'group') === SurfaceResolver::CLASSIC;
         $sidebarMembers = $found->members()
             ->with(['member' => fn ($members) => $countFriends ? $members->with('avatar.file')->withCount('friendships') : $members->with('avatar.file')])
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
-        // The recent-topics / recent-events boxes only show when the viewer
-        // may read that board; events share the topic read gate, so one check covers both.
+        // Events share the topic read gate, so one check covers both boards.
         $canViewBoard = GroupTopicAccess::canViewBoard($found, $viewer);
-        // A switched-off unit reuses that same null seam — both surfaces already hide the box on
-        // null — and its query never runs.
+        // A switched-off unit hides its box through the same null both surfaces already hide on,
+        // and its query never runs.
         $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
         $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
         // Read here rather than in a branch: all three layouts — Classic, the shipped Modern page and
@@ -106,10 +91,8 @@ class GroupController extends Controller
         // Never read the conversation before the gate says the viewer may: the preview carries a
         // member's words, so the access question comes first and the query does not run otherwise.
         $talkPreview = $canViewTalk ? $latestMessage($found) : null;
-        // The viewer's own unread for this group. A non-member reading an Everyone group has no
-        // membership row and so no cursor — zero, correctly, rather than "everything". A muted group
-        // still reports its count here: mute silences the nav badge, not the group's own card
-        // (UnreadTalkCounts).
+        // A non-member reading an Everyone group has no membership row and so no cursor: zero,
+        // rather than everything.
         $talkUnreadCount = $canViewTalk ? ($talkUnread($viewer)[$found->getKey()]['count'] ?? 0) : 0;
         // The group's own rows only: the room's talk row is the conversation's, and reading it is
         // what the talk read cursor does.
@@ -137,30 +120,23 @@ class GroupController extends Controller
                     'canPostTopic' => $canPostTopic,
                     'recentEvents' => $events,
                     'canPostEvent' => $canPostEvent,
-                    // Classic gets a link box where the community timeline used to render; the talk
-                    // screen itself is Modern for every member, so a link is the whole surface here.
+                    // The talk screen is Modern for every member, so Classic gets a link box.
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
             SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
-                // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
-                // The talk card: one line of the newest message, so the group page says what is
-                // being talked about rather than only that talk exists.
                 $preview = $talkPreview === null ? null : [
-                    // The room list's own line, so the card and the list read the same — including
-                    // the stand-in a message with nothing but pictures leads with.
+                    // The room list's own line, so the card and the list read the same.
                     'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->images_exists),
                     'authorName' => $talkPreview->author?->name,
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ];
 
-                // The look swaps the page, not the route or the sources: every value above is
-                // already decided, and the unified page adds only its own sections. Both render
-                // calls stay string literals — ChromeContextCoverageTest reads them to check every
-                // routed component is classified.
+                // Both Inertia::render targets stay string literals, so a static sweep can classify
+                // every routed component.
                 if (LookResolver::resolve($request)->usesUnifiedPages()) {
                     return Inertia::render('unified/group', UnifiedGroupSerializer::page(
                         viewer: $viewer,
@@ -191,8 +167,6 @@ class GroupController extends Controller
                     'canJoin' => $canJoin,
                     'canLeave' => $canLeave,
                     'members' => GroupSerializer::members($sidebarMembers),
-                    // The recent-topics / recent-events boxes link into their boards; null when the
-                    // viewer may not read them (events share the topic read gate), so the card is hidden.
                     'recentTopics' => $topics === null ? null : GroupTopicSerializer::summaries($topics),
                     'canPostTopic' => $canPostTopic,
                     'recentEvents' => $events === null ? null : GroupEventSerializer::summaries($events),
@@ -207,9 +181,8 @@ class GroupController extends Controller
 
     public function search(Request $request, SearchGroups $query): View|InertiaResponse
     {
-        // OpenPNE 3 query shape: community[name] / community[community_category_id], with a
-        // search_query alias for the name (preserved so a bookmarked OpenPNE 3 search URL works).
-        // The Modern search form uses flat keyword / category_id, accepted here as a fallback.
+        // OpenPNE 3 query shape community[name] / community[community_category_id] plus its
+        // search_query alias, so a bookmarked OpenPNE 3 search URL still works.
         $params = $request->query('community');
         $params = is_array($params) ? $params : [];
 
@@ -243,13 +216,9 @@ class GroupController extends Controller
     }
 
     /**
-     * The member's groups, in one of two shapes. Their own list under Modern with talk on is a list
-     * of conversations, ordered by what was last said (JoinedTalkRooms); everything else — another
-     * member's memberships, Classic, talk switched off — stays the group grid it has always been,
-     * so `view` is what the client switches on rather than the presence of a prop.
-     *
-     * The grid's query is deferred behind a closure because the two shapes read different tables:
-     * the room list must not also pay for the grid's page.
+     * The member's own list under Modern with talk on is a list of conversations; everything else
+     * stays the group grid, so `view` is what the client switches on rather than a prop's presence.
+     * The grid's query is deferred behind a closure because the two shapes read different tables.
      */
     public function listMine(Request $request, ListMemberGroups $query, JoinedTalkRooms $talkRooms): View|InertiaResponse
     {
@@ -313,7 +282,7 @@ class GroupController extends Controller
 
     /**
      * One choice list per enum, shared verbatim by both surfaces so the OpenPNE 3 wording lives in
-     * the enum alone. Slugs on the wire — the enums' own rule.
+     * the enum alone.
      *
      * @param  array<int, JoinPolicy|TopicReadAccess|TopicPostAuthority>  $cases
      * @return list<array{slug: string, label: string}>
@@ -399,8 +368,8 @@ class GroupController extends Controller
         $group = $this->groupFrom($request);
         $viewer = $this->viewer();
         $modern = SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN;
-        // Already in the group or awaiting approval: nothing to confirm. Classic says so on
-        // OpenPNE 3's joinError screen; Modern confirms joining inline, so it goes back to the group.
+        // Classic says so on OpenPNE 3's joinError screen; Modern confirms joining inline, so it
+        // redirects back to the group.
         foreach ([
             [GroupMembership::isMember($group, $viewer), __('You are already joined to this %community%.')],
             [GroupMembership::isPending($group, $viewer), __('You have already sent the participation request to this %community%.')],
@@ -439,8 +408,8 @@ class GroupController extends Controller
         $group = $this->groupFrom($request);
         $viewer = $this->viewer();
         $modern = SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN;
-        // Only a non-admin member can quit (the sole admin must hand off first). Classic says so on
-        // OpenPNE 3's quitError screen; Modern confirms leaving inline, so it goes back to the group.
+        // Classic says so on OpenPNE 3's quitError screen; Modern confirms leaving inline, so it
+        // redirects back to the group.
         foreach ([
             [GroupMembership::isAdmin($group, $viewer), __("The administrator doesn't leave the %community%.")],
             [! GroupMembership::isMember($group, $viewer), __("You haven't joined this %community% yet.")],
@@ -474,7 +443,6 @@ class GroupController extends Controller
     {
         abort_unless(Gate::allows('delete', $group), 404);
 
-        // Modern confirms deletion inline — send a Modern viewer back to the group.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.show', $group);
         }
@@ -523,7 +491,6 @@ class GroupController extends Controller
         return $this->moderate($request, fn (Group $c, Member $applicant) => $action($this->viewer(), $c, $applicant), __('Request declined.'));
     }
 
-    /** Shared approve/decline body: gate on admin, resolve the applicant, run, redirect to pending. */
     private function moderate(Request $request, callable $run, string $status): RedirectResponse
     {
         $group = $this->groupFrom($request);
@@ -549,10 +516,7 @@ class GroupController extends Controller
         return redirect()->route('group.show', $group);
     }
 
-    /**
-     * Resolve the group a page is about: the canonical routes carry it in the path ({group}); the
-     * OpenPNE 3 compatibility shapes carry it as ?id=. 404 when neither resolves.
-     */
+    /** The canonical routes carry the group in the path; the OpenPNE 3 shapes carry it as `?id=`. */
     private function groupFrom(Request $request): Group
     {
         $routeId = $request->route('group');
@@ -561,10 +525,6 @@ class GroupController extends Controller
         return Group::findOrFail($id);
     }
 
-    /**
-     * Like groupFrom, but null when no group is identified — the create form/submit carries
-     * neither a path {group} nor ?id=. Used by edit/save, which serve both new and existing.
-     */
     private function optionalGroupFrom(Request $request): ?Group
     {
         $routeId = $request->route('group');
@@ -573,7 +533,6 @@ class GroupController extends Controller
         return $id !== null ? Group::findOrFail($id) : null;
     }
 
-    /** Categories an ordinary member may create in — the OpenPNE 3 create-form set. */
     private function selectableCategories()
     {
         return GroupCategory::query()
@@ -583,7 +542,6 @@ class GroupController extends Controller
             ->get();
     }
 
-    /** Every category, for the search filter. */
     private function allCategories()
     {
         return GroupCategory::query()
@@ -593,8 +551,6 @@ class GroupController extends Controller
     }
 
     /**
-     * The search filter's category options for the Modern surface: {id, name} for every category.
-     *
      * @return list<array{id: int, name: string}>
      */
     private function categoryOptions(): array
@@ -629,7 +585,6 @@ class GroupController extends Controller
         return is_string($value) ? $value : '';
     }
 
-    /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id from the parity. */
     private function classic(string $view, array $data = []): View
     {
         // A page about one concrete group renders the group localNav; search and the

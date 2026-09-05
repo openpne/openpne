@@ -21,11 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * The new-topic / new-event broadcast to a community's confirmed members, minus the author / banned /
- * blocked, gated by the single new-post kind (and the shared group-posting template for the mail
- * leg). Topic is covered thoroughly; event shares the fan-out so it gets the smoke path.
- */
+/** Topic is covered thoroughly; event shares the fan-out, so it gets the smoke path. */
 class BroadcastGroupNewPostTest extends TestCase
 {
     use RefreshDatabase;

@@ -18,10 +18,8 @@ class UpdateTopic
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit a topic's text and manage its image slots: remove the images in
-     * $images->removals and add $images->additions into the freed slots (1..MAX). Image bytes are
-     * rollback-safe — new uploads are compensated if the transaction fails, and removed images'
-     * bytes (irreversible on a disk backend) are purged only after commit.
+     * Image bytes are rollback-safe: new uploads are compensated if the transaction fails, and
+     * removed images' bytes are purged only after commit.
      */
     public function __invoke(Member $actor, GroupTopic $topic, GroupTopicFormData $data, ImageEdit $images): GroupTopic
     {
@@ -35,8 +33,8 @@ class UpdateTopic
             // unique) or push past the image cap.
             GroupTopic::whereKey($topic->getKey())->lockForUpdate()->first();
 
-            // OpenPNE 3 bumps topic_updated_at only when the name or body actually changes. The save
-            // bumps updated_at too (the board ordering key), so an edited topic rises on the board.
+            // OpenPNE 3 bumps topic_updated_at only when the name or body changes; the save bumps
+            // updated_at regardless, so any edit rises on the board.
             $contentChanged = $topic->name !== $data->name || $topic->body !== $data->body;
             $topic->name = $data->name;
             $topic->body = $data->body;
@@ -53,15 +51,13 @@ class UpdateTopic
             $topic->clearLinkCardIfBodyChanged();
             $topic->save();
 
-            // Drop the selected images (this topic's only — an id from another topic is ignored).
-            // Keep their Files to purge after commit; here only the link row is removed.
+            // This topic's images only — an id from another topic is ignored — and their Files are
+            // purged after commit.
             $removed = $topic->images()->whereKey($images->removals)->with('file')->get();
             $topic->images()->whereKey($removed->modelKeys())->delete();
 
-            // Add the new uploads into the lowest free slots. Recheck the count under the lock: the
-            // request validated against the pre-lock state, so a concurrent edit (or a crafted
-            // payload that slipped the cross-field check) could leave too few slots — fail cleanly
-            // rather than index past $free.
+            // Recheck the count under the lock: the request validated against the pre-lock state,
+            // so a concurrent edit could leave too few slots.
             $used = $topic->images()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
             if (count($images->additions) > count($free)) {
@@ -76,7 +72,7 @@ class UpdateTopic
         });
 
         foreach ($removedFiles as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
 
         SyncLinkCard::for($topic);

@@ -17,15 +17,14 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
- * Modern surface shapes for the group topic board. author is null for a withdrawn member (the
- * FK SET NULL); comment `deletable` is the viewer-specific permission, computed server-side so the
- * client never re-derives authorization. Dates are ISO strings (the client formats them).
+ * author is null for a withdrawn member (the FK SET NULL); comment `deletable` is the viewer's
+ * permission, computed server-side so the client never re-derives authorization. Dates are ISO
+ * strings.
  */
 class GroupTopicSerializer
 {
     /**
-     * A board row / recent-topics card: the title, comment count, author, and last-activity time
-     * (updated_at, bumped by a new comment). Callers eager-load `comments_count` and `member`.
+     * Callers eager-load `comments_count` and `member`.
      *
      * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, updatedAt: string}
      */
@@ -41,8 +40,6 @@ class GroupTopicSerializer
     }
 
     /**
-     * The topic show shape: the full body and images plus the author and post time.
-     *
      * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string}
      */
     public static function detail(GroupTopic $topic, Member $viewer): array
@@ -51,7 +48,8 @@ class GroupTopicSerializer
             'id' => $topic->getKey(),
             'name' => $topic->name,
             'body' => $topic->body,
-            // See DiarySerializer::detail: bodyHtml is the server-rendered decoration HTML, null for plain.
+            // bodyHtml is the server-rendered decoration HTML, null for plain
+            // (docs/internals/body-text.md, "Render authority is the server").
             'format' => $topic->format->value,
             'bodyHtml' => $topic->format === BodyFormat::Plain ? null : BodyRenderer::render($topic->body, $topic->format)->toHtml(),
             'images' => $topic->images->map([self::class, 'image'])->all(),
@@ -62,9 +60,6 @@ class GroupTopicSerializer
     }
 
     /**
-     * A single comment. `deletable` is the viewer's delete permission (its author, or anyone who may
-     * edit the topic), so the client renders the button without re-deriving the rule.
-     *
      * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupTopicComment $comment, Member $viewer): array
@@ -91,10 +86,6 @@ class GroupTopicSerializer
     }
 
     /**
-     * The paged comment thread (OpenPNE 3 pager): the current page ascending, plus the reversible
-     * paging state the React page needs to build Older/Newer/oldest-first links. Ordering is by id,
-     * not number (the pager's contract), so Modern matches Classic even on migrated data.
-     *
      * @return array{comments: list<array>, total: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
      */
     public static function thread(GroupTopicCommentThread $thread, Member $viewer): array
@@ -113,10 +104,8 @@ class GroupTopicSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
-     * all FilePolicy-gated. See docs/internals/images.md for which one a surface takes and why the
-     * intrinsic size travels with them. Tolerates a row whose File is gone (defensive; the join
-     * cascades with it).
+     * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
+     * "The two ladders". A row whose File is gone is tolerated defensively.
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */

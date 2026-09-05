@@ -7,7 +7,6 @@ use App\Models\Member;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
-/** A group admin promoted a plain member to sub-admin. */
 class SubAdminAppointed implements ShouldDispatchAfterCommit
 {
     use Dispatchable;

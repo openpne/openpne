@@ -7,9 +7,8 @@ use App\Models\GroupTopic;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * A group's topic board: most recently active first.
- * updated_at is the activity key — a new comment touches it (CreateTopicComment), so a thread with
- * fresh replies sorts above an untouched one. id breaks ties for a stable order.
+ * updated_at is the activity key — a new comment touches it — so a thread with fresh replies sorts
+ * above an untouched one. id breaks ties for a stable order.
  */
 class ListGroupTopics
 {

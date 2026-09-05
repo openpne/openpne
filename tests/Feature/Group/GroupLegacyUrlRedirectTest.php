@@ -8,10 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The OpenPNE 3 `/community/*` GET URLs, preserved by redirect now that the canonical space is
- * `/groups/*` (GroupRouteParity::compatRedirects()). The audit test only checks the declared
- * targets exist; this checks each legacy URL actually lands on its canonical one, and that the id
- * OpenPNE 3 carried as `?id=` reaches the path.
+ * The audit test only checks the declared targets exist; this checks each legacy URL actually lands
+ * on its canonical one, carrying the id OpenPNE 3 passed as `?id=` into the path.
  */
 class GroupLegacyUrlRedirectTest extends TestCase
 {

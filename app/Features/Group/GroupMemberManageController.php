@@ -27,11 +27,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * The group member-management screen and its immediate operations — appoint / demote a
- * sub-admin, drop a plain member — kept off GroupController (already large; join/quit/pending
- * stay there). Dual-surface: Classic renders the roster and a shared GET confirm page per action;
- * Modern renders the roster and confirms inline, so a Modern GET confirm redirects to the roster
- * after the same state guards run — a crafted GET can never render a confirm for an invalid target.
+ * A Modern GET confirm redirects to the roster only after the same state guards Classic runs, so a
+ * crafted GET can never render a confirm for an invalid target.
  */
 class GroupMemberManageController extends Controller
 {
@@ -172,9 +169,8 @@ class GroupMemberManageController extends Controller
     }
 
     /**
-     * The nominee's accept/reject: no policy ability — being the nominee is state, not role, so the
-     * action's NoTransferPending check is authoritative. Resolve the group, run, redirect to the
-     * group home (where the banner lives), surfacing a failure as an error flash.
+     * No policy ability: being the nominee is state, not a role, so the action's NoTransferPending
+     * check is authoritative.
      */
     private function respondToTransfer(Request $request, Closure $run, string $status): RedirectResponse
     {
@@ -190,13 +186,9 @@ class GroupMemberManageController extends Controller
     }
 
     /**
-     * Shared GET confirm: resolve group + target, gate the viewer, then state-guard the target
-     * so an invalid confirm is never rendered. Modern confirms inline, so it redirects to the
-     * roster once the guards pass (showJoin pattern); Classic renders the shared confirm blade.
-     *
-     * $boxKind / $boxId carry the Classic parts kind and id of the OpenPNE 3 input page this
-     * confirm replaces — they differ per action (yesNo for the drop/demote confirmations, the form
-     * kind for the appoint/take-over requests), and skins target the id.
+     * The target is state-guarded before anything renders, so an invalid confirm never is.
+     * $boxKind / $boxId are the Classic parts kind and id of the OpenPNE 3 input page this confirm
+     * replaces, which a site's skin targets.
      */
     private function confirm(Request $request, string $ability, Closure $targetOk, string $title, string $messageKey, string $submitLabel, string $actionRoute, string $boxKind, string $boxId): View|RedirectResponse
     {
@@ -221,7 +213,6 @@ class GroupMemberManageController extends Controller
         ]);
     }
 
-    /** Shared POST body: gate the viewer, resolve the target, run the action, redirect to the roster. */
     private function operate(Request $request, string $ability, Closure $run, string $status): RedirectResponse
     {
         $group = $this->groupFrom($request);
@@ -255,7 +246,6 @@ class GroupMemberManageController extends Controller
         return Group::findOrFail($routeId !== null ? (int) $routeId : $request->integer('id'));
     }
 
-    /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id and group localNav. */
     private function classic(string $view, array $data): View
     {
         $this->markLocalNavGroup($data['group']);

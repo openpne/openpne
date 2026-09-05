@@ -17,21 +17,16 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
- * Modern surface shapes for community events. author is null for a withdrawn member; comment
- * `deletable` is the viewer-specific permission, computed server-side. Datetimes are ISO strings;
- * the date-only open_date/application_deadline are Y-m-d (the client formats them). RSVP state
- * (isParticipant/isClosed/isExpired/isFull/canParticipate) is a top-level controller prop, not part
- * of these shapes.
+ * author is null for a withdrawn member; comment `deletable` is the viewer's permission, computed
+ * server-side. Datetimes are ISO strings, the date-only open_date / application_deadline are Y-m-d,
+ * and RSVP state is a top-level controller prop.
  */
 class GroupEventSerializer
 {
     /**
-     * A board row / recent-events card: the title, comment count, participant count, author,
-     * last-activity time, and the open date (shown alongside the title). Callers eager-load
-     * comments_count, participants_count, and member.
-     *
-     * openDate is a date-only Y-m-d string, not an ISO datetime: rendering an ISO midnight with the
-     * browser's timezone would shift the date a day west of UTC (Classic renders the stored date).
+     * Callers eager-load comments_count, participants_count and member. openDate is date-only
+     * Y-m-d, not an ISO datetime: an ISO midnight rendered in the browser's timezone would shift
+     * the date a day west of UTC.
      *
      * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, updatedAt: string, openDate: string}
      */
@@ -49,9 +44,7 @@ class GroupEventSerializer
     }
 
     /**
-     * The event show shape: the full body, images, and the event schedule fields. participantCount is
-     * the current roster size (the RSVP button state is computed by the controller). openDate and
-     * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
+     * openDate and applicationDeadline are date-only Y-m-d strings; createdAt is a real datetime.
      *
      * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
@@ -61,7 +54,8 @@ class GroupEventSerializer
             'id' => $event->getKey(),
             'name' => $event->name,
             'body' => $event->body,
-            // See DiarySerializer::detail: bodyHtml is the server-rendered decoration HTML, null for plain.
+            // bodyHtml is the server-rendered decoration HTML, null for plain
+            // (docs/internals/body-text.md, "Render authority is the server").
             'format' => $event->format->value,
             'bodyHtml' => $event->format === BodyFormat::Plain ? null : BodyRenderer::render($event->body, $event->format)->toHtml(),
             'images' => $event->images->map([self::class, 'image'])->all(),
@@ -104,9 +98,6 @@ class GroupEventSerializer
     }
 
     /**
-     * The paged comment thread (id-ordered, size 20, reversible) plus the paging state the React page
-     * needs — same contract as the topic thread.
-     *
      * @return array{comments: list<array>, total: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
      */
     public static function thread(GroupEventCommentThread $thread, Member $viewer): array
@@ -125,10 +116,8 @@ class GroupEventSerializer
     }
 
     /**
-     * A single attached image (event or comment): the full-bytes url plus the thumbnail sources a
-     * surface picks from, all FilePolicy-gated. See docs/internals/images.md for which one a
-     * surface takes and why the intrinsic size travels with them. Tolerates a row whose File is
-     * gone (defensive; the join cascades with it).
+     * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
+     * "The two ladders". A row whose File is gone is tolerated defensively.
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */
@@ -161,8 +150,7 @@ class GroupEventSerializer
     }
 
     /**
-     * A roster member (event participant list). Requires avatar.file to be loaded so a list is not an
-     * N+1.
+     * Requires `avatar.file` to be loaded, so serializing a list is not an N+1.
      *
      * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}
      */

@@ -32,12 +32,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Group topic board, dual-surface: each action serves Classic Blade or Modern Inertia per
- * SurfaceResolver. The board-level gates (view a group's board, post a topic) key on Group,
- * so they call GroupTopicAccess directly; the topic-level gates (edit/delete) go through the
- * auto-discovered GroupTopicPolicy via Gate. Every failure is a 404, hiding the topic's
- * existence. The Classic group localNav side effect runs only in the Classic branch. showDelete
- * stays a Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
+ * Board-level gates key on Group and call GroupTopicAccess directly; topic-level gates go through
+ * GroupTopicPolicy via Gate. Every failure is a 404, hiding the topic's existence.
  */
 class GroupTopicController extends Controller
 {
@@ -98,9 +94,6 @@ class GroupTopicController extends Controller
             },
             SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
                 $found->loadMissing('member.avatar.file');
-                // Reuse the Classic thread pager (id-ordered, size 20, reversible) so Modern shows
-                // comments in the same order as Classic — number is racy on migrated data — and never
-                // serializes an unbounded thread in one response.
                 $thread = GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
                 $linkCards->ensureAll($thread->comments);
 
@@ -178,7 +171,6 @@ class GroupTopicController extends Controller
     {
         abort_unless(Gate::allows('delete', $topic), 404);
 
-        // Modern confirms deletion inline — send a Modern viewer back to the topic.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.topics.show', $topic);
         }
@@ -201,13 +193,12 @@ class GroupTopicController extends Controller
             ->with('status', __('%Topic% deleted.'));
     }
 
-    /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
+    /** Both surfaces key off {topic}, so $request selects nothing here. */
     private function redirectToTopic(Request $request, GroupTopic $topic): RedirectResponse
     {
         return redirect()->route('group.topics.show', $topic);
     }
 
-    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
     private function classic(string $view, array $data = []): View
     {
         $group = ($data['topic'] ?? null)?->group;

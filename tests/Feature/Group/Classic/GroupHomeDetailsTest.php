@@ -14,9 +14,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * OpenPNE 3 community home fidelity: the sidemenu member grid crowns the admin, and the center
- * column renders the full details listBox. Labels resolve in the request locale (en here), so the
- * assertions are the rendered English output (the fronted %Community% term renders "Community").
+ * Labels resolve in the request locale (en here), so the assertions are the rendered English output
+ * — the fronted %Community% term renders "Community".
  */
 class GroupHomeDetailsTest extends TestCase
 {
@@ -66,10 +65,7 @@ class GroupHomeDetailsTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('group.show', $group))->assertOk();
 
-        // The box heading is the fronted %Community% term, and the th labels follow OpenPNE 3's
-        // rendered order. The config rows (topic access, register policy, description) come from
-        // OpenPNE 3's community-config registry, so the order is pinned from a live render, not
-        // the template source.
+        // The th order is pinned from a live OpenPNE 3 render, not from its template source.
         $response->assertSeeInOrder(['id="communityHome"', '<h3>Group</h3>'], false);
         $response->assertSeeInOrder([
             '<th>Group Name</th>',

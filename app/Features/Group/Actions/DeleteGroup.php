@@ -30,16 +30,11 @@ class DeleteGroup
         $this->purge($group);
     }
 
-    /**
-     * Delete the group and purge every owned image File's bytes — no authorization. The admin
-     * moderation panel calls this directly (the panel's `admin` guard is an AdminUser, not a Member);
-     * frontend callers always go through __invoke.
-     */
+    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
     public function purge(Group $group): void
     {
-        // The group cascade drops nested topics/events/comments and their *_image link rows, but
-        // never the File bytes. Delete each topic/event through its own purge first (each collects and
-        // purges its and its comments' image bytes), so nothing orphans; then the group itself.
+        // Each nested topic and event goes through its own purge first: the group cascade drops
+        // their rows but never their File bytes.
         foreach ($group->topics()->get() as $topic) {
             $this->deleteTopic->purge($topic);
         }
@@ -48,17 +43,9 @@ class DeleteGroup
             $this->deleteEvent->purge($event);
         }
 
-        // The cascade removes memberships and join requests but never the top-image File bytes. Read
-        // the image under the same lock as the delete so a concurrent edit that just replaced it can't
-        // leave the new File orphaned (file_id is a mutable self-column — a stale read would miss that
-        // edit's image). Purge the bytes after commit.
-        //
-        // The talk's image Files are collected under that same lock, unlike the topic/event
-        // sweeps above: talk is written concurrently by design, and a message committed after any
-        // earlier enumeration would slip past it — its join row cascading away while the File row and
-        // bytes stay. The parent-row X-lock closes that window (a new message's FK check takes a
-        // shared lock on the group row and waits), the cascade drops the message and join rows, and
-        // the Files are purged once the delete has committed.
+        // The talk sweep and the group's own image are read under this lock — talk is written
+        // concurrently, and file_id is a mutable self-column — and the bytes are purged after the
+        // commit (docs/internals/group-boards.md, "Tearing a group down").
         [$image, $talkImages] = DB::transaction(function () use ($group): array {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->first();
             if ($locked === null) {
@@ -72,11 +59,8 @@ class DeleteGroup
                     ->select('group_message_images.file_id'))
                 ->get();
 
-            // `reactions.reactable_id` is polymorphic and so carries no foreign key: the cascade that
-            // takes the messages away would leave every reaction on them behind, pointing at ids that
-            // no longer exist. Under the same lock, for the same reason the image sweep is — and in
-            // the order every reaction write takes it (App\Features\GroupTalk\TalkWriteLock), so a
-            // teardown and a reaction queue rather than deadlock.
+            // `reactions.reactable_id` is polymorphic and carries no foreign key, so the cascade
+            // would leave every reaction behind (docs/internals/group-talk.md, "Reclaiming the rows").
             DB::table('reactions')
                 ->where('reactable_type', (new GroupMessage)->getMorphClass())
                 ->whereIn('reactable_id', DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'))
@@ -88,7 +72,7 @@ class DeleteGroup
             return [$file, $talkImages];
         });
 
-        $image?->delete(); // deleting a File purges its bytes
+        $image?->delete();
         foreach ($talkImages as $talkImage) {
             $talkImage->delete();
         }

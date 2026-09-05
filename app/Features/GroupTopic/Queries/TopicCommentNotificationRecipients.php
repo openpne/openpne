@@ -10,14 +10,9 @@ use App\Models\Member;
 use App\Notifications\CommentReason;
 
 /**
- * Who a new topic comment notifies: the topic author (Reply) and the distinct co-commenters
- * (Related), never the commenter. One entry per recipient, Reply winning when both apply.
- *
- * Every recipient must currently be able to receive it: not banned (is_login_rejected — banned
- * members cannot receive, as in messaging), able to view the topic right now (board read
- * access), and — the access class checks membership only, so it is applied here — no block in
- * either direction against the commenter. A withdrawn author/co-commenter's rows carry a NULL
- * member_id and drop out naturally.
+ * One entry per recipient, Reply winning when both apply. GroupTopicAccess checks membership only,
+ * so the either-direction block is applied here; a withdrawn author or co-commenter carries a NULL
+ * member_id and drops out naturally.
  */
 class TopicCommentNotificationRecipients
 {

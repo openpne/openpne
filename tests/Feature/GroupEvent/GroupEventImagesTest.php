@@ -185,9 +185,8 @@ class GroupEventImagesTest extends TestCase
 
     public function test_a_failed_later_image_compensates_the_earlier_images_bytes(): void
     {
-        // Drive a disk backend so writeStream lands real bytes, then fail the second write. The first
-        // image's bytes must be compensated off the disk when the outer transaction rolls back — a
-        // disk write is not transactional, so without compensation it would orphan.
+        // Drive a real disk backend so writeStream lands real bytes: a disk write is not
+        // transactional, so nothing but compensation would take them back.
         config(['openpne.files.disk' => 'local']);
         Storage::fake('local');
 
@@ -226,9 +225,6 @@ class GroupEventImagesTest extends TestCase
 
     public function test_a_failed_image_in_a_merged_participate_rolls_back_the_join_too(): void
     {
-        // The merged endpoint runs the roster toggle, the comment and its images in ONE compensating
-        // transaction. A failed image write must undo the join and the comment as well, and leave no
-        // orphan bytes — a separate outer transaction around two self-transacting actions would not.
         config(['openpne.files.disk' => 'local']);
         Storage::fake('local');
 

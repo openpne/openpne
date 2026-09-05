@@ -8,8 +8,8 @@ use App\Models\Group;
 use App\Models\Member;
 
 /**
- * The nominee declines a pending admin transfer. A single conditional UPDATE is its own
- * compare-and-set, so no lock is needed: 0 rows changed means the pending seat is not the actor's.
+ * A single conditional UPDATE is its own compare-and-set, so this takes no group-row lock: 0 rows
+ * changed means the pending seat is not the actor's.
  */
 class RejectAdminTransfer
 {

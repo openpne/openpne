@@ -33,12 +33,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Group events, dual-surface: each action serves Classic Blade or Modern Inertia per
- * SurfaceResolver. Board-level gates (view a community's events, post one) key on Group, so they
- * call GroupEventAccess directly; event-level gates (edit/delete) go through the auto-discovered
- * GroupEventPolicy via Gate. Every failure is a 404. The Classic community localNav side effect
- * runs only in the Classic branch. showDelete stays a Classic-only GET confirm page — Modern confirms
- * inline. RSVP (join/cancel) is posted through the comment endpoint (GroupEventCommentController).
+ * Board-level gates key on Group and call GroupEventAccess directly; event-level gates go through
+ * GroupEventPolicy via Gate. Every failure is a 404, and RSVP is posted through the comment endpoint.
  */
 class GroupEventController extends Controller
 {
@@ -101,8 +97,6 @@ class GroupEventController extends Controller
             },
             SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
                 $found->loadMissing('member.avatar.file');
-                // Reuse the id-ordered, size-20 pager so Modern matches Classic and never serializes
-                // an unbounded thread (same contract as the topic board).
                 $thread = GroupEventCommentThread::paginate($found, $request->query('order'), $request->query('page'));
                 $linkCards->ensureAll($thread->comments);
 
@@ -197,7 +191,6 @@ class GroupEventController extends Controller
     {
         abort_unless(Gate::allows('delete', $event), 404);
 
-        // Modern confirms deletion inline — send a Modern viewer back to the event.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.events.show', $event);
         }
@@ -247,13 +240,12 @@ class GroupEventController extends Controller
         ]);
     }
 
-    /** Redirect to the event show page on the surface the request came from (both key off {event}). */
+    /** Both surfaces key off {event}, so $request selects nothing here. */
     private function redirectToEvent(Request $request, GroupEvent $event): RedirectResponse
     {
         return redirect()->route('group.events.show', $event);
     }
 
-    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
     private function classic(string $view, array $data = []): View
     {
         $group = ($data['event'] ?? null)?->group;

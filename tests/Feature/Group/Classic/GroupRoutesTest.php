@@ -176,10 +176,7 @@ class GroupRoutesTest extends TestCase
         ]);
     }
 
-    /**
-     * OpenPNE 3's two opCommunityTopicPlugin settings, radios with its own choice captions. A
-     * members-only community must render with its stored choice checked — not the default.
-     */
+    /** OpenPNE 3's two opCommunityTopicPlugin settings, radios with its own choice captions. */
     public function test_editing_renders_the_topic_settings_with_the_stored_choice_checked(): void
     {
         $group = Group::factory()->create([

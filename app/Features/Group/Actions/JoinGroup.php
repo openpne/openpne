@@ -23,10 +23,8 @@ class JoinGroup
             throw new GroupActionException(GroupActionFailure::AlreadyMember);
         }
 
-        // A pending applicant is already in the join flow, independent of the current policy.
-        // Guarding here (not only in the Approval branch) keeps a member from holding both a
-        // confirmed membership and a stale request if the policy flips Approval→Open between
-        // applying and re-joining — the request must be approved or declined first.
+        // Guarded here rather than only in the Approval branch: a policy flipped Approval→Open
+        // between applying and re-joining must not leave both a membership and a stale request.
         if (GroupMembership::isPending($group, $member)) {
             throw new GroupActionException(GroupActionFailure::AlreadyRequested);
         }

@@ -6,10 +6,6 @@ use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * Members with a pending join request for a group, oldest first (the admin approval queue).
- * Reads group_join_requests via the applicants() pivot.
- */
 class ListPendingMembers
 {
     public const PER_PAGE = 20;

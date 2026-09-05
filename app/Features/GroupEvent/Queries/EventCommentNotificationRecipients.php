@@ -10,10 +10,8 @@ use App\Models\Member;
 use App\Notifications\CommentReason;
 
 /**
- * Who a new event comment notifies: the event author (Reply) and the distinct co-commenters
- * (Related), never the commenter. Same conditions as the topic twin: not banned, current board
- * read access, and no block in either direction against the commenter (the access class checks
- * membership only, so the block is applied here).
+ * One entry per recipient, Reply winning when both apply. GroupEventAccess checks membership only,
+ * so the either-direction block is applied here.
  */
 class EventCommentNotificationRecipients
 {

@@ -18,10 +18,8 @@ class UpdateEvent
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit an event's fields and manage its image slots: remove the images in
-     * $images->removals and add $images->additions into the freed slots (1..MAX). Image bytes are
-     * rollback-safe — new uploads are compensated if the transaction fails, and removed images' bytes
-     * (irreversible on a disk backend) are purged only after commit.
+     * Image bytes are rollback-safe: new uploads are compensated if the transaction fails, and
+     * removed images' bytes are purged only after commit.
      */
     public function __invoke(Member $actor, GroupEvent $event, GroupEventFormData $data, ImageEdit $images): GroupEvent
     {
@@ -35,9 +33,8 @@ class UpdateEvent
             // unique) or push past the image cap.
             GroupEvent::whereKey($event->getKey())->lockForUpdate()->first();
 
-            // OpenPNE 3 bumps event_updated_at only when the name or body actually changes (preSave
-            // isEventModified). The save bumps updated_at too (the board ordering key) whenever any
-            // field changed, so an edited event rises on the board.
+            // OpenPNE 3 bumps event_updated_at only when the name or body changes (preSave
+            // isEventModified); the save bumps updated_at whenever any field did.
             $contentChanged = $event->name !== $data->name || $event->body !== $data->body;
             $event->fill([
                 'name' => $data->name,
@@ -61,15 +58,13 @@ class UpdateEvent
             $event->clearLinkCardIfBodyChanged();
             $event->save();
 
-            // Drop the selected images (this event's only — an id from another event is ignored).
-            // Keep their Files to purge after commit; here only the link row is removed.
+            // This event's images only — an id from another event is ignored — and their Files are
+            // purged after commit.
             $removed = $event->images()->whereKey($images->removals)->with('file')->get();
             $event->images()->whereKey($removed->modelKeys())->delete();
 
-            // Add the new uploads into the lowest free slots. Recheck the count under the lock: the
-            // request validated against the pre-lock state, so a concurrent edit (or a crafted
-            // payload that slipped the cross-field check) could leave too few slots — fail cleanly
-            // rather than index past $free.
+            // Recheck the count under the lock: the request validated against the pre-lock state,
+            // so a concurrent edit could leave too few slots.
             $used = $event->images()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
             if (count($images->additions) > count($free)) {
@@ -84,7 +79,7 @@ class UpdateEvent
         });
 
         foreach ($removedFiles as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
 
         SyncLinkCard::for($event);

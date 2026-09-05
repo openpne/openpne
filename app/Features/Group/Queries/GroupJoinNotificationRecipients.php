@@ -9,13 +9,9 @@ use App\Models\GroupMember;
 use App\Models\Member;
 
 /**
- * Who a new group join notifies: the group's admins, never the joiner. Empty when the group
- * opted out of join notifications (OpenPNE 3 per-community is_send_pc_joinCommunity_mail).
- *
- * Each recipient must currently be able to receive it: not banned (is_login_rejected, as elsewhere in
- * the notification catalog) and no block in either direction against the joiner — a blocked pair chose
- * mutual invisibility, so the join stays hidden even though the admin still governs the group
- * through the member list.
+ * Empty when the group opted out of join notifications (OpenPNE 3 per-community
+ * is_send_pc_joinCommunity_mail). A blocked pair chose mutual invisibility, so the join stays
+ * hidden from an admin who still governs the group through the member list.
  */
 class GroupJoinNotificationRecipients
 {

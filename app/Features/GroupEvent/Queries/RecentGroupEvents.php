@@ -6,10 +6,6 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use Illuminate\Support\Collection;
 
-/**
- * The most recently active events of a community, for the "recent events" box on the community
- * home. Same ordering as the list, capped at a few rows.
- */
 class RecentGroupEvents
 {
     public const LIMIT = 5;

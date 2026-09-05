@@ -6,11 +6,8 @@ use App\Models\Group;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * OpenPNE 3 community search: by name keyword and/or category. An empty keyword applies no name
- * filter (browse, optionally narrowed by category).
- *
- * Wildcards in the keyword are not escaped, matching SearchDiaries / SearchMembers; the term is
- * still bound, so this is wildcard latitude, not injection.
+ * An empty keyword applies no name filter. Wildcards in the keyword are not escaped, as in the
+ * diary and member searches; the term is still bound, so this is wildcard latitude, not injection.
  */
 class SearchGroups
 {

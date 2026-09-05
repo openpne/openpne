@@ -9,15 +9,9 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * An applicant withdraws their own pending join request.
- *
  * QuitGroup cannot stand in for this: it deletes a confirmed membership row, and an applicant has
- * none — the request lives in group_join_requests until an admin answers it. Without this the only
- * way out of a queue is someone else's decision.
- *
- * The group row lock is the same one ApproveMember and DeclinePendingMember take (see
- * AcceptAdminTransfer), so a cancel racing an approval resolves one way or the other rather than
- * leaving both a membership and a request behind.
+ * none. The lock is the one ApproveMember and DeclinePendingMember take, so a cancel racing an
+ * approval resolves one way or the other rather than leaving both a membership and a request.
  */
 class CancelGroupJoinRequest
 {

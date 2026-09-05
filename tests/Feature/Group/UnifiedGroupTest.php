@@ -23,10 +23,8 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The look on the group top. It pins both sides — standard, the shipped page is what it was;
- * unified, the new page carries every entrance the old one offered under the same conditions — and
- * the two things the layout adds: the groups filed beside this one, which must read the same to
- * everybody, and the picture strip, whose every file is asked again.
+ * Beyond the entrances the shipped page already offered, this pins the two things the layout adds:
+ * the groups filed beside this one, and the picture strip whose every file is asked again.
  */
 class UnifiedGroupTest extends TestCase
 {
@@ -465,9 +463,6 @@ class UnifiedGroupTest extends TestCase
 
     public function test_a_join_row_pointing_at_a_file_owned_elsewhere_leaves_no_trace(): void
     {
-        // FilePolicy authorizes against the owner the FILE declares, not the join row that pointed
-        // here — so a row whose file belongs elsewhere could pass the Gate on the other owner's
-        // terms. The strip must also demand that the file's declared owner IS this parent.
         $group = Group::factory()->create();
         $author = Member::factory()->create();
         $this->join($group, $author);

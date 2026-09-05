@@ -20,22 +20,17 @@ class DeleteTopic
         $this->purge($topic);
     }
 
-    /**
-     * Delete the topic and purge its (and its comments') image bytes — no authorization. The admin
-     * moderation panel calls this directly (the panel's `admin` guard is an AdminUser, not a Member);
-     * frontend callers always go through __invoke.
-     */
+    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
     public function purge(GroupTopic $topic): void
     {
-        // Collect every owned image File (the topic's and its comments') before the row is gone:
-        // the FK cascade drops the *_image link rows but never the File bytes, which a disk backend
-        // deletes irreversibly. Purge them after the topic is deleted (post-commit).
+        // Collect every owned image File — the topic's and its comments' — before the row is gone:
+        // the cascade drops the *_image link rows but never the bytes, which a disk deletes for good.
         $files = $this->ownedImageFiles($topic);
 
         $topic->delete(); // FK cascade removes comments and all *_image link rows
 
         foreach ($files as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
     }
 

@@ -12,9 +12,8 @@ use Illuminate\Support\Facades\DB;
 class ToggleParticipation
 {
     /**
-     * Join or leave an event's roster. A closed or expired event
-     * freezes the roster in both directions; a full event blocks only joining. Lock the event row so
-     * the capacity check and the insert cannot race two joins past the cap.
+     * A full event blocks joining only. Lock the event row so the capacity check and the insert
+     * cannot race two joins past the cap.
      *
      * @return bool the member's participation state after the toggle (true = now joined)
      */
@@ -32,10 +31,8 @@ class ToggleParticipation
     }
 
     /**
-     * The toggle decision and roster write, assuming the caller is inside a transaction that already
-     * holds $event's row lock. Split out so the merged comment flow (SubmitEventComment) can run it
-     * in the same compensating transaction as the comment and its images. The capacity/membership
-     * predicates query under that lock, so they cannot race a concurrent join.
+     * The caller must already be inside a transaction holding $event's row lock; the capacity and
+     * membership predicates query under it, so they cannot race a concurrent join.
      *
      * @return bool the member's participation state after the toggle (true = now joined)
      */

@@ -8,9 +8,8 @@ use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The single read chokepoint for "what is this member to this group". group_members
- * holds confirmed members only and group_join_requests holds pending applicants, so these
- * helpers answer membership/role without any pending-filter for a caller to forget.
+ * group_members holds confirmed members only and group_join_requests the pending applicants, so
+ * these helpers need no pending-filter for a caller to forget.
  */
 class GroupMembership
 {

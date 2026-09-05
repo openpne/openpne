@@ -19,11 +19,7 @@ class DeleteTopicComment
         $this->purge($comment);
     }
 
-    /**
-     * Delete the comment and purge its image bytes — no authorization. The admin moderation panel
-     * calls this directly (the panel's `admin` guard is an AdminUser, not a Member); frontend callers
-     * always go through __invoke.
-     */
+    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
     public function purge(GroupTopicComment $comment): void
     {
         // Collect the comment's owned image Files before the cascade drops the *_image link rows;
@@ -34,7 +30,7 @@ class DeleteTopicComment
         $comment->delete();
 
         foreach ($files as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
     }
 }

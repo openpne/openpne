@@ -3,20 +3,16 @@
 namespace App\Features\GroupTopic;
 
 /**
- * Who may read a group's topics.
- *
- * Values start at 1 (the JoinPolicy convention): OpenPNE 3 stored this as a string, so there is
- * no numeric to preserve, and a 0 case invites PHP falsy-comparison bugs.
+ * Values start at 1, the JoinPolicy convention. The column is the one read gate the board, events
+ * and talk all share (docs/internals/group-talk.md, "Access").
  */
 enum TopicReadAccess: int
 {
     /** Any signed-in member may read. */
     case Everyone = 1;
 
-    /** Only group members may read. */
     case MembersOnly = 2;
 
-    /** String slug for serialization. Never pass the raw int to the frontend. */
     /**
      * OpenPNE 3's stored community_config value, the seam the Classic edit form's radio ids keep
      * (`community_config_{field}_{value}`) so a site's CSS and scripts still find them.
@@ -29,6 +25,7 @@ enum TopicReadAccess: int
         };
     }
 
+    /** Never pass the raw int to the frontend. */
     public function slug(): string
     {
         return match ($this) {
@@ -49,8 +46,8 @@ enum TopicReadAccess: int
     }
 
     /**
-     * Label key, translated via __() on either surface. OpenPNE 3's own choice captions
-     * (community_config.yml public_flag), which its edit form and group home both printed.
+     * OpenPNE 3's own choice captions (community_config.yml public_flag), translated via __() on
+     * either surface.
      */
     public function label(): string
     {
