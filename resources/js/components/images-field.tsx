@@ -5,8 +5,8 @@ import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 
 /**
- * Server contract (PostImageRules): raster only, 5MB / 5000px per file — shrunk output sits far
- * under both.
+ * Server contract (PostImageRules): raster only, a per-file byte cap the operator sets and 5000px —
+ * the shrink targets sit well under the shipped defaults.
  */
 export const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 const MAX_EDGE = 2048;

@@ -7,6 +7,7 @@ use App\Upgrade\Runner\UpgradeRunner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * See docs/internals/upgrade.md; the operator guide is docs/upgrading-from-openpne3.md.
@@ -46,7 +47,9 @@ class UpgradeFromThreeCommand extends Command
         $this->line('Site timezone: '.config('app.timezone').' — migrated timestamps are read as this zone, unconverted.');
 
         $runner = app(UpgradeRunner::class);
-        $out = fn (string $line) => $this->line($line);
+        // Source-derived text (setting values, unknown names) rides in these lines, and an unescaped
+        // `<fg=…>` in it would make the console formatter throw.
+        $out = fn (string $line) => $this->line(OutputFormatter::escape($line));
 
         // --force-restart is applied inside run(), only after the source preflight passes, so a bad
         // source cannot delete existing target rows before aborting.

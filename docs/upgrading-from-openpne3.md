@@ -204,8 +204,12 @@ change from a problem when you go through it.
   (*Settings → Registration settings*). The dry-run report lists what the settings step copies. Values with no
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
-  JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen)
-  and `Theme_used` (Classic ships one skin plus custom CSS).
+  JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen),
+  `Theme_used` (Classic ships one skin plus custom CSS) and `pc_home_information` (OpenPNE 3 itself
+  rendered the information box from the gadget's own config, never from this row, which the
+  gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment
+  variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value
+  to set, or tells you the OpenPNE 3 value could not be read as a size.
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how

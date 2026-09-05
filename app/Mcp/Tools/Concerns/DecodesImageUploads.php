@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Tools\Concerns;
 
 use App\Files\PostImages;
+use App\Files\UploadLimit;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\UploadedFile;
@@ -20,9 +21,6 @@ use RuntimeException;
  */
 trait DecodesImageUploads
 {
-    /** `max:5120` on the shared rules (kilobytes) stated in bytes; the two must stay one number. */
-    private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
     /**
      * The temporary files are removed on every path out, a refused picture and a rolled-back write
      * included.
@@ -63,7 +61,7 @@ trait DecodesImageUploads
             ->description(
                 'Pictures to attach, at most '.PostImages::MAX_IMAGES.'. Each is the file\'s own bytes as standard '
                 .'base64 — no data: prefix, no url-safe substitutions — and at most '
-                .intdiv(self::MAX_IMAGE_BYTES, 1024 * 1024).' MB once decoded. jpeg, png, gif or webp: what a '
+                .UploadLimit::kilobytes().' KB once decoded. jpeg, png, gif or webp: what a '
                 .'picture is is decided by reading it, whatever it is called.',
             );
     }
@@ -102,12 +100,12 @@ trait DecodesImageUploads
 
     /**
      * Four base64 characters carry at most three bytes, so a longer string cannot decode to
-     * something {@see self::MAX_IMAGE_BYTES} would accept. Exact: slack here is bytes over the cap
+     * something the compose rules' cap would accept. Exact: slack here is bytes over the cap
      * being decoded.
      */
     private static function maxEncodedLength(): int
     {
-        return intdiv(self::MAX_IMAGE_BYTES + 2, 3) * 4;
+        return intdiv(UploadLimit::bytes() + 2, 3) * 4;
     }
 
     private static function upload(string $encoded, int $index): UploadedFile
@@ -142,6 +140,6 @@ trait DecodesImageUploads
     private static function tooLongMessage(int $limit): string
     {
         return 'This picture is longer than a picture may be: at most '
-            .intdiv(self::MAX_IMAGE_BYTES, 1024 * 1024).' MB, which is '.$limit.' base64 characters.';
+            .UploadLimit::kilobytes().' KB, which is '.$limit.' base64 characters.';
     }
 }

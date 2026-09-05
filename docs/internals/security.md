@@ -375,7 +375,7 @@ first frame of an animated source. Each frame is held as a full-canvas buffer, s
 decoding an animation costs frames × width × height however small the encoded file
 is, and GD allocates those buffers outside PHP's `memory_limit`. The upload rules
 bound one frame (`dimensions`, `openpne.images.max_upload_dimension`) and the wire
-size; neither bounds the frame count, so a 31 KB 1000×1000 GIF of 150 frames costs
+size (`OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)); neither bounds the frame count, so a 31 KB 1000×1000 GIF of 150 frames costs
 ~650 MB decoded (~1 GB under Imagick).
 
 Under the default GD driver the frames are skipped before allocation, via

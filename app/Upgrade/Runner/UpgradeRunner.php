@@ -94,6 +94,12 @@ final class UpgradeRunner
             }
         }
 
+        if ($this->readsSourceTable('sns_config')) {
+            foreach ((new UncopiedSettingsNotice)->inspect($options->sourcePrefix, $options->sourceDatabase) as $notice) {
+                $out("WARN {$notice}");
+            }
+        }
+
         if ($options->dryRun) {
             // Same compatibility gate as a real run, but read-only: a plan against legacy or
             // mismatched state must say so instead of PLANning steps that would never be allowed.
@@ -398,5 +404,16 @@ final class UpgradeRunner
     private function steps(): array
     {
         return $this->steps ?? StepRegistry::all();
+    }
+
+    private function readsSourceTable(string $table): bool
+    {
+        foreach ($this->steps() as $step) {
+            if ($step->sourceTable() === $table) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

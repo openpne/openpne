@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Files\DbBlobFileStorage;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
+use App\Files\UploadLimit;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +21,10 @@ class FilesServiceProvider extends ServiceProvider
         // Through config so a test can take either branch, and set unconditionally because
         // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
+
+        // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
+        // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
+        config(['livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.UploadLimit::kilobytes()]]);
 
         // Bound (not singleton) so each resolution reflects the current
         // openpne.files.disk; the implementations are stateless and cheap to build.
