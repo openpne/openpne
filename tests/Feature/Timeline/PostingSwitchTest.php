@@ -92,6 +92,17 @@ class PostingSwitchTest extends TestCase
         $response->assertDontSee('#timeline-reply-form', false);
     }
 
+    public function test_classic_load_more_rows_drop_their_reply_affordances_too(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
+
+        $response = $this->actingAs($this->member)->get(route('timeline.index.rows', ['page' => 1]))->assertOk();
+
+        $response->assertSee('already here');
+        $response->assertDontSee('timeline-comment-link', false);
+        $response->assertDontSee('timeline-post-comment-form', false);
+    }
+
     public function test_classic_thread_page_drops_its_reply_form(): void
     {
         $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
