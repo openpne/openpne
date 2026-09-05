@@ -22,11 +22,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * The community-wide side of a topic comment (CommentNewPost). Precedence Reply > Related > Group:
- * the broadcast reaches members who are neither the author nor a co-commenter, so no member is
- * notified twice. The author/co-commenter half lives in NotifyTopicCommentPosted (Reply/Related).
- */
 class BroadcastGroupCommentTest extends TestCase
 {
     use RefreshDatabase;
@@ -157,8 +152,6 @@ class BroadcastGroupCommentTest extends TestCase
 
         app(CreateTopicComment::class)($commenter, $topic, 'hello');
 
-        // Inline: the author gets a Reply. Off the request: the community-wide broadcast job, carrying the
-        // author + commenter in its snapshotted exclusion.
         Notification::assertSentTo(
             $author,
             TopicCommentedNotification::class,

@@ -17,9 +17,8 @@ class ApproveMember
 {
     public function __invoke(Member $actor, Group $group, Member $applicant): void
     {
-        // Move the pending request into a confirmed membership atomically (cf. AcceptFriendRequest).
-        // The admin check re-runs under the group-row lock (see AcceptAdminTransfer): a transfer
-        // accepted after page load could have demoted this ex-admin.
+        // The admin check re-runs under the group-row lock, so a transfer accepted after page load
+        // cannot let an ex-admin approve (docs/internals/group-boards.md, "The group row is the lock").
         DB::transaction(function () use ($actor, $group, $applicant) {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->firstOrFail();
 

@@ -11,7 +11,7 @@ use App\Models\Member;
 use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
-/** A member leaves a group. See AcceptAdminTransfer for the group-row lock protocol. */
+/** See docs/internals/group-boards.md, "The group row is the lock". */
 class QuitGroup
 {
     public function __invoke(Member $member, Group $group): void
@@ -19,8 +19,6 @@ class QuitGroup
         DB::transaction(function () use ($member, $group): void {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->firstOrFail();
 
-            // Re-read the role under the lock so AdminCannotQuit stays correct even if a concurrent
-            // AcceptAdminTransfer just promoted this member to admin between page load and here.
             $membership = GroupMember::query()
                 ->where('group_id', $locked->getKey())
                 ->where('member_id', $member->getKey())
@@ -38,7 +36,6 @@ class QuitGroup
 
             $membership->delete();
 
-            // A leaving nominee cancels the pending transfer.
             if ((int) $locked->pending_admin_member_id === (int) $member->getKey()) {
                 $locked->pending_admin_member_id = null;
                 $locked->save();

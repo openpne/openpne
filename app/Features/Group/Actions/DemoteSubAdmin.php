@@ -12,7 +12,7 @@ use App\Models\Member;
 use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
-/** Demote a sub-admin back to plain member. See AcceptAdminTransfer for the group-row lock protocol. */
+/** See docs/internals/group-boards.md, "The group row is the lock". */
 class DemoteSubAdmin
 {
     public function __invoke(Member $actor, Group $group, Member $target): void
@@ -32,8 +32,7 @@ class DemoteSubAdmin
                 throw new GroupActionException(GroupActionFailure::NotSubAdmin);
             }
 
-            // pending is left untouched: a nominee who is also a sub-admin may be demoted (the
-            // transfer stands — nominees need only be non-admin members).
+            // pending is left untouched: a nominee who is also a sub-admin may still be demoted.
             GroupMember::query()
                 ->where('group_id', $locked->getKey())
                 ->where('member_id', $target->getKey())

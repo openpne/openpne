@@ -5,8 +5,8 @@ namespace App\Features\GroupEvent\Data;
 use App\Support\BodyFormat;
 
 /**
- * Validated event form input. Dates are carried as strings (the form sends Y-m-d) and cast on the
- * model; open_date_comment is '' when omitted (OpenPNE 3 stores empty, not null).
+ * Dates are carried as strings (the form sends Y-m-d) and cast on the model; open_date_comment is
+ * '' when omitted, as OpenPNE 3 stores empty rather than null.
  */
 final readonly class GroupEventFormData
 {

@@ -13,7 +13,7 @@ use App\Models\Member;
 use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
-/** Promote a plain member to sub-admin. See AcceptAdminTransfer for the group-row lock protocol. */
+/** See docs/internals/group-boards.md, "The group row is the lock". */
 class AppointSubAdmin
 {
     public function __invoke(Member $actor, Group $group, Member $target): void

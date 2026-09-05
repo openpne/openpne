@@ -18,10 +18,8 @@ class UpdateGroup
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit a group's settings and manage its single top
-     * image: replace it with $image, or clear it when $removeImage is set. A new image's bytes are
-     * rollback-safe; the replaced/removed File's bytes (irreversible on a disk backend) are purged
-     * only after commit.
+     * A new image's bytes are rollback-safe; the replaced or removed File's bytes (irreversible on a
+     * disk backend) are purged only after commit.
      */
     public function __invoke(Member $actor, Group $group, GroupFormData $data, ?UploadedFile $image = null, bool $removeImage = false): void
     {
@@ -37,16 +35,12 @@ class UpdateGroup
         }
 
         $replaced = $this->images->compensating(function (callable $store) use ($actor, $group, $data, $image, $removeImage): ?File {
-            // Re-read under the lock and work off $locked: file_id is a mutable column on this row, so
-            // the passed-in instance may carry a value already overwritten by a concurrent edit that
-            // won the lock first. Reading the prior File off the stale value would miss that edit's
-            // image and orphan its bytes. (UpdateTopic is safe without this because it reads images by
-            // the immutable post_id, not a self-column.)
+            // Work off $locked, never the passed-in instance: file_id is a mutable self-column, so a
+            // stale read would miss a concurrent edit's image and orphan its bytes.
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->firstOrFail();
 
-            // Re-check management under the lock (see AcceptAdminTransfer): a transfer accepted after
-            // page load could have demoted this ex-manager. No image is stored yet, so the throw just
-            // rolls the transaction back with nothing to purge.
+            // Re-checked under the lock (docs/internals/group-boards.md, "The group row is the
+            // lock"); no image is stored yet, so the throw rolls back with nothing to purge.
             if (! GroupMembership::canManage($locked, $actor)) {
                 throw new GroupActionException(GroupActionFailure::NotManager);
             }
@@ -61,7 +55,7 @@ class UpdateGroup
                 'topic_post_authority' => $data->topicPostAuthority,
             ]);
 
-            // A new upload wins over a remove flag. Capture the prior File (if any) to purge after commit.
+            // A new upload wins over a remove flag.
             if ($image !== null) {
                 $previous = $locked->image()->first();
                 $file = $store($image, 'group', (int) $locked->getKey());
@@ -80,6 +74,6 @@ class UpdateGroup
             return null;
         });
 
-        $replaced?->delete(); // deleting the File purges its bytes
+        $replaced?->delete();
     }
 }

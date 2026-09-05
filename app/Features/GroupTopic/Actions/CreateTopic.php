@@ -43,8 +43,6 @@ class CreateTopic
             relation: fn (GroupTopic $topic) => $topic->images(),
         );
 
-        // Fires after the image-attach transaction commits (ShouldDispatchAfterCommit); the fan-out job
-        // re-reads a durable topic.
         TopicPosted::dispatch($topic, $author);
         SyncLinkCard::for($topic);
 

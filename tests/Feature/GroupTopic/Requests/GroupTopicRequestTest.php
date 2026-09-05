@@ -12,14 +12,11 @@ use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
-use Tests\Feature\Group\GroupPostRequestParityTest;
 use Tests\TestCase;
 
 /**
- * Drives the topic form requests through throwaway routes (the real routes land with the Classic
- * adapter), to pin the OpenPNE 3 validation rules and the 404-on-refusal authorization. The
- * name/body rules shared with events are additionally guarded against one-sided drift by
- * {@see GroupPostRequestParityTest}.
+ * Drives the topic form requests through throwaway routes, because the real routes land with the
+ * Classic adapter.
  */
 class GroupTopicRequestTest extends TestCase
 {

@@ -17,13 +17,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Event comments and the merged RSVP form, dual-surface for the write path. OpenPNE 3 posts
- * participation through the same comment-create endpoint: the participate/cancel buttons toggle the
- * roster and then save the (required) comment, while the "comment only" button just saves it.
- * SubmitEventComment runs the toggle, the comment and its images in one compensating transaction, so
- * a closed/expired/full guard aborts the whole submission. A guard failure is an in-app error (flash
- * + back), not a 404; the 404s are reserved for the membership gate. showDelete stays a Classic-only
- * GET confirm page — Modern confirms delete inline.
+ * OpenPNE 3 posts participation through the same comment-create endpoint: the participate/cancel
+ * buttons toggle the roster and then save the required comment, while "comment only" just saves it.
+ * A roster guard failure is an in-app error, not a 404; the 404s are the membership gate's.
  */
 class GroupEventCommentController extends Controller
 {
@@ -39,7 +35,6 @@ class GroupEventCommentController extends Controller
         try {
             $joined = $submit($this->viewer(), $found, $body, $images, $toggleRoster);
         } catch (GroupEventActionException $e) {
-            // A roster guard (closed / expired / full) is shown in place; the comment is rolled back.
             if ($this->isRosterGuard($e->reason)) {
                 return $this->redirectToEvent($request, $found)->with('error', $this->rosterError($e->reason));
             }
@@ -53,12 +48,10 @@ class GroupEventCommentController extends Controller
     {
         abort_unless(GroupEventAccess::canDeleteComment($comment, $this->viewer()), 404);
 
-        // Modern confirms deletion inline — send a Modern viewer back to the event.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.events.show', $comment->event);
         }
 
-        // The confirm keeps the community context its event pages carry.
         $this->markLocalNavGroup($comment->event->group);
 
         return view('group-event.comment-delete', [
@@ -80,7 +73,7 @@ class GroupEventCommentController extends Controller
         return $this->redirectToEvent($request, $event)->with('status', __('The comment was deleted.'));
     }
 
-    /** Redirect to the event show page on the surface the request came from (both key off {event}). */
+    /** Both surfaces key off {event}, so $request selects nothing here. */
     private function redirectToEvent(Request $request, GroupEvent $event): RedirectResponse
     {
         return redirect()->route('group.events.show', $event);

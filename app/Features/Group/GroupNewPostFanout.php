@@ -10,22 +10,15 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Shared group-posting fan-out (topic/event new-post and comment broadcast). Walks the given member
- * audience in id-ordered chunks and resolves each chunk's channels from ONE opt-out query over the
- * member_notification_settings fan-out index — never a per-recipient cold read. Unlike the diary
- * broadcast there is no friends-only variant, so the gate is the single kind; the mail leg additionally
- * needs the shared (configurable) group-posting template to be enabled, checked once by the caller.
- * The audience itself (who to reach, minus author / already-notified) is the caller's to build.
- */
+/** See docs/internals/notifications.md, "Broadcast fan-out". */
 class GroupNewPostFanout
 {
     private const CHUNK = 1000;
 
     /**
-     * @param  Builder<Member>  $audience  the members to reach (already excluding author / reply-related)
-     * @param  bool  $mailTemplateEnabled  the group-posting template's admin toggle, resolved once
-     * @param  callable(list<string>): Notification  $makeNotification  builds the notification for decided channels
+     * @param  Builder<Member>  $audience  the members to reach, already excluding the author and anyone the caller notified inline
+     * @param  bool  $mailTemplateEnabled  the group-posting template's admin toggle, resolved once by the caller
+     * @param  callable(list<string>): Notification  $makeNotification
      */
     public function run(Builder $audience, NotificationKind $kind, bool $mailTemplateEnabled, callable $makeNotification): void
     {
@@ -57,8 +50,7 @@ class GroupNewPostFanout
     }
 
     /**
-     * The opted-out set for this chunk in one indexed query: $out[channel][member_id] = true. Everyone
-     * absent defaults to on.
+     * Everyone absent from the result defaults to on.
      *
      * @param  Collection<int, int>  $ids
      * @return array<string, array<int, true>>

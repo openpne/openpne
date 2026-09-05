@@ -10,10 +10,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The OpenPNE 3 `/communityTopic/*` GET URLs, preserved by redirect now that the board is nested
- * under its group and a thread has a flat permalink (GroupTopicRouteParity::compatRedirects()).
- * The audit test only checks the declared targets exist; this checks each legacy URL actually
- * lands on its canonical one.
+ * The audit test only checks the declared targets exist; this checks each legacy URL actually lands
+ * on its canonical one.
  */
 class GroupTopicLegacyUrlRedirectTest extends TestCase
 {

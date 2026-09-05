@@ -10,10 +10,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The OpenPNE 3 `/communityEvent/*` GET URLs, preserved by redirect now that the board is nested
- * under its group and an event has a flat permalink (GroupEventRouteParity::compatRedirects()).
- * The audit test only checks the declared targets exist; this checks each legacy URL actually
- * lands on its canonical one.
+ * The audit test only checks the declared targets exist; this checks each legacy URL actually lands
+ * on its canonical one.
  */
 class GroupEventLegacyUrlRedirectTest extends TestCase
 {

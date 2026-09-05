@@ -13,8 +13,8 @@ class DeclinePendingMember
 {
     public function __invoke(Member $actor, Group $group, Member $applicant): void
     {
-        // The admin check re-runs under the group-row lock (see AcceptAdminTransfer) so a transfer
-        // accepted after page load can't let an ex-admin decline.
+        // The admin check re-runs under the group-row lock, so a transfer accepted after page load
+        // cannot let an ex-admin decline (docs/internals/group-boards.md, "The group row is the lock").
         DB::transaction(function () use ($actor, $group, $applicant): void {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->firstOrFail();
 

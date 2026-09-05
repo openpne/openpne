@@ -6,10 +6,6 @@ use App\Models\Group;
 use App\Models\GroupTopic;
 use Illuminate\Support\Collection;
 
-/**
- * The most recently active topics of a group, for the "recent topics" box on the group
- * home. Same ordering as the board, capped at a few rows.
- */
 class RecentGroupTopics
 {
     public const LIMIT = 5;
