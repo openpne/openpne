@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Token-based checkbox (native, so it stays Inertia useForm-friendly). `accent-primary` tints it. */
+/** Native rather than a styled primitive, so it binds straight to Inertia's useForm. */
 export function Checkbox({ className, ...props }: ComponentProps<'input'>) {
     return (
         <input

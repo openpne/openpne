@@ -9,15 +9,9 @@ import { cn } from '@/lib/utils';
 import type { PageProps, TalkNavRooms } from '@/types';
 
 /**
- * Shared nav list for LeftNav (desktop) and NavDrawer (mobile), rendered from the member chrome
- * registry — the same source the page frame reads for hub headers, so nav labels and hub h1s cannot
- * drift. Home is the brand row, so it is omitted. Friends and Messages carry an attention badge
- * (pending requests / unread) from the shared `unread` counts. Sections of a switched-off unit are
- * dropped (the Classic navigation does the same from its own route table).
- *
- * `rooms` opens the groups entry into a room list. It is a parameter rather than a prop read here
- * because only the desktop sidebar wants it: on a phone the bottom bar is the way into a group, and
- * a drawer that had to be opened first is not where a conversation list belongs.
+ * Rendered from the member chrome registry, the same source the page frame reads for hub headers, so
+ * nav labels and hub headings cannot drift. `rooms` is a parameter rather than a prop read here
+ * because only the desktop sidebar wants it.
  */
 export function NavItems({ onNavigate, rooms }: { onNavigate?: () => void; rooms?: TalkNavRooms | null }) {
     const t = useT();
@@ -37,13 +31,9 @@ export function NavItems({ onNavigate, rooms }: { onNavigate?: () => void; rooms
                             aria-current={active ? 'page' : undefined}
                             className={
                                 'flex min-h-11 items-center gap-3 rounded-full px-3 text-base transition ' +
-                                // Hover paints the background and leaves the text muted, so the two
-                                // never converge: the current item is the only one showing the
-                                // background *and* foreground text. Brightening the text on hover
-                                // would make a hovered item identical to the current one — in dark
-                                // --accent-foreground and --foreground are the same value — which is
-                                // what font weight used to hide before it was removed from the
-                                // non-unread states.
+                                // Hover paints the background and leaves the text muted: in dark
+                                // --accent-foreground and --foreground are the same value, so
+                                // brightening it would make a hovered item identical to the current one.
                                 (active
                                     ? 'bg-accent text-foreground'
                                     : 'text-muted-foreground hover:bg-accent')
@@ -92,9 +82,8 @@ function TalkRooms({ rooms: { rooms, hasMore }, url }: { rooms: TalkNavRooms; ur
                             <CommunityImage name={room.name} src={room.imageUrl} className="size-6" textClassName="text-[10px]" decorative />
                             <span className="min-w-0 flex-1 truncate">{room.name}</span>
                             {room.muted && <BellOff className="size-3 shrink-0" aria-label={t('Muted')} />}
-                            {/* The row is one link, so the pill's phrase joins its name
-                                (components/count-pill.tsx). A muted room keeps that number and gives
-                                up the pill's insistence, as its row on the joined list does. */}
+                            {/* The row is one link, so the pill's phrase joins its name; a muted room
+                                keeps the number and gives up the pill's insistence. */}
                             <CountPill
                                 count={room.unread}
                                 label={unreadMessagesPhrase(t, room.unread)}

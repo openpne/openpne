@@ -3,11 +3,7 @@ import type { ReactNode } from 'react';
 import { Card, CardBody } from '@/components/card';
 import { Heading } from '@/components/ui/heading';
 
-/**
- * Detail page for one consequential setting (email/password/withdrawal): the page title as h1 and
- * one card holding the form. The chrome registry's CONFIG_CONTEXT crumb (Settings) carries the way
- * back, so this owns only the title.
- */
+/** The chrome registry's CONFIG_CONTEXT crumb carries the way back, so this owns only the title. */
 export function SettingsSubpage({ title, danger = false, children }: { title: string; danger?: boolean; children: ReactNode }) {
     return (
         <>

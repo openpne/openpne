@@ -4,7 +4,10 @@ import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 
-/** Server contract (PostImageRules): raster only, 5MB / 5000px per file — shrunk output sits far under both. */
+/**
+ * Server contract (PostImageRules): raster only, 5MB / 5000px per file — shrunk output sits far
+ * under both.
+ */
 export const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 const MAX_EDGE = 2048;
 const JPEG_QUALITY = 0.82;
@@ -12,14 +15,11 @@ const JPEG_QUALITY = 0.82;
 const PASSTHROUGH_BYTES = 2 * 1024 * 1024;
 
 /**
- * Re-encode one picked image down to MAX_EDGE on the longest side. Phone cameras default to
- * 24MP+, which trips the server's byte/pixel caps (or PHP's own upload limits) — and no reader
- * ever sees more than a thumbnail-sized render, so shrinking before upload is pure win. EXIF — GPS
- * included — does not survive the canvas, which is as much the point as the size is. Returns the
- * original when it cannot be decoded; the server validation answers those.
+ * EXIF — GPS included — does not survive the canvas, which is as much the point as the size is.
+ * Returns the original when it cannot be decoded; the server validation answers those.
  */
 export async function shrink(file: File): Promise<File> {
-    // A GIF stays as picked: the canvas would flatten its animation. Oversized ones fail visibly.
+    // A GIF stays as picked: the canvas would flatten its animation, so an oversized one fails visibly.
     if (file.type === 'image/gif') {
         return file;
     }

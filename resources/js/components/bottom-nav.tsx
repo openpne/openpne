@@ -19,9 +19,8 @@ import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /**
- * Mobile (< lg) bottom bar. Members only: a guest (a web-public profile is reachable signed out) has
- * no member nav to shortcut. `hidden` slides it away while the reader scrolls down (AppShell owns the
- * signal).
+ * Members only: a guest (a web-public profile is reachable signed out) has no member nav to
+ * shortcut.
  */
 export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
@@ -57,11 +56,8 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
                 hidden && 'translate-y-full',
             )}
         >
-            {/* A tab fills the row, so the row is the tap target, and the word under each icon is
-                what makes the labelled row the taller of the two. AppShell reserves these same
-                lengths as `--modern-bottom-offset`, and a bar taller than the space it was given
-                stands over the page's last rows — so both are written as the same literal and
-                AppShellTest reads this one back off the shell's reservation. */}
+            {/* AppShell reserves these same lengths as `--modern-bottom-offset`, and a bar taller
+                than the space it was given stands over the page's last rows. */}
             <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-[3rem]')}>
                 {bottomBar === 'dive' ? <DiveRow chrome={chrome} path={path} /> : <LabeledTabs path={path} mark={tabMark} />}
             </ul>
@@ -69,12 +65,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
     );
 }
 
-/**
- * The section row: Home and the few sections a phone reaches for, each icon over its own word, with
- * what waits on them marked as the look says. Without it the counts live only behind the hamburger,
- * so nothing on a phone says anything is waiting. The tabs stay in the drawer too — this is a
- * shortcut, not the whole nav.
- */
+/** A shortcut, not the whole nav: the same tabs stay in the drawer. */
 function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
     const t = useT();
     const { props } = usePage<PageProps>();
@@ -92,10 +83,8 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                         <Link
                             href={href}
                             aria-current={active ? 'page' : undefined}
-                            // Named by the word on screen, with the count beside it from the pill's
-                            // own label. A dot prints nothing to name, so the phrase goes here — and
-                            // that replaces the name rather than joining it, which stays inside
-                            // WCAG 2.5.3 only because the phrase spells the word out again.
+                            // A dot prints nothing to name, so the phrase goes here — inside
+                            // WCAG 2.5.3 only because it spells the visible word out again.
                             aria-label={dotted ? badgePhrase(t, NOTIFICATIONS_SECTION.badge, count) : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
@@ -119,11 +108,8 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
 }
 
 /**
- * The unified layout's row: the place the member is in, between the two errands that interrupt one.
- * The middle names where they have dived to and returns them to its top, so coming back up is one
- * tap from anywhere inside it — a group's talk, a topic, somebody's diary. It is a statement about
- * the screen rather than a section to switch to, which is why it carries a name and no icon: the
- * flanks are the same three-zone bar's tabs, and only they behave like tabs.
+ * The middle names the place the member has dived into and returns them to its top; it carries a
+ * name and no icon because only the flanks behave like tabs.
  */
 function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
     const t = useT();
@@ -136,8 +122,7 @@ function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
             <li className="flex min-w-0 flex-1 items-stretch">
                 <Link
                     href={place.href}
-                    // Standing on the place's own top, the link points at the page it is on: the same
-                    // "you are here" the tabs say, said where the member actually is.
+                    // Standing on the place's own top, the link points at the page it is on.
                     aria-current={path === place.href ? 'page' : undefined}
                     data-dive-place={place.href}
                     className="flex size-full min-w-0 items-center justify-center px-2 text-foreground"
@@ -153,9 +138,8 @@ function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
 }
 
 /**
- * A flanking zone, the mock's way: the icon beside its name on one line, and a dot rather than a
- * printed number when something waits (the count stays in the link's accessible name). `shortLabel`
- * is the design's own word where the nav row's is longer.
+ * A dot rather than a printed number when something waits; the count stays in the link's accessible
+ * name.
  */
 function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; count?: number; shortLabel?: string }) {
     const t = useT();

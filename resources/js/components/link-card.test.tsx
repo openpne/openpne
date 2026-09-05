@@ -62,8 +62,8 @@ test('the wide picture offers every rung, with the widths it will really be serv
     const { container } = render(<LinkCard card={wide} />);
     const image = container.querySelector('img');
 
-    // 1200x630 fits a 320 box at 320 wide and a 640 box at 640; the 1200 box cannot enlarge it past
-    // its own 1200. Descriptors are the real widths, not the boxes asked for.
+    // 1200x630 fits a 320 box at 320 and a 640 box at 640, and the 1200 box cannot enlarge it past
+    // its own width — the descriptors are the real widths, not the boxes asked for.
     expect(image?.getAttribute('srcset')).toBe(
         '/linkCard/diary/1/img/png/w320_h320/a.png 320w, /linkCard/diary/1/img/png/w640_h640/a.png 640w, /linkCard/diary/1/img/png/w1200_h1200/a.png 1200w',
     );

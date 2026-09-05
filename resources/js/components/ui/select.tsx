@@ -2,8 +2,8 @@ import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Token-based native select (keeps the platform picker + Inertia useForm compatibility; a Radix
- * combobox is heavier and unnecessary for these short option lists).
+ * Native rather than a combobox primitive: it keeps the platform picker and binds straight to
+ * Inertia's useForm.
  */
 export function Select({ className, ...props }: ComponentProps<'select'>) {
     return (

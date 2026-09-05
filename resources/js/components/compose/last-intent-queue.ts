@@ -1,11 +1,7 @@
 /**
- * Serializes fire-and-forget writes of a single value down to the LAST one asked for. Firing them in
- * parallel lets the responses — and therefore the writes — land out of order, so a quick run through
- * three choices could leave an earlier one stored. While a send is in flight, later calls only
- * replace the pending value; when it settles, the queue sends that final value and nothing in
- * between. A failed send is dropped rather than retried, but never strands the values behind it.
- *
- * Pure scheduling, no I/O of its own, so the ordering guarantee is unit-testable without a DOM.
+ * Serializes fire-and-forget writes of a single value down to the last one asked for: sent in
+ * parallel, the responses — and so the writes — could land out of order and leave an earlier value
+ * stored. A failed send is dropped rather than retried, but never strands the values behind it.
  */
 export function createLastIntentQueue<T>(send: (value: T) => Promise<void>): (value: T) => void {
     let chain: Promise<void> | null = null;

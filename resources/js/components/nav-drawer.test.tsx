@@ -67,9 +67,8 @@ test.each([
 });
 
 /**
- * The drawer's title is the lockup, and it is a way home — the front page, not the digest that used
- * to stand there. Reached through the dialog's own naming rather than by the link's text, so the two
- * facts it carries (it names the sheet, and it goes somewhere) are checked as one.
+ * Reached through the dialog's own naming rather than by the link's text, so the two facts the
+ * lockup carries — it names the sheet, and it goes somewhere — are checked as one.
  */
 test('the drawer is named by a brand link to the front page', () => {
     arrive('standard');
@@ -93,8 +92,7 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
     // Full-bleed, sliding in from the trigger's edge — the action is meant to be seen.
     expect(sheet.className).toContain('w-full');
     expect(sheet.className).toContain('animate-sheet-from-right');
-    // The close control is the trigger's twin: same box, same spot, the word visible under the
-    // glyph (the survey invariant is "the ✕ sits on the trigger's side" — and here, in its seat).
+    // The close control is the trigger's twin: same box, same spot, the word visible under the glyph.
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close.className).toContain('size-12');
     expect(close.className).toContain('right-[calc(0.5rem+env(safe-area-inset-right))]');
@@ -103,8 +101,7 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
 
 /**
  * Both of the tabbed look's controls carry the word under the glyph, and a tooltip over one of them
- * would float a second copy of what the reader is already looking at. The rule is per state, not per
- * component — the same trigger is icon-only in every other look, and there it does get one.
+ * would float a second copy of what the reader is already looking at.
  */
 test('the tabbed look shows its words, so nothing floats over them', () => {
     vi.useFakeTimers();

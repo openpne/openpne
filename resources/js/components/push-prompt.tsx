@@ -7,8 +7,7 @@ import { useT } from '@/lib/i18n';
 import { isIosNotInstalled, permissionState, subscribeThisDevice } from '@/lib/push';
 import type { PageProps } from '@/types';
 
-// Mirrors color-mode's persisted flag: a dismissal survives reloads. Guarded reads/writes because a
-// privacy-locked localStorage throws on access.
+// Guarded reads and writes: a privacy-locked localStorage throws on access.
 const STORAGE_KEY = 'openpne-push-prompt';
 
 function isDismissed(): boolean {
@@ -20,10 +19,8 @@ function isDismissed(): boolean {
 }
 
 /**
- * A dismissible invitation to turn on push, page-owned so it renders under the Notifications heading
- * (not a FlashMessage — the member frame owns that). Shows only where push is offered, the browser
- * has not been asked yet, and the member has not dismissed it. Enabling runs from the button's own
- * click so the native permission prompt is always a direct response to a tap.
+ * Enabling runs from the button's own click, so the native permission prompt is always a direct
+ * response to a tap.
  */
 export function PushPrompt() {
     const t = useT();
@@ -48,8 +45,8 @@ export function PushPrompt() {
         setFailed(false);
         const result = await subscribeThisDevice(push.vapidPublicKey);
         if (result === 'error') {
-            // The store failed; keep the prompt up with a retry hint. 'subscribed' and 'denied' are
-            // both terminal — 'denied' also flips permission out of 'default', failing the guard above.
+            // 'subscribed' and 'denied' are both terminal — 'denied' also flips permission out of
+            // 'default', failing the guard above.
             setFailed(true);
             return;
         }

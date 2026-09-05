@@ -6,17 +6,9 @@ import { useT } from '@/lib/i18n';
 import type { NineTableItem } from '@/types';
 
 /**
- * A grid of friend or group thumbnails with names. `round`
- * (friends, like the circular Avatar) vs `square` (groups, like CommunityImage) so a person and
- * a place read differently at a glance. Missing images fall back to a neutral initial badge. Items
- * are pre-shuffled server-side; this renders in order. `columns` picks the density: 3 fits the narrow
- * right rail; 5 keeps roughly the same tile size in a full-width body column (3 on mobile either way).
- * A 5-column caller sends 10 items so a full grid makes two clean rows; mobile trims to 9 (3×3)
- * rather than leave a one-tile fourth row.
- *
- * A tile is too narrow for an AiChip beside the name — the name itself is one truncated line — so an
- * AI account is marked the way a standalone Avatar is: the corner tag visually, and `markedName` as
- * the link's accessible name and hover title. Group tiles arrive with `isAi` false and are unaffected.
+ * Items are pre-shuffled server-side and rendered in order. A tile is too narrow for an AiChip beside
+ * the name, so an AI account is marked the way a standalone Avatar is: the corner tag, and
+ * `markedName` as the link's accessible name and hover title.
  */
 export function NineTable({ items, shape, columns = 3 }: { items: NineTableItem[]; shape: 'round' | 'square'; columns?: 3 | 5 }) {
     const t = useT();

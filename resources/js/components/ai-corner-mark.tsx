@@ -11,16 +11,9 @@ const sizeClass: Record<AiCornerMarkSize, string> = {
 };
 
 /**
- * The AI corner tag: what says so where a face is drawn, whether or not a name is beside it (avatars,
- * roster grids, the right rail's tiles). Deliberately quiet — it wears the AiChip's muted register, so
- * a row carrying both reads as one statement rather than two. Its own fill and a background-coloured
- * ring keep it legible over an uploaded photo.
- *
  * Positioned against the caller's `relative` box, which must be the face itself so the tag lands on
- * its corner. Always `aria-hidden`: the fact reaches the a11y tree through the AiChip beside the name
- * or through an accessible name the caller builds with `markedName` — once, either way.
- *
- * Renders nothing for a human, so a call site passes the fact rather than guarding on it.
+ * its corner. Always `aria-hidden`: the fact reaches the a11y tree through the AiChip beside the
+ * name, or through an accessible name the caller builds with `markedName`.
  */
 export function AiCornerMark({ isAi, size = 'md' }: { isAi: boolean; size?: AiCornerMarkSize }) {
     const t = useT();

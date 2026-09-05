@@ -17,17 +17,14 @@ type OtpInputProps = {
 };
 
 /**
- * One box per digit for a numeric one-time code: the boxes themselves say "type the 6-digit
- * code here" without a sentence of instructions. The value stays a single left-filled string —
- * typing advances, backspace retreats, and a paste or an OS code autofill (which drops the whole
- * code into one box) spreads across the boxes.
+ * The value is one left-filled string, so a paste or an OS code autofill that drops the whole code
+ * into a single box spreads across them.
  */
 export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ...aria }: OtpInputProps) {
     const t = useT();
     const boxes = useRef<(HTMLInputElement | null)[]>([]);
     // write() focuses the next box before React re-renders, so the focus handler would still see
-    // the previous value and bounce the focus straight back (the type-one-digit-twice bug). The
-    // flag tells it "this focus is ours — don't second-guess it".
+    // the previous value and bounce the focus straight back.
     const programmaticFocus = useRef(false);
 
     const write = (next: string) => {
@@ -55,9 +52,7 @@ export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ..
         write(e.clipboardData.getData('text'));
     };
 
-    // The value is left-filled, so the only sensible caret is the first empty box (or the last
-    // one for corrections); redirect a click on any box past it. Never second-guess a focus that
-    // write() just placed — at that moment `value` is still the pre-update render's.
+    // The value is left-filled, so a click on a box past the first empty one is redirected back to it.
     const handleFocus = (index: number, input: HTMLInputElement) => {
         if (!programmaticFocus.current) {
             const active = Math.min(value.length, length - 1);

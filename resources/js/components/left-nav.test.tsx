@@ -45,11 +45,7 @@ function arrive(auth: { user: AuthUser | null }) {
     };
 }
 
-/**
- * The sidebar's lockup is the desktop's way home, for a member and for a guest alike — and home is
- * the front page, not the digest that used to stand there. Named by the site name alone, because
- * BrandMark is aria-hidden in both its arms.
- */
+/** Named by the site name alone, because BrandMark is aria-hidden in both its arms. */
 test.each([
     ['a member', user],
     ['a guest', null],

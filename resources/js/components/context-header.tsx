@@ -8,10 +8,8 @@ export interface ContextHeaderItem {
 }
 
 /**
- * Scope context above a page heading: where the screen lives (a group, and for board content the
- * board), each crumb a link back up. Kept separate from PageHeading so the heading stays h1 + action
- * only; the frame renders this from the chrome registry's `context`. The crumbs are all ancestors —
- * the current page is not among them — so no `aria-current` (WAI breadcrumb pattern).
+ * Separate from PageHeading, so the heading stays h1 + action only. The crumbs are all ancestors —
+ * the current page is not among them — so no `aria-current` (the WAI breadcrumb pattern).
  */
 export function ContextHeader({ items, className }: { items: ContextHeaderItem[]; className?: string }) {
     const t = useT();

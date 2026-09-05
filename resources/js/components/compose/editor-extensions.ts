@@ -1,37 +1,7 @@
 /**
- * Rich-text editor schema — the single source of truth shared by the React component
- * (rich-text-editor.tsx, through useEditor) and the headless round-trip tests. Kept free of
- * `@/` alias imports so `node --test` can load it directly.
- *
- * INVARIANT: the editor schema equals the server Markdown sanitizer allowlist
- * (app/Support/MarkdownText.php). Modern-surface compose forms submit Markdown and the server
- * renders it (league/commonmark html_input=escape + symfony/html-sanitizer). Authoring a construct
- * the sanitizer would strip means silently losing the user's content on save, so every extension
- * here maps to an allowlisted element:
- *   p br strong em del code pre blockquote ul ol li h1–h6 hr table thead tbody tr th td
- *   a[href] (http/https)
- * Underline — and any other HTML-representable but not-Markdown mark — is excluded: it has no
- * Markdown form and no matching allowlist element.
- *
- * Two behaviors @tiptap/markdown does not give us out of the box, both reproduced from the server
- * so the round-trip matches (see round-trip.test.ts):
- *   (a) Raw HTML in the source stays literal, never re-parsed as formatting. @tiptap/markdown feeds
- *       raw-HTML tokens through each extension's parseHTML (via generateJSON) whenever
- *       window.DOMParser exists, so in the browser `<strong>x</strong>` would become bold while the
- *       server escapes it to literal text. markdownParser() neutralises marked's inline `tag` and
- *       block `html` tokenizers so raw HTML never becomes an HTML token — it lexes as text and
- *       serialises back as escaped entities the server renders identically.
- *   (b) `![alt](src)` survives. With no Image extension the image token collapses to its alt text.
- *       MarkdownImage keeps the source: an inert inline chip in the editor (the server allowlist has
- *       no <img>, so it never displays), `![alt](src)` on serialize.
- *   (c) Content the schema can't represent stays literal and re-renders identically on the server.
- *       Two more marked constructs would otherwise be silently corrupted on the first edit+save (the
- *       dirty rule only shields an unedited body): a GFM task item (`- [ ] x`) has its marker
- *       stripped, and an escaped pipe in a table cell (`| a \| b |`) collapses the column structure.
- *       markdownParser() keeps the task marker literal; the table serializer re-escapes cell pipes.
- *       And every serializer here (image alt/src/title, cell text) escapes Markdown-significant
- *       characters so nothing breaks structure or emits a raw `<tag` (verified against the server
- *       renderer in round-trip.test.ts).
+ * The editor schema equals the server Markdown sanitizer allowlist (app/Support/MarkdownText.php),
+ * so nothing authored here is dropped on save (docs/internals/body-text.md, "Authoring: the input
+ * method"). Kept free of `@/` alias imports so the headless tests can load it directly.
  */
 import { Extension, Node } from '@tiptap/core';
 import type { Editor, EditorOptions, Extensions, MarkdownRendererHelpers, MarkdownToken } from '@tiptap/core';
@@ -56,15 +26,17 @@ const originalListTokenizer = Tokenizer.prototype.list;
 const EDITOR_CONTENT_CLASS =
     'rich-body block min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
 
-/** True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring. */
+/**
+ * True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring.
+ */
 function isHttpUrl(url: string): boolean {
     return /^https?:\/\//i.test(url);
 }
 
 /**
- * A marked instance that never emits raw-HTML tokens — see invariant (a). Autolinks
- * (`<https://x>`), code spans, and tables are untouched; only inline tags and block HTML are
- * neutralised into literal text.
+ * Never emits raw-HTML tokens: wherever `window.DOMParser` exists @tiptap/markdown would feed them
+ * through each extension's parseHTML and turn `<strong>x</strong>` into bold, where the server
+ * escapes it to literal text.
  */
 function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
     const parser = new Marked();
@@ -76,10 +48,9 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
             tag() {
                 return undefined;
             },
-            // Undo GFM task-item detection so the marker survives — invariant (c). The server (no
-            // task-list extension) renders `- [ ] x` as the literal `[ ] x`, and the schema has no
-            // task node; letting marked strip the marker would lose it on the first save. Done at the
-            // tokenizer so a `[ ]` inside a code block (which is not a list item) is left untouched.
+            // The server renders `- [ ] x` literally and the schema has no task node, so letting
+            // marked strip the marker would lose it on the first save; done at the tokenizer, a
+            // `[ ]` inside a code block is left alone.
             list(src) {
                 const token = originalListTokenizer.call(this, src);
                 if (token) {
@@ -107,11 +78,8 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
                             }
                             continue;
                         }
-                        // Fold the marker into the first text/paragraph block after the checkbox by
-                        // mutating its inline `tokens` array IN PLACE — marked's deferred inline pass
-                        // holds a reference to that array, so reassigning it would drop the marker. This
-                        // keeps a loose item's marker inside its first paragraph instead of emitting it
-                        // as a standalone paragraph.
+                        // Mutate the inline `tokens` array IN PLACE: marked's deferred inline pass
+                        // holds a reference to it, so reassigning would drop the marker.
                         const content = item.tokens.find(
                             (child, index) => index > checkboxIndex && (child.type === 'paragraph' || child.type === 'text'),
                         ) as Tokens.Paragraph | Tokens.Text | undefined;
@@ -134,21 +102,17 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
     return parser as unknown as NonNullable<MarkdownExtensionOptions['marked']>;
 }
 
-// --- Markdown escaping for content the schema keeps as literal text (invariant c) ---
-
 /**
- * Escape an image alt so it can't break out of `![...]` (brackets / backslash), start a code span
- * (backtick), or emit a raw `<tag`. `<`/`>` become entities rather than backslash escapes because
- * the gate-c contract forbids a `<` followed by a letter even when backslash-escaped.
+ * `<`/`>` become entities rather than backslash escapes: serialized output may carry no `<`
+ * followed by a letter, escaped or not.
  */
 function escapeImageAlt(alt: string): string {
     return alt.replace(/[\\`[\]]/g, '\\$&').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**
- * Serialize an image destination: backslash-escape the `()` / `\` delimiters and percent-encode the
- * chars that would otherwise force an angle-bracket destination (`<url>` reads as a raw tag under
- * gate c). A clean http(s) URL is returned unchanged.
+ * Percent-encodes the characters that would otherwise force an angle-bracket destination, which
+ * reads as a raw tag.
  */
 function serializeImageDestination(src: string): string {
     return src
@@ -158,15 +122,13 @@ function serializeImageDestination(src: string): string {
         .replace(/ /g, '%20');
 }
 
-/** Serialize an image title in double quotes, escaping the quote/backslash and `<`/`>` (gate c). */
 function serializeImageTitle(title: string): string {
     return ` "${title.replace(/[\\"]/g, '\\$&').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`;
 }
 
 /**
- * Escape every unescaped `|` in table-cell text so it can't be read as a column separator. A pipe is
- * unescaped only when preceded by an EVEN-length run of backslashes (each pair is one literal `\`); an
- * odd run means the pipe is already escaped. A lookbehind (`(?<!\\)`) can't tell the two apart.
+ * A pipe is unescaped only when preceded by an even-length run of backslashes, each pair being one
+ * literal `\`. A lookbehind cannot tell that from an escaped backslash standing before a pipe.
  */
 function escapeTableCellText(text: string): string {
     return text.replace(/(\\*)\|/g, (match, backslashes: string) =>
@@ -175,8 +137,8 @@ function escapeTableCellText(text: string): string {
 }
 
 /**
- * Inline node that preserves a Markdown image — see invariant (b). Rendered as an inert chip
- * (`.md-image-chip`) showing the alt text; serialises back to `![alt](src)`.
+ * Preserves a Markdown image: with no Image extension the token would collapse to its alt text, so
+ * this keeps the source and serialises back to `![alt](src)`.
  */
 const MarkdownImage = Node.create({
     name: 'markdownImage',
@@ -215,9 +177,8 @@ const MarkdownImage = Node.create({
 });
 
 /**
- * Table with a serializer that re-escapes pipes in cell text — invariant (c). The vendor serializer
- * emits cell text verbatim, so a `|` inside a cell (valid input, written `\|`) would be read as a
- * column separator and collapse the table into a paragraph. Wrapping renderChildren re-escapes it.
+ * The vendor serializer emits cell text verbatim, so a `|` inside a cell (valid input, written
+ * `\|`) would be read as a column separator and collapse the table into a paragraph.
  */
 const ComposeTable = Table.extend({
     renderMarkdown(node, helpers) {
@@ -229,23 +190,13 @@ const ComposeTable = Table.extend({
     },
 });
 
-/** Plugin state: true while a caller is holding the selection visible — see {@link HeldSelection}. */
 const heldSelectionKey = new PluginKey<boolean>('heldSelection');
 
 /**
- * Paints the selection while a UI that acts on it holds the editor open — the compact toolbar's
- * "More" sheet, which blurs the editor on purpose to dismiss the soft keyboard. `blur()` clears the
- * document range, so without this the member would be choosing a command for a range they can no
- * longer see, even though the selection survives in the editor state and the command still applies.
- *
- * Held by the caller rather than by blur alone, because blur is not one situation. Chromium keeps a
- * contenteditable's selection painted when focus moves to a button (what the sheet is) and drops it
- * when focus moves to a text field (what the title input is) — measured, both. Painting on every
- * blur would restore the first and contradict the second.
- *
- * Decoration only: no node, no mark, nothing the schema or the Markdown serializer can see. The flag
- * rides a meta-only transaction, which has no steps, so `docChanged` stays false and the host form's
- * dirty signal stays silent (dirty-contract.test.ts).
+ * `blur()` clears the painted range although the selection survives in the editor state, so a UI
+ * that blurs the editor on purpose paints the range itself. Held by the caller rather than on blur
+ * alone: Chromium keeps the painted selection when focus moves to a button and drops it for a text
+ * field.
  */
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -287,8 +238,8 @@ const HeldSelection = Extension.create({
                         return DecorationSet.create(state.doc, [Decoration.inline(from, to, { class: 'held-selection' })]);
                     },
                     handleDOMEvents: {
-                        // Focus returning ends the hold whoever set it: the editable paints its own
-                        // selection again. Returning false leaves the event to ProseMirror's handlers.
+                        // Focus returning ends the hold whoever set it; false leaves the event to
+                        // ProseMirror's own handlers.
                         focus: (view) => {
                             if (heldSelectionKey.getState(view.state)) {
                                 view.dispatch(view.state.tr.setMeta(heldSelectionKey, false));
@@ -303,9 +254,9 @@ const HeldSelection = Extension.create({
 });
 
 /**
- * The editor schema, capped to the server sanitizer allowlist. StarterKit already bundles Link and
- * Underline; underline is dropped, link restricted to http/https. HeldSelection is the one
- * view-only member — a decoration, not a schema entry.
+ * StarterKit already bundles Link and Underline: underline is dropped, having no Markdown form and
+ * no allowlisted element, and links are restricted to http/https. HeldSelection is view-only, a
+ * decoration rather than a schema entry.
  */
 export function composeExtensions(): Extensions {
     return [
@@ -316,9 +267,8 @@ export function composeExtensions(): Extensions {
                 autolink: true,
                 defaultProtocol: 'https',
                 protocols: ['http', 'https'],
-                // Authoring guard: setLink and autolink only ever create http/https links, matching
-                // the sanitizer. A foreign scheme already in the Markdown is preserved on parse; the
-                // server drops it on render.
+                // setLink and autolink only ever create http/https links; a foreign scheme already
+                // in the Markdown survives the parse and is dropped by the server on render.
                 isAllowedUri: (url, ctx) => isHttpUrl(url) && ctx.defaultValidate(url),
                 shouldAutoLink: (url) => isHttpUrl(url),
             },
@@ -343,11 +293,9 @@ export function composeExtensions(): Extensions {
 }
 
 /**
- * The full editable-element attribute map (chrome class + caller attributes). Exported so the
- * component can push updated aria-* attributes into a live editor via editor.setOptions — the
- * attributes handed to createComposeEditorOptions are only read at construction. The explicit
- * textbox role is what permits aria-label/aria-required on the contenteditable (axe
- * aria-allowed-attr; contenteditable has no implicit role).
+ * Exported so the component can push updated aria-* attributes into a live editor: the attributes
+ * handed to createComposeEditorOptions are read only at construction. The explicit textbox role is
+ * what permits aria-label/aria-required on a contenteditable, which has no implicit role.
  */
 export function composeEditorAttributes(attributes?: Record<string, string>): Record<string, string> {
     return { class: EDITOR_CONTENT_CLASS, role: 'textbox', 'aria-multiline': 'true', ...attributes };
@@ -364,10 +312,8 @@ export function serializeMarkdown(editor: Editor): string {
 }
 
 /**
- * The options factory used by BOTH the React component (via useEditor) and the headless tests (via
- * `new Editor`), so the dirty-signal contract is tested against the production config. Initial
- * content is parsed as Markdown at construction without emitting an update; onUpdate ignores
- * selection-only transactions and otherwise reports canonical Markdown.
+ * Shared by the React component and the headless tests, so the dirty-signal contract is exercised
+ * against the production config.
  */
 export function createComposeEditorOptions(opts: {
     initialMarkdown: string;

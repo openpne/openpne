@@ -12,14 +12,8 @@ export interface MemberTileMember {
 }
 
 /**
- * One face in a roster grid — a group's members, an event's participants — avatar over the name, the
- * whole tile a link to the profile. The three rosters carried this markup separately and had each
- * dropped the AI marker the same way, so it lives in one place now.
- *
  * The AiChip sits inside the link, which is what puts the fact in the link's accessible name: the
- * avatar is decorative here (the name below it is the visible label), so its corner tag is silent.
- *
- * The caller sizes the tile; `nameSize` follows it — `sm` under a full grid cell, `xs` under a 64px one.
+ * avatar is decorative here, so its corner tag is silent.
  */
 export function MemberTile({ member, nameSize = 'xs' }: { member: MemberTileMember; nameSize?: 'xs' | 'sm' }) {
     return (

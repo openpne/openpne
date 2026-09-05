@@ -19,8 +19,8 @@ const hero = (width: number, height: number): GridImage => ({
 });
 
 test('a lone boxed picture is held to its box by the width formula the link card shares', () => {
-    // The literal, not the helper: the helper is what a card reads too, so the string itself is the
-    // contract. Landscape, portrait and square, because the height term binds only on the tall one.
+    // The literal rather than the helper, which a card reads too, so the string itself is the
+    // contract; landscape, portrait and square, because the height term binds only on the tall one.
     const shapes: Array<[number, number]> = [
         [1200, 630],
         [300, 900],

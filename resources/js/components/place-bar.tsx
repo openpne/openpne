@@ -12,35 +12,10 @@ import { cn } from '@/lib/utils';
 const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
 
 /**
- * The desktop answer to "where am I": the place the screen is inside, sticky at the head of the
- * content column. It replaces the crumb trail rather than joining it — this look answers the question
- * in one element at every width, and two answers stacked would be the question asked twice.
- *
- * Only where a screen is inside something. Home, a hub and anything the sidebar's own active row
- * already names render nothing, which is what keeps this furniture rather than a second header.
- *
- * The crumb is the phone header's (`breadcrumbCrumb`), down to the pill and to a form's crumb being
- * static text. What this bar adds is the place's face: the one-image rule belongs to the phone
- * header, where the brand mark is that image — here the sidebar holds the mark, so the pill is free
- * to carry the face the reader is standing in.
- *
- * It is a surface, not a pill floating on nothing. Left transparent it took the clicks of everything
- * that scrolled under it — a strip of the content column wide and 32px tall where a link could be
- * seen and not pressed — and let that content show through around the pill besides. It carries the
- * page's own ground, and a seam drawn only once something has scrolled under (the phone header's
- * `useScrolled`). Every desktop client this bar answers to draws its place as a surface too.
- *
- * Opaque, where that header is translucent, and the frame's full width rather than the card's — the
- * same escape from the frame's padding the composer makes at the other end of the conversation. Held
- * to the card's width the bar is invisible as a surface, since its ground is the ground either side of
- * the card too: what a reader sees then is not a band but the card's own side borders, cut where the
- * bar covers them and standing in grey where it does not. Full width it is a band, and the card runs
- * under it the way content runs under a header.
- *
- * The remove the pill keeps from the top is padding rather than offset, which is the other half of
- * that header's shape and the half a surface cannot do without. Held off the top instead, the bar
- * leaves a window above itself for rows to travel through — invisible while it was transparent,
- * since there was no surface for them to be beside, and a seam the moment there is one.
+ * Only where a screen is inside something: home, a hub and anything the sidebar's own active row
+ * already names render nothing (docs/internals/looks.md, "The registry"). It is a surface rather
+ * than a pill floating on nothing — left transparent it took the clicks of everything that scrolled
+ * under it.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const t = useT();
@@ -72,14 +47,9 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const padding = face ? 'pr-3 pl-1' : 'px-3';
 
     return (
-        // Flush under the color line, and below lg nothing: the header carries this there. A surface
-        // sits on the offset; something that floats over the conversation keeps the 0.5rem remove
-        // instead (the jump-to-unread banner) — the difference is what the thing is, not an oversight.
-        //
-        // The width cancels the frame's padding rather than taking the content column's. At the
-        // column's width this bar is not a surface at all: its ground is the ground either side of the
-        // card too, so what is left to see is the card's own side borders, cut where the bar covers
-        // them (main 672, card 640, measured).
+        // The width cancels the frame's padding rather than taking the content column's: at the
+        // column's width this bar is not a surface at all, its ground being the ground either side of
+        // the card too.
         <div
             data-testid="place-bar"
             className={cn(

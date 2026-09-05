@@ -6,10 +6,6 @@ type Props = ComponentProps<'input'> & {
     description?: ReactNode;
 };
 
-/**
- * A radio rendered as a selectable card (label + optional description). The card highlights via
- * `has-[:checked]` so the whole surface reads as the control, not just the dot.
- */
 export function RadioCard({ label, description, className, ...props }: Props) {
     return (
         <label

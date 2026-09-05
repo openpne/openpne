@@ -9,11 +9,9 @@ export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 export const DialogTitle = DialogPrimitive.Title;
 
-/** Dialog content rendered as a left-edge sheet (the mobile nav drawer). Radix supplies the focus
- *  trap, ESC/overlay dismissal, and scroll lock. */
 /**
- * Centered modal panel. Below sm it anchors to the upper area instead of vertical center so the
- * soft keyboard never covers the panel (the visual viewport shrinks from the bottom).
+ * Below sm it anchors near the top rather than the vertical center: the soft keyboard shrinks the
+ * visual viewport from the bottom and would cover a centered panel.
  */
 export function DialogContent({
     className,
@@ -43,9 +41,8 @@ export function DialogContent({
 }
 
 /**
- * What each edge costs the base sheet, which is written for a full-height side drawer: the bottom one
- * gives up `inset-y-0` for a top it does not set, and takes a cap of its own so a long sheet scrolls
- * inside itself rather than growing over the conversation it was opened from.
+ * Each entry overrides the base sheet, which is written for a full-height side drawer. The bottom
+ * one restates the top padding because it has no top edge to inset from.
  */
 const SHEET_SIDE = {
     left: 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
@@ -54,19 +51,9 @@ const SHEET_SIDE = {
 };
 
 /**
- * `side` is the screen edge the sheet hugs. A drawer opens from the side its trigger stands on — the
- * one thing every site in the 2026-08 menu survey agreed about — so a bar that moves its hamburger
- * moves the sheet with it. The close control belongs to the trigger's side too.
- *
- * The right sheet is the tabbed look's: full-bleed, sliding from its edge (Radix holds it mounted
- * while the closed animation runs), padded to the breadcrumb bar's gutters so what the drawer and
- * the bar both draw — the brand, the menu control — lands in the same place open or shut. Its close
- * control is the trigger's twin: same box, same spot, the word "close" where "menu" stood.
- *
- * The bottom sheet answers a touch, not a trigger: it rises from the edge the thumb rests on and is
- * capped short of the screen so what it was opened from stays in view above it. It restates the top
- * padding because it has no top edge to inset from — the base's status-bar inset would otherwise
- * stand as dead space under the sheet's own rounded top.
+ * `side` is the screen edge the sheet hugs, and its close control sits on that same edge. Radix
+ * keeps the content mounted while the closed animation runs, which is what the right sheet's exit
+ * animation needs.
  */
 export function SheetContent({
     className,
@@ -91,10 +78,7 @@ export function SheetContent({
                 {/* First in the DOM as well as top-right on screen: a 48px labelled control that
                     read after the whole nav would put the tab order at odds with the visual one. */}
                 {side === 'right' && (
-                    // The trigger's geometry, restated: a size-12 box whose right edge sits 0.5rem
-                    // (0.75 gutter − 0.25 overhang) from the screen's, its row starting under the
-                    // 4px line — so opening the drawer swaps the word under the glyph, nothing more.
-                    // Wordful, so no Tip: it is named by what it shows.
+                    // Wordful, so no Tip: the control is named by the word it shows.
                     <DialogPrimitive.Close className="absolute top-[calc(0.25rem+env(safe-area-inset-top))] right-[calc(0.5rem+env(safe-area-inset-right))] inline-flex size-12 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent">
                         <X className="size-6" aria-hidden />
                         <span className="text-[11px] leading-none">{closeLabel}</span>

@@ -19,11 +19,8 @@ const GAP: Record<Chrome['gap'], string> = {
 };
 
 /**
- * The default page frame for every member-facing Modern page: the single <main>, the crumb trail or
- * the place bar a look asks for, the hub header (h1 + primary action + tabs) from the chrome the
- * layout resolved, and central flash. Pages render
- * only their content — a page must not carry its own <main> or FlashMessage (MemberFrameGuardTest
- * enforces both), and headings outside the registry's hub modes stay in the page body ('embedded').
+ * The single <main> and the central flash for every member-facing Modern page
+ * (docs/internals/feature-modules.md, "Surface responsibilities").
  */
 export function MemberFrame({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     const t = useT();
@@ -38,22 +35,15 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
         <main
             className={cn(
                 // 12px below sm only: the frame is the outermost of three paddings on the same line
-                // (frame → card body → field box), so it gives up 4px of the usual 16 to leave the
-                // inner two roomy. The strip of page background it still shows
-                // is what keeps a card reading as a surface on the page rather than as the page itself.
-                // From sm up it restores 16 — the width is only scarce on a phone, and `max-w` is
-                // border-box, so changing it there would widen every content column too.
+                // (frame → card body → field box) and gives up 4px of the usual 16 to the inner two.
                 'mx-auto px-3 py-8 sm:px-4',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
-                // The sheet's heading hangs from neither edge: enough air below the bar that it
-                // does not read as part of it (20px), and a tighter gap to the form it heads (8px)
-                // than a reading page's rhythm — proximity groups it with what it names.
+                // The sheet's heading takes more air above than below it, so proximity groups it
+                // with the form it heads rather than with the bar.
                 chrome.compose && 'max-lg:space-y-2 max-lg:pt-5',
-                // A conversation ends in its composer rather than in the page's reading rhythm: below
-                // lg the composer is stuck to the foot of the screen, and padding under it is the band
-                // it would come to rest on — 32px of nothing between the chat bar and the screen edge
-                // at exactly the scroll position the room opens at.
+                // A conversation ends in its composer: below lg the composer is stuck to the foot of
+                // the screen, and padding under it is a band it would come to rest on.
                 chrome.conversation && 'max-lg:pb-0',
                 chrome.foreground && 'text-foreground',
                 // Clearance for the FAB the shell floats over this content: 56px of circle, 20px off
@@ -79,9 +69,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    // Only where the mobile bar actually carries the title. A guest's bar is brand +
+                    // Only where the mobile bar actually carries the title: a guest's bar is brand +
                     // sign-in and the unified chrome's is the tab pair, so folding for either would
-                    // leave that hub with no visible heading anywhere.
+                    // leave the hub with no visible heading anywhere.
                     fold={chrome.mode === 'section' && props.auth.user !== null && look.foldsHubHeading}
                     action={
                         action && (

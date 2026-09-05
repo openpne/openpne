@@ -5,10 +5,9 @@ import { applyUnreadPayload, type UnreadPayload } from '@/lib/unread-payload';
 import { UNREAD_REFRESH_EVENT } from '@/lib/unread-refresh';
 import type { PageProps } from '@/types';
 
-/** How often a visible tab re-reads the counts. */
 const INTERVAL_MS = 60_000;
 
-/** Mirror the OS app-icon badge to the notifications count (both calls feature-detected inside). */
+/** Both calls are feature-detected inside, so callers need no guard of their own. */
 function writeBadge(count: number): void {
     if (count > 0) {
         setAppBadge(count);
@@ -18,16 +17,10 @@ function writeBadge(count: number): void {
 }
 
 /**
- * Keeps the shell's live state — the shared `unread` counts and the sidebar's room list — current
- * while a tab sits open, and mirrors the notifications count to the OS app-icon badge. Non-visual;
- * mounted once in the app shell, which persists across SPA navigations (auth pages have no layout, so
- * nothing polls there).
- *
- * Refreshes are pushed back into the shared props (lib/unread-payload.ts, which owns the rule that
- * they move together), so every consumer — the badges, the sidebar rooms, and the title callback
- * reading `page.props.unread` (app.tsx) — re-renders from the one source it already reads. Not
- * Inertia's `usePoll`: that still fires on a hidden tab (every tenth interval) and does not refresh
- * on return to the tab, which is the moment a stale badge is seen.
+ * Refreshes are pushed back into the shared props, so every consumer re-renders from the source it
+ * already reads (docs/internals/notifications.md, "Liveness"). Not Inertia's `usePoll`: that still
+ * fires on a hidden tab and does not refresh on return to it, which is the moment a stale badge is
+ * seen.
  */
 export function UnreadSync() {
     const { unread, push, auth } = usePage<PageProps>().props;
@@ -35,21 +28,16 @@ export function UnreadSync() {
     const pushConfigured = push != null;
     const memberId = auth.user?.id ?? null;
 
-    // App-icon badge on every foreground change: mark-all, opening the feed and navigation all refresh
-    // this prop. The fetch path below covers the other case — an unchanged value that a background
-    // push left a stale badge under, which this keyed effect would not re-fire for.
+    // Every foreground change refreshes this prop; a background push that left a stale badge under an
+    // unchanged value is the fetch path's case, not this effect's.
     useEffect(() => {
         if (signedIn) {
             writeBadge(unread?.notifications ?? 0);
         }
     }, [signedIn, unread?.notifications]);
 
-    // A device's push ownership follows the member signed in now: re-register the worker (an opted-in
-    // browser re-fetches an updated /sw.js) then rebind any existing subscription to this member.
-    // reconcileSubscription POSTs only on an ownership transition (memberId change / new device) and
-    // fails closed on a rejected rebind; it never subscribes a fresh browser. This is the Modern half;
-    // the Classic surface runs the same rebind from its header (push-reconcile.js), so an account
-    // switch on either surface is covered. signedIn ⇒ auth.user is non-null, so memberId is set here.
+    // Ownership reconciliation, the Modern half of a rule the Classic header runs too
+    // (docs/internals/notifications.md, "Web push").
     useEffect(() => {
         if (pushConfigured && signedIn && memberId != null) {
             resumeRegistration();
@@ -64,9 +52,8 @@ export function UnreadSync() {
 
         let inFlight: AbortController | null = null;
 
-        // The authoritative read of everything the shell keeps live. Also overwrites the badge from
-        // the fresh value: a background push may have written a stale one, and if the count is
-        // unchanged the keyed effect above will not re-fire to correct it.
+        // Also overwrites the badge from the fresh value, which is what corrects a stale one when the
+        // count itself has not changed.
         const fetchCounts = () => {
             inFlight?.abort();
             const controller = new AbortController();
@@ -103,18 +90,16 @@ export function UnreadSync() {
 
         const timer = setInterval(refresh, INTERVAL_MS);
         document.addEventListener('visibilitychange', refresh);
-        // A page that has just settled a count with the server (see lib/unread-refresh.ts). Without
-        // it a badge sits on its stale number until the interval comes round, which reads as the
-        // screen the member is looking at not having counted.
+        // A page that has just settled a count with the server; without this the badge sits on its
+        // stale number until the interval comes round.
         window.addEventListener(UNREAD_REFRESH_EVENT, refresh);
 
         // A page restored from history is not this component's problem: the app-wide revalidation
         // (lib/revalidate-on-restore.ts) reloads it whole, and a full reload re-reads the shared
         // props these counts live in along with everything else.
 
-        // The worker hands the badge's source of truth to a live tab. Fetch unconditionally — it asked,
-        // and the tab may have flipped hidden since the worker's matchAll — then ACK on the transferred
-        // port so the worker knows a handler took responsibility and skips its own fallback badge write.
+        // Fetch unconditionally — the tab may have flipped hidden since the worker's matchAll — then
+        // ACK on the transferred port, so the worker skips its own fallback badge write.
         const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
         // (A notification tap's messages are answered from the entry module, lib/notification-open.ts —
         // a listener added here, after load, would never hear them.)

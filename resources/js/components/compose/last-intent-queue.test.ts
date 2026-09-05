@@ -18,7 +18,6 @@ function deferredSender() {
     return {
         sent,
         send,
-        /** Settle the oldest in-flight send and let the queue advance. */
         settle: async (outcome: 'resolve' | 'reject' = 'resolve') => {
             settlers.shift()?.[outcome]();
             await flush();

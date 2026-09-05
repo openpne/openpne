@@ -4,10 +4,9 @@ import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 
 /**
- * Live Markdown preview for the compose forms. Debounces edits, then POSTs to /compose/preview (the
- * same sanitized pipeline as a stored body) and renders the returned HTML through <RichBody>, so the
- * preview can never show markup the saved body would strip. Renders nothing until enabled with a
- * non-empty body. An in-flight request is aborted when the body changes or the component unmounts.
+ * Rendered through the same sanitized pipeline a stored body goes through
+ * (docs/internals/body-text.md, "`markdown` — two independent safety belts"). An in-flight request
+ * is aborted when the body changes or the component unmounts.
  */
 export function MarkdownPreview({ body, enabled }: { body: string; enabled: boolean }) {
     const t = useT();

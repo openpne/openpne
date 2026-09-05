@@ -4,10 +4,8 @@ import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 
 /**
- * The magnifier submit that sits inside a rounded search Input (diary feed, member/community search,
- * right rail). It stays in the DOM so Enter / mobile / IME submission stays reliable; while the
- * request is in flight it swaps the icon for a spinner and disables, so a slow GET shows progress.
- * Position (absolute, right-aligned) is baked in — render it inside the Input's `relative` wrapper.
+ * It stays in the DOM so Enter, mobile and IME submission stay reliable. Position is baked in —
+ * render it inside the Input's `relative` wrapper.
  */
 export function SearchSubmitButton({ loading = false }: { loading?: boolean }) {
     const t = useT();

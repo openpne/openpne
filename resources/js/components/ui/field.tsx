@@ -6,29 +6,22 @@ import { cn } from '@/lib/utils';
 
 type FieldProps = {
     label?: ReactNode;
-    /** Ties the label to the control; defaults to a generated id when omitted. */
     htmlFor?: string;
     help?: ReactNode;
-    /** Validation message (e.g. Inertia `form.errors.x`); rendered in place of help when set. */
     error?: string;
     required?: boolean;
     className?: string;
-    /** Trailing content on the label row (e.g. a compact per-field visibility control). */
     labelRight?: ReactNode;
-    /** The single control element. Field injects id / aria-invalid / aria-describedby onto it. */
+    /** A single element, cloned to receive id / aria-invalid / aria-describedby. */
     children: ReactNode;
 };
 
 /**
- * Label + help + error scaffolding around one control. Owns the a11y wiring: it gives help/error
- * deterministic ids and injects `id`, `aria-invalid`, and `aria-describedby` onto the control, so
- * every use site is programmatically associated without repeating the plumbing. Form state stays in
- * the caller's Inertia useForm; just pass `error`.
+ * Owns one control's a11y wiring, so no use site writes `aria-describedby` or the help/error ids
+ * itself.
  */
 export function Field({ label, htmlFor, help, error, required, className, labelRight, children }: FieldProps) {
     const generatedId = useId();
-    // Canonical id: prefer the caller's htmlFor, else the child's own id, else a generated one — then
-    // stamp that same id on both the label and the control so they can never desynchronize.
     const childId = isValidElement(children) ? ((children.props as Record<string, unknown>).id as string | undefined) : undefined;
     const id = htmlFor ?? childId ?? generatedId;
     const helpId = help ? `${id}-help` : undefined;
@@ -79,7 +72,6 @@ export function Field({ label, htmlFor, help, error, required, className, labelR
     );
 }
 
-/** A titled group of fields within a settings/form page. */
 export function FormSection({
     title,
     description,
@@ -103,15 +95,13 @@ export function FormSection({
     );
 }
 
-/** Trailing action row (submit/cancel). */
 export function FormActions({ className, children }: { className?: string; children: ReactNode }) {
     return <div className={cn('flex flex-wrap items-center gap-3 pt-1', className)}>{children}</div>;
 }
 
 /**
- * Group semantics for a set of RadioCards: a real fieldset with an (sr-only) legend for its
- * accessible name, and a group-level error tied via aria-describedby. `legend` mirrors the section
- * title so the visible heading is not duplicated for sighted users.
+ * Pass the visible section title as `legend`: it is sr-only, so it names the group without
+ * repeating on screen.
  */
 export function RadioCardGroup({
     legend,
@@ -140,7 +130,6 @@ export function RadioCardGroup({
     );
 }
 
-/** A single checkbox with its label and an associated error. */
 export function CheckboxField({
     label,
     error,

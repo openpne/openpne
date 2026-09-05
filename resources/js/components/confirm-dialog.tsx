@@ -8,7 +8,6 @@ export type ConfirmOptions = {
     description?: ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
-    /** Irreversible action; the confirm button turns red. */
     danger?: boolean;
 };
 
@@ -31,9 +30,7 @@ export function useConfirm() {
 }
 
 /**
- * Host for useConfirm(), mounted once in the app shell. Radix AlertDialog supplies the focus trap,
- * ESC/overlay dismissal, scroll lock, and ARIA wiring. Dismissal resolves false; the caller runs
- * the action (and any loading UI) after an awaited true.
+ * Dismissal resolves false; the caller runs the action, and any loading UI, after an awaited true.
  */
 export function ConfirmDialogHost() {
     const t = useT();
@@ -45,8 +42,7 @@ export function ConfirmDialogHost() {
         return () => window.removeEventListener(EVENT_NAME, handler);
     }, []);
 
-    // A confirm resolves true and closes; any other close (cancel/ESC/overlay) resolves false.
-    // Whichever fires first wins — the promise ignores the second resolve.
+    // Whichever fires first wins: the promise ignores the second resolve.
     const settle = (ok: boolean) => {
         opts?.resolve(ok);
         setOpts(null);

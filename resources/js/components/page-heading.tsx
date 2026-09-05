@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 
 type Props = {
     title: ReactNode;
-    /** The screen's primary create/start/request/send action, right-aligned. Omit when the screen has none. */
     action?: ReactNode;
     /** Hub pages: below lg the top bar shows this title, so the row folds away and the h1 stays for
      *  assistive technology alone. */
@@ -13,20 +12,10 @@ type Props = {
 };
 
 /**
- * Canonical page heading: the page title (h1) with an optional right-aligned primary action. Every
- * Modern index/list page uses this so a screen's primary action is always the button at the top-right,
- * findable without per-screen learning. Overflow is encoded here once: the title owns `min-w-0` +
- * wrapping and the action `shrink-0`, so a long community/member name never clips or squeezes it.
- *
- * Below lg the action lives in the floating ActionFab instead, on every page — a screen has one
- * primary action, and at that width it is the one place it sits. The folded ROW is sr-only, not
- * display-hidden: absolute positioning takes it out of the flow, so it neither shows nor spends a
- * `space-y` gap, while the h1 inside stays in the accessibility tree. The action is display-hidden
- * separately so its link never takes keyboard focus while invisible.
- *
- * The fold is scoped to `max-lg` rather than un-hidden at `lg`: Tailwind's un-hide utility resets
- * `margin: 0`, which outranks the zero-specificity `:where()` selector `space-y-*` generates, so the
- * frame's gap below this row would vanish at exactly the widths where the row is visible.
+ * The folded row is sr-only rather than display-hidden, so it leaves the flow while the h1 stays in
+ * the accessibility tree, and the action inside it is hidden outright so its link never takes focus.
+ * Scoped to `max-lg` rather than un-hidden at `lg`: Tailwind's un-hide utility resets `margin: 0`,
+ * outranking the `:where()` selector `space-y-*` generates.
  */
 export function PageHeading({ title, action, fold, className }: Props) {
     return (

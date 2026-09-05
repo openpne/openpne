@@ -1,40 +1,14 @@
 /**
- * Compose input-method resolution — pure and DOM-free, so it is unit-testable and shared by both
- * BodyField's mount (which editor opens) and the pages' `format` initializer (what the form submits).
- *
- * One member-facing choice ("input method") maps onto the two internal axes, so the UI never has to
- * expose `mode × format`. The three valid states are exactly:
- *
- * | input method | mode  | format     | saved preference |
- * |--------------|-------|------------|------------------|
- * | 'rich'       | rich  | 'markdown' | rich             |
- * | 'markdown'   | raw   | 'markdown' | markdown         |
- * | 'plain'      | raw   | 'plain'    | plain            |
- *
- * Initial resolution — the record's format wins, the preference only picks the mode within it:
- *
- * | record            | initialEditorMode        | initialComposeFormat                  |
- * |-------------------|--------------------------|---------------------------------------|
- * | 'op3'             | 'raw' (no menu at all)   | undefined (field omitted)             |
- * | 'plain'           | 'raw' ALWAYS             | 'plain'                               |
- * | 'markdown'        | follow pref (rich↔raw)   | 'markdown'                            |
- * | undefined/create  | follow pref              | plain pref → 'plain', else 'markdown' |
- *
- * WHY a plain record always opens raw, regardless of the preference: opening stored plain text in
- * the rich (Markdown) editor would parse it AS Markdown and could silently reinterpret it — a bare
- * `#`, `*`, `_`, or `|` becomes structure. We never do that implicitly. The member can still pick
- * another input method by hand; that is a deliberate "treat this as Markdown from now on" choice,
- * and it is what flips `format`.
+ * Compose input-method resolution, pure and DOM-free: the record's format wins and the preference
+ * only picks the editor within it (docs/internals/body-text.md, "Authoring: the input method").
  */
 
-/** The member's saved choice, and the input-method menu's selection — the same three values. */
 export type ComposeEditorPreference = 'rich' | 'markdown' | 'plain';
 export type InputMethod = ComposeEditorPreference;
 export type EditorMode = 'rich' | 'raw';
 export type RecordFormat = 'plain' | 'markdown' | 'op3';
 export type ComposeFormat = 'plain' | 'markdown';
 
-/** Which editor a compose form opens with. Never writes the preference — a mount is not a choice. */
 export function initialEditorMode(pref: ComposeEditorPreference, recordFormat?: RecordFormat): EditorMode {
     switch (recordFormat) {
         case 'op3':
@@ -46,7 +20,7 @@ export function initialEditorMode(pref: ComposeEditorPreference, recordFormat?: 
     }
 }
 
-/** The `format` a compose form starts with. undefined ⇔ op3 (the page omits the field to preserve it). */
+/** undefined ⇔ op3: the page omits the field, so the stored format is preserved. */
 export function initialComposeFormat(pref: ComposeEditorPreference, recordFormat?: RecordFormat): ComposeFormat | undefined {
     switch (recordFormat) {
         case 'op3':
@@ -65,7 +39,7 @@ export function inputMethodFor(mode: EditorMode, format: ComposeFormat): InputMe
     return mode === 'rich' ? 'rich' : format;
 }
 
-/** The (mode, format) a menu selection puts the form into. Inverse of {@link inputMethodFor}. */
+/** Inverse of {@link inputMethodFor}. */
 export function applyInputMethod(method: InputMethod): { mode: EditorMode; format: ComposeFormat } {
     switch (method) {
         case 'rich':
@@ -78,15 +52,8 @@ export function applyInputMethod(method: InputMethod): { mode: EditorMode; forma
 }
 
 /**
- * Whether picking `method` needs a confirmation first: only on a stored record, and only when it
- * crosses the format the form is on RIGHT NOW — that is what changes how the body renders (`#`/`*`
- * become structure, or stop being it). Both directions count: once the body has been edited, going
- * back to the record's original format is no longer a no-op either.
- *
- * `current`, not the stored format, is the axis. Comparing against the stored one would re-ask on a
- * mode-only move that already crossed once (plain record → Markdown → rich), and stay silent on a
- * real crossing that happens to land back on it (plain record → rich, edit, → no formatting).
- * A draft has nothing stored to reinterpret and op3 has no menu, so neither prompts.
+ * `current`, not the stored format, is the axis: comparing against the stored one would re-ask on a
+ * mode-only move that already crossed once, and stay silent on a real crossing that lands back on it.
  */
 export function needsFormatConfirm(recordFormat: RecordFormat | undefined, current: ComposeFormat, method: InputMethod): boolean {
     if (recordFormat !== 'plain' && recordFormat !== 'markdown') {
