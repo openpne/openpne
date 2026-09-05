@@ -14,7 +14,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/** Timeline posts the whole membership may read, ranked by the conversation they drew. */
 final class TimelineStoryCandidates implements StoryCandidates
 {
     public function alias(): string
@@ -46,10 +45,8 @@ final class TimelineStoryCandidates implements StoryCandidates
 
     /**
      * TimelineFeedScope::applyMembersOnly's audience test, minus its block filter: a block is a
-     * relation between two members and the publisher is neither of them. The page applies the
-     * viewer's own blocks when it re-resolves the row.
-     *
-     * A reply is not a story — it is part of one, and the post it answers is the candidate.
+     * relation between two members and the publisher is neither of them. A reply is not a story — it
+     * is part of one, and the post it answers is the candidate.
      *
      * @return Builder<TimelinePost>
      */

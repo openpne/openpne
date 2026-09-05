@@ -31,9 +31,8 @@ class RebuildHomeIssuesCommandTest extends TestCase
     }
 
     /**
-     * Days 23 and 25 were published, 24 and 26 were blank. A story that turns up inside the 24th
-     * afterwards — the rules having changed, say — gets its issue, numbered where its date falls,
-     * and everything after it is renumbered to match.
+     * Days 23 and 25 were published, 24 and 26 were blank; a story turning up inside the 24th
+     * afterwards gets its issue, numbered where its date falls.
      */
     public function test_it_republishes_every_day_from_the_archives_first_day(): void
     {
@@ -84,9 +83,8 @@ class RebuildHomeIssuesCommandTest extends TestCase
     }
 
     /**
-     * Consecutive issues share their boundary instant, and the one that closed on it is not rebuilt
-     * by a --from that opens on it: the day after a kept issue is the natural place to start, and
-     * the last closed day is the latest.
+     * Consecutive issues share their boundary instant, so a --from that opens on one does not rebuild
+     * the issue that closed on it.
      */
     public function test_from_the_day_after_a_kept_issue_leaves_it_whole(): void
     {
@@ -204,9 +202,8 @@ class RebuildHomeIssuesCommandTest extends TestCase
     }
 
     /**
-     * The first scheduled issue reaches back a week. A day inside that stretch cannot start a
-     * rebuild — dropping the issue would lose the days before it, keeping it would report the days
-     * after it twice — but the day it opens on can.
+     * A day inside the first issue's week cannot start a rebuild — dropping the issue would lose the
+     * days before it, keeping it would report the days after it twice — but the day it opens on can.
      */
     public function test_a_from_inside_an_issues_window_is_refused_and_its_first_day_is_not(): void
     {

@@ -13,11 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The tag page's feed. Two things to pin: the lookup speaks the parser's normalized form (the column
- * is byte-equal, so a query that does not normalize finds nothing), and collecting posts under a tag
- * never widens who may read them — the audience is HomeFeed's, unchanged.
- */
 class TagFeedTest extends TestCase
 {
     use RefreshDatabase;

@@ -11,11 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * Composing and editing a diary while the friend unit is off. New entries lose the Friends tier;
- * an entry already stored there keeps it, on both surfaces, so an untouched edit saves the audience
- * back unchanged instead of widening it to all members.
- */
 class DiaryFriendOffAudienceTest extends TestCase
 {
     use RefreshDatabase;

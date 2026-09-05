@@ -41,10 +41,7 @@ class DiaryFeedRoutesTest extends TestCase
             ->assertDontSee('Friends note');
     }
 
-    /**
-     * Being the author earns no seat in this feed: OpenPNE 3's all-member list carries only the
-     * all-members tier, your own restricted entries included. Their home is the member list page.
-     */
+    /** OpenPNE 3's all-member list carries only the all-members tier, your own entries included. */
     public function test_the_member_feed_excludes_the_viewers_own_restricted_entries(): void
     {
         $viewer = Member::factory()->create();

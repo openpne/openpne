@@ -63,8 +63,8 @@ class DiaryRoutesTest extends TestCase
 
     public function test_the_archive_offers_no_per_row_edit_or_delete_but_the_entry_still_does(): void
     {
-        // listMemberSuccess.php lists titles only; OpenPNE 3 reaches edit and delete from the entry
-        // itself. Asserted as a pair so dropping the archive links cannot strip the only route to them.
+        // listMemberSuccess.php lists titles only, OpenPNE 3 reaching edit and delete from the entry
+        // itself — asserted as a pair so dropping the archive links cannot strip the route to them.
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
 

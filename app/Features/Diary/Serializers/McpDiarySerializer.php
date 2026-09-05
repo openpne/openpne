@@ -13,15 +13,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
- * What the MCP diary tools put on the wire. A separate shape from the Modern surface's
- * ({@see DiarySerializer}) rather than a reuse of it: that one carries `/file` and `/cache/img`
- * URLs, which a bearer client cannot fetch — the file routes are session-guarded — so shipping them
- * would be shipping links that always 404.
- *
- * Text is all it carries. Pictures are reported as a count, so a reader knows an entry is not only
- * what it says. A body is flattened to plain text ({@see BodyRenderer::plainText()}) as text/plain
- * mail flattens one, so a Markdown body does not arrive as literal `**bold**` and an op3 body
- * carries no `<op:*>` tags.
+ * What the MCP diary tools put on the wire (docs/internals/mcp.md, "Diaries"). A separate shape from
+ * {@see DiarySerializer} rather than a reuse of it: that one carries `/file` and `/cache/img` URLs,
+ * which are session-guarded and so always 404 for a bearer client.
  */
 class McpDiarySerializer
 {
@@ -43,8 +37,8 @@ class McpDiarySerializer
     }
 
     /**
-     * One entry with its whole body and its whole thread. The author is never null here: a diary's
-     * `member_id` is not nullable, and withdrawal takes the entries with the account.
+     * The author is never null here: a diary's `member_id` is not nullable, and withdrawal takes the
+     * entries with the account.
      *
      * @param  Collection<int, DiaryComment>  $comments
      * @return array{diaryId: int, title: string, body: string, visibility: string, commentCount: int, imageCount: int, authorId: int, authorName: string, authorIsAi: bool, createdAt: string, comments: list<array<string, mixed>>}
@@ -65,8 +59,7 @@ class McpDiarySerializer
 
     /**
      * A comment carries no format column — OpenPNE 3 has none either — so its body is already the
-     * plain text it is stored as. `number` is the per-diary sequence a reader cites; its pictures
-     * are counted here as the entry's are, and read by naming the comment
+     * plain text it is stored as. Its pictures are counted here and read by naming the comment
      * ({@see ReadDiaryImagesTool}).
      *
      * @return array{id: int, number: int, body: string, imageCount: int, authorId: int|null, authorName: string|null, authorIsAi: bool|null, createdAt: string}
@@ -117,13 +110,7 @@ class McpDiarySerializer
         ];
     }
 
-    /**
-     * The member reference, flattened: this wire has no avatar to draw, and `isAi` is the one fact
-     * off it a reading agent needs — a colleague's words told from another agent's without inferring
-     * it from the name.
-     *
-     * @return array{authorId: int, authorName: string, authorIsAi: bool}
-     */
+    /** @return array{authorId: int, authorName: string, authorIsAi: bool} */
     private static function author(Diary $diary): array
     {
         $author = MemberRefSerializer::ref($diary->member);

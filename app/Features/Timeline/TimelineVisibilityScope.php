@@ -9,9 +9,8 @@ use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Constrains a query over one author's timeline posts to what a viewer may see: a guest (no Member)
- * sees only web-public, a blocked viewer sees nothing, otherwise up to the viewer's clearance on
- * the author.
+ * The query counterpart of {@see TimelineAccess}, which has to answer the same rule
+ * (docs/internals/feature-modules.md, "Authorization and visibility").
  */
 final class TimelineVisibilityScope
 {

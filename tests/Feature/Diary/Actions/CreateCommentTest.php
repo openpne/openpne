@@ -47,9 +47,8 @@ class CreateCommentTest extends TestCase
 
     public function test_duplicate_numbers_are_permitted_for_upgrade_fidelity(): void
     {
-        // OpenPNE 3's (diary_id, number) index is non-unique and its number is a racy max+1,
-        // so legacy data can carry duplicates. The table must import them, not reject them —
-        // flipping this to a unique constraint would break the OpenPNE 3 upgrade.
+        // OpenPNE 3's (diary_id, number) index is not unique and legacy data can carry duplicates,
+        // which the upgrade must import rather than reject.
         $diary = Diary::factory()->create();
         DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
         DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);

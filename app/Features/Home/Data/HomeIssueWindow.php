@@ -9,18 +9,14 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Query\Builder;
 
 /**
- * The stretch one issue draws from: open at the start, closed at the end.
- *
- * Consecutive issues share their boundary instant — the end is stored as the issue's `published_at`
- * and becomes the next issue's start — so a row written exactly on it must land in one issue, not
- * both. It goes with the window that closes on it, the same rule talk's digest windows follow
- * ({@see TalkSampleDigest}).
+ * The stretch one issue draws from: open at the start, closed at the end. Consecutive issues share
+ * their boundary instant, so a row written exactly on it goes with the window that closes on it, the
+ * same rule talk's digest windows follow ({@see TalkSampleDigest}).
  */
 final readonly class HomeIssueWindow
 {
     public function __construct(public CarbonImmutable $start, public CarbonImmutable $end) {}
 
-    /** The first day of happenings this window reaches into ({@see HomeIssueDay}). */
     public function firstDay(): CarbonImmutable
     {
         return HomeIssueDay::of($this->start);
@@ -39,8 +35,8 @@ final readonly class HomeIssueWindow
     }
 
     /**
-     * Constrain $column to the window. Takes the column rather than assuming one, because the
-     * windowed instant is the source's own `created_at` and the queries qualify it by table.
+     * Takes the column rather than assuming one, because the windowed instant is the source's own
+     * `created_at` and the queries qualify it by table.
      */
     public function apply(Builder $query, string $column): Builder
     {

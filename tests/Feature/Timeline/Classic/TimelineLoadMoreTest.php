@@ -11,11 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The Classic もっと読む: a rows fragment per page with the page after it in a Link header, offered
- * by the screens from their own page and by the gadgets only past their limit; the pager stands in
- * without the script.
- */
 class TimelineLoadMoreTest extends TestCase
 {
     use RefreshDatabase;

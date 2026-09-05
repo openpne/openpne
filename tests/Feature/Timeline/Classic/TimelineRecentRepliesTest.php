@@ -17,10 +17,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The inline reply layer a Classic feed row carries: the tail of the thread, in reading order, for
- * one page's worth of queries however many rows there are.
- */
 class TimelineRecentRepliesTest extends TestCase
 {
     use RefreshDatabase;

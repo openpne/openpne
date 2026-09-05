@@ -15,15 +15,8 @@ class CreateComment
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Append a comment to a diary the author may already view (the controller gates
-     * viewability). `number` is the per-diary sequence. Lock the parent diary row first so
-     * concurrent commenters serialize on a row that always exists: an empty thread has no
-     * comment rows to lock, so `max(number)` alone would let two posts both claim 1. This is
-     * the only guard — OpenPNE 3's index is non-unique and legacy data may already carry
-     * duplicate numbers, so a unique constraint would reject them on upgrade.
-     *
-     * Image bytes are rollback-safe: a disk write that fails mid-store is compensated when the
-     * transaction rolls back. Comment images carry no slot number (OpenPNE 3 has none).
+     * The caller gates viewability; this only appends. The parent diary row is locked because an
+     * empty thread has no comment row to serialize on (docs/internals/diary.md, "Comment numbering").
      *
      * @param  array<int, UploadedFile>  $images  attached images, at most the upload cap
      */

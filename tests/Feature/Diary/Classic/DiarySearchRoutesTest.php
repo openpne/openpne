@@ -37,7 +37,6 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('Search Results');
     }
 
-    /** The search scope is the feed's: the all-members tier, web-public included, per author. */
     public function test_a_members_search_includes_web_public_and_excludes_friends_entries(): void
     {
         $viewer = Member::factory()->create();

@@ -9,8 +9,6 @@ use App\Models\HomeIssue;
 use Carbon\CarbonImmutable;
 
 /**
- * The issue covering one calendar day, addressed the way its URL spells it.
- *
  * The day is validated before it is looked for, because a route pattern admits shapes a calendar
  * does not: `/home/2026/02/30` is a well-formed URL naming a day that never happened, and it must
  * read as nothing rather than as a query.

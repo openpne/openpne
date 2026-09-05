@@ -19,23 +19,18 @@ class DeleteDiary
         $this->purge($diary);
     }
 
-    /**
-     * Delete the diary and purge its (and its comments') image bytes — no authorization.
-     * The admin moderation panel calls this directly: the panel's `admin` guard is an
-     * AdminUser, not a Member, so it can't satisfy the author check in __invoke. Frontend
-     * callers always go through __invoke; admin callers gate via the panel guard.
-     */
+    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
     public function purge(Diary $diary): void
     {
-        // Collect every owned image File (the diary's and its comments') before the row is gone:
-        // the FK cascade drops the *_image link rows but never the File bytes, which a disk backend
-        // deletes irreversibly. Purge them after the diary is deleted (post-commit).
+        // Collect the diary's and its comments' owned image Files before the cascade drops the
+        // *_image link rows; their bytes (irreversible on a disk backend) are purged after the row
+        // is gone.
         $files = $this->ownedImageFiles($diary);
 
-        $diary->delete(); // FK cascade removes comments and all *_image link rows
+        $diary->delete();
 
         foreach ($files as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
     }
 

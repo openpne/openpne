@@ -13,9 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Hashtags reach timeline_post_tags from the body itself, with no payload involved
- * (HashtagParserTest covers what the body yields). What is worth pinning here is that both write
- * paths index, that mentions and tags coexist on one post, and that the rows are the post's.
+ * What is pinned here is that both write paths index, that mentions and tags coexist on one post,
+ * and that the rows are the post's; HashtagParserTest covers what a body yields.
  */
 class HashtagStorageTest extends TestCase
 {
@@ -85,9 +84,9 @@ class HashtagStorageTest extends TestCase
 
     public function test_a_tag_lookup_is_byte_equality_on_every_engine(): void
     {
-        // The parser's NFKC + lowercase is the whole equivalence. MySQL's default collation would
-        // additionally fold accents (cafe = café) where SQLite would not — the tag column pins
-        // MySQL to utf8mb4_bin so an equality lookup means the same thing on both engines.
+        // MySQL's default collation would additionally fold accents (cafe = café) where SQLite would
+        // not, so the tag column pins MySQL to utf8mb4_bin and the parser's NFKC + lowercase stays
+        // the whole equivalence.
         $author = Member::factory()->create();
         $this->createPost($author, 'a #cafe visit');
         $this->createPost($author, 'un #café aussi');

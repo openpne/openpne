@@ -34,10 +34,8 @@ class DiaryCommentController extends Controller
     }
 
     /**
-     * OpenPNE 3 diaryComment/history: the diaries the viewer commented on, ordered by their last
-     * comment. Modern has no twin — its nearest existing destination is the notification feed,
-     * whose Reply/Related rows serve the "something moved in a thread I joined" need — so a
-     * Modern viewer is sent there.
+     * Modern has no twin — its nearest destination is the notification feed, whose Reply/Related
+     * rows serve the "something moved in a thread I joined" need — so a Modern viewer is sent there.
      */
     public function history(Request $request, DiaryCommentHistory $query): View|RedirectResponse
     {

@@ -186,11 +186,9 @@ class ClassicHomeTest extends TestCase
     }
 
     /**
-     * The cautions count the mailbox and the request list; the header badges count the notification
-     * center's own rows (NotificationCenterTest). Those answer different questions and are not
-     * reconciled — OpenPNE 3's diverged the same way, its badges coming from the event store while
-     * these cautions ran their own queries. What this pins is that the cautions keep asking layer 1,
-     * so a member with nothing in the center is still told what is waiting.
+     * The cautions count the mailbox and the request list while the header badges count the
+     * notification center's own rows, as OpenPNE 3's diverged too; what is pinned is that the
+     * cautions keep asking layer 1.
      */
     public function test_the_cautions_count_the_mailbox_rather_than_the_notification_rows(): void
     {

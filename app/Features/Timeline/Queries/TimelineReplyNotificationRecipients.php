@@ -8,13 +8,10 @@ use App\Models\TimelinePost;
 use App\Notifications\CommentReason;
 
 /**
- * Who a new reply notifies: the thread root's author (Reply) and the distinct other members who
- * already replied to that root (Related), never the replier. One entry per recipient, Reply winning
- * when both apply.
- *
- * Every recipient must still be able to receive it (TimelineNotificationEligibility: unbanned, able
- * to view the thread root, no block either way against the replier). Members the reply @mentions are
- * excluded by the caller's snapshot, so the precedence is Mention > Reply > Related.
+ * Who a new reply notifies: the thread root's author (Reply) and the distinct other repliers
+ * (Related), one entry per recipient with Reply winning when both apply. The members the reply
+ * mentions are excluded by the caller's snapshot, which is what makes the precedence
+ * Mention > Reply > Related.
  */
 class TimelineReplyNotificationRecipients
 {

@@ -7,17 +7,11 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 
 /**
- * Whether a member may receive a notification about a timeline post right now — the one predicate
- * behind every timeline notification (mention, new post, reply), so the three cannot drift.
- *
- * Evaluated twice per recipient: when the listener or fan-out enqueues, and again in the
- * notification's shouldSend() immediately before each channel delivers, because a queued
- * notification can outlive the facts it was enqueued under (a ban, a new block, a revoked
- * friendship on a Friends thread) and a mail carries the post body.
- *
- * Viewability is judged on the thread root. A reply inherits its parent's visibility, so a thread
- * is one audience owned by the root's author — while TimelineAccess reads the owner off the row it
- * is handed, which for a reply is the replier, a stranger to that audience.
+ * The one predicate behind every timeline notification, evaluated again in each notification's
+ * `shouldSend()` because a queued one can outlive the facts it was enqueued under
+ * (docs/internals/notifications.md, "Delivery-time re-checks"). Viewability is judged on the thread
+ * root, whose author owns the thread's one audience — {@see TimelineAccess} would otherwise read
+ * the owner off a reply.
  */
 final class TimelineNotificationEligibility
 {

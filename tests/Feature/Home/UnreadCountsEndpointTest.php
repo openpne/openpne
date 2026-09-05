@@ -9,10 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * The JSON an open Modern tab polls: the shared `unread` counts and the sidebar's room list, read
- * together so a refresh cannot move the groups badge without the rooms it is counting.
- */
 class UnreadCountsEndpointTest extends TestCase
 {
     use RefreshDatabase;

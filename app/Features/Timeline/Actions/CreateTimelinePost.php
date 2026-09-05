@@ -19,8 +19,8 @@ class CreateTimelinePost
     ) {}
 
     /**
-     * Post to the author's own timeline. OpenPNE 3 allows one image per post; $image is attached as
-     * slot 1, with its bytes rolled back if the transaction fails.
+     * OpenPNE 3 allows one image per post; $image is attached as slot 1, with its bytes rolled back
+     * if the transaction fails.
      */
     public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
     {

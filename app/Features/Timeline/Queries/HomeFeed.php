@@ -10,9 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The cross-member home feed: top-level posts the viewer may see — their own at every visibility,
- * anyone's web-public / all-members posts, and friends' friends-only posts — newest first. Replies
- * (in_reply_to_id set) are excluded, matching OpenPNE 3's timeline, which lists top-level activities.
+ * The cross-member home feed, newest first. Replies are excluded, matching OpenPNE 3's timeline,
+ * which lists top-level activities.
  */
 class HomeFeed
 {

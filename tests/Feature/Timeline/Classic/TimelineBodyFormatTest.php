@@ -7,10 +7,7 @@ use App\Models\TimelinePost;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Locks OpenPNE 3's op_url_cmd(nl2br(...)) body rendering onto the timeline templates: bare URLs
- * become links and HTML is escaped, on both the permalink (show) and the member feed (_post).
- */
+/** The expected rendering is OpenPNE 3's op_url_cmd(nl2br(...)) on the timeline templates. */
 class TimelineBodyFormatTest extends TestCase
 {
     use RefreshDatabase;

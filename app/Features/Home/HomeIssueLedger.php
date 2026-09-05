@@ -10,22 +10,13 @@ use InvalidArgumentException;
 use LogicException;
 
 /**
- * The ledger read as memory: has this source already been featured in this section?
- *
- * Scoped to the section, always. The bands answer different questions about the same row, so a group
- * that was featured for being new may still be featured for what was said in it, and an event that
- * led a story may still be listed on the calendar.
- *
- * Rows are never swept when their source is deleted (see the create migration), which is what makes
- * this a memory rather than an index of what currently exists.
+ * The ledger read as memory: has this source already been featured in this section? Rows are never
+ * swept when their source is deleted, which is what makes this a memory rather than an index of what
+ * currently exists (docs/internals/home-issues.md, "Never again — per section").
  */
 final class HomeIssueLedger
 {
-    /**
-     * Drop from $query every row this section has already featured.
-     *
-     * @param  string  $idColumn  qualified id column on the query's table (e.g. `diaries.id`)
-     */
+    /** @param  string  $idColumn  qualified id column on the query's table (e.g. `diaries.id`) */
     public static function excludeFeatured(Builder $query, HomeIssueSection $section, string $sourceType, string $idColumn): void
     {
         self::assertRemembers($section);
@@ -40,7 +31,6 @@ final class HomeIssueLedger
         });
     }
 
-    /** Whether this section has featured this source in any issue. */
     public static function wasFeatured(HomeIssueSection $section, string $sourceType, int $sourceId): bool
     {
         self::assertRemembers($section);
@@ -53,11 +43,10 @@ final class HomeIssueLedger
     }
 
     /**
-     * The column must name its table. Unqualified, it binds to the subquery's own table rather than
-     * to the caller's — `id` compares source_id against the ledger row's own id — and the result is
-     * a wrong answer, not an error. Whether that answer happens to match the right one depends on
-     * whether the two ids coincide, so it can look correct on a database whose ids start over per
-     * test and wrong on one whose do not.
+     * The column must name its table: unqualified it binds to the subquery's own table, and the
+     * result is a wrong answer rather than an error. Whether that answer happens to match the right
+     * one depends on whether the two ids coincide, so it can look correct on one database and not on
+     * another.
      */
     private static function assertQualified(string $idColumn): void
     {
@@ -68,9 +57,7 @@ final class HomeIssueLedger
 
     /**
      * A recurring section keeps no such memory, so asking it is a mistake at the call site rather
-     * than a question with an answer. Returning "not featured" would be the more forgiving reply and
-     * the worse one: it looks like a fact, and a caller that consults the ledger for a section which
-     * may repeat has confused two rules that only happen to agree today.
+     * than a question with an answer. Returning "not featured" would look like a fact.
      */
     private static function assertRemembers(HomeIssueSection $section): void
     {

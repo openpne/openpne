@@ -15,17 +15,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Groups that were talked in during the window.
- *
- * One message is enough. On a quiet site a single line is the day's news, and the band's job is to
- * say a room was spoken in, not to grade how much — the score ranks rooms against each other, it does
- * not admit them.
- *
- * The item is the stretch, not any message in it, so nothing about a message is stored: no anchor,
- * no id. The page re-resolves the burst live through {@see TalkSampleDigest}
- * over the same window, which is what lets a deleted message simply not be there rather than leave a
- * hole. It is also why this section may feature a group again next week — the news is what was said
- * since, and that is a different stretch every time.
+ * Groups talked in during the window: one message is enough, since the score ranks rooms rather
+ * than admitting them. Nothing about a message is stored, which lets the page re-resolve the stretch
+ * live through {@see TalkSampleDigest} and is why this section may feature a group again
+ * (docs/internals/home-issues.md, "Frozen stats are provenance").
  */
 final class TalkBurstCandidates
 {
@@ -37,10 +30,8 @@ final class TalkBurstCandidates
     /** @return Collection<int, PlannedItem> */
     public function __invoke(HomeIssueWindow $window, int $limit): Collection
     {
-        // Correlated rather than a second pass over the winning groups, because the reaction count
-        // is part of the score: a second pass would have to rank before it knew the numbers it ranks
-        // by. Nothing bounds the window but the range itself — no index leads with created_at — so
-        // this reads a day's messages across every group, which is what once a day affords.
+        // Correlated rather than a second pass, because the reaction count is part of the score;
+        // nothing bounds the window but the range itself, which is what once a day affords.
         $reactions = DB::table('reactions')
             ->selectRaw('count(*)')
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')

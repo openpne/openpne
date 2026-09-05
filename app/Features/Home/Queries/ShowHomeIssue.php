@@ -21,12 +21,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * An issue read by one member: its ledger resolved back through every source's own gate.
- *
- * The whole page is bounded by the ledger, which is capped per section, so the reads are bounded
- * too: one per source table however many rows it holds, and the relations the gate asks about are
- * read in one query each ({@see ViewerRelations}) rather than per row. Talk is the exception by
- * design — a burst is a stretch of one room, and there is no read that describes several at once.
+ * An issue read by one member: its ledger resolved back through every source's own gate. The reads
+ * are bounded — one per source table, and the relations the gate asks about in one query each
+ * ({@see ViewerRelations}) — with talk the exception, since no read describes several rooms at once.
  */
 final class ShowHomeIssue
 {
@@ -55,12 +52,9 @@ final class ShowHomeIssue
     }
 
     /**
-     * Every source the ledger names, one read per table.
-     *
-     * Per table and not per (section, table): a group is featured both for being new and for what
-     * was said in it, and reading it twice would buy nothing but a second query. The eager loads are
-     * therefore the union of what the serializers of either section ask for — an event's roster
-     * count is the calendar row's, not the story's.
+     * Every source the ledger names, one read per table and not per (section, table): a group is
+     * featured both for being new and for what was said in it. The eager loads are therefore the
+     * union of what either section's serializer asks for.
      *
      * @param  EloquentCollection<int, HomeIssueItem>  $items
      * @return array<string, Collection<int, Model>> keyed by morph alias, then by id

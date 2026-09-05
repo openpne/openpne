@@ -10,13 +10,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The "Recently Posted Diaries" feed: every member's diaries
- * open to the membership at large, newest first — the web-public tier only for a guest
- * (DiaryVisibilityScope::applyFeed). The threshold is the all-members tier, so a friend's
- * Friends-only diary belongs to the friend feed, not here.
- *
- * Unlike OpenPNE 3, owners who block the viewer are excluded, keeping the feed consistent
- * with ShowDiary (which 404s a blocked viewer).
+ * The "Recently Posted Diaries" feed, newest first — the web-public tier only for a guest
+ * ({@see DiaryVisibilityScope::applyFeed}). Unlike OpenPNE 3, owners who block the viewer are
+ * excluded, keeping the feed consistent with ShowDiary.
  */
 class ListRecentDiaries
 {
