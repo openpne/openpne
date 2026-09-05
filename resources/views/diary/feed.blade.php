@@ -1,7 +1,6 @@
 @extends('layouts.classic')
 
 @php
-    $searchable = $variant !== 'friends';
     $title = match (true) {
         $variant === 'friends' => __('%Diaries% of %My_friends%'),
         $variant === 'search' && $hasKeyword => __('Search Results'),

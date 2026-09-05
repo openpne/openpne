@@ -6,7 +6,9 @@
 <div class="dparts homeAllTimeline"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
     <div class="partsHeading"><h3>{{ __("All members' %activity%") }}</h3></div>
     {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}
-    <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+    @if (\App\Features\Timeline\TimelinePosting::enabled())
+        <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+    @endif
     <div class="timeline" data-timeline-container>
         @include('timeline._compose', ['returnTo' => 'home'])
         @if ($posts->isNotEmpty())

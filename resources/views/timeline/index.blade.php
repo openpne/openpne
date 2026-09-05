@@ -12,7 +12,9 @@
          carries a gadget suffix; the standalone page keeps the bare kind name as its id. --}}
     <x-classic.parts id="homeAllTimeline" name="homeAllTimeline" :title="$title">
         {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}
-        <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+        @if (\App\Features\Timeline\TimelinePosting::enabled())
+            <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+        @endif
 
         {{-- OpenPNE 3's div.timeline shell: the compose box leads it, then div#timeline-list and
              the load-more control; the server pager beside it is the way on without the script. --}}

@@ -1,3 +1,4 @@
+@if (\App\Features\Timeline\TimelinePosting::enabled())
 @once
     @push('pluginCss')
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/counter.css') }}">
@@ -37,3 +38,4 @@
     <script src="{{ asset('js/classic-timeline-compose.js') }}" defer></script>
 @endonce
 @include('timeline._mention-picker')
+@endif
