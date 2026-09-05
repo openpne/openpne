@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Features\Notifications;
 
 /**
- * The three compartments OpenPNE 3's notification center split its events into — one per badge on
- * the sprite, in that order. Everything the center shows is classified here and nowhere else, so a
- * badge can never count an event its panel does not list, or count one twice.
+ * OpenPNE 3's three compartments in badge order; everything the center shows is classified here and
+ * nowhere else, so a badge can never count an event its panel does not list.
  */
 enum NotificationCenterCategory: string
 {
@@ -24,7 +23,6 @@ enum NotificationCenterCategory: string
         };
     }
 
-    /** The badge the skin positions over this compartment's icon. */
     public function badgeId(): string
     {
         return match ($this) {

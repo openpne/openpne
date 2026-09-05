@@ -9,13 +9,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * Hides a switched-off unit's rows from every notification surface — the feed, the header center,
- * the badge counts — by the non-null `type` column (see FeatureNotificationMap).
- *
- * The rows themselves are never touched here: mark-all-read runs through this too, so a hidden row is
- * still unread when its unit comes back, exactly as the member left it. One kind does delete its own
- * rows, outside this filter: the talk broadcast keeps a single row per room
- * (App\Features\GroupTalk\GroupTalkRoomNotificationRows).
+ * The rows themselves are never touched: mark-all-read runs through this too, so a hidden row is still
+ * unread when its unit comes back. One kind does delete its own rows outside this filter — the talk
+ * broadcast keeps a single row per room (App\Features\GroupTalk\GroupTalkRoomNotificationRows).
  */
 final class VisibleNotifications
 {

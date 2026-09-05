@@ -17,13 +17,8 @@ use Illuminate\Http\Response;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The panel behind the Classic header sprite. OpenPNE 3 fetched its contents on the first open
- * rather than with every page, and this keeps that: a panel nobody opens costs one page nothing.
- *
- * The list answers in HTML because every sentence in it is already resolved in PHP
- * ([`NotificationKindLabel`](NotificationKindLabel.php)); re-deriving them in the browser would put
- * a second copy of the wording where the first one cannot check it. Only the two decisions answer
- * in JSON, which is state, not text.
+ * Fetched on the first open rather than with every page, as OpenPNE 3 did. The list answers in HTML
+ * because its sentences are already resolved in PHP; only the two decisions answer in JSON.
  */
 class NotificationCenterController extends Controller
 {
@@ -36,8 +31,8 @@ class NotificationCenterController extends Controller
     }
 
     /**
-     * The header badges as the page would draw them now, keyed by badge id: what the script redraws
-     * when a page comes back from the browser's cache with counts from before it left.
+     * What the header redraws when a page comes back from the browser's cache with counts from before it
+     * left.
      */
     public function counts(NotificationCenterCounts $counts): JsonResponse
     {

@@ -14,11 +14,6 @@ use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The topic/event "posted" mails are text/plain, so a non-plain body must be flattened before it is
- * interpolated into the template — otherwise a Markdown body arrives as literal `**bold**` and an
- * op3 body carries its <op:*> tags.
- */
 class GroupPostingFlattenTest extends TestCase
 {
     use RefreshDatabase;

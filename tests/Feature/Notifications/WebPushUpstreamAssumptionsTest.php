@@ -23,32 +23,17 @@ use Tests\TestCase;
 use Throwable;
 
 /**
- * Things the push seam takes for granted about the packages under it.
- *
- * None of these are this app's code, and none of them are announced when they change — the upgrade
- * that broke each of them the last time was a routine dependency bump whose release notes said
- * something else entirely. They are asserted here so the bump itself goes red, with a message saying
- * what to go and re-read, rather than the behaviour quietly becoming something else.
- *
- * Read this file when bumping laravel-notification-channels/webpush, minishlink/web-push, or
- * guzzlehttp/guzzle. The rest of the seam is docs/internals/outbound-http.md. What Guzzle's curl
- * handler refuses from the `curl` option — the escape hatch that could once undo the seam's pins —
- * is asserted in OutboundTransportTest, next to the transport it belongs to.
- *
- * Two neighbouring assumptions are covered elsewhere and not repeated: that the channel sends
- * through `flush()` (FakeWebPush overrides exactly that, so the push tests stop exercising anything
- * if it is not called), and that `queueNotification()` and `MessageSentReport` keep the shapes that
- * fake is written against (a changed signature on the override is a declaration-time error, and a
- * changed report constructor an ArgumentCountError from inside it).
+ * Assumptions about the packages under the push seam, asserted so a bump to
+ * laravel-notification-channels/webpush, minishlink/web-push or guzzlehttp/guzzle is what goes red
+ * (docs/internals/outbound-http.md, The push endpoint seam). Two neighbouring ones are not repeated: that
+ * the channel sends through `flush()`, and that `queueNotification()` and `MessageSentReport` keep the
+ * shapes FakeWebPush is written against.
  */
 class WebPushUpstreamAssumptionsTest extends TestCase
 {
     /**
-     * The seam App\Providers\WebPushServiceProvider overrides has to stay a method it can override.
-     *
-     * Renaming it is the obvious break; narrowing it to private is the quiet one, since the parent
-     * would then call its own copy and leave ours as a method that merely exists. Neither shows up
-     * as anything but push going out on a client this app did not build.
+     * Narrowing it to private is the quiet break: the parent would then call its own copy and leave the
+     * override a method that merely exists.
      */
     public function test_the_client_seam_this_app_overrides_is_still_overridable(): void
     {
@@ -64,19 +49,8 @@ class WebPushUpstreamAssumptionsTest extends TestCase
     }
 
     /**
-     * And the client the channel sends on has to be the one this app built.
-     *
-     * Asserted by taking the config away first: with no options to pass on, the package's own
-     * builder produces a client with neither of these set, and only PushClientFactory — which
-     * applies them after whatever it was handed — still has them. So this stays green only while
-     * that factory is what runs, however the package happens to reach it.
-     *
-     * The config is emptied before the provider boots because the binding closes over a config
-     * array read at boot time; setting it afterwards changes nothing.
-     *
-     * Registering the provider by hand means this one says nothing about it being listed in
-     * bootstrap/providers.php. WebPushClientConfigTest resolves through the boot the app did — keep
-     * it that way, or nothing is left watching that it is registered at all.
+     * Asserted by emptying the config before the provider boots — the binding closes over a config array
+     * read at boot time — so only PushClientFactory can still have these set.
      */
     public function test_the_channel_sends_on_the_client_this_app_built(): void
     {
@@ -98,17 +72,8 @@ class WebPushUpstreamAssumptionsTest extends TestCase
     }
 
     /**
-     * The transport must not be able to reach an HTTP client this app did not build.
-     *
-     * `flushPooled()` sends on a separate async client discovered from whatever is installed, with
-     * no options at all: redirects followed, the environment's proxy honoured, no timeouts. It
-     * throws today only because nothing implements the interface it looks for — the seam's
-     * guarantees hold because the alternative path does not exist, not because it is safe. A
-     * transitive dependency pulling in an adapter is all it would take, and `php-http/discovery` is
-     * an allowed plugin, so one can arrive without anyone naming it.
-     *
-     * Asserted against discovery rather than against the instance the library keeps: where it
-     * stores the result, and whether it looks eagerly at all, is its own business.
+     * Asserted against discovery rather than against the instance the library keeps
+     * (docs/internals/outbound-http.md, The push endpoint seam).
      */
     public function test_no_async_client_is_available_to_send_push_unguarded(): void
     {
@@ -127,13 +92,8 @@ class WebPushUpstreamAssumptionsTest extends TestCase
     }
 
     /**
-     * The transport sends one device at a time, which is the whole reason WebPushNudge needs a
-     * ceiling of its own: the per-request timeout multiplies rather than bounds.
-     *
-     * Asserted by consuming one report and counting — one request has been made by then, and the
-     * remaining two only on draining. An implementation that issued them together would satisfy
-     * neither half. If this fails, the timeouts in config/webpush.php were sized for a cost that no
-     * longer applies and WebPushTimeoutBudgetTest is asserting the wrong shape.
+     * Asserted by consuming one report and counting: one request has been made by then and the remaining
+     * two only on draining, so an implementation issuing them together would satisfy neither half.
      */
     public function test_the_transport_still_sends_one_device_at_a_time(): void
     {
@@ -183,10 +143,8 @@ class WebPushUpstreamAssumptionsTest extends TestCase
     }
 
     /**
-     * The Guzzle client the channel resolved, reached the way WebPushClientConfigTest reaches it.
-     *
-     * Each hop is checked by name first: a property renamed upstream is exactly the routine bump
-     * this file exists to explain, and a bare ReflectionException explains nothing.
+     * Each hop is checked by name first: a property renamed upstream is exactly the routine bump this file
+     * exists to explain, and a bare ReflectionException explains nothing.
      *
      * @return array<string, mixed>
      */

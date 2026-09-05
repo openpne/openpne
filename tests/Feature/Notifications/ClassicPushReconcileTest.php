@@ -10,11 +10,8 @@ use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
 /**
- * The Classic header loads the push-ownership reconcile script (public/js/push-reconcile.js) so a
- * shared-browser account switch is closed on Classic too, not only under the Modern shell. This pins
- * the security-relevant gate: the script must never reach a guest page (nobody to rebind ownership to)
- * and must be absent on a site with no push at all. The script's runtime rebind/fail-closed behavior
- * has no browser harness here — see the manual-verification list in the PR.
+ * Pins the gate only: the script must never reach a guest page, and must be absent on a site with no push
+ * at all. Its runtime rebind and fail-closed behaviour have no browser harness here.
  */
 class ClassicPushReconcileTest extends TestCase
 {
@@ -35,8 +32,6 @@ class ClassicPushReconcileTest extends TestCase
 
         $member = Member::factory()->create();
 
-        // The script also carries the signed-in member's id, so the vanilla reconcile knows whose
-        // binding to confirm and re-POSTs only on an ownership transition.
         $this->actingAs($member)
             ->get('/member/config?category=notification')
             ->assertOk()
@@ -46,10 +41,8 @@ class ClassicPushReconcileTest extends TestCase
 
     public function test_a_guest_classic_page_never_loads_the_reconcile_script(): void
     {
-        // VAPID is configured, so the only reason the script is absent is the auth gate — a guest has
-        // no subscription of its own to rebind. The login page is a Classic shell a guest actually
-        // renders (the csrf-token meta confirms the layout ran), so the partial's gate is exercised,
-        // not an auth redirect.
+        // The login page is a Classic shell a guest actually renders, so what is exercised is the
+        // partial's gate rather than an auth redirect.
         $this->configureVapid();
 
         $this->get('/login')

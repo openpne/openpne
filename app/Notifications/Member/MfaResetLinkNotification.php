@@ -10,10 +10,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * The admin-issued "reset your two-factor authentication" mail, sent on-demand to the member's registered
- * address (so the notifiable is an AnonymousNotifiable pinned to that literal address, never the Member —
- * matching RequestEmailChange's queue-safety reasoning). Carries the raw token in the reset link only; the
- * locale is captured at request time because the notification renders later on the queue.
+ * Sent on-demand to the member's registered address, so the notifiable is an AnonymousNotifiable pinned to
+ * that literal address rather than the Member.
  */
 class MfaResetLinkNotification extends Notification implements ShouldQueue
 {

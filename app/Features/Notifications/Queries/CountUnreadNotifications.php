@@ -4,11 +4,7 @@ namespace App\Features\Notifications\Queries;
 
 use App\Models\Member;
 
-/**
- * The bell badge number: unread rows in the member's per-event feed (layer 3). Unlike the
- * layer-1 counts this is read_at-driven — reading the feed drops it, acting on the underlying
- * item does not.
- */
+/** Driven by `read_at`, unlike the layer-1 counts (docs/internals/notifications.md, The three layers). */
 class CountUnreadNotifications
 {
     public function __invoke(Member $viewer): int

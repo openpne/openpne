@@ -16,10 +16,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a group admin a member joined. Mail + database. Unlike the catalog comment notifications
- * this has no per-member kind: the opt-out is the per-group toggle (applied by the recipient query),
- * so via() only adds the admin's global mail-template gate. The default body links the group and
- * the new member via app_url_for, so the context carries their ids as well as their names.
+ * No per-member catalog kind: the opt-out is the per-group toggle the recipient query applies
+ * (docs/internals/notifications.md, Gating flow).
  */
 class GroupJoinedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

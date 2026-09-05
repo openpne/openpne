@@ -10,13 +10,9 @@ use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The strictVariables flag is what makes the drift guards (MailTemplateDriftGuardTest) non-vacuous:
- * production renders leniently (an absent variable is empty, matching OpenPNE 3), the guards render
- * strictly so an undeclared variable throws. Pin both directions so a regression to the flag can't
- * silently turn the guards into no-ops.
- *
- * Also pins the fault classification the import preflight groups by, including the boundary that keeps
- * it honest: an honest runtime fault must NOT be reported as a missing variable.
+ * Pins both directions of the strictVariables flag, so a regression to it cannot silently turn the drift
+ * guards into no-ops. Also pins the boundary that keeps the fault classification honest: an honest runtime
+ * fault must not be reported as a missing variable.
  */
 class MailTemplateRendererTest extends TestCase
 {
@@ -51,7 +47,6 @@ class MailTemplateRendererTest extends TestCase
 
     public function test_an_unmapped_app_url_for_route_is_a_route_map_failure(): void
     {
-        // Twig wraps what the function threw in a RuntimeError; the inner fault is the real one.
         $this->assertSame(
             MailTemplateFault::RouteMapFailure,
             $this->faultOf("{% app_url_for('pc_frontend', 'member/thereIsNoSuchAction') %}"),
@@ -60,8 +55,6 @@ class MailTemplateRendererTest extends TestCase
 
     public function test_a_runtime_fault_that_is_not_a_missing_variable_stays_generic(): void
     {
-        // The boundary MailTemplateFault exists for: this is a RuntimeError just like a strict-variable
-        // miss, so classifying by type alone would mislabel it as missing context.
         $this->assertSame(MailTemplateFault::RenderFailure, $this->faultOf('{{ 1 / 0 }}'));
     }
 

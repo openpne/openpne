@@ -9,12 +9,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Resolves a mail template to its rendered subject/body for a recipient, reading the admin override from
- * `mail_templates` (+ translations) and falling back to the MailTemplate registry default. A single
- * cached map guarded by Schema::hasTable lets a pre-migrate / console boot resolve to defaults instead
- * of throwing; the admin editor calls clearCache() after saving.
- */
 class MailTemplateService
 {
     private const CACHE_KEY = 'mail_templates';
@@ -24,9 +18,8 @@ class MailTemplateService
     public function __construct(private readonly MailTemplateRenderer $renderer) {}
 
     /**
-     * Render a template for a recipient. The OpenPNE 3 globals (op_config, op_term, sf_config) are
-     * injected here so callers pass only the template-specific context; values resolve now (at render
-     * time), not lazily. The signature is appended to a sendable body.
+     * Callers pass only the template-specific context: the OpenPNE 3 globals (op_config, op_term,
+     * sf_config) are injected here, resolved at render time rather than lazily.
      *
      * @param  array<string, mixed>  $context
      */
@@ -49,16 +42,14 @@ class MailTemplateService
     }
 
     /**
-     * Render-test a subject the admin typed in the template's representative context. Throws
-     * UnsupportedMailTemplateSyntaxException on a parse error / sandbox violation / unmapped route, so the
-     * editor can reject it before it is stored and breaks the next send.
+     * Throws UnsupportedMailTemplateSyntaxException so the editor can reject what the admin typed before it
+     * is stored and breaks the next send.
      */
     public function assertSubjectRenderable(MailTemplate $template, string $locale, string $subject): void
     {
         $this->renderer->renderSubject($subject, $this->validationContext($template, $locale));
     }
 
-    /** As assertSubjectRenderable(), for a body. */
     public function assertBodyRenderable(MailTemplate $template, string $locale, string $body): void
     {
         $this->renderer->render($body, $this->validationContext($template, $locale));
@@ -70,7 +61,6 @@ class MailTemplateService
         return $this->baseContext($locale) + $template->representativeContext();
     }
 
-    /** Whether a template is sent. Non-configurable templates are always on; configurable ones honor the stored flag. */
     public function isEnabled(MailTemplate $template): bool
     {
         if (! $template->isConfigurable()) {
@@ -80,6 +70,7 @@ class MailTemplateService
         return $this->map()['enabled'][$template->value] ?? true;
     }
 
+    /** Every writer of `mail_templates` must call this; the map is otherwise cached for an hour. */
     public function clearCache(): void
     {
         Cache::forget(self::CACHE_KEY);
@@ -93,12 +84,7 @@ class MailTemplateService
         return $body === '' ? '' : $this->renderer->render($body, $this->baseContext($locale));
     }
 
-    /**
-     * The OpenPNE 3 globals every template may reference, as nested arrays so `{{ op_config.sns_name }}`
-     * and `{{ op_term.friend }}` resolve. Resolved now (at render time), not lazily.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function baseContext(string $locale): array
     {
         return [
@@ -122,11 +108,9 @@ class MailTemplateService
     }
 
     /**
-     * Stored override for a (template, locale, field), or null to use the default. "Use the default" is
-     * expressed by the row's ABSENCE, not by an empty value: a present row is honored as-is, including an
-     * empty body (e.g. an admin who blanked the signature wants no signature, not the default restored).
-     * Resolved per locale — a ja recipient never falls back to an en override (that would mail the wrong
-     * language); an unedited locale uses its own default, which the OpenPNE 3 import populates for both.
+     * A row's absence is what selects the default: a present row is honoured as-is, an empty body included.
+     * Per locale — a ja recipient never falls back to an en override, and an unedited locale uses its own
+     * default, which the OpenPNE 3 import populates for both.
      */
     private function override(MailTemplate $template, string $locale, string $field): ?string
     {
@@ -141,9 +125,6 @@ class MailTemplateService
     }
 
     /**
-     * Cached snapshot: per-key is_enabled and per-(key, locale) subject/body. Guarded so a missing table
-     * resolves to "no overrides" (all defaults).
-     *
      * @return array{enabled: array<string, bool>, tx: array<string, array<string, array{subject: ?string, body: string}>>}
      */
     private function map(): array

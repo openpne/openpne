@@ -6,9 +6,6 @@ namespace App\Notifications\Settings;
 
 use App\Support\Feature;
 
-/**
- * The notification-catalog categories, used to group kinds on the settings pages.
- */
 enum NotificationCategory: string
 {
     case Timeline = 'timeline';
@@ -19,7 +16,6 @@ enum NotificationCategory: string
     case FriendLink = 'friend_link';
     case DirectMessage = 'direct_message';
 
-    /** The feature unit whose notifications this category configures; off means it has nothing to offer. */
     public function feature(): Feature
     {
         return match ($this) {
@@ -33,7 +29,7 @@ enum NotificationCategory: string
         };
     }
 
-    /** Member-facing group heading (translated; %term% placeholders resolve downstream). */
+    /** Translated, but its %term% placeholders are resolved downstream. */
     public function caption(): string
     {
         return __($this->sourceCaption());
@@ -53,8 +49,8 @@ enum NotificationCategory: string
     }
 
     /**
-     * Raw caption source strings (pre-__()). Exposed so the i18n:check term-literal gate can
-     * scan captions that reach __() via a variable and never enter the code scanner.
+     * Read by the i18n:check term-literal gate: a string reaching __() through a variable never enters
+     * the code scanner.
      *
      * @return list<string>
      */
@@ -64,8 +60,8 @@ enum NotificationCategory: string
     }
 
     /**
-     * Raw headings (pre-__()) of categories that render — those with at least one wired kind. An
-     * all-unwired category never surfaces, so gating its ja translation would be speculative.
+     * Only a category with a wired kind renders, so gating an all-unwired one's ja translation would be
+     * speculative.
      *
      * @return list<string>
      */

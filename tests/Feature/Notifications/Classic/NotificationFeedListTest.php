@@ -15,10 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * The Classic feed: the recentList box, a pager around it, and one open POST per row. There is no
- * OpenPNE 3 screen behind it, so what is asserted here is the box's own contract rather than parity.
- */
+/** There is no OpenPNE 3 screen behind this feed, so what is asserted is its own contract, not parity. */
 class NotificationFeedListTest extends TestCase
 {
     use RefreshDatabase;
@@ -53,12 +50,6 @@ class NotificationFeedListTest extends TestCase
         $this->assertStringContainsString($read, $body);
     }
 
-    /**
-     * Opening a row marks it read and leaves, so the page the browser keeps for back is stale the
-     * moment it is kept. The feed loads the restore refresh for that; the rest of Classic does not,
-     * since what that script costs a screen is the instant back the cache was giving it — there the
-     * header re-asks the badge counts instead (classic-notification-center.js).
-     */
     public function test_only_the_feed_refreshes_itself_after_a_back_forward_restore(): void
     {
         $viewer = Member::factory()->create();
@@ -96,7 +87,6 @@ class NotificationFeedListTest extends TestCase
         $row->markAsRead();
         $this->freshRequestState(); // the count is memoized per request, and this is the next one
 
-        // Same condition the Modern page hides its button on: nothing left to mark.
         $this->actingAs($viewer)->get('/notifications')
             ->assertDontSee('action="'.route('notifications.readAll').'"', false);
     }
@@ -113,11 +103,6 @@ class NotificationFeedListTest extends TestCase
         $this->assertNotNull($row->fresh()->read_at);
     }
 
-    /**
-     * The feed pages through everything, so its mark-all follows the whole unread set — not the
-     * header center's 20-row window. An unread row the center cannot badge still has something for
-     * this button to mark.
-     */
     public function test_mark_all_survives_an_unread_row_older_than_the_centers_window(): void
     {
         $viewer = Member::factory()->create();
@@ -143,7 +128,6 @@ class NotificationFeedListTest extends TestCase
             ->assertDontSee('class="pagerRelative"', false);
     }
 
-    /** The way to what decides this feed's contents, independent of whether it has any. */
     public function test_the_settings_link_shows_whether_or_not_the_feed_has_rows(): void
     {
         $viewer = Member::factory()->create();
@@ -162,9 +146,8 @@ class NotificationFeedListTest extends TestCase
     }
 
     /**
-     * Where a row leads is resolved by the open POST, not by listing it — so a page of rows costs
-     * what a handful does. The message kind is the canary: resolving its target reads the inbox
-     * receipt, which a per-row evaluation would show up as one query per row.
+     * The message kind is the canary: resolving its target reads the inbox receipt, which a per-row
+     * evaluation would show up as one query per row.
      */
     public function test_a_page_of_rows_costs_what_a_handful_does(): void
     {

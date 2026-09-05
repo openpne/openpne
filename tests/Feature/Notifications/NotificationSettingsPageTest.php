@@ -69,10 +69,6 @@ class NotificationSettingsPageTest extends TestCase
             );
     }
 
-    /**
-     * The "(default)" label's input: true only where the shown value is the site's, which is only
-     * ever a kind whose default an administrator can move.
-     */
     public function test_the_site_default_flag_marks_an_inherited_value_until_the_member_overrides_it(): void
     {
         $member = Member::factory()->create();
@@ -81,12 +77,11 @@ class NotificationSettingsPageTest extends TestCase
         $this->actingAs($member)->get('/member/config/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                // The overridden channel is the member's own; mail is never the site's to begin with
-                // (its default is fixed off), so it is not labelled either.
+                // All four are false: the overridden web channel is the member's own, mail's default is
+                // fixed off, and a kind with no site default is never labelled, row or no row.
                 ->where('form.groups.4.kinds.1.kind', 'group_talk_new_message')
                 ->where('form.groups.4.kinds.1.siteDefault.web', false)
                 ->where('form.groups.4.kinds.1.siteDefault.mail', false)
-                // A kind with no site default is never labelled, row or no row.
                 ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
                 ->where('form.groups.4.kinds.0.siteDefault.web', false)
                 ->where('form.groups.4.kinds.0.siteDefault.mail', false),
@@ -118,10 +113,8 @@ class NotificationSettingsPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
-                // Shared VAPID key + the page's own pause-switch state (default on).
                 ->where('push.vapidPublicKey', config('webpush.vapid.public_key'))
                 ->where('pushSettings.enabled', true)
-                // The push section does not touch the catalog grid.
                 ->has('form.groups', 7)
                 ->where('form.groups.0.kinds.0.kind', 'timeline_new_post'),
             );
@@ -178,9 +171,8 @@ class NotificationSettingsPageTest extends TestCase
 
     public function test_only_wired_kinds_are_writable(): void
     {
-        // Every registered kind is wired today, so the rule is pinned against the registry rather
-        // than against one dormant kind: an unwired kind added later must not become writable by
-        // the allowlist drifting away from wiredCases().
+        // Pinned against the registry rather than against one dormant kind, so an unwired kind added
+        // later cannot become writable by the allowlist drifting from wiredCases().
         $this->assertSame(
             array_map(fn (NotificationKind $kind): string => $kind->value, NotificationKind::wiredCases()),
             $this->writableKinds(),

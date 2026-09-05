@@ -12,9 +12,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a member an admin appointed them sub-admin. Database only: the appointment is immediate (the
- * OpenPNE 3 handshake was dropped), so there is nothing to confirm, no mail template, and no catalog
- * kind to gate.
+ * Database only: the appointment is immediate, the OpenPNE 3 handshake having been dropped, so there is
+ * nothing to confirm and no catalog kind to gate.
  */
 class SubAdminAppointedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

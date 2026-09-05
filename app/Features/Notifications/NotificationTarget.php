@@ -26,13 +26,9 @@ use App\Notifications\Timeline\TimelineRepliedNotification;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * What a feed row is about, as a value: the single table saying which `data` ids each kind points at.
- * Two things read it — the URL a row opens (NotificationFeedSerializer::targetUrl) and the rule that
- * reading that target marks the row read (ConsumeNotificationRows) — so a row can never open one
- * place and be consumed by another.
- *
- * Tests\Feature\Notifications\NotificationTargetReadTest walks FeatureNotificationMap::CLASSES
- * against both tables here, so a new notification class cannot land without a target.
+ * The single table saying which `data` ids each kind points at, read both by the URL a row opens and by
+ * the rule that reading that target marks the row read, so a row can never open one place and be consumed
+ * by another.
  */
 final class NotificationTarget
 {
@@ -104,9 +100,8 @@ final class NotificationTarget
     }
 
     /**
-     * The notification classes whose rows can point at this type. `notifications.type` is what a row
-     * is narrowed by everywhere (`data` is a TEXT column with no path index), so this is what keeps a
-     * community page from sweeping the room's talk row beside it.
+     * `notifications.type` is what a row is narrowed by everywhere (`data` is a TEXT column with no path
+     * index), so this is what keeps a community page from sweeping the room's talk row beside it.
      *
      * @return list<class-string>
      */

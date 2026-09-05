@@ -6,10 +6,8 @@ use App\Support\SecurityLog;
 use Illuminate\Auth\Events\Login;
 
 /**
- * Security event listeners (this namespace) are synchronous by design: they are NOT ShouldQueue.
- * Queueing would serialise the event onto a worker that no longer has the originating request, so
- * the ip / user_agent SecurityLog auto-attaches would be lost, and events could land out of order
- * relative to the request that caused them. Auto-discovered by their handle() type hint.
+ * Security event listeners are synchronous by design, never ShouldQueue: a worker no longer holds the
+ * originating request (docs/internals/logging.md, Queue workers).
  */
 class LogSuccessfulLogin
 {

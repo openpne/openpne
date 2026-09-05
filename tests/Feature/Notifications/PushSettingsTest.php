@@ -69,10 +69,6 @@ class PushSettingsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('push', null));
     }
 
-    /**
-     * Inertia merges page props over the shared ones, so a page prop named `push` would replace the
-     * shared VAPID key outright — on the one page that needs both.
-     */
     public function test_the_settings_page_carries_both_the_shared_key_and_its_own_toggle_state(): void
     {
         $member = Member::factory()->create();
