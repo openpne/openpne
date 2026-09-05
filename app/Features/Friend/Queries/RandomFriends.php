@@ -5,11 +5,7 @@ namespace App\Features\Friend\Queries;
 use App\Models\Member;
 use Illuminate\Support\Collection;
 
-/**
- * A random handful of the viewer's friends, for the right rail's friends grid. Random so the
- * grid varies between visits rather than always showing the
- * same nine; the small-SNS scale makes ORDER BY RANDOM() cheap.
- */
+/** `inRandomOrder()` runs over one member's friend rows only, so its cost is the friend count, not the member table. */
 class RandomFriends
 {
     public const LIMIT = 9;

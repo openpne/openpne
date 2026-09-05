@@ -131,8 +131,7 @@ class ClassicProfileGadgetTest extends TestCase
         DB::table('sns_settings')->insert(['key' => 'gadget_profile_layout', 'value' => 'layoutA']);
         app(SnsSettingService::class)->clearCache();
 
-        // layoutA has a `top` row, but only a sideMenu gadget is placed. OpenPNE 3 keys the letter off
-        // the setting (setLayout), so it must stay A — not B inferred from which zones have content.
+        // OpenPNE 3 keys the letter off the setting, so a layoutA with only a sideMenu gadget stays A.
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->makeGadget('sideMenu', 'profileListBox');

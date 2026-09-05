@@ -18,11 +18,6 @@ use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-/**
- * Member profile image (avatar), on both surfaces: the Classic editor and the Modern Inertia page
- * share one upload/remove backend (SetAvatar / RemoveAvatar). Post-submit redirects stay on the
- * surface they came from.
- */
 class MemberAvatarController extends Controller
 {
     use RespondsWithSurface;
@@ -74,9 +69,8 @@ class MemberAvatarController extends Controller
     }
 
     /**
-     * The viewer's avatar as the shared Modern image shape, or null when unset. thumbnailUrl is the
-     * editor preview, which paints at 128px and so asks for the 320px square; url is the full-bytes
-     * (FilePolicy-gated) original.
+     * `thumbnailUrl` feeds the editor preview, which paints at 128px; `url` is the full-bytes
+     * original, gated by FilePolicy.
      *
      * @return array{url: string, thumbnailUrl: string}|null
      */
@@ -88,8 +82,8 @@ class MemberAvatarController extends Controller
     }
 
     /**
-     * The badge-color picker payload. `value` is the stored slug (what the POST validates), while
-     * each option carries the display hex — the client must never post a hex back.
+     * `value` is the stored slug, which is what the POST validates; the hex is display only and is
+     * never posted back.
      *
      * @return array{value: string|null, options: list<array{value: string, hex: string, label: string}>}
      */

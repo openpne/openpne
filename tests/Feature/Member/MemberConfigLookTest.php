@@ -12,10 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The layout picker: the settings row that names the current choice, the detail page that describes
- * what separates the looks, and the POST that keeps one.
- */
 class MemberConfigLookTest extends TestCase
 {
     use RefreshDatabase;
@@ -43,7 +39,6 @@ class MemberConfigLookTest extends TestCase
 
     public function test_the_settings_row_is_absent_while_the_site_offers_one_look(): void
     {
-        // The default alone is not a choice, so the row would lead to a page with nothing on it.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/member/config')
@@ -65,8 +60,6 @@ class MemberConfigLookTest extends TestCase
 
     public function test_the_settings_row_reads_as_following_while_nothing_is_chosen(): void
     {
-        // Null is what the row renders "match the site default" on, so an undecided member is not
-        // reported as having picked whatever they are currently being shown.
         $member = Member::factory()->create();
         $this->offerBoth();
 
@@ -95,17 +88,14 @@ class MemberConfigLookTest extends TestCase
                 ->where('lookChoice.options.1.description', 'The experimental layout that renders profiles and %communities% in one shared shape.')
                 ->where('lookChoice.current', 'unified')
                 ->where('lookChoice.default', ['value' => 'standard', 'label' => 'Standard'])
-                // The shared prop stays the plain look id beside the page's own block. A page prop
-                // named `look` would win the Inertia merge and hand the shell an object where it
-                // reads an id — the whole shell went blank that way once.
+                // A page prop named `look` would win the Inertia merge and hand the shell an object
+                // where it reads an id.
                 ->where('look', 'unified')
             );
     }
 
     public function test_the_picker_preselects_following_when_the_stored_look_is_no_longer_offered(): void
     {
-        // Same filter as the resolver: a row outside the set reads as following the default, which
-        // is what the member is actually being shown, rather than as a card that is not there.
         $member = Member::factory()->create();
         $member->setPreferredLook(Look::Tabbed);
         $this->setSnsSetting(SnsSettingKey::SelectableLooks, [Look::Unified]);
@@ -138,8 +128,6 @@ class MemberConfigLookTest extends TestCase
 
     public function test_the_choice_answers_a_running_spa_with_a_full_page_load(): void
     {
-        // What changes is the shell the SPA is running inside, so an XHR redirect would leave the
-        // page drawing the previous look.
         $member = Member::factory()->create();
         $this->offerBoth();
 

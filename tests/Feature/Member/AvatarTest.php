@@ -51,7 +51,6 @@ class AvatarTest extends TestCase
         $this->actingAs($member)
             ->get(route('member.avatar.edit'))
             ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false)
-            // With an avatar set, the remove form (a DELETE to /member/avatar) is offered.
             ->assertSee('value="DELETE"', escape: false);
     }
 
@@ -67,7 +66,6 @@ class AvatarTest extends TestCase
         $this->assertNotNull($file);
         $this->assertSame('member', $file->related_entity_type);
         $this->assertSame($member->getKey(), $file->related_entity_id);
-        // The stored avatar is then fetchable through the gated delivery route.
         $this->actingAs($member)->get($file->url())->assertOk();
     }
 
@@ -80,12 +78,10 @@ class AvatarTest extends TestCase
 
         $this->actingAs($member)->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('two.png', 10, 10)]);
 
-        // Exactly one image remains, and it is the new one.
         $this->assertSame(1, $member->fresh()->avatar()->count());
         $new = $member->fresh()->avatar->file;
         $this->assertNotSame($old->getKey(), $new->getKey());
 
-        // The old File row and its bytes are gone.
         $this->assertNull(File::find($old->getKey()));
         $this->assertSame(0, DB::table('file_bin')->where('file_id', $old->getKey())->count());
     }
@@ -96,8 +92,7 @@ class AvatarTest extends TestCase
         app(SetAvatar::class)($member, UploadedFile::fake()->image('old.png', 10, 10));
         $old = $member->fresh()->avatar->file;
 
-        // The next byte write fails mid-replace (e.g. a disk error). The previous
-        // avatar — row and bytes — must survive.
+        // The next byte write fails mid-replace, so the previous avatar must survive.
         $this->mock(FileStorage::class, function ($mock) {
             $mock->shouldReceive('writeStream')->andThrow(new RuntimeException('storage down'));
             $mock->shouldReceive('delete');

@@ -11,16 +11,9 @@ use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 /**
- * Disable a member's two-factor factor, returning whether a LIVE (confirmed) factor was removed —
- * only that is a credential change worth revoking sessions over and alerting on (the caller branches
- * its log/alert/redirect on the return). Cancelling an inert pending set-up is password- and
- * proof-free, so it stays side-effect-free.
- *
- * The state is re-derived from the row locked FOR UPDATE, not the request-time snapshot
- * ($stepUpValidated is that snapshot — whether the request demanded and verified the password): if
- * the factor went live under a pending-cancel request, removing it unproven is refused (fail closed).
- * A spent recovery code is consumed BEFORE the factor is wiped, so its RecoveryCodeReplaced audit log
- * (deferred to after-commit) records nothing when a later failure rolls the transaction back.
+ * Returns whether a live (confirmed) factor was removed; only that is a credential change to revoke
+ * sessions and alert over. `$stepUpValidated` is the request-time snapshot of whether the password
+ * was demanded and verified.
  */
 class DisableMemberMfa
 {
@@ -44,9 +37,8 @@ class DisableMemberMfa
             $wasEnabled = $fresh->hasEnabledTwoFactorAuthentication();
 
             if ($wasEnabled) {
-                // Fail closed if the request was validated as a pending cancel (no password, no
-                // proof) while the factor went live under it: removing a live factor unproven is
-                // exactly what the re-auth exists to stop.
+                // Fail closed: the request was validated as a pending cancel, and the factor went
+                // live under it.
                 if (! $stepUpValidated) {
                     throw ValidationException::withMessages([
                         'current_password' => __('Your two-factor settings changed while this page was open. Please try again.'),
@@ -64,10 +56,8 @@ class DisableMemberMfa
                 SessionRevocation::revokeMember($fresh, $exceptSessionId);
             }
 
-            // Invalidation contract (a): the factor this member had is gone, so any admin-issued reset
-            // link for it must die too — otherwise a "send → self-disable → re-enable within the TTL"
-            // sequence would leave the old link live against the new factor. Member is already locked
-            // above; the global Member → mfa_reset_requests order holds.
+            // A reset link must never survive a change in the factor's lifecycle
+            // (docs/internals/security.md, "Member two-factor authentication").
             MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return [$fresh, $wasEnabled];
@@ -79,9 +69,8 @@ class DisableMemberMfa
     }
 
     /**
-     * The live factor's second proof, returning the recovery code to consume (or null for a TOTP
-     * proof). A filled recovery code wins over a TOTP code (challenge parity). Throws under
-     * 'recovery_code' / 'code' on no match.
+     * Returns the recovery code to consume, or null for a TOTP proof. A filled recovery code wins
+     * over a TOTP code, as the login challenge does.
      */
     private function verifySecondFactor(Member $fresh, ?string $code, ?string $recoveryCode): ?string
     {

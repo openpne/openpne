@@ -12,10 +12,6 @@ use Illuminate\Database\Eloquent\Model;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/**
- * The `alias:id` spelling, which is the form a source reference takes anywhere outside the ledger's
- * two columns.
- */
 class SourceRefTest extends TestCase
 {
     public function test_a_featurable_alias_parses(): void

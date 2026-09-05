@@ -11,25 +11,17 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Admin-initiated: issue a two-factor reset link and mail it to the member's registered address. The link
- * lets the locked-out member (a guest — they cannot present a second-factor proof) clear their factor by
- * entering their account password (App\Features\Member\MfaResetLinkController, ConsumeMfaReset). The admin
- * never gains a takeover ability: the link goes only to the member's mailbox and needs the member's
- * password to act — both outside the admin's reach (docs/internals/security.md).
- *
- * The live-factor + registered-address preconditions are re-checked under a row lock, not trusted from the
- * Filament action's visibility snapshot: a factor disabled or an address cleared between render and click
- * must not mint a link for a member who cannot use it. The Filament layer halts gracefully on the stale
- * state (UX); reaching this Action with the precondition already broken is a caller bug, so it throws.
- * Global lock order is Member → mfa_reset_requests, shared with ForceDisableMemberMfa / ConsumeMfaReset.
+ * The live-factor and registered-address preconditions are re-checked under the row lock, not trusted
+ * from the Filament action's snapshot; reaching here with one already broken is a caller bug and
+ * throws. Issuing a link gives the admin no takeover ability (docs/internals/security.md, "Member
+ * two-factor authentication").
  */
 class RequestMfaReset
 {
     public function __invoke(Member $member): void
     {
-        // One row per member (the column is unique): a re-send refreshes the token in place, killing the
-        // old link. upsert is a single atomic statement so two concurrent clicks cannot race the unique
-        // index into a 500.
+        // One row per member: `upsert` is atomic, so a re-send refreshes the token in place and two
+        // concurrent clicks cannot race the unique index.
         $raw = Str::random(40);
 
         [$email, $locale] = DB::transaction(function () use ($member, $raw): array {
@@ -54,16 +46,15 @@ class RequestMfaReset
             return [(string) $fresh->email, $fresh->locale ?? app()->getLocale()];
         });
 
-        // The pending link is durable; log before the fallible notification send. The token is never logged.
+        // Logged before the fallible send, and never with the token.
         SecurityLog::event('mfa.reset_link_sent', [
             'guard' => 'member',
             'member_id' => $member->getKey(),
             'admin_username' => auth('admin')->user()?->username,
         ]);
 
-        // Pinned to the registered address as an on-demand notifiable (not the Member): the notification
-        // queues, and resolving a Member notifiable's address at send time could misroute a link if the
-        // address changed meanwhile (RequestEmailChange's reasoning).
+        // Pinned to the address as an on-demand notifiable: the notification queues, and resolving a
+        // Member notifiable at send time could misroute the link if the address changed meanwhile.
         Notification::route('mail', $email)->notify(new MfaResetLinkNotification($raw, $locale));
     }
 }

@@ -9,7 +9,6 @@ use App\Services\RegionListService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
-/** Modern surface shapes for member search: the result paginator and the search form fields. */
 class MemberSearchSerializer
 {
     /**

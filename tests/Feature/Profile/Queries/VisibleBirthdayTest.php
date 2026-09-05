@@ -62,8 +62,6 @@ class VisibleBirthdayTest extends TestCase
 
     public function test_age_gate_does_not_hide_a_visible_birthday(): void
     {
-        // The birthday field is gated only by its own visibility; a Private age gate (AgeVisibility)
-        // must not suppress the birthday when the field itself is visible.
         $owner = Member::factory()->create();
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Private);
         $viewer = Member::factory()->create();

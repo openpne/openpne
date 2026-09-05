@@ -43,7 +43,6 @@ class ProfileController extends Controller
         /** @var Member|null $viewer */
         $viewer = $request->user();
 
-        // A guest can only reach a web-public profile; otherwise send them to log in.
         if ($viewer === null && ! ProfileAccess::isWebPublic($member)) {
             return GuestLoginRedirect::response();
         }
@@ -55,14 +54,10 @@ class ProfileController extends Controller
         abort_if($fields === null, 404); // defense in depth: ShowProfile also nulls on block
 
         $isSelf = $viewer?->is($member) ?? false;
-        // The gadget-driven Classic surface re-resolves age in the ProfileListBox component; this
-        // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
-        // Entry point for a friend request. memberSubject above only
-        // 404s the owner→viewer block; a viewer who blocks the owner still reaches this page, and
-        // the friend-link form rejects any block direction — so hide the entry for both (null).
-        // A switched-off unit takes the same null, so neither surface learns the relationship.
+        // memberSubject only 404s the owner→viewer block, and the friend form refuses either
+        // direction, so a viewer who blocks the owner gets no entry either.
         $friendStatus = (Feature::Friend->enabled() && $viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {
             $viewer->isFriendsWith($member) => 'friend',
             $member->hasPendingRequestFrom($viewer) => 'sent',
@@ -86,21 +81,15 @@ class ProfileController extends Controller
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => function () use ($request, $member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
-                // The look swaps the page for a signed-in member, reading the same owner rows at the
-                // same clearance. Branching first is what keeps the digest below from being gathered
-                // for a page that would not show it. A guest keeps the shipped profile — the
-                // resolver's own clamp: the unified sections are the auth-only ones the digest is
-                // already withheld for.
+                // Branching first keeps the digest below from being gathered for a page that never
+                // shows it.
                 if (LookResolver::resolve($request)->usesUnifiedPages()) {
                     return Inertia::render('unified/member', UnifiedMemberSerializer::page(
                         $viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus,
                     ));
                 }
 
-                // Digest = auth-only: its previews and stats link to routes behind the auth group, and
-                // a guest never sees another member's friends/groups. Classic/guest pay +0 queries
-                // (this closure runs only for a Modern render). images.file feeds the rich diary rows.
-                // Each preview follows its own unit: switched off, it is an empty grid nobody queried.
+                // Auth-only: the previews and stats link to routes behind the auth group.
                 $digest = $viewer === null ? null : ProfileSerializer::digest(
                     (new ProfileStats)($viewer, $member),
                     Feature::Diary->enabled() ? (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file') : collect(),
@@ -140,14 +129,8 @@ class ProfileController extends Controller
         $viewer = $this->viewer();
         $action($viewer, $request->toData());
 
-        // The age-visibility gate is edited next to the birthday it derives from (Modern; Classic
-        // keeps its config category). Deliberately persisted whenever submitted, even unchanged —
-        // the form showed a concrete value and saving affirms it (the default is a hardcoded
-        // Private, so there is no operator default to keep following). Consequence, accepted:
-        // AgeVisibility::defaultFor() clamps a stored Open to Members while web-public age is off,
-        // so saving the profile in that window persists the clamped value (fail-closed direction).
-        // The one clamp that would widen — Friends while friends are off — is why defaultFor() keeps
-        // a stored Friends offered instead.
+        // Persisted whenever submitted, even unchanged, so a save while web-public age is off stores
+        // defaultFor()'s clamped Members over a stored Open.
         $age = $request->validated('age_visibility');
         if ($age !== null && $birthdayExists()) {
             $viewer->setPreference(PreferenceKey::AgeVisibility, Visibility::from((int) $age));
@@ -158,12 +141,7 @@ class ProfileController extends Controller
             ->with('status', __('Profile updated.'));
     }
 
-    /**
-     * Age-visibility block for the Modern edit form, or null when the site has no birthday
-     * profile item — without a birthday there is no age, so the setting is not offered.
-     *
-     * @return array{value: int, options: list<array{value: int, label: string}>}|null
-     */
+    /** @return array{value: int, options: list<array{value: int, label: string}>}|null */
     private function ageBlock(Member $viewer, BirthdayFieldExists $birthdayExists): ?array
     {
         if (! $birthdayExists()) {
@@ -179,7 +157,7 @@ class ProfileController extends Controller
         ];
     }
 
-    /** Translation lang code (OpenPNE/Doctrine I18n) for the current locale. */
+    /** OpenPNE 3 (Doctrine I18n) lang codes: `ja_JP`, not `ja`. */
     private function translationLang(): string
     {
         return app()->getLocale() === 'ja' ? 'ja_JP' : 'en';

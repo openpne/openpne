@@ -5,10 +5,7 @@ namespace App\Features\Member\Actions;
 use App\Models\Member;
 use App\Support\SecurityLog;
 
-/**
- * Lift a member's login freeze — the inverse of RejectMemberLogin. Non-destructive, so no
- * transaction (a single save) and no primary-member guard.
- */
+/** Non-destructive, so no transaction and no primary-member guard. */
 class AllowMemberLogin
 {
     public function __invoke(Member $member): void

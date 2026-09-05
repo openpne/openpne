@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
- * member-invite registration token and mails the link. The entry is gated to modes that allow member
- * invites, and completing an invited registration auto-friends the inviter.
- */
 class MemberInviteTest extends TestCase
 {
     use RefreshDatabase;
@@ -138,9 +133,8 @@ class MemberInviteTest extends TestCase
 
     public function test_the_invite_email_never_emits_html_from_member_text(): void
     {
-        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so the
-        // app never emits a live link, remote image, or script from member text into the plain-text invite
-        // mail. (A receiving client may still auto-link a bare URL — that is its choice, not ours.)
+        // The name and note render as literal text, so the mail carries no live link, remote image or
+        // script from member text; a receiving client may still auto-link a bare URL.
         $note = 'see [here](http://evil.test) ![x](http://evil.test/p.png) <script>alert(1)</script>';
         $mail = (new RegistrationLinkNotification(
             Str::random(40),
@@ -158,7 +152,6 @@ class MemberInviteTest extends TestCase
         $this->assertStringNotContainsString('<img', $text);                       // no remote image
     }
 
-    /** Create a live member-invite token for an address and return the raw token its link carries. */
     private function issueMemberInvite(string $email, Member $inviter): string
     {
         $raw = Str::random(40);

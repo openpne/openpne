@@ -16,6 +16,8 @@ class Unfriend
             throw new FriendActionException(FriendActionFailure::NotFriends);
         }
 
+        // No FriendRequestLock: the single two-row delete is its own compare-and-set, and a pair that
+        // re-friends after it is a new friendship.
         DB::transaction(function () use ($member, $other) {
             $aId = $member->getKey();
             $bId = $other->getKey();

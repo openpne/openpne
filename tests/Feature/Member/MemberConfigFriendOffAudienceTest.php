@@ -12,11 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * The member's stored default audience for new diaries while the friend unit is off. The preference
- * seeds new entries rather than describing an existing one, so it clamps where it is *shown* — and
- * the stored row is left as the member set it until they save that section themselves.
- */
 class MemberConfigFriendOffAudienceTest extends TestCase
 {
     use RefreshDatabase;

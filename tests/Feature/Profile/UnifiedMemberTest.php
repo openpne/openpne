@@ -20,10 +20,8 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The look on a page about somebody else. It pins both sides — standard, the digest profile is what
- * it was; unified, the new page carries only what the same viewer-scoped queries already return —
- * and, because viewer and owner are now different members, the clearance matrix the home slice had
- * no way to exercise.
+ * Viewer and owner are different members here, so this exercises the clearance matrix the home slice
+ * cannot.
  */
 class UnifiedMemberTest extends TestCase
 {
@@ -58,7 +56,6 @@ class UnifiedMemberTest extends TestCase
         DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $blocked->getKey()]);
     }
 
-    /** A diary of the owner's, posted at $at, with $images pictures attached. */
     private function diary(Member $owner, string $at, int $images = 0, Visibility $visibility = Visibility::Members, string $title = 'a-title'): Diary
     {
         $diary = Diary::factory()->create([
@@ -76,7 +73,6 @@ class UnifiedMemberTest extends TestCase
         return $diary;
     }
 
-    /** A timeline post of the owner's, posted at $at, with $images pictures attached. */
     private function timelinePost(Member $owner, string $at, int $images = 0, Visibility $visibility = Visibility::Members): TimelinePost
     {
         $post = TimelinePost::factory()->create([
@@ -94,11 +90,9 @@ class UnifiedMemberTest extends TestCase
     }
 
     /**
-     * ProfileStats' four counts — what the digest gathers and what the unified page must never make
-     * anyone pay for. The `aggregate` alias is Laravel's `->count()` reading (the quoting is the
-     * driver's, hence the pattern), which tells them apart both from the shell's badge counts, which
-     * count other tables, and from every `withCount` subquery, which is aliased `*_count` and rides
-     * inside a select the page does want.
+     * The `aggregate` alias is Laravel's `->count()` reading, and the quoting is the driver's, hence
+     * the pattern. It tells those counts apart from a `withCount` subquery, which is aliased
+     * `*_count` and rides inside a select the page does want.
      *
      * @return list<array{query: string}>
      */
@@ -129,7 +123,6 @@ class UnifiedMemberTest extends TestCase
                 ->has('digest.recentDiaries')
                 ->has('digest.friends')
                 ->has('digest.groups')
-                // The unified payload's own keys are absent while the switch is off.
                 ->missing('groups')
                 ->missing('friends')
                 ->missing('recentPhotos')
@@ -156,9 +149,7 @@ class UnifiedMemberTest extends TestCase
                 ->where('profile.name', $owner->name)
                 ->where('profile.isAi', false)
                 ->where('profile.isSelf', false)
-                // What the action row is drawn from: the same relationship the digest profile reads.
                 ->where('profile.friendStatus', 'none')
-                // The digest and the counts its header carried are gone with the page that showed them.
                 ->missing('digest')
                 ->missing('profile.stats')
             );
@@ -224,8 +215,6 @@ class UnifiedMemberTest extends TestCase
 
     public function test_a_viewer_who_blocks_the_owner_gets_the_page_with_no_relationship_entry(): void
     {
-        // The reverse direction renders, as it does on the digest profile: the friend-link form would
-        // reject the request either way, so there is no entry to offer.
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->block($viewer, $owner);
@@ -339,11 +328,6 @@ class UnifiedMemberTest extends TestCase
             );
     }
 
-    /**
-     * The owner's faces, in the owner's order: the nine newest of their friendships, newest first, as on
-     * their own home. This page is the one that shows somebody else's, so the order is deliberate here
-     * and not inherited — it is the fact the section adds over the profile grid it replaces.
-     */
     public function test_the_faces_are_the_owners_nine_newest_friendships(): void
     {
         $owner = Member::factory()->create();
@@ -402,13 +386,10 @@ class UnifiedMemberTest extends TestCase
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('friends', [])
-                // Nothing about the relationship travels either, so the action row has no entry to
-                // draw and the switched-off unit stays unobservable.
                 ->where('profile.friendStatus', null)
                 ->where('enabledFeatures.friend', false)
             );
-        // The roster read is what goes with the unit. The `exists` probes stay: a friends-only diary
-        // is friends-only whatever the section is doing, so content clearance still has to ask.
+        // The `exists` probes stay: a friends-only diary is friends-only whatever the section is doing.
         $friendQueries = array_filter(
             DB::getQueryLog(),
             fn (array $q): bool => str_contains($q['query'], 'friendships') && ! str_contains($q['query'], 'select exists('),

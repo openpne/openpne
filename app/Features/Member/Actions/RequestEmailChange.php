@@ -11,13 +11,9 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Issues an email-change confirmation token and mails it. The confirmation link goes to the proposed
- * NEW address (proving control of it); a notify-only security alert goes to the current/OLD address
- * (the member is still authenticated against it). members.email is not touched until confirmation.
- *
- * Both mails pin their address as an on-demand notifiable (Notification::route) rather than notifying
- * the Member: the notifications queue, and the queue worker resolves a Member notifiable's address at
- * send time — a fast confirmation could flip members.email first and misroute the old-address notice.
+ * The confirmation goes to the proposed address and the notice to the current one; `members.email` is
+ * not touched until confirmation. Both pin their address as an on-demand notifiable: the notifications
+ * queue, and resolving a Member notifiable at send time could misroute the notice.
  */
 class RequestEmailChange
 {
@@ -25,9 +21,8 @@ class RequestEmailChange
     {
         $newEmail = Str::lower(trim($newEmail));
 
-        // One row per member (the column is unique): a re-request refreshes the token in place. upsert
-        // is a single atomic statement so two concurrent requests cannot race the unique index into a
-        // 500. Two independent raw tokens: confirm (to the new address) and cancel (to the old).
+        // One row per member: `upsert` is atomic, so a re-request refreshes the token in place and two
+        // concurrent requests cannot race the unique index.
         $raw = Str::random(40);
         $rawCancel = Str::random(40);
         EmailChangeRequest::upsert(
@@ -42,8 +37,7 @@ class RequestEmailChange
             ['new_email', 'token', 'cancel_token', 'created_at'],
         );
 
-        // The pending change is durable; log before the fallible notification sends. The new address
-        // is the subject of the change, so it is logged (contrast: passwords never are).
+        // Logged before the fallible sends, and with the new address, which is the change's subject.
         SecurityLog::event('email.change_requested', [
             'guard' => 'member',
             'member_id' => $member->getKey(),
@@ -54,8 +48,6 @@ class RequestEmailChange
             new EmailChangeConfirmationNotification($raw, (int) $member->getKey(), app()->getLocale()),
         );
 
-        // Sent to the current address while members.email still holds it (captured here as a literal).
-        // Carries the cancel link so the old-address holder can void a change they did not initiate.
         Notification::route('mail', $member->email)->notify(
             new EmailChangeNoticeNotification($newEmail, $rawCancel, app()->getLocale()),
         );

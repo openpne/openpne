@@ -8,16 +8,9 @@ use App\Services\PresetProfileService;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The self-introduction (op_preset_self_introduction) of each given member, keyed by member id,
- * but only where the value is visible to $viewer under the field-visibility gate the profile page
- * and member search already enforce: the field's effective visibility (per-value flag, or the field
- * default when the field is not per-value editable) must be within the viewer's clearance for that
- * owner. An owner who blocks the viewer, an empty value, and a value above the viewer's clearance are
- * simply absent from the map — as is the whole thing when the install has no such field registered
- * (fail-closed, never an error).
- *
- * One query for the whole result page (the effVis/clearance SQL mirrors SearchMembers::applyVisibility)
- * so the person-row list stays flat instead of reading a relation per row.
+ * The effective-visibility and clearance SQL mirrors `SearchMembers::applyVisibility`, so the two
+ * agree on what a viewer may see. A blocking owner, an empty value, or one above the viewer's
+ * clearance is absent from the map rather than an error.
  */
 class VisibleSelfIntroductions
 {

@@ -9,13 +9,7 @@ use App\Services\RegionListService;
 use App\Support\Visibility;
 use Illuminate\Validation\Rule;
 
-/**
- * Builds the validation rules for one configurable profile field's submitted value, keyed by
- * `profile.{id}` (+ `profile.{id}.*` for a checkbox). Shared by profile-edit and registration so
- * both validate identically: preset choice keys vs custom option ids, the country/region sets,
- * date bounds, regexp/min/max, and uniqueness. The caller adds the per-value visibility rule
- * (edit only) and any non-profile keys.
- */
+/** The caller adds the per-value visibility rule and any non-profile keys. */
 class ProfileFieldRules
 {
     public function __construct(private PresetProfileService $presets) {}
@@ -40,9 +34,6 @@ class ProfileFieldRules
     }
 
     /**
-     * The per-value visibility rule for a member-editable field, restricted to the field's offered
-     * choices (Open only when web-public). Empty when the field's flag is not member-editable.
-     *
      * @param  Visibility|null  $current  audience the member already stores for this field, so the
      *                                    rule keeps accepting what the edit form kept offering
      * @return array<string, array<int, mixed>>
@@ -55,13 +46,11 @@ class ProfileFieldRules
 
         $allowed = array_map(fn (Visibility $v): int => $v->value, $profile->visibilityOptions($current));
 
-        // Required, not nullable: the form always submits the select, and an omitted key would
-        // store null — read as the field's admin default, an audience change the offered list never
-        // approved (default Friends smuggled in, or a stored Friends widened to the default).
+        // Required, not nullable: an omitted key would store null, read back as the field's admin
+        // default — an audience the offered list never approved.
         return ["visibility.{$profile->getKey()}" => ['required', Rule::in($allowed)]];
     }
 
-    /** A unique input/textarea rejects a value another member already holds. */
     public function isUniqueText(Profile $profile): bool
     {
         return $profile->is_unique && in_array($profile->form_type, ['input', 'textarea'], true);
@@ -79,7 +68,6 @@ class ProfileFieldRules
                 break;
             case 'date':
                 $rules[] = 'date';
-                // Enforce the admin-configured bounds.
                 if ($profile->value_min !== null && $profile->value_min !== '') {
                     $rules[] = 'after_or_equal:'.$profile->value_min;
                 }
