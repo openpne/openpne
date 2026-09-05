@@ -20,10 +20,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a recipient a new message arrived. Mail + database, each gated by the recipient's catalog
- * opt-in: DirectMessageNew covers every sender; while it is off, DirectMessageNewOnlyFriends (its
- * dependOnNot variant) still covers friend senders. This exact chain is what imported opt-outs
- * were saved against, so it must not change shape.
+ * The DirectMessageNew / DirectMessageNewOnlyFriends chain below is what imported opt-outs were saved
+ * against, so it must not change shape.
  */
 class DirectMessageReceivedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -51,14 +49,8 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
     }
 
     /**
-     * The delivery-time re-check (docs/internals/notifications.md#delivery-time-re-checks). The mail
-     * carries the body, so every fact that decides whether the recipient may read this message is
-     * asked again here — SerializesModels hands the job fresh rows, so the answer is current.
-     *
-     * The feed row asks one more thing than the mail does, which is why the channel decides between
-     * two forms of the same query rather than both being run: a row written for a message already
-     * read would put the bell over something the recipient has read. The mail is a copy, not a
-     * badge, so it still goes.
+     * The delivery-time re-check (docs/internals/notifications.md, Delivery-time re-checks); SerializesModels
+     * hands the job fresh rows, so the answer is current.
      */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
@@ -89,9 +81,8 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             // The extension wording's flat variable names, so an imported body renders as-is.
             'member_name' => MemberDisplayName::of($this->sender),
             'message_subject' => $this->message->subject,
-            // A message written as chat may be nothing but pictures, which would leave the mail's
-            // body line blank; it says so instead. A legacy subject-only row carries no attachment
-            // and stays as empty as it has always been.
+            // A chat-written message may be nothing but pictures, which would leave the body line blank;
+            // a legacy subject-only row has no attachment and stays as blank as it has always been.
             'message_body' => (string) $this->message->body !== ''
                 ? $this->message->body
                 : ChatPreview::imagesLine($this->message->files()->exists()),
@@ -110,9 +101,8 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
     }
 
     /**
-     * Whether this message is still the recipient's to read: a receipt of theirs that has not been
-     * purged. Purge is the one side-state that revokes reading (trash does not — a trashed message is
-     * restorable and still theirs), so a purged message must not be carried out by mail.
+     * Purge is the one side-state that revokes reading — a trashed message is restorable and still theirs —
+     * so only it may keep the body out of the mail.
      */
     private function stillTheirs(Member $notifiable): bool
     {
@@ -122,7 +112,6 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             ->exists();
     }
 
-    /** stillTheirs(), and not read yet. */
     private function stillUnread(Member $notifiable): bool
     {
         return $this->message->recipients()

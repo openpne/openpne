@@ -19,10 +19,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * The group-wide side of a topic comment (CommentNewPost): reaches members who are neither the
- * topic author nor a co-commenter — they get Reply / Related instead (TopicCommentedNotification). The
- * fan-out pre-resolves each recipient's channels, so via() returns them verbatim. Same feed kind and
- * mail template as the author/co-commenter notification, distinguished by the Group reason.
+ * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
+ * gates nothing (docs/internals/notifications.md, Broadcast fan-out).
  */
 class TopicCommentBroadcastNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -30,7 +28,7 @@ class TopicCommentBroadcastNotification extends Notification implements FeatureN
     use Queueable;
     use RendersMailTemplate;
 
-    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
+    /** @param list<string> $channels */
     public function __construct(
         public readonly Group $group,
         public readonly GroupTopic $topic,

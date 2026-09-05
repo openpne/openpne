@@ -18,11 +18,9 @@ use NotificationChannels\WebPush\WebPushChannel;
 use Tests\TestCase;
 
 /**
- * The one test that drives a stored key through the real Minishlink Encryption. Everywhere else
- * FakeWebPush stands in for the transport and never encrypts, so nothing else proves that a key
- * which passed StorePushSubscriptionRequest actually encrypts end to end — the whole point of
- * validating the point on the curve at ingress. A Guzzle MockHandler answers the send, so real
- * encryption runs with no network.
+ * FakeWebPush stands in for the transport everywhere else and never encrypts, so nothing else proves a key
+ * that passed StorePushSubscriptionRequest encrypts end to end. A Guzzle MockHandler answers the send, so
+ * real encryption runs with no network.
  */
 class WebPushEncryptionIntegrationTest extends TestCase
 {
@@ -62,8 +60,8 @@ class WebPushEncryptionIntegrationTest extends TestCase
 
         $member->notify(new WebPushNudge('direct_message_received', null, null));
 
-        // The scripted response was consumed: encryption produced a real request that reached the
-        // handler exactly once. A key that only threw inside Encryption would leave it untouched.
+        // A key that only threw inside Encryption would leave the scripted response untouched, so
+        // consuming it is the assertion.
         $this->assertNotNull($mock->getLastRequest());
         $this->assertSame(0, $mock->count());
     }

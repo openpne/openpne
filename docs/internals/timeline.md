@@ -225,7 +225,9 @@ redirect that dropped a member's draft would be worse than a 404.
 per-message kind, [`group_talk_new_message`](group-talk.md#what-talk-notifies), is not read as its
 successor — it is an administrator-defaulted kind about a room, and an OpenPNE 3 choice about
 community timeline posts is not migrated into it — and the imported rows are kept because a member's
-stored choice is a record rather than a value to discard.
+stored choice is a record rather than a value to discard. OpenPNE 3 registered the kind and never sent
+it, and OpenPNE 4 wired it for the community timeline only, so nothing that ever reached a member is
+withdrawn by leaving it dormant.
 
 ### Why `linkableTags()` still exists
 

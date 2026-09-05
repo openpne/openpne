@@ -17,10 +17,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Tells a member a new post or reply @mentions them. Mail + database, gated by the recipient's
- * catalog kind.
- */
 class TimelineMentionedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature {

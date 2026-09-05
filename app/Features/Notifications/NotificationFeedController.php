@@ -16,10 +16,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The per-event notification feed (layer 3): the standard Laravel `notifications` rows the
- * database channel writes, read newest-first with the row's own read_at as the read state.
- * Opening the feed does not mark anything read — opening a row does (plus an explicit
- * mark-all-read), so the unread badge only drops on the member's own action.
+ * Opening the feed marks nothing read; opening a row does, as does an explicit mark-all-read
+ * (docs/internals/notifications.md, The three layers).
  */
 class NotificationFeedController extends Controller
 {
@@ -33,10 +31,7 @@ class NotificationFeedController extends Controller
         $rows = VisibleNotifications::apply($viewer->notifications())->paginate(self::PAGE);
 
         return $this->respondWith($request, 'notifications', [
-            // Modern shares the unread count on every page; Classic has no such prop, so the
-            // mark-all button asks for it here (and hides on zero, as Modern's does). Counted over
-            // the whole feed, not the header center's window: this page pages through everything,
-            // so an unread row older than that window still has something to mark.
+            // Counted over the whole feed, not the header center's window: this page pages past it.
             SurfaceResolver::CLASSIC => fn (): View => view('notifications.index', [
                 'feed' => NotificationFeedSerializer::classicRows($rows),
                 'unreadCount' => $unread($viewer),
@@ -47,16 +42,13 @@ class NotificationFeedController extends Controller
         ]);
     }
 
-    /** Mark one row read and land on what it is about (or back on the feed when that is gone). */
     public function open(string $notification): RedirectResponse
     {
         /** @var ?DatabaseNotification $row */
         $row = $this->viewer()->notifications()->whereKey($notification)->first();
 
-        // A row that is no longer there is not a refusal: the talk broadcast replaces a room's row
-        // with each message, so an open feed can hold one that has since been superseded. Only a row
-        // that EXISTS but is hidden 404s — its target is a switched-off unit's screen, and opening it
-        // must not redirect into one.
+        // A missing row returns to the feed rather than erroring; only a row that exists but belongs to
+        // a switched-off unit is refused (docs/internals/notifications.md, The three layers).
         if ($row === null) {
             return redirect()->route('notifications.index');
         }
@@ -69,8 +61,6 @@ class NotificationFeedController extends Controller
 
     public function readAll(): RedirectResponse
     {
-        // Scoped to what the member can see: a hidden row stays unread and resurfaces intact when
-        // its unit comes back.
         VisibleNotifications::apply($this->viewer()->unreadNotifications())->update(['read_at' => now()]);
 
         return back();

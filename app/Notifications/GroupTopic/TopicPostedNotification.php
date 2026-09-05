@@ -18,9 +18,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Announces a new topic to a group member in the broadcast audience. The fan-out resolves each
- * recipient's channels once and passes them, so via() returns them verbatim (one instance per
- * recipient). Shares the group-posting mail template with the comment notifications.
+ * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
+ * gates nothing (docs/internals/notifications.md, Broadcast fan-out).
  */
 class TopicPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -28,7 +27,7 @@ class TopicPostedNotification extends Notification implements FeatureNotificatio
     use Queueable;
     use RendersMailTemplate;
 
-    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
+    /** @param list<string> $channels */
     public function __construct(
         public readonly Group $group,
         public readonly GroupTopic $topic,

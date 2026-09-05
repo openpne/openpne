@@ -8,16 +8,9 @@ use App\Models\Member;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The sprite's three badge numbers, counted off the very rows the panel lists —
- * [`NotificationCenterWindow`](NotificationCenterWindow.php), unread only, split by category.
- *
- * Deliberately not [`UnreadCounts`](../Home/UnreadCounts.php), which mixes layer-1 truth (what is
- * unread in the mailbox, how many requests are pending) with layer 3: a badge heading a panel has
- * to count what is in that panel, or opting a kind out of the web channel leaves a badge standing
- * over an empty list and the third badge re-counts the first two. Nor the whole unread table, which
- * would badge events older than the window the panel can show. The home cautions keep asking layer
- * 1, and the two are not reconciled — OpenPNE 3's diverged the same way, its badges coming from the
- * capped event store while its cautions ran their own queries.
+ * Counted off the very rows the panel lists rather than off UnreadCounts or the whole unread table, so a
+ * badge can never stand over rows the panel does not show (docs/internals/notifications.md, The three
+ * layers).
  */
 class NotificationCenterCounts
 {

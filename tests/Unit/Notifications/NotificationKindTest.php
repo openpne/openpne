@@ -9,7 +9,6 @@ use App\Notifications\Settings\NotificationKind;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
-/** Registry self-consistency: every kind is fully specified and the imported key mapping is well-formed. */
 class NotificationKindTest extends TestCase
 {
     public function test_op3_names_are_unique(): void
@@ -37,8 +36,6 @@ class NotificationKindTest extends TestCase
 
     public function test_a_native_kind_has_no_op3_config_name(): void
     {
-        // Asking for one is a caller that forgot to select with importableCases(), not a fallback
-        // to invent a key from — a made-up name would silently migrate nothing.
         $this->expectException(LogicException::class);
 
         NotificationKind::TimelineMention->op3ConfigName(NotificationChannel::Web);
@@ -111,9 +108,8 @@ class NotificationKindTest extends TestCase
 
     public function test_every_kind_defaults_enabled_unless_its_arm_declares_otherwise(): void
     {
-        // Imported kinds must default on (an absent source key meant enabled); flipping one is a
-        // deliberate one-arm change, never an accident. The talk broadcast is that arm — web follows
-        // the site, mail is fixed off — so what this guards is a kind going off WITHOUT declaring it.
+        // The talk broadcast is the declared exception, so what this guards is a kind going off without
+        // declaring it.
         foreach (NotificationKind::cases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
                 if ($kind === NotificationKind::GroupTalkNewMessage) {
@@ -133,7 +129,6 @@ class NotificationKindTest extends TestCase
         ));
 
         $this->assertSame([NotificationKind::GroupTalkNewMessage], $withSiteDefault);
-        // Its mail default is fixed off, so that channel is nobody's to inherit from.
         $this->assertFalse(NotificationKind::GroupTalkNewMessage->hasSiteDefault(NotificationChannel::Mail));
     }
 

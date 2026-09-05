@@ -9,19 +9,13 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * The feed is an inbox, so a row is spent once the member has read what it announces — not only when
- * the row itself is opened (docs/internals/notifications.md).
- *
- * Rows are the starting point rather than the domain: `data` is a TEXT column with no path index, so
- * the SQL narrows by what `notifications_notifiable_read_at_index` covers plus `type`, and the entity
- * ids are matched in PHP over the member's own unread rows, which are few.
- *
- * The room's talk row is not consumed here — it is one row per (member, group) with a delete rule of
- * its own (GroupTalkRoomNotificationRows).
+ * The feed is an inbox, so a row is spent once the member has read what it announces
+ * (docs/internals/notifications.md, The three layers). `data` is a TEXT column with no path index, so the
+ * SQL narrows by `notifications_notifiable_read_at_index` plus `type` and the ids are matched in PHP over
+ * the member's few unread rows.
  */
 class ConsumeNotificationRows
 {
-    /** Mark the member's unread rows pointing at any of these targets read. */
     public function markTargetsRead(int $memberId, NotificationTarget ...$targets): void
     {
         if ($targets === []) {
@@ -50,8 +44,7 @@ class ConsumeNotificationRows
     }
 
     /**
-     * The member's unread rows of these types, for a caller matching them against a read cursor of
-     * its own. Naming no type asks for nothing.
+     * Naming no type asks for nothing.
      *
      * @return Collection<int, DatabaseNotification>
      */

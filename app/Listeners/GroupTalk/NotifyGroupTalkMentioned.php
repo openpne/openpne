@@ -6,11 +6,7 @@ use App\Features\GroupTalk\Events\GroupMessagePosted;
 use App\Features\GroupTalk\Queries\GroupTalkMentionRecipients;
 use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 
-/**
- * Tells everyone a talk message named that it mentions them. In-request: a mention names a handful
- * of people, so unlike the room-wide broadcast (NotifyGroupTalkMessagePosted) there is no audience to
- * walk off the request.
- */
+/** In-request: a mention names a handful of people, so there is no audience to walk off the request. */
 class NotifyGroupTalkMentioned
 {
     public function __construct(private readonly GroupTalkMentionRecipients $recipients) {}

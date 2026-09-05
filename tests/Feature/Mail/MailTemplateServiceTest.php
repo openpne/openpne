@@ -10,7 +10,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** Resolution tiering (override → default), per-locale isolation, is_enabled policy, and cache clearing. */
 class MailTemplateServiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -37,7 +36,6 @@ class MailTemplateServiceTest extends TestCase
         $this->assertSame('Bob accepted your friend link request', $rendered->subject);
         $this->assertStringContainsString('My Group', $rendered->body);
         $this->assertStringContainsString('Bob accepted your friend link request.', $rendered->body);
-        // The appended signature carries the contact line.
         $this->assertStringContainsString('ops@example.test', $rendered->body);
     }
 
@@ -54,7 +52,6 @@ class MailTemplateServiceTest extends TestCase
         $this->assertStringContainsString('よろしく', $invite->body);
         $this->assertStringContainsString(url('/register/TOK'), $invite->body);
 
-        // Self-registration (no inviter): the conditional inviter line is omitted.
         $self = $this->service()->render(MailTemplate::RegistrationLink, 'ja', ['token' => 'TOK']);
         $this->assertStringNotContainsString('があなたを', $self->body);
         $this->assertStringContainsString('■', $self->body);
@@ -105,7 +102,6 @@ class MailTemplateServiceTest extends TestCase
             'mail_template_id' => $id, 'locale' => 'en', 'subject' => 'EN', 'body' => 'English only',
         ]);
 
-        // A ja recipient gets the ja default, never the en override.
         $ja = $this->service()->render(MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']]);
         $this->assertStringNotContainsString('English only', $ja->body);
         $this->assertStringContainsString('承諾', $ja->body);
@@ -121,7 +117,6 @@ class MailTemplateServiceTest extends TestCase
             'key' => MailTemplate::Signature->value,
             'is_enabled' => true,
         ]);
-        // An admin who blanks the signature wants no signature, not the default restored.
         DB::table('mail_template_translations')->insert([
             'mail_template_id' => $id, 'locale' => 'en', 'subject' => null, 'body' => '',
         ]);
@@ -150,7 +145,6 @@ class MailTemplateServiceTest extends TestCase
         ]);
 
         $this->assertFalse($this->service()->isEnabled(MailTemplate::FriendRequested));
-        // An absent row defaults to enabled.
         $this->assertTrue($this->service()->isEnabled(MailTemplate::DirectMessageReceived));
     }
 

@@ -14,7 +14,6 @@ class NotifyEventCommentPosted
 
     public function handle(EventCommentPosted $event): void
     {
-        // Author + co-commenters, notified inline (a small set).
         foreach (($this->recipients)($event->event, $event->commenter) as [$member, $reason]) {
             $member->notify(
                 (new EventCommentedNotification($event->commenter, $event->event, $event->comment, $reason))
@@ -22,9 +21,8 @@ class NotifyEventCommentPosted
             );
         }
 
-        // The rest of the community, off the request (CommentNewPost). Snapshot the author + co-commenter
-        // ids now (the Reply/Related lane) so the async broadcast excludes exactly them even if a comment
-        // is deleted before it runs — otherwise a dropped co-commenter would be notified twice.
+        // The excluded ids are snapshotted now, never re-derived when the job runs
+        // (docs/internals/notifications.md, Broadcast fan-out).
         BroadcastEventCommentPosted::dispatch(
             (int) $event->event->getKey(),
             (int) $event->comment->getKey(),
@@ -33,11 +31,7 @@ class NotifyEventCommentPosted
         );
     }
 
-    /**
-     * The author + everyone who has commented — the members handled by the inline Reply/Related lane.
-     *
-     * @return list<int>
-     */
+    /** @return list<int> */
     private function replyRelatedIds(GroupEvent $event): array
     {
         $ids = $event->comments()->whereNotNull('member_id')->distinct()->pluck('member_id')->all();

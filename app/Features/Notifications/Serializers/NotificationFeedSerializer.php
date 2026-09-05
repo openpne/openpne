@@ -29,9 +29,8 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * Feed shapes for the per-event notification rows (layer 3). Rows store only the kind
- * discriminator and entity ids; everything displayed is hydrated at render time, so a withdrawn
- * actor degrades to a fallback label instead of freezing stale text into the row.
+ * Everything displayed is hydrated at render time, so a withdrawn actor degrades to a fallback label
+ * rather than freezing stale text into the row.
  */
 class NotificationFeedSerializer
 {
@@ -74,9 +73,8 @@ class NotificationFeedSerializer
     }
 
     /**
-     * Rows for the Classic notification center panel. Takes the requesters whose %friend% request
-     * is still open so the panel can offer the decision inline; resolving that per row would be a
-     * query per row.
+     * Takes the requesters whose %friend% request is still open, resolving that per row being a query per
+     * row.
      *
      * @param  Collection<int, DatabaseNotification>  $rows
      * @param  array<int, bool>  $awaitingByRequester  keyed by requester id
@@ -170,7 +168,6 @@ class NotificationFeedSerializer
         return [
             'id' => $row->getKey(),
             'kind' => $row->data['kind'] ?? 'unknown',
-            // Sub-discriminator for kinds that label by cause (a comment's reply/related).
             'reason' => $row->data['reason'] ?? null,
             'label' => self::label($row, $actors),
             'createdAt' => $row->created_at?->toISOString() ?? '',
@@ -238,7 +235,6 @@ class NotificationFeedSerializer
             : null;
     }
 
-    /** The event twin of topicUrl(). */
     private static function eventUrl(DatabaseNotification $row, int $eventId): ?string
     {
         $event = GroupEvent::find($eventId);
@@ -254,12 +250,8 @@ class NotificationFeedSerializer
     }
 
     /**
-     * The conversation the mentioning message sits in, opened on that message (`?m=`). Talk has no
-     * screen of its own for one message, so the anchor is a place in the conversation rather than a
-     * permalink — see group-talk.md.
-     *
-     * Re-checked at click time, not trusted from delivery: the message may have been deleted since,
-     * and the reader may have left a members-only group or lost read access with it.
+     * Talk has no per-message screen, so the anchor (`?m=`) is a place in the conversation rather than a
+     * permalink.
      */
     private static function groupTalkUrl(DatabaseNotification $row, int $messageId): ?string
     {
@@ -277,11 +269,8 @@ class NotificationFeedSerializer
     }
 
     /**
-     * The room itself, with no `?m=`: the row stands for everything said there since the member last
-     * looked, and talk opens on the unread boundary, which is where they want to arrive.
-     *
-     * Re-checked at click time like every other target: the group may have dissolved, or the reader
-     * may have left a members-only one since.
+     * No `?m=`: the row stands for everything said since the member last looked, and talk opens on the
+     * unread boundary.
      */
     private static function groupTalkRoomUrl(DatabaseNotification $row, int $groupId): ?string
     {

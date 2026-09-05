@@ -18,10 +18,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Tells the thread root's author (Reply) or another member who replied to it (Related) a new reply
- * landed. Mail + database, gated by the recipient's catalog kind for the reason.
- */
 class TimelineRepliedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature {

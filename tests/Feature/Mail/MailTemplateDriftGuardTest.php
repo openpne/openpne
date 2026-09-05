@@ -44,15 +44,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Tests\TestCase;
 
 /**
- * Drift guard for the mail-template registry. Production renders with strict_variables off (an absent
- * variable renders empty, matching OpenPNE 3's lenient templates), so a body/subject referencing an
- * undeclared variable — or a notification that fails to pass one — fails silently. Here everything is
- * rendered through a STRICT renderer, so such a mismatch throws.
- *
- * Caveat: strict rendering only exercises the paths the sample context reaches — a variable behind a
- * false `{% if %}`, an empty `{% for %}`, or absorbed by `|default` is not checked. This guards the
- * current built-in defaults; a default that later gains such a construct needs an added case or token
- * extraction to stay covered.
+ * Strict rendering only exercises the paths the sample context reaches: a variable behind a false
+ * `{% if %}`, an empty `{% for %}` or absorbed by `|default` is not checked.
  */
 class MailTemplateDriftGuardTest extends TestCase
 {
@@ -63,7 +56,6 @@ class MailTemplateDriftGuardTest extends TestCase
         parent::setUp();
         $this->setSnsSetting(SnsSettingKey::SnsName, 'My Group');
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
-        // Every render below goes through this strict service so an undeclared/undelivered variable throws.
         $this->app->instance(MailTemplateService::class, new MailTemplateService(new MailTemplateRenderer(strictVariables: true)));
     }
 
@@ -74,8 +66,6 @@ class MailTemplateDriftGuardTest extends TestCase
         $rendered = 0;
         foreach (MailTemplate::cases() as $template) {
             foreach (['en', 'ja'] as $locale) {
-                // representativeContext() is the declared variable set (plus the globals the service adds);
-                // a default subject/body touching anything outside it throws under strict rendering.
                 $service->render($template, $locale, $template->representativeContext());
                 $rendered++;
             }

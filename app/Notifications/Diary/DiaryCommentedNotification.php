@@ -18,10 +18,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Tells the diary owner (Reply) or a co-commenter (Related) a new comment landed. Mail +
- * database, gated by the recipient's catalog kind for the reason.
- */
 class DiaryCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature;

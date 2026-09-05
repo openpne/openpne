@@ -44,13 +44,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Every feed row is spent by reading what it is about, and by nothing else. The table walks
- * FeatureNotificationMap::CLASSES, so a notification class that lands without a target — or with one
- * nothing consumes — fails here rather than leaving a row nobody can clear by reading.
- *
- * CLASSES means "every database notification" only over the feature namespaces
- * FeatureNotificationCoverageTest::OWNED walks (`Auth` / `Member` are mail only, `Push` is WebPush).
- * A database notification outside those has to be added to both.
+ * The table walks FeatureNotificationMap::CLASSES, which covers every database notification only over the
+ * feature namespaces FeatureNotificationCoverageTest::OWNED walks (`Auth` / `Member` are mail only, `Push`
+ * is WebPush). A database notification outside those has to be added to both.
  */
 class NotificationTargetReadTest extends TestCase
 {
@@ -92,10 +88,6 @@ class NotificationTargetReadTest extends TestCase
         }
     }
 
-    /**
-     * A mention is spent by the cursor reaching it, not by the room being opened: what was said above
-     * where the reader stopped has not been read.
-     */
     public function test_a_mention_the_cursor_has_not_reached_keeps_its_row(): void
     {
         $viewer = Member::factory()->create();
@@ -124,7 +116,6 @@ class NotificationTargetReadTest extends TestCase
         $this->assertNotNull($rows[1]->refresh()->read_at);
     }
 
-    /** The conversation's read covers a position, so it spends the rows below that position only. */
     public function test_the_conversation_spends_the_rows_its_read_covered(): void
     {
         $viewer = Member::factory()->create();
@@ -153,10 +144,7 @@ class NotificationTargetReadTest extends TestCase
         $this->assertNull($rows[1]->refresh()->read_at);
     }
 
-    /**
-     * Answering is reading, and it is one requester's row: the other requests on that page are still
-     * waiting for an answer of their own.
-     */
+    /** One requester's row: the other requests on that page are still waiting for an answer of their own. */
     public function test_answering_a_request_spends_that_requester_row_only(): void
     {
         $viewer = Member::factory()->create();
@@ -285,7 +273,6 @@ class NotificationTargetReadTest extends TestCase
         ];
     }
 
-    /** A row about a reply lands on the thread root, which is the page the reply is read on. */
     private function timelineReplyScenario(string $class, Member $viewer): array
     {
         $post = TimelinePost::factory()->create();
@@ -313,8 +300,7 @@ class NotificationTargetReadTest extends TestCase
     }
 
     /**
-     * The requests page is every request's target, so the decoy is a row of another kind: one
-     * requester's row is singled out by answering, not by reading the list (covered separately).
+     * The requests page is every request's target, so the decoy is a row of another kind.
      *
      * @return array{data: array<string, mixed>, decoys: list<array{0: class-string, 1: array<string, mixed>}>, read: Closure}
      */

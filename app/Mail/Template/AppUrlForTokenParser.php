@@ -13,11 +13,9 @@ use Twig\Token;
 use Twig\TokenParser\AbstractTokenParser;
 
 /**
- * Parses OpenPNE 3's `{% app_url_for('app', 'uri'~token, abs) %}` tag. OpenPNE 3 exposed helper functions
- * as tags (HelperTwigExtension); we keep that exact surface for the one in-scope helper. Implemented as a
- * real token parser (not a source rewrite) so Twig's own lexer parses the arguments — string literals and
- * `{# comments #}` that merely contain the text "app_url_for" are never touched. Compiles to a print of
- * the registered `app_url_for` Twig function, which the sandbox allows.
+ * OpenPNE 3 exposed helper functions as tags (HelperTwigExtension), so `{% app_url_for(…) %}` is a tag here
+ * too. A real token parser rather than a source rewrite, so Twig's own lexer parses the arguments and the
+ * text "app_url_for" inside a string literal or a `{# comment #}` is never touched.
  */
 final class AppUrlForTokenParser extends AbstractTokenParser
 {
@@ -41,16 +39,12 @@ final class AppUrlForTokenParser extends AbstractTokenParser
         $function = $this->parser->getEnvironment()->getFunction('app_url_for');
         $print = new PrintNode(new FunctionExpression($function, new Nodes($arguments, $line), $line), $line);
 
-        // Twig's lexer swallows the first newline after a plain `%}` block tag. For a helper that merely
-        // prints a URL that is wrong: an imported OpenPNE 3 body puts the tag on its own line mid-text, so
-        // the URL would merge into the following line. The swallowed newline advanced the lexer's line
-        // count, so a next token exactly one line down is the tell — re-emit the one newline it ate.
-        //
-        // Exactly one line: a plain `%}` eats at most a single newline, so a delta of one is that case. A
-        // `-%}` whitespace-trim eats *all* trailing whitespace (delta ≥ 2 when it spans blank lines), which
-        // we deliberately leave trimmed. The sole gap is `-%}` followed by exactly one newline — an exotic
-        // combination absent from OpenPNE 3 mail templates, where the eaten newline is restored.
+        // Twig's lexer swallows the first newline after a plain `%}`, which would merge this tag's URL into
+        // the line following it in an imported body.
         $next = $stream->getCurrent();
+        // A delta of one line is the newline a plain `%}` ate; a `-%}` that trimmed more leaves a bigger
+        // delta and stays trimmed, while `-%}` followed by exactly one newline is indistinguishable and
+        // gets it back.
         if ($next->getLine() - $end->getLine() === 1) {
             return new Nodes([$print, new TextNode("\n", $end->getLine())], $line);
         }

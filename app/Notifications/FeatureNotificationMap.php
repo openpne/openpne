@@ -25,14 +25,10 @@ use App\Notifications\Timeline\TimelinePostedNotification;
 use App\Notifications\Timeline\TimelineRepliedNotification;
 
 /**
- * Every feature-owned notification class, for the display side: `notifications.type` holds exactly
- * these strings, which is why a switched-off unit's rows are filtered by type and never by the
- * payload's `kind` — that is a nullable JSON path, where a row without the key would drop out of
- * both sides of a comparison and disappear silently.
- *
- * The list is the only thing here that can fall behind; which unit a class belongs to is read off
- * the class. Tests\Feature\Architecture\FeatureNotificationCoverageTest walks the feature
- * notification namespaces and fails on a class that is missing here or does not declare its unit.
+ * A switched-off unit's rows are filtered by `notifications.type`, never by the payload's `kind`: that is a
+ * nullable JSON path, and a row without the key would drop out of both sides of a comparison and disappear
+ * silently. The list is the only thing here that can fall behind — which unit a class belongs to is read
+ * off the class.
  */
 final class FeatureNotificationMap
 {
@@ -59,7 +55,7 @@ final class FeatureNotificationMap
         TimelineRepliedNotification::class,
     ];
 
-    /** @return list<class-string<FeatureNotification>> the classes whose unit is switched off */
+    /** @return list<class-string<FeatureNotification>> */
     public static function disabledTypes(): array
     {
         return array_values(array_filter(

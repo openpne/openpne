@@ -9,10 +9,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\Timeline\TimelineMentionedNotification;
 
-/**
- * Tells everyone a new post or reply named that it mentions them. Both events carry the same
- * snapshot and a mention reads the same either way, so one listener serves both.
- */
+/** Both events carry the same snapshot and a mention reads the same either way, so one listener serves both. */
 class NotifyTimelineMentioned
 {
     public function __construct(private readonly TimelineMentionRecipients $recipients) {}

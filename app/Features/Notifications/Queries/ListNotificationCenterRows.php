@@ -12,10 +12,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The panel's rows: the center's window, hydrated. Read and unread both appear — the panel is a
- * log, and the skin greys the read ones out.
- */
+/** Read and unread both appear: the panel is a log, and the skin greys the read ones out. */
 class ListNotificationCenterRows
 {
     public function __construct(private readonly NotificationCenterWindow $window) {}
@@ -29,8 +26,6 @@ class ListNotificationCenterRows
     }
 
     /**
-     * Which of the listed requesters are still waiting on this member, in one query.
-     *
      * @param  Collection<int, DatabaseNotification>  $rows
      * @return array<int, bool>
      */
@@ -56,9 +51,8 @@ class ListNotificationCenterRows
     }
 
     /**
-     * The member a %friend% row is about. Normalized rather than trusted: this id decides who a
-     * decision is taken against, and a payload shape nobody expected should read as "no requester"
-     * rather than reach a lookup.
+     * Normalized rather than trusted: this id decides who a decision is taken against, so an unexpected
+     * payload shape reads as "no requester" rather than reaching a lookup.
      */
     public static function requesterId(DatabaseNotification $row): ?int
     {

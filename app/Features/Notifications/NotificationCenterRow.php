@@ -6,7 +6,6 @@ namespace App\Features\Notifications;
 
 use App\Models\File;
 
-/** One `.push` row in the notification center panel. */
 final class NotificationCenterRow
 {
     public function __construct(
@@ -18,8 +17,8 @@ final class NotificationCenterRow
         public readonly ?string $actorName,
         public readonly ?File $actorAvatar,
         /**
-         * A %friend% row whose request is still waiting on this member. Answered by the request
-         * itself, never by the row's read state: reading the panel must not retract the decision.
+         * Answered by the request itself, never by the row's read state: reading the panel must not
+         * retract the decision.
          */
         public readonly bool $awaitingDecision = false,
     ) {}

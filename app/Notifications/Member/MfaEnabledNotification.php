@@ -9,10 +9,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * A notify-only security alert sent when two-factor authentication is turned on. Mail only, always
- * sent — the takeover-detection control for a credential change the member should recognize.
- */
 class MfaEnabledNotification extends Notification implements ShouldQueue
 {
     use Queueable;

@@ -10,9 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * A notify-only security alert sent after the member's password changes (self-service change or a
- * forgot-password reset) — the takeover-detection control. Mail only, always sent, no action link;
- * the actionable path for an unexpected change is "reset your password", not a one-click revert.
+ * No action link: the path for an unexpected change is a password reset, not a one-click revert.
  */
 class PasswordChangedNotification extends Notification implements ShouldQueue
 {

@@ -8,11 +8,7 @@ use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 
-/**
- * The OpenPNE 3 compatibility surface for the mail-template sandbox: the `app_url_for` helper tag/function,
- * an OpenPNE-3-semantics `date` filter (overriding Twig's built-in), and a no-op `encoding` filter. The
- * `default` filter is Twig's built-in (allowed by the SecurityPolicy).
- */
+/** The `default` filter the SecurityPolicy allows is Twig's own, which is why it is not defined here. */
 final class MailTemplateTwigExtension extends AbstractExtension
 {
     public function getTokenParsers(): array

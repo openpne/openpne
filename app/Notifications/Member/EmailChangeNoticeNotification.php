@@ -10,11 +10,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * A notify-only security alert, sent on-demand to the member's CURRENT (old) address when an email
- * change is requested — the takeover-detection control (OWASP). Sent before members.email changes, so
- * the address it reaches is still the member's own. It carries a cancel link (a second single-use
- * token) so the old-address holder can void a change they did not initiate without signing in; the
- * link only voids the pending change, it never itself alters the login identifier.
+ * Sent to the member's current address before `members.email` changes, so the address it reaches is still
+ * theirs. Its cancel link voids the pending change only; it never itself alters the login identifier.
  */
 class EmailChangeNoticeNotification extends Notification implements ShouldQueue
 {

@@ -7,10 +7,8 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 
 /**
- * The settings-form shape for the notification catalog, shared by both surfaces: wired kinds
- * only (an unwired kind has no sender, so a toggle would gate nothing), grouped by category in
- * registry order. dependOnNot rides along so the Modern page can render an "(x only)" variant
- * pair as one three-state control.
+ * dependOnNot rides along so the Modern page can render an "(x only)" variant pair as one three-state
+ * control.
  */
 class NotificationSettingsSerializer
 {
@@ -23,8 +21,8 @@ class NotificationSettingsSerializer
 
         foreach (NotificationKind::wiredCases() as $kind) {
             $category = $kind->category();
-            // A switched-off unit sends nothing, so its opt-ins are not choices to offer. The stored
-            // rows stay put and reappear with the unit.
+            // A switched-off unit sends nothing, so its opt-ins are not offered; the stored rows stay put
+            // and reappear with it.
             if (! $category->feature()->enabled()) {
                 continue;
             }
@@ -48,11 +46,8 @@ class NotificationSettingsSerializer
     }
 
     /**
-     * Whether the value shown on each channel is the site's rather than the member's own — what the
-     * surfaces label "(default)". Only a channel whose default is an admin setting can be inherited
-     * at all (NotificationKind::hasSiteDefault); anywhere else the shown value is the member's either
-     * way, since an absent row there means a default nobody can move — the talk broadcast's mail
-     * channel included.
+     * True only where the default is an admin setting (NotificationKind::hasSiteDefault); elsewhere an
+     * absent row means a default nobody can move, the talk broadcast's mail channel included.
      *
      * @return array{web: bool, mail: bool}
      */

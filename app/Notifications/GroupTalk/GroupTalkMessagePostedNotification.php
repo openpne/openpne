@@ -17,13 +17,9 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a member a talk room has something new in it, on a site whose administrator asked for that
- * (docs/internals/group-talk.md). The fan-out job resolves each recipient's channels once — from the
- * kind's site default and the explicit rows overriding it — and passes the decided list, so `via()`
- * returns it verbatim.
- *
- * Its feed row is the ROOM's row, not the message's: KeepOneGroupTalkRoomRow drops the room's other
- * rows once this one is written, so the feed holds one line per conversation however much is said in it.
+ * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
+ * gates nothing; its feed row is the room's, not the message's (docs/internals/notifications.md, Broadcast
+ * fan-out).
  */
 class GroupTalkMessagePostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -33,10 +29,10 @@ class GroupTalkMessagePostedNotification extends Notification implements Feature
     use Queueable;
     use RendersMailTemplate;
 
-    /** An author who withdrew before delivery takes the notification with them, as a mention does. */
+    /** An author who withdrew before delivery takes the notification with them: the queued job cannot restore the serialized Member. */
     public bool $deleteWhenMissingModels = true;
 
-    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
+    /** @param list<string> $channels */
     public function __construct(
         public readonly Member $author,
         public readonly GroupMessage $message,
@@ -49,9 +45,8 @@ class GroupTalkMessagePostedNotification extends Notification implements Feature
     }
 
     /**
-     * SerializesModels hands this fresh rows, so the answer is delivery-time current: a ban, a fresh
-     * block, a member who left or muted the room since — and a member who has since read the message,
-     * which is the whole point of the grace the dispatch waits out.
+     * SerializesModels hands this fresh rows, so the answer is delivery-time current, a member who has since
+     * read the message included — the point of the grace the dispatch waits out.
      */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
@@ -71,8 +66,7 @@ class GroupTalkMessagePostedNotification extends Notification implements Feature
             'member_name' => MemberDisplayName::of($this->author),
             'community_name' => $this->message->group?->name ?? '',
             'body' => $this->message->body,
-            // The same anchor a mention mail carries: talk has no screen for one message, so the link
-            // is a place in the conversation.
+            // Talk has no per-message screen, so the link is a place in the conversation.
             'url' => route('group.talk.show', ['group' => $this->message->group_id, 'm' => $this->message->getKey()]),
         ]);
     }

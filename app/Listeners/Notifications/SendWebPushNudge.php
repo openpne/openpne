@@ -14,19 +14,9 @@ use Illuminate\Notifications\Events\NotificationSent;
 use Throwable;
 
 /**
- * Nudges a member's subscribed devices whenever a feed row is written for them.
- *
- * Hooking the `database` send rather than each notification class is what makes push follow the
- * catalog for free: every opt-in, fan-out and feature gate has already decided by the time this
- * event fires, and a notification added later is covered without being told about push. The nudge
- * itself sends on WebPushChannel, so it cannot re-enter this filter.
- *
- * Everything past the two pure filters is wrapped: this runs inside the queued job that wrote the
- * feed row, so an exception escaping here retries that job and duplicates the row. A failed push is
- * reported and dropped instead.
- *
- * Guard order is deliberate — the config read is free, and the subscription probe is what makes a
- * member-wide fan-out one query per recipient instead of two, since most members have no device.
+ * Everything past the two pure filters is wrapped: this runs inside the queued job that wrote the feed
+ * row, and an escaping exception would retry it and duplicate the row (docs/internals/notifications.md,
+ * Web push).
  */
 final class SendWebPushNudge
 {

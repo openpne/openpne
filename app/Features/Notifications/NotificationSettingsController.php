@@ -17,19 +17,15 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * The member's notification-catalog opt-ins. Modern edits on a dedicated detail page (instant
- * per-toggle saves); Classic edits as a member-config category (one bulk save), rendered by
- * MemberConfigController::show — this controller owns the Modern page and the save for both.
- */
+/** Classic renders through MemberConfigController::show, but the save for both surfaces is here. */
 class NotificationSettingsController extends Controller
 {
     public function edit(MutedTalkRooms $mutedRooms): Response
     {
         return Inertia::render('member/config/notifications', [
             'form' => NotificationSettingsSerializer::form($this->viewer()),
-            // The rooms the member has quieted one by one, shown beside the catalog toggles those
-            // mutes are exceptions to (docs/internals/group-talk.md#mute).
+            // The rooms the member has quieted one by one, shown beside the catalog toggles those mutes
+            // are exceptions to (docs/internals/group-talk.md, Mute).
             'mutedRooms' => $mutedRooms($this->viewer()),
             // Deliberately not called `push`: Inertia merges page props over the shared ones, so a
             // top-level `push` here would replace the shared VAPID key this page needs to subscribe.
@@ -51,8 +47,6 @@ class NotificationSettingsController extends Controller
             }
         }
 
-        // Modern returns to the detail page silently (the inline SavedIndicator is the feedback);
-        // Classic returns to its category page with the usual flash.
         return SurfaceResolver::resolve($request, 'member') === SurfaceResolver::MODERN
             ? redirect()->route('member.config.notifications.edit')
             : redirect()
@@ -61,9 +55,8 @@ class NotificationSettingsController extends Controller
     }
 
     /**
-     * The global push pause switch. Its own POST, like every other member-config section, so
-     * pausing push never rewrites a catalog opt-in. Modern-only: the section is not rendered on
-     * Classic, and with no VAPID keypair it is not rendered at all.
+     * Its own POST, like every other member-config section, so pausing push never rewrites a catalog
+     * opt-in.
      */
     public function updatePush(Request $request): RedirectResponse
     {

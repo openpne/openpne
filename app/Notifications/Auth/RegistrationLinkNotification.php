@@ -11,11 +11,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * The "complete your registration" mail, sent to an address with no Member yet (on-demand, so the
- * notifiable is an AnonymousNotifiable). Carries the raw token in the link only; the locale is captured
- * at request time because the notification renders later on the queue. The optional inviter name /
- * personal message are shown by the template's conditional blocks (OpenPNE 3 requestRegisterURL), so the
- * self / member-invite / admin-invite variants share one template and never drift.
+ * Sent to an address with no Member yet, so the notifiable is an AnonymousNotifiable. One template covers
+ * the self, member-invite and admin-invite variants, which its conditional blocks tell apart.
  */
 class RegistrationLinkNotification extends Notification implements ShouldQueue
 {

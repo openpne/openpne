@@ -20,11 +20,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
-/**
- * A switched-off unit sends nothing — and the case that decides where the gate may live is the
- * queued one: a notification queued while the unit was on carries the channels via() picked back
- * then, and SendQueuedNotifications replays exactly those. Only shouldSend() runs late enough.
- */
 class FeatureNotificationSuppressionTest extends TestCase
 {
     use RefreshDatabase;
@@ -33,18 +28,13 @@ class FeatureNotificationSuppressionTest extends TestCase
     {
         parent::setUp();
 
-        // Self-contained mailer: sentMailCount() reads the array transport's buffer, and the
-        // environment's MAIL_MAILER (smtp under docker) must not decide whether that exists.
-        // Forget any resolved mailer so the override takes effect.
+        // A resolved mailer is forgotten so the array transport takes effect: sentMailCount() reads its
+        // buffer, and the environment's MAIL_MAILER must not decide whether it exists.
         config(['mail.default' => 'array']);
         Mail::forgetMailers();
     }
 
-    /**
-     * Queue a diary broadcast the way the fan-out does, and hand back the jobs waiting to run.
-     *
-     * @return Collection<int, SendQueuedNotifications>
-     */
+    /** @return Collection<int, SendQueuedNotifications> */
     private function queuedDiaryBroadcast(): Collection
     {
         Queue::fake();

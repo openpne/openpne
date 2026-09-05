@@ -16,10 +16,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Announces a new diary to a recipient in the broadcast audience. Unlike the comment notifications this
- * does not gate itself: the fan-out job resolves each recipient's channels once (bulk, from the opt-out
- * set) and passes the decided list, so `via()` returns it verbatim — one notification instance per
- * recipient, never a per-channel duplicate of the database feed row.
+ * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
+ * gates nothing (docs/internals/notifications.md, Broadcast fan-out).
  */
 class DiaryPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -27,7 +25,7 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
     use Queueable;
     use RendersMailTemplate;
 
-    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
+    /** @param list<string> $channels */
     public function __construct(
         public readonly Diary $diary,
         public readonly Member $author,

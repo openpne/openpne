@@ -10,9 +10,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * A notify-only security alert sent when a live two-factor factor is removed (self-service disable or
- * operator lockout recovery). Mail only, always sent. Only a confirmed factor's removal is announced —
- * cancelling a pending set-up is not a credential change, so callers gate on wasEnabled.
+ * Only a live factor's removal is announced, so each caller gates on wasEnabled
+ * (docs/internals/notifications.md, Gating flow).
  */
 class MfaDisabledNotification extends Notification implements ShouldQueue
 {
