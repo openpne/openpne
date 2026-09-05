@@ -320,6 +320,11 @@ export function unifiedTabs(enabled: Record<FeatureKey, boolean>): NavSection[] 
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
+
+/** The write action only while the site lets members post; a page that says nothing keeps it. */
+function postActivityAction(props: Record<string, unknown>): { action?: ChromeAction } {
+    return (props as { canPost?: boolean }).canPost === false ? {} : { action: POST_ACTIVITY };
+}
 const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create a %community%'), icon: Plus };
 const NEW_MESSAGE: ChromeAction = { href: '/messages/new', label: t('New message'), icon: Pencil };
 
@@ -586,11 +591,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             scope: communityScope(group),
         };
     },
-    'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
+    'timeline/index': (props) => ({ mode: 'section', title: ACTIVITY, ...postActivityAction(props) }),
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
-            ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
+            ? { mode: 'section', title: ACTIVITY, ...postActivityAction(props) }
             : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner), scope: memberScope(owner) };
     },
     'timeline/tag': (props) => ({

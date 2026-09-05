@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Queries;
 
+use App\Features\Diary\DiarySearch;
 use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
@@ -25,6 +26,9 @@ class SearchDiaries
         DiaryVisibilityScope::applyFeed($query, $viewer);
 
         self::applyTerms($query, $keyword);
+
+        // The window is this screen's alone: applyTerms is shared with the member archive, which OpenPNE 3 never narrowed.
+        $query->when(DiarySearch::periodLowerBound(), fn ($q, $lower) => $q->where('created_at', '>=', $lower));
 
         return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
     }

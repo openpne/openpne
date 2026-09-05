@@ -53,6 +53,7 @@ class TimelineController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
                 'posts' => TimelinePostSerializer::paginator($posts, $viewer),
+                'canPost' => TimelinePosting::enabled(),
             ]),
         ]);
     }
@@ -75,6 +76,7 @@ class TimelineController extends Controller
                 return Inertia::render('timeline/member', [
                     'owner' => MemberRefSerializer::ref($owner),
                     'isOwner' => $viewer->is($owner),
+                    'canPost' => TimelinePosting::enabled(),
                     'viewerId' => $viewer->getKey(),
                     'posts' => TimelinePostSerializer::paginator($posts, $viewer),
                 ]);
@@ -148,6 +150,7 @@ class TimelineController extends Controller
                 'post' => TimelinePostSerializer::entry($post, $viewer),
                 'replies' => array_map(fn (TimelinePost $reply): array => TimelinePostSerializer::entry($reply, $viewer), $post->replies->all()),
                 'viewerId' => $viewer->getKey(),
+                'canPost' => TimelinePosting::enabled(),
             ]),
         ]);
     }

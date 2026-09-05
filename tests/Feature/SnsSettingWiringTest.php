@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,23 @@ use Tests\TestCase;
 class SnsSettingWiringTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_every_key_answers_every_registry_accessor(): void
+    {
+        // The registry's matches have no default arm; a case one of them forgets is a 500 nobody
+        // meets until a page iterates that group.
+        foreach (SnsSettingKey::cases() as $key) {
+            $key->group();
+            $key->op3SourceName();
+            $key->isMigratedFromOp3();
+            $key->label();
+            $key->isRequired();
+            $key->maxBytes();
+            $default = $key->default();
+            // decode() answers null before its match, so the round trip is what reaches the arms.
+            $this->assertSame($default, $key->decode($key->encode($key->coerce($default))), $key->value);
+        }
+    }
 
     public function test_helpers_return_stored_overrides(): void
     {

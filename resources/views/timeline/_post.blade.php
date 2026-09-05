@@ -37,11 +37,14 @@
             {{-- Every control below is a working link or a working form on its own; the script only
                  keeps the reader on the page. The anchor lands on the reply form: viewing a thread
                  is what admits replying to it. --}}
-            <a class="timeline-comment-link" href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
-            @if ($post->member->is(auth()->user()))
-                | <a class="timeline-post-delete-confirm-link" href="{{ route('timeline.delete.show', $post) }}" data-dialog="timeline-post-delete-confirm-{{ $post->getKey() }}">{{ __('Delete') }}</a>
+            @php($canPost ??= \App\Features\Timeline\TimelinePosting::enabled())
+            @if ($canPost)
+                <a class="timeline-comment-link" href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
             @endif
-            | <a href="{{ route('timeline.show', $post) }}"><x-timeline-timestamp :date="$post->created_at" /></a>
+            @if ($post->member->is(auth()->user()))
+                @if ($canPost) | @endif<a class="timeline-post-delete-confirm-link" href="{{ route('timeline.delete.show', $post) }}" data-dialog="timeline-post-delete-confirm-{{ $post->getKey() }}">{{ __('Delete') }}</a>
+            @endif
+            @if ($canPost || $post->member->is(auth()->user())) | @endif<a href="{{ route('timeline.show', $post) }}"><x-timeline-timestamp :date="$post->created_at" /></a>
 
             @if (! $thread && $post->replies_count > \App\Features\Timeline\Queries\RecentReplies::LIMIT)
                 <a id="timeline-comment-loadmore-{{ $post->getKey() }}" class="timeline-comment-loadmore" href="{{ route('timeline.show', $post) }}"
@@ -52,7 +55,7 @@
                 @foreach ($thread ? $post->replies : $post->recentReplies as $reply)
                     @include('timeline._reply', ['reply' => $reply])
                 @endforeach
-                @unless ($thread)
+                @if (! $thread && $canPost)
                     <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-post-comment-form-{{ $post->getKey() }}" class="timeline-post-comment-form"
                           data-timeline-reply data-error-text="{{ __('Failed to post.') }}">
                         @csrf
@@ -61,7 +64,7 @@
                     </form>
                     <div id="timeline-post-comment-form-loader-{{ $post->getKey() }}" class="timeline-post-comment-form-loader" role="status"><img src="{{ asset('images/ajax-loader.gif') }}" alt="{{ __('Sending') }}"></div>
                     <div id="timeline-post-comment-form-error-{{ $post->getKey() }}" class="timeline-post-comment-form-loader" role="alert"></div>
-                @endunless
+                @endif
             </div>
         </div>
     </div>

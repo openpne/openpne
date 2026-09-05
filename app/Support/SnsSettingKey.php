@@ -29,8 +29,19 @@ enum SnsSettingKey: string
 
     case TimelineAllowWebPublic = 'timeline_allow_web_public';
 
+    /** Off refuses new posts and replies; what is already posted stays readable. */
+    case TimelinePostingEnabled = 'timeline_posting_enabled';
+
     /** Off also closes the guest-reachable diary screens, as OpenPNE 3 did. */
     case DiaryAllowWebPublic = 'diary_allow_web_public';
+
+    /** The site-wide search screen only; a member archive's keyword filter is not this. */
+    case DiarySearchEnabled = 'diary_search_enabled';
+
+    case DiarySearchPeriodEnabled = 'diary_search_period_enabled';
+
+    /** Days back from today's midnight that the site-wide search covers while the period switch is on; 0 is today alone, as OpenPNE 3 read it. */
+    case DiarySearchPeriodDays = 'diary_search_period_days';
 
     /** An App\Gadgets\GadgetLayout id (layoutA/B/C). */
     case GadgetHomeLayout = 'gadget_home_layout';
@@ -131,6 +142,9 @@ enum SnsSettingKey: string
     /** OpenPNE 3's footer seed. */
     private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
 
+    /** A century, longer than any archive; a bound also keeps `subDays()` away from the int-scale values that wrap into the future. */
+    public const DIARY_SEARCH_PERIOD_MAX_DAYS = 36500;
+
     public function group(): SettingGroup
     {
         return match ($this) {
@@ -138,8 +152,9 @@ enum SnsSettingKey: string
             self::SurfaceMode => SettingGroup::Surface,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::AllowWebPublicAge => SettingGroup::Privacy,
-            self::TimelineAllowWebPublic => SettingGroup::Timeline,
-            self::DiaryAllowWebPublic => SettingGroup::Diary,
+            self::TimelineAllowWebPublic, self::TimelinePostingEnabled => SettingGroup::Timeline,
+            self::DiaryAllowWebPublic, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
+            self::DiarySearchPeriodDays => SettingGroup::Diary,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
@@ -182,7 +197,11 @@ enum SnsSettingKey: string
             // OpenPNE 3's op_activity_is_open is an sfConfig (app.yml) value, not an sns_config row, so
             // there is nothing to copy; upgraded sites fall back to the same off default.
             self::TimelineAllowWebPublic => null,
+            self::TimelinePostingEnabled => 'is_allow_post_activity',
             self::DiaryAllowWebPublic => 'op_diary_plugin_use_open_diary',
+            self::DiarySearchEnabled => 'op_diary_plugin_search_enable',
+            self::DiarySearchPeriodEnabled => 'op_diary_plugin_search_period_enable',
+            self::DiarySearchPeriodDays => 'op_diary_plugin_search_period',
             // OpenPNE 3 stored the gadget layout as `{type}_layout` in sns_config (the home context
             // is keyed "home", not "gadget").
             self::GadgetHomeLayout => 'home_layout',
@@ -220,8 +239,9 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
-            SettingGroup::Diary, SettingGroup::SitePolicy, SettingGroup::GroupBoard => $this->op3SourceName() !== null,
-            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
+            SettingGroup::Diary, SettingGroup::SitePolicy, SettingGroup::GroupBoard,
+            SettingGroup::Timeline => $this->op3SourceName() !== null,
+            SettingGroup::Auth, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             SettingGroup::Ai, SettingGroup::Look,
             SettingGroup::GroupTalk => false,
@@ -258,6 +278,10 @@ enum SnsSettingKey: string
             self::TimelineAllowWebPublic => false,
             // On, as OpenPNE 3 shipped it: the switch offers members an audience rather than publishing anything itself.
             self::DiaryAllowWebPublic => true,
+            // On, as OpenPNE 3 shipped them: posting and the search screen are open until an admin closes them.
+            self::TimelinePostingEnabled, self::DiarySearchEnabled => true,
+            self::DiarySearchPeriodEnabled => false,
+            self::DiarySearchPeriodDays => 30,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
             // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
@@ -304,10 +328,11 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
-            self::LinkCardEnabled,
+            self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::AiAccountsEnabled => (bool) $value,
             // A non-numeric submission lands on 0, the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
+            self::DiarySearchPeriodDays => self::clampDays((int) (is_string($value) ? trim($value) : $value)),
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
@@ -327,9 +352,9 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
-            self::LinkCardEnabled,
+            self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::AiAccountsEnabled => $value ? '1' : '0',
-            self::AiAccountLimit => (string) (int) $value,
+            self::AiAccountLimit, self::DiarySearchPeriodDays => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
@@ -367,6 +392,10 @@ enum SnsSettingKey: string
             // A non-numeric stored value is corruption and reads as the shipped cap; a negative one
             // clamps to 0 rather than inverting the comparison it feeds.
             self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
+            self::DiarySearchPeriodDays => is_numeric($value) ? self::clampDays((int) $value) : $this->default(),
+            // OpenPNE 3 read all three as PHP truthy, so '' closes like '0' while any other stored value opens.
+            self::TimelinePostingEnabled, self::DiarySearchEnabled,
+            self::DiarySearchPeriodEnabled => ! in_array($value, ['', '0'], true),
             // Fail-open, the one place that direction is right: only an explicit '0' takes a feature
             // down, so a malformed value cannot black out a module and strand its content.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
@@ -391,7 +420,11 @@ enum SnsSettingKey: string
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
             self::TimelineAllowWebPublic => __('Allow members to make %activity% posts public to the web'),
+            self::TimelinePostingEnabled => __('Allow members to post %activity%'),
             self::DiaryAllowWebPublic => __('Allow members to make %diary% entries public to the web'),
+            self::DiarySearchEnabled => __('Offer %diary% search'),
+            self::DiarySearchPeriodEnabled => __('Limit %diary% search to recent entries'),
+            self::DiarySearchPeriodDays => __('Days that %diary% search covers'),
             self::GadgetHomeLayout => __('Home layout'),
             self::GadgetProfileLayout => __('Profile layout'),
             self::GadgetLoginLayout => __('Login layout'),
@@ -434,7 +467,8 @@ enum SnsSettingKey: string
         return match ($this) {
             self::SnsName, self::AdminMailAddress, self::DefaultLook => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
-            self::TimelineAllowWebPublic, self::DiaryAllowWebPublic, self::LinkCardEnabled,
+            self::TimelineAllowWebPublic, self::TimelinePostingEnabled, self::DiaryAllowWebPublic, self::DiarySearchEnabled,
+            self::DiarySearchPeriodEnabled, self::DiarySearchPeriodDays, self::LinkCardEnabled,
             self::AiAccountsEnabled, self::AiAccountLimit,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
@@ -480,6 +514,11 @@ enum SnsSettingKey: string
     public static function inGroup(SettingGroup $group): array
     {
         return array_values(array_filter(self::cases(), fn (self $key): bool => $key->group() === $group));
+    }
+
+    private static function clampDays(int $days): int
+    {
+        return max(0, min(self::DIARY_SEARCH_PERIOD_MAX_DAYS, $days));
     }
 
     /** Resolve a key by its OpenPNE 3 source name, or null if none maps from it. */
