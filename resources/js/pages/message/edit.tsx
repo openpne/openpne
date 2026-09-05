@@ -32,7 +32,6 @@ export default function MessageEdit() {
     });
     const [active, setActive] = useState<'send' | 'draft' | null>(null);
 
-    // Two submit buttons (send / draft) as one form; transform stamps the chosen action.
     const submit = (action: 'send' | 'draft') => {
         setActive(action);
         form.transform((data) => ({ ...data, action }));
@@ -49,11 +48,9 @@ export default function MessageEdit() {
         <>
             <Head title={t('Edit draft')} />
 
-            {/* Both actions ride the sheet header below lg — a draft button left behind at the foot of
-                the form would read as belonging to something else. They are the same buttons as the
-                pair below, deliberately not external submitters: this form has no native submit path
-                (the pair posts from onClick), and a submit button before the form in tree order would
-                become its default button and make Enter in the subject field send or save. */}
+            {/* Deliberately not external submitters: this form has no native submit path, and a
+                submit button before it in tree order would become the default one and make Enter in
+                the subject field send or save. */}
             <ComposeSheetAction>
                 <Button
                     variant="secondary"

@@ -18,14 +18,9 @@ interface Props {
 // Opacity ramp per heat bucket over the chosen-state token (bucket 0 = no fill).
 const BUCKET_FILL = ['', 'bg-selected/10', 'bg-selected/20', 'bg-selected/30', 'bg-selected/45'] as const;
 
-// Always-visible recent years; older years fold behind a disclosure.
 const RECENT_YEARS = 2;
 
-/**
- * Viewer-scoped year×month heat grid over a member's diary archive: each month cell links to that
- * month's archive (shaded by entry count), so the reader can scan when they wrote and jump to a
- * period. Hidden entirely when the member has no diaries.
- */
+/** Hidden entirely when the member has no diaries. */
 export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) {
     const t = useT();
     const date = useDateFormat();
@@ -65,9 +60,9 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
                                         {/* A localized month name ("7月" / "Jul"), not a bare digit: the label is what
                                             makes the grid read as a calendar at a glance. */}
                                         <span className="text-xs">{date.civilMonthShort(cell.month)}</span>
-                                        {/* The count line is always reserved (nbsp on empty months) so the month labels
-                                            sit at the same height in every cell. Inherits the cell foreground: muted
-                                            text fails contrast on the heavier fills. */}
+                                        {/* The count line is always reserved (nbsp on empty months) so month labels sit
+                                            at the same height, and it inherits the cell foreground because muted text
+                                            fails contrast on the heavier fills. */}
                                         <span className="text-[0.625rem] leading-none">{cell.count > 0 ? cell.count : ' '}</span>
                                     </>
                                 );

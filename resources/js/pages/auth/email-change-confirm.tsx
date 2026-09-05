@@ -7,8 +7,8 @@ import type { PageProps } from '@/types';
 
 type Props = PageProps & { token: string; newEmail: string };
 
-// Token landing for the emailed confirmation link (reachable logged-in or out). The change is the
-// POST below, not this GET render, so a mail scanner / prefetch cannot consume the token.
+// Token landing reachable logged-in or out; the change is the POST below, not this GET render, so a
+// mail scanner cannot consume the token.
 export default function EmailChangeConfirm() {
     const t = useT();
     const { token, newEmail } = usePage<Props>().props;

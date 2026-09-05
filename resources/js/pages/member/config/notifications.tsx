@@ -48,10 +48,9 @@ const CHANNELS: Channel[] = ['web', 'mail'];
 const TALK_GROUP = 'group_talk';
 
 /**
- * Push: a global pause switch (instant-saved like the catalog toggles) plus this-device
- * subscribe/unsubscribe. Rendered only where the site has a VAPID keypair — the `push` shared prop is
- * that switch, so nothing here re-derives whether push is available. The catalog grid is unrelated:
- * push is an extra delivery of what already reaches the in-app feed, not a per-kind channel.
+ * Rendered only where the site has a VAPID keypair — the `push` shared prop is that switch, so
+ * nothing here re-derives whether push is available. Push is an extra delivery of what already
+ * reaches the in-app feed, not a per-kind channel of the catalog grid.
  */
 function PushSection() {
     const t = useT();
@@ -95,9 +94,8 @@ function PushSection() {
         );
     };
 
-    // `action` resolves true when the operation succeeded and device state should be re-read, false to
-    // surface an error instead of a possibly-false "subscribed". finally always clears busy, so a
-    // rejected action (a thrown network error from unsubscribe) can never leave the button stuck.
+    // `action` resolves true when the operation succeeded and device state should be re-read, false
+    // to surface an error; the finally clears busy, so a rejection cannot leave the button stuck.
     const runDevice = async (action: () => Promise<boolean>) => {
         setBusy(true);
         setDeviceError(false);
@@ -170,9 +168,6 @@ function PushSection() {
 }
 
 /**
- * The rooms quieted one at a time, listed under the settings they are the exceptions to — otherwise
- * a mute set months ago in one room is only discoverable by opening that room.
- *
  * Unmuting here is the same POST the room's own toggle makes, so the two can never disagree, and it
  * rings the shell for the badges that change with it (lib/unread-refresh.ts).
  */

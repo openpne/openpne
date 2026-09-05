@@ -7,9 +7,8 @@ import { OtpInput } from '@/components/ui/otp-input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
-// Second login step for a member with TOTP enabled. The challenged member is carried in the
-// session, so there is no identifier field. Only the active field is submitted: the server
-// prefers a filled recovery_code over code, so the inactive one must be cleared on toggle.
+// The challenged member is carried in the session, so there is no identifier field; the server
+// prefers a filled recovery_code, so only the active field is submitted.
 export default function TwoFactorChallenge() {
     const t = useT();
     const [useRecovery, setUseRecovery] = useState(false);

@@ -9,9 +9,8 @@ import type { PageProps } from '@/types';
 
 type Props = PageProps & { token: string };
 
-// Token landing for the admin-issued two-factor reset link (reachable logged-in or out). The reset is
-// the POST below, not this GET render, so a mail scanner / prefetch cannot consume the token. Only the
-// token is passed in — the account's address and name are never surfaced on this page.
+// The reset is the POST below, not this GET render, so a mail scanner cannot consume the token; only
+// the token is passed in, never the account's address or name.
 export default function MfaReset() {
     const t = useT();
     const { token } = usePage<Props>().props;

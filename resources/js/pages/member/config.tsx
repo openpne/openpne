@@ -35,9 +35,8 @@ interface ConfigForm {
     ai?: { count: number };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; options: Option[] };
-    // Absent while the site offers fewer than two looks — there would be nothing to choose between.
-    // Translation keys: `current` is the stored choice's label (null = following the site default,
-    // whose label is `default`), not the label of the look being rendered.
+    // Absent while the site offers fewer than two looks; `current` is the stored choice's label
+    // (null = following the site default), never the label of the look being rendered.
     look?: { current: string | null; default: string };
 }
 
@@ -45,7 +44,6 @@ interface ConfigProps extends PageProps {
     form: ConfigForm;
 }
 
-/** A titled group of related sections: one h2 over one card, sections separated by dividers. */
 function SettingsGroup({ title, danger = false, children }: { title: string; danger?: boolean; children: ReactNode }) {
     return (
         <section className="space-y-3">
@@ -63,17 +61,12 @@ function GroupItem({ children }: { children: ReactNode }) {
     return <div className="py-5">{children}</div>;
 }
 
-/**
- * A consequential setting kept as a compact row: title (+ current value) with a link to the
- * dedicated detail page that carries the actual form.
- */
 function DetailRow({ title, value, action }: { title: string; value?: ReactNode; action: ReactNode }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <div className="space-y-0.5">
-                {/* Still an h3 — a settings page is worth navigating by heading — but styled as
-                    the row's content line, which is what it is: the name of one setting, with its
-                    current value muted underneath. */}
+                {/* Still an h3 — a settings page is worth navigating by heading — but styled as the
+                    row's content line. */}
                 <h3 className="text-base text-foreground">{title}</h3>
                 {value && <p className="text-sm text-muted-foreground">{value}</p>}
             </div>
@@ -83,8 +76,8 @@ function DetailRow({ title, value, action }: { title: string; value?: ReactNode;
 }
 
 /**
- * Inline feedback for instant-apply preferences. The element is always present (with reserved
- * height) so the aria-live region exists before the announcement and the layout never shifts.
+ * Always present, with reserved height, so the aria-live region exists before the announcement and
+ * the layout never shifts.
  */
 function SavedIndicator({ show }: { show: boolean }) {
     const t = useT();
@@ -100,9 +93,8 @@ export default function MemberConfig() {
     const t = useT();
     const { form, auth } = usePage<ConfigProps>().props;
 
-    // One form per preference so saving one never resubmits another (mirrors the Classic surface).
-    // Hooks run unconditionally; a fallback is inert since each optional section renders only when
-    // its key is present (diary switched on, Classic available).
+    // One form per preference so saving one never resubmits another; the hooks run unconditionally,
+    // and a fallback is inert because each optional section renders only when its key is present.
     const diary = useForm({ diary_default_visibility: form.diary?.value ?? '' });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
@@ -129,8 +121,6 @@ export default function MemberConfig() {
     return (
         <>
             <Head title={t('Settings')} />
-            {/* Identity leads (the survey convention): link rows into the profile-edit pages,
-                which also host the age-visibility gate that used to live on this page. */}
             {auth.user && (
                 <SettingsGroup title={t('Profile')}>
                     <GroupItem>
@@ -262,9 +252,7 @@ export default function MemberConfig() {
                                 </RadioCardGroup>
                                 <FormActions>
                                     {/* The one explicit button among the preferences: switching re-renders the whole
-                                        shell on the chosen surface, so it must not fire on a stray radio click.
-                                        Disabled until the choice differs from the current surface, so a casual save
-                                        never pins. */}
+                                        shell, so it must not fire on a stray radio click. */}
                                     <Button
                                         type="submit"
                                         loading={surface.processing}
@@ -329,9 +317,8 @@ export default function MemberConfig() {
                 </SettingsGroup>
             )}
 
-            {/* Consequential account changes are rows into dedicated detail pages: the forms are
-                deliberately one level deeper (focused page, visible validation errors, weight
-                matching the action), keeping this page a scannable hub. */}
+            {/* Consequential account changes are rows into dedicated detail pages, keeping this page
+                a scannable hub. */}
             <SettingsGroup title={t('Account')}>
                 <GroupItem>
                     <DetailRow
@@ -367,9 +354,8 @@ export default function MemberConfig() {
                 </GroupItem>
             </SettingsGroup>
 
-            {/* The site's own documents, not the member's settings — so they read as links out, and
-                they sit above the danger zone rather than after it. Classic reaches them from its
-                footer; Modern has no site-wide footer, so this is a member's way in. */}
+            {/* Classic reaches these from its footer; Modern has no site-wide footer, so this is a
+                member's way in. */}
             <SettingsGroup title={t('About this site')}>
                 <GroupItem>
                     <DetailRow

@@ -10,13 +10,9 @@ import type { LookId } from '@/lib/member-chrome';
 const FOLLOW_DEFAULT = 'default';
 
 /**
- * What each look does about one dimension of the layout, as translation keys. This table is the
- * page: a look is a way around the site, and showing one live said nothing about what to look at
- * (docs/internals/looks.md), so what separates them is stated instead.
- *
- * Cells are keyed by look id — `Record<LookId, …>` — so a look joining the registry cannot ship a
- * column of blanks. Columns come from the selectable set, not from this map, so a look the site
- * does not offer is never described as if it could be chosen.
+ * Cells are keyed by look id, so a look joining the registry cannot ship a column of blanks
+ * (docs/internals/looks.md, "The registry"). Columns come from the selectable set rather than from
+ * this map, so a look the site does not offer is never described as if it could be chosen.
  */
 const COMPARISON: { dimension: string; cells: Record<LookId, string> }[] = [
     {
@@ -106,9 +102,8 @@ export default function ConfigLook({ lookChoice }: Props) {
                     {t('A layout changes how the site is arranged around you, not what you can do here.')}
                 </p>
 
-                {/* Three columns of description do not fit a phone, and narrowing them to fit would
-                    cost the detail the table exists to give, so it scrolls sideways instead. A
-                    scrollable region needs a name and the keyboard's reach, hence role + tabIndex. */}
+                {/* A scrollable region needs a name and the keyboard's reach, hence role +
+                    tabIndex. */}
                 <div
                     role="region"
                     aria-label={t('How the layouts differ')}

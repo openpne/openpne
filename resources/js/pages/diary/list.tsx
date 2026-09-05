@@ -40,8 +40,8 @@ export default function DiaryList() {
 
     const submitSearch = (e: FormEvent) => {
         e.preventDefault();
-        // Keyword is orthogonal to the period: submit to the current path so a month archive stays
-        // narrowed and gains the term filter. Empty keyword drops the param (clean, unfiltered URL).
+        // Keyword is orthogonal to the period: submitting to the current path keeps a month archive
+        // narrowed, and an empty keyword drops the param.
         const path = page.url.split('?')[0] ?? page.url;
         router.get(path, keywordInput ? { keyword: keywordInput } : {}, {
             preserveState: true,

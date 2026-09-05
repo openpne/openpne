@@ -16,7 +16,6 @@ import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
 
-/** The hero's identity block, plus the facts about the group that belong beside its name. */
 interface UnifiedGroupIdentity extends UnifiedProfile {
     memberCount: number;
     categoryName: string | null;
@@ -44,13 +43,8 @@ interface UnifiedGroupProps extends PageProps {
 }
 
 /**
- * The unified group page (Look::Unified): the unified layout's grammar turned on a
- * group — what it is, how to be in it, what is being said in it, and who else is around. Read
- * vertically, like the home and the member page, so the three read as one surface.
- *
  * Every entrance the shipped group page offers is here with the same condition and the same
- * destination; what the layout adds is a way sideways (the groups filed beside this one) and a look
- * at the group rather than a list of it (the pictures its content was posted with).
+ * destination (docs/internals/looks.md, "What a look may not do").
  */
 export default function UnifiedGroup() {
     const t = useT();
@@ -76,8 +70,6 @@ export default function UnifiedGroup() {
         <>
             <Head title={group.name} />
 
-            {/* Above the hero, not inside it: this is an errand addressed to one member, and it has to
-                be answered before anything the page says about the group matters. */}
             {isTransferNominee && (
                 <section className={`${HOME_CARD} space-y-3 px-4 py-4 sm:px-5`}>
                     <p className="text-sm">{t('The administrator of this %community% asks you to take over the administration.')}</p>
@@ -95,8 +87,6 @@ export default function UnifiedGroup() {
             <ProfileHeader
                 profile={group}
                 as="h1"
-                // The description is what a group is for, and nothing below the hero repeats it — so it
-                // is read here in full rather than clamped to a lead-in.
                 clampBio={false}
                 meta={
                     <div className="mt-0.5 space-y-0.5 text-sm text-muted-foreground">
@@ -148,16 +138,15 @@ export default function UnifiedGroup() {
                 }
             />
 
-            {/* Directly under the hero, as on the shipped page: the conversation is the thing a member
-                comes back for, and the row is its entrance — the empty state carries it too, since a
-                group whose talk has not started is exactly the one that needs a way in. */}
+            {/* The empty state carries the entrance too: a group whose talk has not started is the
+                one that needs a way in. */}
             {canViewTalk && (
                 <HomeSection
                     title={
                         <>
                             {t('Talk')}
                             {/* The pill in `right` is beside the heading, not inside a control, so
-                                its number would belong to nothing. The heading is what it is about. */}
+                                its number would belong to nothing. */}
                             {talkUnread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, talkUnread)}</span>}
                         </>
                     }
@@ -284,7 +273,6 @@ export default function UnifiedGroup() {
     );
 }
 
-/** The way from a board's latest few to the board itself, under the rows where it is read last. */
 function SeeAll({ href, label }: { href: string; label: string }) {
     return (
         <Link href={href} className="mt-2 inline-block text-sm text-link hover:underline">

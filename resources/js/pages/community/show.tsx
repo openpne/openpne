@@ -119,10 +119,8 @@ export default function CommunityShow() {
                 )}
             </Panel>
 
-            {/* Where the community timeline's box used to sit — the plugin injected it before the
-                group's own details, and talk inherits the slot. The server has already answered the
-                read gate; a non-member of an Everyone group sees the preview with no unread of their
-                own, since only a membership carries a cursor. */}
+            {/* The server has already answered the read gate; a non-member of an Everyone group sees
+                the preview with no unread of their own, since only a membership carries a cursor. */}
             {canViewTalk && (
                 <Panel
                     flush
@@ -130,16 +128,14 @@ export default function CommunityShow() {
                         <>
                             {t('Talk')}
                             {/* The pill in `right` is beside the heading, not inside a control, so
-                                its number would belong to nothing. The heading is what it is about. */}
+                                its number would belong to nothing. */}
                             {talkUnread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, talkUnread)}</span>}
                         </>
                     }
                     right={<CountPill count={talkUnread} />}
                 >
-                    {/* The row is the entrance, the way a topic row is: a footer link beside it would
-                        be a second way into the one screen the card is about. The empty state carries
-                        it too — a group whose conversation has not started is exactly the one that
-                        needs a way in. */}
+                    {/* The empty state carries the entrance too: a group whose conversation has not
+                        started is the one that needs a way in. */}
                     <List>
                         <ListRow rowLink chevron>
                             <p className="min-w-0 flex-1 truncate text-sm">

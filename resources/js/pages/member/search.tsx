@@ -33,7 +33,6 @@ export default function MemberSearch() {
     const [monthday, setMonthday] = useState<Record<string, MonthDayRange>>(criteria.monthday ?? {});
     const [age, setAge] = useState<AgeRange>(criteria.age ?? {});
 
-    // No searchable profile fields and no age criterion → there is nothing behind the toggle.
     const hasAdvancedFields = profiles.length > 0 || showAge;
 
     // Land with the detailed criteria expanded only when the applied search actually used one, so the
@@ -65,8 +64,8 @@ export default function MemberSearch() {
         <>
             <Head title={t('Member search')} />
             <form onSubmit={submit} className="space-y-3">
-                {/* Card-less pill: the common case is a quick name lookup, so the search stays
-                    subordinate to the results list below. The magnifier submits the whole form. */}
+                {/* Card-less pill, subordinate to the results list; the magnifier submits the whole
+                    form, advanced fields included. */}
                 <div className="relative">
                     <label htmlFor="search_name" className="sr-only">
                         {t('%nickname%')}
@@ -152,7 +151,6 @@ export default function MemberSearch() {
                                     key={member.id}
                                     rowLink
                                     chevron
-                                    // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
                                     className={member.selfIntroduction ? 'items-start' : undefined}
                                 >
                                     <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="md" decorative />

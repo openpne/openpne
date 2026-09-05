@@ -116,12 +116,8 @@ const liveReply = {
     thumbnailUrl: null as string | null,
 };
 
-/**
- * Both branches carry the same controls under the same names. What a screen shows of them is CSS the
- * component test never loads — the reveal and the touch lane are checked in the browser (tools/ux-review),
- * not here — so this asserts only that the names exist to be reached at all, which is what the
- * `sr-only` lane rests on.
- */
+/** What a screen shows of them is CSS a component test never loads, so this asserts only that the
+ *  names exist to be reached at all. */
 test.each([false, true])('a row (grouped: %s) offers reacting, replying and deleting by name', (grouped) => {
     renderWithProviders(
         <ul>
@@ -153,9 +149,8 @@ test('a reply draws its reference above the row: the parent author, the excerpt,
     expect(screen.getByText('Mei')).toBeTruthy();
     expect(screen.getByText('the plan we discussed')).toBeTruthy();
 
-    // The whole line is one button, and its accessible name carries the who-and-what — not a bare
-    // "go to" label an aria-label would flatten every reference to. Activating it goes to the
-    // referenced message by id and cursor.
+    // The matcher is a predicate because the who-and-what has to be in the accessible name, not a
+    // bare "go to".
     const jump = screen.getByRole('button', {
         name: (name: string) => name.includes('Go to the replied message') && name.includes('Mei') && name.includes('the plan we discussed'),
     });
@@ -185,7 +180,6 @@ test('a reply to a deleted parent reads as deleted and is not a jump', () => {
     renderRow({ inReplyTo: { deleted: true } });
 
     expect(screen.getByText('Deleted message')).toBeTruthy();
-    // Plain text, no button semantics: there is nowhere to jump to.
     expect(screen.queryByRole('button', { name: 'Go to the replied message' })).toBeNull();
 });
 
@@ -199,11 +193,8 @@ test('the row carries the time alone, beside the author rather than at the far e
     const { container } = renderRow();
 
     const stamp = container.querySelector('time');
-    // The day is said once by the heading above the run, so the row says only the hour and minute.
     expect(stamp?.textContent).toBe('10:00');
-    // Still the whole instant for machines, and the whole value on hover.
     expect(stamp?.getAttribute('datetime')).toBe('2026-08-16T10:00:00+09:00');
-    // Nothing pushes it away from the name it belongs to.
     expect(stamp?.className).not.toContain('ml-auto');
 });
 
@@ -223,14 +214,13 @@ test('a folded row keeps its time in the gutter, spoken as well as drawn', () =>
         </ul>,
     );
 
-    // Counted rather than located. A selector down the row's boxes resolves to the gutter only by
-    // today's order of children, and the companion test below asserts an *absence* — which such a
-    // selector would go on passing the moment it stopped pointing at the gutter at all.
+    // Counted rather than located: a selector down the row's boxes resolves to the gutter only by
+    // today's order of children, and the companion test below asserts an absence.
     const stamps = [...container.querySelectorAll('time')];
     // Two lanes, one minute: what a cursor reveals, and what a screen reader is told instead.
     expect(stamps.map((stamp) => stamp.textContent)).toEqual(['10:00', '10:00']);
-    // Whether the drawn one is *visible* is the hover rule, which this test never loads
-    // (tools/ux-review drives that in a browser); that it is hidden from the spoken lane is here.
+    // Whether the drawn one is visible is the hover rule, which a component test never loads; that it
+    // is hidden from the spoken lane is here.
     expect(stamps.filter((stamp) => stamp.closest('[aria-hidden]') !== null)).toHaveLength(1);
     expect(stamps.filter((stamp) => stamp.closest('.sr-only') !== null)).toHaveLength(1);
 });
@@ -238,9 +228,8 @@ test('a folded row keeps its time in the gutter, spoken as well as drawn', () =>
 test('a row that draws its author draws no gutter time: it already shows one beside the name', () => {
     const { container } = renderRow();
 
-    // One stamp, and it is the one beside the name: a second would be the gutter's, drawn on a row
-    // that never folded. Counting is what makes this fail if a stamp appears rather than if a
-    // selector stops finding one.
+    // Counting is what makes this fail if a stamp appears rather than if a selector stops finding
+    // one.
     const stamps = [...container.querySelectorAll('time')];
     expect(stamps).toHaveLength(1);
     expect(stamps[0]?.closest('[aria-hidden]')).toBeNull();
@@ -268,10 +257,7 @@ test('a message whose body holds a link draws the card under the words', () => {
 
     const card = screen.getByText('A title from the page').closest('a');
     expect(card).not.toBeNull();
-    // The domain is what a reader acts on, and it is drawn whatever the title claims.
     expect(card?.textContent).toContain('example.com');
-    // No width of its own: a card restates something in the message, so it runs to the words' edge
-    // rather than stopping short of them (link-card.tsx).
     expect(card?.className).not.toMatch(/\bmax-w-/);
 });
 
@@ -323,7 +309,6 @@ test('a completed copy answers with a check and a spoken line, then offers again
 
     // Spoken on completion, not on the click: the acknowledgement claims the write happened.
     expect(screen.getByText('Link copied.')).toBeTruthy();
-    // data-ack is what holds the bar out while the answer is showing.
     expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBe('copied');
 
     act(() => {

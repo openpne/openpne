@@ -17,7 +17,6 @@ export interface UnifiedProfile {
     avatarUrlLarge: string | null;
     avatarColor: string | null;
     isAi: boolean;
-    /** Self-introduction, promoted into the header; null when unset. */
     bio: string | null;
     /** Only where the page is about somebody else, and only inside their age gate. */
     age?: number | null;
@@ -27,22 +26,8 @@ export interface UnifiedProfile {
 const COVER_SIZES = '(min-width: 42rem) 42rem, 100vw';
 
 /**
- * Who the page is about.
- *
- * The member's picture is the cover rather than a face beside the name: a home someone opens dozens
- * of times a day should look like theirs before a word of it is read, and a page about another member
- * is about them before it is read either. The arc is what keeps it a header and not a banner — the
- * card rises back over the photo's foot, so the name sits on the card rather than on the picture, and
- * no text ever has to survive whatever was uploaded behind it.
- *
- * `selfLink` is the home's way through to the profile; a page that already is the profile passes
- * `actions` instead — what the viewer can do about this member, where the link would have been — and
- * `as="h1"`, since there the name is what the page is called rather than a block inside it.
- *
- * `meta` is the line of facts about the subject that belongs with its name (a group's category and
- * size), and `clampBio` decides whether the self-introduction is a two-line lead-in or the whole
- * text: a member's page has their profile below to read the rest of them in, a group's page has
- * nothing else that says what the group is for.
+ * The card rises back over the photo's foot, so no text ever has to survive whatever was uploaded
+ * behind it. `clampBio` is false where nothing else on the page says what the subject is for.
  */
 export function ProfileHeader({
     profile,
@@ -77,9 +62,8 @@ export function ProfileHeader({
                         className="aspect-[4/3] max-h-[21.25rem] w-full object-cover sm:max-h-72"
                     />
                 ) : (
-                    // No picture still gets a cover: a wash of the identity's color (chosen, or
-                    // derived from the name), the initial standing in the area the dome leaves
-                    // visible — the page reads designed rather than missing something.
+                    // The initial stands in the area the dome leaves visible, which is what the
+                    // bottom padding reserves.
                     <div
                         aria-hidden
                         className="flex aspect-[4/3] max-h-[16rem] w-full items-center justify-center pb-24 sm:max-h-60"
@@ -92,11 +76,7 @@ export function ProfileHeader({
                         />
                     </div>
                 )}
-                {/* The design's bowl, measured off the mock (590x369): apex ≈ 39% of the cover's
-                    height, meeting the card's edges ≈ 19% up — a half-ellipse a little wider than
-                    the card (≈114%), so the picture ends where the curve crosses the edge and the
-                    skirt below is white the full width. -bottom-px closes the seam a fractional
-                    height can open. */}
+                {/* -bottom-px closes the seam a fractional height can open. */}
                 {/* rounded-t-full would clamp to quarter-circles with a flat middle (the radii scale by the
                     SMALLEST side ratio); the explicit 50%/100% pair keeps the whole top one ellipse. */}
                 <span aria-hidden className="absolute inset-x-[-7%] -bottom-px block h-26 rounded-t-[50%_100%] bg-card" />

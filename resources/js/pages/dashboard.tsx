@@ -28,10 +28,8 @@ interface DashboardProps extends PageProps {
 }
 
 /**
- * Attention notices — pending friend requests, conversations with something new, and join requests
- * awaiting the viewer's approval. Layer-1 "needs action" counts only: the layer-3 unread-notification count is
- * the nav bell / bottom bar's job — a row restating that badge would say nothing new while
- * occupying the top of the dashboard.
+ * "Needs action" counts only: the unread-notification count stays with the bell
+ * (docs/internals/notifications.md, "The three layers").
  */
 function AnnouncementsPanel({ announcements }: { announcements: Announcements }) {
     const t = useT();
@@ -84,7 +82,6 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     );
 }
 
-/** A section shown only when it has rows: title band with a "View all" (and optional extra) link. */
 function DigestSection({ title, viewAllHref, extra, children }: { title: string; viewAllHref: string; extra?: ReactNode; children: ReactNode }) {
     const t = useT();
     return (
@@ -123,9 +120,8 @@ export default function Dashboard() {
 
             <AnnouncementsPanel announcements={announcements} />
 
-            {/* Talk leads the screen: the conversations are what a member comes back for; everything
-                below them is reading. It sits outside the welcome branch and does not decide it —
-                a room is a place to talk, not the feeds and people that panel offers to go find. */}
+            {/* It sits outside the welcome branch and does not decide it: a room is a place to talk,
+                not the feeds and people that panel offers to go find. */}
             {enabledFeatures.groupTalk && talkRooms.length > 0 && (
                 <DigestSection title={t('Talk')} viewAllHref="/groups/mine">
                     {talkRooms.map((room) => (

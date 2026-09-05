@@ -6,25 +6,16 @@ import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem } from '@/types';
 
-/** A row of the seat map: how wide the seats are spread, and how many of them are taken. */
 export interface SeatRow {
-    /** Seats the row is spread over — four or five, which is what sets the pitch between faces. */
     seats: 4 | 5;
     /** Faces seated in it; fewer than `seats` in the last row of a count that does not fill it. */
     filled: number;
 }
 
 /**
- * The rows of the seat map: four faces spread over the row, then five, then four again.
- *
- * The unevenness is the point. Rows of four and of five over the same width put one row's faces
- * between the other's, and that stagger is what keeps a group of people from reading as an assembly
- * photo. It follows from the seat counts alone, so no face is offset by hand and the formation
- * survives any width.
- *
- * The last row is left ragged rather than centred: centring it would line the columns back up
- * whenever the count fills two rows evenly. A count that fits one row is drawn as one row, though —
- * a second row holding a single face has nothing to stagger against, and reads as a leftover.
+ * Rows of four and of five over the same width put one row's faces between the other's, which is
+ * where the stagger comes from. The last row is left ragged rather than centred: centring it would
+ * line the columns back up whenever the count fills two rows evenly.
  */
 export function seatRows(count: number): SeatRow[] {
     if (count === 0) {
@@ -48,23 +39,9 @@ export function seatRows(count: number): SeatRow[] {
 }
 
 /**
- * The people a member or a group keeps company with, as faces in the seat map. Faces alone: the grid
- * is decoration — who is around, at a glance — and the roster it links to is where names are read.
- * The name is still the link's accessible name, so nothing is lost to anyone reading the page aloud.
- *
- * A face is the mock's 48px, and 72 in the desktop column; the seat it sits in is what the width
- * divides into, so the slack around it grows with the screen rather than the face. The cap is written
- * as a maximum over the seat, not as a size, so a viewport too narrow to seat five 48px faces shrinks
- * them instead of letting the row spill out of its card.
- *
- * One list over one grid of forty columns: the rows are a visual arrangement, and a list per row would
- * have a screen reader announce a formation the design draws for the eye. A seat is eight columns in a
- * row of five, and nine starting two columns in for a row of four — which is where the stagger comes
- * from, since the four-seat row is both wider-pitched and held off the edges. Forty columns is what
- * lets that inset be a whole number of them. The top row is always full, so what breaks a row is the
- * spans rather than the count.
- *
- * The seat, not the face, is the link: a circle would hand back the corners of its own target.
+ * One list over one grid of forty columns: a list per row would have a screen reader announce a
+ * formation drawn for the eye, and forty is what makes the four-seat row's inset a whole number of
+ * columns. The seat, not the face, is the link: a circle hands back the corners of its own target.
  */
 export function PeopleGrid({ people }: { people: NineTableItem[] }) {
     const t = useT();
@@ -92,6 +69,8 @@ export function PeopleGrid({ people }: { people: NineTableItem[] }) {
                                 title={label}
                                 className="group block focus-visible:outline-none"
                             >
+                                {/* A cap over the seat rather than a size, so a viewport too narrow to seat five faces
+                                    shrinks them instead of letting the row spill out of its card. */}
                                 <span className="relative mx-auto block aspect-square w-full max-w-12 rounded-full group-focus-visible:ring-2 group-focus-visible:ring-ring sm:max-w-18">
                                     {person.imageUrl ? (
                                         <img src={person.imageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
