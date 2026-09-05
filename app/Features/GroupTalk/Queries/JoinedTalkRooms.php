@@ -24,8 +24,8 @@ class JoinedTalkRooms
     public const PER_PAGE = 20;
 
     /**
-     * A caller with no request behind it must name $page, since `paginate()` otherwise reads it off a
-     * request that is not there.
+     * A caller with no request behind it must name $page, since `paginate()` otherwise answers page
+     * one every time.
      *
      * @return LengthAwarePaginator<int, TalkRoom>
      */

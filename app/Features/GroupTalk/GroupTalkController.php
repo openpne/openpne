@@ -44,8 +44,8 @@ class GroupTalkController extends Controller
         $anchor = $this->anchor($group, $request->query('m'));
         $reactionsVersion = TalkReactionVersion::of($group);
         $page = $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor));
-        // Talk has no detail page, so this is where a card is asked for, and only for the rows the
-        // page renders (docs/internals/link-cards.md, "The conversation page is talk's detail page").
+        // Talk has no detail page, so its reads are where a card is asked for, and only for the rows
+        // they render (docs/internals/link-cards.md, "The conversation page is talk's detail page").
         $linkCards->ensureAll($page->messages);
         $snapshot = $unread($group, $viewer);
 

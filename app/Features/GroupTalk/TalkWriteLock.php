@@ -6,7 +6,7 @@ use App\Models\GroupMessage;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Every write that touches a reaction takes this first: the group's row exclusively, then the
+ * Every application write that touches a reaction takes this first: the group's row exclusively, then the
  * message (docs/internals/group-talk.md, "One lock order"). Both are locking
  * reads, so under REPEATABLE READ they see the latest committed row rather than the transaction's
  * snapshot.
