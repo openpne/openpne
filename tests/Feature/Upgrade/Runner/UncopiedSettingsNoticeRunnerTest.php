@@ -86,6 +86,17 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         $this->assertStringContainsString('OPENPNE_IMAGE_MAX_UPLOAD_KB=2048', $output);
     }
 
+    public function test_the_command_prints_a_value_that_looks_like_a_console_tag(): void
+    {
+        // An unknown colour in an unescaped `<fg=…>` makes the console formatter throw.
+        $this->seedSize('<fg=bogus>300K');
+        $this->app->instance(UpgradeRunner::class, new UpgradeRunner(new InsertSelectCompiler, [new SnsSettingUpgrade]));
+
+        $this->artisan('openpne:upgrade-from-3', ['--dry-run' => true])
+            ->expectsOutputToContain('image_max_filesize = <fg=bogus>300K is not copied')
+            ->assertSuccessful();
+    }
+
     public function test_any_step_reading_sns_config_carries_the_notice(): void
     {
         $this->seedSize('300K');

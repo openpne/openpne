@@ -34,7 +34,7 @@ class UploadLimitTest extends TestCase
 
     public function test_the_config_fallback_and_the_constant_are_one_number(): void
     {
-        // An absent env reads the config fallback and a blank one the constant, so both must be one cap.
+        // The pinned env, the config fallback and the Livewire rule must be one number.
         $this->assertSame(UploadLimit::DEFAULT_KILOBYTES, (int) config('openpne.images.max_upload_kilobytes'));
         $this->assertContains('max:'.UploadLimit::DEFAULT_KILOBYTES, FileUploadConfiguration::rules());
     }
