@@ -81,12 +81,15 @@ class SnsSettingUpgrade extends UpgradeStep
             if ($map === null) {
                 continue;
             }
-            // Byte length for the blank: under MySQL's PAD SPACE collations `value` = '' also matches
-            // ' ', which OpenPNE 3 read as truthy.
+            // Byte length beside the equality: under MySQL's PAD SPACE collations '0 ' and ' ' equal
+            // '0' and '', while OpenPNE 3 read both as truthy strings.
             $inner = implode(' ', array_map(
-                static fn (string $from, string $to): string => $from === ''
-                    ? sprintf("WHEN LENGTH(`value`) = 0 THEN '%s'", $to)
-                    : sprintf("WHEN `value` = '%s' THEN '%s'", $from, $to),
+                static fn (string $from, string $to): string => sprintf(
+                    "WHEN `value` = '%s' AND LENGTH(`value`) = %d THEN '%s'",
+                    $from,
+                    strlen($from),
+                    $to,
+                ),
                 array_keys($map),
                 $map,
             ));

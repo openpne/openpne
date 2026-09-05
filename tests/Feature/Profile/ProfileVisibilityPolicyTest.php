@@ -5,6 +5,7 @@ namespace Tests\Feature\Profile;
 use App\Features\Profile\ProfileAccess;
 use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Models\Member;
+use App\Models\Profile;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -128,13 +129,30 @@ class ProfileVisibilityPolicyTest extends TestCase
 
     public function test_the_ai_account_page_sidemenu_hides_the_privacy_category_the_same_way(): void
     {
+        // The Classic AI account detail page draws the sidemenu without the config controller's props.
         $this->policy(ProfileVisibilityPolicy::Members);
         $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, true);
+        $owner = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($owner)->create();
+
+        $this->actingAs($owner)->get(route('member.config.ai.show', $aiAccount))
+            ->assertOk()
+            ->assertSee('id="pageNav"', false)
+            ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
+    }
+
+    public function test_the_classic_box_keeps_only_the_age_form_when_the_policy_decides(): void
+    {
+        // The one shape where the blade's own gate, not the controller's fold, hides the form.
+        $this->policy(ProfileVisibilityPolicy::Members);
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/member/config/ai')
+        $this->actingAs($member)->get('/member/config?category=publicFlag')
             ->assertOk()
-            ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
+            ->assertSee('id="publicFlagForm"', false)
+            ->assertSee('action="'.route('member.config.age').'"', false)
+            ->assertDontSee('action="'.route('member.config.profile_visibility').'"', false);
     }
 
     public function test_a_modern_save_announces_inline_and_not_as_a_page_flash(): void

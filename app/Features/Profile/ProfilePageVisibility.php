@@ -17,9 +17,7 @@ final class ProfilePageVisibility
 {
     public static function policy(): ProfileVisibilityPolicy
     {
-        $policy = app(SnsSettingService::class)->get(SnsSettingKey::ProfileVisibilityPolicy);
-
-        return $policy instanceof ProfileVisibilityPolicy ? $policy : ProfileVisibilityPolicy::Members;
+        return app(SnsSettingService::class)->get(SnsSettingKey::ProfileVisibilityPolicy);
     }
 
     public static function memberMayChoose(): bool

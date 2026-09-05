@@ -122,9 +122,7 @@ class MemberPrivacySettings extends Page
     {
         $values = [];
         foreach (SnsSettingKey::inGroup(SettingGroup::Privacy) as $key) {
-            // The service hands back the typed policy; the radio holds and posts its stored value.
-            $value = app(SnsSettingService::class)->get($key);
-            $values[$key->value] = $value instanceof ProfileVisibilityPolicy ? $value->value : $value;
+            $values[$key->value] = app(SnsSettingService::class)->get($key);
         }
 
         return $values;
