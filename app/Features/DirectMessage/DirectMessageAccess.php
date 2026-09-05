@@ -6,18 +6,13 @@ use App\Features\Block\BlockLookup;
 use App\Models\DirectMessage;
 use App\Models\Member;
 
-/**
- * Authorization choicepoint for private messages. Used by the controller, the queries, and
- * FilePolicy (for attachment bytes), so the "who may see this message" rule lives in one place.
- */
+/** The one place that answers who may see a private message, its attachment bytes included. */
 class DirectMessageAccess
 {
     /**
-     * May $viewer read this message (its body and attachments)? The sender always may — including
-     * their own draft — until they purge it. A recipient may read a delivered (non-draft) message
-     * they have not purged; a draft's intended recipient may not, so a draft attachment is never
-     * fetchable through the shared file route. Purge revokes the purging side's view (an old file
-     * URL stops resolving), distinct from the row/bytes that stay for the other side.
+     * A draft's intended recipient may not read it, so a draft's attachment is not fetchable through
+     * the file route either. Purge revokes the purging side's view — an old file URL stops resolving
+     * — while the row and its bytes stay for the other side.
      */
     public static function canViewMessage(DirectMessage $message, Member $viewer): bool
     {
@@ -36,9 +31,8 @@ class DirectMessageAccess
     }
 
     /**
-     * May $sender send a message to $recipient? OpenPNE 3 404s a self-addressed message; a blocked
-     * pair (either direction) cannot message; a login-rejected (banned) member cannot receive.
-     * ($recipient `is_active` has no OpenPNE 4 column — is_login_rejected is the carried gate.)
+     * A block in either direction refuses the pair, and a login-rejected member cannot receive.
+     * OpenPNE 3's `is_active` has no OpenPNE 4 column; `is_login_rejected` is the carried gate.
      */
     public static function canSend(Member $sender, Member $recipient): bool
     {

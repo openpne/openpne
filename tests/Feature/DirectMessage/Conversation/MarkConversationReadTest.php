@@ -8,10 +8,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 
-/**
- * "I have read this conversation as far as here": the client names a message, the server resolves
- * its position, and every receipt of this conversation still waiting at or before it is opened.
- */
 class MarkConversationReadTest extends ConversationTestCase
 {
     /** One message at a fixed minute, so the tuple order is the writing order. */
@@ -182,10 +178,7 @@ class MarkConversationReadTest extends ConversationTestCase
         $this->assertSame($first, $this->readAt($message, $viewer));
     }
 
-    /**
-     * Two tabs reporting out of order. `read_at` only ever goes from null to a time, so an older
-     * report re-marks nothing and the boundary cannot walk backwards.
-     */
+    /** Two tabs reporting out of order. */
     public function test_an_older_report_after_a_newer_one_marks_nothing(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

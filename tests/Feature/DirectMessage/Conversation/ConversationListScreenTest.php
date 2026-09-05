@@ -10,7 +10,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
-/** The `/messages` screen: the conversations, and the drafts box carried under them. */
 class ConversationListScreenTest extends ConversationTestCase
 {
     private function at(?Member $sender, ?Member $recipient, string $at, array $message = []): DirectMessage
@@ -100,10 +99,7 @@ class ConversationListScreenTest extends ConversationTestCase
             ->assertInertia(fn ($page) => $page->where('conversations.data.0.latest.body', 'Holiday photos'));
     }
 
-    /**
-     * "0" is a message, and so is a subject of "0". Each step down the body → subject → picture order
-     * tests emptiness strictly, not PHP's truthiness, or a member's own words would read as a picture.
-     */
+    /** "0" is a message, and so is a subject of "0": each step tests emptiness rather than truthiness. */
     public function test_a_body_or_subject_of_zero_is_previewed_as_itself(): void
     {
         [$viewer, $other, $third] = Member::factory()->count(3)->create();

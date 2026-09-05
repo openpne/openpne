@@ -13,10 +13,8 @@ use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Compose a new message (a fresh message or a reply) and either send it or keep it as a draft.
- * Sending creates the receipt (direct_message_recipients) and notifies the recipient after commit; a draft
- * has no receipt and holds its pending recipient in draft_recipient_id, so a draft is never the
- * recipient's. Editing the draft (UpdateDraft) materializes the receipt when it is finally sent.
+ * A draft has no receipt and holds its pending recipient in `draft_recipient_id`, so it is never the
+ * recipient's; sending is what writes the receipt.
  */
 class SendDirectMessage
 {
@@ -42,7 +40,6 @@ class SendDirectMessage
             persist: function () use ($sender, $recipient, $data, $asDraft): DirectMessage {
                 $message = DirectMessage::create([
                     'sender_id' => $sender->getKey(),
-                    // A draft keeps its recipient here; sending materializes a receipt instead.
                     'draft_recipient_id' => $asDraft ? $recipient->getKey() : null,
                     'subject' => $data->subject,
                     'body' => $data->body,

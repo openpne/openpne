@@ -87,8 +87,7 @@ class DirectMessageControllerTest extends TestCase
 
     public function test_show_renders_a_legacy_message_with_null_subject_and_body(): void
     {
-        // OpenPNE 3 subject/body are nullable; a migrated legacy row may carry null. The show page
-        // must still render rather than error.
+        // OpenPNE 3 subject/body are nullable, so a migrated legacy row may carry null.
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $message = $this->deliver($sender, $recipient, ['subject' => null, 'body' => null]);
 

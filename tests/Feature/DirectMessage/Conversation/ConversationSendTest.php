@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * Writing into a conversation. The write itself is the mailbox's SendDirectMessage; what this pins
- * is the shape the chat screen sends and gets back, and the fields it must leave empty.
+ * The write itself is the mailbox's SendDirectMessage; this pins the shape the chat screen sends and
+ * gets back.
  */
 class ConversationSendTest extends ConversationTestCase
 {

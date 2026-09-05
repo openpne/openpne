@@ -7,13 +7,9 @@ use App\Models\BannerImage;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Applies one admin edit of a banner image — link, label, optionally its placements, and optionally a
- * replacement file — atomically.
- *
- * Everything runs in one compensating transaction so a failed image swap rolls back the metadata too
- * (no half-saved edit). The row is locked first (like SetAvatar) so two concurrent edits/replaces
- * serialize instead of leaving the superseded upload's File orphaned as a public banner image. The
- * replaced File — bytes irreversible on a disk backend — is purged only after commit.
+ * The row is locked first so two concurrent edits serialize rather than leaving the superseded
+ * upload's File orphaned as a public banner image. The replaced File is deleted after the commit
+ * because a disk backend's byte deletion cannot be rolled back.
  */
 class UpdateBannerImage
 {
@@ -37,7 +33,6 @@ class UpdateBannerImage
                 return null;
             }
 
-            // Read the current File under the lock so a concurrent replace can't be missed.
             $replaced = $locked->file()->first();
             $file = $store($upload, 'bannerImage', $locked->getKey());
             $locked->update(['file_id' => $file->getKey()]);

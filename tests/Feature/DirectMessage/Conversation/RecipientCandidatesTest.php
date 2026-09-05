@@ -11,10 +11,6 @@ use App\Support\Feature;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 
-/**
- * Who the new-message picker offers, and the invariant that holds it to
- * DirectMessageAccess::canSend — a name offered here must reach a conversation with a composer in it.
- */
 class RecipientCandidatesTest extends ConversationTestCase
 {
     private const URI = '/messages/recipients';
@@ -176,8 +172,7 @@ class RecipientCandidatesTest extends ConversationTestCase
 
     public function test_it_throttles_after_the_per_member_cap(): void
     {
-        // The picker's search shares the mention pickers' keystroke limiter. Lower the per-member
-        // limb; keep the per-IP one loose so the member cap is what trips.
+        // Lower the per-member limb, keeping the per-IP one loose, so the member cap is what trips.
         config(['openpne.throttle.mention_search' => 2, 'openpne.throttle.mention_search_ip' => 1000]);
         $viewer = Member::factory()->create();
 

@@ -7,7 +7,6 @@ use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Member;
 
-/** The chat shape of a stored message: what the mailbox holds, as a conversation reads it. */
 class ConversationSerializerTest extends ConversationTestCase
 {
     public function test_a_mailbox_subject_is_carried_and_a_chat_message_has_none(): void

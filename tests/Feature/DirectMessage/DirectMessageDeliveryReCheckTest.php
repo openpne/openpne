@@ -18,9 +18,8 @@ use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
- * The delivery-time re-check. The mail carries the message body, and the queued job outlives the
- * facts it was enqueued under — so every case here changes the world *between* the send and the
- * delivery, and asks what actually reached the transport and the feed.
+ * Every case here changes the world between the send and the delivery, and asks what reached the
+ * transport and the feed.
  */
 class DirectMessageDeliveryReCheckTest extends TestCase
 {
@@ -174,11 +173,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /**
-     * The one fact the two channels answer differently: a feed row for a message already read would
-     * stand the bell over something the recipient has read, while the mail is a copy of the message
-     * rather than a badge, and still goes.
-     */
     public function test_a_message_read_before_delivery_keeps_the_mail_and_writes_no_feed_row(): void
     {
         $jobs = $this->queuedSend();

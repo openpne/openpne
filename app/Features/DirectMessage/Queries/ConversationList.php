@@ -11,24 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The viewer's conversations, most recently written in first: one row per counterpart, carrying the
- * message it leads with and the viewer's unread.
- *
- * **The order is decided in SQL, before the page is cut** — the room list's rule
- * (docs/internals/group-talk.md), for the same reason: paging the counterparts first and then
- * looking up their newest messages sorts the page rather than the correspondence. So the newest
- * `(created_at, id)` rides along as two correlated subselects, one per column, since the tuple
- * cannot be read in one statement without a row constructor or a lateral join.
- *
- * The counterparts are composed in the FROM clause as a UNION of the two arms — which
- * ConversationScope refuses for reading a conversation, and which is right here because this set is
- * never ordered or sliced: it is deduplicated and nothing else. That is also what collapses every
- * withdrawn member into one row, since UNION deduplicates NULL with NULL.
- *
- * What each row leads with is ConversationScope's own two arms, correlated to the row's counterpart
- * instead of a bound member — a shape the scope's Eloquent builder cannot be reused in. The list and
- * the per-conversation reads are therefore pinned against each other by test rather than by sharing
- * code (tests/Feature/DirectMessage/Conversation/ConversationListBeltTest.php).
+ * The order is decided in SQL, before the page is cut, and each row's lead message restates
+ * `ConversationScope`'s two arms as a correlated subquery the scope's builder cannot be reused in
+ * (`docs/internals/direct-messages.md`, "The conversation list").
  */
 class ConversationList
 {
@@ -46,15 +31,12 @@ class ConversationList
             ->selectSub($this->newest($viewerId, 'created_at'), 'latest_at')
             ->selectSub($this->newest($viewerId, 'id'), 'latest_id')
             ->selectSub($this->unread($viewerId), 'unread_count')
-            // No "nothing said yet" case for the order to place: a counterpart is here because a
-            // message is. The counterpart itself is the final tie-break — an upgraded
-            // multi-recipient send is the shared latest of every conversation it landed in, so
-            // (latest_at, latest_id) alone is not a total order, and an offset page boundary would
-            // duplicate or drop a row on whatever order the engine felt like. The withdrawn bucket
-            // sorts last within such a tie, spelled as a CASE because where an engine collates NULL
-            // in a descending sort is not a portable answer.
+            // An upgraded multi-recipient send is the shared latest of every conversation it landed
+            // in, so the counterpart is the final tie-break an offset page needs to not duplicate or
+            // drop a row.
             ->orderByDesc('latest_at')
             ->orderByDesc('latest_id')
+            // A CASE because where an engine collates NULL in a descending sort is not portable.
             ->orderByRaw('case when heads.counterpart_id is null then 1 else 0 end')
             ->orderByDesc('heads.counterpart_id')
             ->paginate($perPage);
@@ -63,10 +45,8 @@ class ConversationList
     }
 
     /**
-     * Everyone the viewer is corresponding with: the recipients of what they sent and still hold,
-     * and the senders of what they received and still hold. Per-side visibility and nothing else,
-     * so a conversation the viewer has emptied from their side leaves the list while staying whole
-     * in the other's.
+     * Per-side visibility and nothing else, so a conversation the viewer has emptied from their side
+     * leaves the list while staying whole in the other's.
      */
     private function counterparts(int $viewerId): Builder
     {
@@ -89,7 +69,6 @@ class ConversationList
         return $sent->union($received);
     }
 
-    /** One column of the conversation's newest message, by the `(created_at, id)` tuple. */
     private function newest(int $viewerId, string $column): Builder
     {
         return $this->conversation($viewerId)
@@ -99,7 +78,6 @@ class ConversationList
             ->limit(1);
     }
 
-    /** How many messages of this conversation are waiting: the received arm with an unopened receipt. */
     private function unread(int $viewerId): Builder
     {
         $query = DB::table('direct_messages as conversation')
@@ -110,7 +88,6 @@ class ConversationList
         return $this->isCounterpart($query, 'conversation.sender_id');
     }
 
-    /** ConversationScope's two arms, correlated to the row's counterpart rather than a bound member. */
     private function conversation(int $viewerId): Builder
     {
         return DB::table('direct_messages as conversation')
@@ -133,7 +110,6 @@ class ConversationList
                     ->whereExists(fn (Builder $receipt) => $this->viewerReceipt($receipt, $viewerId))));
     }
 
-    /** The viewer's own live receipt of the row — what makes a received message theirs to read. */
     private function viewerReceipt(Builder $query, int $viewerId): Builder
     {
         return $query
@@ -163,15 +139,12 @@ class ConversationList
      */
     private function summaries(Collection $rows): Collection
     {
-        // The ordering already named the exact rows, so both of these are lookups by key rather than
-        // a "newest message" query per conversation.
         $memberIds = $rows->pluck('counterpart_id')->filter()->map(static fn ($id): int => (int) $id)->all();
         $members = $memberIds === []
             ? new Collection
             : Member::query()->whereIn('id', $memberIds)->with('avatar.file')->get()->keyBy('id');
 
-        // Whether there are pictures, not how many: the preview's stand-in for a message with no
-        // words never counts them (App\Support\ChatPreview).
+        // Whether there are pictures, not how many: the preview's stand-in never counts them.
         $messageIds = $rows->pluck('latest_id')->map(static fn ($id): int => (int) $id)->all();
         $messages = $messageIds === []
             ? new Collection

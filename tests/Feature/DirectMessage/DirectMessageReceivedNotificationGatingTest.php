@@ -13,10 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The message delivery chain per channel: DirectMessageNew on → deliver to anyone; else
- * DirectMessageNewOnlyFriends on and the sender is a friend → deliver.
- */
 class DirectMessageReceivedNotificationGatingTest extends TestCase
 {
     use RefreshDatabase;
