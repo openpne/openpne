@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * A thumbnail is always a still image; the original size is served untouched, so that is where an
- * uploaded animation still plays (see docs/internals/security.md, "Decoding an upload").
+ * uploaded animation still plays (docs/internals/security.md, "Decoding an upload").
  */
 class ImageCache
 {
