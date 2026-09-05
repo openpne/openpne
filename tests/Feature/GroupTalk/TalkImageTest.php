@@ -4,6 +4,7 @@ namespace Tests\Feature\GroupTalk;
 
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTalk\Actions\DeleteGroupMessage;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
@@ -295,6 +296,62 @@ class TalkImageTest extends TalkTestCase
             $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
             $this->assertFalse(app(FileStorage::class)->exists($file));
         }
+    }
+
+    /** Disk lane: the only backend where a rolled-back row can point at bytes that are already gone. */
+    public function test_a_failed_purge_leaves_the_bytes_on_the_disk(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
+            ->json('id');
+        $file = $this->attachedFile(GroupMessage::findOrFail($id));
+        $this->assertNotNull($file);
+
+        GroupMessage::deleting(function (): void {
+            throw new RuntimeException('the delete failed after the sweep');
+        });
+
+        try {
+            app(DeleteGroupMessage::class)->purge(GroupMessage::findOrFail($id));
+            $this->fail('the purge did not fail');
+        } catch (RuntimeException $e) {
+            $this->assertSame('the delete failed after the sweep', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('group_messages', ['id' => $id]);
+        $this->assertDatabaseHas('files', ['id' => $file->getKey()]);
+        Storage::disk('local')->assertExists($file->name);
+    }
+
+    public function test_a_storage_failure_while_reclaiming_the_bytes_does_not_bring_the_message_back(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $real = new DiskFileStorage('local');
+        $this->instance(FileStorage::class, Mockery::mock(FileStorage::class, function ($mock) use ($real) {
+            $mock->shouldReceive('writeStream')->andReturnUsing(fn ($file, $stream) => $real->writeStream($file, $stream));
+            $mock->shouldReceive('readStream')->andReturnUsing(fn ($file) => $real->readStream($file));
+            $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
+            $mock->shouldReceive('delete')->andThrow(new RuntimeException('the storage is down'));
+        }));
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
+            ->json('id');
+
+        try {
+            app(DeleteGroupMessage::class)->purge(GroupMessage::findOrFail($id));
+            $this->fail('the purge did not fail');
+        } catch (RuntimeException $e) {
+            $this->assertSame('the storage is down', $e->getMessage());
+        }
+
+        $this->assertDatabaseMissing('group_messages', ['id' => $id]);
     }
 
     // --- FilePolicy: a talk image inherits the conversation's read gate ---
