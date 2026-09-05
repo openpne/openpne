@@ -31,11 +31,6 @@ use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
-/**
- * The per-message broadcast a site turns on with `group_talk_notify_default = all`. A mentions-only
- * site must stay as cheap as it was; an `all` site reaches every unmuted member who has not already
- * read the message, and the room keeps exactly one feed row however much is said in it.
- */
 class TalkNewMessageNotificationTest extends TalkTestCase
 {
     protected function setUp(): void
@@ -186,7 +181,6 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         Notification::assertSentTo($other, GroupTalkMessagePostedNotification::class);
     }
 
-    /** The asymmetry with a mention: asking the room for quiet answers a message addressed to the room. */
     public function test_a_muted_member_hears_nothing(): void
     {
         Notification::fake();
@@ -201,10 +195,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         Notification::assertNotSentTo($muted, GroupTalkMessagePostedNotification::class);
     }
 
-    /**
-     * The audience query itself, not just the delivery gate: a quiet room is the common case on an
-     * `all` site, so mute must drop out in SQL rather than be walked and discarded.
-     */
+    /** The audience query itself, not just the delivery gate that runs after it. */
     public function test_the_audience_query_leaves_out_a_muted_member(): void
     {
         $group = $this->group();
@@ -235,7 +226,6 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         Notification::assertNotSentTo($blocked, GroupTalkMessagePostedNotification::class);
     }
 
-    /** The grace the dispatch waits out: someone sitting in the room has already seen it. */
     public function test_a_member_who_already_read_the_message_is_not_told_about_it(): void
     {
         Notification::fake();
@@ -304,7 +294,6 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $this->assertCount(1, $this->roomRows($byMail, $group));
     }
 
-    /** An AI account keeps the record of what happened to it, and has nobody to interrupt by mail. */
     public function test_an_ai_account_gets_the_row_but_no_mail(): void
     {
         $this->notifyEveryMessage();
@@ -374,10 +363,6 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         ], $row->data);
     }
 
-    /**
-     * The room's row, not the message's: three messages leave one row, read rows included — while
-     * still sending three times, so the device is nudged for each (push follows the database send).
-     */
     public function test_a_busy_room_leaves_one_row_and_still_sends_each_time(): void
     {
         $this->notifyEveryMessage();
@@ -515,10 +500,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
             ->assertRedirect(route('notifications.index'));
     }
 
-    /**
-     * The replace runs inside the queued job that wrote the row, so a failure there must be reported
-     * and dropped: rethrowing would retry the job and duplicate the row it exists to deduplicate.
-     */
+    /** Rethrowing would retry the job and duplicate the row the replace exists to deduplicate. */
     public function test_a_failing_replace_is_reported_and_leaves_the_new_row_intact(): void
     {
         Exceptions::fake();

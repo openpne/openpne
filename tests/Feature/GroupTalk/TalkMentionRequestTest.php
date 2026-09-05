@@ -14,12 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * Layer one of the failure contract, and the feed's click-time resolution.
- *
- * A payload the picker could not have produced is a broken client or tampering, so the whole message
- * is refused — unlike a row that merely went stale, which is dropped alone (TalkMentionStorageTest).
- */
 class TalkMentionRequestTest extends TalkTestCase
 {
     private function joined(Group $group, string $name): Member
@@ -59,7 +53,6 @@ class TalkMentionRequestTest extends TalkTestCase
         $this->assertDatabaseCount('group_messages', 0);
     }
 
-    /** The bounds follow talk's own body cap, not the timeline's 140 — a mention may sit far into a long message. */
     public function test_an_offset_past_the_timeline_cap_is_accepted_here(): void
     {
         $group = $this->group();
@@ -91,7 +84,6 @@ class TalkMentionRequestTest extends TalkTestCase
             ->assertStatus(422);
     }
 
-    /** CRLF is normalized before offsets are measured, so a range after a newline still lands. */
     public function test_crlf_is_normalized_before_the_offsets_are_checked(): void
     {
         $group = $this->group();
@@ -122,7 +114,6 @@ class TalkMentionRequestTest extends TalkTestCase
         ]);
     }
 
-    /** On the message that named them: talk has no screen for one message, so `?m=` is the address. */
     public function test_the_feed_row_opens_the_conversation_on_the_message(): void
     {
         $group = $this->group();
@@ -135,7 +126,6 @@ class TalkMentionRequestTest extends TalkTestCase
         $this->assertSame("/groups/{$group->getKey()}/talk?m={$message->getKey()}", $url);
     }
 
-    /** Fail-closed: a message deleted since delivery resolves to nowhere, and the feed keeps the reader. */
     public function test_a_deleted_message_resolves_to_no_target(): void
     {
         $group = $this->group();
@@ -149,7 +139,6 @@ class TalkMentionRequestTest extends TalkTestCase
         $this->assertNull(NotificationFeedSerializer::targetUrl($row));
     }
 
-    /** Read access is re-asked at click time, not trusted from delivery. */
     public function test_a_reader_who_lost_access_resolves_to_no_target(): void
     {
         $group = $this->group(TopicReadAccess::MembersOnly);

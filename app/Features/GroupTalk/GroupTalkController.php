@@ -32,15 +32,6 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-/**
- * A group's talk: one linear conversation, Modern only (talk has no OpenPNE 3 counterpart, so there
- * is no Classic screen to be compatible with — /groups/recent takes the same shape).
- *
- * The page ships the newest slice, or the one a `?m=` deep link lands in; everything after it moves
- * over JSON — "load older" walks back by keyset and a poll asks what has arrived since. Every action
- * resolves the read gate first and answers 404 when it refuses, hiding whether the group has a
- * conversation at all.
- */
 class GroupTalkController extends Controller
 {
     public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
@@ -51,13 +42,10 @@ class GroupTalkController extends Controller
         // Resolved after the gate, so a link into a conversation the viewer may not read changes
         // nothing about the refusal.
         $anchor = $this->anchor($group, $request->query('m'));
-        // Before the page is read, never after: a reaction landing between the two would otherwise
-        // sit below the watermark the client starts polling from and never be asked for again.
         $reactionsVersion = TalkReactionVersion::of($group);
         $page = $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor));
-        // A conversation has no detail page, so this page is where a card is asked for — see
-        // LinkCardSync::ensureAll for what bounds it. The rows the page renders, not the parents
-        // read to decorate them.
+        // Talk has no detail page, so its reads are where a card is asked for, and only for the rows
+        // they render (docs/internals/link-cards.md, "The conversation page is talk's detail page").
         $linkCards->ensureAll($page->messages);
         $snapshot = $unread($group, $viewer);
 
@@ -69,22 +57,15 @@ class GroupTalkController extends Controller
             // Only a member holds a cursor or a mute, so only a member is offered either.
             'isMember' => $permissions->canPost,
             'isMuted' => $permissions->canPost && GroupTalkPermissions::isMuted($group, $viewer),
-            // Where the unread boundary stood at render time, and nothing later moves it: the page's
-            // "from here" divider has to keep naming the line the reader opened on, while the shared
-            // `unread` badge prop next to it goes on tracking the live count.
+            // Fixed at render time: the divider names the line the reader opened on, while the
+            // shared `unread` badge prop goes on tracking the live count.
             'talkUnreadSnapshot' => GroupMessageSerializer::unreadSnapshot($snapshot),
             'reactionsVersion' => $reactionsVersion,
-            // The vocabulary travels with the page rather than being duplicated in the bundle, so
-            // App\Features\Reactions\ReactionVocabulary is the one place it is written down and one
-            // render draws its picker from one set. A prop is fixed at render time, so a tab left
-            // open across a deploy still offers what it was rendered with; the add rule reads the
-            // class, refuses a retired emoji with 422, and the client's optimistic chip reverts.
+            // The set travels with the page so that nothing in the bundle holds a copy of it.
             'reactionVocabulary' => ReactionVocabulary::all(),
         ];
 
-        // Only a backlog worth a catch-up card gets one, and the key is absent rather than null
-        // below that: the digest costs queries, so "no digest" has to be a decision this side of the
-        // wire rather than a shape the client is handed and told to ignore.
+        // Absent rather than null below the threshold, where no digest query runs at all.
         $absence = $digest($group, $viewer, $snapshot);
         if ($absence !== null) {
             $props['unreadDigest'] = $absence;
@@ -94,13 +75,8 @@ class GroupTalkController extends Controller
     }
 
     /**
-     * The message `?m=` asked to open on — a mention notification's deep link — or null for the
-     * ordinary newest page.
-     *
-     * Best-effort by contract: a link naming a deleted message, another group's, or nothing that
-     * parses opens the conversation as usual rather than refusing it. A stale link is a link to a
-     * conversation that has moved on, and the notification feed's own click-time re-check does not
-     * cover mail or a pasted URL.
+     * Best-effort by contract: a deleted message, another group's id, or anything that does not parse
+     * opens the newest page rather than refusing the conversation.
      */
     private function anchor(Group $group, mixed $id): ?GroupMessage
     {
@@ -112,11 +88,8 @@ class GroupTalkController extends Controller
     }
 
     /**
-     * One page around a cursor the client was handed: `after` for the poll, `before` for "load
-     * older", `context` for the page a position sits in (the unread boundary; a deep link's landing
-     * is the same page, resolved by `show` above), none of them for the newest page. A cursor that
-     * does not parse is simply no cursor — pagination is a position, not a permission, and the gate
-     * above already decided the audience.
+     * A cursor that does not parse is simply no cursor: a position is not a permission, and the gate
+     * has already decided the audience.
      */
     public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions, ReplyReferences $replies, LinkCardSync $linkCards): JsonResponse
     {
@@ -128,8 +101,6 @@ class GroupTalkController extends Controller
         $before = GroupTalkCursor::tryParse($request->query('before'));
         $reactionsAfter = $this->reactionsAfter($request->query('reactionsAfter'));
 
-        // Read before the page, for the reason show() reads it before its own — and only when a
-        // client asked, so the ordinary poll costs what it always did.
         $snapshot = $reactionsAfter === null ? null : TalkReactionVersion::of($group);
 
         $page = match (true) {
@@ -139,8 +110,6 @@ class GroupTalkController extends Controller
             default => $query->latest($group),
         };
 
-        // As in show(): every page this answers is a page of the conversation itself, including the
-        // history "load older" walks back through.
         $linkCards->ensureAll($page->messages);
 
         $permissions = GroupTalkPermissions::for($group, $viewer);
@@ -154,11 +123,6 @@ class GroupTalkController extends Controller
     }
 
     /**
-     * The reaction watermark a client is polling from, or null for one that does not speak the
-     * protocol — a tab loaded before this shipped, or a surface (direct messages) that shares the
-     * poll and has no reactions. Its answer keeps the shape it has always had, down to the absence
-     * of these two keys.
-     *
      * Unparseable is read as absent rather than refused, exactly as a malformed cursor is: a poll
      * that 422s would take the whole conversation off the screen over a watermark.
      */
@@ -168,13 +132,8 @@ class GroupTalkController extends Controller
     }
 
     /**
-     * The messages whose reactions changed since the client's watermark, and the watermark to come
-     * back with.
-     *
-     * A full page means the catch-up is not finished, so the watermark is the last row returned
-     * rather than the snapshot: moving it to the snapshot would step over everything the cap left
-     * behind. Only an exhausted read may take the snapshot, which was read before the page and so
-     * cannot be ahead of anything this answer omits.
+     * A capped page reports the last row it returned rather than the snapshot, so nothing the cap
+     * left behind is stepped over.
      *
      * @param  Collection<int, GroupMessage>  $rows  one over the cap, as the query returns them
      * @return array{touched: list<array>, reactionsVersion: int}
@@ -183,10 +142,7 @@ class GroupTalkController extends Controller
     {
         $capped = $rows->count() > GroupTalkMessages::PER_PAGE;
         $rows = $rows->take(GroupTalkMessages::PER_PAGE);
-        // The rows the page did not carry, counted in the same one query the page's chips came from.
         $chips = $reactions($permissions->member, $rows);
-        // A touched row replaces the client's whole row, so it has to arrive as complete as a page's:
-        // one without its reference would take the reply header off screen the moment someone reacted.
         $parents = $replies($group, $rows);
 
         return [
@@ -195,10 +151,7 @@ class GroupTalkController extends Controller
         ];
     }
 
-    /**
-     * What the composer's @mention picker reads. Gated on posting, not reading: only someone who can
-     * write here has a mention to make, and the roster is not a non-member's to browse.
-     */
+    /** Gated on posting rather than reading: the roster is not a non-member's to browse. */
     public function mentionCandidates(Request $request, Group $group, GroupTalkMentionCandidates $query): JsonResponse
     {
         $request->validate(['q' => ['nullable', 'string', 'max:100']]);
@@ -214,14 +167,11 @@ class GroupTalkController extends Controller
         ]);
     }
 
-    /** Returns the message it wrote, so the composer appends it rather than re-reading the page. */
     public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action, ReplyReferences $replies): JsonResponse
     {
         $viewer = $this->viewer();
-        // Before the reply id is resolved, not after: resolving it is scoped to this group and 422s an
-        // id that is not a live message of it, so a non-member reaching the resolve would read that 422
-        // apart from the 404 a live id draws — an existence oracle over a group they may not post to.
-        // Gating first collapses both to 404, and a member (canPost) may already read every message.
+        // Gated before the reply id is resolved: the resolve's 422 would otherwise be an existence
+        // oracle over a group the viewer may not post to.
         abort_unless(GroupTalkAccess::canPost($group, $viewer), 404);
         $inReplyTo = $this->replyTo($group, $request->replyToMessageId());
 
@@ -231,29 +181,22 @@ class GroupTalkController extends Controller
             abort(404);
         }
 
-        // The author is the viewer; hand the model over rather than re-reading the row just written.
         $message->setRelation('author', $viewer->loadMissing('avatar.file'));
-        // PostImages creates the join rows through the relation, which does not populate it — load
-        // them explicitly rather than letting the serializer lazy-load one query per attachment.
+        // PostImages writes the join rows through the relation without populating it, so the
+        // serializer would otherwise lazy-load one query per attachment.
         $message->loadMissing('images.file');
 
         return response()->json(
-            // A message a moment old has no reactions by construction; say so rather than pay a
-            // query to be told. The reference it may carry is read the way a page reads one, so the
-            // row the composer appends is shaped exactly like the one a reload would bring back.
+            // A message a moment old has no reactions, so the empty chip row is passed rather than
+            // queried for.
             GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer), [], $replies->of($group, $message)),
             201,
         );
     }
 
     /**
-     * The message a composer is answering: a live row of *this* group, as `anchor()` and the MCP tool
-     * resolve one. An id that resolves to nothing is a 422 rather than a silently plain message — the
-     * client keeps the draft and says what happened.
-     *
-     * Nothing is locked between here and the insert. A parent deleted in that window leaves a
-     * reference to a row that is gone, which is the state deleting it produces anyway and which the
-     * screen draws as such.
+     * Nothing is locked between this resolve and the insert: a parent deleted in that window leaves
+     * a dangling reference, which is the state deleting one produces anyway.
      */
     private function replyTo(Group $group, ?int $id): ?GroupMessage
     {
@@ -272,11 +215,6 @@ class GroupTalkController extends Controller
         return $message;
     }
 
-    /**
-     * "I have read as far as this message", or — with no id — "I have read the lot", the digest's
-     * catch-up. Fire-and-forget from the reader's side: it carries no body back, and the shell's own
-     * refresh is what moves the badge.
-     */
     public function read(MarkTalkReadRequest $request, Group $group, MarkTalkRead $action): Response
     {
         abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
@@ -284,15 +222,12 @@ class GroupTalkController extends Controller
         try {
             $action($this->viewer(), $group, $request->messageId());
         } catch (GroupTalkActionException) {
-            // A message deleted between rendering and this call is an ordinary race, and so is a
-            // non-member trying to hold a cursor; neither is worth a distinct answer.
             abort(404);
         }
 
         return response()->noContent();
     }
 
-    /** Per-group quiet, on the membership row. Explicit state rather than a blind flip, so a double tap settles. */
     public function mute(Request $request, Group $group, SetTalkMute $action): Response
     {
         abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
@@ -309,8 +244,6 @@ class GroupTalkController extends Controller
 
     public function delete(Group $group, GroupMessage $message, DeleteGroupMessage $action): Response
     {
-        // The message id names its group already; the path carries both, so a mismatch is a
-        // malformed URL rather than a message to act on.
         abort_unless($message->group_id === $group->getKey(), 404);
 
         try {

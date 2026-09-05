@@ -14,25 +14,18 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The viewer's own groups read as conversations: most recently talked in first, each carrying the
- * line it leads with and the viewer's unread.
- *
- * **The order is decided in SQL, before the page is cut.** Paging the groups first and then asking
- * for their newest messages would sort the page rather than the membership — a group talked in an
- * hour ago belongs at the top whether or not it falls in the first twenty by id.
- *
- * So the newest message's `(created_at, id)` rides along as two correlated subselects, one per
- * column: the tuple cannot be read in one statement without a row constructor or a lateral join,
- * and neither is portable to SQLite. Each is a single seek on `(group_id, created_at, id)`.
+ * The order is decided in SQL before the page is cut: paging the groups first and then reading their
+ * newest messages sorts the page rather than the membership. The newest tuple rides along as two
+ * correlated subselects because reading it in one needs a row constructor or a lateral join, and
+ * SQLite has neither.
  */
 class JoinedTalkRooms
 {
     public const PER_PAGE = 20;
 
     /**
-     * $page is null for a caller that has a URL behind it — paginate() then reads `?page=` as it
-     * always did. A caller with no request (the MCP tool) names the page, or every call would answer
-     * the first one.
+     * A caller with no request behind it must name $page, since `paginate()` otherwise answers page
+     * one every time.
      *
      * @return LengthAwarePaginator<int, TalkRoom>
      */
@@ -43,24 +36,15 @@ class JoinedTalkRooms
         return $paginator->setCollection($this->rooms($paginator->getCollection(), $withUnreadMentions));
     }
 
-    /**
-     * The leading rooms alone, for a digest that has no pager: no total to count, and no page
-     * number read off the URL of a screen that has none.
-     *
-     * @return Collection<int, TalkRoom>
-     */
+    /** @return Collection<int, TalkRoom> */
     public function take(Member $viewer, int $limit): Collection
     {
         return $this->rooms($this->ordered($viewer)->limit($limit)->get());
     }
 
     /**
-     * The viewer's rooms in room order, before any page is cut — shared with the nav's lighter slice
-     * (NavTalkRooms), which takes the same rows and stops there.
-     *
-     * $withUnreadMentions buys a third correlated subselect and is off for everything the nav
-     * renders: this query runs on every page, and "how many of those are addressed to me" — named or
-     * answered — is a question only a caller with no screen to look at asks (the MCP room list).
+     * $withUnreadMentions buys a third correlated subselect, so it stays off for the reads that run
+     * on every page.
      *
      * @return EloquentBuilder<Group>
      */
@@ -75,8 +59,6 @@ class JoinedTalkRooms
             ->addSelect([
                 'latest_message_at' => $this->newest('created_at'),
                 'latest_message_id' => $this->newest('id'),
-                // The same read model the group list's per-row counts use, so the number here and
-                // the number in the nav can never disagree about what unread means.
                 'unread_talk_count' => UnreadTalkScope::correlate(
                     DB::table('group_messages')->selectRaw('count(*)'),
                     'group_members',
@@ -87,20 +69,15 @@ class JoinedTalkRooms
                 'unread_mention_count' => $this->unreadMentions($viewerId),
             ]))
             ->with('image')
-            // Rooms that have been talked in lead. Spelled as a CASE rather than left to where the
-            // engine collates NULL in a descending sort, which is not a portable answer.
+            // A CASE rather than a reliance on where the engine collates NULL in a descending sort,
+            // which is not a portable answer.
             ->orderByRaw('case when latest_message_at is null then 1 else 0 end')
             ->orderByDesc('latest_message_at')
             ->orderByDesc('latest_message_id')
-            // Nothing said yet: the join is the only event the room has, newest first.
             ->orderByDesc('group_members.created_at')
             ->orderByDesc('groups.id');
     }
 
-    /**
-     * One column of the group's newest message, by the `(created_at, id)` tuple everything in talk
-     * is ordered by.
-     */
     private function newest(string $column): Builder
     {
         return DB::table('group_messages')
@@ -112,18 +89,10 @@ class JoinedTalkRooms
     }
 
     /**
-     * The subset of the unread that is addressed to the viewer — the same unread predicate, narrowed
-     * to messages that either carry a mention row of theirs or answer something they said. Being
-     * replied to is being spoken to, though only the mention notifies: a reply is what this number
-     * exists to surface to a caller who has no screen to look at.
-     *
-     * A semi-join rather than a join, and one OR rather than two counts: it counts *messages*, so a
-     * line that names the viewer twice — or both names them and answers them — is one unread message,
-     * the unit `unread_talk_count` already answers in. Both arms are written outwards from
+     * A semi-join rather than a join, and one OR rather than two counts, so a message that both names
+     * the viewer and answers them is one unread message. Both arms are written outwards from
      * `group_messages` because that direction is indexed on both engines: `group_message_id` leads
-     * the mentions table's unique index, which on SQLite is the only index there — a foreign key gets
-     * none of its own — and the reply arm seeks a primary key. MySQL, which does index its keys, may
-     * flatten either EXISTS and drive the other way; every direction is an index lookup.
+     * the mentions table's unique index, which on SQLite is the only index there.
      */
     private function unreadMentions(int $viewerId): Builder
     {
@@ -154,11 +123,8 @@ class JoinedTalkRooms
      */
     private function rooms(Collection $groups, bool $withUnreadMentions = false): Collection
     {
-        // The bodies for this page in one statement: the ordering already named the exact rows, so
-        // this is a lookup by primary key rather than a "newest message" query per room.
-        //
-        // Whether there are pictures, not how many: the preview's stand-in for a message with no
-        // words never counts them (App\Support\ChatPreview).
+        // The ordering already named the exact rows, so the bodies are one lookup by primary key
+        // rather than a "newest message" query per room.
         $ids = $groups->pluck('latest_message_id')->filter()->values()->all();
         $messages = $ids === []
             ? new Collection

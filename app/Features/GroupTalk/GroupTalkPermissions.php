@@ -8,11 +8,6 @@ use App\Models\GroupMessage;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
-/**
- * What one member may do in one group's talk, resolved from a single membership read and then asked
- * per message. A page renders a whole conversation, so the per-row questions ("is this mine", "may I
- * delete it") must not each cost a query — the role is read once and the rest is arithmetic.
- */
 final readonly class GroupTalkPermissions
 {
     private function __construct(
@@ -28,11 +23,7 @@ final readonly class GroupTalkPermissions
         return new self($member, canPost: $role !== null, canManage: $role?->canManage() ?? false);
     }
 
-    /**
-     * Has this member silenced the group's talk? Read on its own rather than folded into for(),
-     * because only the talk page asks and the write paths would pay for a column they never read.
-     * A non-member has no membership row and so no mute to hold.
-     */
+    /** Kept out of `for()` so the write paths do not read a column only the talk page asks for. */
     public static function isMuted(Group $group, Member $member): bool
     {
         return (bool) DB::table('group_members')
@@ -47,11 +38,7 @@ final readonly class GroupTalkPermissions
         return $message->member_id !== null && $message->member_id === $this->member->getKey();
     }
 
-    /**
-     * May this member delete the message? Its author may, and so may anyone who manages the group —
-     * a linear chat needs the moderation reach the boards already give. An author who has since left
-     * the group keeps the ability to retract their own words.
-     */
+    /** An author who has since left the group keeps the ability to retract their own words. */
     public function canDelete(GroupMessage $message): bool
     {
         return $this->owns($message) || $this->canManage;

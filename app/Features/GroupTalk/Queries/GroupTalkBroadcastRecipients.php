@@ -11,13 +11,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The audience of one talk message's broadcast: the group's members, minus the author, banned
- * members, either-direction blocks against the author, the members the message already named (they
- * get the mention instead), and **anyone who muted the room** — the one line that separates this
- * from the board fan-out's audience (App\Features\Group\Queries\GroupNewPostRecipients).
- *
- * Mute is applied in SQL rather than per recipient because a quiet room is the common case on a site
- * that notifies about every message, and walking members only to drop them is the cost this avoids.
+ * Mute is filtered in SQL as well as at delivery, so a quiet room is not walked member by member on a
+ * site that notifies about every message.
  */
 class GroupTalkBroadcastRecipients
 {
@@ -45,9 +40,8 @@ class GroupTalkBroadcastRecipients
     }
 
     /**
-     * Narrow the audience to members holding an explicit opt-in for $kind on either channel — what a
-     * site whose default is off broadcasts to. Without it every message would walk the whole
-     * membership to decide that nobody wants it.
+     * A row on either channel counts as an opt-in — what a site whose default is off broadcasts to,
+     * instead of walking the whole membership to decide that nobody wants it.
      *
      * @param  Builder<Member>  $audience
      * @return Builder<Member>

@@ -8,11 +8,6 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 
-/**
- * The Classic group page's talk link — the box that replaced the community timeline's slot. Classic
- * has no talk surface of its own (the link lands on the Modern screen), so the link IS the Classic
- * entrance, gated by the same read answer the Modern card uses.
- */
 class ClassicTalkEntranceTest extends TalkTestCase
 {
     protected function setUp(): void

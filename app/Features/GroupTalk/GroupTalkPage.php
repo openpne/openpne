@@ -5,19 +5,13 @@ namespace App\Features\GroupTalk;
 use App\Models\GroupMessage;
 use Illuminate\Support\Collection;
 
-/**
- * One slice of a group's talk, always oldest-first — the order it is read in, whichever direction it
- * was fetched from. Each message carries its own cursor once serialized, so the page needs no
- * boundary of its own: "load older" asks from the first, the poll watches from the last.
- */
 final readonly class GroupTalkPage
 {
     /**
      * @param  Collection<int, GroupMessage>  $messages  ascending by (created_at, id)
-     * @param  bool  $hasNewer  whether rows follow this page that the asker does not already hold. A
-     *                          read that walks forward and hits its cap says true; a read bounded by
-     *                          a position the client gave (or by the newest row) says false, because
-     *                          everything past that boundary is already on the client's screen.
+     * @param  bool  $hasNewer  whether rows follow this page that the asker does not already hold: a
+     *                          forward read that hits its cap says true, a read bounded by a
+     *                          client-given position or by the newest row says false
      */
     public function __construct(
         public Collection $messages,
