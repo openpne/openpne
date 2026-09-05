@@ -12,9 +12,7 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * What the members table itself refuses, on whichever engine is running: an owned row carrying a
- * credential, and an owner going away while an account still points at it. Both are stated in SQL so
- * they hold for a write that never went through the application.
+ * Both rules are stated in SQL, so they hold for a write that never went through the application.
  */
 class AiAccountSchemaTest extends TestCase
 {
@@ -46,8 +44,8 @@ class AiAccountSchemaTest extends TestCase
 
     public function test_an_owned_row_cannot_be_inserted_with_a_remember_token(): void
     {
-        // A remember-me token is a credential like the other two: it is the whole of what a recaller
-        // cookie is checked against, so a row holding one holds a way in.
+        // A remember-me token is a credential like the other two: it is the whole of what a
+        // recaller cookie is checked against.
         $owner = Member::factory()->create();
 
         $this->expectException(QueryException::class);
@@ -80,8 +78,6 @@ class AiAccountSchemaTest extends TestCase
 
     public function test_an_existing_member_with_credentials_cannot_be_given_an_owner(): void
     {
-        // The other direction of the same rule: a login-capable row must not become an AI account by
-        // acquiring an owner and keeping its way in.
         $owner = Member::factory()->create();
         $member = Member::factory()->create();
 

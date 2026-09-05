@@ -41,7 +41,7 @@ class Diary extends Model
         return $this->hasMany(DiaryComment::class);
     }
 
-    /** @return HasMany<DiaryImage, $this> Attached images, slot-ordered (1..N). */
+    /** @return HasMany<DiaryImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(DiaryImage::class)->orderBy('number');

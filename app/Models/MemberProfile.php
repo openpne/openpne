@@ -16,10 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One member's value for one profile field. A single-value field is one row; a checkbox is
- * one row per chosen option (each with profile_option_id); a custom date is one row holding
- * the composed Y-m-d. Per-value `visibility` (App\Support\Visibility) is null when it should
- * fall back to the field default. See MemberProfileUpgrade for how OpenPNE 3 rows are flattened.
+ * See docs/internals/member-profile.md, "Storage model".
  */
 #[Fillable(['member_id', 'profile_id', 'profile_option_id', 'value', 'value_datetime', 'visibility'])]
 class MemberProfile extends Model
@@ -53,11 +50,6 @@ class MemberProfile extends Model
         return $this->belongsTo(ProfileOption::class, 'profile_option_id');
     }
 
-    /**
-     * Human-readable value for the current locale. Option fields resolve to the choice
-     * label (preset choices from the catalog, custom from profile_options); country/region
-     * resolve through their list services; dates format the stored datetime.
-     */
     public function displayValue(string $lang = 'ja_JP'): string
     {
         $profile = $this->profile;
@@ -78,10 +70,8 @@ class MemberProfile extends Model
         }
 
         if ($profile->form_type === 'date') {
-            // The preset birthday shows month/day only; its birth year is revealed solely through
-            // the separately-gated age (App\Features\Profile\Queries\VisibleAge).
-            // Fail-closed: the birthday path never echoes the raw value (which could carry the year)
-            // — it renders month/day from a parseable date or nothing.
+            // Fail-closed: an unparseable birthday renders as nothing rather than echoing a raw
+            // value that may carry the year.
             if ($profile->name === $presets->nameForKey('birthday')['name']) {
                 $birth = $this->value_datetime ?? $this->parseDate((string) $this->value);
 

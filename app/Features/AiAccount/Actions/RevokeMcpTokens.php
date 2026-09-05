@@ -10,12 +10,9 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Retire every MCP token $member holds, and only those: a token minted for some other purpose is
- * not collateral damage of taking this endpoint's access away.
- *
- * On the member's row lock, the same one the mint takes, so a revoke cannot report "0" while a
- * token minted a moment earlier lands right behind it — and, like the mint, whoever was asked for is
- * confirmed on that locked row rather than taken from the caller's earlier lookup.
+ * Only the tokens this endpoint mints: one minted for some other purpose is not collateral damage.
+ * Taken on the member's row lock, so a revoke cannot report "0" while a token minted a moment
+ * earlier lands right behind it.
  */
 class RevokeMcpTokens
 {

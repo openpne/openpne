@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One member's opt-in/out for one notification kind on one channel. The `kind` column holds the
- * App\Notifications\Settings\NotificationKind case value, `channel` a NotificationChannel value.
- * An absent row means "enabled" — the typed read/write goes through
- * Member::wantsNotification()/setNotificationSetting(), not this model directly.
+ * See docs/internals/notifications.md, "The per-member catalog".
  */
 #[Fillable(['member_id', 'kind', 'channel', 'is_enabled'])]
 class MemberNotificationSetting extends Model

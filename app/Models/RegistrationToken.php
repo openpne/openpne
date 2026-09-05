@@ -10,10 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * A pending email-confirmation registration. `token` holds the SHA-256 hash of the raw token that
- * the registration URL carries; the raw token only ever lives in the emailed link. Only created_at
- * is tracked (expiry is derived from it), so timestamps are off. `source`/`inviter_id` record who
- * issued it (self vs member/admin invite) — see RegistrationTokenSource.
+ * `token` holds a SHA-256 hash; the raw token exists only in the emailed link.
  *
  * @property int $id
  * @property string $email
@@ -45,8 +42,6 @@ class RegistrationToken extends Model
     }
 
     /**
-     * Expired tokens are dead state (the link no longer works), so prune them past the TTL.
-     *
      * @return Builder<RegistrationToken>
      */
     public function prunable(): Builder

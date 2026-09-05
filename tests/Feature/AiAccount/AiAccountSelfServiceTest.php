@@ -12,12 +12,7 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The member-facing pages: who may reach one account's page, and what the creation-only gate does
- * and does not close.
- *
- * The gate is the load-bearing contract here. AiAccountsEnabled is read when an account is created
- * and never again, so every test that switches it off also asserts the management paths still
- * answer — an operator closing the door must not lock owners in with what is behind it.
+ * Every test that switches AiAccountsEnabled off also asserts the management paths still answer.
  */
 class AiAccountSelfServiceTest extends TestCase
 {
@@ -110,9 +105,8 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_the_delete_password_never_answers_for_an_account_that_is_not_the_viewers(): void
     {
-        // The ownership gate outranks the password rule, so every password lands on the same 404 —
-        // otherwise "wrong password" against a stranger's id, versus 404 against an unused one, would
-        // say which member ids are AI accounts.
+        // Otherwise a "wrong password" against a stranger's id, versus a 404 against an unused
+        // one, would say which member ids are AI accounts.
         $viewer = Member::factory()->create();
         $theirs = Member::factory()->aiAccount()->create();
         $unused = (int) Member::max('id') + 1000;
@@ -132,8 +126,6 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_a_human_member_is_not_reachable_as_an_ai_account(): void
     {
-        // An id naming a person — including the viewer's own — must read like an id naming nothing:
-        // ownership, not "is a member", is what the page answers to.
         $viewer = Member::factory()->create();
         $other = Member::factory()->create();
 
@@ -170,8 +162,6 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_deleting_re_authenticates_with_the_current_password(): void
     {
-        // Same re-auth account withdrawal asks for, because the same withdrawal runs: an unlocked
-        // screen must not be enough to spend the account's tokens and group seats.
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $url = "/member/config/ai/{$aiAccount->getKey()}/delete";
@@ -190,13 +180,11 @@ class AiAccountSelfServiceTest extends TestCase
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, false);
 
-        // Creation: refused, with the reason said out loud rather than hidden behind a 404.
         $this->actingAs($owner)->post('/member/config/ai', ['name' => 'Another'])
             ->assertRedirect(route('member.config.ai'))
             ->assertSessionHas('error', __('This site is not offering AI accounts right now.'));
         $this->assertSame(1, $owner->aiAccounts()->count());
 
-        // Everything else: still there.
         $this->actingAs($owner)->get('/member/config/ai')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('enabled', false)->where('canCreate', false)->has('accounts', 1));
@@ -215,11 +203,9 @@ class AiAccountSelfServiceTest extends TestCase
 
         $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, false);
 
-        // Nothing to offer and nothing to manage: the section is absent, not an empty shell.
         $this->actingAs($withNone)->get('/member/config')
             ->assertInertia(fn (AssertableInertia $page) => $page->missing('form.ai'));
 
-        // An owner keeps the way in after the site stops offering creation.
         $owner = Member::factory()->create();
         Member::factory()->aiAccount($owner)->create();
         $this->actingAs($owner)->get('/member/config')
@@ -228,8 +214,7 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_creating_and_deleting_are_throttled_but_the_renders_are_not(): void
     {
-        // Each POST puts a member row into the site, takes one out, or rewrites what one shows the
-        // site; the GETs are left out so a refresh cannot spend the budget.
+        // The GETs are left out, so a refresh cannot spend the budget.
         $names = [
             'member.config.ai.store',
             'member.config.ai.destroy',
@@ -257,9 +242,8 @@ class AiAccountSelfServiceTest extends TestCase
 
     public function test_every_route_naming_an_account_carries_the_ownership_gate(): void
     {
-        // As route middleware, so it outranks the delete's FormRequest. Left to the controller alone,
-        // a wrong password would be answered before the ownership check and would say the account is
-        // there; the same reasoning holds for any FormRequest a sibling route grows later.
+        // The gate has to be route middleware: left to the controller, a FormRequest would answer
+        // before the ownership check — on any sibling route that grows one later, too.
         $names = [
             'member.config.ai.show',
             'member.config.ai.update',

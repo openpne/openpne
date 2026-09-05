@@ -14,13 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Create an AI account owned by $owner: a member row with no email and no password, reachable only
- * through a personal access token the owner mints.
- *
- * Every precondition is re-read under an X lock on the OWNER row, never from the caller's snapshot.
- * That row is the serialization point the whole feature agrees on — a freeze, a withdrawal, another
- * creation and a token mint all take it first — so a creation cannot slip past a ban that committed
- * while the form was open, and two concurrent creations cannot both see "one under the cap".
+ * Every precondition is re-read under an X lock on the owner row, never from the caller's snapshot
+ * (docs/internals/mcp.md, "Running a bot member").
  */
 class CreateAiAccount
 {
@@ -30,9 +25,8 @@ class CreateAiAccount
     {
         $name = trim($name);
 
-        // The name is a member's name, held to the same rule an ordinary member's is created under
-        // — here rather than only in whatever form submitted it, so no caller can persist a nameless
-        // or over-long member by skipping the form.
+        // Held to the same rule an ordinary member's name is, here and not only in the form, so no
+        // caller can persist a nameless or over-long member.
         Validator::make(['name' => $name], ['name' => MemberNameRules::rules()])->validate();
 
         $aiAccount = DB::transaction(function () use ($owner, $name): Member {
@@ -56,9 +50,8 @@ class CreateAiAccount
                 throw new AiAccountActionException(AiAccountActionFailure::LimitReached);
             }
 
-            // forceFill: owner_member_id is outside the model's mass-assignable set, because the link
-            // is immutable — an account is created owned, and no path re-parents it afterwards.
-            // email and password stay null, which the members CHECK also insists on.
+            // `owner_member_id` is deliberately not mass-assignable, and email and password stay
+            // null as the `members` CHECK insists.
             $aiAccount = new Member;
             $aiAccount->forceFill([
                 'name' => $name,

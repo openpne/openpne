@@ -16,14 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * The identity an owner may rewrite on their own AI account: its name, its self-introduction and
- * its picture.
- *
- * Two contracts carry the weight here. The self-introduction is one row of a member profile, so the
- * save must touch that field and no other; and the panel offers no audience control, so the value's
- * existing audience must survive a save that never mentions it.
- */
 class AiAccountIdentityTest extends TestCase
 {
     use RefreshDatabase;
@@ -47,7 +39,6 @@ class AiAccountIdentityTest extends TestCase
         // Trimmed on the way in, as at creation.
         $this->assertSame('Research helper', $aiAccount->fresh()->name);
 
-        // Through MemberRefSerializer::ref, which is what every member reference is drawn from.
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('account.name', 'Research helper'));
     }
@@ -75,15 +66,12 @@ class AiAccountIdentityTest extends TestCase
         $row = MemberProfile::query()->where('member_id', $aiAccount->getKey())->where('profile_id', $field->getKey())->sole();
         $this->assertSame('I answer questions about the docs.', $row->value);
 
-        // The page offers back what was saved, so the box is not blank on the next visit — under the
-        // name the operator gave the field, not a caption of this page's own.
         $field->setTranslation('en', 'About me');
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('selfIntroduction.value', 'I answer questions about the docs.')
                 ->where('selfIntroduction.label', 'About me'));
 
-        // Cleared, the row goes rather than lingering as an empty value.
         $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}", ['name' => 'Helper', 'self_introduction' => ''])
             ->assertRedirect();
         $this->assertSame(0, MemberProfile::query()->where('member_id', $aiAccount->getKey())->count());
@@ -91,9 +79,8 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_an_install_without_the_field_takes_the_submission_without_breaking(): void
     {
-        // No op_preset_self_introduction row at all: an operator may delete it, and an upgraded site
-        // may never have had one. The box is not offered, a posted value is not written, and the
-        // rest of the form still saves.
+        // No op_preset_self_introduction row at all: an operator may delete it, and an upgraded
+        // site may never have had one.
         [$owner, $aiAccount] = $this->ownedAccount();
 
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
@@ -111,8 +98,8 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_a_field_the_profile_editor_may_not_write_is_not_written_here_either(): void
     {
-        // is_disp_config off is the operator saying members do not edit this on their own profile.
-        // The AI panel is that same edit, so it is not a way around the answer.
+        // is_disp_config off is the operator saying members do not edit this on their own
+        // profile.
         $field = $this->selfIntroductionField();
         $field->update(['is_disp_config' => false]);
         [$owner, $aiAccount] = $this->ownedAccount();
@@ -128,8 +115,6 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_a_saved_value_keeps_the_audience_it_already_had(): void
     {
-        // The panel shows no audience control and the row is replaced wholesale, so what the value
-        // already carries has to be handed back — otherwise saving a typo fix would widen it.
         $field = $this->selfIntroductionField();
         [$owner, $aiAccount] = $this->ownedAccount();
         MemberProfile::factory()->create([
@@ -163,8 +148,7 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_saving_the_panel_leaves_every_other_profile_value_alone(): void
     {
-        // The panel carries one field. Saved through the whole-profile write instead of a per-field
-        // one, it would take every other value the account holds down with it.
+        // A whole-profile write would take every other value the account holds down with it.
         $this->selfIntroductionField();
         $other = Profile::factory()->create(['is_disp_config' => true]);
         [$owner, $aiAccount] = $this->ownedAccount();
@@ -183,7 +167,6 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_the_field_rules_hold_for_this_panel_too(): void
     {
-        // The same field, so the same limits: what the profile editor refuses, this refuses.
         $this->selfIntroductionField()->update(['value_max' => 10]);
         [$owner, $aiAccount] = $this->ownedAccount();
 
@@ -211,7 +194,6 @@ class AiAccountIdentityTest extends TestCase
         $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/avatar", ['image' => UploadedFile::fake()->image('two.png', 10, 10)])
             ->assertRedirect($page);
 
-        // One image at a time, and the replaced one's bytes go with it.
         $this->assertSame(1, $aiAccount->fresh()->avatar()->count());
         $new = $aiAccount->fresh()->avatar->file;
         $this->assertNotSame($old->getKey(), $new->getKey());
@@ -239,8 +221,6 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_switching_the_setting_off_leaves_the_identity_editable(): void
     {
-        // AiAccountsEnabled gates creation and nothing else: an operator closing the door must not
-        // strand an owner with a typo they cannot fix.
         $this->selfIntroductionField();
         [$owner, $aiAccount] = $this->ownedAccount();
         $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, false);
@@ -257,8 +237,6 @@ class AiAccountIdentityTest extends TestCase
 
     public function test_a_human_member_cannot_be_edited_through_this_page(): void
     {
-        // Ownership, not "is a member", is what these POSTs answer to — the viewer's own row
-        // included.
         $viewer = Member::factory()->create();
 
         $this->actingAs($viewer)->post("/member/config/ai/{$viewer->getKey()}", ['name' => 'Renamed'])->assertNotFound();

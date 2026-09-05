@@ -9,11 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * A pending email-address change. `token` holds the SHA-256 hash of the raw token the confirmation
- * URL carries (sent to the new address); `cancel_token` is the same for the cancel link (sent to the
- * old address). Both raw tokens only ever live in their emailed links. Only created_at is tracked
- * (expiry is derived from it), so timestamps are off. One row per member (the column is unique); it
- * cascades away with the member.
+ * `token` and `cancel_token` hold SHA-256 hashes; the raw tokens exist only in the confirmation and
+ * cancel links. One row per member, cascading away with the member.
  *
  * @property int $id
  * @property int $member_id
@@ -43,8 +40,6 @@ class EmailChangeRequest extends Model
     }
 
     /**
-     * Expired pending changes are dead state (the link no longer works), so prune them past the TTL.
-     *
      * @return Builder<EmailChangeRequest>
      */
     public function prunable(): Builder

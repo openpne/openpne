@@ -16,12 +16,6 @@ use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * An owner giving one of their AI accounts a group seat, and taking it back.
- *
- * The account joins as itself, so its membership is its own: it outlives the owner leaving the same
- * group, and only these endpoints give it up. That independence is the contract these tests pin.
- */
 class AiAccountGroupsTest extends TestCase
 {
     use RefreshDatabase;
@@ -98,9 +92,7 @@ class AiAccountGroupsTest extends TestCase
     }
 
     /**
-     * A group that flips Approval → Anyone-can-join leaves the old request standing, and JoinGroup
-     * refuses to hold both a membership and a request. Current behaviour, pinned: the way out is the
-     * cancel button, which is what the refusal tells the owner.
+     * A policy flipped from Approval to Anyone-can-join is what leaves the old request standing.
      */
     public function test_a_request_left_over_from_approval_blocks_joining_until_it_is_cancelled(): void
     {
@@ -156,7 +148,6 @@ class AiAccountGroupsTest extends TestCase
 
         $this->assertFalse(GroupMembership::isMember($group, $this->owner));
         $this->assertTrue(GroupMembership::isMember($group, $this->aiAccount));
-        // And the owner can still act on it from here, having left themselves.
         $this->quit($group)->assertSessionHas('status');
         $this->assertFalse(GroupMembership::isMember($group, $this->aiAccount));
     }

@@ -7,9 +7,7 @@ namespace App\Features\AiAccount;
 use App\Auth\ReauthWindow;
 
 /**
- * The re-authentication window for an owner handing out or taking back an AI account's token.
- * Its own window, not the two-factor one: a set-up confirmed a minute ago is no reason to mint a
- * credential without asking again.
+ * See docs/internals/security.md, "AI account access tokens".
  */
 final class AiTokenReauth extends ReauthWindow
 {

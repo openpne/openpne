@@ -11,12 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * One line of an issue's ledger: what was featured, where, and how highly.
- *
- * `source_type` is a morph alias and is never written as a literal — a write takes it from the
- * model's getMorphClass(), so a rename stays a morphMap edit. source() may resolve to nothing: the
- * row outlives its source on purpose (see the migration), and a caller that cannot resolve one drops
- * the item rather than treating it as an error.
+ * `source_type` is a morph alias and is never written as a literal, so a rename stays a morphMap
+ * edit. The row outlives its source on purpose, and a caller that cannot resolve one drops the item
+ * rather than treating it as an error.
  */
 #[Fillable(['home_issue_id', 'section', 'rank', 'source_type', 'source_id', 'score', 'stats'])]
 class HomeIssueItem extends Model

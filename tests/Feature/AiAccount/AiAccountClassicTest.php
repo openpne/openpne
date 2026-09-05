@@ -15,12 +15,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
-/**
- * The Classic surface of the same feature: the AI category of member/config for the list and the
- * create form, and the account's own page for its groups and its delete button. Simpler in shape
- * than Modern (plain forms, no inline confirm) but not smaller in what it can do — an owner on
- * Classic must not need Modern to empty and delete an account.
- */
 class AiAccountClassicTest extends TestCase
 {
     use RefreshDatabase;
@@ -55,14 +49,12 @@ class AiAccountClassicTest extends TestCase
 
         $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, false);
 
-        // Nothing offered and nothing owned: the nav entry is gone and its URL lands on the landing.
         $this->actingAs($member)->get('/member/config')->assertDontSee($link, false);
         $this->actingAs($member)->get('/member/config?category=ai')
             ->assertOk()
             ->assertSee('Please select the item')
             ->assertDontSee('id="member_config_ai"', false);
 
-        // An owner keeps the way in after the site stops offering creation, and the create form goes.
         $owner = Member::factory()->create();
         Member::factory()->aiAccount($owner)->create();
         $this->actingAs($owner)->get('/member/config?category=ai')
@@ -105,8 +97,6 @@ class AiAccountClassicTest extends TestCase
             ->assertSee('id="member_ai_account_groups"', false)
             ->assertSee('id="member_ai_account_join"', false)
             ->assertSee('id="member_ai_account_delete"', false)
-            // Classic has no confirm dialog, so the password field is both the re-auth and the step
-            // that keeps a stray click from spending the account.
             ->assertSee('name="password"', false)
             ->assertSee('Open group');
     }
@@ -141,7 +131,6 @@ class AiAccountClassicTest extends TestCase
             ->assertRedirect($page);
 
         $token = $aiAccount->tokens()->sole();
-        // The credential is on the page it redirected to, beside the revoke form for that token.
         $this->actingAs($owner)->get($page)
             ->assertSee('This token is shown only this once.')
             ->assertSee(route('member.config.ai.tokens.destroy', ['member' => $aiAccount->getKey(), 'token' => $token->getKey()]));
@@ -164,7 +153,7 @@ class AiAccountClassicTest extends TestCase
             ->assertSee('action="'.route('member.config.ai.update', ['member' => $aiAccount->getKey()]).'"', false)
             ->assertSee('value="Helper"', false)
             ->assertSee('name="self_introduction"', false)
-            // The upload is its own form, and a file needs the encoding to arrive at all.
+            // A file needs the encoding to arrive at all.
             ->assertSee('action="'.route('member.config.ai.avatar', ['member' => $aiAccount->getKey()]).'"', false)
             ->assertSee('enctype="multipart/form-data"', false);
 
@@ -195,7 +184,6 @@ class AiAccountClassicTest extends TestCase
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $page = route('member.config.ai.show', ['member' => $aiAccount->getKey()]);
 
-        // Nothing uploaded yet: the remove form is not offered.
         $this->actingAs($owner)->get($page)
             ->assertDontSee('action="'.route('member.config.ai.avatar.delete', ['member' => $aiAccount->getKey()]).'"', false);
 

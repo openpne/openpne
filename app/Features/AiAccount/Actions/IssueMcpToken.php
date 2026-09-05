@@ -14,19 +14,9 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\NewAccessToken;
 
 /**
- * Mint the personal access token an MCP client presents as $member.
- *
- * Who may ask is the caller's question — server access for the CLI, ownership for the owner's
- * settings screen — so no authorization is decided here. What is decided here is the part the two
- * callers must not answer differently: the abilities are always named (never Sanctum's wildcard,
- * which passes every gate), and the decision to mint is taken on rows locked in this feature's
- * order — the owner's first, then the account's — with eligibility re-read from those locked rows.
- * Reading it from the caller's snapshot instead would let a mint hand back the reach a freeze
- * committing beside it has just taken away.
- *
- * The transaction ends when this returns, so a caller that logs or prints afterwards is reporting a
- * token that exists. The audit line is the caller's to write: `via` is a fact about which trust
- * boundary was crossed, which only the caller knows.
+ * No authorization is decided here, but the abilities are always named — never Sanctum's wildcard,
+ * which passes every gate. The transaction ends when this returns, so a caller that logs or prints
+ * afterwards is reporting a token that exists.
  */
 class IssueMcpToken
 {
@@ -53,15 +43,9 @@ class IssueMcpToken
     }
 
     /**
-     * The member row locked behind its owner's, when it has one, and still the row that was asked
-     * for once locked.
-     *
-     * `owner_member_id` is immutable, so the caller's snapshot is enough to decide the lock order;
-     * every value that is then judged comes from the locked rows — including whether the selector
-     * still names this row, which is how an address that changed hands since the lookup stops the
-     * mint instead of steering it to a stale id. The owner is attached to the relation rather than
-     * left to lazy-load, so the eligibility predicate reads the row this transaction locked instead
-     * of issuing a fresh unlocked query for it.
+     * The owner's row is locked before the account's, and `owner_member_id` is immutable, so the
+     * caller's snapshot decides that order. Everything then judged comes from the locked rows,
+     * including whether the selector still names this one.
      *
      * @throws AiAccountActionException
      */
@@ -85,6 +69,7 @@ class IssueMcpToken
         }
 
         if ($owner !== null) {
+            // So the eligibility read uses the row this transaction locked, not a fresh unlocked one.
             $actor->setRelation('owner', $owner);
         }
 

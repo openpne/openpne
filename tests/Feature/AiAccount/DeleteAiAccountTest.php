@@ -66,7 +66,6 @@ class DeleteAiAccountTest extends TestCase
         $this->assertSame(1, $bystander->pushSubscriptions()->count(), "another account's device is untouched");
         $this->assertSame([$bystander->getKey()], $owner->aiAccounts()->pluck('id')->all());
 
-        // Both lines: the withdrawal records the row going away, ai_account.deleted records whose it was.
         $this->assertCount(1, $this->securityRecords('member.withdrawn'));
         $context = $this->assertOneSecurityEvent('ai_account.deleted');
         $this->assertSame((string) $aiAccount->getKey(), $context['member_id']);
@@ -106,8 +105,6 @@ class DeleteAiAccountTest extends TestCase
 
     public function test_deletion_stays_available_once_the_site_stops_offering_ai_accounts(): void
     {
-        // Switching the feature off closes the door; it must not lock the owner in with what is
-        // already behind it.
         Notification::fake();
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();

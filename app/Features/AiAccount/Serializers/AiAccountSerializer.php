@@ -15,21 +15,20 @@ use Illuminate\Contracts\Session\Session;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
- * Modern surface shapes for a member's own AI accounts. The identity half is MemberRefSerializer's
- * — an AI account IS a member, and its avatar and AI mark must read the same here as anywhere else.
+ * The identity half is MemberRefSerializer's, so an account's avatar and AI mark read the same here
+ * as anywhere else.
  */
 class AiAccountSerializer
 {
     /**
-     * Flash key carrying the plaintext credential — and the id of the account it was minted for —
-     * through the redirect that follows a mint. Payload: `{member_id: int, token: string}`.
+     * Flash payload `{member_id: int, token: string}`: the id is what keeps one account's credential
+     * from being rendered on another's page.
      */
     public const NEW_TOKEN = 'ai_account.new_token';
 
     /**
-     * What a member's AI-account list page is, on either surface: what they own, and whether there
-     * is room and permission for one more. Shared so the Modern page and the Classic category
-     * cannot disagree about whether the create form is offered.
+     * Shared so the Modern page and the Classic category cannot disagree about whether the create
+     * form is offered.
      *
      * @return array{accounts: list<array<string, mixed>>, used: int, limit: int, enabled: bool, canCreate: bool}
      */
@@ -44,16 +43,12 @@ class AiAccountSerializer
             'used' => $accounts->count(),
             'limit' => $limit,
             'enabled' => $enabled,
-            // Advisory: CreateAiAccount re-reads both under the owner lock, so this only decides
-            // whether the form is worth showing, never whether a creation is allowed.
+            // Advisory only: the creation re-reads both under the owner lock.
             'canCreate' => $enabled && $accounts->count() < $limit,
         ];
     }
 
     /**
-     * The token half of an account's page, on either surface: what it holds, whether the password
-     * is due, and the credential just minted — which exists on exactly one render.
-     *
      * @return array{tokens: list<array{id: int, readOnly: bool, createdAt: string, lastUsedAt: string|null}>, requiresPassword: bool, mcpEnabled: bool, newToken: string|null}
      */
     public static function tokens(Member $aiAccount, Session $session): array
@@ -65,19 +60,16 @@ class AiAccountSerializer
             // Lockstep with AiTokenRequest: the form offers the password field exactly when the
             // request will demand it.
             'requiresPassword' => ! AiTokenReauth::isFresh($session),
-            // Not a gate on any of this — the unit is the endpoint's kill switch and a token
-            // outlives it being thrown. Reported so a member whose brand-new token is answered 404
-            // is not left guessing why.
+            // Reported, not a gate: the unit is the endpoint's kill switch and a token outlives it
+            // being thrown.
             'mcpEnabled' => Feature::Mcp->enabled(),
             'newToken' => self::mintedFor($aiAccount, $session),
         ];
     }
 
     /**
-     * The self-introduction box of the identity panel, on either surface: what the field is called
-     * here (an operator may have renamed it), what this account currently says, and how long the
-     * field lets that be. Null when the install has no such field — the same null that keeps the
-     * POST from writing one, so the box is absent rather than a form with nowhere to save to.
+     * Null whenever SelfIntroductionField answers null, the same null that keeps the POST from
+     * writing one.
      *
      * @return array{label: string, value: string, maxLength: int|null}|null
      */
@@ -96,11 +88,6 @@ class AiAccountSerializer
         ];
     }
 
-    /**
-     * The credential from the flash, and only where this is the account it was minted for: an owner
-     * who mints for one account and then opens another's page must not be shown the first one's
-     * token as the second one's, which is a credential read as standing for the wrong identity.
-     */
     private static function mintedFor(Member $aiAccount, Session $session): ?string
     {
         $minted = $session->get(self::NEW_TOKEN);
@@ -119,8 +106,6 @@ class AiAccountSerializer
     {
         return [
             'id' => (int) $token->getKey(),
-            // The name is fixed, so what distinguishes one token from another is its reach and when
-            // it was last heard from.
             'readOnly' => ! in_array(McpAbilities::WRITE, (array) $token->abilities, true),
             'createdAt' => $token->created_at->toIso8601String(),
             'lastUsedAt' => $token->last_used_at?->toIso8601String(),
@@ -134,8 +119,8 @@ class AiAccountSerializer
     {
         return [
             ...MemberRefSerializer::ref($aiAccount),
-            // withCount('groupMemberships') on the listing query; the fallback keeps a route-bound
-            // account from silently reporting zero.
+            // The fallback keeps a route-bound account, loaded without `withCount`, from reporting
+            // zero.
             'groupCount' => (int) ($aiAccount->group_memberships_count ?? $aiAccount->groupMemberships()->count()),
         ];
     }

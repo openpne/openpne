@@ -16,13 +16,6 @@ use Inertia\Testing\AssertableInertia;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
-/**
- * The owner half of the token trust boundary: minting and revoking from the account's own page.
- *
- * Two contracts carry this screen. Ownership decides who may ask at all — someone else's account is
- * not there, as everywhere else in this feature — and the account password decides whether the ask
- * is honoured, so a walked-up session cannot hand out a credential that outlives it.
- */
 class AiTokenSelfServiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -82,8 +75,6 @@ class AiTokenSelfServiceTest extends TestCase
         $this->assertTrue($minted->tokenable->is($aiAccount));
         $this->assertSame([McpAbilities::READ, McpAbilities::WRITE], $minted->abilities);
 
-        // The credential is legible on the render the mint redirected to, and on no other: it is
-        // flashed, not stored, and the row keeps only a hash of it.
         $plainText = null;
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(function (AssertableInertia $page) use (&$plainText) {
@@ -98,9 +89,8 @@ class AiTokenSelfServiceTest extends TestCase
 
     public function test_a_minted_credential_is_shown_only_on_the_account_it_was_minted_for(): void
     {
-        // The flash is one key for the whole session, and the page read from it need not be the one
-        // the mint redirected to. A token rendered under another account's name would be read as
-        // standing for that account — the wrong identity for whatever the client then does with it.
+        // The flash is one key for the whole session, and the page read from it need not be the
+        // one the mint redirected to.
         [$owner, $aiAccount] = $this->ownerWithAccount();
         $other = Member::factory()->aiAccount($owner)->create();
 
@@ -108,7 +98,6 @@ class AiTokenSelfServiceTest extends TestCase
         $this->actingAs($owner)->get("/member/config/ai/{$other->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tokens.newToken', null));
 
-        // Still shown on the page it was minted from, which is the one-shot the panel is built on.
         $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password']);
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->whereNot('tokens.newToken', null));
@@ -135,8 +124,6 @@ class AiTokenSelfServiceTest extends TestCase
 
         $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password']);
 
-        // Inside the window the field is neither shown nor demanded — one re-auth per sitting, not
-        // one per token.
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tokens.requiresPassword', false));
         $this->actingAs($owner)->post($this->tokensUrl($aiAccount))->assertSessionHasNoErrors();
@@ -184,8 +171,7 @@ class AiTokenSelfServiceTest extends TestCase
         $this->actingAs($viewer)->post($this->tokensUrl($theirs)."/{$token->getKey()}/delete", ['current_password' => 'password'])
             ->assertNotFound();
 
-        // A human member's own account is not mintable from this screen either: the operator CLI is
-        // the only way to a person's token.
+        // A human member's own account is not mintable from this screen either.
         $this->actingAs($viewer)->post("/member/config/ai/{$viewer->getKey()}/tokens", ['current_password' => 'password'])
             ->assertNotFound();
 
@@ -193,9 +179,6 @@ class AiTokenSelfServiceTest extends TestCase
     }
 
     /**
-     * Ownership is settled before the password is: the route's own policy check answers first, so a
-     * refusal cannot vary with what is behind the id.
-     *
      * @param  list<TestResponse>  $probes  refusals that must be told apart by nothing at all
      */
     private function assertIndistinguishable(array $probes): void
@@ -215,9 +198,8 @@ class AiTokenSelfServiceTest extends TestCase
 
     public function test_a_refused_mint_reads_the_same_whatever_the_id_names(): void
     {
-        // An id the viewer may not mint for must not be told apart from one that names nothing: a
-        // password error where the other answers 404 says "this id is an AI account", and a wrong
-        // password says it for any id the sender cares to try.
+        // A password error where the other answers 404 would say "this id is an AI account", for
+        // any id the sender cares to try.
         $viewer = Member::factory()->create();
         [, $theirs] = $this->ownerWithAccount();
 
@@ -227,7 +209,6 @@ class AiTokenSelfServiceTest extends TestCase
                 $probes[] = $this->actingAs($viewer)->post("/member/config/ai/{$id}/tokens", $payload);
             }
         }
-        // A human member's own id is refused the same way: this screen mints for AI accounts only.
         $probes[] = $this->actingAs($viewer)->post("/member/config/ai/{$viewer->getKey()}/tokens");
 
         $this->assertIndistinguishable($probes);
@@ -300,7 +281,6 @@ class AiTokenSelfServiceTest extends TestCase
             ->post($this->tokensUrl($aiAccount)."/{$token->getKey()}/delete", ['current_password' => 'password'])
             ->assertRedirect(route('member.config.ai.show', ['member' => $aiAccount->getKey()]));
 
-        // The client's credential stops being one the moment the owner says so.
         $this->freshRequestState();
         $call()->assertUnauthorized();
         $this->assertSame(1, $group->messages()->count());
@@ -311,8 +291,6 @@ class AiTokenSelfServiceTest extends TestCase
         [$owner, $aiAccount] = $this->ownerWithAccount();
         $this->setSnsSetting(SnsSettingKey::FeatureMcpEnabled, false);
 
-        // The unit is the endpoint's kill switch, not this screen's: a token is still mintable and,
-        // more to the point, still revocable while it is off.
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tokens.mcpEnabled', false));
         $this->actingAs($owner)->post($this->tokensUrl($aiAccount), ['current_password' => 'password'])

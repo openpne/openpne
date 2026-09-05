@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Localised label for a ProfileOption, keyed by (id, lang). See ProfileTranslation for the
- * composite-key handling.
+ * The OpenPNE 3 Doctrine I18n shape: the key is (id, lang) and `id` is not an autoincrement, so a
+ * write is an upsert.
  */
 class ProfileOptionTranslation extends Model
 {

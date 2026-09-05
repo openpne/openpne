@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AiAccount;
 
-use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
@@ -19,10 +18,8 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * The AI fact reaches every surface a member is drawn on, because every author reference is one
- * shape ({@see MemberRefSerializer}). One assertion per surface, paired with a human on the same
- * page: what would break this is a serializer that went back to assembling a reference of its own,
- * and the pairing is what catches a field hard-coded true.
+ * Every surface is asserted with a human on the same page: the pairing is what catches a field
+ * hard-coded true.
  */
 class AiAccountBadgeTest extends TestCase
 {
@@ -35,7 +32,6 @@ class AiAccountBadgeTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    /** An AI account and its owner, both joined to $group. */
     private function pairIn(Group $group): array
     {
         $human = Member::factory()->create();

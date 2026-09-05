@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Rewrite one AI account's identity: the name it speaks under, and the self-introduction its
- * profile carries. The caller has already established that the account is the owner's.
+ * The caller has already established that the account is the owner's.
  */
 class UpdateAiAccountIdentity
 {
@@ -29,8 +28,8 @@ class UpdateAiAccountIdentity
     {
         $name = trim($name);
 
-        // Same rule an ordinary member's name is written under, here rather than only in the form
-        // that submitted it — as at creation, so no caller can rename an account to nothing.
+        // Held to the same rule an ordinary member's name is, here and not only in the form, so no
+        // caller can rename an account to nothing.
         Validator::make(['name' => $name], ['name' => MemberNameRules::rules()])->validate();
 
         $field = ($this->selfIntroduction)();
@@ -42,9 +41,8 @@ class UpdateAiAccountIdentity
                 return;
             }
 
-            // saveFields with one field, never SaveMemberProfile's __invoke: that rewrites the
-            // member's whole is_disp_config set from the submission, so a panel carrying a single
-            // field would erase every other value the account holds.
+            // `saveFields`, never `SaveMemberProfile::__invoke`: that rewrites the member's whole
+            // is_disp_config set from the submission, erasing every value this panel does not carry.
             $this->profiles->saveFields($aiAccount, new Collection([$field]), new ProfileFormData(
                 name: $name,
                 values: [$field->getKey() => (string) $selfIntroduction],
@@ -54,11 +52,9 @@ class UpdateAiAccountIdentity
     }
 
     /**
-     * The audience the rewritten value keeps. This panel shows no audience control and the row is
-     * replaced wholesale, so what the value already carries has to be handed back explicitly —
-     * otherwise every save would drop it and the value would be read at the field's default
-     * instead, which is a widening nobody asked for. A value the account has never held is new
-     * content, and starts at that default.
+     * This panel shows no audience control and the row is replaced wholesale, so the audience the
+     * value already carries has to be handed back explicitly or every save would widen it to the
+     * field default. A value the account has never held starts at that default.
      */
     private function audienceFor(Member $aiAccount, Profile $field): ?int
     {

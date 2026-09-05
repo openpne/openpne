@@ -50,38 +50,38 @@ class GroupEvent extends Model
         return $this->hasMany(GroupEventComment::class);
     }
 
-    /** @return HasMany<GroupEventImage, $this> Attached images, in slot (number) order. */
+    /** @return HasMany<GroupEventImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(GroupEventImage::class, 'post_id')->orderBy('number');
     }
 
-    /** @return BelongsToMany<Member, $this> Members who have RSVP'd, via group_event_members. */
+    /** @return BelongsToMany<Member, $this> */
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(Member::class, 'group_event_members')->withTimestamps();
     }
 
-    /** @return HasMany<GroupEventMember, $this> RSVP roster rows; admin moderation lists/removes these individually. */
+    /** @return HasMany<GroupEventMember, $this> */
     public function eventMembers(): HasMany
     {
         return $this->hasMany(GroupEventMember::class);
     }
 
-    /** Past the join window: now is later than the day after open_date (OpenPNE 3 isClosed). */
+    /** OpenPNE 3 `isClosed`. */
     public function isClosed(): bool
     {
         return now()->greaterThan($this->open_date->copy()->addDay());
     }
 
-    /** Past the RSVP deadline: set and now is later than the day after it (OpenPNE 3 isExpired). */
+    /** OpenPNE 3 `isExpired`. */
     public function isExpired(): bool
     {
         return $this->application_deadline !== null
             && now()->greaterThan($this->application_deadline->copy()->addDay());
     }
 
-    /** At the participant cap: set and reached (OpenPNE 3 isAtCapacity). */
+    /** OpenPNE 3 `isAtCapacity`. */
     public function isFull(): bool
     {
         return $this->capacity !== null && $this->participantCount() >= $this->capacity;

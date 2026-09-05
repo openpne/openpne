@@ -12,11 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * One utterance in a group's talk. Ordering is the (created_at, id) tuple everywhere — see
- * App\Features\GroupTalk\Queries\GroupTalkMessages.
- *
- * A message is never edited, so HasLinkCard's invalidation half has no call site here: the card
- * attached to a body is attached to the only body that row will ever have.
+ * A message is never edited, so HasLinkCard's invalidation half has no call site here.
  */
 #[Fillable(['group_id', 'member_id', 'in_reply_to_id', 'body'])]
 class GroupMessage extends Model
@@ -44,24 +40,23 @@ class GroupMessage extends Model
     }
 
     /**
-     * @return HasMany<GroupMessageMention, $this> The @mentions in the body, ascending by offset —
-     *                                             the order EntityText expects to walk them in.
+     * @return HasMany<GroupMessageMention, $this> ascending by offset, the order EntityText requires
+     *                                             and does not re-check
      */
     public function mentions(): HasMany
     {
         return $this->hasMany(GroupMessageMention::class)->orderBy('offset');
     }
 
-    /** @return HasMany<GroupMessageImage, $this> Attached images, in slot (number) order. */
+    /** @return HasMany<GroupMessageImage, $this> */
     public function images(): HasMany
     {
         return $this->hasMany(GroupMessageImage::class)->orderBy('number');
     }
 
     /**
-     * @return MorphMany<Reaction, $this> The emoji on this message, oldest first — the order the
-     *                                    chips are drawn in, so a new emoji joins the end of the row
-     *                                    rather than shuffling the ones already there.
+     * @return MorphMany<Reaction, $this> oldest first: the reactor list is capped, so this order
+     *                                    decides which reactors it shows
      */
     public function reactions(): MorphMany
     {
