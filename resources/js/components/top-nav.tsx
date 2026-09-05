@@ -30,18 +30,13 @@ import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
-/** The 6px above and below a 36px bar action, claimed as tap target: every control in the bar
- *  answers across its full 48px height, whatever it paints — an action that filled the bar instead
- *  would leave the glyph beside it looking stranded. The compose slot spells the same rule as a
- *  descendant variant, because the actions it holds are portalled in from the page. */
+/** Claims the 6px above and below a 36px action, so every control in the bar answers across its
+ *  full 48px height. The compose slot spells the same rule as a descendant variant, its actions
+ *  arriving through a portal. */
 const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']";
 
-/** The shell every bar variant shares — one element, one height. Height is read from
- *  `--modern-top-offset` rather than restated: the var *is* this bar's height (the top inset, which a
- *  standalone PWA draws under, is part of it), and a page's sticky header offsets by it. `hidden`
- *  slides it away while the reader scrolls down (AppShell owns the signal). `seam` is the bottom
- *  hairline: it divides the bar from the page it floats over, so a surface that is meant to read as
- *  one piece (the compose sheet) keeps it off until content actually scrolls under the bar. */
+/** The height is read from `--modern-top-offset` rather than restated: the var is this bar's height,
+ *  the top inset included, and a page's sticky header offsets by it. */
 function TopBar({
     hidden,
     seam = true,
@@ -52,8 +47,8 @@ function TopBar({
     hidden?: boolean;
     seam?: boolean;
     persistent?: boolean;
-    /** Site color for the 4px line atop the row. It is part of the bar — the height var counts it,
-     *  and it slides away with the bar rather than hanging under one that has gone. */
+    /** Site color for the 4px line atop the row, which is part of the bar: the height var counts it
+     *  and it slides away with the bar. */
     line?: string;
     children: ReactNode;
 }) {
@@ -77,9 +72,8 @@ function TopBar({
                 // The unified bar is the header at every width; the shipped bars are phone furniture.
                 !persistent && 'lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
-                // The line is the bar's crown — the same top edge the desktop line holds — so the
-                // row centers in what is left below it. The padding restates the status-bar inset
-                // because it replaces the base padding rather than adding to it.
+                // The padding restates the status-bar inset because it replaces the base padding
+                // rather than adding to it.
                 line !== undefined && 'pt-[calc(0.25rem+env(safe-area-inset-top))]',
                 hidden && '-translate-y-full',
             )}
@@ -93,9 +87,8 @@ function TopBar({
 }
 
 /**
- * The bar's leading control. One target, two faces: back on a detail or form page, close on a compose
- * sheet — where it goes to the same place, so the glyph, the label and the way it leaves are all that
- * differ. `sheet` is that way out: the surface slides back down before the navigation runs.
+ * One target with two faces: back on a detail or form page, close on a compose sheet, where `sheet`
+ * plays the slide back down before the navigation runs.
  */
 function LeadingControl({
     target,
@@ -122,9 +115,8 @@ function LeadingControl({
         );
     }
 
-    // The sheet's link stays a link — a real href, so it reads and behaves as one (status bar, open in
-    // a new tab) — and only the plain click is taken over, to play the exit before visiting. A
-    // modified click is the browser's to answer, and the sheet has nothing to animate for it.
+    // A real href, so only the plain click is taken over to play the exit; a modified click is the
+    // browser's to answer.
     return (
         <Tip label={label}>
             {sheet ? (
@@ -151,16 +143,9 @@ function LeadingControl({
 }
 
 /**
- * Who the page belongs to (mark + name, the whole block one link), centered like every other middle
- * element — the member bar's one grammar is "the middle is a label; a trailing › means tapping opens
- * the thing it names" (the disclosure cue, not position, carries tappability). The mark and the
- * chevron are decorative — the name is the accessible name.
- *
- * The scope is the member the page is *about* (a diary's author, a DM counterpart, the owner of the
- * list being read), not the viewer, so it can be an AI account. The bar is one truncating line and a
- * chevron with no room for an AiChip, so the accessible name carries the marker instead.
- *
- * Exported for the test that pins that accessible name; TopNav is its only caller.
+ * The scope is the member the page is about, not the viewer, so it can be an AI account: the bar is
+ * one truncating line with no room for an AiChip, so the accessible name carries the marker instead.
+ * Exported only so that name can be tested; TopNav is its one caller.
  */
 export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
     const t = useT();
@@ -180,8 +165,6 @@ export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
                 ) : (
                     <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="sm" decorative />
                 )}
-                {/* The scope names the region the bar is in, the same job the hub bar's centered label
-                    does — so it takes the same heading weight, not a heavier one. */}
                 <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{scope.name}</span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </Link>
@@ -190,13 +173,8 @@ export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
 }
 
 /**
- * The unified layout's mobile bar (docs/internals/feature-modules.md), standing where the brand bar
- * and the hub bar used to: the drawer, the two places the layout moves between, what is waiting, and
- * the account. The top level stops being several screens to arrive at — a member switches between
- * their own space and their groups without going back home first.
- *
- * Only the top level. A detail, a form, a sheet and a room keep their own bar, which says where the
- * reader is — a tab pair claiming they are at the top level would be saying something false.
+ * Only the top level: a detail, a form, a sheet and a room keep their own bar, which says where the
+ * reader is (docs/internals/feature-modules.md, "Surface responsibilities").
  */
 function UnifiedBar({ hidden }: { hidden?: boolean }) {
     const t = useT();
@@ -206,8 +184,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
     const notifications = props.unread?.notifications ?? 0;
 
     return (
-        // No seam: in the design this bar follows, the top of the page and the bar are one surface —
-        // the first card below is what marks where the page begins.
+        // No seam: this bar and the top of the page are one surface.
         <TopBar hidden={hidden} seam={false} persistent>
             {/* The drawer is phone furniture: at desk width the sidebar holds the same nav, and the
                 design's desk header carries no hamburger beside it. */}
@@ -215,8 +192,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
                 <NavDrawer />
             </span>
             {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
-                with the same name is a landmark list a reader cannot tell apart. Each tab names
-                itself and says whether it is the page being read. */}
+                with the same name is a landmark list a reader cannot tell apart. */}
             <div className="flex min-w-0 flex-1 items-stretch justify-center">
                 {unifiedTabs(props.enabledFeatures).map((section) => {
                     const active = isSectionActive(section, path);
@@ -228,8 +204,6 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
                             aria-current={active ? 'page' : undefined}
                             className="group relative flex min-h-12 min-w-0 items-center px-3"
                         >
-                            {/* The bar's own label rank, since a tab names the place it leads to the
-                                way the hub bar's centered label named the one it stood on. */}
                             <span
                                 className={cn(
                                     headingVariants({ variant: 'bar' }),
@@ -248,9 +222,8 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
                     );
                 })}
             </div>
-            {/* The count is announced in words or not at all — the mock's grammar is a dot, not a
-                number: something is waiting, and how much is the notification screen's answer. The
-                link's name still carries the count for a reader who cannot see the dot. */}
+            {/* The dot is not a number, so the link's name carries the count for a reader who cannot
+                see it. */}
             <Tip
                 label={
                     notifications > 0
@@ -268,22 +241,16 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
 }
 
 /**
- * The tabbed look's phone header: one grammar for every screen class — the site mark, then where the
- * reader is. "[mark] › here" answers all three layers of the question at once (which site, which
- * place, and the way back up out of it), which is why it replaces the per-class bars rather than
- * joining them. The mark is the way home and the only image the bar carries: a second one beside a
- * truncating name was measured and dropped.
- *
- * A compose sheet is the exception, and it is a mode rather than a class: it keeps its own ✕ header.
+ * The tabbed look's phone header (docs/internals/looks.md, "The registry"). A compose sheet is the
+ * exception, being a mode rather than a class: it keeps its own ✕ header.
  */
 function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
     const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
-    // A hub names itself; everything else names the place it is in — except the three pages that
-    // ARE a place (home, a member's, a group's), which share one header: mark and site name. The
-    // three-page symmetry extends to the bar, and the place's own hero names it directly below.
+    // A hub names itself; everything else names the place it is in, except the three pages that ARE
+    // a place, which share one header of mark and site name.
     const brand = isHomeComponent(String(component)) || isPlaceTop(String(component));
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
     const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome);
@@ -292,18 +259,13 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
             {/* Left-aligned, not centered: a trail reads from its root, and the root is the way home. */}
             {brand ? (
-                // No Tip: the site name beside the mark is the word a reader sees, and one spelled
-                // over it — announced or floated — would say something else. Carrying the name, this
-                // is the element that gives way, so an unbounded site name truncates instead of
-                // running under the menu.
+                // No Tip: the site name beside the mark is the word a reader sees.
                 <Link href="/" className="flex min-h-12 min-w-0 items-center gap-2">
                     <BrandMark size="sm" />
-                    {/* Home is the root spelled out; deeper, the name gives its width to the crumb. */}
                     <BrandName className="truncate" />
                 </Link>
             ) : (
-                // The mark alone, and BrandMark is aria-hidden in both its arms, so without this the
-                // link has no name at all. Holding its size here: the crumb beside it is what shortens.
+                // BrandMark is aria-hidden in both its arms, so without this the link has no name at all.
                 <Tip label={t('Home')}>
                     <Link href="/" className="flex min-h-12 shrink-0 items-center gap-2">
                         <BrandMark size="sm" />
@@ -324,8 +286,8 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
             )}
             {crumb &&
                 (crumb.link ? (
-                    // Pressable, so it is painted as pressable: the pill is the affordance the bare
-                    // trailing › failed to be. Text only — the bar's one image is the mark.
+                    // Pressable, so it is painted as pressable: the pill is the affordance a bare
+                    // trailing › was not.
                     <Link href={crumb.href} className="flex min-h-11 min-w-0 items-center rounded-full bg-accent px-3">
                         <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{text(crumb.label)}</span>
                     </Link>
@@ -339,11 +301,8 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
 }
 
 /**
- * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the front page,
- * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
- * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
- * its width on where the page sits. A compose screen replaces that with the sheet header: close plus
- * the page's own actions.
+ * The mobile (< lg) top bar, varying by page class (docs/internals/feature-modules.md, "Surface
+ * responsibilities").
  */
 export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
@@ -359,8 +318,6 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const inAppHistory = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot) > 0;
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
 
-    // Guest only: a guest lands from outside, where logo-left-goes-home is the web convention, and
-    // has neither the bottom nav nor the drawer — this link is their one way home.
     const brand = (
         <Link href="/" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
@@ -386,8 +343,8 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // One bar for every screen class, the compose sheet excepted (it is a mode, and its ✕ is how a
-    // mode is left). Ahead of the class split below, which this look does not make.
+    // Ahead of the class split below, which this look does not make; the compose sheet is excepted
+    // because its ✕ is how a mode is left.
     if (lookSpec(props.look).topBar === 'breadcrumb' && !chrome.compose) {
         return <BreadcrumbBar chrome={chrome} hidden={hidden} />;
     }
@@ -398,22 +355,16 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         return <UnifiedBar hidden={hidden} />;
     }
 
-    // Everything that is neither home nor a hub is a detail or form page. Home is named rather than
-    // derived: it shares the detail pages' chrome mode (its h1 is in the page), but it is the brand's
-    // home, and there is nothing above it to go back to.
+    // Home is named rather than derived: it shares the detail pages' chrome mode, but there is
+    // nothing above it to go back to.
     if (!topLevel) {
         const target = backTarget(inAppHistory, chrome.context);
 
-        // A compose sheet spends the bar on leaving and finishing: close, then the page's own
-        // action(s). No trail, no scope, no nav — the sheet is one screen with one job, and until
-        // something scrolls under the bar there is no seam either: the header and the form it belongs
-        // to are one surface.
         if (chrome.compose) {
             return (
                 <TopBar hidden={hidden} seam={scrolled}>
                     <LeadingControl target={target} label={t('Close')} icon={X} sheet />
-                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end —
-                        BAR_ACTION_HIT applied to each, since they arrive through a portal. */}
+                    {/* BAR_ACTION_HIT as a descendant variant: the actions arrive through a portal. */}
                     <div
                         ref={slotRef}
                         className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1.5 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
@@ -430,16 +381,13 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 {chrome.scope && !chrome.form ? (
                     <>
                         <ScopeIdentity scope={chrome.scope} />
-                        {/* Balances the back control — same box, mirrored margins — so the identity
-                            centers on the bar. */}
+                        {/* Balances the back control, so the identity centers on the bar. */}
                         <span className="-mr-1 size-12 shrink-0" aria-hidden />
                     </>
                 ) : (
                     chrome.context && (
                         <>
-                            {/* No scope to be in — a form, or a message with no single counterparty.
-                                The trail stays where it is as plain text, centered so the row reads
-                                as a title rather than as more of the back control. */}
+                            {/* No scope to be in — a form, or a message with no single counterparty. */}
                             <p className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden text-sm whitespace-nowrap text-muted-foreground">
                                 {chrome.context.map((item, i) => (
                                     <span
@@ -463,8 +411,8 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                                     </span>
                                 ))}
                             </p>
-                            {/* Balances the back control — same box, mirrored -mr-1 against its -ml-1 —
-                                so the text centers on the bar, not on what is left of it. */}
+                            {/* Balances the back control, mirrored -mr-1 against its -ml-1, so the
+                                text centers on the bar. */}
                             <span className="-mr-1 size-12 shrink-0" aria-hidden />
                         </>
                     )
@@ -473,10 +421,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // A hub's h1 is fixed section vocabulary (= its nav label), short enough for the bar and worth a
-    // row of a phone's height, so the bar carries it and the in-page heading folds to sr-only. It is
-    // aria-hidden here: that in-page h1 is the page's one announcement of the title. Centered, like
-    // every static label in the bar — only tappable identity blocks sit left.
+    // aria-hidden here: the in-page h1, folded to sr-only, is the page's one announcement of the title.
     if (chrome.mode === 'section' && chrome.title) {
         return (
             <TopBar hidden={hidden}>
@@ -489,9 +434,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // Home's brand is a label, not a link: it would only point at the page it is on, and
-    // "center with no ›" meaning not-tappable is the grammar the other bars rely on. Home from
-    // elsewhere is the bottom nav's job.
+    // Home's brand is a label, not a link: it would only point at the page it is on.
     return (
         <TopBar hidden={hidden}>
             <NavDrawer />

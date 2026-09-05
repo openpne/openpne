@@ -19,7 +19,10 @@ afterEach(cleanup);
 
 const author = { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false };
 
-/** One row of a list that mixes the two: this one either carries its photos or only says it has them. */
+/**
+ * One row of a list that mixes the two: this one either carries its photos or only says it has
+ * them.
+ */
 function row(photos: 'strip' | 'marker') {
     const { container } = render(
         <ul>
@@ -55,10 +58,9 @@ function downToTheTitle(column: Element): string[] {
 }
 
 /**
- * A list mixing rows that carry a photo strip with rows that only mark that they have photos must
- * read as one column of titles. Two things hold that: the row aligns to its own top, so a taller row
- * cannot centre its text against the short one beside it, and the byline keeps a line's height
- * whatever it happens to carry.
+ * A list mixing rows that carry a photo strip with rows that only mark they have photos must read as
+ * one column of titles. Two things hold that: the row aligns to its own top, and the byline keeps a
+ * line's height whatever it carries.
  */
 test('a row with photos and one without are the same shape above the title', () => {
     const strip = row('strip');

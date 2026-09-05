@@ -6,10 +6,6 @@ export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 
 /**
- * A panel anchored to its trigger, for content that is not a menu of commands — a grid of toggles,
- * a small form. Radix supplies the dialog role, the focus that moves into the panel and back to the
- * trigger on Esc, and outside-click dismissal.
- *
  * Portalled, so a scroll container or an `overflow-hidden` card between the trigger and the page
  * cannot clip it. Give it an `aria-label`: a dialog with no name is one axe refuses.
  */

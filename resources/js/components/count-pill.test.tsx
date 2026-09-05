@@ -62,15 +62,8 @@ const named = (...names: string[]): void => {
 const counted = { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 };
 
 /*
- * The count now reaches these names through an `sr-only` phrase rather than an `aria-label` on the
- * pill's span. These strings are what the surfaces announced before that change, recorded from the
- * same renders and asserted unchanged — if the phrase does not fold into a contents-derived name the
- * way the attribute did, this is where it shows.
- *
- * They are not all in the same order, and this PR deliberately did not make them so: the bar's tab
- * puts the pill ahead of the visible word in the DOM, so its name leads with the count. Unifying
- * that changes what a reader hears and is a separate question; pinning it here is what keeps the
- * difference deliberate rather than drifting.
+ * The orders differ deliberately: the bar's tab puts the pill ahead of the visible word in the DOM,
+ * so its name leads with the count.
  */
 test('the bar tab is named count first, as it was', () => {
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
@@ -121,9 +114,8 @@ test('a hub tab is named word first, as it was', () => {
 });
 
 /*
- * What the name test above cannot see. Putting `aria-label` back on the pill's span produces the very
- * same names — the attribute and the phrase fold in identically — so the guard against the shape this
- * change exists to remove has to look at the markup itself.
+ * The attribute and the phrase fold into the same names, so the guard against an `aria-label` on the
+ * pill has to look at the markup itself.
  */
 test('the pill names no role-less element of its own', () => {
     const { container } = render(<CountPill count={3} label="3 unread messages" />);
@@ -191,10 +183,7 @@ test('a conversation row with nothing waiting is named by who it is with, and no
     named('Sato');
 });
 
-/*
- * Shape C: no control at all beside the pill, so the heading is the only thing that can hold the
- * count. Neither page had a heading-name test, which makes these the only guard on that.
- */
+/* No control at all beside the pill, so the heading is the only thing that can hold the count. */
 test('a section heading takes the count the pill beside it cannot name', () => {
     render(
         <HomeSection
@@ -224,8 +213,8 @@ test('a section heading with nothing waiting says only what it is', () => {
 });
 
 /*
- * The count phrase is a template, and a call site that forgets the replacement announces the
- * placeholder itself. One tile did. Nothing renders every call site, so this reads them instead.
+ * A call site that forgets the replacement announces the placeholder itself, and nothing renders
+ * every call site, so this reads them instead.
  */
 test('every unread phrase is given the count it names', () => {
     const root = path.join(import.meta.dirname, '..');
@@ -239,9 +228,8 @@ test('every unread phrase is given the count it names', () => {
 
     const calls = sources(root).flatMap((file) => {
         const code = readFileSync(file, 'utf8');
-        // Only where `t` is the translator. `lib/member-chrome.ts` has a local `t` that builds a
-        // deferred {key, replacements} label, and its calls are supposed to carry no count — the
-        // component that draws the badge supplies it.
+        // `lib/member-chrome.ts` has a local `t` building a deferred label whose calls carry no count,
+        // so only the translator's own calls are read.
         if (!code.includes("from '@/lib/i18n'")) return [];
         // Anywhere in the key, not only at its start: `Jump to :count unread messages` and
         // `%Friends% (:count)` are the same template and were sailing past a `^:count` match.
@@ -291,9 +279,8 @@ test('a group room row with one waiting says so in the singular', () => {
 });
 
 /*
- * The heading tests above build the counted title the way the two pages build it, which proves the
- * mechanism and not the wiring: either page could drop its `sr-only` phrase and stay green. This
- * reads the pages instead — a `right={<CountPill …>}` is a heading that has to carry the count.
+ * The heading tests above prove the mechanism and not the wiring — either page could drop its
+ * `sr-only` phrase and stay green — so this reads the pages instead.
  */
 test('every heading that shows a pill also says the count', () => {
     const root = path.join(import.meta.dirname, '..');
@@ -319,11 +306,8 @@ test('every heading that shows a pill also says the count', () => {
     expect(sites).toHaveLength(2);
 
     const bare = sites.filter(({ code, at }) => {
-        // Only the section this pill is in, from its own opening tag. "An sr-only somewhere near a
-        // title" is satisfied by any other section's, so removing this heading's phrase and adding
-        // an unrelated one elsewhere would leave it green — and the phrase has to be the count (a
-        // `:count` template, or the shared phrase that picks the singular at one), not whatever
-        // sr-only happens to live in the same band.
+        // Scoped to this pill's own section: "an sr-only somewhere near a title" would be satisfied
+        // by any other section's.
         const opens = [...code.slice(0, at).matchAll(SECTION)];
 
         return !/sr-only[\s\S]*?(?::count|unreadMessagesPhrase\()/.test(code.slice(opens.at(-1)?.index ?? 0, at));

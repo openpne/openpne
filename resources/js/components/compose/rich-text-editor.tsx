@@ -60,7 +60,6 @@ const COMPACT_QUERY = '(max-width: 767.98px)';
 const TOOLBAR_BUTTON_CLASS =
     'inline-flex size-9 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-accent aria-pressed:text-accent-foreground';
 
-/** Track a media query so the compact button set engages below md (matches the CSS breakpoint). */
 function useIsCompact(): boolean {
     const [compact, setCompact] = useState(
         () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(COMPACT_QUERY).matches,
@@ -151,11 +150,8 @@ function useToolbarActions(editor: Editor) {
 }
 
 /**
- * onMouseDown preventDefault keeps the editor selection (and the mobile keyboard) while clicking.
- *
- * Tip stands inside rather than around the caller's `<ToolbarButton>`: this component takes a fixed
- * prop list and forwards neither ref nor the rest, so a tooltip wrapped around it from outside would
- * have nothing to anchor to. One Tip here labels the whole toolbar.
+ * onMouseDown preventDefault keeps the editor selection, and the mobile keyboard, through the click.
+ * Tip stands inside rather than around this component, which forwards neither ref nor its rest props.
  */
 function ToolbarButton({
     label,
@@ -186,7 +182,6 @@ function ToolbarButton({
     );
 }
 
-/** Icon-only toolbar button bound to a {@link ToolbarAction}. */
 function ActionButton({ action }: { action: ToolbarAction }) {
     const t = useT();
     const Icon = action.icon;
@@ -197,7 +192,6 @@ function ActionButton({ action }: { action: ToolbarAction }) {
     );
 }
 
-/** Text + icon row inside the "More" menu — the label doubles as the icon's meaning on touch. */
 function MoreItem({
     label,
     icon: Icon,
@@ -224,25 +218,10 @@ function MoreItem({
 }
 
 /**
- * Overflow menu for the formatting + table commands the compact row demotes. A plain (non-Radix)
- * popover on purpose: Radix menus pull DOM focus into the menu for arrow-key navigation, which drops
- * the editor selection. Here the items preventDefault on mousedown, so picking one never moves focus
- * and the command applies to the live selection.
- *
- * Opening dismisses the soft keyboard on purpose. The panel is taller than the band left above an
- * open keyboard, and its max height is layout-viewport based — the keyboard shrinks only the visual
- * viewport — so the last items would sit behind the keyboard with no way to scroll them out. The
- * selection lives in the editor state rather than in DOM focus, so each item's `chain().focus()`
- * brings back both the caret and the keyboard.
- *
- * That dismissal is also what lets the panel sit as a bottom sheet on the layout viewport: with no
- * keyboard the layout viewport is what the member sees, so `bottom-0` is the real bottom of the
- * screen and the whole list is reachable however short the page is. Anchoring it to the trigger
- * instead put the tail below the fold of a page with nothing to scroll.
- *
- * The sheet is portaled to <body> because the toolbar's `z-10` opens a stacking context: rendered in
- * place, no z-index could lift it over the app shell's fixed bottom bar, which swallowed the taps on
- * the last item.
+ * A plain popover rather than a Radix menu: Radix pulls DOM focus into the menu for arrow-key
+ * navigation, which drops the editor selection its commands act on. Opening dismisses the soft
+ * keyboard on purpose, the panel's max height being layout-viewport based while the keyboard shrinks
+ * only the visual one.
  */
 function MoreMenu({ editor }: { editor: Editor }) {
     const t = useT();
@@ -258,8 +237,8 @@ function MoreMenu({ editor }: { editor: Editor }) {
         if (!open) {
             return;
         }
-        // The sheet is portaled, so "inside" spans both roots: the trigger's container and the sheet.
-        // Everything else — including the backdrop — is outside and dismisses.
+        // The sheet is portaled, so "inside" spans both roots; everything else, the backdrop
+        // included, dismisses.
         const inside = (target: EventTarget | null) =>
             Boolean(containerRef.current?.contains(target as Node) || panelRef.current?.contains(target as Node));
         const onPointerDown = (event: PointerEvent) => {
@@ -267,9 +246,8 @@ function MoreMenu({ editor }: { editor: Editor }) {
                 setOpen(false);
             }
         };
-        // Close if focus reaches anything outside the sheet — a command handing it back to the
-        // editable, say — so the popover never lingers over an external control. Tab alone cannot
-        // get there; it cycles inside (see onKeyDown).
+        // Close if focus reaches anything outside the sheet, so the popover never lingers over an
+        // external control.
         const onFocusIn = (event: FocusEvent) => {
             if (!inside(event.target)) {
                 setOpen(false);
@@ -284,10 +262,8 @@ function MoreMenu({ editor }: { editor: Editor }) {
             if (event.key !== 'Tab' || !panelRef.current) {
                 return;
             }
-            // Tab cycles inside the sheet. The portal put it at the end of <body>, so leaving it by
-            // Tab would drop focus to nothing and then wrap to the top of the document rather than
-            // reach the trigger it belongs to. Escape is the way out; the commands' own
-            // `chain().focus()` still hands focus to the editable.
+            // The portal put the sheet at the end of <body>, so leaving it by Tab would wrap to the
+            // top of the document rather than reach its trigger; Escape is the way out.
             const items = panelRef.current.querySelectorAll<HTMLElement>('button');
             const first = items[0];
             const last = items[items.length - 1];
@@ -304,13 +280,11 @@ function MoreMenu({ editor }: { editor: Editor }) {
         document.addEventListener('pointerdown', onPointerDown, true);
         document.addEventListener('focusin', onFocusIn);
         document.addEventListener('keydown', onKeyDown);
-        // The portal puts the sheet at the end of <body>, so it no longer follows the trigger in Tab
-        // order: enter it here instead. Nothing is lost — opening already blurred the editor, and the
-        // selection each item applies to lives in the editor state.
+        // The sheet no longer follows the trigger in Tab order, so focus enters it here; opening
+        // already blurred the editor, and the selection each item applies to lives in the editor state.
         panelRef.current?.focus();
         return () => {
-            // Release the painted selection however the sheet closed. Picking a command re-focuses
-            // the editable, which releases it too, but a dismissal need not focus anything.
+            // Release the painted selection however the sheet closed: a dismissal focuses nothing.
             editor.commands.holdSelection(false);
             document.removeEventListener('pointerdown', onPointerDown, true);
             document.removeEventListener('focusin', onFocusIn);
@@ -348,26 +322,23 @@ function MoreMenu({ editor }: { editor: Editor }) {
                 </button>
             </Tip>
             {open &&
+                // Portaled to <body>: the toolbar's `z-10` opens a stacking context, so no z-index
+                // here could lift the sheet over the app shell's fixed bottom bar.
                 createPortal(
                     <>
-                        {/* Catches the tap that dismisses the sheet so it cannot also reach a link or
-                            the bottom bar underneath. Deliberately undimmed: this list formats the
-                            selection, and scrimming the text being formatted reads as hiding it. */}
+                        {/* Catches the dismissing tap, so it cannot also reach a link or the bottom bar underneath. */}
+                        {/* Deliberately undimmed: scrimming the text being formatted reads as hiding it. */}
                         <div aria-hidden className="fixed inset-0 z-50" />
                         <div
                             ref={panelRef}
                             id={panelId}
-                            // A named dialog, not a menu: the items are toggles rather than
-                            // arrow-navigated menuitems. Tab cycles within it, but aria-modal stays
-                            // off — a command may hand focus straight back to the editable.
+                            // A named dialog, not a menu: the items are toggles, and aria-modal stays
+                            // off because a command may hand focus straight back to the editable.
                             role="dialog"
                             aria-label={t('More formatting')}
                             tabIndex={-1}
                             data-testid="compose-more-panel"
-                            // Two columns: the sheet covers whatever the member is formatting, so
-                            // halving its rows is halving how much of the selection it hides. The
-                            // order below is by row pair — the grid flows left→right, so it is the
-                            // pairing, not a separator, that groups related commands.
+                            // The grid flows left→right, so the order below pairs related commands by row.
                             className="fixed inset-x-0 bottom-0 z-50 grid max-h-[70dvh] grid-cols-2 gap-x-1 overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
                         >
                             <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
@@ -441,7 +412,6 @@ function MoreMenu({ editor }: { editor: Editor }) {
     );
 }
 
-/** Small dialog to set or clear the link on the current selection; only http/https is accepted. */
 function LinkDialog({ editor }: { editor: Editor }) {
     const t = useT();
     const [open, setOpen] = useState(false);
@@ -485,9 +455,8 @@ function LinkDialog({ editor }: { editor: Editor }) {
             </ToolbarButton>
             <DialogContent
                 closeLabel={t('Close')}
-                // Hand focus back to the editable on every close path (Apply / × / ESC / overlay-tap).
-                // Radix would otherwise return it to the trigger, undoing the `.focus()` the link
-                // command chain just ran and leaving the caret nowhere to keep typing.
+                // Radix would otherwise return focus to the trigger on every close path, undoing the
+                // `.focus()` the link command chain just ran.
                 onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     editor.commands.focus();
@@ -542,7 +511,6 @@ function LinkDialog({ editor }: { editor: Editor }) {
     );
 }
 
-/** Insert/edit table via a dropdown; row/column actions disable outside a table. md+ only. */
 function TableMenu({ editor }: { editor: Editor }) {
     const t = useT();
     const inTable = editor.isActive('table');
@@ -591,19 +559,10 @@ function TableMenu({ editor }: { editor: Editor }) {
 }
 
 /**
- * The formatting row, sticky at the top of the form column at every width (below the persistent TopNav
- * via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls under it.
- * The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky resolves
- * against the page scroll. The band's horizontal geometry is keyed to that Panel's body padding
- * (surface.tsx): at lg the negative margin matches it exactly (20px), so the band ends at the card's
- * padding edge; below lg it takes no negative margin at all and spans the body's content width, which
- * is where the field boxes start — a band that ran wider than the fields it formats would read as
- * belonging to the screen rather than to the body. Change that padding and the lg pair moves with it.
- *
- * Placement is deliberately breakpoint-independent: only the button set narrows, with the rest demoted
- * into "More". A bar anchored to the visual viewport to ride the soft keyboard was tried and removed —
- * the measurement differs per engine and display mode and lags scroll, so the bar drifted off the
- * keyboard on real hardware. Staying in the page's own coordinate system has no such failure mode.
+ * The band's geometry is keyed to the host Panel's body padding (surface.tsx): at lg the negative
+ * margin matches it exactly, so changing that padding moves this pair too. Anchoring the bar to the
+ * visual viewport was tried and removed: the measurement differs per engine and lags scroll, so it
+ * drifted off the keyboard on real hardware.
  */
 function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boolean }) {
     const t = useT();
@@ -614,13 +573,7 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             role="toolbar"
             aria-label={t('Formatting')}
             data-testid="compose-toolbar"
-            // Tinted, not the card's own color: the buttons' touch targets are mostly whitespace, so
-            // an untinted row has no visible top edge and the eye reads all of it as the gap below the
-            // label. A band the member can see starts where the field starts.
-            // px-1: enough that the outermost touch target does not sit on the band's own edge, and it
-            // puts the first glyph on roughly the same line as the text inside the field boxes.
-            // No vertical padding: the buttons carry 44px touch targets of their own, and padding on
-            // top of them pushes the row further from the label still.
+            // No vertical padding: the buttons carry 44px touch targets of their own.
             className="sticky top-[var(--modern-top-offset)] z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (
@@ -653,11 +606,7 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
     );
 }
 
-/**
- * WYSIWYG compose editor for a Modern-surface Markdown body. The schema and the Markdown
- * parse/serialize round-trip live in editor-extensions.ts (the shared SSoT). Default export so the
- * host page can lazy-load it.
- */
+/** Default export, so the host page can lazy-load it. */
 export default function RichTextEditor({
     initialMarkdown,
     onChange,

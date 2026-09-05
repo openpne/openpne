@@ -12,11 +12,6 @@ import {
 import { Tip } from '@/components/ui/tooltip';
 import type { AuthUser } from '@/types';
 
-/**
- * Account menu: profile, settings, sign out. Radix DropdownMenu supplies the keyboard/focus/ARIA
- * behavior. `compact` shows just the avatar (mobile top bar); the default avatar+name row is used
- * in the desktop sidebar footer. (Appearance and language live on the settings page.)
- */
 export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?: boolean }) {
     const t = useT();
 
@@ -26,9 +21,8 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
             aria-label={compact ? undefined : t('Account menu')}
             className={
                 compact
-                    ? // The same 48px box as the bar's other edge controls (hamburger, back), so a
-                      // centered bar label sits on the true center — and the tap target grows past
-                      // the 32px avatar it paints. -mr-1 mirrors their -ml-1.
+                    ? // The same 48px box as the bar's other edge controls, so a centered bar label
+                      // sits on the true center; -mr-1 mirrors their -ml-1.
                       '-mr-1 inline-flex size-12 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring'
                     : 'flex min-h-11 w-full items-center gap-3 rounded-full px-2 outline-none transition hover:bg-accent focus-visible:bg-accent'
             }

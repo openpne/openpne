@@ -10,9 +10,8 @@ import type { AuthUser, FeatureKey } from '@/types';
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
-// The bar reads the whole Inertia page (which component, which URL, the shared props) and links with
-// the router's Link; a test has neither, so both are stood in for. `Link` stays an anchor so the
-// bar's controls keep the roles and names the assertions below are about.
+// The bar reads the whole Inertia page and links with the router's Link, so both are stood in for;
+// `Link` stays an anchor to keep the roles the assertions below are about.
 const inertia = vi.hoisted(() => ({ page: {} as { component: string; url: string; props: Record<string, unknown> } }));
 
 vi.mock('@inertiajs/react', () => ({
@@ -296,7 +295,7 @@ test('a tabbed page that is nowhere leaves the mark standing alone', () => {
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/']);
     expect(container.textContent).not.toContain('›');
     // BrandMark is aria-hidden in both its arms, so a mark standing alone has whatever name is put
-    // on the link and no other. The site's name is not it: nothing spells it here to read.
+    // on the link and no other.
     expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
 });

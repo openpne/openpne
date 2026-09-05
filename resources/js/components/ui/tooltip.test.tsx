@@ -29,11 +29,6 @@ test('the label names the control it wraps', () => {
     expect(screen.getByRole('button', { name: 'Reply' })).toBeTruthy();
 });
 
-/**
- * The whole reason the label is cloned in rather than merged through Slot: outside dev nothing
- * throws, and the injected name has to be the one that survives — otherwise a child's stale
- * `aria-label` would quietly disagree with the panel beside it.
- */
 test('the label wins over a name the child brought, where nothing throws', () => {
     vi.stubEnv('DEV', false);
 
@@ -84,10 +79,6 @@ test("the child's own description is left where it points", () => {
     expect(button.getAttribute('aria-describedby')).toBe('hint');
 });
 
-/**
- * Open or shut, the control is named once and described by nothing: the panel repeats the name, and
- * a description carrying it again reads out as "Reply, button, Reply".
- */
 test('the raised panel is not announced a second time as a description', () => {
     vi.useFakeTimers();
     renderWithProviders(
@@ -120,7 +111,6 @@ test('a pointer raises the panel', () => {
     expect(screen.getByRole('tooltip').textContent).toBe('Reply');
 });
 
-/** `silent` is for a control that shows its word in one state and not the other: the name stays. */
 test('a silent Tip names the control and floats nothing', () => {
     vi.useFakeTimers();
     renderWithProviders(
@@ -156,9 +146,7 @@ test('the keyboard raises it too, and lets it go', () => {
 });
 
 /**
- * What a dialog does to its trigger as it shuts, and to its close control as it opens: focus that
- * moved by itself, on an element the browser draws no ring for. After a tap, that is the only kind
- * there is — so nothing floats.
+ * The spy models a dialog moving focus by itself, onto an element the browser draws no ring for.
  */
 test('a focus that moved by itself raises nothing', () => {
     renderWithProviders(

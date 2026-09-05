@@ -5,12 +5,6 @@ type Props = ComponentProps<'input'> & {
     label: ReactNode;
 };
 
-/**
- * A radio rendered as a compact pill, for short single-choice settings laid out as one wrapping
- * row (2-5 options) — the scannable counterpart to RadioCard for options that need no description.
- * Same selection language as RadioCard (primary border + ring via `has-[:checked]`), and the radio
- * input stays visible so the group still reads as a choice at a glance.
- */
 export function RadioPill({ label, className, ...props }: Props) {
     return (
         <label

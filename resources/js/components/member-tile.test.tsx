@@ -11,10 +11,9 @@ afterEach(cleanup);
 const member = { id: 7, name: 'Shirabe', imageUrl: null, avatarColor: null, isAi: false };
 
 /**
- * The accessible name is the assertion, not the presence of a chip: an avatar's corner tag is
- * aria-hidden and a truncated name says nothing, so a marker that lands outside the name leaves a
- * screen reader with no way to tell an AI account from a person. axe does not catch that — the name
- * is present and non-empty either way, just wrong about what it names.
+ * The accessible name is the assertion, not the presence of a chip: a marker that lands outside the
+ * name leaves a screen reader unable to tell an AI account from a person. axe does not catch that —
+ * the name is present and non-empty either way.
  */
 test('an AI account is named as one by the tile link', () => {
     render(<MemberTile member={{ ...member, isAi: true }} />);

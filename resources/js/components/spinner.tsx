@@ -1,4 +1,3 @@
-/** Circular loading spinner; `size` maps to a Tailwind size-N. */
 type Props = {
     size?: 4 | 5 | 6;
 };

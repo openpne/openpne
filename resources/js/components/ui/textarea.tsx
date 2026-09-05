@@ -1,7 +1,6 @@
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Token-based multiline input. Set `aria-invalid` to surface the error ring. */
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
     return (
         <textarea

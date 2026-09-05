@@ -44,12 +44,10 @@ export function DropdownMenuSeparator({ className, ...props }: ComponentProps<ty
 export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 export const DropdownMenuItemIndicator = DropdownMenuPrimitive.ItemIndicator;
 
-/** Menu heading for the group below it — labels the choice, not one of its options. */
 export function DropdownMenuLabel({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
     return <DropdownMenuPrimitive.Label className={cn(headingVariants({ variant: 'label' }), 'px-3 py-2', className)} {...props} />;
 }
 
-/** Exclusive choice within a {@link DropdownMenuRadioGroup}. Top-aligned so an item may carry a description line. */
 export function DropdownMenuRadioItem({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
     return (
         <DropdownMenuPrimitive.RadioItem

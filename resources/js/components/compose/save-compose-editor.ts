@@ -18,11 +18,8 @@ function post(method: ComposeEditorPreference): Promise<void> {
 const queue = createLastIntentQueue(post);
 
 /**
- * Persist the member's input-method choice — fire-and-forget from the caller's side, since the form
- * has already switched. Follows the raw-fetch contract of markdown-preview.tsx: JSON content/accept
- * headers plus the XSRF header. A failed request is swallowed and never retried — the choice simply
- * isn't persisted this time. Requests are serialized and coalesced to the last choice made, so a
- * quick run through the menu cannot store an earlier one.
+ * Fire-and-forget: a failed write is swallowed and never retried, so the choice is simply not
+ * persisted this time.
  */
 export function saveComposeEditor(method: ComposeEditorPreference): void {
     queue(method);

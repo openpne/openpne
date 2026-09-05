@@ -8,9 +8,6 @@ import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-/** Desktop (lg+) sticky sidebar: brand (home link) + member nav + account menu; a guest (a
- *  web-public profile is reachable signed out) sees only the brand and a sign-in link. The room list
- *  under the groups entry is this sidebar's alone — the drawer sharing NavItems does not ask for it. */
 export function LeftNav() {
     const t = useT();
     const { auth, enabledFeatures, talkNavRooms } = usePage<PageProps>().props;
