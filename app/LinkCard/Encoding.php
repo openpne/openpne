@@ -7,7 +7,7 @@ namespace App\LinkCard;
 /**
  * Converts a fetched page to UTF-8 before the HTML5 parser, which assumes it, reads anything; a
  * wrong guess stores a title of mojibake rather than failing. The order in `toUtf8()` is the design
- * and is explained step by step in docs/internals/link-cards.md (Encoding is not an edge case).
+ * and is explained step by step in docs/internals/link-cards.md, "Encoding is not an edge case".
  */
 final class Encoding
 {

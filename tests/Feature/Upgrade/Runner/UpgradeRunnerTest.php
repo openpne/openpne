@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Driver-agnostic runner/command behavior (the INSERT...SELECT execution is covered on the MySQL
- * lane by UpgradeRunnerSqlTest).
+ * Driver-agnostic runner/command behavior; the INSERT...SELECT execution is covered on the MySQL
+ * lane.
  */
 class UpgradeRunnerTest extends TestCase
 {

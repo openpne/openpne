@@ -210,8 +210,8 @@ class NotificationCenterTest extends TestCase
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $sender->getKey()]);
 
-        // The Classic error screen is the site's own shell (see ClassicErrorPageTest), so the
-        // header it carries is the whole header.
+        // The Classic error screen is the site's own shell, so the header it carries is the whole
+        // header.
         $this->actingAs($viewer)->get('/diary/999999')
             ->assertNotFound()
             ->assertSee('id="notificationCenter"', false)

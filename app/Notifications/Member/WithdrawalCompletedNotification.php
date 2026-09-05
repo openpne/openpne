@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * The Member row is already gone, so the address, name and locale travel as scalars
- * (docs/internals/notifications.md, Gating flow).
+ * (docs/internals/notifications.md, "Gating flow").
  */
 class WithdrawalCompletedNotification extends Notification implements ShouldQueue
 {

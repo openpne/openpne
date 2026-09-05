@@ -20,8 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Why this fan-out reads the kind's rows in both polarities, and how it stays cheap on a site where
- * nobody opted in, are in [notifications.md](../../docs/internals/notifications.md) § Broadcast
- * fan-out.
+ * nobody opted in, are in docs/internals/notifications.md, "Broadcast fan-out".
  */
 class BroadcastGroupMessagePosted implements ShouldQueue
 {

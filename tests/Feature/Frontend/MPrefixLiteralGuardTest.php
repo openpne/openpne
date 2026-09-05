@@ -10,8 +10,8 @@ use Tests\TestCase;
 /**
  * Guards against /m/ URL literals re-entering the codebase: the retired Modern URL space is served
  * only by the compat redirects, every emitted URL is canonical, and a persisted or outbound URL
- * must be canonical (docs/internals/classic-compatibility.md, key invariant #2 — structural here,
- * not a review item).
+ * must be canonical (docs/internals/classic-compatibility.md, "Key invariants" #2 — structural
+ * here, not a review item).
  */
 class MPrefixLiteralGuardTest extends TestCase
 {

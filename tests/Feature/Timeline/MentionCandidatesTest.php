@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** Never someone the submit would drop — MentionStorageTest holds the drop side of that agreement. */
+/** Never someone the submit would drop — the storage half holds the drop side of that agreement. */
 class MentionCandidatesTest extends TestCase
 {
     use RefreshDatabase;

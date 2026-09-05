@@ -6,7 +6,7 @@ use RuntimeException;
 
 /**
  * Fails closed: the original bytes are never passed through
- * ([security.md](../../docs/internals/security.md) § Uploaded image metadata).
+ * (docs/internals/security.md, "Uploaded image metadata").
  */
 class ImageMetadataStripException extends RuntimeException
 {

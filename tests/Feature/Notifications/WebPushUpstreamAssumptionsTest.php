@@ -25,9 +25,9 @@ use Throwable;
 /**
  * Assumptions about the packages under the push seam, asserted so a bump to
  * laravel-notification-channels/webpush, minishlink/web-push or guzzlehttp/guzzle is what goes red
- * (docs/internals/outbound-http.md, The push endpoint seam). Two neighbouring ones are not repeated: that
- * the channel sends through `flush()`, and that `queueNotification()` and `MessageSentReport` keep the
- * shapes FakeWebPush is written against.
+ * (docs/internals/outbound-http.md, "The push endpoint seam"). Two neighbouring ones are not
+ * repeated: that the channel sends through `flush()`, and that `queueNotification()` and
+ * `MessageSentReport` keep the shapes FakeWebPush is written against.
  */
 class WebPushUpstreamAssumptionsTest extends TestCase
 {
@@ -73,7 +73,7 @@ class WebPushUpstreamAssumptionsTest extends TestCase
 
     /**
      * Asserted against discovery rather than against the instance the library keeps
-     * (docs/internals/outbound-http.md, The push endpoint seam).
+     * (docs/internals/outbound-http.md, "The push endpoint seam").
      */
     public function test_no_async_client_is_available_to_send_push_unguarded(): void
     {

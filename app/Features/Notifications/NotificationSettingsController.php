@@ -24,8 +24,8 @@ class NotificationSettingsController extends Controller
     {
         return Inertia::render('member/config/notifications', [
             'form' => NotificationSettingsSerializer::form($this->viewer()),
-            // The rooms the member has quieted one by one, shown beside the catalog toggles those mutes
-            // are exceptions to (docs/internals/group-talk.md, Mute).
+            // The rooms the member has quieted one by one, shown beside the catalog toggles those
+            // mutes are exceptions to (docs/internals/group-talk.md, "Mute").
             'mutedRooms' => $mutedRooms($this->viewer()),
             // Deliberately not called `push`: Inertia merges page props over the shared ones, so a
             // top-level `push` here would replace the shared VAPID key this page needs to subscribe.

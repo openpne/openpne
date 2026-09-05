@@ -315,7 +315,7 @@ class SafeHttpFetcherTest extends TestCase
         $this->assertFalse($options['cookies']);
         $this->assertTrue($options['verify'], 'TLS verification is not something this fetcher may turn off.');
         $this->assertArrayNotHasKey('auth', $options);
-        // ~/.netrc stays unread by libcurl's default; OutboundTransportTest pins that the option bag
+        // ~/.netrc stays unread by libcurl's default, and the transport pins that the option bag
         // cannot turn it on, so nothing here needs to turn it off.
         $this->assertSame([CURLOPT_CONNECT_TO], array_keys($options['curl']));
         $this->assertStringStartsWith('OpenPNE/4', $request->getHeaderLine('User-Agent'));

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Throwable;
 
 /**
- * See docs/internals/images.md "files.width / files.height".
+ * See docs/internals/images.md, "files.width / files.height".
  */
 class BackfillImageDimensionsCommand extends Command
 {

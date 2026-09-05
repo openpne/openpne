@@ -4,7 +4,7 @@ namespace App\Files;
 
 /**
  * Each container walk, the segments it deliberately keeps, and the fail-closed rule are in
- * [security.md](../../docs/internals/security.md) § Uploaded image metadata.
+ * docs/internals/security.md, "Uploaded image metadata".
  */
 class ImageMetadataStripper
 {
