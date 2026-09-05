@@ -32,8 +32,8 @@ class SnsSettingWiringTest extends TestCase
             $key->isRequired();
             $key->maxBytes();
             $default = $key->default();
-            $this->assertSame($default, $key->decode(null), $key->value);
-            $this->assertIsString($key->encode($key->coerce($default)), $key->value);
+            // decode() answers null before its match, so the round trip is what reaches the arms.
+            $this->assertEquals($default, $key->decode($key->encode($key->coerce($default))), $key->value);
         }
     }
 

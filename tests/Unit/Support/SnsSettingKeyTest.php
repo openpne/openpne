@@ -205,7 +205,7 @@ class SnsSettingKeyTest extends TestCase
         }
     }
 
-    public function test_the_posting_and_search_switches_are_on_by_default_and_fail_open(): void
+    public function test_the_posting_and_search_switches_are_on_by_default_and_read_as_openpne3_truthy(): void
     {
         foreach ([
             [SnsSettingKey::TimelinePostingEnabled, SettingGroup::Timeline, 'is_allow_post_activity'],
@@ -216,10 +216,10 @@ class SnsSettingKeyTest extends TestCase
             $this->assertSame($source, $key->op3SourceName(), $key->value);
             $this->assertTrue($key->isMigratedFromOp3(), $key->value);
             $this->assertSame('0', $key->encode(false), $key->value);
-            // Only an explicit '0' closes it: a malformed row must not silence every member.
+            // OpenPNE 3 read the row as PHP truthy: '' closed the site like '0', anything else opened it.
             $this->assertFalse($key->decode('0'), $key->value);
+            $this->assertFalse($key->decode(''), $key->value);
             $this->assertTrue($key->decode('1'), $key->value);
-            $this->assertTrue($key->decode(''), $key->value);
             $this->assertTrue($key->decode('yes'), $key->value);
         }
 

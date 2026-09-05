@@ -1,4 +1,4 @@
-@if (\App\Features\Timeline\TimelinePosting::enabled())
+@if ($canPost ?? \App\Features\Timeline\TimelinePosting::enabled())
 @once
     @push('pluginCss')
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/counter.css') }}">
