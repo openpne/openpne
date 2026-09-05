@@ -5,15 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Where a card of this site's own URL points (App\LinkCard\InternalCardTarget + the record's id).
- *
- * A pointer and nothing else: what such a card shows depends on who is reading it, and this table is
- * shared by every body that mentions the URL, so the content is assembled from the record at render
- * time and the metadata columns stay null. No foreign key — the target may be any of seven tables,
- * and a row naming a record that is gone renders as no card, which is the same answer a record the
- * reader may not see gets.
- *
- * Not indexed: nothing looks a card up by its target. The lookup is always the other way round.
+ * No foreign key: the target may be any of several tables, and a row naming a record that is gone
+ * renders as no card.
  */
 return new class extends Migration
 {

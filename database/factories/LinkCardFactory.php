@@ -16,10 +16,6 @@ class LinkCardFactory extends Factory
 {
     protected $model = LinkCard::class;
 
-    /**
-     * The default is a fetched, renderable card — the state most tests are about. The lifecycle
-     * states have their own methods so a test that wants one says so.
-     */
     public function definition(): array
     {
         $url = 'https://example.com/'.fake()->unique()->slug();
@@ -36,7 +32,6 @@ class LinkCardFactory extends Factory
         ];
     }
 
-    /** Created but not yet fetched. */
     public function pending(): static
     {
         return $this->state(fn (): array => [
@@ -49,7 +44,6 @@ class LinkCardFactory extends Factory
         ]);
     }
 
-    /** Fetched, and the answer was that there is nothing to show. */
     public function failed(int $failureCount = 1): static
     {
         return $this->state(fn (): array => [
@@ -63,7 +57,6 @@ class LinkCardFactory extends Factory
         ]);
     }
 
-    /** Fetched successfully, but the cached metadata is old enough to fetch again. */
     public function stale(): static
     {
         return $this->state(fn (): array => ['expires_at' => now()->subDay()]);

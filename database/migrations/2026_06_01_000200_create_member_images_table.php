@@ -5,12 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * A member's profile image (avatar), pointing at a stored File. Successor of the
- * OpenPNE 3 `member_image` table.
- *
- * `member_id` is unique: one image per member. OpenPNE 3 kept up to three with an
- * is_primary flag; OpenPNE 4 is a single avatar, so the cardinality is a DB constraint
- * rather than application logic.
+ * OpenPNE 3 `member_image` kept up to three images with an is_primary flag; the unique `member_id`
+ * here makes OpenPNE 4 a single avatar.
  */
 return new class extends Migration
 {
@@ -19,8 +15,7 @@ return new class extends Migration
         Schema::create('member_images', function (Blueprint $table) {
             $table->id();
             $table->foreignId('member_id')->unique()->constrained('members')->cascadeOnDelete();
-            // Signed INT to match files.id (the create_files migration keeps it a
-            // signed INT; foreignId() would emit BIGINT UNSIGNED and fail the FK).
+            // Signed INT to match files.id.
             $table->integer('file_id');
             $table->timestamps();
 

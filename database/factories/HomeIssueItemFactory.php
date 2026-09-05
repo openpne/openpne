@@ -22,8 +22,7 @@ class HomeIssueItemFactory extends Factory
 
     /**
      * `source_id` is a bare integer, not a created model: the ledger holds references it never
-     * resolves for itself, so the default has to be able to point at nothing. A test that wants a
-     * real row says forSource().
+     * resolves for itself, so the default has to be able to point at nothing.
      */
     public function definition(): array
     {

@@ -1,29 +1,12 @@
 <?php
 
 /**
- * OpenPNE 3 pc_frontend route inventory, by module — the route-parity SSoT the Classic
- * adapters map from. See database/parity/README.md for how to regenerate.
- *
- * Each module lists its named routes (name => [URL pattern, method]) from the OpenPNE 3
- * route collection. `method` is the route's sf_method constraint: 'POST' where the route
- * declares sf_method => ['post'], otherwise 'ANY' (no constraint — these are GET-reachable).
- * The distinction drives URL-compatibility scope: only GET-reachable URLs are bookmarked /
- * mailed / linked, so only they carry a URL-preservation obligation. POST-only routes are
- * still covered for completeness, but are out of the URL-compatibility contract.
- *
- * OpenPNE 3 also has a global deprecated fallback `/:module/:action/*`
- * (opSymfonyDefaultRouteCollection), so by default any module action is reachable by URL
- * even without a named route. `disables_global_fallback` records that a module turns this
- * off — opDiaryPlugin adds diary_nodefaults (`/diary/*` → default/error), which makes the
- * named routes the complete set of reachable diary URLs.
+ * The OpenPNE 3 pc_frontend route inventory, per module: name => [URL pattern, method]. How to
+ * regenerate it, and what `method` and `disables_global_fallback` mean: database/parity/README.md.
  */
 
 return [
     'member' => [
-        // No member_nodefaults route, so the global /:module/:action fallback stays on:
-        // un-named member actions remain URL-reachable. Only the profile / avatar / search /
-        // edit slices are ported; the rest (home, auth, config, invite, withdrawal) are gapped.
-        // Every route is sf_method-unconstrained or [get] — none is POST-only — so all are ANY.
         'disables_global_fallback' => false,
         'routes' => [
             'homepage' => ['/', 'ANY'],
@@ -45,9 +28,7 @@ return [
         ],
     ],
     'friend' => [
-        // No friend_nodefaults route, so the global /:module/:action fallback stays on:
-        // un-named actions (e.g. /friend/link) remain reachable. obj_friend_unlink declares
-        // sf_method [get, post], so it is not POST-only — ANY (GET-reachable) here.
+        // obj_friend_unlink declares sf_method [get, post], so it is GET-reachable and recorded ANY.
         'disables_global_fallback' => false,
         'routes' => [
             'friend_list' => ['/friend/list', 'ANY'],
@@ -81,9 +62,6 @@ return [
         ],
     ],
     'community' => [
-        // No community_nodefaults route, so the global /:module/:action fallback stays on:
-        // the mobile smt* actions, deleteImage, and memberManage remain URL-reachable un-named.
-        // Every community route is sf_method-unconstrained, so all are ANY (GET-reachable).
         'disables_global_fallback' => false,
         'routes' => [
             'community_joinlist' => ['/community/joinList', 'ANY'],
@@ -99,10 +77,8 @@ return [
         ],
     ],
     'communityTopic' => [
-        // opCommunityTopicPlugin adds communityTopic_nodefaults (/communityTopic/* →
-        // default/error), so the global /:module/:action fallback is off: the named routes are the
-        // complete reachable set. The comment routes are inventoried here (they belong to the topic
-        // plugin) though they render under the communityTopicComment module.
+        // The comment routes are inventoried here, with the plugin that owns them, though they
+        // render under the communityTopicComment module.
         'disables_global_fallback' => true,
         'routes' => [
             'communityTopic_list_community' => ['/communityTopic/listCommunity/:id', 'ANY'],
@@ -124,13 +100,8 @@ return [
         ],
     ],
     'communityEvent' => [
-        // opCommunityTopicPlugin's event collection adds communityEvent_nodefaults
-        // (/communityEvent/* → default/error), so the global /:module/:action fallback is off: the
-        // named routes are the complete reachable set. The comment routes are inventoried here (they
-        // belong to the plugin) though they render under the communityEventComment module. Events
-        // reuse the same route-collection class as topics under the `event` name, so the board /
-        // comment shape mirrors communityTopic; the additions are the RSVP roster (memberList) and
-        // the scheduling fields carried in create/update.
+        // The comment routes are inventoried here, with the plugin that owns them, though they
+        // render under the communityEventComment module.
         'disables_global_fallback' => true,
         'routes' => [
             'communityEvent_list_community' => ['/communityEvent/listCommunity/:id', 'ANY'],
@@ -150,15 +121,8 @@ return [
         ],
     ],
     'message' => [
-        // opMessagePlugin registers its UI routes programmatically (opMessagePluginRouting). It also
-        // adds message_no_default (/message/* → default/error), but compose/reply/edit/restore have
-        // no named route and are reached through the module/action fallback, so the named routes are
-        // NOT the complete reachable set — fallback stays acknowledged (disables_global_fallback off).
-        // OpenPNE 3 left the delete/deleteComplete routes method-unconstrained, but they are
-        // CSRF-protected button_to submits with no working GET form, so they carry no GET
-        // URL-preservation obligation and are recorded POST (the obligation the method field drives,
-        // not literal sf_method); only the deleteConfirm page is a GET screen. *.json are the
-        // smartphone/API endpoints; messageChain is the smartphone thread view.
+        // OpenPNE 3 leaves delete/deleteComplete method-unconstrained, but they are CSRF-protected
+        // button_to submits with no GET form, so they are recorded POST.
         'disables_global_fallback' => false,
         'routes' => [
             'receiveList' => ['/message/receiveList', 'ANY'],
@@ -179,10 +143,6 @@ return [
         ],
     ],
     'timeline' => [
-        // opTimelinePlugin adds no timeline_nodefaults route, so the global /:module/:action
-        // fallback stays on: the API endpoints (post/search/show.json) and the smt* mobile views
-        // are reached un-named. The three pc_frontend named routes are the member / community /
-        // SNS timeline feeds; every one is sf_method-unconstrained, so all are ANY (GET-reachable).
         'disables_global_fallback' => false,
         'routes' => [
             'member_timeline' => ['/member/:id/timeline', 'ANY'],
@@ -191,14 +151,8 @@ return [
         ],
     ],
     'default' => [
-        // The symfony default module OpenPNE 3 hung its site-wide odds and ends on: the two policy
-        // pages, the customizing stylesheet, the global search entry (/search?search_module=X
-        // forwards to X/search), the JS route-name resolver (urlFor.txt), and the error catch-alls
-        // that answer /default/*, /symfony/* and a bare /member/profile/*. `no_default` is one of
-        // those catch-alls, so the global fallback is off for this module. A plugin's own
-        // `*_nodefaults` catch-all (diary, communityTopic, …) also targets default/error, but is
-        // recorded as that module's `disables_global_fallback`, not here. Every route is
-        // sf_method-unconstrained, so all are ANY.
+        // A plugin's own `*_nodefaults` catch-all also targets default/error but is recorded as that
+        // module's `disables_global_fallback`, not here.
         'disables_global_fallback' => true,
         'routes' => [
             'error' => ['/default/error', 'ANY'],

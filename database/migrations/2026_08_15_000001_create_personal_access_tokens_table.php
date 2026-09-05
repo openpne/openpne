@@ -5,13 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Laravel Sanctum's personal access tokens, published from the package so the schema lives with
- * every other table this app owns. `token` holds a SHA-256 of the credential, never the credential
- * itself; the plaintext exists only in the output of `openpne:mcp:token`.
- *
- * `tokenable` is polymorphic and so carries no foreign key: deleting a member does not cascade
- * here, and every path that removes or freezes one has to sweep the rows itself
- * (RejectMemberLogin for the ban, MemberObserver::deleting for withdrawal).
+ * `tokenable` is polymorphic and so carries no foreign key: deleting a member does not cascade here,
+ * and every path that removes or freezes one sweeps the rows itself.
  */
 return new class extends Migration
 {

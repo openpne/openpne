@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The `modern_unified_home` → `default_look` conversion, both ways. The old key exists here only as
- * the literal the migration itself carries — its enum case is gone.
+ * The old key exists here only as the literal the migration itself carries — its enum case is gone.
  */
 class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
 {
@@ -37,12 +36,7 @@ class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
         return DB::table('sns_settings')->where('key', self::OLD_KEY)->value('value');
     }
 
-    /**
-     * The site that had the experiment on renders unified on the very next read — no cache clear of
-     * the test's own. A migration is the one `sns_settings` writer that does not go through
-     * SnsSettingService::clearCache(), so without its own forget a warm map would hold the site on
-     * standard until the hour was up.
-     */
+    /** The read after up() takes no cache clear of the test's own, so the migration's forget answers it. */
     public function test_the_experiment_carries_over_through_a_warm_cache(): void
     {
         DB::table('sns_settings')->updateOrInsert(['key' => self::OLD_KEY], ['value' => '1']);

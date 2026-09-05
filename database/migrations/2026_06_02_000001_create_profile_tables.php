@@ -4,15 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Profile field definitions (OpenPNE 3 `profile`/`profile_option` + their i18n tables).
- *
- * A `profile` row defines one member-profile field (its form type, validation, default
- * visibility, and where it is shown); `profile_options` holds the choices for custom
- * select/radio/checkbox fields. Captions/labels live in the `*_translations` tables keyed
- * by (id, lang), mirroring OpenPNE 3's Doctrine I18n behavior. Preset fields
- * (`op_preset_*`) source their choices from config/preset_profile.php, not profile_options.
- */
 return new class extends Migration
 {
     public function up(): void
@@ -23,8 +14,6 @@ return new class extends Migration
             $table->boolean('is_required')->default(false);
             $table->boolean('is_unique')->default(false);
             $table->boolean('is_edit_public_flag')->default(false);
-            // Visibility fallback when a value has no per-value visibility. App\Support\Visibility
-            // scale (0=Open..3=Private); the upgrade maps OpenPNE 3's public_flag onto it.
             $table->unsignedTinyInteger('default_visibility')->default(1); // Visibility::Members
             $table->string('form_type', 32);
             $table->string('value_type', 32)->default('');

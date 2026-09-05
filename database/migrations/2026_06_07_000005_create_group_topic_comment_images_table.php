@@ -4,11 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/*
- * Images attached to a topic comment (successor of OpenPNE 3 `community_topic_comment_image`).
- * Same shape as group_topic_images: post_id -> the comment, file_id -> the stored bytes,
- * number = the 1..N slot. No timestamps (the File carries them).
- */
 return new class extends Migration
 {
     public function up(): void
@@ -16,8 +11,7 @@ return new class extends Migration
         Schema::create('group_topic_comment_images', function (Blueprint $table) {
             $table->id();
             $table->foreignId('post_id')->constrained('group_topic_comments')->cascadeOnDelete();
-            // Signed INT to match files.id (see create_files migration). DeleteTopicComment purges
-            // the owned File's bytes; the FK cascade only drops this join row.
+            // Signed INT to match files.id.
             $table->integer('file_id');
             $table->unsignedTinyInteger('number');
             $table->foreign('file_id')->references('id')->on('files')->cascadeOnDelete();

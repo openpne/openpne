@@ -6,14 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Lets a comment carry a link card, on the two columns every other body carries one on
- * (2026_08_06_000002_add_link_card_to_body_tables). That migration says comments are deliberately
- * absent because a thread of them stacks cards; talk settled that the other way, drawing the same
- * cards in a denser list than any comment thread.
- *
- * The SQLite index is the same exception 2026_08_07_000001 makes: InnoDB backs a foreign key with an
- * index and SQLite backs it with nothing, so without this the prune sweep's "does any body still
- * point at this card" degrades into a full scan of these tables there.
+ * InnoDB backs a foreign key with an index and SQLite backs none, so the index is added on the
+ * SQLite lane only.
  */
 return new class extends Migration
 {
