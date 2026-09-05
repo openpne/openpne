@@ -18,7 +18,7 @@ class UncopiedSettingsNoticeTest extends TestCase
             'bare bytes' => ['307200', 300],
             'bare bytes round up to the kilobyte that holds them' => ['307201', 301],
             'zero is not a size' => ['0', null],
-            'a decimal is not a size OpenPNE 3 accepted' => ['1.5M', null],
+            'a decimal OpenPNE 3 read as its integer prefix is refused rather than guessed' => ['1.5M', null],
             'words are not a size' => ['abc', null],
             'a gigabyte suffix OpenPNE 3 did not scale' => ['1G', null],
         ];

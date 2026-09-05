@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Upgrade\InsertSelectCompiler;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * The OpenPNE 3 sns_config values that live in .env on OpenPNE 4, each reported with the value to set
@@ -27,8 +28,9 @@ final class UncopiedSettingsNotice
             return [];
         }
 
-        $value = (string) $rows[0]->value;
-        $kilobytes = self::kilobytes($value);
+        $kilobytes = self::kilobytes((string) $rows[0]->value);
+        // The line reaches a Symfony Console output, where an unescaped `<fg=…>` in the value throws.
+        $value = OutputFormatter::escape((string) $rows[0]->value);
 
         return [$kilobytes === null
             ? "sns_config image_max_filesize = {$value} is not copied and could not be read as a size; set ".self::ENV.' yourself (per file, kilobytes).'

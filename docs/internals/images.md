@@ -96,13 +96,17 @@ upload through Livewire's temporary endpoint before Filament validates, so
 `FilesServiceProvider` sets that endpoint's rule to the same cap; unconfigured, Livewire's own
 12288 KB would silently be the admin cap above that size.
 
-The cap is read as configured; PHP's ini limits are not folded in, because they belong to the
-deployment and differ between the FPM pool that serves uploads and the CLI that runs tests and
-commands. Those ini limits are prerequisites the operator sets alongside the cap.
-`upload_max_filesize` must be at least the cap: above it PHP discards the file before validation
-runs, and the form reports a failed upload rather than the size. `post_max_size` bounds the whole
-request, and a compose form carries up to `PostImages::MAX_IMAGES` files plus its fields, so it
-must hold the cap times that count with room for the rest of the body.
+The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
+limits are not folded in, because they belong to the deployment and differ between the FPM pool
+that serves uploads and the CLI that runs tests and commands. Those limits, and the reverse proxy's,
+are prerequisites the operator sets alongside the cap, and the shipped `docker/` stack sizes them
+for the default only. `upload_max_filesize` must be at least the cap: above it PHP discards the
+file before validation runs, and the form reports a failed upload rather than the size.
+`post_max_size` bounds the whole request, and a compose form carries up to `PostImages::MAX_IMAGES`
+files plus its fields, so it must hold the cap times that count with room for the rest of the body;
+over it the answer is a bare 413 from `ValidatePostSize`, the composed post lost with it. The proxy's
+body limit (nginx `client_max_body_size`, 1 MB unconfigured) sits in front of both and fails the same
+way, out of the app's sight.
 
 The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes again; it never touches
 `$_FILES`, and the decoded file is then run through the compose forms' own rules, so the same cap

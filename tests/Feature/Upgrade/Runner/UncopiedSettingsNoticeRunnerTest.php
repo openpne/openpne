@@ -6,6 +6,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
+use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -83,6 +84,16 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString('OPENPNE_IMAGE_MAX_UPLOAD_KB=2048', $output);
+    }
+
+    public function test_any_step_reading_sns_config_carries_the_notice(): void
+    {
+        $this->seedSize('300K');
+
+        [$ok, $output] = $this->upgrade([new FriendFeatureUpgrade]);
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString('OPENPNE_IMAGE_MAX_UPLOAD_KB=300', $output);
     }
 
     public function test_a_run_without_an_sns_config_step_does_not_read_the_table(): void
