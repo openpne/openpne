@@ -21,7 +21,8 @@ or a transfer is accepted while the old admin withdraws.
 
 [`AcceptAdminTransfer`](../../app/Features/Group/Actions/AcceptAdminTransfer.php) promotes the
 nominee from Member or Sub-admin, demotes the incumbent admin to Member and clears the pending
-seat, all under that lock. Three writes are outside the protocol on purpose:
+seat, all under that lock. The writes on a live group that stay outside the protocol do so on
+purpose:
 [`AddAllMembers`](../../app/Features/Group/Actions/AddAllMembers.php) and
 [`JoinGroup`](../../app/Features/Group/Actions/JoinGroup.php) only insert plain Member rows and
 touch neither a role nor `pending_admin_member_id`, and
