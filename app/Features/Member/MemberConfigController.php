@@ -14,6 +14,7 @@ use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Member\Serializers\MemberMfaSerializer;
 use App\Features\Notifications\Serializers\NotificationSettingsSerializer;
 use App\Features\Profile\AgeVisibility;
+use App\Features\Profile\ProfilePageVisibility;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -23,6 +24,7 @@ use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
 use App\Http\Requests\Member\UpdateLookRequest;
 use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
+use App\Http\Requests\Member\UpdateProfileVisibilityRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
@@ -32,6 +34,7 @@ use App\Support\PreferenceKey;
 use App\Support\SecurityLog;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
+use App\Support\Visibility;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -74,11 +77,11 @@ class MemberConfigController extends Controller
                 $raw = $request->query('category');
                 $category = is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null;
 
-                // Without a birthday profile item there is no age, so the age category is dead
-                // weight: hide it from the nav and fold its URL into the landing (a deliberate
-                // divergence from OpenPNE 3, which always shows it).
+                // With neither an age to gate nor a profile-page choice the privacy category is dead
+                // weight, hidden from the nav and folded into the landing where OpenPNE 3 always showed it.
                 $ageAvailable = $birthdayExists();
-                if ($category === MemberConfigCategory::PublicFlag && ! $ageAvailable) {
+                $profileChoice = ProfilePageVisibility::memberMayChoose();
+                if ($category === MemberConfigCategory::PublicFlag && ! $ageAvailable && ! $profileChoice) {
                     $category = null;
                 }
 
@@ -98,6 +101,10 @@ class MemberConfigController extends Controller
                 return view('member.config', [
                     'category' => $category,
                     'ageAvailable' => $ageAvailable,
+                    'profileChoice' => $profileChoice,
+                    'publicFlagAvailable' => $ageAvailable || $profileChoice,
+                    'profileDefault' => ProfilePageVisibility::defaultFor($viewer),
+                    'profileOptions' => ProfilePageVisibility::options(),
                     'aiAvailable' => $aiAvailable,
                     'ai' => $category === MemberConfigCategory::Ai
                         ? AiAccountSerializer::list($viewer, $this->aiSettings)
@@ -152,6 +159,21 @@ class MemberConfigController extends Controller
     }
 
     // Classic-only: the Modern setter lives on the profile-edit form.
+    public function updateProfileVisibility(UpdateProfileVisibilityRequest $request): RedirectResponse
+    {
+        // Under a policy that decides for everyone the section is hidden, and a crafted POST
+        // persists nothing, landing where the hidden category's URL does.
+        if (! ProfilePageVisibility::memberMayChoose()) {
+            return redirect()->route('member.config');
+        }
+
+        $viewer = $this->viewer();
+        $viewer->profile_visibility = Visibility::from((int) $request->validated('profile_visibility'));
+        $viewer->save();
+
+        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
+    }
+
     public function updateAge(UpdateAgeVisibilityRequest $request, BirthdayFieldExists $birthdayExists): RedirectResponse
     {
         // Without a birthday item a crafted POST persists nothing, landing where the hidden
