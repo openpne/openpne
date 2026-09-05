@@ -17,9 +17,10 @@ use Minishlink\WebPush\ContentEncoding;
 class PushSubscriptionController extends Controller
 {
     /**
-     * A browser hands out a fresh endpoint whenever its subscription is recreated, so an unbounded store
-     * would grow with every reinstall. Public because it also multiplies the per-request push timeout
-     * (docs/internals/outbound-http.md, The push endpoint seam).
+     * A browser hands out a fresh endpoint whenever its subscription is recreated and the store is writable
+     * by anyone signed in, so an unbounded one would grow with every reinstall. Public because a push job's
+     * budget is the per-request timeout times this cap (docs/internals/outbound-http.md, The push endpoint
+     * seam).
      */
     public const MAX_DEVICES = 10;
 

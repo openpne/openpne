@@ -318,7 +318,8 @@ enum MailTemplate: string
     }
 
     /**
-     * Read by the i18n:check coverage gate, which no call site reaches (docs/internals/i18n.md, CI gate).
+     * Read by the i18n:check term-literal gate: a string reaching __() through a variable never enters
+     * the code scanner.
      *
      * @return list<string>
      */

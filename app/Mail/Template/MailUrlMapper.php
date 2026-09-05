@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Mail\Template;
 
 /**
- * The OpenPNE 3 application argument is ignored and its obsolete query params (id/type) dropped, the
- * OpenPNE 4 routes being token-only. An unmapped route or a missing token throws, so the import preflight
- * surfaces it rather than emitting a broken link.
+ * The OpenPNE 3 application argument is ignored; the token routes drop the obsolete id/type params and
+ * take the token only, while the named-route arms (`@route?id=N`) are resolved from that id. An unmapped
+ * route, a missing token or a non-numeric id throws, so the import preflight surfaces it rather than
+ * emitting a broken link.
  */
 final class MailUrlMapper
 {
