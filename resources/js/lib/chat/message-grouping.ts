@@ -1,10 +1,9 @@
-/** What grouping needs to know about a message — the stream rows all carry these. */
 export interface GroupableMessage {
     author: { id: number } | null;
     createdAt: string;
     /**
-     * Present when this row answers another message. A reply opens a new turn even inside a run: the
-     * header must return to draw the reference above it. Talk carries it; a direct message omits it.
+     * A reply opens a new turn even inside a run, because the header must return to draw the
+     * reference above it. Talk carries it; a direct message omits it.
      */
     inReplyTo?: { deleted: boolean } | null;
 }
@@ -17,9 +16,8 @@ export interface GroupableMessage {
 const WINDOW_MS = 7 * 60 * 1000;
 
 /**
- * Whether `message` continues `previous`'s run and can drop its author header. Withdrawn authors
- * (null) never group: two nameless rows in a row would read as one member's, and nothing on the row
- * could say otherwise.
+ * Withdrawn authors (null) never group: two nameless rows in a row would read as one member's, and
+ * nothing on the row could say otherwise.
  */
 export function continuesRun(previous: GroupableMessage | undefined, message: GroupableMessage): boolean {
     // A reply opens a new turn: its own header carries the reference, so it never folds under the row
@@ -38,14 +36,9 @@ export function continuesRun(previous: GroupableMessage | undefined, message: Gr
 }
 
 /**
- * Whether `message` folds under the previous row's header. `restartsHere` is the caller's one fact for
- * every reason a row opens a turn regardless of who spoke last: something is drawn above it that the
- * run must not cross — the unread separator (lib/chat/unread), a date heading. Such a row says again
- * who is speaking, since a header is what the thing above it separates the reader from. The rows after
- * it fold normally: they and their run sit below together, so nothing folds across it.
- *
- * One boolean rather than the ids of each: the reasons accumulate, they all mean the same thing here,
- * and the list already knows which of them it drew.
+ * `restartsHere` is the caller's one fact for every reason a row opens a turn regardless of who spoke
+ * last — an unread separator, a date heading — and such a row says again who is speaking. The rows
+ * after it fold normally, so nothing folds across it.
  */
 export function foldsInto(previous: GroupableMessage | undefined, message: GroupableMessage, restartsHere: boolean): boolean {
     return !restartsHere && continuesRun(previous, message);

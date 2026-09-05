@@ -34,13 +34,11 @@ test('a clock that runs backwards breaks the run', () => {
 });
 
 test('a reply breaks the run it would otherwise continue', () => {
-    // One author, two quick messages — but the second answers something, so it starts a fresh turn.
     const m1 = { id: 1, ...at('2026-08-16T10:00:00+09:00', 7) };
     const reply = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7), inReplyTo: { deleted: false } };
 
     assert.ok(!continuesRun(m1, reply));
     assert.ok(!foldsInto(m1, reply, false));
-    // A plain follow-up in the same window still folds — the reply reference is what breaks it.
     const plain = { id: 3, ...at('2026-08-16T10:01:00+09:00', 7) };
     assert.ok(foldsInto(m1, plain, false));
 });
@@ -51,12 +49,8 @@ test('anything drawn above a row restarts its run, and the rows after it fold be
     const m2 = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7) };
     const m3 = { id: 3, ...at('2026-08-16T10:02:00+09:00', 7) };
 
-    // m2 would continue the run — what stands above it is what forces its header back. Which of the
-    // reasons it was (the unread separator, a date heading) is the list's business, not this rule's.
     assert.ok(continuesRun(m1, m2));
     assert.ok(!foldsInto(m1, m2, true));
-    // m3 folds under m2: both sit below, so no fold crosses it.
     assert.ok(foldsInto(m2, m3, false));
-    // With nothing drawn above it, m2 folds as normal.
     assert.ok(foldsInto(m1, m2, false));
 });

@@ -1,18 +1,8 @@
 /**
- * Splits a plain-text body into text and entity segments over code-point ranges, mirroring the
- * Classic App\Support\EntityText (app/Support/EntityText.php). The shared cases are pinned by
- * tests/Unit/Support/EntityTextTest.php (PHP) and entity-split.test.ts (this file's sibling).
- *
- * Mentions and tags arrive as two lists and are merged here by offset, as <x-timeline-body> merges
- * them for EntityText. The two never intersect — a tag candidate overlapping a mention is dropped at
- * save time — so offset order is the whole merge.
- *
- * Text between entities is *not* linkified here: <EntityText> hands each text segment to
- * <UserText>, so the URL rules stay in linkify.ts alone. An entity's own text never goes through
- * them, which is what keeps a display name containing "www." from nesting an anchor.
- *
- * Escaping is the renderer's job — React escapes what this returns, so these are raw strings and
- * never HTML.
+ * Mirrors App\Support\EntityText, with the shared cases pinned on both sides
+ * (docs/internals/body-text.md, "Render authority is the server"). Mentions and tags never intersect,
+ * so offset order is the whole merge, and an entity's own text is never linkified, which keeps a
+ * display name containing `www.` from nesting an anchor.
  */
 
 /** Half-open [offset, offset + length) in Unicode code points, ascending and non-overlapping. */

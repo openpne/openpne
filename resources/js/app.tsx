@@ -5,9 +5,8 @@ import { createRoot } from 'react-dom/client';
 import { MemberLayout } from '@/components/member-layout';
 import { SyncLocaleWithServer } from '@/components/sync-locale';
 import { TooltipProvider } from '@/components/ui/tooltip';
-// Side-effect import: applies the saved color mode, keeps <meta name="theme-color"> in sync, and
-// installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
-// on the settings page, so without this the listener/sync would load lazily with that page).
+// Imported here, not from the settings page's `useColorMode`, so the color-mode listener installs
+// on every Modern page.
 import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
 import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
@@ -18,19 +17,16 @@ import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
-// Keep this entry free of React component definitions: a component here makes the module a Vite
-// Fast Refresh boundary, and plugin-react's boundary self-import re-executes the entry's top-level
-// createRoot in dev, mounting the app twice. Put shell components in their own module (see
-// SyncLocaleWithServer). This module must stay a pure side-effect that mounts exactly once.
+// Keep this entry free of React component definitions: a component makes it a Vite Fast Refresh
+// boundary, and plugin-react's boundary self-import re-runs the top-level createRoot in dev,
+// mounting the app twice.
 
-// Set at mount from the shared Inertia `name` prop (sns_name()) so Modern titles track the
-// per-site name like Classic. VITE_APP_NAME is only the pre-mount fallback; site name is
-// treated as site-invariant, so capturing the initial page's value is enough.
+// The site name is site-invariant, so capturing the initial page's value is enough; VITE_APP_NAME
+// is only the pre-mount fallback.
 let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
 
-// From this module's top level, before DOMContentLoaded — the module explains why a listener added
-// any later misses a notification tap. The router takes the visit once it has announced the initial
-// page.
+// Installed from the module top level, before DOMContentLoaded: a listener added any later misses
+// a notification tap.
 const notificationOpen = installNotificationOpen((url) => router.visit(url));
 const offFirstNavigate = router.on('navigate', () => {
     offFirstNavigate();
@@ -38,21 +34,18 @@ const offFirstNavigate = router.on('navigate', () => {
 });
 
 void createInertiaApp({
-    // The unread prefix is applied here rather than by writing document.title, because the head
-    // manager owns that write and debounces it. Reading the count from the callback's page argument
-    // keeps auth pages clean: they share no `unread`, so no prefix survives a SPA logout.
+    // The head manager owns the title write (docs/internals/notifications.md, "Liveness"); auth
+    // pages share no `unread`, so no prefix survives a SPA logout.
     title: (title, page) =>
         withUnreadPrefix(title ? `${title} - ${appName}` : appName, (page.props as PageProps).unread?.notifications ?? 0),
     defaults: {
-        // Asked for every visit, and the one place a destination can decline being scrolled by
-        // Inertia — see lib/chat/opening-scroll.ts for why a conversation has to.
+        // Inertia asks this for every visit, and it is the one place a destination can decline
+        // being scrolled.
         visitOptions: (_href: string, options: { preserveScroll?: unknown }) => conversationVisitOptions(options),
     },
     resolve: (name) => resolvePageComponent<ResolvedComponent>(pagePath(name), pageModules),
-    // Default layout for every non-auth page: nav chrome + the member page frame (single <main>,
-    // hub header from the chrome registry, central flash). auth/* keep their own AuthLayout. A page
-    // overrides its frame via `Page.layout = (props) => ({ chrome: {…} })` (Inertia merges the
-    // object into this layout's props); returning a component instead replaces the layout entirely.
+    // A page overrides its frame by returning an object from `Page.layout` (Inertia merges it into
+    // this layout's props); returning a component instead replaces the layout entirely.
     layout: (name: string) => (name.startsWith('auth/') ? undefined : MemberLayout),
     setup({ el, App, props }) {
         appName = (props.initialPage.props as PageProps).name || appName;
@@ -62,31 +55,23 @@ void createInertiaApp({
         // Before the app mounts likewise: a page that revalidates on a restore has to find the
         // record already there when it arrives.
         installHistoryRestore();
-        // Every page restored from history is re-read from the server — see the module for why
-        // this is the default rather than something each page opts into.
         installRevalidateOnRestore(router);
-        // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
-        // surfaces as the raw English key — matching the "key === English
-        // text" omission policy. ja-as-fallback would silently render Japanese
-        // when the en bundle is intentionally empty.
         const locale = (props.initialPage.props as PageProps).locale;
         createRoot(el).render(
             <LaravelReactI18nProvider
                 locale={locale}
+                // See docs/internals/i18n.md, "Inertia / React wiring".
                 fallbackLocale="en"
-                // Eager so the active locale's dictionary is present on the first paint. A lazy glob
-                // loads it in a post-mount effect, so the first render shows raw (English) keys and
-                // then swaps to the translation — a visible flash on every full Modern load, e.g. a
-                // Classic→Modern surface switch. Eager bundles ja/en (small, flat dicts) instead.
+                // Eager so the active locale's dictionary is present on the first paint; a lazy
+                // glob loads it in a post-mount effect, so the first render shows raw English keys
+                // and then swaps.
                 files={import.meta.glob('/lang/*.json', { eager: true })}
             >
                 <SyncLocaleWithServer />
-                {/* One provider for the whole app, not one per tooltip: `skipDelayDuration` is what
-                    makes the second of two neighbouring icons answer instantly, and it is shared
-                    state — per-tooltip providers would each start their own delay again. */}
-                {/* disableHoverableContent: these are labels, not panels to mouse into — and a
-                    hoverable panel floats over the neighbouring icon and eats the pointer that
-                    would have raised that icon's own label. */}
+                {/* One provider for the whole app: `skipDelayDuration` is shared state, so
+                    per-tooltip providers would each start their own delay again. */}
+                {/* disableHoverableContent: a hoverable panel floats over the neighbouring icon and
+                    eats the pointer that would have raised that icon's own label. */}
                 <TooltipProvider delayDuration={500} skipDelayDuration={300} disableHoverableContent>
                     <App {...props} />
                 </TooltipProvider>

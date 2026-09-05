@@ -3,14 +3,9 @@ import { test } from 'node:test';
 import { msUntilNextSiteDay, relativeDeadline, relativeParts } from './date.ts';
 
 /**
- * The hook is a timer around this deadline, so what is worth pinning is the property the pair of timers
- * rests on: between now and whichever boundary comes first, the text does not change — and at the
- * deadline it has. Compared through the production formatter, since a second copy of the bucket rules in
- * the test could agree with itself while both drifted from what the screen shows.
- *
- * Two boundaries, because two timers share the work: this stamp's own next minute or hour, and the
- * site's midnight, which the shared day clock waits on. Asserting only against the deadline would call
- * it a failure whenever midnight legitimately arrives first.
+ * Compared through the production formatter, since a second copy of the bucket rules could agree with
+ * itself while both drifted from the screen. Two boundaries share the work, so asserting only against
+ * the deadline would fail whenever the site's midnight legitimately arrives first.
  */
 const shown = (at: string, now: Date, timeZone: string) => JSON.stringify(relativeParts(at, timeZone, now));
 
@@ -76,10 +71,6 @@ test('a future instant schedules one wake at the moment it stops being just now'
     assert.equal(relativeDeadline(at, 'Asia/Tokyo', now), new Date(at).getTime() + 60_000);
 });
 
-/**
- * A day count and a date both only change when the calendar does, and the shared day clock is already
- * waiting on that. Arming here as well would wake every hour to render the same words.
- */
 test('anything counted in days arms nothing and leaves the boundary to the day clock', () => {
     const at = '2026-08-10T12:00:00Z';
 

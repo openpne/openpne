@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { conversationVisitOptions } from './opening-scroll.ts';
 
-/** What the policy answers for a visit landing on `component`. */
 const preserves = (options: { preserveScroll?: unknown }, component: string): boolean | undefined =>
     conversationVisitOptions(options).preserveScroll?.({ component });
 

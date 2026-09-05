@@ -36,7 +36,7 @@ test('it re-arms, so a page open for days keeps turning over', (t) => {
     assert.equal(notified, 2);
 });
 
-// The boundary is the site's. A clock armed for New York must not fire when Tokyo rolls over.
+// A clock armed for New York must not fire when Tokyo rolls over.
 test('the boundary follows the site zone, not the viewer or the host', (t) => {
     t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: beforeTokyoMidnight });
     const clock = createSiteDayClock();
@@ -48,8 +48,8 @@ test('the boundary follows the site zone, not the viewer or the host', (t) => {
     t.mock.timers.tick(1100);
     assert.equal(notified, 0, 'Tokyo turned over; New York is still on the 9th');
 
-    // 14:59:59Z is 10:59:59 in New York, so its own midnight is 46,801s away. Stopping at the
-    // not-yet-fired assertion alone would pass for a clock that never fires at all.
+    // 14:59:59Z is 10:59:59 in New York, whose own midnight is 46,801s away; the second assertion
+    // is what a clock that never fires would fail.
     t.mock.timers.tick(46_801_000 - 1100);
     assert.equal(notified, 1, 'and it does fire at New York midnight');
 });

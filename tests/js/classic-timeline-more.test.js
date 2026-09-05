@@ -5,9 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 
 /**
- * The load-more script's one decision: which URL a Link header hands it next, and that it is one
- * on the page's own origin.
- *
  * The script is loaded the way the browser loads it (evaluated, not imported) with a `module` in
  * scope: that branch hands back the pure half and skips the DOM wiring.
  */

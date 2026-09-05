@@ -1,18 +1,14 @@
-// Client-side web push: capability checks, subscribe/unsubscribe for the current device, and the
-// VAPID key decode. Sibling import (not the `@/` alias) so `push.test.ts` resolves it under
-// `node --test`.
+// Sibling import (not the `@/` alias) so `push.test.ts` resolves it under `node --test`.
 import { xsrfHeader } from './csrf.ts';
 
-/** Whether this browser can register a worker and receive web push at all. */
 export function pushSupported(): boolean {
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 
 /**
  * iOS/iPadOS delivers web push only to a site added to the Home Screen, so an ordinary Safari tab can
- * never subscribe. Detect that (iOS UA, not running standalone — iOS exposes both the display-mode
- * query and the legacy `navigator.standalone`) so the UI guides the member to install first instead
- * of offering a Subscribe button that would always fail.
+ * never subscribe. Detected as the iOS UA not running standalone, which iOS reports through both the
+ * display-mode query and the legacy `navigator.standalone`.
  */
 export function isIosNotInstalled(): boolean {
     const nav = navigator as Navigator & { standalone?: boolean };
@@ -37,13 +33,12 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
 }
 
 /**
- * Subscribe this browser. MUST be called from a user gesture (a button click): the first step asks
- * for the notification permission, which browsers only grant in response to one. Returns 'denied'
- * when permission is refused and 'error' on any failure, so the caller can message without a throw.
+ * MUST be called from a user gesture: the first step asks for the notification permission, which
+ * browsers only grant in response to one. Returns 'denied' when permission is refused and 'error' on
+ * any failure, so the caller can message without a throw.
  */
 export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subscribed' | 'denied' | 'error'> {
-    // Rolled back on any failure past subscribe(): "subscribed" must mean the server persisted the
-    // row, not merely that this browser created a PushSubscription. A local sub the server never
+    // Rolled back on any failure past subscribe(), because a local subscription the server never
     // stored would read back as subscribed forever.
     let sub: PushSubscription | null = null;
     try {
@@ -84,9 +79,9 @@ export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subs
 }
 
 /**
- * Drop this browser's subscription. Local removal is the success condition — a dead endpoint
- * self-expires via the push service's 404/410, so the server delete is best-effort and its answer is
- * not load-bearing. A thrown network error is left to propagate for the caller's finally to handle.
+ * Local removal is the success condition — a dead endpoint self-expires via the push service's
+ * 404/410, so the server delete is best-effort. A thrown network error is left to propagate for the
+ * caller's finally to handle.
  */
 export async function unsubscribeThisDevice(): Promise<void> {
     const sub = await currentSubscription();
@@ -119,11 +114,9 @@ const PUSH_BOUND_KEY = 'openpne-push-bound';
 const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 
 /**
- * Reconcile only on an ownership transition — no marker, a different member or endpoint, or a marker
- * older than the TTL — never on a confirmed same-member binding. Re-confirming an unchanged binding on
- * every load would consume the store route's `throttle:30,1` and, on the 429, fail closed and
- * unsubscribe the member's own device. Pure so push.test.ts pins it; the Classic vanilla script mirrors
- * this predicate inline.
+ * Re-confirming an unchanged binding on every load would consume the store route's `throttle:30,1`
+ * and, on the 429, unsubscribe the member's own device (docs/internals/notifications.md, "Web
+ * push"). The Classic vanilla script mirrors this predicate inline.
  */
 export function shouldReconcile(
     marker: PushBinding | null,
@@ -143,16 +136,9 @@ export function shouldReconcile(
 const DEFINITIVE_REFUSAL = new Set([400, 401, 403, 404, 419, 422]);
 
 /**
- * What a reconcile POST's status means for the local subscription, given whether the marker already
- * proves this subscription was another member's (`knownForeign` — same endpoint, different member).
- *
- * A 2xx confirms the rebind. When we already know it is foreign, ANY non-2xx sheds it: a transient
- * failure is not a reason to keep delivering the prior member's pushes to the person now signed in, and
- * the retry is only on the next navigation, so a kept foreign sub is not time-bounded. Otherwise (our
- * own subscription, or ownership unknown) only a definitive refusal fails closed; a 408/425/429/5xx or
- * a dropped request is the server not answering, so the subscription is kept and the next navigation
- * retries — a transient outage must not unsubscribe a member's own device. Pure so push.test.ts pins
- * it; the Classic script mirrors it.
+ * A known-foreign subscription — same endpoint, different member — is shed on any non-2xx, while our
+ * own or an ownership-unknown one is shed only on a definitive refusal (docs/internals/notifications.md,
+ * "Web push"). The Classic script mirrors it.
  */
 export function reconcileOutcome(status: number, knownForeign: boolean): 'confirm' | 'keep' | 'unsubscribe' {
     if (status >= 200 && status < 300) {
@@ -192,22 +178,11 @@ function clearBinding(): void {
 }
 
 /**
- * Rebind this browser's existing subscription to the member signed in now, failing *closed*. A push
- * row belongs to whoever last POSTed its endpoint, so on a shared browser (A subscribes, logs out; B
- * logs in) the server-side owner stays A while this browser still holds A's subscription — B would see
- * "subscribed" and receive A's pushes. Re-POSTing the endpoint reclaims ownership for the current
- * member and also heals a cap-pruned row (server row gone, browser sub present).
- *
- * The POST fires only on an ownership transition ({@link shouldReconcile}) — a confirmed same-member
- * binding costs zero requests, so ordinary browsing never trips the store route's rate limit. How an
- * unconfirmed rebind is handled depends on whether the marker already proves the subscription is a
- * different member's ({@link reconcileOutcome}): a *known-foreign* one is shed on any non-2xx (a
- * transient failure is no reason to keep delivering the prior member's pushes to whoever is signed in
- * now), while our own (or an ownership-unknown) subscription is kept through a transient outage and
- * only shed on a definitive refusal — a transient outage must not unsubscribe a member's own device.
- * `getRegistration()` (not `.ready`, which never resolves when no worker is registered) keeps a member
- * who never subscribed a no-op, and with no existing subscription this never subscribes a fresh browser
- * — a silent subscribe is not consent.
+ * A push row belongs to whoever last POSTed its endpoint, so this re-POST reclaims ownership for the
+ * member signed in now and heals a cap-pruned row (docs/internals/notifications.md, "Web push").
+ * `getRegistration()`, not `.ready` which never resolves when no worker is registered, keeps a member
+ * who never subscribed a no-op, and with no existing subscription this never subscribes a fresh
+ * browser.
  */
 export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!pushSupported() || Notification.permission !== 'granted') {
@@ -222,8 +197,6 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!shouldReconcile(marker, sub.endpoint, memberId, Date.now(), RECONCILE_TTL_MS)) {
         return;
     }
-    // The marker proves prior ownership: a matching endpoint under a different member is a subscription
-    // we know belongs to someone else, so an unconfirmed rebind must shed it rather than keep it.
     const knownForeign = marker !== null && marker.endpoint === sub.endpoint && marker.memberId !== memberId;
     let outcome: 'confirm' | 'keep' | 'unsubscribe';
     try {
@@ -236,8 +209,8 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
         });
         outcome = reconcileOutcome(res.status, knownForeign);
     } catch {
-        // No answer from the server. Keep our own/unknown subscription and let the next navigation
-        // retry; a known-foreign one must still be shed, since keeping it would leak the prior member's.
+        // A dropped request is the server not answering, so only a known-foreign subscription is
+        // shed here.
         outcome = knownForeign ? 'unsubscribe' : 'keep';
     }
     if (outcome === 'confirm') {
@@ -275,9 +248,8 @@ export function clearAppBadge(): void {
 }
 
 /**
- * Decode a base64url VAPID public key to raw bytes: PushManager.subscribe wants the key's bytes as
- * applicationServerKey, not its string form, so the P-256 point round-trips intact. Exported so the
- * decode — the one pure, security-adjacent piece here — can be unit-tested.
+ * PushManager.subscribe wants the key's bytes as applicationServerKey, not its string form, so the
+ * P-256 point round-trips intact.
  */
 export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
     const padding = '='.repeat((4 - (base64.length % 4)) % 4);
