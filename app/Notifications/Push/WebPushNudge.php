@@ -17,7 +17,7 @@ use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Carries no catalog opt-in and no feature gate, and is built from scalars rather than models
- * (docs/internals/notifications.md, Web push).
+ * (docs/internals/notifications.md, "Web push").
  */
 final class WebPushNudge extends Notification implements ShouldQueue
 {
@@ -26,8 +26,9 @@ final class WebPushNudge extends Notification implements ShouldQueue
     private const TAG = 'openpne-notifications';
 
     /**
-     * Must stay under the queue's retry_after, past which the job is handed out again mid-send and every
-     * device that answered is pushed twice (docs/internals/outbound-http.md, The push endpoint seam).
+     * Must stay under the queue's retry_after, past which the job is handed out again mid-send and
+     * every device that answered is pushed twice (docs/internals/outbound-http.md, "The push
+     * endpoint seam").
      */
     public int $timeout = 60;
 

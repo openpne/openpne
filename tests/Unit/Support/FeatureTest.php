@@ -9,8 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The feature registry's static shape: which setting stores a unit's flag, which unit contains
- * which, which route names a unit owns, and how a stored flag decodes. The resolved state (and its
- * dependency chain) is exercised against the store in Tests\Feature\Support\FeatureStateTest.
+ * which, which route names a unit owns, and how a stored flag decodes.
  */
 class FeatureTest extends TestCase
 {

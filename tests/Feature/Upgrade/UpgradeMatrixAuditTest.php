@@ -116,8 +116,8 @@ class UpgradeMatrixAuditTest extends TestCase
     public function test_steps_sharing_a_target_table_declare_what_they_own(): void
     {
         // With several steps writing one table, a null targetFilter() would make verify count the
-        // siblings' rows as drift; that the filters do not overlap is raw SQL, pinned by
-        // VerifierSharedTargetTest instead.
+        // siblings' rows as drift; that the filters do not overlap is raw SQL, pinned on the
+        // verifier itself.
         $stepsByTarget = [];
         foreach (StepRegistry::all() as $step) {
             $stepsByTarget[$step->targetTable()][] = $step;

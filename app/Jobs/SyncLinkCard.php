@@ -23,8 +23,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Keyed by the record where FetchLinkCard is keyed by the URL, and only a body's first URL becomes a
- * card ([link-cards.md](../../docs/internals/link-cards.md) § When a card is fetched).
+ * Keyed by the record where FetchLinkCard is keyed by the URL, and only a body's first URL becomes
+ * a card (docs/internals/link-cards.md, "When a card is fetched").
  */
 class SyncLinkCard implements ShouldBeUnique, ShouldQueue
 {
@@ -149,7 +149,7 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     /**
      * No row is minted for an address of ours that names nothing a card can be built from, while a
      * row already there is converted either way
-     * ([link-cards.md](../../docs/internals/link-cards.md) § Rows written before this existed).
+     * (docs/internals/link-cards.md, "Rows written before this existed").
      */
     private function internalCardFor(string $url, InternalUrl $link): ?LinkCard
     {

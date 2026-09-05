@@ -49,7 +49,8 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
     }
 
     /**
-     * The delivery-time re-check (docs/internals/notifications.md, Delivery-time re-checks); SerializesModels
+     * The delivery-time re-check (docs/internals/notifications.md, "Delivery-time re-checks");
+     * SerializesModels
      * hands the job fresh rows, so the answer is current.
      */
     public function shouldSend(Member $notifiable, string $channel): bool

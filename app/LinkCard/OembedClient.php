@@ -10,8 +10,9 @@ use App\Outbound\SafeHttpFetcher;
 /**
  * Only the structured fields are used and the `html` field is never touched: it is
  * provider-authored markup, and a card is drawn from text and a self-hosted image, so there is
- * nothing markup could add (docs/internals/link-cards.md, The card is never HTML). The request goes
- * through `SafeHttpFetcher` like any other, since the endpoint URL came out of a stranger's page.
+ * nothing markup could add (docs/internals/link-cards.md, "The card is never HTML"). The request
+ * goes through `SafeHttpFetcher` like any other, since the endpoint URL came out of a stranger's
+ * page.
  */
 final class OembedClient
 {

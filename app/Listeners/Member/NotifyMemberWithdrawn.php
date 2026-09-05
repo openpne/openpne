@@ -8,8 +8,8 @@ use App\Notifications\Member\WithdrawalCompletedNotification;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Sent for every withdrawal path, self-service and admin-initiated alike, a receipt being owed to the
- * address holder whoever pulled the trigger (docs/internals/notifications.md, Gating flow).
+ * Sent for every withdrawal path, self-service and admin-initiated alike, a receipt being owed to
+ * the address holder whoever pulled the trigger (docs/internals/notifications.md, "Gating flow").
  */
 class NotifyMemberWithdrawn
 {

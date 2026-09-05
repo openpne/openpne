@@ -22,7 +22,7 @@ class NotifyEventCommentPosted
         }
 
         // The excluded ids are snapshotted now, never re-derived when the job runs
-        // (docs/internals/notifications.md, Broadcast fan-out).
+        // (docs/internals/notifications.md, "Broadcast fan-out").
         BroadcastEventCommentPosted::dispatch(
             (int) $event->event->getKey(),
             (int) $event->comment->getKey(),

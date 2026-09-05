@@ -66,8 +66,8 @@ class SqlitePragmaConfigTest extends TestCase
     }
 
     /**
-     * Evaluate the config file against a chosen environment rather than the ambient one, the way
-     * SecurityLogChannelTest pins a fallback: set the variable, re-evaluate, restore.
+     * Evaluate the config file against a chosen environment rather than the ambient one: set the
+     * variable, re-evaluate, restore.
      */
     private function assertConfigured(string $variable, string $key, ?string $value, ?string $expected): void
     {

@@ -35,7 +35,6 @@ class ShellNavigationTest extends TestCase
             ->assertDontSee('%my_friend%', false); // term layer resolved the caption
     }
 
-    /** Hiding an item whose URL has no route is covered per-item in NavigationServiceTest. */
     public function test_secure_global_nav_uses_openpne3_ids(): void
     {
         $this->seed(NavigationSeeder::class);

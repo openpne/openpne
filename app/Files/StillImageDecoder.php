@@ -6,8 +6,8 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\ImageInterface;
 
 /**
- * Why an animation must be dropped before it is decoded, and what each driver can do about it, is in
- * [security.md](../../docs/internals/security.md) § Decoding an upload.
+ * Why an animation must be dropped before it is decoded, and what each driver can do about it, is
+ * in docs/internals/security.md, "Decoding an upload".
  */
 class StillImageDecoder
 {

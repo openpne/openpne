@@ -138,7 +138,7 @@ class McpEndpointTest extends McpTestCase
     public function test_a_wildcard_token_passes_the_ability_gate(): void
     {
         // Sanctum answers every `can()` with true for a wildcard token, which neither mint path can
-        // produce (docs/internals/mcp.md "Tokens and abilities").
+        // produce (docs/internals/mcp.md, "Tokens and abilities").
         $token = Member::factory()->create()->createToken('mcp', ['*'])->plainTextToken;
 
         $this->rpc($token, 'tools/list')->assertOk();

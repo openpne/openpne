@@ -22,8 +22,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The Gate is unit-tested in FilePolicyTest; this walks the same matrix over HTTP, because only a
- * request proves reachability.
+ * This walks the policy's matrix over HTTP rather than at the Gate, because only a request proves
+ * reachability.
  */
 class GuestFileDeliveryTest extends TestCase
 {

@@ -11,8 +11,8 @@ use Throwable;
 
 /**
  * The metadata row and the bytes are written inside one DB transaction, and a disk backend's write,
- * which cannot join it, is compensated here rather than in FileObserver — a rollback never fires the
- * deleting event ([file-storage.md](../../docs/internals/file-storage.md) § Writing an upload).
+ * which cannot join it, is compensated here rather than in FileObserver — a rollback never fires
+ * the deleting event (docs/internals/file-storage.md, "Writing an upload").
  */
 class FileUploader
 {

@@ -7,8 +7,8 @@ namespace App\LinkCard;
 /**
  * Walks the container's own block lengths, so every exit that is not a completed walk proving one
  * still frame is a refusal; a parse that gave up is what an attacker constructs. Why neither a
- * marker search nor decoding can answer this is in docs/internals/link-cards.md (The image is
- * copied, and the order of checks is the safety).
+ * marker search nor decoding can answer this is in docs/internals/link-cards.md, "The image is
+ * copied, and the order of checks is the safety".
  */
 final class ImageContainer
 {

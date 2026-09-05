@@ -10,7 +10,7 @@ use LogicException;
 
 /**
  * The closed registry of member-configurable notification kinds; the case value is the stored
- * `member_notification_settings.kind` (docs/internals/notifications.md, The per-member catalog).
+ * `member_notification_settings.kind` (docs/internals/notifications.md, "The per-member catalog").
  */
 enum NotificationKind: string
 {
@@ -220,9 +220,9 @@ enum NotificationKind: string
     }
 
     /**
-     * Must stay true on both channels for an imported kind: an absent source key meant enabled, and the
-     * import writes no row for it. A kind whose default can be false is read in both polarities by every
-     * fan-out (docs/internals/notifications.md, Key invariants).
+     * Must stay true on both channels for an imported kind: an absent source key meant enabled, and
+     * the import writes no row for it. A kind whose default can be false is read in both polarities
+     * by every fan-out (docs/internals/notifications.md, "Key invariants").
      */
     public function defaultEnabled(NotificationChannel $channel): bool
     {
@@ -235,7 +235,7 @@ enum NotificationKind: string
 
     /**
      * Such a channel stores a row only as an override — a value equal to the current default is not
-     * written (Member::setNotificationSetting; docs/internals/notifications.md, Key invariants).
+     * written (Member::setNotificationSetting; docs/internals/notifications.md, "Key invariants").
      */
     public function hasSiteDefault(NotificationChannel $channel): bool
     {

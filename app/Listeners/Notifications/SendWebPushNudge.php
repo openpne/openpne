@@ -14,9 +14,9 @@ use Illuminate\Notifications\Events\NotificationSent;
 use Throwable;
 
 /**
- * Everything past the two pure filters is wrapped: this runs inside the queued job that wrote the feed
- * row, and an escaping exception would retry it and duplicate the row (docs/internals/notifications.md,
- * Web push).
+ * Everything past the two pure filters is wrapped: this runs inside the queued job that wrote the
+ * feed row, and an escaping exception would retry it and duplicate the row
+ * (docs/internals/notifications.md, "Web push").
  */
 final class SendWebPushNudge
 {
