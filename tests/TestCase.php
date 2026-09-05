@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +24,9 @@ abstract class TestCase extends BaseTestCase
         if ($this->usesRefreshDatabase() && Schema::hasTable('sns_settings')) {
             $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'open');
             $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, false);
+            // A member's stored Open means a web-public page only under this policy; the shipped
+            // members-only default is pinned by ProfileVisibilityPolicyTest itself.
+            $this->setSnsSetting(SnsSettingKey::ProfileVisibilityPolicy, ProfileVisibilityPolicy::MemberChoice);
         }
     }
 

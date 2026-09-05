@@ -22,7 +22,7 @@ class SnsSettingUpgrade extends UpgradeStep
     {
         return [
             'key' => Column::expr($this->keyCase(), uses: ['name']),
-            'value' => Column::source('value'),
+            'value' => $this->valueCase() === null ? Column::source('value') : Column::expr($this->valueCase(), uses: ['name', 'value']),
         ];
     }
 
@@ -70,6 +70,33 @@ class SnsSettingUpgrade extends UpgradeStep
             static fn (SnsSettingKey $key): string => "'{$key->op3SourceName()}'",
             $this->migratedKeys(),
         ));
+    }
+
+    /** The stored value, rewritten only for a key with an op3ValueMap(); null when no migrated key has one. */
+    private function valueCase(): ?string
+    {
+        $whens = [];
+        foreach ($this->migratedKeys() as $key) {
+            $map = $key->op3ValueMap();
+            if ($map === null) {
+                continue;
+            }
+            // Byte length beside the equality: under MySQL's PAD SPACE collations '0 ' and ' ' equal
+            // '0' and '', while OpenPNE 3 read both as truthy strings.
+            $inner = implode(' ', array_map(
+                static fn (string $from, string $to): string => sprintf(
+                    "WHEN `value` = '%s' AND LENGTH(`value`) = %d THEN '%s'",
+                    $from,
+                    strlen($from),
+                    $to,
+                ),
+                array_keys($map),
+                $map,
+            ));
+            $whens[] = sprintf("WHEN '%s' THEN CASE %s ELSE `value` END", $key->op3SourceName(), $inner);
+        }
+
+        return $whens === [] ? null : 'CASE `name` '.implode(' ', $whens).' ELSE `value` END';
     }
 
     /** `sns_config.name` → the SnsSettingKey case value (the stored `key`), built from the registry. */

@@ -23,7 +23,7 @@ class SnsBaseSettingsTest extends TestCase
     {
         parent::setUp();
 
-        // Start from a clean settings table: the base TestCase seeds the Auth-group baseline, but this
+        // Start from a clean settings table: the base TestCase seeds Auth and Privacy baselines, but this
         // page owns only the Base keys, so the verbatim-save count assertion must see just those.
         DB::table('sns_settings')->truncate();
         app(SnsSettingService::class)->clearCache();

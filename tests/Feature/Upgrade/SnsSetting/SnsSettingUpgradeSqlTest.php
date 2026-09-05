@@ -145,6 +145,37 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'diary_search_period_days', 'value' => '7']);
     }
 
+    public function test_rewrites_the_profile_policy_codes_and_copies_an_unknown_one_verbatim(): void
+    {
+        foreach (['', '0', '1', '4', '9'] as $code) {
+            DB::table('sns_config')->delete();
+            DB::table('sns_settings')->whereIn('key', ['profile_visibility_policy', 'sns_name'])->delete();
+            $this->seedConfig('is_allow_config_public_flag_profile_page', $code);
+            // The sibling verbatim key proves the value CASE leaves every other row untouched.
+            $this->seedConfig('sns_name', 'Verbatim '.$code);
+
+            $this->runUpgrade();
+
+            $expected = ['' => 'member_choice', '0' => 'member_choice', '1' => 'members', '4' => 'web', '9' => '9'][$code];
+            $this->assertDatabaseHas('sns_settings', ['key' => 'profile_visibility_policy', 'value' => $expected]);
+            $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => 'Verbatim '.$code]);
+        }
+    }
+
+    public function test_a_trailing_space_keeps_a_code_out_of_the_map(): void
+    {
+        // PAD SPACE would equate these with '', '0' and '4'; OpenPNE 3 read the first two as truthy (members-only) and '4 ' as the web, which this deliberately closes.
+        foreach ([' ', '0 ', '4 '] as $code) {
+            DB::table('sns_config')->delete();
+            DB::table('sns_settings')->where('key', 'profile_visibility_policy')->delete();
+            $this->seedConfig('is_allow_config_public_flag_profile_page', $code);
+
+            $this->runUpgrade();
+
+            $this->assertSame($code, DB::table('sns_settings')->where('key', 'profile_visibility_policy')->value('value'));
+        }
+    }
+
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
         $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default

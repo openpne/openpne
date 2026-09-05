@@ -91,28 +91,16 @@ class MemberUpgrade extends UpgradeStep
         return "CASE WHEN {$lang} LIKE 'ja%' THEN 'ja' WHEN {$lang} LIKE 'en%' THEN 'en' ELSE NULL END";
     }
 
-    private function snsConfigValue(string $name): string
-    {
-        return '(SELECT `value` FROM '.SourceRef::table('sns_config')." WHERE `name` = '{$name}' LIMIT 1)";
-    }
-
     /**
-     * Effective profile-page public flag → Visibility. The SNS-wide
-     * is_allow_config_public_flag_profile_page overrides the per-member flag when truthy
-     * (OpenPNE 3 MemberTable::appendRules); only when empty/0 does the member's own flag apply.
+     * The member's own profile_page_public_flag alone: the SNS-wide override travels as
+     * SnsSettingKey::ProfileVisibilityPolicy and is applied on read (docs/internals/member-profile.md, "Profile page audience").
      */
     private function profileVisibilityExpr(): string
     {
-        $global = $this->snsConfigValue('is_allow_config_public_flag_profile_page');
-        $member = $this->memberConfigValueLatest('profile_page_public_flag');
-        $effective = "CASE WHEN {$global} IS NOT NULL AND {$global} NOT IN ('', '0') THEN {$global} ELSE {$member} END";
-
         return sprintf(
-            "CASE (%s) WHEN '4' THEN %d WHEN '2' THEN %d WHEN '3' THEN %d ELSE %d END",
-            $effective,
+            "CASE %s WHEN '4' THEN %d ELSE %d END",
+            $this->memberConfigValueLatest('profile_page_public_flag'),
             Visibility::Open->value,
-            Visibility::Friends->value,
-            Visibility::Private->value,
             Visibility::Members->value,
         );
     }
