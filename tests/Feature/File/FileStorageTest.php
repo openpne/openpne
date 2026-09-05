@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\File;
 
+use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Models\File;
@@ -179,14 +180,15 @@ class FileStorageTest extends TestCase
         config()->set('openpne.files.disk', 'local');
         Storage::fake('local');
         $storage = app(FileStorage::class);
+        $this->assertInstanceOf(DiskFileStorage::class, $storage);
         $file = File::factory()->create();
+        $storage->writeStream($file, $this->streamOf('x'));
 
-        // Never written: FileUploader's compensation and FileObserver::deleting both reach here for
-        // bytes that may never have landed.
+        $storage->delete($file);
+        Storage::disk('local')->assertMissing($file->name);
         $storage->delete($file);
 
         $this->assertFalse($storage->exists($file));
-        Storage::disk('local')->assertMissing($file->name);
     }
 
     private function readAll(FileStorage $storage, File $file): string
