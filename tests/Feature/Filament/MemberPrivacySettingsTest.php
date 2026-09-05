@@ -58,8 +58,9 @@ class MemberPrivacySettingsTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         // The service returns the typed enum and Filament's option cast folds it to the backing value; a field without that cast would need the fold done here.
-        $this->assertSame('string', get_debug_type(Livewire::test(MemberPrivacySettings::class)->get('data.profile_visibility_policy')));
-        Livewire::test(MemberPrivacySettings::class)
+        $page = Livewire::test(MemberPrivacySettings::class);
+        $this->assertSame('string', get_debug_type($page->get('data.profile_visibility_policy')));
+        $page
             ->assertSet('data.profile_visibility_policy', 'members')
             ->fillForm(['profile_visibility_policy' => 'web'])
             ->call('save')

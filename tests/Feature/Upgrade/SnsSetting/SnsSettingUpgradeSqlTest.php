@@ -164,7 +164,7 @@ class SnsSettingUpgradeSqlTest extends TestCase
 
     public function test_a_trailing_space_keeps_a_code_out_of_the_map(): void
     {
-        // PAD SPACE would equate these with '', '0' and '4'; OpenPNE 3 read the first two as truthy (members-only) and '4 ' as the web, which this deliberately closes.
+        // The three codes a PAD SPACE collation would equate with '', '0' and '4'.
         foreach ([' ', '0 ', '4 '] as $code) {
             DB::table('sns_config')->delete();
             DB::table('sns_settings')->where('key', 'profile_visibility_policy')->delete();

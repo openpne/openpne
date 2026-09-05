@@ -81,8 +81,8 @@ class SnsSettingUpgrade extends UpgradeStep
             if ($map === null) {
                 continue;
             }
-            // Byte length beside the equality: under MySQL's PAD SPACE collations '0 ' and ' ' equal
-            // '0' and '', while OpenPNE 3 read both as truthy strings.
+            // Byte length beside the equality (PAD SPACE would equate '0 ' with '0'), so a padded code
+            // copies verbatim and reads members-only; OpenPNE 3 read '4 ' as the web, the one deliberate narrowing.
             $inner = implode(' ', array_map(
                 static fn (string $from, string $to): string => sprintf(
                     "WHEN `value` = '%s' AND LENGTH(`value`) = %d THEN '%s'",
