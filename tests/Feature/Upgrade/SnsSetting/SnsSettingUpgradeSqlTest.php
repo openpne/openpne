@@ -162,14 +162,19 @@ class SnsSettingUpgradeSqlTest extends TestCase
         }
     }
 
-    public function test_a_blank_only_space_is_not_read_as_the_empty_code(): void
+    public function test_a_trailing_space_keeps_a_code_out_of_the_map(): void
     {
-        // A PAD SPACE collation equates ' ' with '', but OpenPNE 3 read ' ' as truthy, so it copies verbatim.
-        $this->seedConfig('is_allow_config_public_flag_profile_page', ' ');
+        // A PAD SPACE collation equates ' ' with '' and '0 ' with '0', but OpenPNE 3 read both as
+        // truthy strings, so they copy verbatim and read as members-only.
+        foreach ([' ', '0 '] as $code) {
+            DB::table('sns_config')->delete();
+            DB::table('sns_settings')->where('key', 'profile_visibility_policy')->delete();
+            $this->seedConfig('is_allow_config_public_flag_profile_page', $code);
 
-        $this->runUpgrade();
+            $this->runUpgrade();
 
-        $this->assertSame(' ', DB::table('sns_settings')->where('key', 'profile_visibility_policy')->value('value'));
+            $this->assertSame($code, DB::table('sns_settings')->where('key', 'profile_visibility_policy')->value('value'));
+        }
     }
 
     public function test_does_not_migrate_security_or_unknown_keys(): void
