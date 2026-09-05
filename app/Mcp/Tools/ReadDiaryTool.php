@@ -31,8 +31,7 @@ class ReadDiaryTool extends DiaryTool
             return $this->refused();
         }
 
-        // The whole thread, oldest first, as the web surface reads one: a diary's comments are the
-        // conversation on it, and a page of them would leave a reader asking for the rest.
+        // Deliberately unpaged: a page of a diary's comments would leave a reader asking for the rest.
         $comments = $diary->comments()->with('member')->withCount('images')->orderBy('number')->get();
 
         return Response::structured(['diary' => McpDiarySerializer::detail($diary, $comments)]);

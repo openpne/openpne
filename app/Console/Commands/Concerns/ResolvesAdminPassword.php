@@ -6,11 +6,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Shared password input + strength validation for the admin CLI commands.
- *
- * Prompts twice interactively (confirmation), or reads OPENPNE_ADMIN_PASSWORD for
- * non-interactive provisioning — no --password option, which would leak the secret into
- * shell history and the process list. Strength matches the member rule set (Password::default).
+ * There is deliberately no --password option: it would leak the secret into shell history and the
+ * process list.
  */
 trait ResolvesAdminPassword
 {

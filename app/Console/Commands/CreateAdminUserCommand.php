@@ -8,11 +8,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-/**
- * Bootstraps the first administrator on a fresh single-site install (and adds further
- * accounts). The panel's in-app CRUD assumes an administrator can already log in, so this
- * is the supported path to the first account; it is scriptable from the fleet provisioner.
- */
 class CreateAdminUserCommand extends Command
 {
     use ResolvesAdminPassword;

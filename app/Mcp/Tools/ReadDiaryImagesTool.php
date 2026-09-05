@@ -63,9 +63,6 @@ class ReadDiaryImagesTool extends DiaryTool
     }
 
     /**
-     * The entry's own pictures, by slot — `DiaryImage.number`, the number the compose form attached
-     * them in, and the same meaning talk's slots carry.
-     *
      * @return Response|list<array{0: int, 1: File}>
      */
     private function diaryTargets(Member $member, Diary $diary, ?int $number): Response|array
@@ -78,14 +75,11 @@ class ReadDiaryImagesTool extends DiaryTool
     }
 
     /**
-     * One comment's pictures. The comment is looked up **within the entry** the caller has just
-     * passed the gate on, so a comment of another entry — readable or not — is no more
-     * distinguishable here than an id that names nothing.
+     * The comment is looked up within the entry the caller has just passed the gate on, so one of
+     * another entry refuses as an id that names nothing does.
      *
-     * A comment image carries no slot column (OpenPNE 3 has none), so `number` is a position in the
-     * comment's own order rather than a stored number, and never a row id. The position is counted
-     * over every row the comment has, before any of them is judged, so what a row turned out to hold
-     * cannot shift the numbering — or be read off it.
+     * A comment image carries no slot column (OpenPNE 3 has none), so `number` is a position counted
+     * over every row before any is judged, never a row id.
      *
      * @return Response|list<array{0: int, 1: File}>
      */
@@ -105,12 +99,8 @@ class ReadDiaryImagesTool extends DiaryTool
     }
 
     /**
-     * The pictures to answer with, in number order, or the refusal that stands for all of them.
-     *
-     * A named number holding no picture — nothing there, not an image, its file gone — is refused
-     * rather than answered empty, so the numbers cannot be walked to count what an entry or a
-     * comment carries. With no number those same rows are simply passed over: what was asked for is
-     * the pictures, and a row that is not one is not missing from them.
+     * A named number holding no picture is refused rather than answered empty, so the numbers cannot
+     * be walked to count what an entry carries; with no number those rows are passed over.
      *
      * @param  list<array{0: int, 1: File|null}>  $rows
      * @return Response|list<array{0: int, 1: File}>
@@ -124,10 +114,8 @@ class ReadDiaryImagesTool extends DiaryTool
                 continue;
             }
 
-            // Belt. FilePolicy resolves a diary or comment image through DiaryAccess::canView — the
-            // gate the entry was already resolved through — so it cannot deny one picture of an entry
-            // the caller may read. Asked anyway, and a denial takes the whole answer rather than
-            // dropping a picture from it.
+            // Belt: FilePolicy resolves these through the gate the entry already passed, and a denial
+            // takes the whole answer rather than dropping a picture from it.
             if ($file !== null && ! Gate::forUser($member)->allows('view', $file)) {
                 return $this->refused();
             }

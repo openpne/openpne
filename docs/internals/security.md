@@ -219,6 +219,10 @@ The policy has a single definition — `Password::defaults()` in
 password-accepting path (member registration, password reset and change, the
 admin panel forms, the admin CLI commands) validates through `Password::default()`.
 
+At the CLI, `openpne:admin:create` and `openpne:admin:reset-password` prompt twice, or read
+`OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no `--password`
+option, which would leak the secret into shell history and the process list.
+
 - **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1) and matches
   the de-facto floor of large consumer services (large-scale measurement:
   S. Alroomi & F. Li, *Measuring Website Password Creation Policies At Scale*,

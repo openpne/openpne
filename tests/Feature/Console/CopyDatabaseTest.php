@@ -120,8 +120,8 @@ class CopyDatabaseTest extends TestCase
         $target = $this->handBuiltSchema('copy_target', ['custom_audit' => 'id integer primary key, note text']);
         $target->table('custom_audit')->insert(['id' => 1, 'note' => 'not from the source']);
 
-        // The copy would never write this table, so its rows would survive into a result meant to be
-        // the source and nothing else.
+        // A table the copy never writes: an emptiness check restricted to the copied tables would
+        // pass here.
         $this->artisan('openpne:copy-database', ['--from' => 'copy_source', '--to' => 'copy_target'])
             ->expectsOutputToContain('does not have: custom_audit')
             ->assertFailed();
@@ -147,8 +147,7 @@ class CopyDatabaseTest extends TestCase
     }
 
     /**
-     * A two-table SQLite database standing in for a migrated schema: `migrations` (both sides must
-     * agree on it) plus `things`. Extra definitions replace or add to that.
+     * Both sides must agree on `migrations`, so the fixture always holds it.
      *
      * @param  array<string, string>  $tables  name => column DDL
      */
@@ -167,7 +166,7 @@ class CopyDatabaseTest extends TestCase
         return $database;
     }
 
-    /** Register a SQLite connection on a scratch file, removed in tearDown. */
+    /** The scratch file is removed in tearDown. */
     private function temporaryConnection(string $name): void
     {
         $path = tempnam(sys_get_temp_dir(), 'openpne-copy-');

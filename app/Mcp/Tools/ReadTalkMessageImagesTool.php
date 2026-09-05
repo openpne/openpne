@@ -64,12 +64,8 @@ class ReadTalkMessageImagesTool extends TalkTool
     }
 
     /**
-     * The slots to answer with, in number order, or the refusal that stands for all of them.
-     *
-     * A named slot that holds no picture — never attached, not an image, its file gone — is refused
-     * rather than answered empty, so the numbers cannot be walked to count what a message carries.
-     * With no number those same slots are simply passed over: what was asked for is the message's
-     * pictures, and a slot that is not one is not missing from that.
+     * A named slot holding no picture is refused rather than answered empty, so the numbers cannot be
+     * walked to count what a message carries; with no number those slots are passed over.
      *
      * @return Response|list<array{0: int, 1: File}>
      */
@@ -85,9 +81,8 @@ class ReadTalkMessageImagesTool extends TalkTool
         foreach ($slots as $slot) {
             $file = $slot->file;
 
-            // Belt. FilePolicy sends a talk image to GroupTalkAccess::canView — the gate this room was
-            // already resolved through — so it cannot deny one row of a message the caller may read.
-            // Asked anyway, and a denial takes the whole answer rather than dropping a picture from it.
+            // Belt: FilePolicy sends these to the gate this room already passed, and a denial takes
+            // the whole answer rather than dropping a picture from it.
             if ($file !== null && ! Gate::forUser($member)->allows('view', $file)) {
                 return $this->refused();
             }

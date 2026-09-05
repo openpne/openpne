@@ -10,15 +10,9 @@ use App\Models\HomeIssue;
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
 
-/**
- * What the issue commands share: how they read a day off the command line, and the lines they print
- * — one place, so a rebuild, a dry run and a publish cannot describe the same issue differently.
- */
 trait ReportsHomeIssues
 {
     /**
-     * $date as a day on the site's clock, or null when it is not one.
-     *
      * The round trip is the whole check: a date constructor rolls February 30th into March 2nd, so
      * parsing alone would quietly publish an issue for a day that never happened.
      */
@@ -48,7 +42,6 @@ trait ReportsHomeIssues
         ));
     }
 
-    /** $verb is "Published" or "Would publish": a dry run that read the same issue says so. */
     private function reportIssue(string $verb, HomeIssue $issue): void
     {
         $counts = $issue->items->countBy(fn ($item): string => $item->section->value);
@@ -68,8 +61,6 @@ trait ReportsHomeIssues
     }
 
     /**
-     * The one place the bands are named.
-     *
      * @param  callable(HomeIssueSection): int  $count
      */
     private function summary(callable $count): string

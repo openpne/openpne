@@ -35,23 +35,17 @@ class PostDiaryTool extends DiaryTool
     {
         $member = $this->member($request);
 
-        // The endpoint only ever asked for mcp:read, so writing is checked again here — that is what
-        // makes a read-only token a read-only token.
         if (! $member->tokenCan(McpAbilities::WRITE)) {
             return Response::error(self::MISSING_WRITE);
         }
 
-        // The audiences the compose form would offer, keyed by the slug this wire speaks: accepting
-        // one is the same act as resolving it, so a tier the site does not offer (Open with
-        // web-public off, Friends with the friend unit off) cannot arrive by another spelling.
+        // Accepting a slug is the same act as resolving it, so a tier the site does not offer cannot
+        // arrive by another spelling.
         $offered = self::offeredBySlug();
 
         /** @var array{title: string, body: string, visibility?: string, format?: string} $validated */
         $validated = Validator::make(
             [
-                // Trimmed here, not left to middleware: the direct tool path never meets TrimStrings,
-                // so what the compose form stores and what this stores would otherwise differ — an
-                // entry titled with three spaces is refused there and written here.
                 'title' => self::trimmed($request, 'title'),
                 'body' => self::trimmed($request, 'body'),
                 // Only when they were actually sent: `sometimes` treats a key holding null as an
@@ -59,9 +53,8 @@ class PostDiaryTool extends DiaryTool
                 ...$request->only(['visibility', 'format']),
             ],
             [
-                // The title's column is TEXT too, and the web form leaves it to the column; here the
-                // cap is stated, as the comment body's is, so an oversize one is a refusal and not a
-                // database error.
+                // The title's column is TEXT too and the web form leaves it to the column; capped
+                // here so an oversize title is a refusal rather than a database error.
                 'title' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
                 'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
                 // A refused audience names the field: it is the caller's own choice, and says nothing
@@ -72,8 +65,6 @@ class PostDiaryTool extends DiaryTool
             ],
         )->validate();
 
-        // Omitted means the member's own default, clamped to what is offered — the audience the
-        // compose form pre-selects for them, not a constant.
         $visibility = isset($validated['visibility'])
             ? $offered[$validated['visibility']]
             : DiaryVisibility::defaultFor($member);
@@ -112,8 +103,7 @@ class PostDiaryTool extends DiaryTool
     }
 
     /**
-     * The offered audiences by slug. Slugs, not the stored ints: Open is 0, and a raw 0 on a wire
-     * reads as "no audience".
+     * Slugs, not the stored ints: Open is 0, and a raw 0 on a wire reads as "no audience".
      *
      * @return array<string, Visibility>
      */

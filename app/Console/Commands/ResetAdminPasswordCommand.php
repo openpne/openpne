@@ -9,9 +9,8 @@ use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 
 /**
- * Lockout recovery: the panel only lets an administrator change their OWN password (OpenPNE 3
- * parity — there is no cross-admin password edit), so resetting a locked-out account is a CLI
- * action gated by server access rather than an in-panel privilege.
+ * The panel only lets an administrator change their own password (OpenPNE 3 parity), so a
+ * locked-out account is reset from the CLI instead.
  */
 class ResetAdminPasswordCommand extends Command
 {

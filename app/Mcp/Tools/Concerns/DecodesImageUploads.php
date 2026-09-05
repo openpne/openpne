@@ -15,25 +15,17 @@ use Laravel\Mcp\Request;
 use RuntimeException;
 
 /**
- * Taking pictures in over a wire that carries JSON: an `images` argument arrives as base64 text,
- * and the Actions that post them take uploads, so this decodes one into the other.
- *
- * Every bound is applied to what a caller sent before it is decoded, and the rules the compose forms
- * apply are then applied to the bytes themselves — a caller says nothing about what a picture is
- * that is believed.
+ * Every bound is applied to the encoded text before a decode; what a picture is is then decided by
+ * reading the bytes, never by anything the caller said about them.
  */
 trait DecodesImageUploads
 {
-    /**
-     * The most decoded bytes one picture may be. `max:5120` on the shared rules (kilobytes) stated
-     * in bytes, so the bound below and the rule that re-checks it are the same number.
-     */
+    /** `max:5120` on the shared rules (kilobytes) stated in bytes; the two must stay one number. */
     private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
     /**
-     * Run $write with the call's `images` decoded into uploads, and take the temporary files back
-     * whatever happens — a picture the rules refuse, a write that throws, a transaction rolled back
-     * around one that had already been stored.
+     * The temporary files are removed on every path out, a refused picture and a rolled-back write
+     * included.
      *
      * @template T
      *
@@ -50,9 +42,7 @@ trait DecodesImageUploads
                 $uploads[] = self::upload($image, $index);
             }
 
-            // The rules the compose forms apply, run against the bytes rather than against anything
-            // the caller said about them: `image`/`mimes` decide the type by sniffing the content,
-            // `dimensions` bounds the decoder's allocation, and `max` measures the decoded file.
+            // The compose forms' own rules, run against the decoded bytes.
             Validator::make(['images' => $uploads], PostImageRules::rules())->validate();
 
             return $write($uploads);
@@ -67,7 +57,6 @@ trait DecodesImageUploads
         }
     }
 
-    /** The `images` argument, described where it is enforced. */
     protected function imagesSchema(JsonSchema $schema): ArrayType
     {
         return $schema->array()->items($schema->string())->max(PostImages::MAX_IMAGES)
@@ -80,9 +69,6 @@ trait DecodesImageUploads
     }
 
     /**
-     * The `images` argument as base64 strings, with everything that can be settled before a decode
-     * settled: its shape, how many there are, and how long each may be.
-     *
      * @return list<string>
      */
     private static function encodedImages(Request $request): array
@@ -104,9 +90,8 @@ trait DecodesImageUploads
         foreach ($images as $index => $image) {
             $total += strlen($image);
 
-            // Before any decode: base64_decode() allocates its output from the length of its input,
-            // so a string judged only afterwards is a string already in memory. The running total is
-            // the belt on the count above — what the whole array may be, whatever the count is.
+            // base64_decode() allocates its output from the length of its input, so a string judged
+            // only after the decode is a string already in memory.
             if (strlen($image) > $limit || $total > $limit * PostImages::MAX_IMAGES) {
                 throw ValidationException::withMessages(['images.'.$index => [self::tooLongMessage($limit)]]);
             }
@@ -116,21 +101,19 @@ trait DecodesImageUploads
     }
 
     /**
-     * The most base64 characters one picture may arrive as. Four characters carry at most three
-     * bytes, so a longer string cannot decode to something {@see self::MAX_IMAGE_BYTES} would
-     * accept. Exact, with nothing added for slack: slack here is bytes over the cap being decoded.
+     * Four base64 characters carry at most three bytes, so a longer string cannot decode to
+     * something {@see self::MAX_IMAGE_BYTES} would accept. Exact: slack here is bytes over the cap
+     * being decoded.
      */
     private static function maxEncodedLength(): int
     {
         return intdiv(self::MAX_IMAGE_BYTES + 2, 3) * 4;
     }
 
-    /** One picture's bytes as an upload the posting Actions can take. */
     private static function upload(string $encoded, int $index): UploadedFile
     {
-        // Standard base64 and nothing else: a `data:` prefix or the url-safe alphabet is refused
-        // here rather than decoded into bytes nobody sent. Padding is optional and line breaks are
-        // skipped, which is the decoder's own reading of the standard.
+        // With strict: true a `data:` prefix or the url-safe alphabet is refused, while padding stays
+        // optional and line breaks are skipped.
         $bytes = base64_decode($encoded, strict: true);
 
         if ($bytes === false) {
@@ -151,9 +134,8 @@ trait DecodesImageUploads
             throw new RuntimeException('Unable to write an uploaded picture to its temporary file.');
         }
 
-        // test: true is how a non-HTTP path gets past is_uploaded_file(). The name is the server's
-        // own, so nothing a caller wrote reaches the filesystem or the stored row's original_filename,
-        // and the client MIME type is left unsaid — the rules read the content.
+        // `test: true` is how a non-HTTP path gets past is_uploaded_file(); the name is the server's
+        // own, so nothing a caller wrote reaches the filesystem or the stored `original_filename`.
         return new UploadedFile($path, 'upload', null, null, true);
     }
 

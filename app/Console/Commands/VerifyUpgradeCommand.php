@@ -9,11 +9,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Verifies an OpenPNE 3 → 4 migration before switchover: row-count parity per step (source rows matching
- * the step's filter == the recorded rows_affected == the target count) and file_bin byte integrity.
- * Read-only. Unlike the coverage-audit commands this is a gate — any failed check fails the command.
+ * A gate rather than a report: any failed check fails the command.
  *
- * Runs against the same source the runner used: pass the same --source-prefix / --source-database.
+ * It runs against the same source the runner used, so pass the same --source-prefix /
+ * --source-database.
  */
 class VerifyUpgradeCommand extends Command
 {
@@ -62,8 +61,8 @@ class VerifyUpgradeCommand extends Command
         $database = $this->option('source-database');
         $database = $database === null ? null : (string) $database;
 
-        // The identifier guard: prefix / database get interpolated into backticked SQL, so restrict them
-        // to a table-name character set (same as the runner command).
+        // A non-empty prefix or database is interpolated into backticked SQL, so restrict it to a
+        // table-name charset.
         if ($prefix !== '' && ! preg_match('/^[A-Za-z0-9_]+$/', $prefix)) {
             $this->error('--source-prefix must match [A-Za-z0-9_]+.');
 

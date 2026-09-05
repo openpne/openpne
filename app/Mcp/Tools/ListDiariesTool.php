@@ -26,8 +26,7 @@ class ListDiariesTool extends DiaryTool
     {
         $validated = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
 
-        // The page is named rather than read off a URL: there is none here, so the query's own
-        // resolver would answer page one every time.
+        // There is no URL here, so the query's own page resolver would answer page one every time.
         $page = $recent(
             $this->member($request),
             ListRecentDiaries::PER_PAGE,
