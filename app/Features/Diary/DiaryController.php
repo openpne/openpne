@@ -138,6 +138,8 @@ class DiaryController extends Controller
 
     public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
     {
+        abort_unless(DiarySearch::enabled(), 404);
+
         $viewer = $this->viewerOrGuest();
         $keyword = $this->keywordParam($request);
 
@@ -170,18 +172,22 @@ class DiaryController extends Controller
      */
     private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
     {
+        $searchable = $variant !== 'friends' && DiarySearch::enabled();
+
         return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => $this->classicScreen('diary.feed', [
                 'variant' => $variant,
+                'searchable' => $searchable,
                 'keyword' => $keyword,
                 'hasKeyword' => $hasKeyword,
                 'diaries' => $diaries,
             ]),
-            SurfaceResolver::MODERN => function () use ($variant, $keyword, $hasKeyword, $diaries) {
+            SurfaceResolver::MODERN => function () use ($variant, $searchable, $keyword, $hasKeyword, $diaries) {
                 $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/feed', [
                     'variant' => $variant,
+                    'searchable' => $searchable,
                     'keyword' => $keyword,
                     'hasKeyword' => $hasKeyword,
                     'diaries' => DiarySerializer::paginator($diaries),

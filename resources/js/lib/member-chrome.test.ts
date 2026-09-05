@@ -629,3 +629,11 @@ test('the retired mailbox screens are gone from the registry', () => {
         assert.deepEqual(chrome(component, {}), { mode: 'embedded', width: 'standard', gap: '4' }, component);
     }
 });
+
+test('the timeline write action follows the posting switch', () => {
+    assert.equal(chrome('timeline/index', { canPost: true }).action?.href, '/timeline/new');
+    assert.equal(chrome('timeline/index', { canPost: false }).action, undefined);
+    assert.equal(chrome('timeline/member', { owner, isOwner: true, canPost: false }).action, undefined);
+    // A page that says nothing about posting keeps the action, as before the switch existed.
+    assert.equal(chrome('timeline/index', {}).action?.href, '/timeline/new');
+});

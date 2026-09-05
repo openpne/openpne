@@ -5,6 +5,7 @@
 @section('title', $title)
 
 @section('content')
+    @php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
     @include('timeline._stylesheets')
     @include('timeline._scripts')
     {{-- OpenPNE 3 streams the posts client-side from the API; the Classic adapter renders them
@@ -20,7 +21,7 @@
             <div class="timeline" data-timeline-container>
                 <div id="timeline-list">
                     @foreach ($posts as $post)
-                        @include('timeline._post', ['post' => $post])
+                        @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                     @endforeach
                 </div>
                 @if ($posts->hasMorePages())

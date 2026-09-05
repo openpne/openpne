@@ -9,6 +9,7 @@ use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -23,7 +24,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the diary policy settings (currently: whether members may make an entry web-public).
+ * Edit the diary policy settings (whether members may make an entry web-public, and the site-wide search's switch and window).
  * `sns_settings` is authoritative; every field is stored verbatim on save and resolves to its
  * OpenPNE 3 default (web-public on) while no row exists.
  *
@@ -135,6 +136,18 @@ class DiarySettings extends Page
                     // The switch reaches further than its label: OpenPNE 3 made the whole module
                     // members-only while it was off, and OpenPNE 4 keeps that (EnsureWebPublicDiaryEnabled).
                     ->helperText(__('While off, guests cannot open any %diary% page at all.')),
+                Toggle::make(SnsSettingKey::DiarySearchEnabled->value)
+                    ->label(SnsSettingKey::DiarySearchEnabled->label())
+                    ->helperText(__('The site-wide %diary% search. It does not affect the keyword filter inside a member\'s own archive.')),
+                Toggle::make(SnsSettingKey::DiarySearchPeriodEnabled->value)
+                    ->label(SnsSettingKey::DiarySearchPeriodEnabled->label()),
+                TextInput::make(SnsSettingKey::DiarySearchPeriodDays->value)
+                    ->label(SnsSettingKey::DiarySearchPeriodDays->label())
+                    ->helperText(__('Counted back from today; 0 searches today only. Applies while the limit above is on.'))
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(SnsSettingKey::DIARY_SEARCH_PERIOD_MAX_DAYS)
+                    ->required(),
             ]);
     }
 }

@@ -5,6 +5,7 @@
 @section('title', $title)
 
 @section('content')
+    @php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
     @include('timeline._stylesheets')
     @include('timeline._scripts')
     {{-- A reading page: the same OpenPNE 3 timeline shell as the home feed, without its compose box
@@ -13,7 +14,7 @@
         <div class="timeline" data-timeline-container>
             <div id="timeline-list">
                 @foreach ($posts as $post)
-                    @include('timeline._post', ['post' => $post])
+                    @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                 @endforeach
             </div>
             @if ($posts->hasMorePages())

@@ -49,6 +49,7 @@ use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureMemberInviteAllowed;
 use App\Http\Middleware\EnsureOpenRegistration;
+use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
@@ -424,16 +425,16 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/timeline/rows', 'indexRows')->name('timeline.index.rows');
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
         Route::get('/member/{member}/timeline/rows', 'memberRows')->whereNumber('member')->name('timeline.member.rows');
-        Route::get('/timeline/new', 'new')->name('timeline.new');
+        Route::get('/timeline/new', 'new')->middleware(EnsureTimelinePostingEnabled::class)->name('timeline.new');
         // What the compose form's @mention picker reads (JSON), on a keystroke-rate limiter like the preview's.
-        Route::get('/timeline/mention-candidates', 'mentionCandidates')->middleware('throttle:mention-search')->name('timeline.mention_candidates');
+        Route::get('/timeline/mention-candidates', 'mentionCandidates')->middleware([EnsureTimelinePostingEnabled::class, 'throttle:mention-search'])->name('timeline.mention_candidates');
         // The tag is percent-encoded in the URL and reaches the action decoded.
         Route::get('/timeline/tag/{tag}', 'tag')->name('timeline.tag');
         Route::get('/timeline/tag/{tag}/rows', 'tagRows')->name('timeline.tag.rows');
-        Route::post('/timeline/create', 'store')->middleware('throttle:posting')->name('timeline.store');
+        Route::post('/timeline/create', 'store')->middleware([EnsureTimelinePostingEnabled::class, 'throttle:posting'])->name('timeline.store');
         Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
         Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');
-        Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->middleware('throttle:posting')->name('timeline.reply.store');
+        Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->middleware([EnsureTimelinePostingEnabled::class, 'throttle:posting'])->name('timeline.reply.store');
         // What the Classic row's 以前のコメントを見る reads: the thread's whole reply list as an HTML
         // fragment, gated exactly as the thread page is.
         Route::get('/timeline/{timelinePost}/replies', 'replies')->whereNumber('timelinePost')->name('timeline.replies');

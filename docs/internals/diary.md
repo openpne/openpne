@@ -80,3 +80,14 @@ Two things that follow the author rather than the page:
 
 The sidemenu calendar ([`DiaryCalendar`](../../app/Features/Diary/DiaryCalendar.php)) is Sunday-first
 with null padding cells, and its previous/next navigation is unbounded, as OpenPNE 3's was.
+
+## Search
+
+The site-wide search screen (`/diary/search`) carries OpenPNE 3's three `op_diary_plugin_search_*`
+settings through [`DiarySearch`](../../app/Features/Diary/DiarySearch.php).
+`SnsSettingKey::DiarySearchEnabled` off makes the screen 404 and drops the search line from the
+recent feed on both surfaces. `DiarySearchPeriodEnabled` with `DiarySearchPeriodDays` narrows the
+results to `created_at` at or after midnight N days ago in the site zone — OpenPNE 3's
+`date('Y-m-d 00:00:00', strtotime('-N days'))`, so 0 is today alone. Both are this screen's alone:
+the Modern member archive's keyword filter is an OpenPNE 4 face OpenPNE 3 never had, and neither
+switch reaches it.
