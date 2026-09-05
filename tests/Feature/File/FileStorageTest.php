@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\File;
 
+use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Models\File;
@@ -172,6 +173,22 @@ class FileStorageTest extends TestCase
 
         $file->delete();
         Storage::disk('local')->assertMissing($file->name);
+    }
+
+    public function test_local_disk_delete_is_idempotent(): void
+    {
+        config()->set('openpne.files.disk', 'local');
+        Storage::fake('local');
+        $storage = app(FileStorage::class);
+        $this->assertInstanceOf(DiskFileStorage::class, $storage);
+        $file = File::factory()->create();
+        $storage->writeStream($file, $this->streamOf('x'));
+
+        $storage->delete($file);
+        Storage::disk('local')->assertMissing($file->name);
+        $storage->delete($file);
+
+        $this->assertFalse($storage->exists($file));
     }
 
     private function readAll(FileStorage $storage, File $file): string
