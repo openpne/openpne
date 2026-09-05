@@ -266,9 +266,9 @@ export function TalkMessageRow({
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
                 'group relative isolate px-4 sm:px-5',
-                // Deliberately not gated on `pressOpens`: the lens and the image menu a held finger
-                // raises would land on top of the sheet, so on a no-clipboard install a touch reader
-                // can neither select nor copy a body, which is accepted.
+                // Deliberately not gated on `pressOpens`, since the lens and the image menu a held
+                // finger raises would land on the sheet; on a no-clipboard install a touch reader
+                // can then neither select nor copy a body, which is accepted.
                 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // The space between turns is a margin rather than padding, so the tint under the
                 // pointer wraps the words evenly and the gap between two turns stays untinted.
