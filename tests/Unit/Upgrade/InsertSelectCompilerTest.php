@@ -163,7 +163,6 @@ class InsertSelectCompilerTest extends TestCase
 
         $this->assertStringContainsString('FROM `member` AS `member`', $sql);
         $this->assertStringContainsString('FROM `member_config`', $sql);
-        $this->assertStringContainsString('FROM `sns_config`', $sql);
         $this->assertStringNotContainsString('{{src:', $sql);
     }
 

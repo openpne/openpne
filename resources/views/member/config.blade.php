@@ -10,7 +10,7 @@
      `{categoryName}Form` (a custom-CSS seam it derived from the category key); the categories
      OpenPNE 4 added keep their own id, having no OpenPNE 3 id to restore. --}}
 @section('sidemenu')
-    <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" :ai-available="$aiAvailable" />
+    <x-member.config-sidemenu :current="$category" :public-flag-available="$publicFlagAvailable" :ai-available="$aiAvailable" />
 @endsection
 
 @section('content')
@@ -43,8 +43,35 @@
             @break
 
         @case(MemberConfigCategory::PublicFlag)
-            {{-- Age visibility (member_preferences[age_visibility]); Open is offered only while web-public age is on. --}}
-            <x-classic.parts id="publicFlagForm" name="form" :title="__('Age')">
+            {{-- OpenPNE 3 drew both fields in one MemberConfigPublicFlagForm box; they save on their own
+                 POSTs here, but the box id stays for custom CSS that targets it. --}}
+            <x-classic.parts id="publicFlagForm" name="form" :title="__('Privacy')">
+            @if ($profileChoice)
+                {{-- profile_page_public_flag, which OpenPNE 3 unset under the same admin gate. --}}
+                <form method="POST" action="{{ route('member.config.profile_visibility') }}">
+                    @csrf
+                    <table>
+                        <tr>
+                            <th><label for="profile_visibility">{{ __('Who can see your profile page') }}</label></th>
+                            <td>
+                                <select id="profile_visibility" name="profile_visibility">
+                                    @foreach ($profileOptions as $option)
+                                        <option value="{{ $option->value }}" @selected(old('profile_visibility', $profileDefault->value) == $option->value)>{{ __($option->label()) }}</option>
+                                    @endforeach
+                                </select>
+                                @error('profile_visibility')<p class="error">{{ $message }}</p>@enderror
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="operation">
+                        <ul class="moreInfo button">
+                            <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                        </ul>
+                    </div>
+                </form>
+            @endif
+            @if ($ageAvailable)
+                {{-- Age visibility (member_preferences[age_visibility]); Open is offered only while web-public age is on. --}}
                 <form method="POST" action="{{ route('member.config.age') }}">
                     @csrf
                     <table>
@@ -66,6 +93,7 @@
                         </ul>
                     </div>
                 </form>
+            @endif
             </x-classic.parts>
             @break
 

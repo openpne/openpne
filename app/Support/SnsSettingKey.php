@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Features\GroupTalk\GroupTalkNotifyMode;
+use App\Features\Profile\ProfileVisibilityPolicy;
 
 /**
  * The closed registry of site-wide settings in `sns_settings`; the stored row is the single source of
@@ -26,6 +27,9 @@ enum SnsSettingKey: string
     case CaptchaEnabled = 'captcha_enabled';
 
     case AllowWebPublicAge = 'allow_web_public_age';
+
+    /** An App\Features\Profile\ProfileVisibilityPolicy value. */
+    case ProfileVisibilityPolicy = 'profile_visibility_policy';
 
     case TimelineAllowWebPublic = 'timeline_allow_web_public';
 
@@ -151,7 +155,7 @@ enum SnsSettingKey: string
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
             self::SurfaceMode => SettingGroup::Surface,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
-            self::AllowWebPublicAge => SettingGroup::Privacy,
+            self::AllowWebPublicAge, self::ProfileVisibilityPolicy => SettingGroup::Privacy,
             self::TimelineAllowWebPublic, self::TimelinePostingEnabled => SettingGroup::Timeline,
             self::DiaryAllowWebPublic, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::DiarySearchPeriodDays => SettingGroup::Diary,
@@ -194,6 +198,7 @@ enum SnsSettingKey: string
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
+            self::ProfileVisibilityPolicy => 'is_allow_config_public_flag_profile_page',
             // OpenPNE 3's op_activity_is_open is an sfConfig (app.yml) value, not an sns_config row, so
             // there is nothing to copy; upgraded sites fall back to the same off default.
             self::TimelineAllowWebPublic => null,
@@ -228,6 +233,26 @@ enum SnsSettingKey: string
             self::GroupTalkNotifyDefault => null,
             self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
             self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
+        };
+    }
+
+    /**
+     * OpenPNE 3 stored value → stored value here, for a key whose vocabulary changed; the upgrade copies
+     * every other key verbatim, and a value outside the map copies verbatim too.
+     *
+     * @return array<string, string>|null
+     */
+    public function op3ValueMap(): ?array
+    {
+        return match ($this) {
+            // 0 and the radio's blank both let members choose (OpenPNE 3 read the row as PHP truthy).
+            self::ProfileVisibilityPolicy => [
+                '' => ProfileVisibilityPolicy::MemberChoice->value,
+                '0' => ProfileVisibilityPolicy::MemberChoice->value,
+                '1' => ProfileVisibilityPolicy::Members->value,
+                '4' => ProfileVisibilityPolicy::Web->value,
+            ],
+            default => null,
         };
     }
 
@@ -273,6 +298,8 @@ enum SnsSettingKey: string
             // Off, matching OpenPNE 3's is_allow_web_public_flag_age default — members may not make
             // their age web-public until an admin opts in.
             self::AllowWebPublicAge => false,
+            // OpenPNE 3's default 1: every profile page members-only, and no member choice, until an admin opens it.
+            self::ProfileVisibilityPolicy => ProfileVisibilityPolicy::Members,
             // Off, matching OpenPNE 3's op_activity_is_open default — posts may not be web-public
             // until an admin opts in.
             self::TimelineAllowWebPublic => false,
@@ -335,6 +362,7 @@ enum SnsSettingKey: string
             self::DiarySearchPeriodDays => self::clampDays((int) (is_string($value) ? trim($value) : $value)),
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
+            self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value : (ProfileVisibilityPolicy::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
             // The one key whose value is a list: an explicit arm because the default one casts to
             // string, which an array cannot be.
@@ -357,6 +385,7 @@ enum SnsSettingKey: string
             self::AiAccountLimit, self::DiarySearchPeriodDays => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
+            self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value->value : (string) $value,
             self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
             // Same reason as coerce()'s arm: the list is stored as CSV, and (string) on an array fatals.
             self::SelectableLooks => implode(',', array_column(self::lookSet($value), 'value')),
@@ -374,6 +403,8 @@ enum SnsSettingKey: string
         return match ($this) {
             // Stored string → typed SurfaceMode; an unknown value fails safe to the install default.
             self::SurfaceMode => SurfaceMode::tryFrom($value) ?? $this->default(),
+            // An unknown value is the members-only default: never the web, never a member's own choice.
+            self::ProfileVisibilityPolicy => ProfileVisibilityPolicy::tryFrom($value) ?? $this->default(),
             // Same for the look: a value no registered look answers to is corruption, and lands on
             // the layout the site shipped with rather than on an experiment.
             self::DefaultLook => Look::tryFrom($value) ?? $this->default(),
@@ -419,6 +450,7 @@ enum SnsSettingKey: string
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
+            self::ProfileVisibilityPolicy => __('Who can see a member\'s profile page'),
             self::TimelineAllowWebPublic => __('Allow members to make %activity% posts public to the web'),
             self::TimelinePostingEnabled => __('Allow members to post %activity%'),
             self::DiaryAllowWebPublic => __('Allow members to make %diary% entries public to the web'),
@@ -466,7 +498,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::SnsName, self::AdminMailAddress, self::DefaultLook => true,
-            self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
+            self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge, self::ProfileVisibilityPolicy,
             self::TimelineAllowWebPublic, self::TimelinePostingEnabled, self::DiaryAllowWebPublic, self::DiarySearchEnabled,
             self::DiarySearchPeriodEnabled, self::DiarySearchPeriodDays, self::LinkCardEnabled,
             self::AiAccountsEnabled, self::AiAccountLimit,

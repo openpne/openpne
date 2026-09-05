@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Files\FileUploader;
 use App\LinkCard\InternalCardResolver;
 use App\LinkCard\InternalCardTarget;
@@ -170,6 +171,12 @@ class InternalLinkCardRenderingTest extends TestCase
         $this->assertSame('Open profile', $this->draw($open, null)['title']);
         $this->assertNull($this->draw($closed, null));
         $this->assertNotNull($this->draw($closed, Member::factory()->create()));
+
+        // The card reads the effective audience: a site-wide policy overrides the member's choice both ways.
+        $this->setSnsSetting(SnsSettingKey::ProfileVisibilityPolicy, ProfileVisibilityPolicy::Members);
+        $this->assertNull($this->draw($open, null));
+        $this->setSnsSetting(SnsSettingKey::ProfileVisibilityPolicy, ProfileVisibilityPolicy::Web);
+        $this->assertNotNull($this->draw($closed, null));
     }
 
     public function test_a_member_card_is_withheld_from_someone_that_member_has_blocked(): void

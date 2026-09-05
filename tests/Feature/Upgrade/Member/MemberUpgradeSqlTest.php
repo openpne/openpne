@@ -116,41 +116,33 @@ class MemberUpgradeSqlTest extends TestCase
 
     public function test_maps_profile_page_public_flag_to_profile_visibility(): void
     {
-        // member_config[profile_page_public_flag] (OpenPNE 3 public_flag) → Visibility.
+        // member_config[profile_page_public_flag] offered web (4) or members (1); anything else is Members.
         $this->seedMember(10, 'WebPublic');
         $this->seedConfig(10, 'profile_page_public_flag', '4'); // web → Open(0)
-        $this->seedMember(11, 'FriendsOnly');
-        $this->seedConfig(11, 'profile_page_public_flag', '2'); // friend → Friends(2)
+        $this->seedMember(11, 'HandEdited');
+        $this->seedConfig(11, 'profile_page_public_flag', '2'); // never offered → Members(1)
         $this->seedMember(12, 'NoFlag');                        // unset → Members(1)
 
         $this->runUpgrade();
 
         $this->assertSame(0, (int) DB::table('members')->where('id', 10)->value('profile_visibility'));
-        $this->assertSame(2, (int) DB::table('members')->where('id', 11)->value('profile_visibility'));
+        $this->assertSame(1, (int) DB::table('members')->where('id', 11)->value('profile_visibility'));
         $this->assertSame(1, (int) DB::table('members')->where('id', 12)->value('profile_visibility'));
     }
 
-    public function test_sns_global_profile_visibility_overrides_a_stale_member_flag(): void
+    public function test_the_sns_wide_override_is_not_baked_into_the_member_row(): void
     {
-        // OpenPNE 3 prefers the SNS-wide setting; a stale member_config=4 must NOT leak the
-        // page to guests when the SNS-wide value is non-web.
-        $this->seedSnsConfig('is_allow_config_public_flag_profile_page', '1'); // truthy, non-web
-        $this->seedMember(13, 'Stale');
+        // The override travels as the profile_visibility_policy setting (SnsSettingUpgrade) and is
+        // applied on read, so the member's own choice survives it, as member_config did in OpenPNE 3.
+        $this->seedSnsConfig('is_allow_config_public_flag_profile_page', '1');
+        $this->seedMember(13, 'Chose web');
         $this->seedConfig(13, 'profile_page_public_flag', '4');
-
-        $this->runUpgrade();
-
-        $this->assertSame(1, (int) DB::table('members')->where('id', 13)->value('profile_visibility')); // Members, not Open
-    }
-
-    public function test_sns_global_web_public_applies_to_a_member_without_a_flag(): void
-    {
-        $this->seedSnsConfig('is_allow_config_public_flag_profile_page', '4'); // SNS-wide web-public
         $this->seedMember(14, 'NoFlag');
 
         $this->runUpgrade();
 
-        $this->assertSame(0, (int) DB::table('members')->where('id', 14)->value('profile_visibility')); // Open
+        $this->assertSame(0, (int) DB::table('members')->where('id', 13)->value('profile_visibility'));
+        $this->assertSame(1, (int) DB::table('members')->where('id', 14)->value('profile_visibility'));
     }
 
     public function test_maps_language_to_a_supported_locale_slug(): void

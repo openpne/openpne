@@ -67,6 +67,30 @@ access check is one range comparison `value.visibility <= clearanceFor(viewer, o
   page-level guest gate is the controller's) and `applyVisibility()` in search (below).
   Both also drop owners who block the viewer, like Diary.
 
+## Profile page audience
+
+Whether a signed-out visitor may open a member's profile page is two layers, as it was in
+OpenPNE 3: a site policy and the member's own choice.
+
+- `SnsSettingKey::ProfileVisibilityPolicy` (OpenPNE 3 `is_allow_config_public_flag_profile_page`,
+  [`ProfileVisibilityPolicy`](../../app/Features/Profile/ProfileVisibilityPolicy.php)): `members`
+  holds every page at members-only (the default, OpenPNE 3's `1`), `web` opens every page to the
+  web (`4`), `member_choice` defers to the member (`0`, and the blank a radio writes).
+- `members.profile_visibility` is the member's own choice, OpenPNE 3 `profile_page_public_flag`:
+  `Open` or `Members`, the only two tiers that page ever offered. It is kept while a policy
+  overrides it, so switching the policy back to `member_choice` restores what each member had
+  chosen — OpenPNE 3 kept `member_config` through an override the same way. A row holding
+  `Friends` or `Private` (an earlier upgrade wrote the override's value into it) reads as `Members`.
+- **Effective audience** = [`ProfilePageVisibility::effective()`](../../app/Features/Profile/ProfilePageVisibility.php):
+  the policy's fixed answer, or under `member_choice` the member's row. `ProfileAccess::isWebPublic()`
+  is the one reader, so the guest gate on the page, the member link card and anything else asking
+  "may a guest see this profile" agree.
+- The page gate and the field gate are separate: a guest let onto a web-public page still sees only
+  `is_public_web` fields (`ShowProfile`), and a member's fields keep their own visibility.
+- The member edits the choice on the Classic privacy category and the Modern settings page, both
+  offered only under `member_choice`; a POST under another policy persists nothing and lands on the
+  settings page, like the age POST without a birthday item.
+
 ## Age (derived from the birthday)
 
 The age shown on the profile is **derived from the `op_preset_birthday` value, never stored**, and is
@@ -147,3 +171,6 @@ Privacy is enforced **in SQL**, not after the fact:
 5. The birth **year** (= age) is exposed only through `AgeVisibility` — via `VisibleAge` and the age
    search criterion. The birthday field displays and searches month/day only; web-public age also
    requires the `AllowWebPublicAge` SNS setting (fail-closed, default off).
+6. Whether a guest may open a profile page is answered by `ProfileAccess::isWebPublic()` alone, which
+   reads the effective audience (policy over member choice); nothing reads `members.profile_visibility`
+   for that question directly.
