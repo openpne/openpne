@@ -8,10 +8,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The Modern surface links mentions client-side (entity-text.tsx), so the payload is the contract:
- * the ranges travel as code-point offsets and the body itself is never rewritten.
- */
 class MentionRenderTest extends TestCase
 {
     use RefreshDatabase;

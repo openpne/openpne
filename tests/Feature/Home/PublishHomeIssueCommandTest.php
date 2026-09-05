@@ -25,8 +25,7 @@ class PublishHomeIssueCommandTest extends TestCase
     {
         parent::setUp();
 
-        // The command reads the clock itself. What it may be told is which past day to report;
-        // where the present one ends is the schedule's to decide.
+        // The command reads the clock itself: what it may be told is which past day to report.
         Carbon::setTestNow(self::NOW);
     }
 
@@ -148,10 +147,7 @@ class PublishHomeIssueCommandTest extends TestCase
         $this->assertDatabaseCount('home_issues', 1);
     }
 
-    /**
-     * A day the first issue already reached back over. Its own date is free — the unique on
-     * `issue_date` would take it — but every happening in it has gone out once already.
-     */
+    /** Its own date is free — the unique would take it — but every happening in it has gone out once. */
     public function test_a_day_inside_an_existing_issues_window_is_refused(): void
     {
         $this->story();

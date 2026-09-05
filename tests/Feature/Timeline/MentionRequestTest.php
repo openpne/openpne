@@ -8,12 +8,7 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The request half of the mention contract: a payload the picker could not have produced fails the
- * whole post (422), and the body reaches the resolver measured the way the client measured it —
- * newlines normalized, length in code points. Rows that merely stopped matching are dropped instead
- * (MentionStorageTest).
- */
+/** The request half of the mention contract; a row that merely stopped matching is MentionStorageTest's. */
 class MentionRequestTest extends TestCase
 {
     use RefreshDatabase;

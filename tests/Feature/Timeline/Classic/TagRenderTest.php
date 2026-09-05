@@ -10,10 +10,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * A stored tag range draws an anchor wherever a Classic timeline row renders, and the page that
- * anchor opens lists the tag's posts under the viewer's own clearance.
- */
 class TagRenderTest extends TestCase
 {
     use RefreshDatabase;

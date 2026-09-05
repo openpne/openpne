@@ -10,7 +10,8 @@ document covers the delivery model around it.
 ## The three layers
 
 1. **Live counts** — "needs action" numbers derived from each domain's own truth (pending
-   `friend_requests` rows, unread `direct_message_recipients`, pending `group_join_requests`).
+   `friend_requests` rows, unread `direct_message_recipients`, pending `group_join_requests`,
+   talk rooms with a message past the member's read cursor).
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
 2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice panel, and the

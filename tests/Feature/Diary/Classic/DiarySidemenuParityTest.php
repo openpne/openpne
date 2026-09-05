@@ -11,11 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
-/**
- * Locks OpenPNE 3's diary LayoutB sidemenu: a screen that opts into it renders the two-column
- * layout (id="LayoutB" + id="Left") with the author box and recent-diaries list, while a diary
- * screen that does not opt in keeps the single-column LayoutC. Anchors are markup hooks/routes.
- */
+/** Anchors are OpenPNE 3's markup hooks and routes, not translated copy. */
 class DiarySidemenuParityTest extends TestCase
 {
     use RefreshDatabase;

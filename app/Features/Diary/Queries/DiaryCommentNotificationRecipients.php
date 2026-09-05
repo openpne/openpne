@@ -10,13 +10,9 @@ use App\Models\Member;
 use App\Notifications\CommentReason;
 
 /**
- * Who a new diary comment notifies: the diary owner (Reply) and the distinct co-commenters
- * (Related), never the commenter. One entry per recipient, Reply winning when both apply.
- *
- * Every recipient must currently be able to receive it: not banned (is_login_rejected — banned
- * members cannot receive, as in messaging), able to view the diary right now, and with no block
- * in either direction against the commenter. A withdrawn co-commenter's rows carry a NULL
- * member_id and drop out naturally.
+ * Who a new diary comment notifies: the owner (Reply) and the distinct co-commenters (Related), one
+ * entry per recipient with Reply winning when both apply. Each is judged as of now — unbanned, able
+ * to view the diary, and no block in either direction against the commenter.
  */
 class DiaryCommentNotificationRecipients
 {

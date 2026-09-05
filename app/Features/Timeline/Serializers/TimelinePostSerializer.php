@@ -12,9 +12,7 @@ use App\Models\TimelinePostTag;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Modern surface shapes for the Timeline feature. visibility is always a string slug (never raw
- * int) to avoid JS falsy-zero bugs with Open=0. A timeline card shows the body and image inline,
- * so entry() carries the full content.
+ * `visibility` is always a string slug, never the raw int: Open is 0 and reads as falsy in JS.
  */
 class TimelinePostSerializer
 {
@@ -28,16 +26,14 @@ class TimelinePostSerializer
         return [
             'id' => $post->getKey(),
             'body' => $post->body,
-            // The @mention ranges over the body, in body order; the client links them (entity-text.tsx).
-            // No display name travels with them — the body already carries it, frozen at post time.
+            // No display name travels with a range: the body already carries it, frozen at post time.
             'mentions' => $post->mentions->map(fn (TimelinePostMention $mention): array => [
                 'memberId' => $mention->member_id,
                 'offset' => $mention->offset,
                 'length' => $mention->length,
             ])->all(),
-            // The #hashtag ranges, in body order; the client links each to its tag page. The tag
-            // travels normalized (the body's own text is inside the range), because that is what the
-            // page is addressed by. linkableTags() is the one seam deciding what links.
+            // The tag travels normalized because that is what its page is addressed by, while the
+            // range still covers the body's own text.
             'tags' => $post->linkableTags()->map(fn (TimelinePostTag $tag): array => [
                 'tag' => $tag->tag,
                 'offset' => $tag->offset,
@@ -57,10 +53,8 @@ class TimelinePostSerializer
     }
 
     /**
-     * A single attached image: the full-bytes url plus the thumbnail sources a surface picks from,
-     * all FilePolicy-gated. See docs/internals/images.md for which one a surface takes and why the
-     * intrinsic size travels with them. Tolerates a row whose File is gone (defensive; the join
-     * cascades with it).
+     * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
+     * "The two ladders". A row whose File is gone is tolerated defensively.
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */

@@ -35,11 +35,9 @@ use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 /**
- * An issue read back: every ledger row re-resolved through the gate its own feature owns.
- *
- * What is pinned here is mostly what does NOT come out. An issue is a ledger and never a copy, so
- * a source that has gone, been narrowed, been switched off or been walled off from this particular
- * reader leaves nothing at all — no placeholder, no shorter list saying how much was left out.
+ * An issue read back: every ledger row re-resolved through the gate its own feature owns. What is
+ * pinned here is mostly what does NOT come out — a source gone, narrowed, switched off or walled off
+ * from this reader leaves nothing at all.
  */
 class ShowHomeIssueTest extends TestCase
 {
@@ -120,9 +118,8 @@ class ShowHomeIssueTest extends TestCase
     // --- narrowed after publication ---
 
     /**
-     * The `visibility` arm and the block arm are different questions, and only the owner can tell
-     * them apart: a stranger is refused by the eligibility rule and by the clearance rule at once,
-     * so a broken eligibility check would still look right from where they stand.
+     * Only the owner tells the `visibility` arm from the block arm: a stranger is refused by both at
+     * once, so a broken eligibility check would still look right from where they stand.
      */
     public function test_a_diary_narrowed_to_friends_drops_for_a_member_and_for_its_own_author(): void
     {
@@ -149,9 +146,8 @@ class ShowHomeIssueTest extends TestCase
     }
 
     /**
-     * A reply is not a story, and nothing about the record itself says so: it carries its root's
-     * audience, so every other question asked of it answers yes. An issue that led with one would
-     * quote half a conversation.
+     * Nothing about the record itself says a reply is not a story: it carries its root's audience, so
+     * every other question asked of it answers yes.
      */
     public function test_a_reply_is_never_a_story(): void
     {
@@ -386,10 +382,7 @@ class ShowHomeIssueTest extends TestCase
         );
     }
 
-    /**
-     * The excerpt is the END of the stretch, not its start. The first issue ever reaches back a
-     * week, and a week-old opening describes a room that has since moved on.
-     */
+    /** The first issue ever reaches back a week, and a week-old opening describes a room that has moved on. */
     public function test_the_excerpt_is_the_tail_of_the_stretch(): void
     {
         $group = Group::factory()->create();

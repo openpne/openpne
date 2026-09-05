@@ -10,10 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Who the @mention picker is offered: friends first, then the rest of the SNS, and never someone the
- * submit would drop (MentionStorageTest holds the drop side of that agreement).
- */
+/** Never someone the submit would drop — MentionStorageTest holds the drop side of that agreement. */
 class MentionCandidatesTest extends TestCase
 {
     use RefreshDatabase;
@@ -58,9 +55,8 @@ class MentionCandidatesTest extends TestCase
 
     public function test_it_never_offers_a_name_too_long_to_ever_mention(): void
     {
-        // "@" + a 140-code-point name can never fit the 140-code-point body, so offering it would
-        // guarantee a dropped mention. 139 is the last name that fits. The multibyte pair is what
-        // catches a byte-counting length function: 139 × "あ" is 417 bytes but must still appear.
+        // 139 is the last name that fits "@" plus the body's 140 code points, and 139 × "あ" is 417
+        // bytes — the pair is what catches a byte-counting length function.
         $viewer = Member::factory()->create();
         $fits = Member::factory()->create(['name' => str_repeat('a', 139)]);
         Member::factory()->create(['name' => str_repeat('a', 140)]);
@@ -235,8 +231,8 @@ class MentionCandidatesTest extends TestCase
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // Each tier resolves its avatars (and their files) in one query, so eight candidates cost
-        // what one does. Bounded well under the eight-candidate steady state plus a per-row read.
+        // Each tier resolves its avatars in one query, so the bound sits well under the
+        // eight-candidate steady state plus a per-row read.
         $this->assertLessThan(14, $queries, "the endpoint ran {$queries} queries — the avatars are likely resolving per candidate");
     }
 

@@ -210,10 +210,8 @@ class DashboardTest extends TestCase
             DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
         }
 
-        // Four distinct joined groups, each with an image and one rostered event, plus a fifth
-        // image-bearing community with a topic: the activity digest reads each row's participant
-        // count AND its community image, so dropping the events feeder's community.image eager load
-        // lazy-loads one query per distinct community (+4), rather than hiding as +1 behind slack.
+        // Four joined groups with an image and a rostered event each, plus a fifth with a topic: a
+        // dropped community.image eager load then costs four queries rather than hiding as +1.
         foreach (range(1, 4) as $ignored) {
             $group = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
             GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
@@ -238,13 +236,8 @@ class DashboardTest extends TestCase
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
-        // eager-loads its avatars, counts, and images, so adding rows must not add queries. Kept tight
-        // (steady state 34 — the look resolver reads `member_preferences` only once a site offers a
-        // second look, which this fixture does not) so dropping any single eager load trips it
-        // instead of hiding under a loose ceiling — the events feeder's community.image turns one
-        // batched fetch into four per-community lazy loads, and either of the talk digest's two
-        // (image, author) turns one into five.
+        // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
+        // state 34 with this fixture's single look) so dropping any one of them trips it.
         $this->assertLessThan(35, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 

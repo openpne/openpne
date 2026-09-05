@@ -14,7 +14,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/** Board topics in groups any member may read, ranked by the comments they drew. */
 final class TopicStoryCandidates implements StoryCandidates
 {
     public function alias(): string

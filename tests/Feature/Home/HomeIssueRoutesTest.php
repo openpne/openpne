@@ -21,12 +21,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The front page and the two issue URLs it is the head of.
- *
- * `/home/issues` and `/home/{y}/{m}/{d}` are Modern-only, like `/groups/recent`: there is no
- * OpenPNE 3 screen to be compatible with, so both render Inertia whatever surface the site or the
- * member is on, and the look swaps the page rather than the route. `/` is the OpenPNE 3 home and so
- * resolves by surface — the Modern arm is the latest issue, and Classic is still the gadget home.
+ * The front page and the two issue URLs it is the head of. `/home/issues` and `/home/{y}/{m}/{d}`
+ * are Modern-only, like `/groups/recent`, while `/` resolves by surface
+ * (docs/internals/home-issues.md, "Routes").
  */
 class HomeIssueRoutesTest extends TestCase
 {
@@ -107,9 +104,8 @@ class HomeIssueRoutesTest extends TestCase
     }
 
     /**
-     * A well-formed URL naming a day that never happened reads as nothing, not as an error — and
-     * never as the day it would roll over into: February 30th is March 2nd to a date constructor,
-     * and the issue published on the 2nd answers to its own URL only.
+     * February 30th is March 2nd to a date constructor, and the issue published on the 2nd answers to
+     * its own URL only.
      */
     public function test_a_day_that_does_not_exist_is_not_a_page(): void
     {
@@ -136,12 +132,7 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/issues'));
     }
 
-    /**
-     * The pager reads the run by day: the issue either side, and nothing past either end.
-     *
-     * Through the route rather than against the query, because the neighbours are what the page is
-     * handed — a pager pointing at the wrong day is the same bug whichever half produced it.
-     */
+    /** Through the route rather than against the query: the neighbours are what the page is handed. */
     public function test_the_pager_points_at_the_issues_either_side(): void
     {
         $this->publishOn('2026-08-25');
@@ -253,11 +244,7 @@ class HomeIssueRoutesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get('/member')->assertRedirect('/');
     }
 
-    /**
-     * The root is guest-reachable and carries `auth.session` on its own, which is what ends a
-     * session whose stored password hash has gone stale. PublicRouteBoundaryTest pins that on the
-     * Classic arm; the Modern arm serves member content here too.
-     */
+    /** PublicRouteBoundaryTest pins `auth.session` on the Classic arm; the Modern arm serves member content too. */
     public function test_a_stale_session_is_ended_on_the_modern_front_page(): void
     {
         $member = Member::factory()->create();

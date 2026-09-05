@@ -15,8 +15,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
- * Modern surface shapes for Diary feature. visibility is always a string slug
- * (never raw int) to avoid JS falsy-zero bugs with Open=0.
+ * `visibility` is always a string slug, never the raw int: Open is 0 and reads as falsy in JS.
  */
 class DiarySerializer
 {
@@ -33,13 +32,8 @@ class DiarySerializer
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
-            // The feed shows only a has-photos marker, so the summary carries the boolean,
-            // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
-            // Rich rows eager-load images.file; a caller that didn't (dashboard digests) leaves the
-            // relation unloaded, and we return [] rather than firing a query per row — the nested
-            // file guard keeps that true even for an images-without-file load. A row whose File is
-            // gone drops out of the list (the join cascades with it).
+            // An unloaded relation yields [] rather than a query per row, nested file guard included.
             'thumbnails' => $diary->relationLoaded('images')
                 ? $diary->images
                     ->map(fn (DiaryImage $image): ?string => $image->relationLoaded('file')
@@ -104,10 +98,8 @@ class DiarySerializer
     }
 
     /**
-     * A single attached image (diary or comment): the full-bytes url plus the thumbnail sources a
-     * surface picks from, all FilePolicy-gated. See docs/internals/images.md for which one a
-     * surface takes and why the intrinsic size travels with them. Tolerates a row whose File is
-     * gone (defensive; the join cascades with it).
+     * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
+     * "The two ladders". A row whose File is gone is tolerated defensively.
      *
      * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
      */

@@ -11,11 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The friend diary feed: diaries by the viewer's friends, newest
- * first. The threshold is Friends — a friend's Friends/Members/Open diaries all qualify, their
- * Private ones do not. No friends means an empty feed (whereIn on an empty set yields no rows).
- *
- * Blocking owners are excluded for the edge case of a friend who has since blocked the viewer.
+ * Diaries by the viewer's friends, newest first: the threshold is Friends, so a friend's Private
+ * entries stay out and no friends at all yields an empty feed. Owners blocking the viewer are
+ * excluded for the friend who has since blocked them.
  */
 class ListFriendDiaries
 {

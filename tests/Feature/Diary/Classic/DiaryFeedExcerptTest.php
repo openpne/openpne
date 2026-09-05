@@ -9,10 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Locks the OpenPNE 3 listSuccess body excerpt: the recent and search feeds preview each diary
- * body (HTML-escaped), while the friends feed (listFriendSuccess) shows no body.
- */
+/** The expected excerpts are OpenPNE 3's listSuccess (a body) and listFriendSuccess (none). */
 class DiaryFeedExcerptTest extends TestCase
 {
     use RefreshDatabase;

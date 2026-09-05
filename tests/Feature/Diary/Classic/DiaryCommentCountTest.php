@@ -10,10 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Locks the OpenPNE 3 op_diary_get_title_and_count display: each list/feed entry shows its
- * comment count "(N)" after the title, across the recent, friend, member, and search feeds.
- */
+/** The expected label is OpenPNE 3's op_diary_get_title_and_count. */
 class DiaryCommentCountTest extends TestCase
 {
     use RefreshDatabase;

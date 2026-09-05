@@ -5,18 +5,10 @@ namespace App\Features\Timeline;
 use Normalizer;
 
 /**
- * Reads the #hashtags out of a timeline post's body.
- *
- * The mirror image of a mention: a mention exists because someone picked a member, so the client
- * sends the ranges and the server only re-checks them. Nobody picks a tag — there is no entity to
- * pick — so the body is the only source, and the server parses it at save time. That is also why
- * this can run over bodies nobody composed here (the backfill command, an upgraded OpenPNE 3 post),
- * where no payload exists at all.
- *
- * A tag is stored normalized so a lookup can be an equality test: `#Tag`, `#ＴＡＧ` and `#tag` are
- * one topic. The range stays over the *raw* body, so the text a reader sees is the text that was
- * typed. The normalization below is therefore a stored format, not a display choice — changing it
- * means re-normalizing every existing row (docs/internals/timeline.md).
+ * Nothing picks a tag, so the body is the only source and the server parses it at save time — over
+ * bodies nobody composed here too (the backfill, an upgraded post). Normalization is therefore a
+ * stored format rather than a display choice (docs/internals/timeline.md, "The stored tag is
+ * normalized; the range is not").
  */
 final class HashtagParser
 {
@@ -29,11 +21,9 @@ final class HashtagParser
     private const TAG_CHAR = '[\p{L}\p{M}\p{N}_]';
 
     /**
-     * A marker at the start of the body or after whitespace, then a tag run.
-     *
-     * U+FF03 is the marker a Japanese IME produces. The trailing negative lookahead is what makes an
-     * over-long run fail *whole* rather than matching its first 30 characters — backtracking cannot
-     * find a shorter match either, so a 31-character run yields no tag at all.
+     * A marker at the start of the body or after whitespace, then a tag run; U+FF03 is the marker a
+     * Japanese IME produces. The trailing negative lookahead makes an over-long run fail *whole* —
+     * backtracking cannot find a shorter match either — rather than match its first 30 characters.
      */
     private const PATTERN = '/(?<=^|[\s\p{Z}])([#\x{FF03}])('.self::TAG_CHAR.'{1,'.self::MAX_LENGTH.'})(?!'.self::TAG_CHAR.')/u';
 
@@ -52,8 +42,8 @@ final class HashtagParser
         $pointCursor = 0;
 
         foreach ($matches as $match) {
-            // preg counts bytes, ranges count code points. Measuring only the gap since the previous
-            // match keeps the walk linear instead of re-measuring the body's head every time.
+            // preg counts bytes and ranges count code points, so only the gap since the previous
+            // match is measured — re-measuring the head each time would make the walk quadratic.
             $pointCursor += mb_strlen(substr($body, $byteCursor, $match[1][1] - $byteCursor));
             $byteCursor = $match[1][1];
 
@@ -67,8 +57,8 @@ final class HashtagParser
 
             $tag = self::normalize($raw);
 
-            // A run of digits is a number someone wrote, not a topic. NFKC can also turn one
-            // character into several (`Ⅷ` into `viii`), overrunning the cap the pattern enforced.
+            // A digit run is a number someone wrote rather than a topic, and NFKC can turn one
+            // character into several (`Ⅷ` into `viii`) past the cap the pattern enforced.
             if (preg_match('/^\p{N}+$/u', $tag) === 1 || mb_strlen($tag) > self::MAX_LENGTH) {
                 continue;
             }

@@ -7,10 +7,7 @@ use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
 
-/**
- * Days of a month on which an author has a viewer-visible diary, for the sidemenu calendar
- * (OpenPNE 3 Diary::getMemberDiaryDays). The calendar links these days to the day archive.
- */
+/** Days of a month on which an author has a viewer-visible diary (OpenPNE 3 Diary::getMemberDiaryDays). */
 class MemberDiaryDays
 {
     /** @return list<int> day-of-month numbers (1-31), ascending */

@@ -13,17 +13,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The OpenPNE 3 "diary comment history" box: other members' diaries the viewer commented on, ordered
- * by their latest comment. OpenPNE 3 kept a dedicated diary_comment_update subscription table, updated
- * by PluginDiaryComment::postSave only when the commenter is not the diary owner
- * (member_id !== Diary->member_id). That table was not ported, so this derives the same set from
- * diary_comments: candidates are non-own diaries the viewer commented on, and last_comment_time is the
- * MAX over non-owner comments only (an owner's own follow-up comment does not bump the box, matching
- * OpenPNE 3's owner exclusion).
- *
- * Divergence from OpenPNE 3: the subscription table never rewound on comment deletion. This derived
- * form recomputes from the surviving rows — a diary drops out once the viewer has no remaining comment
- * on it, and deleting whichever non-owner comment was latest rewinds the box's time to the next one.
+ * The OpenPNE 3 "diary comment history" box, derived from `diary_comments` rather than from a
+ * subscription table (docs/internals/diary.md, "The comment-history box").
  */
 class DiaryCommentHistory
 {
@@ -34,8 +25,7 @@ class DiaryCommentHistory
     }
 
     /**
-     * The full history page (OpenPNE 3 diaryComment/history): same set and order as the home box,
-     * twenty to a page. One builder feeds both, so the page can never disagree with the box.
+     * One builder feeds this page and the home box, so the two can never disagree.
      *
      * @return LengthAwarePaginator<int, Diary>
      */
@@ -55,14 +45,11 @@ class DiaryCommentHistory
             ->addSelect(['last_comment_time' => DiaryComment::query()
                 ->selectRaw('MAX(diary_comments.created_at)')
                 ->whereColumn('diary_comments.diary_id', 'diaries.id')
-                // A withdrawn commenter's member_id is NULL (nullOnDelete); on a surviving diary that
-                // is necessarily a non-owner comment (owners cascade-delete their diaries), and a bare
-                // != would drop it under SQL three-valued logic, rewinding the box's time.
+                // A bare `!=` would drop a withdrawn commenter's NULL member_id under SQL's
+                // three-valued logic (docs/internals/diary.md, "The comment-history box").
                 ->where(fn (Builder $q) => $q
                     ->whereNull('diary_comments.member_id')
                     ->orWhereColumn('diary_comments.member_id', '!=', 'diaries.member_id'))])
-            // Candidate: the viewer commented on a diary that is not their own — so their comment is
-            // necessarily a non-owner comment, matching OpenPNE 3's member_id !== owner condition.
             ->where('diaries.member_id', '!=', $viewerId)
             ->whereHas('comments', fn (Builder $q) => $q->where('member_id', $viewerId))
             ->where(function (Builder $audience) use ($viewerId) {

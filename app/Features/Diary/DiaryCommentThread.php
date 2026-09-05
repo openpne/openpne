@@ -7,15 +7,11 @@ use App\Models\DiaryComment;
 use Illuminate\Support\Collection;
 
 /**
- * OpenPNE 3 diaryComment list pager (sfReversibleDoctrinePager): comments page by their
- * `number` at a selectable size, with a reversible order. The default (DESC) fetches the
- * newest page first but always lists a page oldest-first; `order=asc` walks from the first
- * comment. "Older"/"Newer" follow comment age, not page index, so they read the same in
- * either order.
+ * OpenPNE 3's `diaryComment` list pager: a page is fetched by `number` in either order and always
+ * listed oldest-first (docs/internals/diary.md, "The thread pages by number").
  */
 final class DiaryCommentThread
 {
-    /** Selectable page sizes (OpenPNE 3 diaryComment list component). */
     public const SIZES = [20, 100];
 
     /** @param  Collection<int, DiaryComment>  $comments  the current page, ascending by number */
@@ -43,7 +39,6 @@ final class DiaryCommentThread
             ->forPage($page, $size)
             ->get();
 
-        // listOrder is always ascending: a descending page is reversed back for display.
         if (! $ascending) {
             $comments = $comments->reverse()->values();
         }
@@ -98,7 +93,6 @@ final class DiaryCommentThread
         return $this->comments->last()?->number;
     }
 
-    /** A show-page URL carrying this view state; order is dropped when default (DESC), page when 1. */
     public function link(int $page, int $size, bool $ascending): string
     {
         $params = ['diary' => $this->diary, 'size' => $size];

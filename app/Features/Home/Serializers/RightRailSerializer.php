@@ -6,15 +6,10 @@ use App\Models\Member;
 use Illuminate\Support\Collection;
 
 /**
- * The shell's right rail (xl+ only): a grid of faces. Each item ships its circular avatar URL and
- * its deep link; the client falls back to a neutral initial badge when the image is null.
- *
- * The grid names its own audience: `people.kind` says whether the rows are the viewer's friends or
- * an SNS-wide sample (the fallback while `friend` is switched off), and the client reads it for the
- * heading and the view-all link. One key, so a call site cannot ship both.
- *
- * The tiles ask for 180px: the rail is a fixed `w-80`, so its three-up tiles land at ~90px and 180
- * is the nearest whitelisted size to the 2x they need. Every other surface paints these far smaller.
+ * The shell's right rail: a grid of faces whose `people.kind` says whether the rows are the viewer's
+ * friends or an SNS-wide sample — one key, so a call site cannot ship both. The tiles ask for 180px,
+ * the nearest whitelisted size to the 2x their ~90px cell needs (docs/internals/images.md, "Adding a
+ * size").
  */
 class RightRailSerializer
 {

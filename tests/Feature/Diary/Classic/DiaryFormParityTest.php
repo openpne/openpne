@@ -9,11 +9,7 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Locks the Ported elements of the diary new/edit form that screen-parity tracks, including the
- * web-public audience and its SnsSettingKey::DiaryAllowWebPublic gate (OpenPNE 3 lets a site disable
- * web-public diaries; that capability must survive).
- */
+/** Locks the new/edit form elements openpne:screen-parity marks Ported, which the inventory leans on. */
 class DiaryFormParityTest extends TestCase
 {
     use RefreshDatabase;

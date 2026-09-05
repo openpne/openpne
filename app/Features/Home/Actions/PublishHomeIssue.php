@@ -26,18 +26,14 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Builds one day's issue: what happened since the last one, and the ledger rows that say so.
- *
- * Two halves on purpose. {@see plan()} decides and writes nothing, so a dry run and a publish reach
- * their answer down the same path; {@see __invoke()} commits that decision in one transaction.
- *
- * **An issue is dated by the last day its window covers** ({@see HomeIssueDay}), never by the day it
- * is built on: the 06:00 run reports the day that just ended, and dating it today would headline
- * yesterday evening's posts with tomorrow's date.
+ * {@see plan()} decides and writes nothing, so a dry run and a publish reach their answer down the
+ * same path; {@see __invoke()} commits that decision in one transaction. An issue is dated by the
+ * last day its window covers ({@see HomeIssueDay}), never by the day it is built on
+ * (docs/internals/home-issues.md, "A day runs 06:00 → 06:00").
  */
 final class PublishHomeIssue
 {
-    /** Site-clock time of day an issue goes out. Read by the schedule (routes/console.php). */
+    /** Site-clock time of day an issue goes out. */
     public const TIME = '06:00';
 
     /** How far the very first issue reaches back: there is no previous `published_at` to start from. */
@@ -56,18 +52,10 @@ final class PublishHomeIssue
     ) {}
 
     /**
-     * Publish the issue $now closes, or null on a 休刊.
-     *
-     * $pin forces one story to the top; it is held to the same eligibility as any candidate and
-     * quietly dropped if it fails, which the plan reports rather than throwing. Nothing wires a pin
-     * yet — the parameter is the seam the admin setting will arrive on.
-     *
-     * $window fixes both bounds instead of chaining from the previous issue, which is what a
-     * backfilled day is (`--date`): the stretch is the day's own, and the issue is dated by it like
-     * any other. The scheduled path passes none.
-     *
      * Meant to run as the top-level transaction: nested inside another, the framework answers a
-     * concurrency error with a DeadlockException that the catch below does not see.
+     * concurrency error with a DeadlockException the catch below does not see. `$window` is a
+     * backfilled day's own stretch (docs/internals/home-issues.md, "Schedule and idempotency") and
+     * `$pin` an operator's lead, dropped rather than thrown on when it fails eligibility.
      */
     public function __invoke(CarbonImmutable $now, ?SourceRef $pin = null, ?HomeIssueWindow $window = null): ?HomeIssue
     {
@@ -84,30 +72,22 @@ final class PublishHomeIssue
         }
 
         try {
-            // Retried, because MySQL and SQLite lose the race differently: MySQL's loser reaches the
-            // insert and violates the unique, while SQLite compiles lockForUpdate away and refuses
-            // the write itself with SQLITE_BUSY. A retry re-reads the maximum and turns the second
-            // shape into the first.
+            // Retried because the two engines lose the race differently: MySQL's loser violates the
+            // unique while SQLite refuses the write itself with SQLITE_BUSY, and a retry re-reads the
+            // maximum and turns the second shape into the first.
             return DB::transaction(fn (): HomeIssue => $this->write($plan), attempts: 3);
         } catch (QueryException $e) {
-            // Another run took this date between the check above and the insert — as a unique
-            // violation, or as a busy database that stayed busy for every attempt. The unique on
-            // issue_date is the guarantee either way: the loser has nothing to unwind and reports
-            // what the winner wrote. A failure with no issue to report is a different fault (the
-            // unique on `number`, a broken write), and stays loud.
+            // Another run took this date between the check above and the insert, so the loser has
+            // nothing to unwind and reports what the winner wrote — a failure with no issue to report
+            // is a different fault and stays loud.
             return $this->publishedOn($window->lastDay()) ?? throw $e;
         }
     }
 
     /**
-     * The issue for $day if it has already been published — $day being the day an issue is dated by
-     * ({@see HomeIssueWindow::lastDay()}), not the day a run happens on.
-     *
-     * `whereDate` rather than an equality on the day, because the two engines do not hold the column
-     * alike: Eloquent writes a `date` cast through the connection's datetime format, which MySQL
-     * truncates into its DATE column and SQLite keeps whole (`2026-08-27 00:00:00`). A literal that
-     * matched one would miss the other, and missing it here means publishing a second issue for a
-     * day that already has one.
+     * $day is the day an issue is dated by ({@see HomeIssueWindow::lastDay()}), not the day a run
+     * happens on. `whereDate` rather than an equality: MySQL truncates Eloquent's cast date into its
+     * DATE column and SQLite keeps it whole, so a literal matching one would miss the other.
      */
     public function publishedOn(CarbonImmutable $day): ?HomeIssue
     {
@@ -115,8 +95,8 @@ final class PublishHomeIssue
     }
 
     /**
-     * What the issue would hold. Null is the 休刊 rule ({@see HomeIssuePlan::isBlank()}): a day on
-     * which nothing was born gets no issue rather than an empty one.
+     * Null is the 休刊 rule ({@see HomeIssuePlan::isBlank()}): a day on which nothing was born gets no
+     * issue rather than an empty one.
      */
     public function plan(CarbonImmutable $now, ?SourceRef $pin = null, ?HomeIssueWindow $window = null): ?HomeIssuePlan
     {
@@ -170,15 +150,10 @@ final class PublishHomeIssue
     }
 
     /**
-     * The stretch this issue covers: the previous issue's `published_at` (exclusive) to the last
-     * 06:00 boundary at or before now (inclusive), so an issue that ran late still covers exactly
-     * what the one before it did not.
-     *
-     * Closed on the boundary, never on the clock. A scheduled run lands a second or two past 06:00,
-     * and an issue closed at 06:00:01 would be dated the day it went out ({@see HomeIssueWindow::lastDay()})
-     * and leave the next window a second short of a day. A run by hand mid-afternoon therefore
-     * publishes what the schedule would have — the day that closed this morning — and finds it
-     * already published if the schedule ran; what has happened since waits for the next issue.
+     * The previous issue's `published_at` (exclusive) to the last 06:00 boundary at or before now
+     * (inclusive), so an issue that ran late still covers exactly what the one before it did not.
+     * Closed on the boundary and never on the clock, which is why a run by hand publishes what the
+     * schedule would have (docs/internals/home-issues.md, "A day runs 06:00 → 06:00").
      */
     public function window(CarbonImmutable $now): HomeIssueWindow
     {
@@ -192,12 +167,10 @@ final class PublishHomeIssue
     }
 
     /**
-     * The number the next issue would carry.
-     *
-     * The read is locking so two runs cannot read the same maximum, which is the whole of the
-     * serialization: MySQL holds it to the end of the enclosing transaction, SQLite compiles the
-     * clause away and refuses the loser's write instead ({@see __invoke} retries). Called outside a
-     * transaction it is a prediction — which is all a dry run needs.
+     * The locking read is the whole of the serialization: MySQL holds it to the end of the enclosing
+     * transaction, SQLite compiles the clause away and refuses the loser's write instead
+     * ({@see __invoke} retries). Called outside a transaction it is a prediction, which is all a dry
+     * run needs.
      */
     public function nextNumber(): int
     {
@@ -205,8 +178,6 @@ final class PublishHomeIssue
     }
 
     /**
-     * The four story kinds, merged and cut to the section's cap.
-     *
      * Each kind is asked for the whole cap so the merged top-N is exact — asking for a share each
      * would cap a quiet day's best story out for a busier kind's eighth.
      *
@@ -240,7 +211,7 @@ final class PublishHomeIssue
 
     /**
      * A single-source section, or nothing at all when its unit is switched off — the query is not
-     * run rather than run and discarded, mirroring the dashboard (HomeController::dashboard).
+     * run rather than run and discarded.
      *
      * @param  callable(int): list<PlannedItem>  $candidates
      * @return list<PlannedItem>

@@ -14,10 +14,9 @@ class CreateReply
     public function __construct(private readonly ResolveMentions $mentions) {}
 
     /**
-     * Reply to a top-level post (the controller gates viewability and re-centers to the thread
-     * root, so $parent is always top-level). A reply is a post row with in_reply_to_id set; it
-     * carries no image (OpenPNE 3 parity) and inherits the parent's visibility so the whole thread
-     * is gated as one audience, in one place.
+     * The caller gates viewability and re-centers to the root, so `$parent` is always top-level. A
+     * reply carries no image (OpenPNE 3 parity) and inherits the parent's visibility, so a thread is
+     * one audience (docs/internals/timeline.md, "Key invariants").
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions  the picker's selection, not yet resolved against $body
      */

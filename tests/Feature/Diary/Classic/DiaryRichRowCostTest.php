@@ -11,9 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The rich Modern rows eager-load a diary's images inside the Modern closure only. Classic must stay
- * at zero added cost: it never runs the standalone diary_images load (nor its follow-up files query),
- * and its query count does not grow with the number of image-bearing entries.
+ * Classic must stay at zero added cost for the rich Modern rows: it never runs the standalone
+ * diary_images load, and its query count does not grow with the number of image-bearing entries.
  */
 class DiaryRichRowCostTest extends TestCase
 {
@@ -50,10 +49,9 @@ class DiaryRichRowCostTest extends TestCase
         }
 
         foreach ($this->queriesFor($viewer, '/diary/list') as $query) {
-            // loadMissing('images.file') runs a standalone `diary_images ... where diary_id in (...)`
-            // load; the withCount images subquery instead reads `diaries.id = diary_images.diary_id`.
-            // The marker's absence proves Classic ran no images eager load. Strip identifier quotes so
-            // it matches on both sqlite and MySQL.
+            // The standalone `diary_images ... where diary_id in (...)` load is the marker — the
+            // withCount subquery reads `diaries.id = diary_images.diary_id` instead — with the
+            // identifier quotes stripped so it matches on both sqlite and MySQL.
             $this->assertStringNotContainsString('from diary_images where diary_images.diary_id in', str_replace(['"', '`'], '', $query));
         }
     }
@@ -72,9 +70,9 @@ class DiaryRichRowCostTest extends TestCase
 
     public function test_the_guest_feed_and_archive_cost_does_not_grow_with_the_row_count(): void
     {
-        // The guest path resolves its author per row (a feed spans authors), so an eager-load lost
-        // on the way to the web-public tier would show up as a query per entry rather than a fixed
-        // cost. Compared row-count to row-count, not against a pinned absolute.
+        // The guest path resolves its author per row, so an eager-load lost on the way to the
+        // web-public tier shows up as a query per entry — compared row-count to row-count, never
+        // against a pinned absolute.
         $author = Member::factory()->create();
         $entries = fn (int $n) => collect(range(1, $n))->each(fn () => $this->attachImage(
             Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Open]),
@@ -103,9 +101,9 @@ class DiaryRichRowCostTest extends TestCase
         }
 
         foreach ($this->queriesFor($owner, "/diary/listMember/{$owner->getKey()}") as $query) {
-            // The Modern archive grid's per-month counts query groups by the year-month alias; it is
-            // resolved inside the Modern closure only, so Classic must never emit it. Strip identifier
-            // quotes so the marker matches on both sqlite and MySQL.
+            // The Modern archive grid's per-month counts group by the year-month alias, which Classic
+            // must never emit, with the identifier quotes stripped so the marker matches on both
+            // engines.
             $this->assertStringNotContainsString('group by ym', str_replace(['"', '`'], '', $query));
         }
     }

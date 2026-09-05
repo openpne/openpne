@@ -13,11 +13,7 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The signed-out half of the diary module (OpenPNE 3 diary/config/security.yml `is_secure: false`):
- * what a guest may read, what bounces them to login, and that switching web-public diaries off
- * closes all of it again.
- */
+/** The guest-reachable half, as OpenPNE 3's diary `security.yml` (`is_secure: false`) defined it. */
 class DiaryGuestAccessTest extends TestCase
 {
     use RefreshDatabase;

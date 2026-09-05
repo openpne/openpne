@@ -16,9 +16,8 @@ use Illuminate\Support\Collection;
 
 /**
  * The Modern home dashboard: a capped digest of the member-facing feeds, each shaped by its own
- * feature serializer. The all-members diary feed is the primary; the friend feed is one tap away
- * (its header link), so the two near-identical feeds of a small SNS never sit side by side. These
- * are previews (no pager); each section's "View all" deep-links to the full list.
+ * feature serializer. The all-members diary feed is the primary and the friend feed one tap away, so
+ * the two near-identical feeds of a small SNS never sit side by side.
  */
 class HomeSerializer
 {
@@ -63,10 +62,8 @@ class HomeSerializer
     }
 
     /**
-     * One group activity row — a topic or an event — flattened for the digest: the group it
-     * belongs to (the byline subject, so its image is here too), its comment count, and (events
-     * only) its participant count. `kind` drives the client's byline note and its link target. Callers
-     * eager-load the owning group's image.
+     * One group activity row — a topic or an event — flattened for the digest, with `kind` driving
+     * the client's byline note and its link target. Callers eager-load the owning group's image.
      *
      * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, group: array{id: int, name: string, imageUrl: string|null}, updatedAt: string}
      */

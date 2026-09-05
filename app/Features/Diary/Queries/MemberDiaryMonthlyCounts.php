@@ -9,12 +9,9 @@ use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Per-month counts of an author's viewer-visible diaries, for the Modern archive grid. One row per
- * month that has at least one entry (empty months are absent — the grid zero-fills), newest first.
- *
- * The year-month is extracted from the naive stored `created_at`, so a diary counted in a month
- * also falls inside that month's {@see ArchivePeriod} `[start, end)` window —
- * the grid's cell count and the month archive's list length cannot diverge.
+ * Per-month counts of an author's viewer-visible diaries: one row per month that has an entry,
+ * newest first. The year-month is extracted from the stored `created_at`, so a month's count and
+ * that month's {@see ArchivePeriod} list cannot diverge (docs/internals/diary.md, "The archive").
  */
 class MemberDiaryMonthlyCounts
 {

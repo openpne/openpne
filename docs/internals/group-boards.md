@@ -79,7 +79,9 @@ size switch) with a reversible order: the default DESC fetches the newest page f
 lists a page oldest-first, and `order=asc` walks from the first comment. "Older" and "Newer" follow
 comment age, not page index.
 
-Ordering is by `id` (OpenPNE 3 `setSqlOrderColumn('id')`), never by `number`. `number` is a racy
+Ordering is by `id` (OpenPNE 3 `setSqlOrderColumn('id')`), never by `number`; the diary thread
+pages by `number` and serializes whole under Modern, for the reasons and the gap recorded in
+[diary.md](diary.md#the-thread-pages-by-number). `number` is a racy
 max+1 label that migrated data may carry out of order or duplicated, so paging by it would drift
 the page boundaries away from OpenPNE 3's; `id` is the monotonic insertion order. Modern reuses the
 same pager rather than shaping its own: the two surfaces must list a thread identically, and

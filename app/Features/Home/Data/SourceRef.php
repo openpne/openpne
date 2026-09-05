@@ -7,20 +7,15 @@ namespace App\Features\Home\Data;
 use App\Features\Home\HomeIssueSection;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * A reference to one featured source, as `alias:id` — the pair the ledger stores, in the one spelling
- * that travels: a command argument, a URL fragment, an array key.
- */
+/** The `alias:id` pair the ledger stores, in the one spelling that travels between command, URL and key. */
 final readonly class SourceRef
 {
     public function __construct(public string $type, public int $id) {}
 
     /**
-     * Parse `alias:id`, or null if the text is not one an issue could ever hold.
-     *
-     * The alias is checked against the sections rather than against the morph map: the map is much
-     * wider than what an issue features, so a syntactically fine `bannerImage:1` is still not a
-     * source ref. Parsing is the narrowest place to say so.
+     * Parse `alias:id`, or null if the text is not one an issue could ever hold. The alias is checked
+     * against the sections rather than against the much wider morph map, so a syntactically fine
+     * `bannerImage:1` is still not a source ref.
      */
     public static function tryParse(string $text): ?self
     {
@@ -41,7 +36,6 @@ final readonly class SourceRef
         return new self($matches[1], (int) $matches[2]);
     }
 
-    /** The morph alias this model is stored under, paired with its key. */
     public static function of(Model $model): self
     {
         return new self($model->getMorphClass(), (int) $model->getKey());
@@ -52,7 +46,6 @@ final readonly class SourceRef
         return $this->type.':'.$this->id;
     }
 
-    /** Whether any section holds sources of this alias. */
     private static function isFeaturable(string $type): bool
     {
         foreach (HomeIssueSection::cases() as $section) {

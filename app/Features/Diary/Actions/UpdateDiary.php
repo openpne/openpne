@@ -17,10 +17,8 @@ class UpdateDiary
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit a diary's text and manage its image slots: remove the images in
-     * $images->removals and add $images->additions into the freed slots (1..MAX). Image bytes are
-     * rollback-safe — new uploads are compensated if the transaction fails, and removed images'
-     * bytes (irreversible on a disk backend) are purged only after commit.
+     * Image bytes are rollback-safe: new uploads are compensated if the transaction fails, and
+     * removed images' bytes are purged only after commit.
      */
     public function __invoke(Member $actor, Diary $diary, DiaryFormData $data, ImageEdit $images): void
     {
@@ -29,9 +27,9 @@ class UpdateDiary
         }
 
         $removedFiles = $this->images->compensating(function (callable $store) use ($diary, $data, $images): array {
-            // Serialize concurrent edits: the free-slot read and the inserts must not interleave
-            // with another edit, or both could claim the same slot (number is not unique) or push
-            // past the image cap.
+            // Serialize concurrent edits of this diary: the free-slot read below and the inserts must
+            // not interleave with another edit, or both could claim the same slot (number is not
+            // unique) or push past the image cap.
             Diary::whereKey($diary->getKey())->lockForUpdate()->first();
 
             $attributes = [
@@ -51,14 +49,13 @@ class UpdateDiary
             $diary->clearLinkCardIfBodyChanged();
             $diary->save();
 
-            // Drop the selected images (this diary's only — an id from another diary is ignored).
-            // Keep their Files to purge after commit; here only the link row is removed.
+            // This diary's images only — an id from another diary is ignored — and their Files are
+            // purged after commit.
             $removed = $diary->images()->whereKey($images->removals)->with('file')->get();
             $diary->images()->whereKey($removed->modelKeys())->delete();
 
-            // Add the new uploads into the lowest free slots. Recheck the count under the lock: the
-            // request validated against the pre-lock state, so a concurrent edit could leave too few
-            // slots — fail cleanly rather than index past $free.
+            // Recheck the count under the lock: the request validated against the pre-lock state,
+            // so a concurrent edit could leave too few slots.
             $used = $diary->images()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
             if (count($images->additions) > count($free)) {
@@ -75,7 +72,7 @@ class UpdateDiary
         SyncLinkCard::for($diary);
 
         foreach ($removedFiles as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
     }
 }

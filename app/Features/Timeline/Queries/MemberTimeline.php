@@ -10,9 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * One member's timeline — their top-level posts under the viewer's clearance. Replies
- * (in_reply_to_id set) are excluded, matching OpenPNE 3's member timeline (opActivityQueryBuilder
- * reads in_reply_to_activity_id IS NULL).
+ * Replies are excluded, matching OpenPNE 3's member timeline (opActivityQueryBuilder reads
+ * in_reply_to_activity_id IS NULL).
  */
 class MemberTimeline
 {
@@ -44,9 +43,8 @@ class MemberTimeline
 
         TimelineVisibilityScope::apply($query, $viewer, $owner);
 
-        // OpenPNE 3 opActivityQueryBuilder orders by id DESC. Keep created_at as the primary key
-        // for human-meaningful order, with id DESC as the stable tiebreaker for same-second posts
-        // (and migrated rows sharing a timestamp).
+        // created_at is the human-meaningful order, with id DESC as the stable tiebreaker for
+        // same-second and migrated rows (OpenPNE 3 opActivityQueryBuilder ordered by id alone).
         return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }

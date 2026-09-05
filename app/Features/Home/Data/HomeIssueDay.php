@@ -7,23 +7,17 @@ namespace App\Features\Home\Data;
 use Carbon\CarbonImmutable;
 
 /**
- * Which day of happenings an instant belongs to.
- *
- * **A day here does not start at midnight.** It starts when the issue goes out and runs to the next
- * one, so what a reader is handed at 06:00 is everything since 06:00 the morning before — and that
- * whole stretch is one day. Dating it by the calendar instead would file last evening under today
- * and headline the page with a date none of it happened on.
+ * A day of happenings does not start at midnight: it starts when the issue goes out and runs to the
+ * next one (docs/internals/home-issues.md, "A day runs 06:00 → 06:00").
  */
 final class HomeIssueDay
 {
     /**
-     * The site-clock hour a day turns over on — the hour the publisher runs at, spelled as a number.
-     * Pinned against `PublishHomeIssue::TIME` in PublishHomeIssueCommandTest, since the schedule
-     * needs the string form and this needs the arithmetic one.
+     * The site-clock hour a day turns over on, in the arithmetic form `PublishHomeIssue::TIME`
+     * spells as a string for the schedule.
      */
     public const HOUR = 6;
 
-    /** The day $instant falls in: the calendar day it lands on once the boundary is taken off. */
     public static function of(CarbonImmutable $instant): CarbonImmutable
     {
         return $instant->subHours(self::HOUR)->startOfDay();

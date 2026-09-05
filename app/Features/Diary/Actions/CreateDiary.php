@@ -32,8 +32,6 @@ class CreateDiary
             relation: fn (Diary $diary) => $diary->images(),
         );
 
-        // Fires after the image-attach transaction has committed (ShouldDispatchAfterCommit), so the
-        // fan-out job re-reads a durable diary.
         DiaryPosted::dispatch($diary, $author);
         SyncLinkCard::for($diary);
 

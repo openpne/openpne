@@ -11,10 +11,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * OpenPNE 3 diaryComment/history (historySuccess.php): the full page behind the home box — the
- * diaries the viewer commented on, by their last comment. Set and order come from the same
- * builder as the box (DiaryCommentHistory), so only the page's own shape is asserted here; the
- * membership rules (owner exclusion, visibility, blocks) are the query's tests.
+ * Only the page's own shape is asserted here (OpenPNE 3 diaryComment/history, historySuccess.php):
+ * set and order come from the same builder as the home box, so the membership rules are the query's
+ * own tests.
  */
 class DiaryCommentHistoryRoutesTest extends TestCase
 {
@@ -86,7 +85,6 @@ class DiaryCommentHistoryRoutesTest extends TestCase
             ->assertSee(__('There are no %diaries%.'));
     }
 
-    /** The page and the home box read one builder — their sets cannot diverge. */
     public function test_the_page_shares_the_boxes_set_and_order(): void
     {
         $viewer = Member::factory()->create();

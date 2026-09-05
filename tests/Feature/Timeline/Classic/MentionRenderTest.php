@@ -9,10 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * A stored mention range draws an anchor on every Classic screen the timeline row reaches, and a
- * range whose row is gone reads as the plain text it always was.
- */
 class MentionRenderTest extends TestCase
 {
     use RefreshDatabase;
@@ -103,7 +99,6 @@ class MentionRenderTest extends TestCase
         $this->assertSame($oneRow, $fiveRows);
     }
 
-    /** The anchor <x-timeline-body> draws for a mention of $member. */
     private function anchor(Member $member): string
     {
         return '<a href="'.route('member.profile.show', $member).'" class="mention">@'.e($member->name).'</a>';

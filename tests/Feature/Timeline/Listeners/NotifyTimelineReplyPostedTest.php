@@ -22,10 +22,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * Who a reply notifies: the thread root's author (Reply) and the root's other repliers (Related),
- * never the replier, never a member the reply already @mentions.
- */
 class NotifyTimelineReplyPostedTest extends TestCase
 {
     use RefreshDatabase;
@@ -171,8 +167,8 @@ class NotifyTimelineReplyPostedTest extends TestCase
     {
         Notification::fake();
         [$owner, $earlier, $replier] = Member::factory()->count(3)->create()->all();
-        // The co-replier is the replier's friend but a stranger to the root's author, and a thread
-        // is one audience — the root author's. Judged on the reply row they would pass.
+        // The co-replier is the replier's friend but a stranger to the root's author, and judged on
+        // the reply row they would pass.
         $this->makeFriends($replier, $earlier);
         $root = $this->root($owner, Visibility::Friends);
         $this->seedReply($root, $earlier);

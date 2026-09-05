@@ -78,10 +78,9 @@ class DiaryArchiveRoutesTest extends TestCase
 
         DB::enableQueryLog();
         $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")->assertOk();
-        // loadMissing('images.file') batches all six rows into one standalone diary_images load
-        // keyed by `diary_id in (...)`, not one per row. The correlated images_count subquery on the
-        // diaries page reads `diaries.id = diary_images.diary_id`, so this marker excludes it. Strip
-        // identifier quotes first so it matches on both sqlite ("…") and MySQL (`…`).
+        // The standalone `diary_images ... where diary_id in (...)` load batches all six rows — the
+        // correlated images_count subquery reads `diaries.id = diary_images.diary_id` instead — with
+        // the identifier quotes stripped so it matches on both sqlite and MySQL.
         $imageQueries = array_filter(
             array_column(DB::getQueryLog(), 'query'),
             fn (string $query): bool => str_contains(str_replace(['"', '`'], '', $query), 'from diary_images where diary_images.diary_id in'),

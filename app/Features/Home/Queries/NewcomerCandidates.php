@@ -14,16 +14,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
- * Members who joined in the window, newest first.
- *
- * No engagement to rank by and none wanted: a face is glanced at, not read, and ordering newcomers
- * by anything they have done yet would rank them against each other on their first day.
- *
- * The lists this sits beside — member search, the right rail's faces — show an AI account and a
- * member an administrator has banned from logging in, so this does too: `is_login_rejected` gates
- * logging in and receiving, not being seen ({@see RandomMembers}).
- * `members.created_at` is nullable and a null is not in any window, so a row from before the column
- * was stamped stays out on the range alone.
+ * Members who joined in the window, newest first, with no engagement to rank by. AI accounts and
+ * members banned from logging in are in it as they are in the lists this sits beside
+ * ({@see RandomMembers}), and a null `members.created_at` is in no window
+ * (docs/internals/home-issues.md, "Eligibility: every member may read it").
  */
 final class NewcomerCandidates
 {

@@ -8,11 +8,8 @@ use App\Models\Member;
 use App\Support\Visibility;
 
 /**
- * Whether an author has anything at all for a guest — OpenPNE 3 DiaryTable::hasOpenDiary, the gate
- * that decides whether a signed-out visitor may open the author's archive.
- *
- * Owner-level on purpose: the page's own month / keyword narrowing must not decide it, or an empty
- * month on an author who does publish would bounce the visitor to login.
+ * Whether a signed-out visitor may open an author's archive at all. Owner-level on purpose: the
+ * page's own month or keyword narrowing must not decide it (docs/internals/diary.md, "The archive").
  */
 class HasWebPublicDiary
 {

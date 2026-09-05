@@ -17,11 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * The new-diary broadcast: audience by visibility (Open/Members = everyone, Friends = the author's
- * friends, Private = nobody), minus the author / banned / blocked; each recipient's channels are the
- * OpenPNE 3 union of diary-new-post and (for friends) diary-new-post-only-friends, absent-means-on.
- */
 class BroadcastDiaryPostedTest extends TestCase
 {
     use RefreshDatabase;

@@ -12,12 +12,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * Events about to happen, soonest first — a calendar, not news.
- *
- * The only section that reads forward from the publishing instant instead of back over the window,
- * and the reason it is a calendar is the reason it never consults the ledger and never triggers an
- * issue on its own: the same gathering is worth listing every day until it happens, and a week of
- * that would otherwise be a week of issues about nothing new.
+ * Events about to happen, soonest first — a calendar, not news, and the only section that reads
+ * forward from the publishing instant. Being a calendar is why it never consults the ledger and
+ * never triggers an issue on its own (docs/internals/home-issues.md, "The window, and 休刊").
  */
 final class UpcomingEventCandidates
 {
@@ -47,9 +44,8 @@ final class UpcomingEventCandidates
             ->map(fn (GroupEvent $event): PlannedItem => new PlannedItem(
                 $this->alias(),
                 (int) $event->getKey(),
-                // The calendar does not rank by engagement, so there is no score to record. The
-                // counts are kept as stats all the same: they are the source's own provenance, and
-                // a section reads the ledger's score only where it ranked by it.
+                // No ranking by engagement, so no score; the counts are kept as the source's own
+                // provenance, which a section reads only where it ranked by it.
                 0,
                 ['comments' => (int) $event->comments_count, 'participants' => (int) $event->participants_count],
                 CarbonImmutable::parse($event->created_at),

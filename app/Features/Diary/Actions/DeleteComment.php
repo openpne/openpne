@@ -18,21 +18,17 @@ class DeleteComment
         $this->purge($comment);
     }
 
-    /**
-     * Delete the comment and purge its image bytes — no authorization. The admin moderation
-     * panel calls this directly (the panel's `admin` guard is an AdminUser, not a Member);
-     * frontend callers always go through __invoke.
-     */
+    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
     public function purge(DiaryComment $comment): void
     {
-        // Collect the owned image Files before the row is gone: the FK cascade drops the
-        // diary_comment_image link rows but never the File bytes. Purge them post-delete.
+        // Collect the comment's owned image Files before the cascade drops the *_image link rows;
+        // their bytes (irreversible on a disk backend) are purged after the row is gone.
         $files = $comment->images()->with('file')->get()->pluck('file')->filter()->values()->all();
 
         $comment->delete();
 
         foreach ($files as $file) {
-            $file->delete(); // deleting the File purges its bytes
+            $file->delete();
         }
     }
 }

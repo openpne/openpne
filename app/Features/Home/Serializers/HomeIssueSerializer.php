@@ -28,16 +28,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * The issue page's payload.
- *
- * **A story travels as a headline, a dek and a picture** — never a body. The front page is where a
- * reader chooses what to read, and the place to read it is its own page, so nothing here carries
- * words the block does not print: no rendered HTML, no link card, no entity ranges. Every optional
- * key is absent when its section is empty — never `[]` — so nothing on the page has to decide what
- * an empty list means on screen.
- *
- * What is there is what SURVIVED the gate, not what was published: an issue of eight stories seven
- * of which have since been taken down is an issue of one.
+ * The issue page's payload: a story travels as a headline, a dek and a picture — never a body, no
+ * rendered HTML, no link card, no entity ranges — and every optional key is absent when its section
+ * is empty rather than `[]` (docs/internals/home-issues.md, "Rendering"). What is there is what
+ * survived the gate, not what was published.
  */
 final class HomeIssueSerializer
 {
@@ -66,8 +60,7 @@ final class HomeIssueSerializer
     }
 
     /**
-     * An issue as something to link to. Null-transparent, so a caller can forward a missing
-     * neighbour straight through.
+     * Null-transparent, so a caller can forward a missing neighbour straight through.
      *
      * @return array{date: string, number: int, href: string}|null
      */
@@ -77,8 +70,6 @@ final class HomeIssueSerializer
     }
 
     /**
-     * The archive index: the run of issues as links, with the pager state the list reads.
-     *
      * @param  LengthAwarePaginator<int, HomeIssue>  $issues
      * @return array{issues: array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}}
      */
@@ -131,9 +122,8 @@ final class HomeIssueSerializer
                 'from' => $window->start->toIso8601String(),
                 'to' => $window->end->toIso8601String(),
             ],
-            // Whether the page is showing what there is. Not "is it dated today": the issue a reader
-            // is handed all day covers the day before, and comparing it to the calendar would make
-            // every fresh front page announce itself as stale.
+            // Whether the page is showing what there is, not whether it is dated today: a fresh
+            // front page covers the day before, and the calendar would call it stale.
             'isCurrent' => CarbonImmutable::parse($issue->issue_date)->startOfDay()
                 ->greaterThanOrEqualTo(HomeIssueDay::latest($now)),
             ...self::section('stories', $hydrated->items(HomeIssueSection::Stories),
@@ -149,10 +139,6 @@ final class HomeIssueSerializer
         ];
     }
 
-    /**
-     * One story, as much of it as a front page prints: what it is called, the line it opens with,
-     * and one picture. A board entry adds the group it was posted in, which its byline names.
-     */
     private static function story(HydratedItem $hydrated): array
     {
         $source = $hydrated->source;
@@ -184,10 +170,9 @@ final class HomeIssueSerializer
     }
 
     /**
-     * A post has no title, so the line its author opened with stands in for one and the dek is what
-     * is left after it. A post opening on a blank line has no such line — and the block is one link
-     * named by its headline, which cannot then be nothing — so there the words themselves headline
-     * it and the dek stands down.
+     * A post has no title, so its opening line stands in for one and the dek is what is left after
+     * it. A post opening on a blank line is headlined by its words instead, since the block is one
+     * link that cannot be named by nothing.
      */
     private static function post(TimelinePost $post): array
     {
@@ -233,7 +218,6 @@ final class HomeIssueSerializer
         ];
     }
 
-    /** What a story says, in plain text, cut at the width a dek is read at. */
     private static function dek(?string $body, BodyFormat $format): string
     {
         return BodyRenderer::excerpt($body, $format, self::DEK_WIDTH);
@@ -253,7 +237,7 @@ final class HomeIssueSerializer
         return $first === null ? null : $shape($first);
     }
 
-    /** A count the eager load already made, or one asked for now rather than reported as zero. */
+    /** A count the eager load already made, or one this call asks for rather than reporting zero. */
     private static function countOf(Model $source, string $relation): int
     {
         $key = "{$relation}_count";
@@ -262,10 +246,8 @@ final class HomeIssueSerializer
     }
 
     /**
-     * A run of talk: how much was said, the end of it to read, and the group it was said in.
-     *
      * Nothing here comes from the row's frozen stats — those record why it was chosen, and are never
-     * re-read as current truth ([home-issues.md](../../../../docs/internals/home-issues.md)).
+     * re-read as current truth (docs/internals/home-issues.md, "Frozen stats are provenance").
      */
     private static function burst(HydratedItem $hydrated): array
     {
@@ -281,7 +263,6 @@ final class HomeIssueSerializer
         ];
     }
 
-    /** A calendar row: the activity row's fields, plus the day the gathering falls on. */
     private static function upcomingEvent(HydratedItem $hydrated): array
     {
         /** @var GroupEvent $event */

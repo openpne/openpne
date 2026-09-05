@@ -47,9 +47,9 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
 
-        // Force a topic and an event onto the same primary-key value (topics and events are separate
-        // tables, so a shared id is legal). A keyed Eloquent merge would collapse them into one;
-        // toBase()->concat() keeps both. Explicit ids so it holds regardless of AUTO_INCREMENT state.
+        // A topic and an event forced onto the same primary key — separate tables, so a shared id is
+        // legal — which a keyed Eloquent merge would collapse into one, with explicit ids so it holds
+        // whatever the AUTO_INCREMENT state.
         $topic = GroupTopic::factory()->create(['id' => 4242, 'group_id' => $group->getKey()]);
         $event = GroupEvent::factory()->create(['id' => 4242, 'group_id' => $group->getKey()]);
         $this->assertSame($topic->getKey(), $event->getKey(), 'test precondition: the ids collide');
@@ -76,9 +76,8 @@ class JoinedGroupActivityTest extends TestCase
 
     public function test_eager_loads_the_group_image_on_every_row(): void
     {
-        // The digest serializes each row's group image; without the per-feeder eager load on the
-        // owning group every row would lazy-load its own. Assert both a topic row and an event row
-        // arrive with the relation loaded (catches a dropped eager load on either feeder directly).
+        // Both a topic row and an event row are asserted to arrive with the group relation loaded,
+        // which catches a dropped eager load on either feeder.
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
 

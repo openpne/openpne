@@ -22,11 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * Who a stored @mention actually reaches. Storage settled mentionability at write time
- * (Tests\Feature\Timeline\MentionStorageTest); this is the delivery-time half, which re-checks
- * what the interval can have changed.
- */
+/** The delivery-time half, which re-checks what the interval since the write can have changed. */
 class NotifyTimelineMentionedTest extends TestCase
 {
     use RefreshDatabase;
@@ -123,9 +119,8 @@ class NotifyTimelineMentionedTest extends TestCase
         Notification::fake();
         [$rootAuthor, $replier] = Member::factory()->count(2)->create()->all();
         $alice = Member::factory()->create(['name' => 'Alice']);
-        // Alice is the replier's friend but a stranger to the root's author, and a thread is one
-        // audience — the root author's. Judged on the reply row she would pass, since a reply's own
-        // "owner" is the replier.
+        // Alice is the replier's friend but a stranger to the root's author, and judged on the reply
+        // row — whose own owner is the replier — she would pass.
         $this->makeFriends($replier, $alice);
         $root = TimelinePost::factory()->friends()->create(['member_id' => $rootAuthor->getKey()]);
 

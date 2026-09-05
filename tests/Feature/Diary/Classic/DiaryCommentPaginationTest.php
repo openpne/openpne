@@ -8,10 +8,7 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Locks the OpenPNE 3 diaryComment list pager on diary.show: the reversible default (newest
- * page, listed oldest-first), the Older/Newer navigation, and the size/order toggles.
- */
+/** The expected pager is OpenPNE 3's diaryComment list component. */
 class DiaryCommentPaginationTest extends TestCase
 {
     use RefreshDatabase;

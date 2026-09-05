@@ -10,10 +10,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The whole SNS's members-only timeline: top-level posts every member may see (visibility <= Members),
- * newest first — matching OpenPNE 3's getAllMemberActivityList. Narrower than HomeFeed: it adds no
- * viewer-specific tiers, so the viewer's own Private posts and a friend's friends-only posts are not
- * included. Replies (in_reply_to_id set) are excluded, matching the other timeline feeds.
+ * Top-level posts every member may see, newest first (OpenPNE 3 getAllMemberActivityList). Narrower
+ * than HomeFeed: no viewer-specific tiers, so the viewer's own Private posts and a friend's
+ * friends-only ones stay out.
  */
 class AllMemberFeed
 {

@@ -10,10 +10,6 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The OpenPNE 3 inline compose box, shipped hidden with a no-JS fallback link, and the
- * allowlisted return_to redirect contract of timeline.store.
- */
 class TimelineComposeTest extends TestCase
 {
     use RefreshDatabase;
@@ -65,9 +61,8 @@ class TimelineComposeTest extends TestCase
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
         $url = route('timeline.mention_candidates');
 
-        // The three Classic bodies a mention can be written in: the inline box, the standalone
-        // compose page and the reply form. Each carries its own endpoint — the script scopes by
-        // form, so nothing is read off the document or a shared singleton.
+        // The three Classic bodies a mention can be written in, each with its own endpoint: the
+        // script scopes by form rather than reading the document or a shared singleton.
         foreach ([route('timeline.index'), route('timeline.new'), route('timeline.show', $post)] as $screen) {
             $this->actingAs($member)->get($screen)->assertOk()
                 ->assertSee('data-timeline-mention data-mention-candidates-url="'.$url.'"', false)
@@ -128,9 +123,8 @@ class TimelineComposeTest extends TestCase
 
     public function test_no_body_textarea_ships_a_maxlength(): void
     {
-        // maxlength counts UTF-16 units, so it would block a body of 140 astral code points that
-        // the counter and the server's max:140 (both code points) accept. The inline box is gated
-        // by classic-timeline-compose.js; the no-JS forms fall through to the server rule.
+        // maxlength counts UTF-16 units, so it would block a body of 140 astral code points that the
+        // counter and the server's max:140 (both code points) accept.
         $member = Member::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
 

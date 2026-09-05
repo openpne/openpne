@@ -11,10 +11,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListDiaries
 {
     /**
-     * A member's diary archive under the viewer's clearance. Pass `period:` to narrow to a
-     * calendar month/day — the OpenPNE 3 calendar archive, which is the same listMember view.
-     * `keyword:` orthogonally filters by title/body term (Modern archive search). `$period` and
-     * `$keyword` follow `$perPage` so the original positional signature stays compatible.
+     * A member's diary archive under the viewer's clearance, narrowed by a calendar period and a
+     * keyword independently. `$period` and `$keyword` follow `$perPage` so the original positional
+     * signature stays compatible.
      *
      * @return LengthAwarePaginator<int, Diary>
      */

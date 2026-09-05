@@ -7,11 +7,9 @@ namespace App\Features\Home\Queries;
 use App\Models\HomeIssue;
 
 /**
- * The issues either side of one, for the pager at the foot of the page.
- *
- * By `issue_date` and not by number: the day is what a reader is moving through, and a repair that
- * renumbers the archive must not reorder it. The column is unique, so the neighbour on each side is
- * settled without a tiebreak.
+ * The issues either side of one, by `issue_date` and not by number: the day is what a reader moves
+ * through, and a repair that renumbers the archive must not reorder it. The column is unique, so
+ * each neighbour is settled without a tiebreak.
  */
 final class AdjacentHomeIssues
 {

@@ -11,12 +11,9 @@ use App\Models\TimelinePost;
 use Illuminate\Support\Collection;
 
 /**
- * The projections the unified layout's pages share (Look::Unified): the picture
- * mosaic, the group cover cards, and the row of faces. The same React components read all three, so
- * the shape is a contract between the pages rather than a detail of either — the home draws them
- * about the viewer, the member page about whoever it is about, and the two must not drift.
- *
- * Shaping only: every caller has already resolved, under its own clearance, which rows to pass in.
+ * The projections the unified layout's pages share: the same React components read all three, so the
+ * shape is a contract between the pages rather than a detail of either. Shaping only — every caller
+ * has already resolved, under its own clearance, which rows to pass in.
  */
 final class UnifiedSections
 {
@@ -56,15 +53,9 @@ final class UnifiedSections
     }
 
     /**
-     * The grid's order and cap, over content of any kind: each parent is the thing a tile opens,
-     * carrying the pictures posted with it. Ordered by parent (created_at, then id, then source)
-     * before the pictures inside one are laid out in the order their author arranged them, so the cap
-     * always cuts the same tiles. Ids come from as many tables as there are sources, so they order a
-     * source apart from itself rather than against another; the source name settles the rest.
-     *
-     * `images` is walked lazily and only as far as the cap reaches, so a caller whose shaping costs
-     * something per picture — a per-file authorization check — pays it for the tiles that are shown
-     * and not for the ones the cap cuts. A picture the caller omits leaves no trace of itself.
+     * Parents are ordered (created_at, then id, then source) before the pictures inside one, so the
+     * cap always cuts the same tiles. `images` is walked lazily and only as far as the cap reaches,
+     * so a caller whose shaping costs something per picture pays only for the tiles shown.
      *
      * @param  list<array{source: string, at: \DateTimeInterface, id: int, href: string, images: iterable<array>}>  $parents
      * @return list<array{source: string, href: string, image: array}>

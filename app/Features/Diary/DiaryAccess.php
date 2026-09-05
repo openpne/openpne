@@ -8,10 +8,8 @@ use App\Models\Member;
 use App\Support\Visibility;
 
 /**
- * Whether a viewer may read a single diary — the row-level counterpart of DiaryVisibilityScope
- * (which constrains a query). Same rule: a guest (no Member) sees only web-public, a blocked
- * viewer sees nothing, otherwise up to the viewer's clearance on the author. ShowDiary and
- * FilePolicy (diary image access) share this so the two never drift.
+ * The row-level counterpart of {@see DiaryVisibilityScope}, which has to answer the same rule
+ * (docs/internals/feature-modules.md, "Authorization and visibility").
  */
 final class DiaryAccess
 {

@@ -9,13 +9,9 @@ use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Diary keyword search over the same tier the recent feed exposes
- * (DiaryVisibilityScope::applyFeed). Each whitespace-split term must match the title or body;
- * terms are AND-connected. An empty keyword applies no term filter, so the page shows recent
- * diaries — OpenPNE 3 forwarded an empty search to `list`.
- *
- * Wildcards are not escaped, matching the existing member search (SearchMembers); the term is
- * still bound, so this is wildcard latitude, not injection.
+ * Diary keyword search over the recent feed's tier: each whitespace-split term must match the title
+ * or the body, AND-connected. Wildcards are not escaped, matching the member search — the term is
+ * still bound, so this is wildcard latitude rather than injection.
  */
 class SearchDiaries
 {
@@ -34,9 +30,8 @@ class SearchDiaries
     }
 
     /**
-     * AND-connect each whitespace-split term as a title/body LIKE onto an existing diary query.
-     * Shared with the member archive ({@see ListDiaries}, {@see MemberDiaryMonthlyCounts}) so a
-     * keyword scans title and body identically wherever it applies. Empty keyword → no-op.
+     * Shared with the member archive so a keyword scans title and body identically wherever it
+     * applies. An empty keyword is a no-op.
      *
      * @param  Builder  $query  a diary query builder (Eloquent builder or a Diary relation)
      */

@@ -29,10 +29,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The OpenPNE 3 member/home portal lives at the canonical root (/). It resolves by surface:
- * a Modern-default install renders the latest issue — the site's front page
- * ([home-issues.md](../../../docs/internals/home-issues.md)) — and a Classic-default one the Classic
- * home, which renders the admin-configured gadgets (the viewer is the home gadgets' subject).
+ * The OpenPNE 3 member/home portal at the canonical root: a Modern-default install renders the
+ * latest issue (docs/internals/home-issues.md, "Routes") and a Classic-default one the Classic home,
+ * whose home gadgets take the viewer as their subject.
  */
 class HomeController extends Controller
 {
@@ -78,27 +77,20 @@ class HomeController extends Controller
             'zones' => $gadgets->zones('home', $viewer, $viewer),
             'layout' => $gadgets->layoutLetter('home'),
             'pageId' => RouteParityRegistry::bodyId('home'),
-            // Groups awaiting this member's admin-transfer decision: the OpenPNE 3
-            // _cautionAboutChangeAdminRequest, restored as a direct link to each community's banner
-            // (Modern surfaces this through the feed + bell instead). Cheap: pending_admin_member_id is indexed.
+            // Groups awaiting this member's admin-transfer decision (OpenPNE 3
+            // _cautionAboutChangeAdminRequest), restored as a direct link to each group's banner.
             'adminTransferGroups' => Feature::Group->enabled()
                 ? Group::where('pending_admin_member_id', $viewer->getKey())->get()
                 : collect(),
             // The friend-request caution is the header badge number, read from the same
             // request-scoped service the shell reads, so a caution and its badge cannot disagree.
             'unread' => $unread->for($viewer),
-            // Messages are counted separately: this caution links into the mailbox, where the number
-            // it announces is the rows waiting there. The Modern badge counts conversations instead
-            // (CountUnreadConversations), which is a different question about the same receipts.
+            // Counted apart from the Modern badge's conversations: this caution links into the
+            // mailbox, where the number it announces is the rows waiting there.
             'unreadMessages' => Feature::DirectMessage->enabled() ? $unreadMessages($viewer) : 0,
         ]);
     }
 
-    /**
-     * What's new: a Modern-only nav section, and the same digest under every look — the viewer's
-     * conversations, the all-members diary feed, the timeline, their joined-community activity, and
-     * their own recent diaries.
-     */
     public function dashboard(
         Request $request,
         JoinedGroupActivity $groupActivity,
@@ -110,8 +102,7 @@ class HomeController extends Controller
         $viewer = $request->user();
 
         // Each digest belongs to a unit, so a switched-off one contributes an empty section and runs
-        // no query — hiding it on the client would still ship the rows. JoinedGroupActivity
-        // applies its own units (topics and events independently).
+        // no query — hiding it on the client would still ship the rows.
         $diaryOn = Feature::Diary->enabled();
         $groupOn = Feature::Group->enabled();
 
@@ -130,11 +121,7 @@ class HomeController extends Controller
     /** Rows shown on the community activity page — the dashboard digest's full "View all" target. */
     private const ACTIVITY_PAGE = 30;
 
-    /**
-     * The full cross-community activity view (the dashboard's community section, expanded): the
-     * viewer's joined-community topics and events, merged newest-first. Modern-only, so it renders
-     * Inertia directly like the dashboard.
-     */
+    /** Modern-only, so it renders Inertia directly rather than resolving a surface. */
     public function groupActivity(Request $request, JoinedGroupActivity $activity): Response
     {
         /** @var Member $viewer */

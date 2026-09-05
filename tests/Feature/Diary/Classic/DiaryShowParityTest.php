@@ -12,10 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Locks the diary.show surface elements that openpne:screen-parity marks Ported (L1): the entry's
- * own dl, the comment list, the comment post form (with its is_open notice), and the owner edit entry.
- * A regression here would silently turn a Ported claim false, so the inventory leans on this.
- * Anchors are routes/seeded data, not translated copy, so they survive wording changes.
+ * Locks the diary.show elements openpne:screen-parity marks Ported (L1), which the inventory leans
+ * on. Anchors are routes and seeded data, not translated copy, so they survive wording changes.
  */
 class DiaryShowParityTest extends TestCase
 {
