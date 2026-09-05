@@ -8,14 +8,7 @@ import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import type { TalkReactorGroup } from './types';
 
-/**
- * Who reacted to one message. The names live nowhere in the page's own payload — they are the one
- * part of a reaction that grows with the room — so they are read when this opens and only then.
- *
- * The read is bounded at the server: an emoji's count is exact, its names stop at a hundred, and the
- * rest are a number. A refusal closes the dialog without a word: the message was deleted, or the
- * reader may no longer read the group, and neither is something to explain over a chip row.
- */
+/** A refusal closes the dialog without a word (docs/internals/group-talk.md, "Reactions"). */
 export function TalkReactorsDialog({ url, onClose }: { url: string; onClose: () => void }) {
     const t = useT();
     const [groups, setGroups] = useState<TalkReactorGroup[] | null>(null);

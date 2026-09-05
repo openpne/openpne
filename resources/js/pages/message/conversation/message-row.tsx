@@ -9,14 +9,6 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { ConversationMessage } from './types';
 
-/**
- * One message in a conversation. A left-aligned row with the face in a gutter rather than a two-sided
- * bubble stream — the same row a reader already knows from a group's talk, so every conversation on
- * the site is read the same way. A withdrawn author keeps their place with the established label.
- *
- * `highlighted` is a `?m=` link's landing: the row it opened on, held for a moment so the reader can
- * see which message brought them here.
- */
 export function ConversationMessageRow({
     message,
     highlighted = false,
@@ -31,8 +23,6 @@ export function ConversationMessageRow({
     const author = message.author;
     // Trimmed rather than compared to '': an upgraded body may be whitespace.
     const hasBody = message.body.trim() !== '';
-    // What the pictures sit under. A chat message with neither is the one that closes the gap; a
-    // mailbox row showing only its subject keeps the rhythm it has always had.
     const hasTextAbove = hasBody || Boolean(message.subject);
 
     return (
@@ -40,20 +30,16 @@ export function ConversationMessageRow({
         <li
             data-conversation-message-id={message.id}
             className={cn(
-                // Even padding, and the space between messages as a margin — see the talk row, whose
-                // shape this follows. Nothing folds in a conversation of two, so every row opens a
-                // turn and every row carries the margin.
+                // Nothing folds in a conversation of two, so every row opens a turn and carries the
+                // margin.
                 'px-4 py-1 sm:px-5',
                 separatorAbove ? undefined : 'mt-3',
-                // The transition is not conditional on the flag: what fades is the highlight being
-                // taken away, and a transition arriving with the class would have nothing to animate
-                // from. The row mounts already highlighted, so the emphasis itself is instant.
+                // The transition is not conditional on the flag: one arriving with the class would
+                // have nothing to animate from, and what fades is the highlight being taken away.
                 'transition-colors duration-1000 motion-reduce:transition-none',
                 highlighted && 'bg-selected/10',
             )}
         >
-            {/* The face in a gutter of its own, so everything the message says starts where the name
-                starts. Nothing folds in a conversation of two, so the gutter is never empty here. */}
             <div className="flex gap-2">
                 <div className="w-10 shrink-0">
                     <Avatar
@@ -76,18 +62,12 @@ export function ConversationMessageRow({
                             <span className="truncate">{t('Withdrawn member')}</span>
                         )}
                         <AiChip isAi={author?.isAi ?? false} />
-                        {/* Beside the name rather than pushed to the far edge — see the talk row, whose
-                            shape this follows. The receipt keeps its place after the time: both say
-                            something about the delivery rather than about the author, and they travel
-                            as one. */}
                         <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
                         {/* Only ever on the viewer's own: a message they received is one they are reading. */}
                         {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}
                     </div>
-                    {/* Mailbox messages carry a subject and chat ones do not, so it names this message
-                        rather than repeating the room — which is the heading recipe's job, and the one
-                        place weight is spent (docs/internals/typography.md). h2, because the page title
-                        is the h1 and nothing sits between: h3 would skip a rank. */}
+                    {/* h2, because the page title is the h1 and nothing sits between: h3 would skip a
+                        rank. */}
                     {message.subject && (
                         <Heading as="h2" variant="section" className="mt-1 break-words">
                             {message.subject}

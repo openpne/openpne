@@ -7,8 +7,8 @@ import type { PageProps } from '@/types';
 
 type Props = PageProps & { token: string; newEmail: string };
 
-// Token landing for the emailed cancel link in the old-address notice (reachable logged-in or out).
-// The cancellation is the POST below, not this GET render, so a prefetch cannot void the change.
+// Token landing reachable logged-in or out; the cancellation is the POST below, not this GET render,
+// so a prefetch cannot void the change.
 export default function EmailChangeCancel() {
     const t = useT();
     const { token, newEmail } = usePage<Props>().props;

@@ -10,7 +10,7 @@ interface PolicyProps extends PageProps {
     bodyHtml: string | null;
 }
 
-/** Terms of service / privacy policy. The h1 is the frame's (contextual chrome), so the page is the body. */
+/** The h1 is the frame's (contextual chrome), so the page is the body. */
 export default function PolicyShow() {
     const t = useT();
     const { kind, body, bodyHtml } = usePage<PolicyProps>().props;

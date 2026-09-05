@@ -104,11 +104,8 @@ test('the lead is one block: a hero over the headline, and nothing else in it to
     const card = container.querySelector('.rounded-card') as HTMLElement;
     const hero = card.querySelector('img[srcset]');
 
-    // The picture's own widths, and the box the placement paints, so the browser can pick before
-    // the layout is measured.
     expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
     expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
-    // The headline says what the story is; the picture is not a second name for it.
     expect(hero?.getAttribute('alt')).toBe('');
 
     const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
@@ -306,8 +303,7 @@ test('a section the issue does not have is absent, not empty', () => {
 });
 
 test('an issue whose stories have all gone is still the day around them', () => {
-    // Every story was taken down after publication, so the payload carries no `stories` at all. The
-    // talk and the faces are still an issue; the story band is simply not one of the things it has.
+    // Every story was taken down after publication, so the payload carries no `stories` at all.
     const { container } = arrive({
         issue: issueOf({ stories: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });

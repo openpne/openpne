@@ -15,5 +15,8 @@ export interface ConversationMessage extends ChatStreamRow {
 
 export type ConversationPage = ChatPage<ConversationMessage>;
 
-/** Where the unread boundary stood when the page was rendered — see the divider note in index.tsx. */
+/**
+ * Where the unread boundary stood when the page was rendered, fixed for the visit
+ * (docs/internals/direct-messages.md, "Unread").
+ */
 export type ConversationUnreadSnapshot = ChatFirstUnreadSnapshot;

@@ -41,7 +41,6 @@ function arrive(data: IssueRef[], meta: { currentPage: number; lastPage: number 
 test('each row is the day it covers, and links to it', () => {
     arrive([ref(12, '2026-08-27'), ref(11, '2026-08-26')], { currentPage: 1, lastPage: 2 });
 
-    // The date is the only name a day has here, so it is the line and the link both.
     const latest = screen.getByRole('link', { name: 'Thu, August 27, 2026' });
     expect(latest.getAttribute('href')).toBe('/home/2026/08/27');
     expect(screen.getByRole('link', { name: 'Wed, August 26, 2026' }).getAttribute('href')).toBe('/home/2026/08/26');
@@ -56,7 +55,6 @@ test('the run pages when there is more of it than one page', () => {
 
     cleanup();
 
-    // One page of issues has nothing to page to, so the control is not drawn at all.
     const { container } = arrive([ref(12, '2026-08-27')], { currentPage: 1, lastPage: 1 });
     expect(screen.queryByText('Page 1 of 1')).toBeNull();
     expect(container.querySelector('nav')).toBeNull();

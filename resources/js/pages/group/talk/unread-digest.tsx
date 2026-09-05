@@ -9,18 +9,7 @@ import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { TalkUnreadDigest } from './types';
 
-/**
- * The catch-up card: what was said while the reader was away, and the one tap that spends it.
- *
- * Drawn at the boundary in both of the states that boundary can be in — at the separator when the
- * line is on the page, in the banner's place when it is above it — with the same payload and the
- * same actions either way, so returning to a room does not depend on where the boundary happens to
- * have fallen in the loaded slice.
- *
- * The summary is a slot rather than a sentence built inline: it is the one part of the card meant to
- * be replaced later by a written account of the backlog, and everything around it — the period, the
- * faces, the pictures, the two actions — stays as it is when that happens.
- */
+/** See docs/internals/group-talk.md, "The absence digest". */
 export function TalkUnreadDigestCard({
     digest,
     onMarkAllRead,
@@ -41,8 +30,8 @@ export function TalkUnreadDigestCard({
 
     return (
         <Card className={cn('px-4 py-3 sm:px-5', className)}>
-            {/* The card's title, and the slot a written account of the backlog would replace. Plural
-                only: the card exists from TalkAbsenceDigest::THRESHOLD messages up, never at one. */}
+            {/* Plural only: the card exists from TalkAbsenceDigest::THRESHOLD messages up, never at
+                one. */}
             <Heading as="h2" variant="minor">
                 {t(':count messages while you were away', { count: digest.count })}
             </Heading>

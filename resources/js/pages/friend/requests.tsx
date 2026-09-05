@@ -13,7 +13,6 @@ interface ManageProps extends PageProps {
     sent: PaginatedFriends;
 }
 
-/** Avatar + name linking to the member's profile — the shared leading cell of a pending-request row. */
 function MemberCell({ member }: { member: FriendMember }) {
     return (
         <div className="flex min-w-0 flex-1 items-center gap-2">

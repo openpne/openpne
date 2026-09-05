@@ -11,7 +11,7 @@ import type { MessageRow, PaginatedConversations, PaginatedMessages } from '../t
 
 interface ConversationsProps extends PageProps {
     conversations: PaginatedConversations;
-    /** The mailbox's drafts, which belong to no conversation — see the section below. */
+    /** The mailbox's drafts, which belong to no conversation. */
     drafts: PaginatedMessages;
 }
 
@@ -44,7 +44,7 @@ export default function MessageConversations() {
             )}
 
             {/* A draft has no receipt, so it is in neither arm of any conversation and would be
-                unreachable without a place of its own. Shown only when there is one to open. */}
+                unreachable without a place of its own. */}
             {drafts.data.length > 0 && (
                 <>
                     <Panel flush title={t('Drafts')}>
@@ -61,7 +61,6 @@ export default function MessageConversations() {
     );
 }
 
-/** One unsent draft: who it is addressed to, what it says so far, and the form to finish it in. */
 function DraftRow({ draft }: { draft: MessageRow }) {
     const t = useT();
     const name = draft.counterparty?.name ?? t('Withdrawn member');

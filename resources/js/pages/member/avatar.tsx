@@ -123,9 +123,7 @@ export default function MemberAvatar() {
                         <InitialBadge aria-hidden name={auth.user.name} color={tentativeHex} className="size-12 rounded-full text-base" />
 
                         {/* The default fills the light-gray cell, so the grid is exactly 9 families ×
-                            2 tiers. The options arrive family-paired (light, deep): column-major on
-                            sm+ gives one column per family (light over deep); the phone's 6-column
-                            row-major keeps each pair side by side. */}
+                            2 tiers, which the column-major flow turns into one column per family. */}
                         <div className="grid w-fit grid-cols-6 gap-3 sm:grid-cols-none sm:grid-flow-col sm:grid-rows-2" role="presentation">
                             <Swatch
                                 checked={color.data.avatar_color === null}
@@ -155,9 +153,8 @@ export default function MemberAvatar() {
     );
 }
 
-/** One color swatch: a real radio (arrow-key group navigation) behind a colored disc; the checked
- *  state shows a checkmark so it never reads by color alone. `hex: null` is the neutral option.
- *  size-11 keeps the touch target at 44px (the grid gap alone is too thin a separator on phones). */
+/** A real radio (arrow-key group navigation) behind a colored disc, with a checkmark so it never
+ *  reads by color alone. size-11 keeps the touch target at 44px. */
 function Swatch({ checked, onSelect, ariaLabel, hex }: { checked: boolean; onSelect: () => void; ariaLabel: string; hex: string | null }) {
     return (
         <label

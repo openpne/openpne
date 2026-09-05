@@ -21,9 +21,8 @@ type Props = {
 
 export default function Login({ registrationOpen = false, captchaRequired = false, challengeUrl, loginMessage }: Props) {
     const t = useT();
-    // Flows that end at the sign-in screen (password reset, email change, 2FA reset) land here with
-    // a status flash; Classic renders it in the layout, so without this their success is silent on
-    // Modern only.
+    // Classic renders the status flash in its layout, so without this a flow that ends at the
+    // sign-in screen succeeds silently on Modern.
     const status = usePage<PageProps>().props.flash.status;
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -32,10 +31,9 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
         altcha: '',
     });
 
-    // Inertia submits the useForm data, not native form fields, so mirror the widget's solution
-    // (carried on its statechange event) into the payload it would otherwise post itself. The widget
-    // only appears once captchaRequired flips on and is remounted (widgetKey) after a failed attempt,
-    // so the listener is (re)bound on those changes, not just at mount.
+    // Inertia submits the useForm data, not native form fields, so the widget's solution is mirrored
+    // into the payload it would otherwise post itself; the listener is bound again whenever the
+    // widget appears or is replaced, not only at mount.
     const widget = useRef<HTMLElement>(null);
     const [widgetKey, setWidgetKey] = useState(0);
     useEffect(() => {

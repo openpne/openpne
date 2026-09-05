@@ -35,27 +35,22 @@ interface FeedProps extends PageProps {
     feed: { data: FeedItem[]; meta: PaginationMeta };
 }
 
-/** The per-event notification feed. Opening a row (a POST) marks it read and lands on what it is
- *  about — and so does reaching that target any other way, a GET included (docs/internals/notifications.md);
- *  the feed itself never marks anything. */
+/** Opening a row marks it read, and so does reaching that target any other way
+ *  (docs/internals/notifications.md, "The three layers"); the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
     const { feed, unread } = usePage<FeedProps>().props;
     const title = t('Notifications');
 
-    // Coming back here from a restore re-reads the feed like every page: the app-wide revalidation
-    // (lib/revalidate-on-restore.ts) reloads it, so the row the member opened one navigation ago
-    // comes back read rather than still claiming unread.
+    // Nothing re-reads the feed here: the app-wide revalidation on a restore does it
+    // (lib/revalidate-on-restore.ts).
 
     return (
         <>
             <Head title={title} />
             <PushPrompt />
-            {/* What arrives here is decided elsewhere, so the feed carries the way to that page. Both
-                controls cluster right: below lg the h1 folds into the bar, and a lone noun phrase at
-                the left edge lands where the heading would have been and reads as one. They take the
-                same weight — one framed and one bare read as an inconsistency rather than as a
-                hierarchy — and settings sits outermost, the corner it is looked for in. */}
+            {/* Both controls cluster right and take the same weight: one framed and one bare would
+                read as an inconsistency rather than as a hierarchy. */}
             <div className="flex items-center justify-end gap-2">
                 {(unread?.notifications ?? 0) > 0 && (
                     <Button
@@ -66,13 +61,8 @@ export default function NotificationsIndex() {
                         {t('Mark all as read')}
                     </Button>
                 )}
-                {/* The full name wherever it fits, the bare word where it does not: beside the
-                    read-all button, English needs a ~360px viewport for "Notification settings"
-                    alone. Cutting over at sm rather than at that measured edge leaves room for a
-                    longer word in another locale. The two reasons to shorten and to be precise sit
-                    on opposite sides of a breakpoint — the left nav's own "Settings", which this
-                    word would otherwise double, appears only from lg. The accessible name stays the
-                    full one at every width, and the short label is contained in it (label-in-name). */}
+                {/* The accessible name stays the full one at every width, and the short label is
+                    contained in it (label-in-name). */}
                 <ActionLink
                     href="/member/config/notifications"
                     variant="outline"

@@ -18,11 +18,7 @@ const profile = {
     bio: 'the first line\nand a second',
 };
 
-/**
- * The clamp is the member pages' behaviour and has to stay theirs by default: a header that grew
- * with whatever someone wrote in their self-introduction would push the page's own content off the
- * screen. Asserted on the rendered class rather than on layout, which jsdom does not compute.
- */
+/** Asserted on the rendered class rather than on layout, which jsdom does not compute. */
 test('a self-introduction is a two-line lead-in unless the page says otherwise', () => {
     const { container } = render(<ProfileHeader profile={profile} />);
 

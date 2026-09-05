@@ -7,13 +7,9 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 /**
- * "Delete this conversation": everything it holds, off this member's screens, in one act. It sits
- * above the conversation as a small text action, where a group's talk keeps its mute — the heading
- * is the chrome's, shared by every screen in the section.
- *
- * The confirmation states what is *not* deleted. Per-side visibility is the whole model here
- * (docs/internals/direct-messages.md), so an action that reads as a retraction would be promising
- * something the store cannot do.
+ * The confirmation states what is not deleted: deleting is per-side rather than a retraction
+ * (docs/internals/direct-messages.md, "Deleting a conversation"), so an action that read as one would
+ * promise something the store cannot do.
  */
 export function DeleteConversation({ path }: { path: string }) {
     const t = useT();

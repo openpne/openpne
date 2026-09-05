@@ -11,15 +11,8 @@ import { PictureStrip } from './picture-strip';
 import type { TalkBurst, TalkExcerptMessage } from './types';
 
 /**
- * One line of the conversation, drawn the way the room draws it: a face, a name, the time it was
- * said at, the words, and whatever was posted with them. A withdrawn author keeps their place with
- * the established label — the message stays, the person is gone.
- *
- * Clipped at three lines. A burst is several messages on a page of several bursts, and one long turn
- * taking the height of a story would make the excerpt an article of its own.
- *
- * `listStamp` and not the room's clock time: an issue is read on its own day and on days after it,
- * and a bare `09:41` under a week-old dateline names no hour in particular.
+ * `listStamp` and not the room's clock time: an issue is read on days after its own, where a bare
+ * clock time names no hour in particular.
  */
 function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
     const t = useT();
@@ -55,16 +48,8 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
 }
 
 /**
- * A run of talk in one group, as the front page reports it: whose room it is, how much was said, and
- * the end of it to read.
- *
- * The excerpt is the card. A count says a number happened; the last few turns say what the room is
- * like, which is the thing a reader can judge from outside it — and it carries the faces and the
- * pictures along the way, so neither needs a row of its own.
- *
- * Not the catch-up card (group/talk/unread-digest.tsx), though it reads like one: that card requires
- * the two actions that spend a backlog, and this has no backlog to spend. Its one way out is the
- * room itself.
+ * Not the catch-up card it reads like: that one requires the two actions that spend a backlog, and
+ * this has none to spend.
  */
 export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
     const t = useT();

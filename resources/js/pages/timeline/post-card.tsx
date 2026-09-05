@@ -18,8 +18,6 @@ interface TimelinePostCardProps {
     viewerId: number;
 }
 
-// A single timeline post card, shared by the member timeline and the home feed. The delete control
-// shows only on the viewer's own posts.
 export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
     const t = useT();
     const confirm = useConfirm();

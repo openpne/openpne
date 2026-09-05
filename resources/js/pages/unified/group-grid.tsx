@@ -12,14 +12,9 @@ export interface HomeGroup {
 }
 
 /**
- * The groups the viewer belongs to, as cover cards. The name lies over the picture rather than under
- * it: a group is recognised by its cover long before it is read, and the label is there to settle the
- * ones that look alike.
- *
- * The scrim is spelled as one arbitrary gradient because the palette guard (RawPaletteGuardTest)
- * admits no raw color-stop utility, and a flat strip over a photo hides either too much of it or too
- * little of the text. `text-scrim-foreground` is the one token that stays white in both themes,
- * because what it sits on is an uploaded picture rather than a surface.
+ * The scrim is one arbitrary gradient because the palette guard admits no raw color-stop utility.
+ * `text-scrim-foreground` is the one token that stays white in both themes, because what it sits on
+ * is an uploaded picture rather than a surface.
  */
 export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
     return (
@@ -34,8 +29,6 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                             // Decorative: the name below is the link's own text.
                             <img src={group.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
-                            // A cover of the group's derived color with its initial — designed, not
-                            // a gray hole where a photo should be.
                             <span
                                 aria-hidden
                                 className="flex h-full w-full items-center justify-center"
@@ -52,8 +45,6 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                             {/* The name gives up its second line to a caption rather than growing the
                                 block past the scrim it has to stay legible against. */}
                             <span className={group.caption ? 'block truncate' : 'line-clamp-2'}>{group.name}</span>
-                            {/* Quieter than the name: the caption settles a choice between cards
-                                rather than naming one. */}
                             {group.caption && <span className="block truncate opacity-80">{group.caption}</span>}
                         </span>
                     </Link>

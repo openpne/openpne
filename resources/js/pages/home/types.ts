@@ -6,15 +6,9 @@ import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '../unified/group-grid';
 
 /**
- * The front page issue (号): one edition of the site, published once a day and identical for every
- * member. **It is a front page**: stories arrive in rank order as headline, dek and picture, and the
- * page ranks them by how much room it gives each — never by printing more or less of a body.
- *
- * Every optional section key is **absent** when it is empty, never `[]`. A section renders exactly
- * when its key is present, so nothing has to decide what an empty list means on screen.
+ * Every optional section key is absent when it is empty, never `[]`, so nothing has to decide what
+ * an empty list means on screen.
  */
-
-/** An issue as something to link to: which day it covers, its number, and where it is read. */
 export interface IssueRef {
     /** The site's calendar day the issue covers, `Y-m-d` — a civil date, never an instant. */
     date: string;
@@ -22,7 +16,6 @@ export interface IssueRef {
     href: string;
 }
 
-/** The group a board entry or a talk burst belongs to, as much of it as a byline draws. */
 export interface BoardScope {
     id: number;
     name: string;
@@ -30,17 +23,12 @@ export interface BoardScope {
 }
 
 /**
- * One story as the front page prints it: what it is called, the line it opens with, and one picture.
- * **Never a body** — the block is a way in, and the story is read on its own page.
- *
- * `kind` is the byline's grammar rather than a shape switch: a board entry names the group it was
- * posted in, a post counts replies where the rest count comments, and every block draws the same
- * fields either way.
+ * Never a body: the block is a way in (docs/internals/home-issues.md, "Rendering"). `kind` is the
+ * byline's grammar rather than a shape switch — a board entry names its group, a post counts replies.
  */
 export interface IssueStory {
     kind: 'diary' | 'timeline' | 'topic' | 'event';
     id: number;
-    /** Where it is read in full — what the whole block links to. */
     href: string;
     /** A post has no title, so this is the line its author opened with. */
     headline: string;
@@ -74,7 +62,6 @@ export interface TalkExcerptMessage {
     images: GridImage[];
 }
 
-/** A run of talk in one group during the issue's day: how much was said, and the end of it to read. */
 export interface TalkBurst {
     group: BoardScope;
     count: number;
@@ -83,14 +70,12 @@ export interface TalkBurst {
     href: string;
 }
 
-/** An event whose open date is still ahead: the activity row's fields plus the day it falls on. */
 export interface UpcomingEvent extends CommunityActivityEntry {
     /** `Y-m-d` civil date, no instant — format with <CivilDate>, never as an instant. */
     openDate: string;
 }
 
 export interface Issue extends IssueRef {
-    /** When the issue went out, as an instant. */
     /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
     days: { from: string; to: string };
     /** The instants those days were drawn from, `(from, to]`. What the colophon states. */

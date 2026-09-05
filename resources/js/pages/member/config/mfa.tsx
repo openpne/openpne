@@ -15,9 +15,8 @@ type Props =
     | { state: 'enabled'; recoveryCodesCount: number; recoveryCodes?: string[] };
 
 /**
- * The one-time recovery-code list, shown right after confirm/regenerate minted it. Dashed frame +
- * an explicit "only this once" lead so it reads as a moment to act on, not page furniture that
- * would still be here on the next visit.
+ * Shown on the one render the codes exist, so it reads as a moment to act on rather than page
+ * furniture that would still be here next visit.
  */
 function RecoveryCodes({ codes }: { codes: string[] }) {
     const t = useT();
@@ -26,9 +25,8 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
         <section className="space-y-2 rounded-md border-2 border-dashed border-foreground/30 p-4">
             <Heading as="h2" variant="section">{t('Recovery codes')}</Heading>
             <p className="flex items-start gap-1.5 text-sm text-foreground">
-                {/* Inherits the text color rather than taking --warning: that amber is a fill token and
-                    reads 1.96:1 on a light card, under the 3:1 a meaningful glyph needs. The shape is
-                    the channel here, not the hue. */}
+                {/* Inherits the text color rather than taking --warning: that amber is a fill token
+                    and reads 1.96:1 on a light card, under the 3:1 a meaningful glyph needs. */}
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {t('These codes are shown only this once.')}
             </p>
@@ -161,8 +159,8 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
     const [useRecovery, setUseRecovery] = useState(false);
 
     function toggleRecovery() {
-        // Clear the now-inactive proof AND its stale error: reset() alone leaves a prior invalid
-        // attempt's error to reappear on toggling back. The password is kept.
+        // Clear the now-inactive proof and its stale error: reset() alone leaves a prior invalid
+        // attempt's error to reappear on toggling back.
         disable.resetAndClearErrors('code', 'recovery_code');
         setUseRecovery((v) => !v);
     }
@@ -179,8 +177,6 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                 </p>
             )}
 
-            {/* Each management form leads with a heading + what it does; the password and code
-                fields are the means, not the message. */}
             <div className="border-t border-border pt-5">
                 <FormSection
                     title={t('Regenerate recovery codes')}

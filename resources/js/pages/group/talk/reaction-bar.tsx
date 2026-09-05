@@ -7,12 +7,8 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 /**
- * The emoji on one message, in two places: the chips under what was said, and the button that adds
- * one among the row's own controls. Split because they answer different questions — the chips are
- * part of the message, the way to react to it is one of the things you can do with it.
- *
- * A tap on a chip is that emoji's own toggle: holding it takes it back, not holding it adds it. Both
- * are drawn from the chip's `mine`, so what the control does is what the row already shows.
+ * A tap on a chip is that emoji's own toggle, drawn from the chip's `mine`, so what the control does
+ * is what the row already shows.
  */
 
 const CHIP_BASE =
@@ -78,19 +74,13 @@ export function TalkReactionChips({
 const PICKER_BUTTON =
     'inline-flex items-center justify-center rounded-full border border-transparent text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-// How much of the vocabulary a row carries in the open: its head, so reacting at all is one click and
-// the rest of the set stays behind the picker. Three is what fits before the bar crowds the row it
-// floats over.
+// Three is what fits before the bar crowds the row it floats over.
 export const QUICK_REACTIONS = 3;
 
 /**
- * The whole vocabulary as buttons, each one already knowing whether it is held: the picker's contents
- * wherever the picker is offered — the popover a cursor opens, the sheet a press does. One source
- * because the two are the same set of choices, and a set that drifted between them would be two
- * different answers to the same question.
- *
- * The buttons come loose rather than in a box: what encloses them is the surface's own business, and
- * a popover sized to four columns and a full-width sheet do not lay them out the same way.
+ * One source for both places the picker is offered, so the two cannot drift into different answers to
+ * the same question. The buttons come loose rather than in a box: what encloses them is the caller's
+ * business.
  */
 export function TalkReactionPickerGrid({
     chips,
@@ -136,9 +126,8 @@ export function TalkReactionAdd({
     onPick: (emoji: string, mine: boolean) => void;
 }) {
     const t = useT();
-    // Each row's picker holds its own. Pressing another row's button is an outside press to this one,
-    // so it gives itself up — one open at a time, without the page closing it from outside and the
-    // focus it hands back landing in the picker that just opened.
+    // Each row's picker holds its own: pressing another row's button is an outside press to this one,
+    // so one is open at a time without the page closing it from outside.
     const [open, setOpen] = useState(false);
 
     return (
@@ -150,14 +139,8 @@ export function TalkReactionAdd({
                     </button>
                 </PopoverTrigger>
             </Tip>
-            {/* Upward and right-aligned: the button sits at the end of a row inside a list that
-                usually ends at the foot of the screen, so below is where there is no room. The card
-                the list stands in clips its overflow, which is why this is portalled rather than a
-                child of the row.
-
-                Four columns' worth of width, wrapping past that. Sizing it to the vocabulary
-                instead would run off the left edge of a phone from an anchor already at the right
-                one, and a set this list does not choose could be any length. */}
+            {/* Portalled because the card the list stands in clips its overflow, and capped at four
+                columns so a set this list does not choose cannot run off a phone's edge. */}
             <PopoverContent side="top" align="end" aria-label={t('Reactions')} className="flex w-max max-w-[13.5rem] flex-wrap gap-1">
                 <TalkReactionPickerGrid
                     chips={chips}

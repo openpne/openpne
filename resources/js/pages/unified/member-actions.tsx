@@ -5,7 +5,6 @@ import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-/** The profile keys this row is drawn from — the ones the digest profile's action block reads. */
 export interface MemberActionsProfile {
     id: number;
     name: string;
@@ -24,12 +23,8 @@ const PILL = 'rounded-full!';
 const SENTENCE_PILL = `${PILL} whitespace-normal text-center`;
 
 /**
- * What the viewer can do about this member, under the hero. The same entries the digest profile
- * offers, with the same destinations and the same conditions — restyled as one centered row, because
- * here they stand where a header's actions stand rather than inside a panel of text.
- *
- * The page renders for a signed-in member only (a guest keeps the digest profile), so the viewer is
- * never a guest and the gate is the relationship alone.
+ * The page renders for a signed-in member only, so the viewer is never a guest and the gate is the
+ * relationship alone.
  */
 export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
     const t = useT();
@@ -69,8 +64,8 @@ export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
                             {t('Send a %friend% request')}
                         </ActionLink>
                     )}
-                    {/* A request already sent is a state, not an errand: quiet, and it leads to the
-                        one screen where it can be taken back. One received is the errand. */}
+                    {/* A request already sent is a state, not an errand; one received is the
+                        errand. */}
                     {profile.friendStatus === 'sent' && (
                         <ActionLink href="/friend/requests" variant="outline" size="sm" className={SENTENCE_PILL}>
                             {t('%Friend% request pending.')}

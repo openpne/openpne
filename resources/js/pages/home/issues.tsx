@@ -5,10 +5,7 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { IssuesPageProps } from './types';
 
-/**
- * The run of days, newest first. A day is called by its date, so the date is the line and the link:
- * that is what a reader looking for a particular morning remembers, and it is the only name one has.
- */
+/** A day is called by its date, so the date is both the line and the link. */
 export default function HomeIssues() {
     const t = useT();
     const { issues } = usePage<IssuesPageProps>().props;

@@ -8,8 +8,6 @@ interface RecentProps extends PageProps {
     activity: CommunityActivityEntry[];
 }
 
-/** The dashboard's group activity digest, expanded: recent topics and events across the
- *  viewer's joined groups, merged newest-first. */
 export default function CommunityRecent() {
     const t = useT();
     const { activity } = usePage<RecentProps>().props;

@@ -4,14 +4,7 @@ import { CivilDate } from '@/components/timestamp';
 import { useT } from '@/lib/i18n';
 import type { IssueRef } from './types';
 
-/**
- * The way out of one day: the day before it, the day after it, and the full run.
- *
- * Same pager grammar as a diary entry's older/newer pair, so the two read as one movement — the
- * direction is the chevron's, and what the reader is moving to is named under the label. Today has
- * nothing after it, so its right half is empty rather than disabled: there is no future day to say
- * anything about.
- */
+/** Today has nothing after it, so its right half is empty rather than disabled. */
 export function IssueNav({ prev, next }: { prev: IssueRef | null; next: IssueRef | null }) {
     const t = useT();
 

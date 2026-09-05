@@ -70,8 +70,8 @@ export default function MemberEditProfile() {
         visibility: Object.fromEntries(
             form.fields.filter((f) => f.is_edit_public_flag).map((f) => [f.id, f.visibility]),
         ) as Record<number, number>,
-        // Absent (undefined → not submitted) when the site has no birthday item. Submitted with the
-        // whole form and always persisted server-side — the value shown is the value affirmed.
+        // Absent (undefined → not submitted) when the site has no birthday item; otherwise the value
+        // shown is the value affirmed.
         age_visibility: form.age?.value,
     });
 
@@ -122,9 +122,8 @@ export default function MemberEditProfile() {
                                         }
                                     />
                                 </div>
-                                {/* The age gate sits right under the birthday it derives from, so the two-gate
-                                    model reads in place: the birthday control above governs the month/day, this
-                                    one the derived age. */}
+                                {/* The age gate sits under the birthday it derives from, so the two-gate
+                                    model reads in place. */}
                                 {field.name === BIRTHDAY_FIELD && form.age && (
                                     <AgeVisibilityBlock
                                         age={form.age}
