@@ -5,10 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * email_change_requests.cancel_token: the SHA-256 hash of a second raw token, carried by the cancel
- * link in the old-address security notice so its holder can void a pending change without signing in.
- * Nullable — a row created before this migration (an in-flight change during deploy) has none and its
- * already-sent notice carried no cancel link — and unique, since it is a hash and a lookup key.
+ * Nullable because a change already in flight when this migration runs has no cancel token and its
+ * sent notice carried no cancel link.
  */
 return new class extends Migration
 {

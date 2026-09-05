@@ -7,26 +7,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Some push services issue endpoints longer than 500 characters, and a device holding one could not
- * register — worse, the 422 read as a definitive refusal and shed the subscription on every reconcile.
- *
- * 500 was as wide as a utf8mb4 unique index fits under MySQL's 3072-byte key limit. An endpoint is a
- * URL, so ASCII (App\Rules\PushEndpoint now refuses anything else): on ascii the same index fits 1024,
- * and ascii_bin keeps the byte-exact identity utf8mb4_bin gave it. One MODIFY, with the unique index
- * left in place — both forms sit well under the key limit — so the change either lands whole or
- * leaves the table as it was. Rows the target column could not hold are deleted first, in either
- * direction: a subscription is disposable (the device re-registers on its next visit), and a row that
- * failed the ALTER would strand the migration instead.
- *
- * SQLite declares the column as a bare varchar, no width and no charset, so only the cleanup runs there.
+ * An endpoint is a URL, so on ascii the unique index fits 1024 characters under MySQL's 3072-byte
+ * key limit and ascii_bin keeps the byte-exact identity utf8mb4_bin gave it. Rows the target column
+ * cannot hold are deleted first in either direction, a subscription being disposable, and on SQLite,
+ * which declares a bare varchar, only that cleanup runs.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        // A frozen copy of the rule's character class and bound as of this migration, so the stored set
-        // satisfies what the store and the unsubscribe demand — a row the column could hold but the
-        // rule refuses could never be dropped.
+        // Frozen as of this migration rather than read from the rule, and matched on the character
+        // class so no row the rule refuses survives.
         $this->deleteWhere(fn (string $endpoint): bool => preg_match('/\A[\x21-\x7e]{1,1024}\z/', $endpoint) !== 1);
         $this->resize(1024, 'ascii', 'ascii_bin');
     }

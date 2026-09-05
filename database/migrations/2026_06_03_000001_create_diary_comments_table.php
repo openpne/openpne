@@ -14,18 +14,14 @@ return new class extends Migration
             // OpenPNE 3 keeps a comment when its author is deleted (Member onDelete: set null),
             // so the thread stays intact and the comment shows as a withdrawn member.
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
-            // Per-diary sequence (OpenPNE 3 DiaryComment.number), rendered as "3:" and used for
-            // chronological ordering. Assigned max(number)+1 per diary at create time.
             $table->unsignedInteger('number');
             // TEXT (not VARCHAR): OpenPNE 3 comment body is Doctrine `type: string` = MySQL TEXT
             // with no validator length limit, so migrated long comments must not be truncated.
             $table->text('body');
             $table->timestamps();
 
-            // Non-unique, matching OpenPNE 3's diary_id_number index: its `number` is a racy
-            // max+1, so legacy data can carry duplicate (diary_id, number) and must import
-            // losslessly. New comments are serialized by the diary-row lock in CreateComment.
-            // Drives the thread query: WHERE diary_id=? ORDER BY number.
+            // Not unique: OpenPNE 3's own index is not unique and migrated data may carry duplicate
+            // (diary_id, number) (docs/internals/diary.md, "Comment numbering").
             $table->index(['diary_id', 'number']);
         });
     }

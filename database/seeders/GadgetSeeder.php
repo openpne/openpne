@@ -7,15 +7,13 @@ use App\Services\GadgetService;
 use Illuminate\Database\Seeder;
 
 /**
- * The default PC gadget set. Mobile / smartphone types are dropped (those frontends are out of
- * scope). Config is left to each kind's defaults. Runs on db:seed, not migrate, so an existing
- * install has no gadgets until seeded (pre-release).
+ * Only the PC types of OpenPNE 3's default gadget set are seeded; the mobile and smartphone ones
+ * are not.
  */
 class GadgetSeeder extends Seeder
 {
     /** @var list<array{context: string, zone: string, name: string, sort_order: int}> */
     private const ITEMS = [
-        // home
         ['context' => 'home', 'zone' => 'top', 'name' => 'birthdayBox', 'sort_order' => 0],
         ['context' => 'home', 'zone' => 'top', 'name' => 'informationBox', 'sort_order' => 20],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryFriendList', 'sort_order' => 101],
@@ -29,7 +27,6 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'groupJoinListBox', 'sort_order' => 30],
 
-        // profile
         ['context' => 'profile', 'zone' => 'top', 'name' => 'birthdayBox', 'sort_order' => 0],
         ['context' => 'profile', 'zone' => 'contents', 'name' => 'timelineProfile', 'sort_order' => 20],
         ['context' => 'profile', 'zone' => 'contents', 'name' => 'diaryMemberList', 'sort_order' => 101],
@@ -38,10 +35,8 @@ class GadgetSeeder extends Seeder
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'groupJoinListBox', 'sort_order' => 30],
 
-        // login
         ['context' => 'login', 'zone' => 'contents', 'name' => 'loginForm', 'sort_order' => 10],
 
-        // sidebanner (global)
         ['context' => 'sidebanner', 'zone' => 'contents', 'name' => 'languageSelecterBox', 'sort_order' => 10],
     ];
 

@@ -118,6 +118,10 @@ keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file
 `.ibd` move) after dropping the source FK. `snapshot()` records `MAX(file.id)` as the bound for a
 post-switchover rollback.
 
+The table's four columns are frozen: adding or dropping one turns that metadata-only ALTER into a
+full table rebuild. Every column is charset-neutral (INT / LONGBLOB / DATETIME), so the app's
+utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
+
 ## Verify
 
 `openpne:verify-upgrade` re-counts source and target without trusting the runner's report.

@@ -32,7 +32,7 @@ class TimelinePostFactory extends Factory
         return $this->state(['visibility' => Visibility::Friends]);
     }
 
-    /** A reply to $parent, copying its visibility (the runtime contract). */
+    /** Copies the parent's visibility, as the runtime does. */
     public function replyTo(TimelinePost $parent): static
     {
         return $this->state([

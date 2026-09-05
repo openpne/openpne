@@ -6,41 +6,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Stored bytes of uploaded files (the OpenPNE 3 `file_bin` table, kept as-is).
- * This is the physical backend of the default DB-BLOB file storage
- * (DbBlobFileStorage), keyed by `file_id`.
- *
- * The schema here is FROZEN to OpenPNE 3's real DDL — file_id (signed INT) PK,
- * bin (LONGBLOB, nullable), created_at / updated_at (DATETIME NOT NULL) — because
- * the upgrade tool migrates this table by a metadata-only ALTER (rewiring the
- * file_id FK from the old `file` table onto `files`), not by copying its BLOBs.
- * That saves order-of-magnitude I/O at switchover (a single site's bytes can be
- * gigabytes). Adding or dropping any column here would turn that rewire into a
- * full table rebuild and defeat the optimisation, so the column set must not
- * change. The fresh-install schema must equal the upgrade target (one schema for
- * both paths), which is why this matches the real OpenPNE 3 DDL column-for-column.
- *
- * All columns are charset-neutral (INT / LONGBLOB / DATETIME, no character data),
- * so the table DEFAULT CHARSET (utf8mb4 here vs OpenPNE 3's utf8mb3) does not
- * affect the metadata-only property — only character columns would force a rewrite.
- *
- * `bin` is declared via the column builder as BLOB (Laravel's binary() cap on
- * MySQL) and widened to LONGBLOB on MySQL below; SQLite BLOB has no size class.
+ * Frozen to OpenPNE 3's four columns: the upgrade migrates this table by a metadata-only ALTER,
+ * and adding or dropping one would turn that into a full rebuild (docs/internals/upgrade.md,
+ * "file_bin").
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        // A same-database OpenPNE 3 upgrade restores the dump's own file_bin (LONGBLOB, schema-frozen
-        // equal, FK still onto the old `file`) before migrate runs; skip so we neither clash on CREATE
-        // nor rebuild it — the upgrade runner re-points its FK onto `files`. Fresh installs create it.
+        // A same-database upgrade restores the dump's own file_bin before migrate runs, so skipping
+        // the create keeps its rows for the runner to re-point onto `files`.
         if (Schema::hasTable('file_bin')) {
             return;
         }
 
         Schema::create('file_bin', function (Blueprint $table) {
-            // Signed INT PK matching files.id (file header: keeps the upgrade FK
-            // rewire metadata-only). MySQL makes a PK column implicitly NOT NULL.
+            // Signed INT PK to match files.id; MySQL makes a PK implicitly NOT NULL, as the frozen
+            // DDL requires.
             $table->integer('file_id')->primary();
             // Nullable to match OpenPNE 3 (bin has no NOT NULL there); the uploader
             // always writes bytes, so it is never null in practice.
@@ -51,9 +33,8 @@ return new class extends Migration
             $table->foreign('file_id')->references('id')->on('files')->cascadeOnDelete();
         });
 
-        // Laravel's binary() emits MySQL BLOB (64 KiB cap), too small for images.
-        // Widen to LONGBLOB on a freshly created empty table (instant, metadata
-        // only). SQLite BLOB is unbounded, so it needs no change.
+        // Laravel's binary() emits MySQL BLOB (64 KiB cap), too small for images; SQLite BLOB is
+        // unbounded and needs no widening.
         if (Schema::getConnection()->getDriverName() === 'mysql') {
             DB::statement('ALTER TABLE file_bin MODIFY bin LONGBLOB NULL');
         }

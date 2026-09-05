@@ -6,14 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Lets a talk message carry a link card, on the same two columns the other bodies carry one on
- * (2026_08_06_000002_add_link_card_to_body_tables). The "messages" that migration names as
- * deliberately absent are direct messages, which this does not change: `group_messages` did not
- * exist when it was written.
- *
- * The SQLite index is the same exception 2026_08_07_000001 makes: InnoDB backs a foreign key with an
- * index and SQLite backs it with nothing, so without this the prune sweep's "does any body still
- * point at this card" degrades into a full scan of the talk table there.
+ * InnoDB backs a foreign key with an index and SQLite backs none, so the index is added on the
+ * SQLite lane only.
  */
 return new class extends Migration
 {

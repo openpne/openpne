@@ -5,9 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * groups.is_join_notification_enabled (OpenPNE 3 community_config[is_send_pc_joinCommunity_mail]):
- * whether the community's admins are told when a member joins. Default true — OpenPNE 3 treated an absent
- * value as on. No index: boolean selectivity is poor and the flag is read per community, not scanned.
+ * Default true because OpenPNE 3 treated an absent is_send_pc_joinCommunity_mail as on.
  */
 return new class extends Migration
 {
