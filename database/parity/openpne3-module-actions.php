@@ -1,8 +1,8 @@
 <?php
 
 /**
- * OpenPNE 3 `module/action` → route name, split `no_id` / `with_id` because symfony resolved one
- * pair to different routes by context. A pair absent here, or whose module disabled OpenPNE 3's
+ * OpenPNE 3 `module/action` → route name (or a literal URL for an action OpenPNE 3 never named),
+ * split `no_id` / `with_id` because symfony resolved one pair to different routes by context. A pair absent here, or whose module disabled OpenPNE 3's
  * global `/:module/:action` fallback, is left unresolved by the upgrade.
  */
 

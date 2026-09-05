@@ -119,9 +119,9 @@ keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file
 post-switchover rollback.
 
 The table's four columns are frozen because the fresh-install schema must equal the upgrade
-target: neither upgrade path runs the app's `CREATE TABLE` (a same-database dump keeps its own
-`file_bin`, a source-database run RENAMEs the source table in), so a column added to the migration
-would exist on fresh installs only. Every column is charset-neutral (INT / LONGBLOB / DATETIME), so
+target: neither upgrade path keeps the table the app's `CREATE TABLE` makes (a same-database dump
+keeps its own `file_bin`, a source-database run drops the empty app table and RENAMEs the source in),
+so a column added to the migration would exist on fresh installs only. Every column is charset-neutral (INT / LONGBLOB / DATETIME), so
 the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
 
 ## Verify
