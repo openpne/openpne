@@ -158,7 +158,6 @@ class MemberConfigController extends Controller
         return $this->savedRedirect($request, MemberConfigCategory::Diary, flashOnModern: false);
     }
 
-    // Classic-only: the Modern setter lives on the profile-edit form.
     public function updateProfileVisibility(UpdateProfileVisibilityRequest $request): RedirectResponse
     {
         // Under a policy that decides for everyone the section is hidden, and a crafted POST
@@ -171,9 +170,10 @@ class MemberConfigController extends Controller
         $viewer->profile_visibility = Visibility::from((int) $request->validated('profile_visibility'));
         $viewer->save();
 
-        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
+        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag, flashOnModern: false);
     }
 
+    // Classic-only: the Modern setter lives on the profile-edit form.
     public function updateAge(UpdateAgeVisibilityRequest $request, BirthdayFieldExists $birthdayExists): RedirectResponse
     {
         // Without a birthday item a crafted POST persists nothing, landing where the hidden
