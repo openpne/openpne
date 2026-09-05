@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
  * A tap on a chip is that emoji's own toggle, drawn from the chip's `mine`, so what the control does
  * is what the row already shows.
  */
-
 const CHIP_BASE =
     'inline-flex min-h-8 items-center gap-1 rounded-full border px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 

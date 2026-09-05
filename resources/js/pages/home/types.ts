@@ -5,10 +5,6 @@ import type { CommunityActivityEntry } from '../community/activity-row';
 import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '../unified/group-grid';
 
-/**
- * Every optional section key is absent when it is empty, never `[]`, so nothing has to decide what
- * an empty list means on screen.
- */
 export interface IssueRef {
     /** The site's calendar day the issue covers, `Y-m-d` — a civil date, never an instant. */
     date: string;
@@ -75,6 +71,10 @@ export interface UpcomingEvent extends CommunityActivityEntry {
     openDate: string;
 }
 
+/**
+ * Every optional section key is absent when it is empty, never `[]`, so nothing has to decide what
+ * an empty list means on screen.
+ */
 export interface Issue extends IssueRef {
     /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
     days: { from: string; to: string };

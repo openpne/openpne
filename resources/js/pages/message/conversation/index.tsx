@@ -255,7 +255,7 @@ export default function MessageConversation() {
 
             {/* Withheld while the banner has this slot, and at the foot of the live window
                 (docs/internals/group-talk.md, "Date headings, and what stands above a row"). */}
-<ChatScrollDay ref={scrollDayLine} at={scrollDayAt} />
+            <ChatScrollDay ref={scrollDayLine} at={scrollDayAt} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot and the boundary this offers is a

@@ -159,8 +159,8 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
     const [useRecovery, setUseRecovery] = useState(false);
 
     function toggleRecovery() {
-        // Clear the now-inactive proof and its stale error: reset() alone leaves a prior invalid
-        // attempt's error to reappear on toggling back.
+        // Clear the now-inactive proof and its stale error, keeping the password: reset() alone
+        // leaves a prior invalid attempt's error to reappear on toggling back.
         disable.resetAndClearErrors('code', 'recovery_code');
         setUseRecovery((v) => !v);
     }

@@ -16,6 +16,7 @@ import { WelcomePanel } from './welcome';
 
 const storyKey = (story: IssueStory): string => `${story.kind}-${story.id}`;
 
+/** How many stories are cards beside the lead, not a duration. */
 const SECONDS = 2;
 
 /**

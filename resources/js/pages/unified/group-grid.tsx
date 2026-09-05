@@ -12,7 +12,8 @@ export interface HomeGroup {
 }
 
 /**
- * The scrim is one arbitrary gradient because the palette guard admits no raw color-stop utility.
+ * A gradient rather than a flat strip, which hides too much of the photo or too little of the text,
+ * spelled as one arbitrary utility because the palette guard admits no raw color-stop utility.
  * `text-scrim-foreground` is the one token that stays white in both themes, because what it sits on
  * is an uploaded picture rather than a surface.
  */
