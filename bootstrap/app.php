@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureFeatureEnabled;
+use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
@@ -71,6 +72,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // ThrottleRequests and SubstituteBindings, so a disabled unit consumes no limiter and reaches no
         // missing() handler.
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureFeatureEnabled::class);
+        $middleware->appendToPriorityList(EnsureFeatureEnabled::class, EnsureTimelinePostingEnabled::class);
 
         // Sanctum ships its ability checks unaliased; `ability` is the any-of check, which for a single
         // ability is also all-of.

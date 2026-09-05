@@ -131,6 +131,18 @@ queue, and a mail carries the post body to whoever is eligible at *delivery* tim
 
 `timelineNewPostCommunity` stays dormant (`isWired: false`) — see the replacement note below.
 
+## Posting switch
+
+`SnsSettingKey::TimelinePostingEnabled` (OpenPNE 3 `is_allow_post_activity`, on by default) is the
+site-wide "may members write" switch. Off, [`EnsureTimelinePostingEnabled`](../../app/Http/Middleware/EnsureTimelinePostingEnabled.php)
+answers the compose page, the post route, the reply route and the mention picker with 404 — OpenPNE 3 forwarded its
+posting action to 404 and refused the API's activity POST, which its timeline plugin used for
+comments as well, so replies are gated with posts. It sits after the auth gate and before the
+throttle in the middleware priority list, so a refused POST consumes no limiter. Every compose and
+reply affordance on both surfaces reads [`TimelinePosting`](../../app/Features/Timeline/TimelinePosting.php)
+and disappears; what is already posted stays readable, and deleting is untouched. This is a policy
+on top of the timeline unit, not the unit's own toggle ([feature-toggles](feature-toggles.md)).
+
 ## Key invariants
 
 - Offsets and lengths are Unicode code points, half-open, ascending, non-overlapping. The write path

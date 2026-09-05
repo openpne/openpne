@@ -25,12 +25,13 @@ interface ShowProps extends PageProps {
     post: TimelinePostEntry;
     replies: TimelinePostEntry[];
     viewerId: number;
+    canPost: boolean;
 }
 
 export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { post, replies, viewerId } = usePage<ShowProps>().props;
+    const { post, replies, viewerId, canPost } = usePage<ShowProps>().props;
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -94,6 +95,7 @@ export default function TimelineShow() {
                 </Panel>
             )}
 
+            {canPost && (
             <Panel overflow="visible">
                 <form onSubmit={submitReply} className="space-y-2">
                     <Field
@@ -118,6 +120,7 @@ export default function TimelineShow() {
                     </Button>
                 </form>
             </Panel>
+            )}
         </>
     );
 }

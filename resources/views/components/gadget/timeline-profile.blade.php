@@ -5,6 +5,7 @@
      there is no server-DOM contract to preserve); the owner keeps the frame with the empty line. No
      compose path, as OpenPNE 3 had none here: posting is the home gadget's box. --}}
 @php($isOwn = $subject !== null && $subject->is(auth()->user()))
+@php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
 @if ($posts->isNotEmpty() || $isOwn)
     @include('timeline._stylesheets')
     @include('timeline._scripts')
@@ -14,7 +15,7 @@
             <div class="timeline" data-timeline-container>
                 <div id="timeline-list">
                     @foreach ($posts as $post)
-                        @include('timeline._post', ['post' => $post])
+                        @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                     @endforeach
                 </div>
                 @if ($hasMore)

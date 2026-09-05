@@ -11,6 +11,7 @@ import type { PaginatedDiaries } from './types';
 
 interface FeedProps extends PageProps {
     variant: 'recent' | 'friends' | 'search';
+    searchable: boolean;
     keyword: string;
     hasKeyword: boolean;
     diaries: PaginatedDiaries;
@@ -18,8 +19,7 @@ interface FeedProps extends PageProps {
 
 export default function DiaryFeed() {
     const t = useT();
-    const { variant, keyword, hasKeyword, diaries } = usePage<FeedProps>().props;
-    const searchable = variant !== 'friends';
+    const { variant, searchable, keyword, hasKeyword, diaries } = usePage<FeedProps>().props;
     // The hub header (h1 = nav label, tabs, write action) comes from the frame; the browser Head
     // title keeps the fuller per-view description.
     const headTitle =

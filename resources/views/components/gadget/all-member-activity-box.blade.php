@@ -1,11 +1,13 @@
 {{-- OpenPNE 3 allMemberActivityBox (member/_allMemberActivityBox via op_include_box): the whole SNS's
-     members-only activity. When the post form is enabled (is_viewable_activity_form) the frame always
-     renders and offers a post entry point; otherwise an empty box is dropped. --}}
-@if ($posts->isNotEmpty() || $showForm)
+     members-only activity. The form needs both the gadget's is_viewable_activity_form and the
+     site-wide switch; with a form the frame always renders and offers a post entry point, otherwise
+     an empty box is dropped. --}}
+@php($offersPost = $showForm && \App\Features\Timeline\TimelinePosting::enabled())
+@if ($posts->isNotEmpty() || $offersPost)
     <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
         <div class="partsHeading"><h3>{{ __("SNS Member's %activity%") }}</h3></div>
         <div class="body">
-            @if ($showForm)
+            @if ($offersPost)
                 {{-- OpenPNE 3 rendered an inline post form here; the Classic port links to the post page. --}}
                 <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
             @endif

@@ -128,6 +128,23 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'group_event_comment_reply', 'value' => '1']);
     }
 
+    public function test_migrates_the_posting_switch_and_the_diary_search_settings(): void
+    {
+        // Off is the case that matters for the two default-on switches: a site that had closed
+        // posting or search would silently reopen if the row did not carry over.
+        $this->seedConfig('is_allow_post_activity', '0');
+        $this->seedConfig('op_diary_plugin_search_enable', '0');
+        $this->seedConfig('op_diary_plugin_search_period_enable', '1');
+        $this->seedConfig('op_diary_plugin_search_period', '7');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'timeline_posting_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_search_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_search_period_enabled', 'value' => '1']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_search_period_days', 'value' => '7']);
+    }
+
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
         $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default

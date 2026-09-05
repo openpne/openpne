@@ -5,6 +5,7 @@
 @section('title', $title)
 
 @section('content')
+    @php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
     @include('timeline._stylesheets')
     @include('timeline._scripts')
     {{-- OpenPNE 3's showSuccess.php emits a bare partsHeading over a .timeline-large div its themes
@@ -21,21 +22,23 @@
              (OpenPNE 3 reads by id), and no inline form — this page's own is that. --}}
         <div class="timeline-large">
             <div id="timeline-list">
-                @include('timeline._post', ['post' => $post, 'thread' => true])
+                @include('timeline._post', ['post' => $post, 'thread' => true, 'canPost' => $canPost])
             </div>
         </div>
 
-        <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
-              data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
-            @csrf
-            @include('timeline._mention-draft')
-            <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>
-            @error('body')
-                <p role="alert">{{ $message }}</p>
-            @enderror
-            <button type="submit">{{ __('Reply') }}</button>
-        </form>
-        @include('timeline._mention-picker')
+        @if ($canPost)
+            <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
+                  data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+                @csrf
+                @include('timeline._mention-draft')
+                <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>
+                @error('body')
+                    <p role="alert">{{ $message }}</p>
+                @enderror
+                <button type="submit">{{ __('Reply') }}</button>
+            </form>
+            @include('timeline._mention-picker')
+        @endif
 
         <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
     </x-classic.parts>
