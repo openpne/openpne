@@ -255,8 +255,7 @@ needs no words") is what breaks this; a theme that brings the two colours togeth
 
 The heading was a pill for a while so that meeting the unread line could not read as one divider; that
 made its label float, and a floating label does not say which side of it the day belongs to. A rule
-says it by being a boundary. Mattermost, whose rows are shaped like these, draws one separator and
-overrides only its colours for the unread one.
+says it by being a boundary.
 
 **Those two are the only rules in the list.** Rows are told apart by the space above them: a rule
 between two people speaking is the vocabulary of a board, and this is a conversation. Space also says

@@ -38,7 +38,7 @@ export interface ChatStreamEndpoints {
     delete?: (id: number) => string;
 }
 
-/** Without it the poll asks what it always asked and `react` refuses. */
+/** Optional: without reactions the poll asks what it always asked and `react` refuses. */
 export interface ChatReactions {
     /** The conversation's reaction version at render — where the poll starts reading changes from. */
     initialVersion: number;
@@ -151,10 +151,11 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         };
 
         const timer = setInterval(poll, POLL_MS);
-        // Returning to the tab is when a stale conversation is seen, so refresh then too.
+        // Returning to the tab is when a stale conversation is seen, so refresh then too; a bfcache
+        // return remounts nothing, so this listener is also what answers it.
         document.addEventListener('visibilitychange', poll);
         // This list is seeded once at mount, so the app-wide reload that answers a restore does not
-        // refresh it and the restore has to poll here.
+        // refresh it and a restore that remounts the page has to poll here.
         if (consumeHistoryRestore()) {
             poll();
         }

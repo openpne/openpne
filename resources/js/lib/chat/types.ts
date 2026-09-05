@@ -4,7 +4,7 @@ export interface ChatReactionChip {
     mine: boolean;
 }
 
-/** Everything else a conversation shows — bodies, authors, attachments — is the page's own. */
+/** What the stream machinery reads of a message; bodies, authors and attachments are the page's own. */
 export interface ChatStreamRow {
     id: number;
     createdAt: string;

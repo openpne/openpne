@@ -105,6 +105,7 @@ interface LookSpec {
      *  only, deep pages keeping the byScreen bars; 'breadcrumb' = every screen class but a compose
      *  sheet, which is a mode rather than a class. */
     topBar: 'byScreen' | 'unified' | 'breadcrumb';
+    /** Reserves `--modern-top-offset` at lg+, which the place bar and the conversations read. */
     desktopTopBar: boolean;
     /** Which row the phone bottom bar draws. 'labeled' = each tab's icon over its full label;
      *  'dive' = the search | place | notifications zones. */

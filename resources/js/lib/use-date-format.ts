@@ -67,11 +67,6 @@ export function useDateFormat(): {
 }
 
 /**
- * Singular and plural are separate keys rather than one `:count` key, because English needs "a minute
- * ago" and only the string form of `t` is exposed. Every key is a literal here so the translation
- * scanner can find it.
- */
-/**
  * Only today and yesterday become words: past that the reader is placing the day on a calendar rather
  * than against now, and {@link formatDayLabel} writes it out with the weekday.
  */
@@ -86,6 +81,11 @@ function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: strin
     }
 }
 
+/**
+ * Singular and plural are separate keys rather than one `:count` key, because English needs "a minute
+ * ago" and only the string form of `t` is exposed. Every key is a literal here so the translation
+ * scanner can find it.
+ */
 function relativeLabel(
     iso: string,
     context: DateFormatContext,
