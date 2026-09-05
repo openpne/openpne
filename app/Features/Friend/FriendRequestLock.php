@@ -5,6 +5,10 @@ namespace App\Features\Friend;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Block mutations touch the same pair, so they take this lock too. The pair is locked as (low id, high
+ * id) whichever way the caller passes it, so two writers never wait on each other in opposite order.
+ */
 class FriendRequestLock
 {
     public static function acquire(Member $a, Member $b): void

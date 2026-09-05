@@ -85,7 +85,7 @@ class MfaResetLinkController extends Controller
         SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'reset_link']);
         $member->notify(new MfaDisabledNotification($member->locale ?? app()->getLocale()));
 
-        // ConsumeMfaReset revoked every session, but not this request's, so the subject's own ends here.
+        // ConsumeMfaReset already purged this session's row; logging out drops the stale guard state and cookie.
         if (Auth::guard('member')->id() === $member->getKey()) {
             Auth::guard('member')->logout();
             $request->session()->invalidate();

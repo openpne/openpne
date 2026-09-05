@@ -5,7 +5,7 @@ namespace App\Features\Friend\Queries;
 use App\Models\Member;
 use Illuminate\Support\Collection;
 
-/** `inRandomOrder()` sorts one member's friend list, not the member table. */
+/** `inRandomOrder()` runs over one member's friend rows only, so its cost is the friend count, not the member table. */
 class RandomFriends
 {
     public const LIMIT = 9;

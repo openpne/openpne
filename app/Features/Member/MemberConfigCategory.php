@@ -3,8 +3,8 @@
 namespace App\Features\Member;
 
 /**
- * Keys mirror the OpenPNE 3 `member_config.yml` category keys, which the URLs carry. `General`, `Ai`
- * and `Mfa` are OpenPNE 4-native, with no OpenPNE 3 category.
+ * Keys mirror the OpenPNE 3 `member_config.yml` category keys, which the URLs carry. `Ai`, `Mfa`,
+ * `Email` and `Withdrawal` are OpenPNE 4-native, with no OpenPNE 3 category.
  */
 enum MemberConfigCategory: string
 {

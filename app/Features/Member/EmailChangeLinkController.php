@@ -92,7 +92,7 @@ class EmailChangeLinkController extends Controller
         // assumes the database session driver.
         SessionRevocation::purgeMemberSessions((int) $member->getKey());
 
-        // A different logged-in member was turned away above, so this session is the subject's own.
+        // The purge above already dropped this session's row; logging out drops the stale guard state and cookie.
         if (Auth::guard('member')->id() === $member->getKey()) {
             Auth::guard('member')->logout();
             $request->session()->invalidate();

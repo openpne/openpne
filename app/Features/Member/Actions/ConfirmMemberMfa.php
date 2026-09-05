@@ -9,10 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 
-/**
- * Fortify raises an invalid code in its `confirmTwoFactorAuthentication` error bag, which the
- * controller translates; the mismatch thrown here is already default-bag.
- */
 class ConfirmMemberMfa
 {
     use SyncsCallerInstance;

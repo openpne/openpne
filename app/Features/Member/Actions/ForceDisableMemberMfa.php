@@ -11,7 +11,7 @@ use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 /**
  * For the two contexts with no second-factor proof to demand, the operator CLI and the reset link,
  * where {@see DisableMemberMfa} demands one; returns whether a live factor was removed. Every session
- * is revoked, with no except-session: neither caller holds the member's own browser session.
+ * is revoked with no except-session, so a logged-in reset-link caller must log itself out afterwards.
  */
 class ForceDisableMemberMfa
 {

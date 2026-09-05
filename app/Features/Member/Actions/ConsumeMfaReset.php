@@ -10,8 +10,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The member is a guest here, so the account password is the proof, checked with `Hash::check`
- * because the `current_password:member` rule needs an authenticated member. The controller never
- * pre-reads or pre-mutates: this takes an id, re-reads under the lock, and returns a result.
+ * because the `current_password:member` rule needs an authenticated member. Takes an id rather than a
+ * pre-read row: the member is re-read under the lock and the outcome is returned, never pre-mutated.
  *
  * @throws ValidationException
  */

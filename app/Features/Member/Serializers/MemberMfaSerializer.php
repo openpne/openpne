@@ -14,6 +14,7 @@ use Laravel\Fortify\Fortify;
  */
 class MemberMfaSerializer
 {
+    /** Flashed by the controller on the request that minted fresh recovery codes. */
     public const SHOW_RECOVERY_CODES = 'mfa.show_recovery_codes';
 
     /** @return array<string, mixed> */
