@@ -19,13 +19,9 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
- * Binds the date formatters to the site's locale and timezone from the shared props. A hook rather
- * than module state because the locale can change without a full page load (see SyncLocaleWithServer),
- * and a stale locale here would render dates in one language beside a UI in another.
- *
- * Deliberately not memoized: the relative label needs the translator, which is a fresh closure every
- * render, so a memo keyed on it would never hit and a memo ignoring it would render the old language.
- * These are a handful of closures.
+ * A hook rather than module state, because the locale can change without a full page load and a
+ * stale one would render dates in one language beside a UI in another. Deliberately not memoized:
+ * the relative label needs the translator, which is a fresh closure every render.
  */
 export function useDateFormat(): {
     absolute: (iso: string) => string;
@@ -35,9 +31,7 @@ export function useDateFormat(): {
     relativeDeadline: (iso: string, now?: Date) => number | null;
     /** The site's calendar day for an instant, as `Y-m-d`; null when the value is not a date. */
     siteDay: (iso: string) => string | null;
-    /** What a conversation's date heading says over the rows of that day. */
     dayHeading: (iso: string, now?: Date) => string;
-    /** The whole day the heading may be abbreviating, for its hover title. */
     dayHeadingTitle: (iso: string) => string;
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
@@ -57,9 +51,8 @@ export function useDateFormat(): {
         relativeDeadline: (iso, now) => relativeDeadline(iso, context.timeZone, now),
         siteDay: (iso) => siteDay(iso, context.timeZone),
         dayHeading: (iso, now) => dayHeadingLabel(iso, context, t, now),
-        // Through the civil-date formatter rather than a shape of its own: the heading names a day, and
-        // this is that same day written out in full — the year included, since a title exists to say
-        // what the visible text left out.
+        // Through the civil-date formatter rather than a shape of its own, year included: a title
+        // exists to say what the visible text left out.
         dayHeadingTitle: (iso) => {
             const day = siteDay(iso, context.timeZone);
 
@@ -74,16 +67,8 @@ export function useDateFormat(): {
 }
 
 /**
- * The wording for "how long ago", falling back to a list stamp once that stops being the useful answer.
- *
- * Singular and plural are separate keys rather than one `:count` key: English needs "a minute ago", not
- * "1 minutes ago", and the wrapper exposes only the string form of `t` (see i18n.ts). Every key is a
- * literal here so the translation scanner can find it.
- */
-/**
- * The wording for a conversation's date heading. Only today and yesterday become words: past that the
- * reader is placing the day on a calendar rather than against now, and {@link formatDayLabel} writes it
- * out with the weekday they place it by.
+ * Only today and yesterday become words: past that the reader is placing the day on a calendar rather
+ * than against now, and {@link formatDayLabel} writes it out with the weekday.
  */
 function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: string) => string, now?: Date): string {
     switch (siteDayOffset(iso, context.timeZone, now)) {
@@ -96,6 +81,11 @@ function dayHeadingLabel(iso: string, context: DateFormatContext, t: (key: strin
     }
 }
 
+/**
+ * Singular and plural are separate keys rather than one `:count` key, because English needs "a minute
+ * ago" and only the string form of `t` is exposed. Every key is a literal here so the translation
+ * scanner can find it.
+ */
 function relativeLabel(
     iso: string,
     context: DateFormatContext,

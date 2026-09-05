@@ -2,32 +2,14 @@ import { applyReactionOutcome, type ReactionOp } from './reaction-overlay.ts';
 import type { ChatPage, ChatStreamRow } from './types';
 
 /**
- * What a chat page is showing, as a value. Every way a message can arrive — the initial page, either
- * direction of the poll, "load older", the composer's own send — goes through one of the merges
- * below, so the list obeys the same three rules however it was assembled.
- *
- * 1. **Order is always the `(created_at, id)` tuple**, re-established on every merge rather than
- *    assumed from arrival order. Responses complete in whatever order the network gives them: a send
- *    and a poll are in flight together by design, and appending each as it lands would leave the list
- *    out of order with no later merge to correct it — the watermark would then be taken from a row
- *    that is not the newest, and the dedupe would swallow the re-fetch that would have healed it.
- * 2. **A message is its id.** The same row arriving twice replaces the copy held, so a re-read that
- *    carries a changed `canDelete` wins over the stale one.
- * 3. **A deletion is a tombstone for the session.** A poll that was already in flight when the
- *    delete landed answers from a snapshot that still contains the row; without the tombstone it
- *    would put it back, and nothing afterwards would take it away again.
+ * Every way a message can arrive goes through one of the merges below, so the list obeys the same
+ * order, dedupe and tombstone rules however it was assembled (docs/internals/group-talk.md,
+ * "Ordering is the `(created_at, id)` tuple"). A message is its id: the same row arriving twice
+ * replaces the copy held, so a re-read carrying a changed `canDelete` wins.
  */
 /**
- * Which stretch of the conversation the list is showing.
- *
- * `latest` is the page as it has always worked: it ends at the newest message, so the poll can keep
- * it there and reaching the foot means having read everything. `history` is the slice the unread
- * jump opens on — somewhere behind the newest, with a "load newer" step forward and no poll, because
- * a poll would append messages that do not follow the last row on screen.
- *
- * The two are never mixed. A window change replaces the list outright; only a page contiguous with
- * what is already held is ever merged in. A list assembled from both would show a hole as if it were
- * a conversation.
+ * `latest` ends at the newest message and is polled; `history` is a slice behind it, stepped forward
+ * by "load newer" and never polled (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export type ChatWindow = { kind: 'latest' } | { kind: 'history'; hasNewer: boolean };
 
@@ -41,28 +23,16 @@ export interface ChatStreamState<M extends ChatStreamRow> {
     /** Which list a response was asked of — see {@link applied}. Moves on every window change. */
     generation: number;
     /**
-     * How far this list has read the reactions the conversation's messages carry, and what the next
-     * poll asks after. Undefined for a surface that has none — it is what makes the poll ask.
-     *
-     * It lives here, beside the list, rather than in a ref of its own: {@link applied} then guards
-     * it with everything else, so a response the window change made worthless cannot move the
-     * watermark past changes the list it landed in never saw.
+     * What the next reaction poll asks after; undefined for a surface with no reactions. It lives
+     * beside the list so {@link applied} guards it too, and a response the window change made
+     * worthless cannot move it past changes the list never saw.
      */
     reactionsVersion?: number;
 }
 
 /**
- * Fold a response into the list that asked for it, or throw it away.
- *
- * Reads are in flight while the window changes under them: the poll is on the wire when the reader
- * taps the unread banner, and either answer can land first. Merging the poll's afterwards would
- * splice rows from the live end into a slice of history with an unfetched stretch between them —
- * drawn as one continuous conversation, and past healing, because the next watermark would be taken
- * from beyond the gap and "load newer" would never ask for it.
- *
- * So every read is issued against the generation the list stood at, and every window change moves
- * that generation on. A response whose generation has passed describes a page the reader is no
- * longer on, and the only safe thing to do with it is nothing.
+ * Every read is issued against the generation the list stood at, and a response whose generation has
+ * passed is dropped rather than merged (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export function applied<M extends ChatStreamRow>(
     state: ChatStreamState<M>,
@@ -73,14 +43,8 @@ export function applied<M extends ChatStreamRow>(
 }
 
 /**
- * The other half of the same question, for the reads that *cause* a window change rather than land
- * in one. The generation only moves when such a read is applied, so between asking for a jump and
- * getting its page there is nothing to tell a later decision from an earlier one — and in that gap
- * the reader can tap another jump, or write.
- *
- * **The last intent wins.** A jump retires the jump before it, and a send retires a jump the reader
- * has since thought better of: writing always puts them back at the live end, so a page fetched for
- * a move they have moved on from must not replace the list under the message they just wrote.
+ * The generation moves only when a read is applied, so a second count orders the reads that ask for
+ * a window change: the last intent wins (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export interface ChatIntents {
     claimed: number;
@@ -90,27 +54,25 @@ export function newIntents(): ChatIntents {
     return { claimed: 0 };
 }
 
-/** Claim the newest intent, retiring every one still out. Returns the epoch to check back against. */
+/** Claiming retires every intent still out; the epoch returned is what to check back against. */
 export function claimIntent(intents: ChatIntents): number {
     intents.claimed += 1;
 
     return intents.claimed;
 }
 
-/** Retire what is out without claiming a move of your own — what writing does. */
+/** Retire what is out without claiming a move of your own. */
 export function retireIntents(intents: ChatIntents): void {
     claimIntent(intents);
 }
 
-/** Whether this navigation's answer is still the one the reader is waiting for. */
 export function isCurrentIntent(intents: ChatIntents, epoch: number): boolean {
     return intents.claimed === epoch;
 }
 
 /**
- * The instant half of the ordering tuple, in milliseconds. An unparseable stamp sorts first rather
- * than poisoning the comparison — NaN compares false against everything, which would make the
- * ordering intransitive and the sort result arbitrary.
+ * An unparseable stamp sorts first rather than poisoning the comparison: NaN compares false against
+ * everything, which would make the ordering intransitive.
  */
 export function instantOf(createdAt: string): number {
     const at = Date.parse(createdAt);
@@ -118,7 +80,6 @@ export function instantOf(createdAt: string): number {
     return Number.isNaN(at) ? 0 : at;
 }
 
-/** Sort key: the instant, with the id breaking a tie inside the same second. */
 function orderOf(message: ChatStreamRow): [number, number] {
     return [instantOf(message.createdAt), message.id];
 }
@@ -138,15 +99,11 @@ function sameWindow(a: ChatWindow, b: ChatWindow): boolean {
     return a.hasNewer === b.hasNewer;
 }
 
-/** The window a forward read leaves behind: still short of the newest, or caught up with it. */
 function windowAfter<M extends ChatStreamRow>(page: ChatPage<M>): ChatWindow {
     return page.hasNewer ? { kind: 'history', hasNewer: true } : { kind: 'latest' };
 }
 
-/**
- * Fold messages into the list: later copies of an id win, tombstoned ids are dropped, and the result
- * is sorted. `hasOlder` is decided by the caller, since only it knows which end it read from.
- */
+/** `hasOlder` is decided by the caller, since only it knows which end it read from. */
 function merge<M extends ChatStreamRow>(
     state: ChatStreamState<M>,
     arriving: readonly M[],
@@ -154,9 +111,8 @@ function merge<M extends ChatStreamRow>(
     window = state.window,
     generation = state.generation,
 ): ChatStreamState<M> {
-    // An idle poll answers with nothing; the state it would rebuild is the state it was given.
-    // Returning the same value matters: every new `messages` reference re-runs the page's pin
-    // effect, and a scroll re-issued every tick fights iOS's keyboard pan.
+    // Returning the same value matters: a new `messages` reference re-runs the page's pin effect,
+    // and a scroll re-issued every tick fights iOS's keyboard pan.
     if (arriving.length === 0 && hasOlder === state.hasOlder && sameWindow(window, state.window) && generation === state.generation) {
         return state;
     }
@@ -171,9 +127,8 @@ function merge<M extends ChatStreamRow>(
 }
 
 /**
- * Throw the list away and stand on $page instead — how every window change lands. The generation
- * moves with it, which is what retires the reads the old list had out. The tombstones are the one
- * thing carried over: a session's deletions outlive the stretch of conversation they were made in.
+ * The generation moves with the replacement, which retires the reads the old list had out, and the
+ * tombstones are the one thing carried over (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 function replace<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>, window: ChatWindow): ChatStreamState<M> {
     const messages = page.messages.filter((message) => !state.deleted.has(message.id)).sort(byTuple);
@@ -191,10 +146,8 @@ function replace<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatP
 }
 
 /**
- * The page the server rendered with. It is the newest one for an ordinary visit, but a deep link
- * (`?m=`) opens on the page a message sits in — so the window is read off `hasNewer` exactly as a
- * forward read's is, rather than assumed live. Standing in a history window from the first render is
- * what stops the poll appending rows that do not follow the last one on screen.
+ * The window is read off `hasNewer` rather than assumed live, because a `?m=` deep link is rendered
+ * inside history (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export function initial<M extends ChatStreamRow>(page: ChatPage<M>, reactionsVersion?: number): ChatStreamState<M> {
     const empty: ChatStreamState<M> = {
@@ -209,19 +162,14 @@ export function initial<M extends ChatStreamRow>(page: ChatPage<M>, reactionsVer
     return merge(empty, page.messages, page.hasOlder, windowAfter(page));
 }
 
-/**
- * The poll's answer to "what has arrived since my newest message". It reads forward only, so it
- * learns nothing about the far end of the history and leaves `hasOlder` alone.
- */
+/** It reads forward only, so it learns nothing about the far end and leaves `hasOlder` alone. */
 export function mergeAfter<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return merge(state, page.messages, state.hasOlder);
 }
 
 /**
- * The poll's answer when there was no watermark to ask after — the conversation was empty when the
- * page loaded, so it asked for the newest page instead. That page knows what lies behind it, and
- * adopting its answer is what keeps a busy room's history reachable without a reload. Once the list
- * is non-empty the current answer is the better one: this response only covers the newest page.
+ * The poll's answer when there was no watermark to ask after and it asked for the newest page
+ * instead. Its `hasOlder` is adopted only while the list is empty, since it covers that page alone.
  */
 export function mergeLatest<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return merge(state, page.messages, state.messages.length === 0 ? page.hasOlder : state.hasOlder);
@@ -233,11 +181,8 @@ export function mergeBefore<M extends ChatStreamRow>(state: ChatStreamState<M>, 
 }
 
 /**
- * The composer's own message, echoed back by the write.
- *
- * Held to the live window rather than to a generation: the message belongs at the foot of *any* list
- * that ends at the newest one, including the one the caller re-read to get back there, but under a
- * stretch of history it would sit beneath a message it does not answer.
+ * Held to the live window rather than to a generation: the message belongs at the foot of any list
+ * that ends at the newest one (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export function mergeSent<M extends ChatStreamRow>(state: ChatStreamState<M>, message: M): ChatStreamState<M> {
     if (state.window.kind !== 'latest') {
@@ -248,9 +193,8 @@ export function mergeSent<M extends ChatStreamRow>(state: ChatStreamState<M>, me
 }
 
 /**
- * "Load newer" in the history window: the page after the last row on screen, which is contiguous
- * with it and so may be merged. When the server reports nothing beyond it, the list now runs to the
- * newest message and the window is the latest one again — poll and all.
+ * The page after the last row on screen is contiguous with it, so it may be merged; nothing beyond
+ * it puts the list back in the latest window (docs/internals/group-talk.md, "Two windows, never mixed").
  */
 export function mergeNewer<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     const window = windowAfter(page);
@@ -261,19 +205,18 @@ export function mergeNewer<M extends ChatStreamRow>(state: ChatStreamState<M>, p
     return merge(state, page.messages, state.hasOlder, window, generation);
 }
 
-/** The unread jump: stand on the boundary page. Contiguous through to the newest ends up as latest. */
+/** A boundary page contiguous through to the newest ends up in the latest window. */
 export function enterHistory<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return replace(state, page, windowAfter(page));
 }
 
-/** Back to the live end of the conversation, on the newest page rather than on what was held. */
 export function enterLatest<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return replace(state, page, { kind: 'latest' });
 }
 
 /**
- * Drop a message and remember that it is gone. Not tied to a generation either: a deletion is a fact
- * about the conversation rather than a page of it, and holds wherever the reader is standing.
+ * Not tied to a generation: a deletion is a fact about the conversation rather than about a page of
+ * it, and holds wherever the reader is standing.
  */
 export function markDeleted<M extends ChatStreamRow>(state: ChatStreamState<M>, id: number): ChatStreamState<M> {
     const deleted = new Set(state.deleted);
@@ -290,14 +233,9 @@ export function markDeleted<M extends ChatStreamRow>(state: ChatStreamState<M>, 
 }
 
 /**
- * The poll's second answer: the messages whose reactions changed, and the watermark to ask after
- * next. **Update-only** — a row whose id is not already held is dropped rather than inserted, which
- * is what keeps the list one contiguous stretch: a reaction on a message from an hour ago says
- * nothing about the messages between it and the page on screen.
- *
- * The watermark moves whether or not anything applied. It is the server's account of what has been
- * reported, and a change to a row outside the window has been reported — asking for it again would
- * hand back the same row for as long as nobody scrolls to it.
+ * Update-only: a row whose id is not already held is dropped rather than inserted, which keeps the
+ * list one contiguous stretch. The watermark moves whether or not anything applied, because it is
+ * the server's account of what has been reported.
  */
 export function mergeTouched<M extends ChatStreamRow>(
     state: ChatStreamState<M>,
@@ -316,17 +254,10 @@ export function mergeTouched<M extends ChatStreamRow>(
 }
 
 /**
- * One's own tap, once the write said it landed: the move applied to the row as it stands now, not
- * the aggregate the write answered with. See {@link applyReactionOutcome} for why the answer's own
- * counts are dropped. Update-only for the reason above, and unsorted because reacting moves nothing
- * in the keyset order.
- *
- * `versionAtSend` is the watermark the tap was sent under, and the move only applies while the
- * watermark still stands there. Once it has moved, the poll owns the row — even the viewer's own
- * flag: their other tab may have acted after this tap, and what the poll delivered is the server's
- * later word on it. Skipping never loses the write itself: a poll whose watermark passed the
- * write's version delivered its outcome in the same answer, and one that stopped short leaves the
- * watermark below it, so the next asks.
+ * The move applies to the row as it stands now, not to the aggregate the write answered with, and
+ * only while the watermark still stands where the tap was sent. Once it has moved the poll owns the
+ * row, including the viewer's own flag, and nothing is lost: a poll past the write's version
+ * delivered its outcome already.
  */
 export function applyReaction<M extends ChatStreamRow>(
     state: ChatStreamState<M>,

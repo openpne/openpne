@@ -28,9 +28,8 @@ test('an empty list owns nothing', () => {
 });
 
 /**
- * The contract the search rests on, stated as a test rather than left in a comment: rows are in DOM
- * order, which is chronological, which is top to bottom. Break that and the answer is silently wrong
- * rather than slow, so this walks every line a linear scan and the search could disagree on.
+ * Walks every line a linear scan and the search could disagree on, because breaking the monotonic
+ * order is silently wrong rather than slow.
  */
 test('over a monotonic list it agrees with a linear scan everywhere', () => {
     const uneven = [12, 30, 31, 90, 91, 200, 340, 341, 342, 500];

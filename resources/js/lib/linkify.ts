@@ -1,11 +1,7 @@
 /**
- * Splits a plain-text body into text and bare-URL segments, mirroring the Classic
- * App\Support\BodyText (app/Support/BodyText.php). The URL regex, the www.→http:// href rule, and
- * the 57-char visible truncation are kept in lockstep with that class; the shared cases are pinned
- * by tests/Unit/Support/BodyTextTest.php (PHP) and linkify.test.ts (this file's sibling).
- *
- * Escaping is the renderer's job: <UserText> emits both the visible text and the href through React,
- * which escapes them, so this module returns raw strings and never HTML.
+ * The URL regex, the www.→http:// href rule and the 57-char visible truncation are kept in lockstep
+ * with App\Support\BodyText, with the shared cases pinned on both sides (docs/internals/body-text.md,
+ * "Render authority is the server").
  */
 export type Segment = { type: 'text'; value: string } | { type: 'url'; href: string; visible: string };
 
@@ -26,9 +22,8 @@ export function linkify(text: string | null | undefined): Segment[] {
             }
 
             const href = part.toLowerCase().startsWith('www.') ? `http://${part}` : part;
-            // Char-count truncation. BodyText uses Str::limit, whose threshold is display width
-            // (mb_strwidth); for ASCII URLs — the real-world case — the two agree. Full-width URLs are
-            // a documented, intentional divergence (see linkify.test.ts).
+            // BodyText truncates on display width (`Str::limit`), which agrees with a char count for
+            // ASCII URLs; full-width URLs are an intentional divergence.
             const visible = part.length > VISIBLE_URL_LIMIT ? `${part.slice(0, VISIBLE_URL_LIMIT)}...` : part;
 
             return { type: 'url', href, visible };

@@ -4,14 +4,9 @@ import { useLaravelReactI18n } from 'laravel-react-i18n';
 import type { PageProps } from '@/types';
 
 /**
- * Thin wrapper around `useLaravelReactI18n().t` so call sites import a single
- * project-local helper. After the base lookup, any `%name%` placeholders are
- * substituted with the resolved term map shipped via Inertia props. Pre-computed
- * server-side as case/plural variants so this stays a flat dictionary read.
- *
- * Only the string-returning form of `t()` is exposed. The package also has a
- * choice/plural form (`tChoice`) — wrap that separately when needed so callers
- * stay type-safe instead of silently coercing here.
+ * After the base lookup, `%name%` placeholders are substituted with the term map shipped via Inertia
+ * props (docs/internals/i18n.md, "Term placeholders"). Only the string-returning form of `t()` is
+ * exposed; the package's choice/plural form is wrapped separately when it is needed.
  */
 export function useT(): (
     key: string,

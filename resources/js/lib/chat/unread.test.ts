@@ -13,7 +13,7 @@ const message = (id: number, createdAt: string): ChatStreamRow => ({
 const readThrough = (count: number, at: string, id: number): ChatUnreadBoundary | null =>
     readThroughBoundary({ count, readThrough: { at, id }, cursor: `${at}|${id}` });
 
-/** A conversation's snapshot: the oldest message still waiting. The server sends none when nothing is. */
+/** A conversation's snapshot: the oldest message still waiting. */
 const firstUnread = (count: number, at: string, id: number): ChatUnreadBoundary | null =>
     firstUnreadBoundary({ count, firstUnread: { at, id }, cursor: `${at}|${id}` });
 
@@ -33,7 +33,6 @@ test('a boundary at the newest message leaves no line to draw', () => {
     assert.equal(dividerBeforeId(conversation, readThrough(1, '2026-08-14T09:02:00+00:00', 3), false), null);
 });
 
-/** The id half of the tuple, as everywhere else: created_at alone cannot separate one second. */
 test('the id breaks a tie inside the same second', () => {
     const sameSecond = [
         message(7, '2026-08-14T09:00:00+00:00'),
@@ -49,10 +48,7 @@ test('the same instant written with a different offset is the same boundary', ()
     assert.equal(dividerBeforeId(conversation, readThrough(2, '2026-08-14T18:00:00+09:00', 1), false), 2);
 });
 
-/**
- * The banner's condition. Every loaded row is unread, but rows remain further back that may be
- * unread too — a line at the top of the page would mark where pagination stopped, not the boundary.
- */
+/** Every loaded row is unread, and rows remain further back. */
 test('a boundary older than the loaded page draws no line', () => {
     assert.equal(dividerBeforeId(conversation, readThrough(60, '2026-08-14T08:00:00+00:00', 0), true), null);
 });
@@ -66,18 +62,10 @@ test('a reader with no cursor gets no line', () => {
     assert.equal(dividerBeforeId(conversation, readThroughBoundary(null), false), null);
 });
 
-/**
- * A visit that opened with nothing waiting has no boundary, and messages arriving while the reader
- * watches must not grow one: a line under them would claim they had missed something.
- */
 test('a snapshot of zero never draws a line, however new the messages are', () => {
     assert.equal(dividerBeforeId(conversation, readThrough(0, '2026-08-14T09:00:00+00:00', 1), false), null);
 });
 
-/**
- * What "fixed for the visit" means in practice: the divider is a function of the snapshot, so the
- * poll's arrivals and the mark-read that follows them cannot move it.
- */
 test('messages arriving afterwards leave the line where it was', () => {
     const boundary = readThrough(2, '2026-08-14T09:00:00+00:00', 1);
     const arrived = [...conversation, message(4, '2026-08-14T09:03:00+00:00')];
@@ -90,10 +78,6 @@ test('an unparseable boundary neither throws nor scrambles the answer', () => {
     assert.equal(dividerBeforeId(conversation, readThrough(3, 'not a date', 0), false), 1);
 });
 
-/**
- * The other kind. A conversation has no read cursor to name the last message read, so its boundary
- * is the first message *not* read — and the line belongs above that row itself, not the one after.
- */
 test('a first-unread boundary draws the line above the row it names', () => {
     assert.equal(dividerBeforeId(conversation, firstUnread(2, '2026-08-14T09:01:00+00:00', 2), false), 2);
 });
@@ -128,8 +112,6 @@ test('a conversation with nothing waiting has no boundary at all', () => {
     assert.equal(dividerBeforeId(conversation, firstUnreadBoundary(null), false), null);
 });
 
-// --- where a catch-up digest is drawn ---
-
 test('the digest goes to the separator when the line is on the page', () => {
     assert.equal(digestPlacement(true, 2, false, false), 'divider');
 });
@@ -138,7 +120,6 @@ test('the digest takes the place of the banner when the boundary is above the pa
     assert.equal(digestPlacement(true, null, true, false), 'banner');
 });
 
-/** The card is drawn once or not at all: a divider id outranks a backlog that cannot both exist. */
 test('a boundary that is on the page never also draws the banner card', () => {
     assert.equal(digestPlacement(true, 2, true, false), 'divider');
 });
@@ -148,7 +129,6 @@ test('a backlog too small for a digest draws no card in either place', () => {
     assert.equal(digestPlacement(false, null, true, false), null);
 });
 
-/** Spending the catch-up withdraws the card from wherever it stood — nothing re-reads the snapshot. */
 test('a spent catch-up leaves no card in either place', () => {
     assert.equal(digestPlacement(true, 2, false, true), null);
     assert.equal(digestPlacement(true, null, true, true), null);

@@ -3,9 +3,8 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 
-// The restrictions below are `no-restricted-syntax` options, which a later config block for the same
-// files replaces wholesale rather than extends — so a green lint says nothing about whether they
-// still apply. Lint the offending spellings through the real config and expect each refusal.
+// `no-restricted-syntax` options are replaced wholesale by a later config block for the same files,
+// so a green lint says nothing about whether these still apply.
 
 const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../', import.meta.url)) });
 

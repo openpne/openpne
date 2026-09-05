@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { reconcileOutcome, shouldReconcile, urlBase64ToUint8Array } from './push.ts';
 
-// A real base64url VAPID public key: an uncompressed P-256 point, so 65 bytes leading with 0x04. This
-// exact string carries both base64url-only characters (`-` and `_`) and needs one `=` of padding.
+// A real base64url VAPID public key — an uncompressed P-256 point — carrying both `-` and `_` and
+// one `=` of padding.
 const VAPID = 'BO5SA4Xiyb-wPdT3EWpWvOGRjrvEucN9EtkwksRsS_nlZMAdk6YS5eMi4ITeOzfWHAIcwhjyC2kf4B9AS9UlFa8';
 
 test('a VAPID public key decodes to a 65-byte uncompressed point', () => {
@@ -24,9 +24,8 @@ test('padding is inferred, so a padding-less string decodes', () => {
     assert.equal(urlBase64ToUint8Array('Ma').length, 1);
 });
 
-// shouldReconcile gates the store POST: reconcile only on an ownership transition, never on a
-// confirmed same-member binding — that skip is what keeps ordinary browsing off the store route's
-// throttle:30,1 (a per-load POST would 429 and, failing closed, unsubscribe the member's own device).
+// shouldReconcile gates the store POST, where a per-load POST would 429 and unsubscribe the
+// member's own device.
 const TTL = 12 * 60 * 60 * 1000;
 const NOW = 1_700_000_000_000;
 const MARKER = { endpoint: 'https://push.example/abc', memberId: 7, at: NOW };
@@ -51,8 +50,7 @@ test('POST: the marker is older than the TTL (a cap-pruned row self-heals)', () 
     assert.equal(shouldReconcile(MARKER, MARKER.endpoint, MARKER.memberId, NOW + TTL + 1, TTL), true);
 });
 
-// reconcileOutcome decides what a reconcile POST's status does to the local subscription, given
-// whether the marker already proves it is another member's. A 2xx always confirms.
+// A 2xx always confirms, whatever the marker knows.
 test('confirm: any 2xx is the rebind stored, foreign or not', () => {
     for (const status of [200, 201, 204]) {
         assert.equal(reconcileOutcome(status, false), 'confirm');

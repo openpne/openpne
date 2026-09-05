@@ -15,7 +15,6 @@ function readStored(): ColorMode {
     return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
 }
 
-/** Toggle the `.dark` class on <html> and match the browser chrome color to the resolved mode. */
 function applyColorMode(mode: ColorMode): void {
     if (typeof document === 'undefined') return;
     const isDark = mode === 'dark' || (mode === 'system' && systemPrefersDark());

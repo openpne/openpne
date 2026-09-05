@@ -131,7 +131,12 @@ site clock the member surfaces render in.
    - **The site's day boundary is shared.** One timer per page (`use-site-day.ts`) wakes at the site's
      next midnight and on return to a backgrounded tab, whose timers are throttled or suspended. It is
      what turns today's `00:05` into `8月10日`, last year's rows into dated ones, and `6日前` into a
-     date. Shared because every stamp crosses that boundary at the same instant.
+     date. Shared because every stamp crosses that boundary at the same instant. That next boundary is
+     found by bisection rather than arithmetic, because neither shortcut survives a DST transition:
+     counting the remaining wall-clock seconds out of 86400 lands an hour late on a 23-hour day, and
+     converting the next local `00:00` to an instant fails where that wall time does not exist at all
+     (in America/Santiago on 2026-09-06 the clock goes 23:59 → 01:00). What is always well defined is
+     the first instant whose site date differs from now's, so that is what is bracketed and bisected.
    - **A relative stamp's own boundary is per stamp** (`use-relative-refresh.ts`), because each one
      reaches its next minute or hour at its own moment. Only the one boundary ahead is armed, so a
      twenty-row list holds twenty pending timers and fires each once, rather than everything waking on a

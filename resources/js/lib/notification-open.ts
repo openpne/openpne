@@ -1,13 +1,7 @@
 /**
- * The page's half of a notification tap (see public/sw.js): the worker offers the tap to every open
- * window and hands the destination to the first that answers. Two messages: `open-offer`, answered
- * on the port it carries, then `open` with the URL, which the page follows once the router can take
- * a visit.
- *
- * The listener must be registered before DOMContentLoaded — from the entry module's top level (module
- * scripts run before that event), never from a component effect. The container holds a worker's
- * messages only until DOMContentLoaded and drops later ones nobody listens for, and a page the worker
- * has just opened is offered as soon as it commits, so a listener added after load never hears it.
+ * Two messages from the worker (public/sw.js): `open-offer`, answered on the port it carries, then
+ * `open` with the URL. The listener must be registered before DOMContentLoaded, from the entry
+ * module's top level, because the container drops a worker's messages nobody was listening for.
  */
 export interface NotificationOpen {
     handleMessage(event: MessageEvent): void;

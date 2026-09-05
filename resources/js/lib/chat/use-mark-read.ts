@@ -19,22 +19,13 @@ function outcomeOf(status: number): ReportOutcome {
     return status >= 500 || status === 408 || status === 429 ? 'retryable' : 'terminal';
 }
 
-/** How long a failed report waits before the same id is tried again. */
 const RETRY_MS = 5_000;
 
 /**
- * Reports the newest rendered message as read.
- *
- * Fires while the tab is visible and the reader is at the foot of the conversation — reading back
- * through history is not reading what has just arrived, and marking it read would drop a badge for
- * messages still below the fold. A tab that was hidden when messages landed reports on its way back,
- * which is the moment the reader actually sees them.
- *
- * The position only advances on a 2xx (mark-read.ts owns that rule); a failed report re-arms and
- * retries the same id, since nothing else would ever resend it. The shared badge props are
- * deliberately NOT patched here: the shell's own refresh owns them, and a second writer would make
- * a stale count look authoritative. An accepted report only asks the shell to re-read them now
- * rather than on its own minute clock (lib/unread-refresh.ts).
+ * Fires while the tab is visible and the reader is at the foot of the conversation, since reading
+ * back through history is not reading what has just arrived. The shared badge props are deliberately
+ * not patched here — the shell's own refresh owns them — and an accepted report only asks it to
+ * re-read now (lib/unread-refresh.ts).
  */
 export function useMarkRead(readUrl: string, newestRenderedId: number | undefined, active: boolean) {
     const acked = useRef(0);
@@ -80,7 +71,7 @@ export function useMarkRead(readUrl: string, newestRenderedId: number | undefine
                 });
                 outcome = outcomeOf(response.status);
             } catch {
-                outcome = 'retryable'; // network reject
+                outcome = 'retryable';
             } finally {
                 inFlight.current = false;
             }

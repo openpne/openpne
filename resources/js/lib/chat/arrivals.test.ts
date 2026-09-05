@@ -25,9 +25,6 @@ test('a reader whose position is unknown is told a number about nobody', () => {
 });
 
 test('the mark survives the deletion of the message it was made on', () => {
-    // markDeleted (lib/chat/stream-state) takes the row out of the list. A mark that named the row
-    // rather than its position would lose the count with it, and the pill would go quiet while two
-    // unseen messages sat below the reader.
     const withoutTheMarked = conversation.filter((message) => message.id !== 10);
 
     assert.equal(arrivalsAfter(withoutTheMarked, { at: '2026-08-16T10:00:00+09:00', id: 10 }), 2);
@@ -45,8 +42,7 @@ test('within one second the id breaks the tie, the way the conversation itself i
 });
 
 test('a smaller id is not an older message', () => {
-    // Upgraded conversations carry ids that do not run with the clock (lib/chat/mark-read), so the
-    // count follows the instant. Here the newest row holds the smallest id.
+    // Upgraded conversations carry ids that do not run with the clock.
     const migrated = [
         row(900, '2026-08-16T10:00:00+09:00'),
         row(7, '2026-08-16T10:05:00+09:00'),

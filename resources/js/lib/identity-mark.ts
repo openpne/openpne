@@ -1,18 +1,11 @@
 /**
- * Helpers for the badges that stand in for a missing image: the neutral InitialBadge (members and
- * groups) and BrandMark, whose color the admin configures.
- *
- * pickReadableTextColor returns raw Tailwind color classes, which RawPaletteGuardTest bans in
- * `.tsx`. Keep it here — a `.ts` file the guard does not scan — rather than inlining at call sites.
+ * pickReadableTextColor returns raw Tailwind color classes, which RawPaletteGuardTest bans in `.tsx`,
+ * so it stays here in a `.ts` file the guard does not scan.
  */
 
 /**
- * The one spelling of the AI marker for the places a name has to carry it as text rather than as an
- * `<AiChip>`: an avatar's accessible name, and a truncated one-line preview, neither of which can
- * hold an element beside the name. The same key App\Features\Member\MemberDisplayName renders, so a
- * notification sentence and the room row that led to it read alike.
- *
- * Takes `t` rather than calling `useT` so it stays a plain function the callers' hooks feed.
+ * The same key App\Features\Member\MemberDisplayName renders, so a notification sentence and the room
+ * row that led to it read alike. Takes `t` rather than calling `useT`, so it stays a plain function.
  */
 export function markedName(name: string, isAi: boolean, t: (key: string, replacements?: Record<string, string>) => string): string {
     return isAi ? t(':name (AI)', { name }) : name;
@@ -39,11 +32,10 @@ function isCjk(ch: string): boolean {
 }
 
 /**
- * Returns `text-white` or `text-black`, whichever has the higher WCAG contrast ratio against
- * `bgHex`. A contrast-ratio comparison (not a luminance threshold) keeps mid-gray backgrounds
- * readable, and pure black rather than an off-black keeps the worst case at 4.58:1 — a mid-tone hue
- * such as #0088aa clears 4.5:1 against neither white nor slate-900. Invalid input falls back to
- * white. App\Support\BrandColor is the server twin.
+ * A contrast-ratio comparison rather than a luminance threshold, and pure black rather than an
+ * off-black, keeps the worst case at 4.58:1 — a mid-tone hue such as #0088aa clears 4.5:1 against
+ * neither white nor slate-900. Invalid input falls back to white; App\Support\BrandColor is the
+ * server twin.
  */
 export function pickReadableTextColor(bgHex: string): string {
     if (!/^#[0-9a-fA-F]{6}$/.test(bgHex)) return 'text-white';

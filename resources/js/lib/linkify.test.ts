@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { linkify } from './linkify.ts';
 
-// Mirrors tests/Unit/Support/BodyTextTest.php for the shared linkify rules. Escaping is not tested
-// here — <UserText> defers it to React — so these assert the raw segment shape only.
+// Mirrors tests/Unit/Support/BodyTextTest.php for the shared linkify rules; escaping is not tested
+// here.
 
 test('http url becomes a url segment with the full href', () => {
     const segments = linkify('see https://example.com/x here');
@@ -48,9 +48,8 @@ test('null and undefined render an empty text segment', () => {
 });
 
 test('full-width url truncation is char-based (intentional divergence from PHP mb_strwidth)', () => {
-    // 47 code units (< 57), so no truncation here. BodyText's Str::limit measures display width
-    // (mb_strwidth ~= 87) and WOULD append an ellipsis — a documented, intentional divergence; the
-    // PHP side pins its own behavior in BodyTextTest.
+    // 47 code units (< 57) so nothing truncates here, where BodyText's display-width measure (~87)
+    // would.
     const url = `http://${'あ'.repeat(40)}`;
     const seg = linkify(url).find((s) => s.type === 'url');
     assert.ok(seg);

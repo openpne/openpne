@@ -1,15 +1,11 @@
 /**
- * Back navigation for the mobile detail bar: how far into this SPA session the current page sits, so
- * the bar can offer the session's own back before falling back to the structural parent.
- *
- * Depth is counted from Inertia's `navigate` event, which also fires for the initial load and for the
- * page a popstate lands on — neither is a step forward, so both are discounted here. What is left can
- * still drift below the truth (a forward popstate, a full page load resets it), and that direction is
- * the safe one: too little depth degrades to the crumb parent, never to a control that leaves the app.
+ * Depth is counted from Inertia's `navigate`, which also fires for the initial load and for the page
+ * a popstate lands on — neither is a step forward, so both are discounted here. What is left can
+ * drift below the truth, which is the safe direction: too little depth degrades to the crumb parent,
+ * never to a control that leaves the app.
  */
 
 export interface BackTracker {
-    /** Inertia's `navigate`. */
     handleNavigate(): void;
     /** The browser's `popstate`, which precedes the `navigate` it causes. */
     handlePopstate(): void;
@@ -22,11 +18,8 @@ export interface BackTracker {
 export function createBackTracker(): BackTracker {
     let depth = 0;
     let started = false;
-    // A counter, not a flag: rapid back presses can fire several popstates before their navigates
-    // arrive, and a flag would absorb them all and count the later navigates as pushes — an
-    // OVER-count, the unsafe direction (a history control whose back leaves the app). A pop whose
-    // navigate never arrives leaves the counter high and discounts a future push instead: an
-    // under-count, which only degrades to the crumb fallback.
+    // A counter, not a flag: rapid back presses fire several popstates before their navigates
+    // arrive, and a flag would absorb them all and over-count the depth.
     let pendingPops = 0;
     const subscribers = new Set<() => void>();
 
@@ -66,12 +59,10 @@ export function createBackTracker(): BackTracker {
 
 const tracker = createBackTracker();
 
-/** The tracker the bar subscribes to; `installBackNav` is what feeds it. */
 export function backTracker(): BackTracker {
     return tracker;
 }
 
-/** Inertia's router, narrowed to the one event this needs. */
 interface NavigateEvents {
     on(type: 'navigate', callback: () => void): () => void;
 }
@@ -79,8 +70,8 @@ interface NavigateEvents {
 let installed = false;
 
 /**
- * Feed the tracker from the router and the browser. The entry calls this (rather than the module
- * wiring itself on import) so importing the tracker stays free of a router and a DOM.
+ * The entry calls this rather than the module wiring itself on import, so importing the tracker
+ * stays free of a router and a DOM.
  */
 export function installBackNav(router: NavigateEvents): void {
     if (installed) {
@@ -94,10 +85,6 @@ export function installBackNav(router: NavigateEvents): void {
 
 export type BackTarget = { type: 'history' } | { type: 'href'; href: string };
 
-/**
- * Where back goes: the session's own history when there is any, else the structural parent — the
- * nearest crumb, or home for a page that carries no crumbs.
- */
 export function backTarget(hasInAppHistory: boolean, context?: readonly { href: string }[]): BackTarget {
     if (hasInAppHistory) {
         return { type: 'history' };

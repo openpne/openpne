@@ -3,17 +3,8 @@ import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Rss, Search, Setti
 import type { FeatureKey, UnreadCounts } from '@/types';
 
 /**
- * The member-surface chrome registry: the single source for what the nav and the page frame render
- * per section — nav label/icon/badge, hub h1, tabs, and the primary action. NavItems reads it, and
- * MemberLayout resolves it once per page for both the app shell (which page class the mobile top bar
- * is, and the mobile action FAB) and MemberFrame, so a hub's h1 IS its nav label by construction
- * (they share the key), and a screen missing from the registry still gets the default frame —
- * consistency is the default, not an opt-in.
- *
- * Everything here is data (label keys, hrefs, icon references): builders run outside React, so
- * translation happens in the consumer (useT). Per-page deviations live in the maps below, keyed by
- * Inertia component name; a page can also override via `Page.layout = (props) => ({ chrome: {…} })`
- * (Inertia merges the object into the default layout's props) — reserve that for one-offs.
+ * Builders run outside React, so everything here is data (label keys, hrefs, icon references) and
+ * the consumer translates at render (docs/internals/feature-modules.md, "Surface responsibilities").
  */
 
 export interface ChromeLabel {
@@ -21,19 +12,16 @@ export interface ChromeLabel {
     replacements?: Record<string, string | number>;
 }
 
-// Named `t` so the i18n scanner (which recognizes keys wrapped by a t call) sees registry keys:
-// this is the deferred form — it captures the key; the frame/nav translate at render with useT.
+// Named `t` so the i18n scanner, which recognizes keys wrapped by a `t` call, sees registry keys.
 const t = (key: string, replacements?: Record<string, string | number>): ChromeLabel => ({ key, replacements });
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>;
 
-/** Which of the shared `unread` counts a badge draws. */
 export type BadgeCount = keyof UnreadCounts;
 
 /**
- * A count from the shared `unread` props plus the phrase naming it. The pill prints the digits and
- * hides them; this phrase is what joins the carrying link's name, so the number is announced exactly
- * once, in words (components/count-pill.tsx).
+ * The pill hides its digits from assistive tech, so this phrase is the one place the number is
+ * announced, in words.
  */
 export interface CountBadge {
     count: BadgeCount;
@@ -56,7 +44,6 @@ export interface ChromeAction {
     icon: Icon;
 }
 
-/** The entity a page sits inside, drawn as the mobile bar's identity block (image + name → its page). */
 export type ChromeScope =
     | { kind: 'group'; id: number; name: string; imageUrl: string | null }
     | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean };
@@ -64,120 +51,83 @@ export type ChromeScope =
 export interface Chrome {
     /**
      * section = hub header (h1 = nav label) from the registry; contextual = frame header with a
-     * page-specific title; embedded = no frame header — the page body carries its own heading
-     * (details, forms, the issue's masthead, member/show's in-panel h1).
+     * page-specific title; embedded = no frame header, the page body carrying its own heading.
      */
     mode: 'section' | 'contextual' | 'embedded';
     title?: ChromeLabel;
     tabs?: ChromeTab[];
-    /** aria-label for the tab strip (the section label). */
     tabsLabel?: ChromeLabel;
-    /** Primary action button (rendered only for a signed-in member). */
+    /** Rendered only for a signed-in member. */
     action?: ChromeAction;
     width: 'standard' | 'narrow';
     gap: '4' | '6' | '8';
-    /** Detail pages keep the text-foreground their own <main> used to set. */
     foreground?: boolean;
-    /** Scope crumbs above the heading (group, and for board content the board). */
     context?: { href: string; label: string | ChromeLabel }[];
     /**
-     * Who this page belongs to, for the mobile bar's identity block. Absent on a form (its bar shows
-     * the context as static text) and on a page that is its own subject (a group top, a profile).
+     * Absent on a form, whose bar must carry no link beside unsaved input, and on a page that is its
+     * own subject.
      */
     scope?: ChromeScope;
     /**
-     * A full-page edit / create / settings / confirmation screen. Its mobile bar carries no link
-     * beside the back control, and its chrome stays where it is instead of receding as the reader
-     * scrolls — a screen someone is working through must not move under them. An inline form (a
-     * comment box, a search row, a hub's instant-save controls) does not make the screen one.
+     * A full-page edit / create / settings / confirmation screen, never an inline one
+     * (docs/internals/feature-modules.md, "Surface responsibilities").
      */
     form?: boolean;
     /**
-     * A screen whose whole job is writing one thing (compose implies `form`). Below lg its chrome is
-     * replaced by a full-page sheet: the top-bar slot carries a lone close control with the back
-     * control's semantics plus the page's own action(s), injected through ComposeSheetAction; the
-     * bottom bar is not rendered; and the surface enters bottom-to-top (nothing under
-     * prefers-reduced-motion). Desktop (lg+) is unchanged. `context` stays: it is the close control's
-     * cold-load fallback and the desktop breadcrumb.
+     * A screen whose whole job is writing one thing, and it implies `form`
+     * (docs/internals/feature-modules.md, "Surface responsibilities"). `context` is still required:
+     * it is the close control's cold-load fallback.
      */
     compose?: boolean;
     /**
-     * A screen where reading and writing sit together and the member stays: a conversation. Below lg
-     * it draws no bottom bar and its chrome does not recede, so the composer stands at the true foot
-     * of the screen — a bar that slid away under it would open a gap for the next message to show
-     * through. Its bar keeps the back control and the scope identity: this is somewhere you go into,
-     * not a sheet you close (←, not ✖).
+     * A room the member stays in, reading and writing in the same place
+     * (docs/internals/feature-modules.md, "Surface responsibilities").
      */
     conversation?: boolean;
 }
 
 /**
- * Whether the phone's bottom tab bar stands under this page. The shell renders the bar and reserves
- * its space (`--modern-bottom-offset`) from this one answer, so what is drawn and what is left clear
- * for it cannot disagree.
+ * The shell draws the bar and reserves its space (`--modern-bottom-offset`) from this one answer, so
+ * the two cannot disagree.
  */
 export function hasBottomNav(chrome: Chrome): boolean {
     return !chrome.compose && !chrome.conversation;
 }
 
-/** Whether the mobile chrome recedes as the reader scrolls — see `form` and `conversation`. */
 export function chromeRecedes(chrome: Chrome): boolean {
     return !chrome.form && !chrome.conversation;
 }
 
 export type TabMark = 'count' | 'dot';
 
-/** One field per question the shell asks a look. Every field is answered, so a partial row is a type error. */
 interface LookSpec {
-    /** Which top-bar grammar the phone header speaks. 'byScreen' = the per-screen-class bars
-     *  (back+scope detail bar, hub title bar, brand bar); 'unified' = the persistent tab pair on
-     *  the TOP LEVEL ONLY — deep pages keep the byScreen bars; 'breadcrumb' claims EVERY screen
-     *  class, a compose sheet excepted because that is a mode rather than a class. The value
-     *  encodes the dispatch policy, not just a skin. */
+    /** 'byScreen' = the per-screen-class bars; 'unified' = the persistent tab pair on the top level
+     *  only, deep pages keeping the byScreen bars; 'breadcrumb' = every screen class but a compose
+     *  sheet, which is a mode rather than a class. */
     topBar: 'byScreen' | 'unified' | 'breadcrumb';
-    /** Whether a top bar stands at lg+ (reserves --modern-top-offset on desktop). */
+    /** Reserves `--modern-top-offset` at lg+, which the place bar and the conversations read. */
     desktopTopBar: boolean;
     /** Which row the phone bottom bar draws. 'labeled' = each tab's icon over its full label;
      *  'dive' = the search | place | notifications zones. */
     bottomBar: 'dive' | 'labeled';
-    /** What a labelled tab wears while something waits on it — the dive row draws its own marks as
-     *  part of its three-zone design. 'count' = the number, on every tab whose section carries a
-     *  badge; 'dot' = the notifications tab alone, every other tab unmarked and its count left to
-     *  the drawer's pill. Which tabs a mark may stand over is the look's own answer (looks.md), not
-     *  a property of the counts. */
+    /** 'count' = the number, on every tab whose section carries a badge; 'dot' = the notifications
+     *  tab alone, every other tab unmarked. Only the labelled row wears these; the dive row draws
+     *  its own marks. */
     tabMark: TabMark;
-    /** Whether a conversation keeps the bottom bar while reading (composers hide it when engaged). */
     bottomBarInConversation: boolean;
-    /** Which ground the shell paints behind the page (html class). */
     ground: 'standard' | 'unified';
-    /** Whether the xl+ third column stands beside the page. */
     rightRail: boolean;
-    /** Whether the drawer carries Profile + Sign out rows (bars with no AvatarMenu need them). */
+    /** A bar with no AvatarMenu needs them. */
     accountInDrawer: boolean;
-    /** Whether a hub's h1 folds away on phones because the mobile bar carries the title. */
     foldsHubHeading: boolean;
-    /** Whether the 4px site-color line is drawn. */
     colorLine: boolean;
-    /** Whether deep pages carry the desktop sticky place bar. */
     placeBar: boolean;
 }
 
 /**
- * The looks a member surface renders in — the client half of App\Support\Look, held in step with it
- * by LookRegistryParityTest. A look is a set of deviations from standard: a screen a look says
- * nothing about renders standard, which is what keeps a look from being a second copy of the UI
- * (docs/internals/looks.md).
- *
- * Fields whose value vectors coincide — the table below is where to read off which — are
- * indistinguishable to every test, registry values and consumer renders alike, until some look
- * splits them. Until then the only guard against a crossed read is the discipline of reading the
- * field whose name answers the question being asked.
- *
  * A question becomes a field when its answer varies by look, including inside a single bar once two
- * looks draw the same row and differ within it: the alternative is a component branching on look
- * identity, which goes stale the moment a look is added. What no look varies stays in the component
- * that draws it. Each row is complete by type, so a look added here answers as itself at every
- * branch point instead of reading standard-ish wherever it happened not to speak.
+ * looks draw the same row and differ within it; what no look varies stays in the component that
+ * draws it (docs/internals/looks.md, "The registry").
  */
 export const LOOKS = {
     standard: {
@@ -223,15 +173,14 @@ export const LOOKS = {
 
 export type LookId = keyof typeof LOOKS;
 
-/** The row a look answers from. One accessor, so a consumer reads the field it means rather than a
- *  boolean that happens to be true of one other look. */
+/** One accessor, so a consumer reads the field it means rather than a boolean that happens to be
+ *  true of one other look. */
 export function lookSpec(look: LookId): LookSpec {
     return LOOKS[look];
 }
 
 export interface NavSection {
     href: string;
-    /** URL prefixes marking this section active — several when a section spans more than one space. */
     match: string[];
     icon: Icon;
     label: ChromeLabel;
@@ -240,7 +189,6 @@ export interface NavSection {
     feature?: FeatureKey;
 }
 
-// Section labels shared between the nav and the hub headers (the h1 = nav label invariant).
 const HOME = t('Home');
 const WHATS_NEW = t("What's new");
 const DIARIES = t('%Diaries%');
@@ -251,25 +199,19 @@ const MESSAGES = t('Messages');
 const NOTIFICATIONS = t('Notifications');
 const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
-// The run of front-page issues: the title of the list screen and the crumb every dated issue takes
-// back to it, which have to be the same words or the way back names a place the reader never saw.
+// The list screen's title and the crumb every dated issue takes back to it have to be the same
+// words.
 const PAST_HAPPENINGS = t('Past happenings');
 
 export type PolicyKind = 'terms' | 'privacy';
 
-/** Titles of the two policy pages, shared by the frame heading and the page's document title. */
 export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
     terms: t('Terms of service'),
     privacy: t('Privacy policy'),
 };
 
-// Neither board has a section of its own, so this one answers for them too and for the
-// container unit alone.
-// The badge counts groups with something new in their talk, not messages — see
-// CountGroupsWithUnreadTalk. It rides the container unit's entry because talk has no section of
-// its own, the way this entry already answers for both boards. The href is the joined list
-// rather than the browse tab: the badge sends a member here to find out which group is waiting,
-// and only the joined rows carry that.
+// The href is the joined list rather than the browse tab: only the joined rows show which group is
+// waiting.
 const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
     href: '/groups/mine',
     match: ['/groups', '/topics', '/events'],
@@ -300,10 +242,9 @@ export const MEMBER_SEARCH_SECTION: NavSection = {
     label: MEMBER_SEARCH,
 };
 
-/** Nav order and metadata (Home is the brand row, so it is omitted). */
+/** Home is the brand row, so it is omitted. */
 export const NAV_SECTIONS: NavSection[] = [
-    // What has happened since — the running digest the front page's once-a-day issue is not. No
-    // unit owns it: with every one switched off it still stands its welcome panel.
+    // No unit owns it: with every unit switched off it still stands its welcome panel.
     { href: '/dashboard', match: ['/dashboard'], icon: Rss, label: WHATS_NEW },
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
     GROUPS_SECTION,
@@ -316,9 +257,8 @@ export const NAV_SECTIONS: NavSection[] = [
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests'), one: t('1 pending %friend% request') },
         feature: 'friend',
     },
-    // The badge counts conversations with something new, not messages — see
-    // CountUnreadConversations, as the groups entry above counts rooms. The match stays the bare
-    // `/message` prefix, which covers the conversation list and the mailbox URLs alike.
+    // The match is the bare `/message` prefix, which covers the conversation list and the mailbox
+    // URLs alike.
     {
         href: '/messages',
         match: ['/message'],
@@ -342,10 +282,7 @@ export function isSectionActive(section: NavSection, path: string): boolean {
     return section.match.some((match) => (match === '/' ? path === '/' : path.startsWith(match)));
 }
 
-/**
- * The entry the desktop room list nests under. Talk has no section of its own, so the rooms hang
- * under the one whose badge they explain — and the same href is where the list's "view all" goes.
- */
+/** Talk has no section of its own, so the rooms hang under the entry whose badge they explain. */
 export const TALK_ROOMS_HREF = '/groups/mine';
 
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
@@ -356,23 +293,15 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 /** Home is the brand row in the nav lists, so it exists only for the bottom bar, which has no brand. */
 const HOME_SECTION: NavSection = { href: '/', match: ['/', '/home/'], icon: House, label: HOME };
 
-/**
- * The component the home route renders. The current issue is the brand's own screen: the mobile bar
- * shows the brand row rather than a back control, since there is nothing above it to go back to. A
- * dated issue is a different component for that reason — it has a parent, the run it belongs to.
- */
+/** A dated issue is deliberately not one: it has a parent, the run it belongs to. */
 export function isHomeComponent(component: string): boolean {
     return component === 'home/issue';
 }
 
 /**
- * The phone bottom bar's tabs after Home, in bar order. A deliberately fixed list — one change
- * point for the composition — rather than something an administrator picks; per-site composition is
- * a later question, and a unit switched off still drops its tab through visibleNavSections.
- *
- * Three plus Home, because a word under each icon is what a phone seats without truncating the
- * longest of them. Messages is what the fourth would have been; the drawer entry that carries its
- * count is where it went.
+ * A deliberately fixed list rather than something an administrator picks, though a unit switched off
+ * still drops its tab through visibleNavSections. Three plus Home, because a word under each icon is
+ * what a phone seats without truncating the longest of them.
  */
 const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
 
@@ -385,12 +314,6 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSect
     ];
 }
 
-/**
- * The unified layout's top-bar tab pair: the two places it moves a member between. Nav entries, so
- * which paths light a tab up is the nav's own answer (Home the front page and the issues under it,
- * the group tab every group space) and the group tab goes with its unit the way the drawer's entry
- * does.
- */
 export function unifiedTabs(enabled: Record<FeatureKey, boolean>): NavSection[] {
     return enabled.group ? [HOME_SECTION, GROUPS_SECTION] : [HOME_SECTION];
 }
@@ -407,7 +330,7 @@ const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeT
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
 ];
 
-// Joined leads: it is where the nav lands, and browsing is the occasional errand.
+// Joined leads because it is where the nav lands.
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
     {
         href: '/groups/mine',
@@ -442,8 +365,6 @@ const communityScope = (group: CommunityRef): ChromeScope => ({
     imageUrl: group.imageUrl,
 });
 
-// Board-scoped context: the group crumb plus the board itself, shared by a board's detail
-// (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
 const topicBoardContext = (group: CommunityRef): Chrome['context'] => [
     ...communityContext(group)!,
     { href: `/groups/${group.id}/topics`, label: t('%Topics%') },
@@ -462,10 +383,8 @@ interface MemberRef {
     isAi: boolean;
 }
 
-// A contextual page about another member (their diary archive, friends, groups): crumb back
-// to that member's profile, the closest thing those lists have to a canonical parent. The crumb is
-// the one place the chrome shows the member's name — titles stay generic (FRIENDS, not ":name's
-// %friends%") so the same string never renders twice back to back.
+// The crumb is the one place the chrome shows the member's name, so titles stay generic and the
+// name never renders twice back to back.
 const memberContext = (member: MemberRef): Chrome['context'] => [
     { href: `/member/${member.id}`, label: member.name },
 ];
@@ -479,7 +398,6 @@ const memberScope = (member: MemberRef): ChromeScope => ({
     isAi: member.isAi,
 });
 
-// The one place messages are listed, and so the parent every message-scoped screen crumbs back to.
 const MESSAGES_HUB: Chrome['context'] = [{ href: '/messages', label: MESSAGES }];
 
 const CONFIG_CONTEXT: Chrome['context'] = [{ href: '/member/config', label: SETTINGS }];
@@ -493,25 +411,15 @@ interface OwnerScoped {
 const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =>
     (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
 
-/**
- * Hub chrome per Inertia component, computed from page props where a component doubles as the
- * viewer's hub and another member's contextual list (owner → hub chrome, non-owner → contextual
- * title, no tabs/action).
- */
 const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
-    // A hub like the others now that the front page is the root: its h1 is the words its drawer
-    // entry carries. The action stays the diary shortcut a digest of what people wrote is the place
-    // for, and below lg it is the FAB (the desktop sidebar already stands the same pill).
     'dashboard': (props) => ({
         mode: 'section',
         title: WHATS_NEW,
         action: enabled(props, 'diary') ? WRITE_DIARY : undefined,
     }),
-    // The run of issues has exactly one parent — the front page it is the history of — so it takes a
-    // contextual title rather than a section of its own: it is a way back into the issues, not a
-    // place in the nav.
+    // Deliberately not a nav section: the run of issues is the front page's history, not a place in
+    // the nav.
     'home/issues': () => ({ mode: 'contextual', title: PAST_HAPPENINGS, context: [{ href: '/', label: HOME_SECTION.label }] }),
-    // One component serves both policy pages, so which one the server rendered picks the heading.
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -520,8 +428,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: diaryTabs((props as { variant: string }).variant === 'friends' ? 'friends' : 'all', enabled(props, 'friend')),
         action: WRITE_DIARY,
     }),
-    // The viewer's own archive (listMember) is a hub tab alongside the feeds; another member's
-    // archive is a contextual list crumbed back to their profile (community/list precedent).
     'diary/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
@@ -552,8 +458,8 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: communityTabs('browse'),
         action: CREATE_COMMUNITY,
     }),
-    // The three group tabs are one hub: same h1 (= nav label) and the create action on every
-    // tab, so switching tabs never shifts the header. A non-owner's list stays contextual.
+    // The three group tabs are one hub: same h1 and create action on every tab, so switching tabs
+    // never shifts the header.
     'community/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
@@ -573,9 +479,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: communityTabs('recent'),
         action: CREATE_COMMUNITY,
     }),
-    // Community-scoped pages carry the group as context crumbs; board indexes keep a short h1
-    // ("Topics" / "Events") so a long group name never wraps the heading. Detail pages add the
-    // board as a second crumb (the back-to-board path they used to carry in the body).
+    // A board index keeps a short h1 so a long group name never wraps the heading.
     'group/topic/index': (props) => {
         const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
@@ -620,8 +524,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { group } = props as unknown as { group: CommunityRef };
         return { context: eventBoardContext(group), scope: communityScope(group) };
     },
-    // Edit mode's third crumb is the topic/event being edited (the page it returns to on cancel);
-    // create mode stops at the board, matching diary/edit vs diary/new.
     'group/topic/edit': (props) => {
         const { group, topic } = props as unknown as { group: CommunityRef; topic: { id: number; name: string } | null };
         return {
@@ -651,15 +553,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             scope: communityScope(group),
         };
     },
-    // Edit mode crumbs to the group; create mode to the hub the create action lives on.
     'community/edit': (props) => {
         const { group } = props as unknown as { group: CommunityRef | null };
         return group
             ? { form: true, context: communityContext(group) }
             : { form: true, context: [{ href: '/groups', label: COMMUNITIES }] };
     },
-    // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
-    // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
     'community/members': (props) => {
         const { group } = props as unknown as { group: CommunityRef };
         return {
@@ -694,14 +593,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
             : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner), scope: memberScope(owner) };
     },
-    // A lens on the feed, so it crumbs back to the feed and names the tag in its own header.
     'timeline/tag': (props) => ({
         mode: 'contextual',
         title: t('%Activity% posts tagged #:tag', { tag: (props as { tag: string }).tag }),
         context: [{ href: '/timeline', label: ACTIVITY }],
     }),
-    // Crumb label is the bare author name, the post card right below carries the same name as
-    // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {
         const { post } = props as unknown as { post: { author: MemberRef } };
         return {
@@ -721,12 +617,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabsLabel: FRIENDS,
         tabs: friendTabs('requests'),
     }),
-    // The Messages hub: the conversations, with the drafts box under them. Its action opens the
-    // recipient picker, the way every other hub's opens the thing that hub is a list of.
     'message/conversations/index': () => ({ mode: 'section', title: MESSAGES, action: NEW_MESSAGE }),
-    // The conversation is the page, so no action button. Its counterpart is the room's identity: the
-    // bar's scope while they still exist, and the heading otherwise — a withdrawn bucket has no
-    // member page for a scope to link to, and no name for the bar to carry.
+    // A withdrawn counterpart has no member page for a scope to link to and no name for the bar to
+    // carry, so the room falls back to a heading.
     'message/conversation/index': (props) => {
         const { counterpart } = props as unknown as { counterpart: MemberRef | null };
 
@@ -743,11 +636,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     'notifications/index': () => ({ mode: 'section', title: NOTIFICATIONS }),
 };
 
-/** Non-hub deviations from the frame defaults (width/gap/foreground), keyed by component name. */
 const STATIC_CHROME: Record<string, Partial<Chrome>> = {
-    // A dated issue crumbs back to the run it belongs to. Embedded, so the frame draws no heading:
-    // the issue's own masthead is the page's h1, and a chrome title over it would name the screen
-    // twice with two different words for it.
+    // Embedded on purpose: the issue's own masthead is the page's h1, and a chrome title over it
+    // would name the screen twice.
     'home/archive': { context: [{ href: '/home/issues', label: PAST_HAPPENINGS }] },
     'block/add': { width: 'narrow', form: true },
     'block/remove': { width: 'narrow', form: true },
@@ -760,8 +651,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     // The unified look's member page: the same screen as the profile it replaces, so the same chrome.
     'unified/member': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
-    // A sheet like the draft form, though it submits nothing: choosing who to write to is one screen
-    // with one job, and it is left by picking a name or by closing it.
+    // Compose although it submits nothing: choosing who to write to is one screen with one job.
     'message/new': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     'member/config/look': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
@@ -783,10 +673,8 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
 };
 
 /**
- * Modern components with intentionally no context crumb, checked by ChromeContextCoverageTest so a
- * new page cannot land unclassified. Hub tops and tab-switch pages have no parent to crumb to;
- * member/show and community/show are top-level entities with no parent context; the rest
- * are orphaned entry points with no inbound nav today (tracked separately, out of this pass's scope).
+ * Modern components with intentionally no context crumb; ChromeContextCoverageTest fails a new page
+ * that lands unclassified.
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
@@ -810,8 +698,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'block/remove',
     'friend/link',
     'member/invite',
-    // Reached from the footer / settings / the signed-out login screen, by a guest as well as a
-    // member: there is no one parent to crumb back to.
+    // Reached by a guest as well as a member, so there is no one parent to crumb back to.
     'policy/show',
 ];
 
@@ -824,13 +711,12 @@ export function resolveChrome(
     return { ...base, ...STATIC_CHROME[component], ...HUB_CHROME[component]?.(props), ...override };
 }
 
-/** Where the member is, and the way back to its top. A name is member text, so it is a plain string. */
+/** A name is member text, so it is a plain string. */
 export interface DivePlace {
     label: ChromeLabel | string;
     href: string;
 }
 
-/** The `{id, name}` every place-bearing prop and every scope share. */
 interface PlaceRef {
     id: number;
     name: string;
@@ -840,20 +726,16 @@ const groupPlace = (group: PlaceRef): DivePlace => ({ label: group.name, href: `
 
 const memberPlace = (member: PlaceRef): DivePlace => ({ label: member.name, href: `/member/${member.id}` });
 
-/** Not inside anything. */
 const HOME_PLACE: DivePlace = { label: HOME_SECTION.label, href: HOME_SECTION.href };
 
 /**
- * The pages that *are* a place, so no scope points at it — a group top and a profile are the top
- * everything under them scopes back to. Read from their own props for that reason: scope alone would
- * put a member standing on a group's front page nowhere.
+ * The pages that ARE a place. They are read from their own props because scope alone would put a
+ * member standing on a group's front page nowhere.
  */
-/** The pages that ARE a place — home's siblings in the three-page symmetry. */
 const PLACE_TOPS = ['community/show', 'unified/group', 'member/show', 'unified/member'] as const;
 
-// Typed off PLACE_TOPS on purpose: today every dive target is a place top and the breadcrumb header
-// leans on that (isPlaceTop). A dive target that is NOT one would need this bond taken apart first,
-// or it would silently strip that screen's crumb.
+// Typed off PLACE_TOPS on purpose: a dive target that is not a place top would need this bond taken
+// apart first, or it would silently strip that screen's crumb.
 const DIVE_PLACES: Record<(typeof PLACE_TOPS)[number], (props: Record<string, unknown>) => DivePlace> = {
     'community/show': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
     'unified/group': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
@@ -861,16 +743,10 @@ const DIVE_PLACES: Record<(typeof PLACE_TOPS)[number], (props: Record<string, un
     'unified/member': (props) => memberPlace((props as unknown as { profile: PlaceRef }).profile),
 };
 
-/**
- * Where the member has dived to, for the unified bottom bar's middle zone: the group or the person
- * whose space they are in, and the way back up to its top. A hub, a form, the search and the
- * notification list are not places to be inside — from those the answer is home.
- */
 export function divePlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace {
     return ownPlace(component, props, chrome) ?? HOME_PLACE;
 }
 
-/** The place a screen is standing in, or nothing where it is not inside one. */
 function ownPlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace | null {
     if (isPlaceTop(component)) {
         return DIVE_PLACES[component as (typeof PLACE_TOPS)[number]](props);
@@ -887,37 +763,26 @@ function ownPlace(component: string, props: Record<string, unknown>, chrome: Chr
     return null;
 }
 
-/** What follows the site mark in the breadcrumb header, or nothing where the mark stands alone. */
 export interface BreadcrumbCrumb {
     label: ChromeLabel | string;
     href: string;
-    /** Whether the crumb is pressable. A crumb that is not must not be painted as one. */
+    /** A crumb that is not pressable must not be painted as one. */
     link: boolean;
 }
 
 /**
- * Whether this screen IS one of the three pages (home's siblings: a member's, a group's). They speak
- * the home grammar in the breadcrumb header — mark and site name, no crumb — because the three-page
- * symmetry extends to the header, and because the place's own hero names it directly below.
+ * The three pages speak the home grammar in the breadcrumb header — mark and site name, no crumb
+ * (docs/internals/looks.md, "The registry").
  */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
 /**
- * The breadcrumb header's second crumb: where the reader is, under the site the mark names.
- *
- * Deliberately not divePlace: that one answers HOME_PLACE from anywhere that is not a place, which
- * is a dive-zone reading ("the way back up is home"). A breadcrumb is a claim about where the reader
- * *is*, and "you are at home" on the email settings page would be false. Three tiers: the place the
- * screen is *inside* (its scope), else the last crumb of its trail, else nothing.
- *
- * A page that IS the place answers nothing here — isPlaceTop carries those, and the header speaks
- * the home grammar on them rather than naming the place twice above its own hero.
- *
- * A form's crumb is static text. The bar must never carry a link beside unsaved input (top-nav's
- * ScopeIdentity gate spells the same rule, and the registry pins form ⇒ no scope), and the scope
- * tier is pressable by construction, so a form takes its trail instead.
+ * Deliberately not divePlace, which answers home from anywhere that is not a place: a breadcrumb
+ * claims where the reader is, and "you are at home" on a settings page would be false. A form takes
+ * its trail rather than its scope: the scope tier is pressable by construction, and the bar must
+ * never carry a link beside unsaved input.
  */
 export function breadcrumbCrumb(chrome: Chrome): BreadcrumbCrumb | null {
     if (chrome.form !== true) {

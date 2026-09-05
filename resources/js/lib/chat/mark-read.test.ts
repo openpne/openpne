@@ -15,11 +15,7 @@ test('an acknowledged message is not reported twice', () => {
     assert.equal(nextReport(5, 5), null);
 });
 
-/**
- * Order is the (created_at, id) tuple and migrated ids are not monotonic in time, so a numerically
- * smaller id can be the newest rendered message. The client reports it and leaves direction to the
- * server's monotonic guard — suppressing on `<=` would silently strand such rows unread.
- */
+/** Migrated ids are not monotonic in time, so the newest rendered message can hold a smaller id. */
 test('a smaller id that is newest by tuple is still reported', () => {
     assert.equal(nextReport(2, 8), 2);
 });
@@ -40,7 +36,6 @@ test('a success under a newer queued id keeps that id and asks to continue', () 
     assert.equal(retry, true);
 });
 
-/** A network reject and a 5xx settle the same way: unacknowledged, same id claimable again. */
 test('a retryable failure keeps the id claimable and asks for a retry', () => {
     const { state, retry } = settleReport({ acked: 3, pending: null }, 7, 'retryable');
     assert.deepEqual(state, { acked: 3, pending: 7 });
@@ -53,11 +48,6 @@ test('a retryable failure never overwrites a newer queued id', () => {
     assert.equal(retry, true);
 });
 
-/**
- * A 404 for a message deleted after rendering (the server calls that an ordinary race), a
- * membership lost in another tab, an expired session: the same id can never succeed, so it settles
- * as spoken-for — no timer re-arms for it, and only a different newest message reports again.
- */
 test('a terminal refusal drops the id without a retry', () => {
     const { state, retry } = settleReport({ acked: 3, pending: 7 }, 7, 'terminal');
     assert.deepEqual(state, { acked: 7, pending: null });

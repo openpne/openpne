@@ -13,19 +13,17 @@ export interface ScrollThresholds {
     /** Travel from the anchor that flips the direction. */
     threshold: number;
     /**
-     * How far down the first flip to 'down' waits. A sticky bar holds its slot in the flow, so taking
-     * it away while that slot is still on screen leaves a blank band above the page — it is worth
-     * hiding only once it has scrolled past. A reveal deep in the page is already past it, so the
+     * A sticky bar holds its slot in the flow, so taking it away while that slot is still on screen
+     * leaves a blank band above the page. A reveal deep in the page is already past it, so the
      * re-hide that follows costs the plain threshold.
      */
     minDownY: number;
 }
 
 /**
- * The direction after the page reached `y`. A flip needs `threshold` of travel from the point the
- * current direction was decided at: a slow drag arrives as a run of 3px events that each fall short
- * on their own and must still add up to a flip. Travel that continues the current direction carries
- * the anchor with it, so the reversal that follows is measured from where the run ended.
+ * A flip needs `threshold` of travel from the point the current direction was decided at: a slow drag
+ * arrives as a run of 3px events that each fall short on their own. Travel that continues the current
+ * direction carries the anchor with it.
  */
 export function nextDirection(state: ScrollState, y: number, { threshold, minDownY }: ScrollThresholds): ScrollState {
     // The top of the page is not a direction: nothing is scrolled away yet, so chrome shows in full.
@@ -48,17 +46,15 @@ export function nextDirection(state: ScrollState, y: number, { threshold, minDow
     return y >= minDownY && y - state.anchorY >= threshold ? { direction: 'down', anchorY: y } : state;
 }
 
-/** A direction and the page it was decided on. */
 export interface PageDirection {
     direction: ScrollDirection;
     url: string;
 }
 
 /**
- * What a render shows. Inertia keeps the document across a navigation, so the direction the previous
- * page ended on is still in state while the next one first paints — the re-arm is derived here rather
- * than left to the effect, which runs a frame too late and lets that page paint with chrome already
- * gone. A disabled caller has no direction at all.
+ * Inertia keeps the document across a navigation, so the direction the previous page ended on is
+ * still in state while the next one first paints; the re-arm is derived here rather than left to the
+ * effect, which runs a frame too late. A disabled caller has no direction at all.
  */
 export function renderedDirection(state: PageDirection, url: string, enabled: boolean): ScrollDirection {
     return enabled && state.url === url ? state.direction : 'up';
@@ -73,19 +69,11 @@ export interface ScrollDirectionOptions extends Partial<ScrollThresholds> {
 const READER_INPUT = ['touchstart', 'pointerdown', 'wheel', 'keydown', 'focusin'] as const;
 
 /**
- * Which way the reader is going, for chrome that recedes while they read.
- *
- * Only the reader's own scrolling counts, and a page starts with none: a scroll that arrives before
- * they have touched the page is the browser's — on iOS a standalone PWA was seen to report, after
- * Inertia's scroll to the top, the position the previous page was left at, and the chrome read that
- * as the reader scrolling down and left. Answering it with another scroll to the top was tried and
- * withdrawn: a programmatic scroll on iOS leaves the fixed bars' hit-testing stale until the reader
- * scrolls again, so the bar stood and took no taps. So the bounce is let stand, and the chrome waits.
- *
- * A page begins at a URL change, and again at any arrival Inertia has scrolled to the top — the
- * active tab tapped again is a same-URL visit, which Inertia fires no `navigate` for and which
- * would otherwise carry the reader's engagement through its reset into the bounce. Only an arrival
- * at the top re-gates: a reload landing while the reader is down the page keeps their travel.
+ * Only the reader's own scrolling counts (docs/internals/feature-modules.md, "Surface
+ * responsibilities"); the iOS bounce is let stand because a programmatic scroll there leaves the
+ * fixed bars' hit-testing stale. The gate re-arms at a URL change and at any arrival Inertia
+ * scrolled to the top, and only at the top, so a reload landing down the page keeps the reader's
+ * travel.
  */
 export function useScrollDirection({
     threshold = 8,
@@ -117,8 +105,8 @@ export function useScrollDirection({
             READER_INPUT.forEach((type) => window.removeEventListener(type, engage, { capture: true }));
         };
 
-        // Under the gate: nothing is the reader's yet, and the chrome shows in full. A read the
-        // reader's last scroll had booked would otherwise land after the gate and take the bounce.
+        // Under the gate nothing is the reader's yet, and a read their last scroll had booked
+        // would otherwise land after the gate.
         const gate = () => {
             if (frame !== 0) {
                 cancelAnimationFrame(frame);
@@ -129,8 +117,8 @@ export function useScrollDirection({
             READER_INPUT.forEach((type) => window.addEventListener(type, engage, { capture: true, passive: true }));
         };
 
-        // Fired once the page is set and scrolled. At the top the direction is 'up' whatever the
-        // state, so re-gating there changes nothing that shows.
+        // At the top the direction is 'up' whatever the state, so re-gating there changes nothing
+        // that shows.
         const arrived = () => {
             if (window.scrollY <= 0) {
                 gate();

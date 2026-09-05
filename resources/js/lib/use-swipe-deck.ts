@@ -3,10 +3,9 @@ import { useEffect, useRef, type DOMAttributes, type RefObject } from 'react';
 export type DragAxis = 'x' | 'y';
 
 /**
- * What a drag turns out to mean. A horizontal drag with somewhere to go turns the page; anything
- * else — a vertical drag, or a horizontal one off either end of the deck — closes the viewer. The
- * second is the first carried past its limit, which is why it reads as one gesture with two
- * outcomes rather than two gestures.
+ * A horizontal drag with somewhere to go turns the page; anything else — a vertical drag, or a
+ * horizontal one off either end of the deck — closes the viewer. The second is the first carried past
+ * its limit, so it is one gesture with two outcomes.
  */
 export type GestureMode = 'page' | 'dismiss';
 
@@ -77,15 +76,9 @@ export function gestureMode(axis: DragAxis, dx: number, index: number, count: nu
 }
 
 /**
- * How much of a drag counts, once the direction it committed to is taken into account.
- *
- * A sideways dismiss is the paging gesture run off the end of the deck, so it only means anything
- * in the direction it left by: at the first image you leave to the right, and dragging back left
- * from there is heading for an image, not for the exit. Clamping at the origin makes that dead
- * travel — the picture holds still — rather than a second exit in the wrong direction.
- *
- * A vertical dismiss has no such direction: up and down are both ways out, so `outward` is null and
- * the whole drag counts.
+ * A sideways dismiss is the paging gesture run off the end of the deck, so it counts only in the
+ * direction it left by and clamping at the origin makes the way back dead travel. A vertical dismiss
+ * has no such direction, so `outward` is null and the whole drag counts.
  */
 export function outwardDisplacement(displacement: number, outward: number | null): number {
     if (outward === null) {
@@ -107,10 +100,9 @@ export function dismissProgress(displacement: number, extent: number): number {
 }
 
 /**
- * The picture the reader gets while they drag: the image shrinks, the scrim thins until the page
- * behind shows through, and the viewer's own chrome gets out of the way. Together they say "let go
- * and this closes" before the letting go — which is the whole reason the gesture is discoverable.
- * Chrome leaves at three times the rate so it is gone early rather than lingering half-faded.
+ * The image shrinks, the scrim thins and the chrome gets out of the way, so the gesture says "let go
+ * and this closes" before the letting go. Chrome leaves at three times the rate so it is gone early
+ * rather than lingering half-faded.
  */
 export function dismissVisual(progress: number): DismissVisual {
     return {
@@ -204,11 +196,9 @@ export interface Rect {
 }
 
 /**
- * The transform that lands `from` exactly on `to`, expressed about the centre of `stage` — the
- * element that will carry it, whose own box is the origin its transform pivots on.
- *
- * Scale takes whichever axis has to shrink further, so the picture ends up inside its thumbnail
- * rather than spilling past it: the thumbnail is a square crop of an image that is not square.
+ * The transform that lands `from` exactly on `to`, about the centre of `stage` — the element that
+ * carries it. Scale takes whichever axis has to shrink further, so the picture ends up inside its
+ * thumbnail rather than spilling past it.
  */
 export function flightTo(from: Rect, to: Rect, stage: Rect): { x: number; y: number; scale: number } {
     if (from.width <= 0 || from.height <= 0 || to.width <= 0 || to.height <= 0) {
@@ -269,7 +259,6 @@ export interface SwipeDeck {
     contentRef: RefObject<HTMLDivElement | null>;
     /** The scrim is a portal sibling, not a descendant, so it is written to separately. */
     scrimRef: RefObject<HTMLDivElement | null>;
-    /** The element whose transform the exit rides out on. */
     stageRef: RefObject<HTMLDivElement | null>;
     handlers: Pick<DOMAttributes<HTMLElement>, 'onTouchStart' | 'onTouchMove' | 'onTouchEnd' | 'onTouchCancel'>;
     /** Whether the click about to be handled is the one a finger's drag left behind. */
@@ -294,17 +283,10 @@ interface Gesture {
 }
 
 /**
- * Finger-tracking paging and swipe-to-dismiss for the lightbox deck.
- *
- * Nothing here calls setState. React owns the resting position (the shown index) and this owns the
- * offset from it, as two separate CSS custom properties, so neither writes a DOM property the other
- * also writes — depending on React DOM to skip unchanged style keys would work today and is not a
- * contract. Staying out of React's render also means the live-region readout cannot fire on every
- * frame of a drag: it changes when the index does, and the index changes once, on release.
- *
- * Gesture ownership rests on `touch-action: pinch-zoom` alone: the browser keeps two-finger zoom and
- * hands over every one-finger pan. React registers touch listeners as passive, so preventDefault is
- * not available — and with that touch-action it is not needed.
+ * Nothing here calls setState: React owns the resting index and this owns the offset from it, as two
+ * separate CSS custom properties, so neither writes a DOM property the other also writes. Gesture
+ * ownership rests on `touch-action: pinch-zoom` alone — React registers touch listeners as passive,
+ * so preventDefault is not available.
  */
 export function useSwipeDeck({
     open,
@@ -357,13 +339,9 @@ export function useSwipeDeck({
     };
 
     /**
-     * The deck stays out of sight until the stage has actually finished travelling, not merely been
-     * told where to go. Dropping the flag with the write would uncover the neighbours while the stage
-     * is still shrunk on its way back, which is the very thing hiding them was for.
-     *
-     * Only the newest watch may drop the flag. One gesture can settle twice — a pinch aborts it, then
-     * the last finger lifting settles it again — and an older watch firing later would otherwise strip
-     * the flag off whatever gesture owns it by then.
+     * The deck stays out of sight until the stage has actually finished travelling: dropping the flag
+     * with the write would uncover the neighbours while the stage is still on its way back. Only the
+     * newest watch may drop the flag, because one gesture can settle twice.
      */
     const releaseLeavingWhenSettled = () => {
         const stage = stageRef.current;
@@ -410,9 +388,8 @@ export function useSwipeDeck({
 
     const activeImage = () => stageRef.current?.querySelector<HTMLImageElement>('[data-active] img') ?? null;
 
-    // Whatever closed the viewer — the exit below, Escape, the close button — lands here, and it is
-    // the only place the exit is torn down. Without it a close during the exit would leave its timer
-    // armed, and a viewer reopened before that timer fired would be shut by the previous one.
+    // The only place the exit is torn down: without it a close during the exit would leave its
+    // timer armed, and a viewer reopened before it fired would be shut by the previous one.
     useEffect(() => {
         if (open) {
             return;
@@ -459,16 +436,9 @@ export function useSwipeDeck({
     };
 
     /**
-     * Carry the drag the rest of the way rather than cutting to nothing: the reader has been watching
-     * the image shrink and the page come through, and an instant unmount throws that away at the
-     * moment it resolves.
-     *
-     * Where it goes is the picture's own place on the page below, when it has one — the reader's eye
-     * is already tracking the image, so putting it back where they will next find it costs them no
-     * search. Off the nearest edge is the fallback for when there is no such place.
-     *
-     * The animation's own end is what closes; the timer is only there for when that event never
-     * arrives, and reduced motion skips the wait entirely.
+     * The drag is carried the rest of the way to the picture's own place on the page below, or off the
+     * nearest edge when it has none. The animation's own end is what closes; the timer is only there
+     * for when that event never arrives, and reduced motion skips the wait entirely.
      */
     const exit = (g: Gesture, displacement: number) => {
         exiting.current = true;
@@ -523,10 +493,8 @@ export function useSwipeDeck({
             }
             const point = e.touches[0]!;
             const content = contentRef.current;
-            // A touch interrupts whatever is still moving — a snapback easing home, a page settling
-            // into its slot — and takes the deck to that destination at once. Measuring first would
-            // record a rect from the middle of that animation, and the picture would then fly home
-            // from a place it was never at.
+            // A touch takes whatever is still moving to its destination at once, because measuring
+            // first would record a rect from the middle of that animation.
             stopLeavingWatch();
             write({ ...IDENTITY_VARS }, { dragging: true });
             gesture.current = {
@@ -549,8 +517,8 @@ export function useSwipeDeck({
             if (!g || g.aborted || exiting.current) {
                 return;
             }
-            // A second finger means a pinch. Dropping the anchor is not enough: the stage, scrim and
-            // chrome would stay wherever the drag left them for the whole zoom.
+            // A second finger means a pinch, and dropping the anchor alone would leave the stage,
+            // scrim and chrome wherever the drag left them for the whole zoom.
             if (e.touches.length !== 1) {
                 abort();
 

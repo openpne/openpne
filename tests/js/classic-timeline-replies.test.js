@@ -5,9 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 
 /**
- * The inline reply layer's decisions: what counts as 140 characters, when the button may fire, and
- * which of a refusal's words are safe to show a member.
- *
  * The script is loaded the way the browser loads it (evaluated, not imported) with a `module` in
  * scope: that branch hands back the pure half and skips the DOM wiring.
  */

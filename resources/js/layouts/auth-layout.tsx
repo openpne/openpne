@@ -28,26 +28,19 @@ const WIDTH = {
 
 interface AuthLayoutProps {
     title: string;
-    /** Site copy shown between the brand block and the card — outside the form, which stays the only place actions live. */
+    /** Site copy between the brand block and the card; actions stay inside the form. */
     intro?: ReactNode;
-    /** Widen the whole column for a screen that asks for more than credentials. */
     width?: keyof typeof WIDTH;
     children: ReactNode;
 }
 
-/**
- * Pre-login card layout. The footer language toggle is the guest's locale entry point (POST
- * /locale stores the choice in the session; registration promotes it to members.locale). The
- * current locale is inert text — only the other language posts.
- */
 export function AuthLayout({ title, intro, width = 'standard', children }: AuthLayoutProps) {
     const t = useT();
     const { locale } = usePage<PageProps>().props;
-    // One width for brand, intro and card: they read as a single column, so they share an edge.
     const column = WIDTH[width];
 
     // dvh, not vh: 100vh is the URL-bar-hidden height on a phone, so centering against it drops the
-    // card below the fold. The gutter is a minimum — centering supplies the rest.
+    // card below the fold.
     return (
         <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1rem+env(safe-area-inset-right))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] sm:pt-[calc(3rem+env(safe-area-inset-top))] sm:pb-[calc(3rem+env(safe-area-inset-bottom))]">
             <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
@@ -62,7 +55,6 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
                 </Heading>
                 {children}
             </main>
-            {/* The policy pages a visitor has to be able to read before they decide to join. */}
             <nav aria-label={t('About this site')} className="mt-6">
                 <ul className="flex items-center text-sm">
                     {POLICY_LINKS.map(({ href, label }, i) => (

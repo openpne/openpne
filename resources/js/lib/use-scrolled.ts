@@ -6,17 +6,15 @@ export function pastTop(y: number): boolean {
     return y > 0;
 }
 
-/** A flag and the page it was decided on. */
 export interface PageScrolled {
     scrolled: boolean;
     url: string;
 }
 
 /**
- * What a render shows. Inertia keeps the document across a navigation, so the flag the previous page
- * ended on is still in state while the next one first paints — the reset is derived here rather than
- * left to the effect, which runs a frame too late and would let a fresh page paint a seam it has not
- * earned. A disabled caller is never scrolled.
+ * Inertia keeps the document across a navigation, so the flag the previous page ended on is still in
+ * state while the next one first paints; the reset is derived here rather than left to the effect,
+ * which runs a frame too late. A disabled caller is never scrolled.
  */
 export function renderedScrolled(state: PageScrolled, url: string, enabled: boolean): boolean {
     return enabled && state.url === url && state.scrolled;
@@ -27,7 +25,6 @@ export interface ScrolledOptions {
     enabled?: boolean;
 }
 
-/** Whether content has scrolled under the top of the page, for chrome that only draws a seam over it. */
 export function useScrolled({ enabled = true }: ScrolledOptions = {}): boolean {
     const { url } = usePage();
     const [state, setState] = useState<PageScrolled>({ scrolled: false, url });

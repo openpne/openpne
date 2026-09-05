@@ -1,10 +1,10 @@
 /**
- * Laravel CSRF for the app's few raw `fetch` calls (Inertia handles its own). The framework sets an
- * `XSRF-TOKEN` cookie (URL-encoded); VerifyCsrfToken accepts its decoded value in an `X-XSRF-TOKEN`
- * header. There is no axios in the stack to do this automatically.
+ * Laravel sets a URL-encoded `XSRF-TOKEN` cookie and `VerifyCsrfToken` accepts its decoded value in
+ * an `X-XSRF-TOKEN` header. Inertia handles its own, and there is no axios in the stack to do it for
+ * the raw `fetch` calls.
  */
 
-/** Reads one cookie's raw value from a `document.cookie` string. Pure, so it is unit-testable. */
+/** Takes the cookie string rather than reading `document.cookie`, so it is unit-testable. */
 export function readCookie(cookies: string, name: string): string | null {
     for (const part of cookies.split(';')) {
         const trimmed = part.trim();

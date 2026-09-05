@@ -1,15 +1,9 @@
 import { codePointLength, utf16ToCodePoint } from './code-points.ts';
 
 /**
- * The compose form's @mention draft: what the picker inserted, carried through every edit that
- * follows so the payload submitted still describes the body submitted with it.
- *
- * A draft entry holds its start as a **UTF-16** offset, the unit the DOM reports carets in, and is
- * converted to code points once — at {@link toPayload}, on the value actually being sent. Tracking
- * code points through each keystroke would mean converting on every edit instead.
- *
- * All of this is pure: the state machine is the part worth pinning by test, and the component around
- * it (mention-textarea.tsx) only feeds it the caret, the value and the picked candidate.
+ * The payload submitted has to describe the body submitted with it, through every edit. A draft
+ * entry holds its start as a UTF-16 offset — the unit the DOM reports carets in — and is converted
+ * to code points once, at {@link toPayload}.
  */
 
 /** A mention the picker inserted, positioned by the UTF-16 offset of its `@`. */
@@ -20,7 +14,6 @@ export interface DraftMention {
     start: number;
 }
 
-/** What the picker needs of a candidate to insert it. */
 export interface MentionCandidate {
     id: number;
     name: string;
@@ -46,8 +39,8 @@ export const MAX_MENTIONS = 10;
 /** Past this a search term is no longer a name being typed, so the trigger ends rather than widens. */
 const MAX_QUERY = 20;
 
-// A handle is a word: it starts the body or follows a space. `\s` covers the ideographic space a
-// Japanese keyboard produces, and the newline that keeps a trigger inside its own line.
+// `\s` covers the ideographic space a Japanese keyboard produces, and the newline that keeps a
+// trigger inside its own line.
 const SPACE = /\s/u;
 
 /**
@@ -75,7 +68,6 @@ export function detectTrigger(value: string, caret: number): MentionTrigger | nu
     return null;
 }
 
-/** A search result, tagged with the query it answers. */
 export interface MentionResults<C> {
     query: string;
     items: C[];
@@ -124,7 +116,6 @@ export interface PickResult {
     caret: number;
 }
 
-/** Replace the trigger with the candidate's handle, and record the mention it just became. */
 export function applyPick(mentions: DraftMention[], value: string, trigger: MentionTrigger, candidate: MentionCandidate): PickResult {
     // The trailing space ends the trigger the caret is still in — without it the next keystroke
     // would reopen the picker on the name just chosen.
@@ -141,22 +132,17 @@ export function applyPick(mentions: DraftMention[], value: string, trigger: Ment
 }
 
 /**
- * Carry the draft across an edit, given the value before and after it.
- *
- * A pair of values does not name the span that changed: where the text repeats around the edit,
- * deleting the first `@Alice ` of two and deleting the second leave the very same pair behind. So
- * the edit is read twice, from each end, and a mention is carried only where both readings say the
- * same thing — see {@link settle} for what is done with the rest.
+ * A pair of values does not name the span that changed: deleting the first `@Alice ` of two and
+ * deleting the second leave the very same pair behind. So the edit is read from each end, and a
+ * mention is carried only where both readings agree — see {@link settle} for the rest.
  */
 export function applyEdit(mentions: DraftMention[], oldValue: string, newValue: string): DraftMention[] {
     if (mentions.length === 0) {
         return mentions;
     }
 
-    // What the two values share at either end. A textarea edit is a single contiguous change
-    // (typing, deleting, pasting over a selection), so one span describes it — and where a scan
-    // splits a surrogate pair, both halves sit inside one code point, which no mention boundary ever
-    // falls inside.
+    // A textarea edit is a single contiguous change, so one span describes it, and where a scan
+    // splits a surrogate pair both halves sit inside one code point.
     const limit = Math.min(oldValue.length, newValue.length);
     let prefix = 0;
     while (prefix < limit && oldValue.charCodeAt(prefix) === newValue.charCodeAt(prefix)) {
@@ -167,9 +153,8 @@ export function applyEdit(mentions: DraftMention[], oldValue: string, newValue: 
         suffix += 1;
     }
 
-    // The two ends the shared runs may be split at: the rightmost span the prefix allows, and the
-    // leftmost one the suffix allows. They coincide unless the runs overlap, which is exactly when
-    // the edit is ambiguous.
+    // The two ends coincide unless the shared runs overlap, which is exactly when the edit is
+    // ambiguous.
     const left = read(mentions, oldValue, newValue, prefix, Math.min(suffix, limit - prefix));
     const right = read(mentions, oldValue, newValue, Math.min(prefix, limit - suffix), suffix);
 
@@ -180,19 +165,15 @@ export function applyEdit(mentions: DraftMention[], oldValue: string, newValue: 
     });
 }
 
-/** Where each mention lands under one reading of the edit. */
 function read(mentions: DraftMention[], oldValue: string, newValue: string, start: number, suffix: number): (number | null)[] {
     return mentions.map((mention) => carryOne(mention, start, oldValue.length - suffix, newValue.length - suffix - start));
 }
 
 /**
- * The start both readings support, or null to give the mention up.
- *
- * Where they disagree the draft may not guess — not even for a label no other entry carries: the
- * body may hold the same `@name` as hand-typed plain text (the feature's own contract), and the
- * guess would promote it to a mention of the member the writer just deleted. Nothing downstream
- * can catch it — {@link toPayload} and the server both re-read the same `@name` text. Losing a
- * mention to plain text is the honest failure; inventing one is not.
+ * Where the readings disagree the draft may not guess, not even for a label no other entry carries:
+ * the body may hold the same `@name` as hand-typed plain text, and the guess would promote it to a
+ * mention of the member the writer just deleted. Losing a mention to plain text is the honest
+ * failure; inventing one is not.
  */
 function settle(left: number | null, right: number | null): number | null {
     return left === right ? left : null;
@@ -214,7 +195,6 @@ function carryOne(mention: DraftMention, start: number, end: number, inserted: n
     return null;
 }
 
-/** The draft after `[start, end)` became `inserted` code units. */
 function carry(mentions: DraftMention[], start: number, end: number, inserted: number): DraftMention[] {
     return mentions.flatMap((mention) => {
         const carried = carryOne(mention, start, end, inserted);

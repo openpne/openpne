@@ -1,11 +1,7 @@
 /**
- * Adds the picker's search term to a candidates endpoint the call site handed over whole — any
- * query it carries rides along untouched.
- *
- * The picker used to assemble the endpoint's scope itself and once spelled a parameter the server
- * did not read, which silently served the SNS-wide roster to a scoped composer: names the submit
- * would then drop, which is exactly the invariant a candidates endpoint exists to hold. Handing the
- * whole URL over removes the chance to guess a parameter name at all.
+ * The call site hands the endpoint over whole, so nothing here guesses a parameter name: a scope
+ * parameter the server does not read silently serves the SNS-wide roster to a scoped composer. Any
+ * query the URL already carries rides along untouched.
  */
 export function candidatesUrlFor(endpoint: string, query: string): string {
     return `${endpoint}${endpoint.includes('?') ? '&' : '?'}q=${encodeURIComponent(query)}`;
