@@ -22,7 +22,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class AdminUser extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasName
 {
     /** @use HasFactory<AdminUserFactory> */
-    // The app-authentication traits hide their own secret and recovery columns, so `#[Hidden]` lists only the rest.
+    // The app-authentication traits hide their own secret and recovery columns, so `#[Hidden]` lists
+    // only the rest.
     use ClearsPasswordScheme, HasFactory, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery;
 
     // The table is `admin_users`, kept distinct from OpenPNE 3's `admin_user` so both coexist in a
