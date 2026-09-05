@@ -37,7 +37,7 @@
             {{-- Every control below is a working link or a working form on its own; the script only
                  keeps the reader on the page. The anchor lands on the reply form: viewing a thread
                  is what admits replying to it. --}}
-            @php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
+            @php($canPost ??= \App\Features\Timeline\TimelinePosting::enabled())
             @if ($canPost)
                 <a class="timeline-comment-link" href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
             @endif

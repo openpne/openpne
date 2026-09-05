@@ -142,7 +142,7 @@ enum SnsSettingKey: string
     /** OpenPNE 3's footer seed. */
     private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
 
-    /** A hundred years: past it `subDays()` overflows into the future and the search window empties. */
+    /** A century, longer than any archive; a bound also keeps `subDays()` away from the int-scale values that wrap into the future. */
     public const DIARY_SEARCH_PERIOD_MAX_DAYS = 36500;
 
     public function group(): SettingGroup
@@ -393,10 +393,8 @@ enum SnsSettingKey: string
             // clamps to 0 rather than inverting the comparison it feeds.
             self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
             self::DiarySearchPeriodDays => is_numeric($value) ? self::clampDays((int) $value) : $this->default(),
-            // Fail-open like a feature toggle: off is a policy, not an exposure, and a malformed value
-            // must not silence every member.
-            self::TimelinePostingEnabled, self::DiarySearchEnabled => $value !== '0',
-            // OpenPNE 3 read this one as PHP truthy, so any stored value but '' and '0' narrows the window.
+            // OpenPNE 3 read all three as PHP truthy, so '' closes like '0' while any other stored value opens.
+            self::TimelinePostingEnabled, self::DiarySearchEnabled,
             self::DiarySearchPeriodEnabled => ! in_array($value, ['', '0'], true),
             // Fail-open, the one place that direction is right: only an explicit '0' takes a feature
             // down, so a malformed value cannot black out a module and strand its content.

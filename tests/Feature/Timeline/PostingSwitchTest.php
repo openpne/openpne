@@ -9,7 +9,6 @@ use App\Services\GadgetService;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /**
@@ -45,11 +44,29 @@ class PostingSwitchTest extends TestCase
 
     public function test_a_refused_post_consumes_no_posting_limiter(): void
     {
+        // At one attempt per minute, a refusal that reached the throttle would 429 the member once the switch is back on.
+        config(['openpne.throttle.posting' => 1, 'openpne.throttle.posting_ip' => 0]);
         $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
 
         $this->actingAs($this->member)->post(route('timeline.store'), ['body' => 'no', 'visibility' => Visibility::Members->value])->assertNotFound();
+        $this->actingAs($this->member)->post(route('timeline.store'), ['body' => 'no', 'visibility' => Visibility::Members->value])->assertNotFound();
 
-        $this->assertSame(0, RateLimiter::attempts('posting|'.$this->member->getKey()));
+        $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, true);
+
+        $this->actingAs($this->member)->post(route('timeline.store'), ['body' => 'yes', 'visibility' => Visibility::Members->value])->assertRedirect();
+        $this->assertDatabaseCount('timeline_posts', 2);
+    }
+
+    public function test_classic_rows_keep_a_well_formed_control_line_without_the_reply_link(): void
+    {
+        $other = TimelinePost::factory()->create(['member_id' => Member::factory()->create()->getKey(), 'visibility' => Visibility::Members, 'body' => 'theirs']);
+        $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
+
+        $html = $this->actingAs($this->member)->get(route('timeline.index'))->assertOk()->getContent();
+
+        // The own row keeps "削除 | timestamp" while another member's row is the timestamp alone, with no leading separator.
+        $this->assertStringContainsString('| <a href="'.route('timeline.show', $this->post).'">', $html);
+        $this->assertStringNotContainsString('| <a href="'.route('timeline.show', $other).'">', $html);
     }
 
     public function test_on_keeps_the_routes_open(): void
