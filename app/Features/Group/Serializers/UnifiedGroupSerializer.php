@@ -196,12 +196,11 @@ final class UnifiedGroupSerializer
         foreach ($images as $image) {
             $file = $image->file;
 
-            // FilePolicy authorizes against the owner the file declares, so a file belonging
-            // elsewhere could pass the Gate on that owner's terms.
             if ($file === null || $file->related_entity_id !== $parent->getKey()) {
                 continue;
             }
-            // instanceof absorbs the legacy morph aliases: `communityTopic` and kin resolve here.
+            // FilePolicy authorizes against the owner the file declares, so a file belonging elsewhere
+            // could pass the Gate on that owner's terms; instanceof absorbs the legacy morph aliases.
             $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
             if ($ownerClass === null || ! $parent instanceof $ownerClass) {
                 continue;

@@ -2,8 +2,8 @@
 
 A group's **board** is `group_topics` and `group_events`: a titled thread with a body and a comment
 list, ordered by activity rather than by post date. The two are a deliberate parallel hierarchy —
-OpenPNE 3's `communityTopic` and `communityEvent` plugins, ported as two feature modules whose
-shared shapes are pinned by tests rather than by a common base class.
+OpenPNE 3's `communityTopic` and `communityEvent` modules of `opCommunityTopicPlugin`, ported as
+two feature modules whose shared shapes are pinned by tests rather than by a common base class.
 
 Talk is the third thing inside a group and has its own document
 ([group-talk.md](group-talk.md)); what all three share is the group's two access columns
@@ -21,9 +21,13 @@ or a transfer is accepted while the old admin withdraws.
 
 [`AcceptAdminTransfer`](../../app/Features/Group/Actions/AcceptAdminTransfer.php) promotes the
 nominee from Member or Sub-admin, demotes the incumbent admin to Member and clears the pending
-seat, all under that lock. [`AddAllMembers`](../../app/Features/Group/Actions/AddAllMembers.php) is
-outside the protocol on purpose: it only inserts plain Member rows and touches neither a role nor
-`pending_admin_member_id`.
+seat, all under that lock. Three writes are outside the protocol on purpose:
+[`AddAllMembers`](../../app/Features/Group/Actions/AddAllMembers.php) and
+[`JoinGroup`](../../app/Features/Group/Actions/JoinGroup.php) only insert plain Member rows and
+touch neither a role nor `pending_admin_member_id`, and
+[`RejectAdminTransfer`](../../app/Features/Group/Actions/RejectAdminTransfer.php) clears the seat
+with a single conditional `UPDATE`, which is its own compare-and-set (zero rows changed means the
+seat was not the actor's), so it takes no lock.
 
 Two edges are accepted rather than closed, and OpenPNE 3 behaves the same way:
 
@@ -60,7 +64,8 @@ concurrently by design.
 The talk arm sits inside the lock while the topic and event sweeps do not, because talk is written
 concurrently: a message committed after an earlier enumeration would slip past it, its join row
 cascading away while the File row and its bytes stayed. The X-lock on the parent closes that window
-— a new message's FK check takes a shared lock on the group row and waits. The order is the one
+on InnoDB, where a new message's FK check takes a shared lock on the group row and waits; SQLite
+takes no row locks, and the single-connection tests cannot show either. The order is the one
 every reaction write takes ([group-talk.md](group-talk.md), "One lock order"), so a teardown and a
 reaction queue rather than deadlock.
 

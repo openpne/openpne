@@ -31,6 +31,9 @@ class ListMemberGroups
     }
 
     /**
+     * Deliberately unpaginated: a management screen must account for every seat, and a slice would
+     * hide one the operator came to give up.
+     *
      * @return Collection<int, Group>
      */
     public function all(Member $member): Collection
