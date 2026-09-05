@@ -22,7 +22,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Sent by every site, and it pierces the mute that stops the per-message broadcast beside it
- * (docs/internals/group-talk.md, What talk notifies).
+ * (docs/internals/group-talk.md, "What talk notifies").
  */
 class GroupTalkMentionedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -50,7 +50,8 @@ class GroupTalkMentionedNotification extends Notification implements FeatureNoti
 
     /**
      * SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current; the feed
-     * row additionally waits on the reader's cursor (docs/internals/notifications.md, Delivery-time re-checks).
+     * row additionally waits on the reader's cursor (docs/internals/notifications.md,
+     * "Delivery-time re-checks").
      */
     public function shouldSend(Member $notifiable, string $channel): bool
     {

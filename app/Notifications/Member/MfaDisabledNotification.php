@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Only a live factor's removal is announced, so each caller gates on wasEnabled
- * (docs/internals/notifications.md, Gating flow).
+ * (docs/internals/notifications.md, "Gating flow").
  */
 class MfaDisabledNotification extends Notification implements ShouldQueue
 {

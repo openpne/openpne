@@ -17,7 +17,7 @@ use Inertia\Response;
 
 /**
  * Opening the feed marks nothing read; opening a row does, as does an explicit mark-all-read
- * (docs/internals/notifications.md, The three layers).
+ * (docs/internals/notifications.md, "The three layers").
  */
 class NotificationFeedController extends Controller
 {
@@ -48,7 +48,7 @@ class NotificationFeedController extends Controller
         $row = $this->viewer()->notifications()->whereKey($notification)->first();
 
         // A missing row returns to the feed rather than erroring; only a row that exists but belongs to
-        // a switched-off unit is refused (docs/internals/notifications.md, The three layers).
+        // a switched-off unit is refused (docs/internals/notifications.md, "The three layers").
         if ($row === null) {
             return redirect()->route('notifications.index');
         }

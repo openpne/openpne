@@ -10,7 +10,8 @@ use NotificationChannels\WebPush\WebPushChannel;
 
 /**
  * Drops mail and web push for an AI account at NotificationSending, letting the `database` row through
- * (docs/internals/notifications.md, Gating flow). Null, not true, for everything else: the event is
+ * (docs/internals/notifications.md, "Gating flow"). Null, not true, for everything else: the event
+ * is
  * dispatched with halt, so any non-null answer ends the chain and would silence a second opinion.
  */
 final class SuppressAiAccountNotifications

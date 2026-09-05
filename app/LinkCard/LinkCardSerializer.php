@@ -81,7 +81,7 @@ final class LinkCardSerializer
      * Nothing is read from the row but the URL and the pointer. The order is the design: URL re-read
      * and pointer must agree, unit before the record is loaded, then the record's own access rule;
      * every failure answers null so refusal and absence are indistinguishable
-     * (docs/internals/link-cards.md, Who may see one).
+     * (docs/internals/link-cards.md, "Who may see one").
      *
      * @return array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null
      */

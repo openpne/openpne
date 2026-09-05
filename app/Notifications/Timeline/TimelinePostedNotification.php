@@ -18,7 +18,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
- * gates nothing (docs/internals/notifications.md, Broadcast fan-out).
+ * gates nothing (docs/internals/notifications.md, "Broadcast fan-out").
  */
 class TimelinePostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

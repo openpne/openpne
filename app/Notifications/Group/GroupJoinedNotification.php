@@ -17,7 +17,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * No per-member catalog kind: the opt-out is the per-group toggle the recipient query applies
- * (docs/internals/notifications.md, Gating flow).
+ * (docs/internals/notifications.md, "Gating flow").
  */
 class GroupJoinedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

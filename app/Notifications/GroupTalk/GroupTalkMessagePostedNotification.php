@@ -18,8 +18,8 @@ use Illuminate\Notifications\Notification;
 
 /**
  * The fan-out resolves each recipient's channels once and passes them, so via() returns them verbatim and
- * gates nothing; its feed row is the room's, not the message's (docs/internals/notifications.md, Broadcast
- * fan-out).
+ * gates nothing; its feed row is the room's, not the message's (docs/internals/notifications.md,
+ * "Broadcast fan-out").
  */
 class GroupTalkMessagePostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

@@ -9,8 +9,8 @@ use Illuminate\Notifications\DatabaseNotification;
 
 /**
  * Counted off the very rows the panel lists rather than off UnreadCounts or the whole unread table, so a
- * badge can never stand over rows the panel does not show (docs/internals/notifications.md, The three
- * layers).
+ * badge can never stand over rows the panel does not show (docs/internals/notifications.md, "The
+ * three layers").
  */
 class NotificationCenterCounts
 {

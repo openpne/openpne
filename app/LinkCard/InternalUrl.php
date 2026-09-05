@@ -8,7 +8,7 @@ namespace App\LinkCard;
  * Reads a normalised URL as one of three answers, purely textually, because it is asked again when
  * a card is drawn. Being ours is decided by host and port before being resolvable and settles
  * fetching on its own: a URL on this host is never handed to the fetcher
- * (docs/internals/link-cards.md, Links to this site are never fetched).
+ * (docs/internals/link-cards.md, "Links to this site are never fetched").
  */
 final class InternalUrl
 {

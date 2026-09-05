@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
-/** The ingress half of the seam (docs/internals/outbound-http.md, The push endpoint seam). */
+/** The ingress half of the seam (docs/internals/outbound-http.md, "The push endpoint seam"). */
 class PushSubscriptionEndpointTest extends TestCase
 {
     use FakesWebPushTransport;

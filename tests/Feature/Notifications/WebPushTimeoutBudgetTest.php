@@ -14,7 +14,7 @@ use Tests\TestCase;
 /**
  * Each of the three numbers lives somewhere else — a config file, a controller constant, a notification
  * property — and each looks harmless alone, so the relation between them is asserted rather than left as a
- * comment (docs/internals/outbound-http.md, The push endpoint seam).
+ * comment (docs/internals/outbound-http.md, "The push endpoint seam").
  */
 class WebPushTimeoutBudgetTest extends TestCase
 {
@@ -47,7 +47,8 @@ class WebPushTimeoutBudgetTest extends TestCase
     /**
      * `sync`, `deferred` and `background` run the job in the process that queued it, so there is no
      * reservation to expire, `failover` delegates, and `sqs` carries a requirement of its own
-     * (docs/internals/outbound-http.md, The push endpoint seam). Named rather than skipped by absence, so a
+     * (docs/internals/outbound-http.md, "The push endpoint seam"). Named rather than skipped by
+     * absence, so a
      * driver added later has to be looked at.
      *
      * @var list<string>

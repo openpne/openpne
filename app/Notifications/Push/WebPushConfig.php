@@ -6,7 +6,7 @@ namespace App\Notifications\Push;
 
 /**
  * The single predicate the shared prop, the subscribe endpoints and the sender all read, so the three
- * cannot disagree (docs/internals/notifications.md, Web push).
+ * cannot disagree (docs/internals/notifications.md, "Web push").
  */
 final class WebPushConfig
 {

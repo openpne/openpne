@@ -17,7 +17,7 @@ use Tests\TestCase;
 /**
  * The Classic-default surface stamp is a runner write (not the command's), so a direct UpgradeRunner
  * invocation gets it too; pinned as insert-if-absent, after a full success only, never on a dry run.
- * The relation source and steps mirror UpgradeRunnerSqlTest, since the stamp fires on any full walk.
+ * The relation source and steps are the plainest full walk, since the stamp fires on any full walk.
  */
 class SurfaceModeUpgradeTest extends TestCase
 {
