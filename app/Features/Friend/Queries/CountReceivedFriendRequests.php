@@ -4,7 +4,7 @@ namespace App\Features\Friend\Queries;
 
 use App\Models\Member;
 
-/** The count falls only when a request is answered or the pair is blocked, as OpenPNE 3's caution did. */
+/** Nothing ages the count out: it falls only when the request row goes, as OpenPNE 3's caution did. */
 class CountReceivedFriendRequests
 {
     public function __invoke(Member $viewer): int
