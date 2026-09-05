@@ -8,8 +8,7 @@ use Illuminate\Http\UploadedFile;
 
 /**
  * The row is locked first so two concurrent edits serialize rather than leaving the superseded
- * upload's File orphaned as a public banner image. The replaced File is deleted after the commit
- * because a disk backend's byte deletion cannot be rolled back.
+ * upload's File orphaned as a public banner image.
  */
 class UpdateBannerImage
 {

@@ -129,7 +129,6 @@ class RecipientCandidatesTest extends ConversationTestCase
         $this->assertSame($friends, array_slice($ids, 0, 5));
     }
 
-    /** A recipient is a member id, so nothing about the name has to fit inside a message. */
     public function test_a_long_name_is_still_offered(): void
     {
         $viewer = Member::factory()->create();

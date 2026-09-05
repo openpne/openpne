@@ -115,7 +115,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Either direction: a block means these two are not to be put in front of each other. */
     public function test_a_block_by_the_sender_stops_both_channels_too(): void
     {
         $jobs = $this->queuedSend();
@@ -150,7 +149,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Trash is not purge: a trashed message is still the recipient's, and still restorable. */
     public function test_a_receipt_only_trashed_before_delivery_still_arrives(): void
     {
         $jobs = $this->queuedSend();
@@ -183,7 +181,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertDatabaseCount('notifications', 0);
     }
 
-    /** A sender or a message gone before delivery takes the queued job with it. */
     public function test_the_job_is_dropped_when_its_models_are_missing(): void
     {
         $jobs = $this->queuedSend();
