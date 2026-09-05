@@ -2,7 +2,8 @@
      ?category=. The privacy category is offered only while it has something to set (an age to
      gate, or a profile-page choice the policy allows), the diary category only while the unit is
      switched on, and the AI category to a member the site offers them to or who already owns one. --}}
-@props(['current' => null, 'publicFlagAvailable' => true, 'aiAvailable' => false])
+@props(['current' => null, 'publicFlagAvailable' => null, 'aiAvailable' => false])
+@php($publicFlagAvailable ??= app(\App\Features\Profile\Queries\BirthdayFieldExists::class)() || \App\Features\Profile\ProfilePageVisibility::memberMayChoose())
 <x-classic.parts id="pageNav" name="pageNav">
     <ul>
         @foreach (\App\Features\Member\MemberConfigCategory::cases() as $category)

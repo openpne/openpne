@@ -55,8 +55,10 @@ class ProfileVisibilityPolicyTest extends TestCase
 
             $this->assertSame($openReachable, ProfileAccess::isWebPublic($open), $policy->value);
             $this->assertSame($membersReachable, ProfileAccess::isWebPublic($members), $policy->value);
-            $this->assertSame($openReachable, $this->get("/member/{$open->getKey()}")->status() === 200, $policy->value);
-            $this->assertSame($membersReachable, $this->get("/member/{$members->getKey()}")->status() === 200, $policy->value);
+            foreach ([[$open, $openReachable], [$members, $membersReachable]] as [$subject, $reachable]) {
+                $response = $this->get("/member/{$subject->getKey()}");
+                $reachable ? $response->assertOk() : $response->assertRedirect('/login');
+            }
         }
     }
 
@@ -112,15 +114,37 @@ class ProfileVisibilityPolicyTest extends TestCase
         $this->actingAs($member)->get('/member/config')->assertOk()->assertSee($link, false);
         $this->actingAs($member)->get('/member/config?category=publicFlag')
             ->assertOk()
-            ->assertSee('id="profileVisibilityForm"', false)
-            ->assertDontSee('id="publicFlagForm"', false);
+            ->assertSee('id="publicFlagForm"', false)
+            ->assertSee('action="'.route('member.config.profile_visibility').'"', false)
+            ->assertDontSee('action="'.route('member.config.age').'"', false);
 
         $this->policy(ProfileVisibilityPolicy::Members);
 
         $this->actingAs($member)->get('/member/config')->assertOk()->assertDontSee($link, false);
         $this->actingAs($member)->get('/member/config?category=publicFlag')
             ->assertOk()
-            ->assertDontSee('id="profileVisibilityForm"', false);
+            ->assertDontSee('action="'.route('member.config.profile_visibility').'"', false);
+    }
+
+    public function test_the_ai_account_page_sidemenu_hides_the_privacy_category_the_same_way(): void
+    {
+        $this->policy(ProfileVisibilityPolicy::Members);
+        $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, true);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/member/config/ai')
+            ->assertOk()
+            ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
+    }
+
+    public function test_a_modern_save_announces_inline_and_not_as_a_page_flash(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/profile-visibility', ['profile_visibility' => (string) Visibility::Open->value])
+            ->assertRedirect(route('member.config'))
+            ->assertSessionMissing('status');
     }
 
     public function test_the_modern_settings_page_carries_the_field_only_under_member_choice(): void
