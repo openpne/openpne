@@ -173,7 +173,9 @@ class ProfileVisibilityPolicyTest extends TestCase
         $this->actingAs($member)->get('/member/config')
             ->assertInertia(fn ($page) => $page
                 ->where('form.profileVisibility.value', '0')
-                ->has('form.profileVisibility.options', 2));
+                ->has('form.profileVisibility.options', 2)
+                // Web first, as OpenPNE 3 listed it and as every other audience picker here does.
+                ->where('form.profileVisibility.options.0.value', '0'));
 
         $this->policy(ProfileVisibilityPolicy::Web);
 

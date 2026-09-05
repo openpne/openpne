@@ -57,7 +57,7 @@ class MemberPrivacySettingsTest extends TestCase
         DB::table('sns_settings')->where('key', SnsSettingKey::ProfileVisibilityPolicy->value)->delete();
         app(SnsSettingService::class)->clearCache();
 
-        // The service returns the typed enum; the radio must hold the backing value or nothing is selected.
+        // The service returns the typed enum and Filament's option cast folds it to the backing value; a field without that cast would need the fold done here.
         Livewire::test(MemberPrivacySettings::class)
             ->assertSet('data.profile_visibility_policy', 'members')
             ->fillForm(['profile_visibility_policy' => 'web'])
