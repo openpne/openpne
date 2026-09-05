@@ -33,9 +33,14 @@ comment age rather than page index, so they read the same in either order.
 
 The boards page by `id` instead, and for their own reason
 ([group-boards.md](group-boards.md#comment-threads-page-by-id)) — the two pagers are ports of two
-different OpenPNE 3 configurations, not one shape that drifted.
+different OpenPNE 3 configurations, not one shape that drifted. Paging by `number` therefore keeps
+OpenPNE 3's own page boundaries for a diary, at a known cost the boards avoided: a thread whose
+migrated numbers are duplicated has engine-dependent page edges, and no test pins them.
 
-Modern's show page does not use this pager: it serializes the whole thread in `number` order.
+Modern's show page does not use this pager: it serializes the whole thread in `number` order. That
+is the bound the boards refuse ([group-boards.md](group-boards.md#comment-threads-page-by-id)), and
+it has simply not been applied to diaries yet; a diary thread is not known to be shorter than a
+board's, so this is a gap rather than a decision.
 
 ## The comment-history box
 

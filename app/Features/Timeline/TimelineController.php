@@ -128,8 +128,8 @@ class TimelineController extends Controller
             'member.avatar.file', 'replies.member.avatar.file', 'replies.images.file',
             'replies.mentions', 'replies.tags', 'replies.linkCard.image',
         ]);
-        // The thread, not only its root: a reply is a body of its own, and this is the page it is
-        // read on.
+        // The thread, not only its root — a reply is a body of its own, read on this page — and
+        // placed after the reply-permalink redirect, so a request that never renders queues nothing.
         $linkCards->ensure($post);
         // Two calls rather than one over a combined collection: `prepend` on a loaded relation
         // mutates it in place, which put the root into the page's own reply list.
@@ -329,6 +329,10 @@ class TimelineController extends Controller
         return (int) ($validated['per_page'] ?? RowsPage::DEFAULT);
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, TimelinePost>  $posts
+     * @return LengthAwarePaginator<int, TimelinePost>
+     */
     private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
     {
         // items(), not getCollection(): only the former is on the contract the feed queries return,

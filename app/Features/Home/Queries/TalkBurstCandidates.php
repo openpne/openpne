@@ -31,7 +31,8 @@ final class TalkBurstCandidates
     public function __invoke(HomeIssueWindow $window, int $limit): Collection
     {
         // Correlated rather than a second pass, because the reaction count is part of the score;
-        // nothing bounds the window but the range itself, which is what once a day affords.
+        // nothing bounds the window but the range itself — no index leads with created_at — which is
+        // what once a day affords.
         $reactions = DB::table('reactions')
             ->selectRaw('count(*)')
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')

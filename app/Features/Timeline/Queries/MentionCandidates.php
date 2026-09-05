@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Who the picker may offer for a search term: the viewer's friends first, then anyone else whose
- * name matches, capped at LIMIT. Whom it offers is ResolveMentions' mentionability restated
- * as a filter — a candidate the submit would silently drop must never be offered.
+ * Two queries rather than one UNION: the friend tier joins the pivot, so both selects would have to
+ * be padded to one column list. Whom it offers is ResolveMentions' mentionability restated as a
+ * filter — a candidate the submit would silently drop must never be offered.
  */
 class MentionCandidates
 {

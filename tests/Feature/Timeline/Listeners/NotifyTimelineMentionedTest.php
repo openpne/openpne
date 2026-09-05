@@ -22,10 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
-/**
- * The delivery-time half, which re-checks what the interval can have changed; storage settled
- * mentionability at write time (Tests\Feature\Timeline\MentionStorageTest).
- */
+/** The delivery-time half, which re-checks what the interval since the write can have changed. */
 class NotifyTimelineMentionedTest extends TestCase
 {
     use RefreshDatabase;

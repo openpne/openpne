@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * What is pinned here is that both write paths index, that mentions and tags coexist on one post,
- * and that the rows are the post's; HashtagParserTest covers what a body yields.
+ * and that the rows are the post's.
  */
 class HashtagStorageTest extends TestCase
 {

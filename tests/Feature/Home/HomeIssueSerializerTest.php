@@ -151,7 +151,7 @@ class HomeIssueSerializerTest extends TestCase
 
     /**
      * The FK cascades a join row away with its file, so an unsaved row in the slot before a real one
-     * is how the guard gets exercised (as in AttachmentImageSerializationTest).
+     * is how the guard gets exercised.
      */
     public function test_a_picture_whose_file_is_gone_is_skipped_for_the_next_one(): void
     {
@@ -300,7 +300,7 @@ class HomeIssueSerializerTest extends TestCase
 
     /**
      * A withdrawn author is a byline the page has lost, not a story it drops: the board keeps the
-     * record (ShowHomeIssueTest), and the front page prints it with nobody's name on it.
+     * record, and the front page prints it with nobody's name on it.
      */
     public function test_a_story_whose_author_has_withdrawn_carries_no_byline(): void
     {
