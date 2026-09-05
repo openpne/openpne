@@ -21,7 +21,6 @@ class ConversationSerializerTest extends ConversationTestCase
         $this->assertNull($page['messages'][1]['subject']);
     }
 
-    /** The storage keeps null and '' distinct, so the wire does too; the screen draws neither. */
     public function test_an_empty_subject_is_carried_as_the_empty_string(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

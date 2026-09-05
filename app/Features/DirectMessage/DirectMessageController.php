@@ -38,7 +38,7 @@ class DirectMessageController extends Controller
 {
     use RespondsWithSurface;
 
-    /** OpenPNE 3 message/index forwards to the inbox. */
+    /** OpenPNE 3 message/index forwards to the inbox; under chat it lands on the conversation list. */
     public function index(Request $request): RedirectResponse
     {
         return $this->isModern($request)

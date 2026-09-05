@@ -59,7 +59,6 @@ class MarkConversationReadTest extends ConversationTestCase
         $this->assertNotNull($this->readAt($waiting, $viewer));
     }
 
-    /** Read state is per receipt: the counterpart's copy of the same row is theirs to open. */
     public function test_reading_your_side_leaves_the_other_sides_receipt_alone(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

@@ -53,6 +53,7 @@ class UpdateDraft
             $removed = $draft->files()->whereKey($images->removals)->with('file')->get();
             $draft->files()->whereKey($removed->modelKeys())->delete();
 
+            // The free slots are recomputed under the same lock, so two concurrent adds cannot claim one.
             $used = $draft->files()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
             if (count($images->additions) > count($free)) {

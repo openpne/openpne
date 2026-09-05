@@ -140,7 +140,6 @@ class DirectMessageDeliveryReCheckTest extends TestCase
         $this->assertNotDelivered();
     }
 
-    /** Purge revokes reading, so the body must not follow the recipient out by mail. */
     public function test_a_receipt_purged_before_delivery_stops_both_channels(): void
     {
         $jobs = $this->queuedSend();

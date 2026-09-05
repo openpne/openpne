@@ -72,7 +72,7 @@ class ConversationMessageSerializer
 
     /**
      * Null when there is nothing to report: a message the viewer received, or one in the withdrawn
-     * bucket where no receipt names a member. An upgraded OpenPNE 3 send carries several receipts, so
+     * bucket where no receipt names a member. An upgraded OpenPNE 3 send may carry several receipts, so
      * the answer is this conversation's rather than whichever one the relation holds first.
      */
     private static function read(DirectMessage $message, int $viewer, ?Member $counterpart): ?bool

@@ -40,6 +40,7 @@ class UpdateBannerImage
             return $replaced;
         });
 
+        // After the commit: a disk backend's byte deletion cannot be rolled back.
         $replaced?->delete();
 
         return $image->refresh();
