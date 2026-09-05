@@ -44,7 +44,7 @@
             @if ($post->member->is(auth()->user()))
                 @if ($canPost) | @endif<a class="timeline-post-delete-confirm-link" href="{{ route('timeline.delete.show', $post) }}" data-dialog="timeline-post-delete-confirm-{{ $post->getKey() }}">{{ __('Delete') }}</a>
             @endif
-            | <a href="{{ route('timeline.show', $post) }}"><x-timeline-timestamp :date="$post->created_at" /></a>
+            @if ($canPost || $post->member->is(auth()->user())) | @endif<a href="{{ route('timeline.show', $post) }}"><x-timeline-timestamp :date="$post->created_at" /></a>
 
             @if (! $thread && $post->replies_count > \App\Features\Timeline\Queries\RecentReplies::LIMIT)
                 <a id="timeline-comment-loadmore-{{ $post->getKey() }}" class="timeline-comment-loadmore" href="{{ route('timeline.show', $post) }}"
