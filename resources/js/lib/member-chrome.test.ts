@@ -176,8 +176,7 @@ test('the dashboard action goes with the diary unit', () => {
 });
 
 test('home takes the mobile brand bar rather than a back control', () => {
-    // Nothing stands above the current issue, so its bar carries the brand row and crumbs to
-    // nowhere. A dated issue is somewhere below the run of them, and What's new is a hub.
+    // A dated issue is somewhere below the run of them, and What's new is a hub.
     assert.ok(isHomeComponent('home/issue'));
     assert.ok(!isHomeComponent('home/archive'));
     assert.ok(!isHomeComponent('dashboard'));
@@ -294,10 +293,9 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
 };
 
 /**
- * Every screen the registry classifies as a compose sheet — the forms whose whole job is writing one
- * thing. Enumerated for the same reason FORM_SCREENS is: below lg these lose the bar and the bottom
- * nav for a full-page sheet, so joining or leaving the set is a UX decision, not an implementation
- * detail. Every entry is also a FORM_SCREEN (compose implies form).
+ * Every screen the registry classifies as a compose sheet, enumerated for the same reason
+ * FORM_SCREENS is: joining or leaving the set is a UX decision, not an implementation detail. Every
+ * entry is also a FORM_SCREEN.
  */
 const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'diary/new': {},
@@ -513,10 +511,9 @@ const OWNER_PLACE: DivePlace = { label: 'Owner', href: '/member/1' };
 const HOME_PLACE: DivePlace = { label: { key: 'Home', replacements: undefined }, href: '/' };
 
 /**
- * Where the unified bottom bar says the member is standing, per screen. Enumerated rather than
- * sampled: the middle zone is a claim about the reader's position and the way back up out of it, so
- * a screen resolving to the wrong place would carry them out of the space they are in. The group and
- * profile tops are the ones scope cannot answer for — they *are* the place, so nothing scopes them.
+ * Where the unified bottom bar says the member is standing, enumerated rather than sampled: a screen
+ * resolving to the wrong place would carry the reader out of the space they are in. The group and
+ * profile tops are the ones scope cannot answer for — they *are* the place.
  */
 const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place: DivePlace }[] = [
     { component: 'community/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
@@ -538,9 +535,8 @@ const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place:
     { component: 'diary/list', props: { owner, isOwner: false }, place: OWNER_PLACE },
     { component: 'timeline/member', props: { owner, isOwner: false }, place: OWNER_PLACE },
     { component: 'message/conversation/index', props: { counterpart: owner }, place: OWNER_PLACE },
-    // Nowhere in particular: a hub, an errand, the viewer's own lists — and the withdrawn bucket,
-    // whose counterpart has no page left to stand on. The issue screens are home itself and the
-    // run behind it, which is the one place they are all a way back up to.
+    // Nowhere in particular: a hub, an errand, the viewer's own lists, and the withdrawn bucket
+    // whose counterpart has no page left to stand on.
     { component: 'home/issue', props: {}, place: HOME_PLACE },
     { component: 'home/archive', props: {}, place: HOME_PLACE },
     { component: 'home/issues', props: {}, place: HOME_PLACE },
@@ -595,9 +591,8 @@ test('a page that IS the place answers no crumb — the header speaks the home g
 });
 
 test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {
-    // The difference from divePlace, and the reason this is not that: from a screen that is inside
-    // nothing, divePlace answers home — the way back up. A breadcrumb says where the reader *is*,
-    // and "you are at home" on the tag lens or the email form would be false.
+    // From a screen that is inside nothing divePlace answers home, where a breadcrumb saying "you
+    // are at home" on the email form would be false.
     assert.deepEqual(crumb('timeline/tag', { tag: 'ride' }), {
         label: { key: '%Activity%', replacements: undefined },
         href: '/timeline',
@@ -607,9 +602,8 @@ test('a screen inside no place takes the last crumb of its trail instead of clai
 });
 
 test("a form's crumb is static text, whatever it would otherwise have been", () => {
-    // The bar must never carry a link beside unsaved input — the rule the detail bar's scope gate
-    // spells, kept rather than reversed by the look that draws the trail as a pressable pill. The
-    // group edit form is the sharp case: the same word as a place, and still not a way out of it.
+    // The group edit form is the sharp case: the same word as a place, and still not a way out of
+    // it.
     assert.deepEqual(crumb('member/config/email', {}), {
         label: { key: 'Settings', replacements: undefined },
         href: '/member/config',

@@ -39,9 +39,7 @@ test('a popstate steps back, and the navigate it causes is not counted again', (
 });
 
 test('rapid popstates each discount their own navigate', () => {
-    // Holding/double-pressing back fires the popstates before their navigates. A flag (rather
-    // than a counter) would absorb both pops and count the second navigate as a push — an
-    // over-count that could offer a history control whose back leaves the app.
+    // Holding or double-pressing back fires the popstates before their navigates.
     const tracker = createBackTracker();
     tracker.handleNavigate();
     tracker.handleNavigate();

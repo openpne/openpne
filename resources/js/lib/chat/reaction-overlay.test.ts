@@ -40,11 +40,7 @@ test('a guess made on another message is not drawn on this one', () => {
     assert.deepEqual(drawn([], pending), []);
 });
 
-/**
- * The reason this is an overlay rather than a snapshot to restore. While the tap was out, the poll
- * put a newer chip row underneath it — a refusal must give up the guess and nothing else, or it
- * would take back what someone else did in the meantime.
- */
+/** While the tap was out, the poll put a newer chip row underneath it. */
 test('a refused tap gives up its own guess and keeps what arrived while it was out', () => {
     const before = [chip(THUMBS, 1)];
     let pending = withPending(noPending(), 1, THUMBS, 'add');
@@ -59,10 +55,7 @@ test('a refused tap gives up its own guess and keeps what arrived while it was o
     assert.deepEqual(drawn(arrived, pending), arrived, 'the failure costs the guess, not the news');
 });
 
-/**
- * Two chips tapped in a row, answered in the other order. Settling is by (message, emoji), so the
- * answer that came back first cannot take the other tap's guess off the screen with it.
- */
+/** Two chips tapped in a row, answered in the other order. */
 test('an answer settles its own tap and leaves another still out', () => {
     let pending = withPending(withPending(noPending(), 1, THUMBS, 'add'), 1, HEART, 'add');
 
@@ -93,11 +86,7 @@ test('nothing out is the chips the stream holds', () => {
     assert.equal(drawn(chips, noPending()), chips);
 });
 
-/**
- * The same move applied to a settled row — what a write that landed folds in. It reads the row
- * rather than counting from the answer, which is what makes it idempotent, and idempotence is what
- * lets a late answer be applied to a row the poll has already moved on.
- */
+/** The same move applied twice — the guess, and then the write that landed on top of it. */
 test('each op moves the viewer’s own line once and then not again', () => {
     const held = [chip(THUMBS, 2, true)];
     const theirs = [chip(THUMBS, 2)];
@@ -117,9 +106,8 @@ test('an emoji nobody holds arrives as a chip of one, and the last one taken bac
 });
 
 /**
- * The ordering the write path turns on: the viewer's add, then someone else's, delivered by the
- * poll — and only then the answer to the first. Applied as this move it changes nothing, where
- * standing the row on what the answer counted would drop it back to one.
+ * The viewer's add, then someone else's delivered by the poll, and only then the answer to the
+ * first.
  */
 test('a move already delivered by the poll is not made twice', () => {
     const polled = [chip(THUMBS, 2, true)];

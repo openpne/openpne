@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { splitEntities } from './entity-split.ts';
 
-// Mirrors tests/Unit/Support/EntityTextTest.php case for case: the same bodies cut at the same code
-// points. Escaping and autolinking are not tested here — <EntityText> defers them to React and to
-// <UserText> — so these assert the raw segment shape only.
+// Mirrors tests/Unit/Support/EntityTextTest.php case for case; escaping and autolinking are not
+// tested here.
 
 const alice = (offset: number, length: number, memberId = 7) => ({ memberId, offset, length });
 const tagged = (offset: number, length: number, tag: string) => ({ tag, offset, length });

@@ -21,7 +21,9 @@ asymmetric: a look present only on the server ships unified pages under standard
 look present only on the client the reverse. Each `LOOKS` row is complete by type
 (`satisfies Record<string, LookSpec>`), so a look cannot answer some of the shell's
 questions and leave the others reading `undefined` — falsy, and standard-ish rather than
-standard.
+standard. Fields whose value vectors coincide are indistinguishable to every test — registry
+values and consumer renders alike — until some look splits them, so a consumer has to read the
+field whose name answers the question being asked rather than one that happens to agree today.
 
 The looks today:
 

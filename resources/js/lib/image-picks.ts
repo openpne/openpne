@@ -2,11 +2,8 @@
 export const MAX_POST_IMAGES = 3;
 
 /**
- * Fold a file picker's selection into the one already held, under the cap.
- *
- * Capping is decided here, before anything is decoded: a fifty-photo selection must not be
- * canvas-processed fifty times to then be thrown away. What the cap turned away is reported rather
- * than dropped silently — a selection that quietly shrinks reads as the picker losing files.
+ * Capping is decided before anything is decoded, so a fifty-photo selection is not canvas-processed
+ * and then thrown away. What the cap turned away is reported rather than dropped silently.
  */
 export function acceptPicks<T>(held: T[], picked: T[], max: number = MAX_POST_IMAGES): { files: T[]; refused: boolean } {
     const room = Math.max(0, max - held.length);

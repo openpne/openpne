@@ -23,11 +23,7 @@ test('one response replaces both props', () => {
     ]);
 });
 
-/**
- * The failure this exists to stop: the badge counts the rooms listed under it, so a refresh must
- * never move one without the other. A read taken after the room was opened says zero in both places,
- * and both places have to hear it.
- */
+/** A read taken after the room was opened says zero in both places, and both have to hear it. */
 test('a refresh that zeroes the badge zeroes the room it was counting', () => {
     const read: UnreadPayload = {
         unread: { ...counts, groupTalks: 0 },

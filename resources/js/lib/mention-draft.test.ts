@@ -9,8 +9,6 @@ const alice = { id: 7, name: 'Alice' };
 /** The draft an insertion of `@Alice ` at `start` leaves behind. */
 const picked = (start: number, name = 'Alice', memberId = 7): DraftMention => ({ memberId, label: name, start });
 
-// --- trigger detection
-
 test('an @ at the start of the body opens a trigger', () => {
     assert.deepEqual(detectTrigger('@al', 3), { start: 0, end: 3, query: 'al' });
 });
@@ -58,8 +56,6 @@ test('the query cap counts code points, not units', () => {
     assert.equal(detectTrigger(`@${GRIN.repeat(21)}`, 43), null);
 });
 
-// --- which keys the picker takes
-
 const openPicker = { open: true, composing: false };
 
 test('an open picker takes the arrows, Enter, Tab and Escape', () => {
@@ -86,8 +82,6 @@ test('a converting IME keeps every key, so a commit is not read as a pick', () =
     assert.equal(keyAction('ArrowDown', { open: true, composing: true }), null);
     assert.equal(keyAction('Escape', { open: true, composing: true }), null);
 });
-
-// --- insertion
 
 test('picking a candidate replaces the trigger with the handle and a space', () => {
     const trigger = detectTrigger('hi @al', 6);
@@ -119,8 +113,6 @@ test('picking into an existing handle drops the mention it overwrote', () => {
     assert.equal(result.value, '@Alice ');
     assert.deepEqual(result.mentions, [picked(0)]);
 });
-
-// --- carrying the draft across edits
 
 test('text typed before a mention shifts it', () => {
     assert.deepEqual(applyEdit([picked(3)], 'hi @Alice ', 'hi!! @Alice '), [picked(5)]);
@@ -157,15 +149,11 @@ test('a draft with no mentions is returned as it came', () => {
     assert.equal(applyEdit(draft, 'a', 'ab'), draft);
 });
 
-// --- edits a pair of values cannot describe on its own
-
 // Two members who share a display name, mentioned in that order.
 const twoAlices = [picked(0, 'Alice', 1), picked(7, 'Alice', 2)];
 
 test('deleting one of two same-named mentions gives up both, from either end', () => {
-    // Deleting the first "@Alice " and deleting the second leave the identical pair of values, so
-    // nothing in the pair says which member is still on screen. Guessing would point the link and
-    // the notification at the one just deleted.
+    // Deleting the first "@Alice " and deleting the second leave the identical pair of values.
     const draft = applyEdit(twoAlices, '@Alice @Alice ', '@Alice ');
     assert.deepEqual(draft, []);
     assert.deepEqual(toPayload(draft, '@Alice '), []);
@@ -177,25 +165,21 @@ test('deleting one of three same-named mentions gives up all three', () => {
 
 test('a same-named pair takes its ambiguity-spanning neighbour down with it', () => {
     // The shared "@" lets one reading eat into Bob's handle, so his fate differs between readings
-    // too. He degrades to plain text with the pair — the honest cost of never guessing.
+    // too.
     const draft = applyEdit([...twoAlices, picked(14, 'Bob', 9)], '@Alice @Alice @Bob ', '@Alice @Bob ');
     assert.deepEqual(draft, []);
 });
 
 test('deleting the first of two differently named mentions gives up the second too', () => {
-    // Ambiguous as well — the "@" left at 0 may be either mention's, so the readings disagree about
-    // Bob. A unique label is not enough to keep him: the body may hold a hand-typed plain "@Bob"
-    // (the feature's own contract), and a guess could promote that to a mention. The price of never
-    // guessing is that Bob degrades to plain text here.
+    // Ambiguous as well: the "@" left at 0 may be either mention's, and a unique label is not enough
+    // to keep Bob.
     const draft = applyEdit([picked(0, 'Alice', 1), picked(7, 'Bob', 9)], '@Alice @Bob ', '@Bob ');
     assert.deepEqual(draft, []);
     assert.deepEqual(toPayload(draft, '@Bob '), []);
 });
 
 test('a deleted mention never jumps onto a hand-typed copy of its handle', () => {
-    // A picked "@Alice " followed by the same handle typed by hand (plain text by contract).
-    // Deleting the picked one must not leave a mention: the surviving "@Alice" is the hand-typed
-    // text, which the writer chose not to make a mention.
+    // A picked "@Alice " followed by the same handle typed by hand, which is plain text by contract.
     const draft = applyEdit([picked(0, 'Alice', 1)], '@Alice @Alice ', '@Alice ');
     assert.deepEqual(draft, []);
     assert.deepEqual(toPayload(draft, '@Alice '), []);
@@ -204,8 +188,6 @@ test('a deleted mention never jumps onto a hand-typed copy of its handle', () =>
 test('deleting the last of two differently named mentions keeps the first', () => {
     assert.deepEqual(applyEdit([picked(0, 'Alice', 1), picked(7, 'Bob', 9)], '@Alice @Bob ', '@Alice '), [picked(0, 'Alice', 1)]);
 });
-
-// --- candidates belong to the query they answer
 
 test('candidates answer the query they were searched for', () => {
     assert.deepEqual(offeredCandidates('al', { query: 'al', items: [alice] }), [alice]);
@@ -224,8 +206,6 @@ test('no trigger offers nothing, whatever the last search returned', () => {
     assert.deepEqual(offeredCandidates(null, { query: 'al', items: [alice] }), []);
     assert.deepEqual(offeredCandidates('al', null), []);
 });
-
-// --- payload
 
 test('a payload row carries the code-point range, not the unit range', () => {
     const value = `${GRIN} @Alice`;

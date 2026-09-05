@@ -22,7 +22,6 @@ import {
 } from './stream-state.ts';
 import type { ChatPage, ChatStreamRow } from './types.ts';
 
-/** A row of the shape the merges read, plus the two fields the assertions below look at. */
 interface TestMessage extends ChatStreamRow {
     body: string;
     canDelete: boolean;
@@ -61,11 +60,7 @@ test('the same message arriving twice is held once, and the later copy wins', ()
     assert.equal(state.messages[0]?.canDelete, true);
 });
 
-/**
- * The failure this reducer exists for: a send and a poll are in flight together, and the poll's
- * answer — which is older — lands second. Appending it would leave the list out of tuple order for
- * good, and the watermark would then be read off a row that is not the newest.
- */
+/** A send and a poll are in flight together, and the poll's answer — which is older — lands second. */
 test('a response completing out of order still lands in tuple order', () => {
     let state = initial(page([message(1, '2026-08-13T09:00:00+00:00')]));
 
@@ -75,7 +70,6 @@ test('a response completing out of order still lands in tuple order', () => {
     state = mergeAfter(state, page([message(2, '2026-08-13T09:01:00+00:00')]));
 
     assert.deepEqual(bodies(state), ['m1', 'm2', 'm3']);
-    // And the watermark is the genuinely newest row, so the next poll asks from the right place.
     assert.equal(watermark(state), '2026-08-13T09:02:00+00:00|3');
 });
 
@@ -94,10 +88,6 @@ test('the same instant written with different offsets compares as the same insta
     assert.deepEqual(bodies(state), ['m1', 'm2']);
 });
 
-/**
- * A poll already in flight when the delete landed answers from a snapshot that still holds the row.
- * Without the tombstone it would come back, and no later merge would take it away again.
- */
 test('a deleted message is not re-admitted by a poll that was already in flight', () => {
     let state = initial(page([message(1, '2026-08-13T09:00:00+00:00'), message(2, '2026-08-13T09:01:00+00:00')]));
 
@@ -124,8 +114,7 @@ test('the tombstone outlives every kind of merge', () => {
 
 /**
  * The empty-conversation poll asks for the newest page rather than after a watermark it does not
- * have. That page knows what lies behind it — dropping its answer would leave a busy group's history
- * unreachable until a reload.
+ * have.
  */
 test('the latest-page fallback adopts hasOlder when the list was empty', () => {
     const state = mergeLatest(initial(page([])), page([message(51, '2026-08-13T09:50:00+00:00')], true));
@@ -181,11 +170,6 @@ test('an unparseable stamp neither throws nor scrambles the rest', () => {
     assert.deepEqual(bodies(state), ['m1', 'm2', 'm3']);
 });
 
-/**
- * The failure this identity exists for: the poll rebuilds state every tick, and each new
- * `messages` reference re-runs the page's pin effect — a scrollTo re-issued every 8s fights
- * iOS's keyboard pan and shoves the sticky composer out of view.
- */
 test('an idle poll returns the very state it was given', () => {
     const before = initial(page([message(1, '2026-08-13T09:00:00+00:00')], true));
 
@@ -205,11 +189,7 @@ test('a page opens on the live end of the conversation', () => {
     assert.deepEqual(initial(page([message(1, '2026-08-13T09:00:00+00:00')])).window, { kind: 'latest' });
 });
 
-/**
- * A deep link (`?m=`) is rendered with the slice its message sits in, so the first page is not
- * always the newest one. Reading the window off `hasNewer` is what stops the poll appending rows
- * that do not follow the last one on screen — the same rule a jump into history obeys.
- */
+/** A deep link (`?m=`) is rendered with the slice its message sits in, not with the newest page. */
 test('a page rendered around a deep link opens in the history window', () => {
     const landed = initial(page([message(10, '2026-08-13T09:10:00+00:00'), message(11, '2026-08-13T09:11:00+00:00')], true, true));
 
@@ -223,10 +203,8 @@ test('a deep link whose page already runs to the newest message is the live wind
 });
 
 /**
- * "Jump to latest" from a deep link's landing. The page holds the move until a render whose
- * generation has moved past the one it was asked from, so a landing that starts in history has to
- * move the generation like any other window change — otherwise the jump is never spent and the
- * scroll never happens.
+ * The page holds the move until a render whose generation has moved past the one it was asked from,
+ * so a landing that starts in history has to move the generation like any other window change.
  */
 test('leaving a deep link window moves the generation the jump was asked from', () => {
     const landed = initial(page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
@@ -242,11 +220,6 @@ test('leaving a deep link window moves the generation the jump was asked from', 
     assert.notEqual(caughtUp.generation, askedFrom);
 });
 
-/**
- * The whole point of the window: the unread jump lands somewhere behind the newest message, and what
- * it lands on must not be stirred into what was on screen. The two stretches have a hole between
- * them, and a merged list would draw that hole as a conversation.
- */
 test('the unread jump replaces the list rather than merging into it', () => {
     const held = initial(page([message(90, '2026-08-13T18:00:00+00:00'), message(91, '2026-08-13T18:01:00+00:00')], true));
 
@@ -289,7 +262,6 @@ test('returning to the live end replaces the stretch being read', () => {
     assert.deepEqual(back.window, { kind: 'latest' });
 });
 
-/** A session's deletions are the one thing a window change carries over. */
 test('a tombstone survives every window change', () => {
     let state = initial(page([message(2, '2026-08-13T09:01:00+00:00')]));
     state = markDeleted(state, 2);
@@ -311,9 +283,8 @@ test('an idle poll still returns the very state it was given', () => {
 });
 
 /**
- * The race the generation exists for. The poll is on the wire when the reader taps the unread
- * banner, and both reads were issued against the live window — whichever lands second must not be
- * folded into a list that has moved on.
+ * The poll is on the wire when the reader taps the unread banner, and both reads were issued against
+ * the live window.
  */
 test('a poll answered after the jump landed is thrown away', () => {
     const live = initial(page([message(90, '2026-08-13T18:00:00+00:00'), message(91, '2026-08-13T18:01:00+00:00')], true));
@@ -379,10 +350,6 @@ test('a response from the list that asked for it is folded in', () => {
     assert.deepEqual(bodies(state), ['m1', 'm2']);
 });
 
-/**
- * The sent message is held to the live window rather than to a generation: it belongs at the foot of
- * the list the caller re-read to get back there, but never under a stretch of history.
- */
 test('a send is refused by a history window and taken by the live one', () => {
     const history = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
     const mine = message(99, '2026-08-13T18:30:00+00:00');
@@ -395,8 +362,7 @@ test('a send is refused by a history window and taken by the live one', () => {
 
 /**
  * The composer stays live while a jump is still out, so the reader can ask to be taken back through
- * history and then write instead. Writing is the later intent and has to win: the jump's page must
- * not arrive afterwards and replace the list out from under their own message.
+ * history and then write instead.
  */
 test('a send made while a jump is still out keeps the reader at the live end', () => {
     const intents = newIntents();
@@ -455,10 +421,6 @@ test('a touched row replaces the copy held, chips and all', () => {
     assert.equal(merged.reactionsVersion, 7);
 });
 
-/**
- * The contract the whole merge exists for: a reaction on a message outside the stretch on screen
- * must not put that message on screen, or the list would be a conversation with a hole in it.
- */
 test('a touched row the list does not hold is not inserted', () => {
     const state = initial(page([message(2, '2026-08-14T09:01:00+00:00')], true));
 
@@ -483,11 +445,6 @@ test('a poll that touched nothing and moved no watermark returns the very state 
     assert.equal(mergeTouched(state, [], undefined), state, 'a conversation with no reactions is answered without one');
 });
 
-/**
- * The watermark rides the same fold as the rows, so the generation that throws a response away
- * throws the watermark with it — advancing it alone would mark changes as read into a list that
- * never saw them, and nothing would ask for them again.
- */
 test('a poll answered after the window moved moves neither the rows nor the watermark', () => {
     const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
     const at = state.generation;
@@ -519,11 +476,8 @@ test('a write moves one row and leaves a row it does not name alone', () => {
 });
 
 /**
- * Why the write is folded in as the move it made rather than as the row it answered with, and only
- * while the watermark still stands where the tap left. The answer describes the moment the server
- * wrote; by the time a slow one lands the poll may have delivered later changes — someone else's
- * count, or the server's later word on the viewer's own flag from their other tab — and moved the
- * watermark past them, so nothing would ever ask for a correction.
+ * The poll delivers later changes and moves the watermark past them before the write's own answer
+ * lands.
  */
 test('a write answered after the poll has moved the row on cannot take the row back', () => {
     const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };

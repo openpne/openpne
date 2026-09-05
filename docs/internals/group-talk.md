@@ -14,6 +14,15 @@ The room is a chrome registry **conversation** screen
 ([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does
 not recede, so the composer is the last thing on the screen at every scroll position.
 
+It also places itself when it opens — at the foot, or on the message a `?m=` link named — and
+[`opening-scroll.ts`](../../resources/js/lib/chat/opening-scroll.ts) is what stops Inertia placing it
+again afterwards. The move is declined per *destination* rather than per link, because the ways into
+a conversation are not one place and the pages that go wrong are the ones nobody remembered to mark;
+`ConversationScrollRegistryTest` holds the pair to the pages that scroll themselves. Undoing the move
+on the next frame would work too and would show the reader a frame at the top of the history first,
+so `preserveScroll` is used to decline instead: under it Inertia restores `[scroll-region]` elements
+rather than the document, and this app has none.
+
 The screen is not the only wire in. The [MCP endpoint](mcp.md) reads and writes talk as a member,
 through the same Actions and Queries — never a second write path. What the two wires must agree on is
 [`TalkBody`](../../app/Features/GroupTalk/TalkBody.php): the LF newline rule and the 5,000-code-point
@@ -258,6 +267,24 @@ new turn opens with room above it.
 heading says the rows under it were said on that day: true for every reader. The unread line says where
 *this* reader stopped, a claim so tied to its position that `dividerBeforeId` withdraws it rather than
 draw it where the position cannot be shown honestly.
+
+A floating **day indicator** answers the same question while the reader is moving
+([`use-scroll-day.ts`](../../resources/js/lib/chat/use-scroll-day.ts)): it names the day of the row
+under the top of the reading area and goes quiet half a second after the scroll stops — a reader
+looking for something wants to know where they are, and a reader who has stopped to read wants
+nothing over the words. Three states, because the two ways down are not the same
+event: `up` is drawn, `idle` is the reader having stopped and fades, and `aside` is a real heading
+arriving underneath, which is instant — politeness there would be exactly the overlap being avoided.
+Whether it is drawn is written to the DOM in the frame it is decided rather than returned for React
+to render: the indicator is sticky, so the browser carries it with the scroll at once, while a
+decision routed through state arrives a render later, and one frame is all it takes to paint a date
+on top of a heading. It stands aside for a heading inside a band around the line, and the band is
+the distance the page moved since the last frame plus the indicator's own strip: the lag is measured
+rather than guessed at, so a fling widens the band as fast as it closes the gap and ends with no
+indicator at all, which is the right answer for a fling. The row under the line is found by binary
+search over the rows' feet ([`scroll-day.ts`](../../resources/js/lib/chat/scroll-day.ts)), because
+the list is never trimmed: six presses of "load older" is 350 rows, and measuring every box on every
+frame would be 20,000 layout reads a second.
 
 ### The absence digest
 

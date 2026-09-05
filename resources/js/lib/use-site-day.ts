@@ -4,14 +4,9 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { msUntilNextSiteDay } from './date.ts';
 
 /**
- * One clock for the whole page, ticking when the site's calendar day changes.
- *
  * A list stamp is shaped relative to today, so without this a page left open past the site's midnight
- * keeps yesterday's rows showing a bare time, and one left open over New Year keeps last year's rows
- * without their year. One shared timer rather than one per stamp: every stamp on the page turns over
- * at the same instant, so there is only ever one boundary to wait for.
- *
- * Exported for its test; components use {@link useSiteDay}.
+ * keeps yesterday's rows showing a bare time. One shared timer rather than one per stamp, since every
+ * stamp on the page turns over at the same instant.
  */
 export function createSiteDayClock() {
     const subscribers = new Set<() => void>();
@@ -21,10 +16,8 @@ export function createSiteDayClock() {
 
     const arm = () => {
         clearTimeout(timer);
-        // The floor is a spin guard, not slack in the delay: a zone whose midnight itself is skipped by
-        // a transition could compute zero, and waking early only re-arms from the new now. A delay that
-        // is too *long* is what cannot be recovered, which is why msUntilNextSiteDay locates the real
-        // boundary rather than assuming a 24-hour day.
+        // The floor is a spin guard, not slack: a zone whose midnight is itself skipped by a transition
+        // could compute zero, and waking early only re-arms from the new now.
         timer = setTimeout(tick, Math.max(1000, msUntilNextSiteDay(new Date(), timeZone)));
     };
 
@@ -37,7 +30,7 @@ export function createSiteDayClock() {
     }
 
     // A background tab's timers are throttled or suspended, so the midnight wake can arrive late or
-    // not at all. Re-reading the clock on return is what makes a tab left open overnight correct.
+    // not at all.
     const onVisible = () => {
         if (document.visibilityState === 'visible') {
             tick();
@@ -72,8 +65,7 @@ export function createSiteDayClock() {
 const clock = createSiteDayClock();
 
 /**
- * Subscribes the caller to the site's day boundary. The return value is meaningless — taking it is how
- * a component re-renders when the day turns over.
+ * The return value is meaningless — taking it is how a component re-renders when the day turns over.
  */
 export function useSiteDay(timeZone: string): number {
     const subscribe = useCallback((callback: () => void) => clock.subscribe(timeZone, callback), [timeZone]);

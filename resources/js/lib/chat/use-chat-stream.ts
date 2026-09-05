@@ -25,13 +25,12 @@ import {
 import type { ReactionOp } from './reaction-overlay';
 import type { ChatPage, ChatStreamRow } from './types';
 
-/** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
 
 /**
- * Where one conversation lives. `messages` is handed the keyset query, empty for the newest page.
- * The write endpoints are optional because a conversation may be read-only — `send` and `remove`
- * throw rather than post to a URL the page never declared.
+ * `messages` is handed the keyset query, empty for the newest page. The write endpoints are
+ * optional because a conversation may be read-only, and `send` and `remove` throw rather than post
+ * to a URL the page never declared.
  */
 export interface ChatStreamEndpoints {
     messages: (query: string) => string;
@@ -39,11 +38,7 @@ export interface ChatStreamEndpoints {
     delete?: (id: number) => string;
 }
 
-/**
- * Reactions, for a conversation that has them. Optional in every sense: without it the poll asks
- * what it always asked and `react` refuses, which is how the direct-message conversation sharing
- * this hook stays exactly as it was.
- */
+/** Without it the poll asks what it always asked and `react` refuses. */
 export interface ChatReactions {
     /** The conversation's reaction version at render — where the poll starts reading changes from. */
     initialVersion: number;
@@ -51,7 +46,6 @@ export interface ChatReactions {
     remove: (messageId: number) => string;
 }
 
-/** Thrown for a rejected send, carrying whatever the server said about each field. */
 export class SendFailed extends Error {
     /** @param errors first validation message per field (`body`, `images`, `images.N`, …); empty for any other refusal. */
     constructor(public readonly errors: Record<string, string>) {
@@ -60,22 +54,16 @@ export class SendFailed extends Error {
 }
 
 /**
- * Holds the conversation a chat page is showing and keeps it current: a visibility-aware poll for
- * what has arrived (the pattern the unread badges already use — Inertia's usePoll keeps firing on a
- * hidden tab and does not refresh on return, which is the moment a stale chat is seen), plus "load
- * older" walking back by keyset and the composer's send appending in place.
- *
- * This hook owns the network and nothing else: what arrives is folded in by the pure merges in
- * stream-state.ts, which is where the ordering, dedupe, tombstone and window rules live. The
- * window is why the poll is conditional — reading back from the unread boundary opens a stretch that
- * does not end at the newest message, and the reader steps forward through it instead.
+ * A visibility-aware poll rather than Inertia's usePoll, which keeps firing on a hidden tab and does
+ * not refresh on return — the moment a stale chat is seen. This hook owns the network and nothing
+ * else: what arrives is folded in by the pure merges in stream-state.ts.
  */
 export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndpoints, page: ChatPage<M>, reactions?: ChatReactions) {
     const [state, setState] = useState<ChatStreamState<M>>(() => initial(page, reactions?.initialVersion));
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [loadingNewer, setLoadingNewer] = useState(false);
 
-    // What the interval reads. Reading state there would capture the value the tick was created with.
+    // Reading state in the interval would capture the value the tick was created with.
     const stateRef = useRef(state);
     useEffect(() => {
         stateRef.current = state;
@@ -84,12 +72,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
     // The poll's read, held where a window change can reach it: moving the page somewhere else makes
     // the answer already on the wire worthless, and there is no reason to wait for it.
     const polling = useRef<AbortController | null>(null);
-    // Which move to another stretch of the conversation the reader is waiting for, and the read
-    // fetching it. The last intent wins — see ChatIntents.
+    // The last intent wins — see ChatIntents.
     const intents = useRef(newIntents());
     const navigating = useRef<AbortController | null>(null);
 
-    /** Claim the newest move, dropping the read any earlier one still has out. */
     const claimMove = useCallback((): number => {
         navigating.current?.abort();
         // Standing somewhere else makes the poll's answer worthless too.
@@ -98,11 +84,7 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         return claimIntent(intents.current);
     }, []);
 
-    /**
-     * The one door every response comes through. `at` is the generation the read was issued against;
-     * `applied` drops it when the list has since moved somewhere else, which is what keeps a poll
-     * that outlived the live window from being spliced into a slice of history.
-     */
+    /** The one door every response comes through: `at` is the generation the read was issued against. */
     const fold = useCallback((at: number, update: (current: ChatStreamState<M>) => ChatStreamState<M>) => {
         setState((current) => applied(current, at, update));
     }, []);
@@ -122,9 +104,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
 
     useEffect(() => {
         const poll = () => {
-            // Only the window that ends at the newest message has anything to poll for: in the
-            // history window what arrives does not follow the last row on screen, and folding it in
-            // would put a hole in the middle of the conversation.
+            // Only the window that ends at the newest message has anything to poll for; in the
+            // history window what arrives does not follow the last row on screen.
             if (document.visibilityState !== 'visible' || stateRef.current.window.kind !== 'latest') {
                 return;
             }
@@ -141,9 +122,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
             if (since !== undefined) {
                 asked.push(`after=${encodeURIComponent(since)}`);
             }
-            // The second position, and the one a message already on screen moves by: reading forward
-            // from a cursor cannot see a reaction, which moves neither half of the ordering tuple.
-            // Absent for a conversation with no reactions, whose poll is then the one it always was.
+            // Reading forward from a cursor cannot see a reaction, which moves neither half of the
+            // ordering tuple.
             const sinceReactions = stateRef.current.reactionsVersion;
             if (sinceReactions !== undefined) {
                 asked.push(`reactionsAfter=${sinceReactions}`);
@@ -155,10 +135,9 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
                     if (arrived === null) {
                         return;
                     }
-                    // Which merge is decided by which question was asked, not by what came back. The
-                    // touched rows and the watermark ride the same fold, so the generation that
-                    // discards a response the reader has moved on from discards both — moving the
-                    // watermark alone would mark changes as read into a list that never saw them.
+                    // The touched rows and the watermark ride the same fold, so a discarded response
+                    // moves neither: a watermark moved alone would mark changes as read into a list
+                    // that never saw them.
                     fold(at, (current) => {
                         const merged = since === undefined ? mergeLatest(current, arrived) : mergeAfter(current, arrived);
 
@@ -174,14 +153,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         const timer = setInterval(poll, POLL_MS);
         // Returning to the tab is when a stale conversation is seen, so refresh then too.
         document.addEventListener('visibilitychange', poll);
-        // A conversation restored from history opens on the messages it was left with, and this
-        // list is seeded once at mount from that stored page — the app-wide reload that answers a
-        // restore refreshes props this hook does not re-read. So the restore is also this hook's
-        // own signal to ask now rather than at the interval's leisure. The record covers the
-        // restores that remount the page — a popstate, a back/forward document arrival — while a
-        // bfcache return remounts nothing and is answered by the visibility listener above. The
-        // poll's window guard still applies, so an anchored (`?m=`) restore stays the untouched
-        // slice it landed on.
+        // This list is seeded once at mount, so the app-wide reload that answers a restore does not
+        // refresh it and the restore has to poll here.
         if (consumeHistoryRestore()) {
             poll();
         }
@@ -212,10 +185,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
     }, [fetchPage, fold, loadingOlder]);
 
     /**
-     * Open on the page a position sits in — the unread boundary today, a linked-to message next.
-     * The cursor is one the server handed over (the unread snapshot's, a message's own), echoed back
-     * as `before` and `after` are. What comes back is a stretch of history, and it replaces the list
-     * rather than joining it.
+     * The cursor is one the server handed over, echoed back as `before` and `after` are. What comes
+     * back replaces the list rather than joining it.
      */
     const openContext = useCallback(
         async (cursor: string): Promise<boolean> => {
@@ -237,7 +208,6 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         [claimMove, fetchPage, fold],
     );
 
-    /** "Load newer": one page forward from the foot of the history window. */
     const loadNewer = useCallback(async () => {
         const boundary = watermark(stateRef.current);
         if (boundary === undefined || loadingNewer) {
@@ -256,7 +226,6 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         }
     }, [fetchPage, fold, loadingNewer]);
 
-    /** Back to the live end: the newest page, replacing whatever stretch was being read. */
     const returnToLatest = useCallback(async (): Promise<boolean> => {
         const epoch = claimMove();
         const controller = new AbortController();
@@ -278,14 +247,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
                 throw new Error('this conversation is read-only: no send endpoint was declared');
             }
 
-            // Multipart throughout, not only when a file rides along: one transport is one set of
-            // encoding rules to reason about. It costs the body its LF newlines — FormData encodes
-            // them as CRLF — which is exactly why the server re-normalizes before it measures
-            // anything, so the mention offsets computed over the textarea's LF value still describe
-            // the body that is stored.
+            // Multipart throughout, not only when a file rides along: FormData encodes the body's LF
+            // newlines as CRLF, which is why the server re-normalizes before it measures anything.
             const form = new FormData();
             form.append('body', body);
-            // Whatever else this conversation sends with a message — talk's mention ranges, say.
             appendFields?.(form);
             // Appended in pick order: the slot numbers the server writes are that order.
             images.forEach((image) => form.append('images[]', image));
@@ -305,22 +270,12 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
             const message = (await response.json()) as M;
 
             // Writing is the newest intent, so a jump the reader asked for and then wrote instead of
-            // waiting for is retired here — its page would otherwise arrive and replace the list out
-            // from under the message just written, which is the one thing the rule below promises
-            // cannot happen.
+            // waiting for is retired here.
             retireIntents(intents.current);
             navigating.current?.abort();
 
-            // Writing puts you back at the live end. Appending it to a history window would sit your
-            // words directly under a message they do not answer, so the newest page is re-read
-            // instead — and when that read fails, the list is emptied down to your own message with
-            // everything else behind "load older", which is a conversation rather than a gap drawn
-            // as one.
-            //
-            // The message itself is not held to a generation, because it belongs at the foot of any
-            // live list including the one just re-read to get back there; `mergeSent` refuses a
-            // history window instead, which is the condition that actually matters and is answered
-            // against the state at the moment it lands.
+            // When the re-read of the newest page fails, the list is emptied down to your own
+            // message with everything else behind "load older".
             if (stateRef.current.window.kind === 'history' && !(await returnToLatest())) {
                 const at = stateRef.current.generation;
                 fold(at, (current) => enterLatest(current, { messages: [], hasOlder: true, hasNewer: false }));
@@ -353,19 +308,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
     );
 
     /**
-     * Add or take back one emoji, and move the message's chips by that one step once the write says
-     * it landed. The row it answers with is read for nothing else: what it counted was true when the
-     * server wrote, and a slow answer landing after the poll has delivered someone else's change —
-     * and moved the watermark past it — would put back a count no later poll will correct. Whether
-     * it landed is the caller's answer: the optimistic guess it is holding is settled either way.
-     *
-     * The watermark at send rides along, and {@link applyReaction} drops the move if it is no
-     * longer the list's — the poll got there first, and what it delivered includes the server's
-     * later word on the viewer's own flag (their other tab may have moved it).
-     *
-     * Not held to a generation, for the reason a deletion is not: a chip row is a fact about the
-     * message rather than about the page it is on, and moving a row the list no longer holds is
-     * already nothing.
+     * The row the write answers with is read for nothing else: a slow answer landing after the poll
+     * has moved the watermark past it would put back a count no later poll corrects. Not held to a
+     * generation, for the reason a deletion is not: a chip row is a fact about the message rather
+     * than the page.
      */
     const react = useCallback(
         async (id: number, emoji: string, op: ReactionOp): Promise<boolean> => {
@@ -383,9 +329,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
             }).catch(() => null);
 
             if (response === null || !response.ok) {
-                // A refusal says nothing to the reader: the vocabulary narrowing under a tab left
-                // open (422) and a message deleted from under the tap (404) are both answered by
-                // the guess going away, which is the truth of the row either way.
+                // A refusal says nothing to the reader: a narrowed vocabulary (422) and a message
+                // deleted from under the tap (404) are both answered by the guess going away.
                 return false;
             }
 
@@ -400,8 +345,8 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         messages: state.messages,
         hasOlder: state.hasOlder,
         window: state.window,
-        // Which list the page is standing on. It moves only when a window change lands, so a caller
-        // can tell its own jump's render from the polls and merges around it.
+        // It moves only when a window change lands, so a caller can tell its own jump's render from
+        // the polls and merges around it.
         generation: state.generation,
         loadingOlder,
         loadingNewer,
@@ -415,7 +360,6 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
     };
 }
 
-/** The first validation message per field from a 422; empty for any other refusal. */
 async function errorsOf(response: Response): Promise<Record<string, string>> {
     if (response.status !== 422) {
         return {};

@@ -1,16 +1,7 @@
 /**
- * Whether the page now on screen was rebuilt from history rather than read from the server: Inertia
- * answers a popstate from its own stored page state, so a screen comes back saying exactly what it
- * said when it was left, however far its server state has moved since.
- *
  * The restore is recorded here rather than handled where it happens, because the page that cares is
- * not mounted when the popstate fires — it is what the popstate is about to swap in. The record
- * carries the URL it landed on, so only the page it is about can spend it: a record nobody asks
- * about expires by never matching again, without needing a second event to clear it.
- *
- * A consumer that outlives pages — the app-wide revalidation (revalidate-on-restore.ts) — cannot
- * use that record: it has to act *after* the restore has written its own stale props, which the
- * record says nothing about. {@link createRestoreQueue} is that shape of the same fact.
+ * not mounted when the popstate fires. The record carries the URL it landed on, so only the page it
+ * is about can spend it and one nobody asks about expires by never matching again.
  */
 
 export interface RestoreTracker {
@@ -59,9 +50,7 @@ export interface RestoreQueue {
 
 /**
  * A count, not a flag: holding back fires every popstate before any of their navigates arrive, and a
- * flag would answer only the first — leaving the last restore with no refresh ordered after its own
- * swap, so whether the counts end up right would come down to request timing. The same shape, and the
- * same reason, as `back-nav.ts`.
+ * flag would answer only the first, leaving the last restore with no refresh ordered after its swap.
  */
 export function createRestoreQueue(): RestoreQueue {
     let pending = 0;
@@ -84,8 +73,8 @@ export function createRestoreQueue(): RestoreQueue {
 let installed = false;
 
 /**
- * Feed the tracker from the browser. The entry calls this (rather than the module wiring itself on
- * import) so importing the tracker stays free of a DOM.
+ * The entry calls this rather than the module wiring itself on import, so importing the tracker
+ * stays free of a DOM.
  */
 export function installHistoryRestore(): void {
     if (installed) {

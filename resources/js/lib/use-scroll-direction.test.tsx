@@ -93,8 +93,8 @@ test('an arrival at the same URL comes back under the gate', async () => {
     await scrolled(400);
     expect(direction()).toBe('down');
 
-    // The active tab tapped again: Inertia resets the scroll and fires no navigate, and the URL is
-    // the same. The bounce that follows is not the reader's.
+    // The active tab tapped again: Inertia resets the scroll, fires no navigate, and the URL is the
+    // same.
     await arrived(0);
     await scrolled(400);
     expect(direction()).toBe('up');

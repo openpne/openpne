@@ -5,13 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 
 /**
- * A notification tap on the real worker: with no window the app opens at its scope root — never at
- * the destination; every open window is offered the tap and the first to answer is focused and
- * handed the destination; a page that cannot answer yet is offered again; when none answers the
- * front window is shown and, except on WebKit, navigated.
- *
- * What this cannot see: whether the page's listener is in place when the offer arrives (the
- * DOMContentLoaded rule in lib/notification-open.ts). That is held by where the listener is
+ * What this cannot see is whether the page's listener is in place when the offer arrives (the
+ * DOMContentLoaded rule in lib/notification-open.ts): that is held by where the listener is
  * registered, not by a test here.
  */
 const source = readFileSync(fileURLToPath(new URL('../../public/sw.js', import.meta.url)), 'utf8');

@@ -1,14 +1,10 @@
-/** One emoji on a message: how many hold it, and whether the viewer is one of them. */
 export interface ChatReactionChip {
     emoji: string;
     count: number;
     mine: boolean;
 }
 
-/**
- * The part of a chat message the stream machinery reads: its identity and its place in the keyset
- * order. Everything else a conversation shows — bodies, authors, attachments — is the page's own.
- */
+/** Everything else a conversation shows — bodies, authors, attachments — is the page's own. */
 export interface ChatStreamRow {
     id: number;
     createdAt: string;
@@ -18,7 +14,7 @@ export interface ChatStreamRow {
     reactions?: ChatReactionChip[];
 }
 
-/** One slice of the conversation, oldest first, and what lies either side of it. */
+/** Oldest first. */
 export interface ChatPage<M extends ChatStreamRow> {
     messages: M[];
     hasOlder: boolean;
@@ -29,13 +25,13 @@ export interface ChatPage<M extends ChatStreamRow> {
      * Present only when one was sent, so a poll that asks nothing is answered as it always was.
      */
     touched?: M[];
-    /** The reaction watermark to come back with — see the poll in use-chat-stream.ts. */
+    /** The reaction watermark to come back with. */
     reactionsVersion?: number;
 }
 
 /**
- * Where the unread boundary stood when the page was rendered, for a member; null for a reader who
- * holds no cursor. Fixed for the visit — see the divider note in the page that draws it.
+ * Where the unread boundary stood when the page was rendered and fixed for the visit; null for a
+ * reader who holds no cursor.
  */
 export interface ChatUnreadSnapshot {
     count: number;
@@ -58,8 +54,7 @@ export interface ChatFirstUnreadSnapshot {
 }
 
 /**
- * A boundary as the divider reads it. The two kinds are the two ways a feature knows where reading
- * stopped, and they place the line on either side of the row they name: a `readThrough` position is
- * the last row already read, a `firstUnread` position is the first row not read.
+ * A `readThrough` position is the last row already read; a `firstUnread` position is the first row
+ * not read.
  */
 export type ChatUnreadBoundary = { kind: 'readThrough'; at: string; id: number } | { kind: 'firstUnread'; at: string; id: number };

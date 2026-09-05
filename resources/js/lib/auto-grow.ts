@@ -18,11 +18,9 @@ export function useAutoGrow(field: RefObject<HTMLTextAreaElement | null>, value:
         // measuring here would size the bar to a wrapped placeholder instead of one line.
         if (value === '') {
             element.style.height = '';
-            // iOS WebKit (reported on device, PWA and Safari; not reproducible in desktop
-            // WebKit) intermittently keeps the placeholder's box at the cleared text's width
-            // until something re-lays the field out — after a send, the placeholder paints
-            // cut to the sent text. Re-asserting the attribute rebuilds the box; the reflow
-            // read between the writes keeps them from coalescing into a no-op.
+            // iOS WebKit intermittently keeps the placeholder's box at the cleared text's
+            // width until something re-lays the field out, and the reflow read between the
+            // writes is what stops them coalescing.
             if (held.current) {
                 const placeholder = element.placeholder;
                 element.placeholder = '';

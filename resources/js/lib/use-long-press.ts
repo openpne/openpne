@@ -3,9 +3,8 @@ import { useEffect, useRef, type DOMAttributes } from 'react';
 /** How long a finger stays down before the press is a press rather than a tap. */
 const LONG_PRESS_MS = 500;
 /**
- * Travel that turns the press back into a scroll. The browser's own `pointercancel` is what normally
- * ends a press that became a scroll — native scrolling is left alone, so it fires — and this is the
- * backstop for the drift of a finger that never scrolled anything.
+ * The browser's own `pointercancel` normally ends a press that became a scroll, since native
+ * scrolling is left alone; this is the backstop for a finger that drifts without scrolling anything.
  */
 const MOVE_SLOP_PX = 10;
 /**
@@ -35,24 +34,16 @@ export type PressEvent =
     | { type: 'cancel' }
     | { type: 'timer' };
 
-/** The next press, and whether this event is the one that made it mean something. */
 export interface PressResult {
     state: PressState;
     fire: boolean;
 }
 
 /**
- * What a press turns out to be. A tap is not a press and never becomes one: nothing here consumes an
- * event, so an ordinary tap passes through to whatever it landed on.
- *
- * A cursor is excluded at the source rather than by asking the media query: a laptop with a touch
- * screen answers `pointer: fine` and still has fingers, and this way the finger's press works there
- * while the mouse held over the same row does nothing.
- *
- * A second finger is a pinch or a two-handed scroll, neither of which is a press on one message.
- * Whether a finger is second is the browser's `isPrimary`, which is answered for the whole document —
- * counting downs per element instead undercounts an up delivered elsewhere (a mouse has no implicit
- * capture), and a counter that drifts up once leaves that element deaf to every later press.
+ * A tap is not a press and never becomes one: nothing here consumes an event, so an ordinary tap
+ * passes through. A cursor is excluded at the source, since a laptop with a touch screen answers
+ * `pointer: fine` and still has fingers, and a second finger is the browser's `isPrimary`, answered
+ * for the whole document.
  */
 export function pressReducer(state: PressState, event: PressEvent): PressResult {
     switch (event.type) {
@@ -84,13 +75,9 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
 }
 
 /**
- * Handlers that turn a long press into one call. Spread onto the element the press belongs to; it is
- * attached in every environment, and the cursor's own press is ignored inside (see pressReducer).
- *
  * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners
- * and keeps its own context menu. Where it is enabled the menu is held off for the length of a press
- * (see `onContextMenu` below) — the element's `user-select` / `-webkit-touch-callout` classes are the
- * other half of that, and the two have to be decided together.
+ * and keeps its own context menu. Where it is enabled the menu is held off for the length of a press,
+ * and the element's `user-select` / `-webkit-touch-callout` classes are the other half of that.
  */
 export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
     const press = useRef<PressState>(IDLE);
