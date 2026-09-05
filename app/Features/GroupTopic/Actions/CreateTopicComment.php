@@ -18,12 +18,9 @@ class CreateTopicComment
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Append a comment to a topic the author may comment on. `number` is the per-topic sequence;
-     * lock the parent topic row first so concurrent commenters serialize on a row that always
-     * exists (an empty thread has no comment rows to lock, so max(number) alone would let two posts
-     * both claim 1). The same row update bumps the topic's updated_at, which OpenPNE 3 got for free
-     * from its cascade-save: a new comment lifts the topic to the top of the board (ordered by
-     * updated_at) and refreshes topic_updated_at for the widget feeds.
+     * Lock the parent topic row first so concurrent commenters serialize on a row that always
+     * exists: an empty thread has no comment rows, so max(number) alone would let two posts both
+     * claim 1. The same save bumps updated_at, lifting the topic as OpenPNE 3's cascade-save did.
      *
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap
      */
@@ -48,7 +45,7 @@ class CreateTopicComment
                 ]);
 
                 $topic->topic_updated_at = now();
-                $topic->save(); // dirty → updated_at bumped too, lifting the topic on the board
+                $topic->save();
 
                 TopicCommentPosted::dispatch($topic, $comment, $author);
                 // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).

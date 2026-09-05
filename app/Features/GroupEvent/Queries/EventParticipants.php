@@ -6,10 +6,6 @@ use App\Models\GroupEvent;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * An event's participant roster, paged. Ordered by join time
- * so the roster reads in the order people signed up.
- */
 class EventParticipants
 {
     public const PER_PAGE = 20;

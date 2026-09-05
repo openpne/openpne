@@ -13,7 +13,7 @@ use App\Models\Member;
 use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
-/** Promote a plain member to sub-admin. See AcceptAdminTransfer for the group-row lock protocol. */
+/** See docs/internals/group-boards.md, "The group row is the lock". */
 class AppointSubAdmin
 {
     public function __invoke(Member $actor, Group $group, Member $target): void
@@ -33,8 +33,8 @@ class AppointSubAdmin
                 throw new GroupActionException(GroupActionFailure::TargetNotPlainMember);
             }
 
-            // A pending transfer nominee's role is frozen until the transfer resolves — OpenPNE 3
-            // refused sub-admin nomination for an admin_confirm holder.
+            // A nominee's role is frozen while the transfer stands (docs/internals/group-boards.md,
+            // "The group row is the lock").
             if ((int) $locked->pending_admin_member_id === (int) $target->getKey()) {
                 throw new GroupActionException(GroupActionFailure::TargetIsPendingAdmin);
             }

@@ -16,10 +16,8 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * GroupTopic and GroupEvent are an intentional parallel hierarchy, but their form requests
- * share a text-post contract (a required, whitespace-stripped name and body) that must not drift on
- * one side only. This pins that shared shape structurally (identical rules) and behaviorally (both
- * reject a whitespace-only name/body), so changing one request without the other fails here.
+ * The two form requests share a text-post contract that must not drift on one side only, pinned
+ * here both structurally (identical rules) and behaviorally.
  */
 class GroupPostRequestParityTest extends TestCase
 {

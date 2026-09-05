@@ -7,11 +7,6 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Support\Collection;
 
-/**
- * The most recently active events across the groups a member has confirmed-joined, for the
- * home dashboard's community activity digest. The event counterpart of RecentJoinedGroupTopics
- * (same ordering and membership scope).
- */
 class RecentJoinedGroupEvents
 {
     public const LIMIT = 5;

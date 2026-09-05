@@ -6,10 +6,7 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * Confirmed members of a group, admins first. No block
- * filtering — a group member list is a many-member set, and blocks are 1:1 (accepted gap).
- */
+/** No block filtering — a group member list is a many-member set and blocks are 1:1 (accepted gap). */
 class ListGroupMembers
 {
     public const PER_PAGE = 20;

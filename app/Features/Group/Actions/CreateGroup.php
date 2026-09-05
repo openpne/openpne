@@ -37,8 +37,8 @@ class CreateGroup
                 'topic_post_authority' => $data->topicPostAuthority,
             ]);
 
-            // The creator is the sole admin (one admin per group). forceCreate because the talk read
-            // cursor is not mass-assignable: it is set by this app, never by a form.
+            // forceCreate because the talk read cursor is not mass-assignable: it is set by this
+            // app, never by a form.
             $group->members()->forceCreate([
                 'member_id' => $creator->getKey(),
                 'role' => GroupRole::Admin,

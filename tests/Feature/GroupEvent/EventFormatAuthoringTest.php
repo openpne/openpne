@@ -11,10 +11,6 @@ use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Body-format authoring on the shared event compose form (group-event/_fields): a markdown event
- * persists its format; an op3 event offers no format control (the edit preserves it).
- */
 class EventFormatAuthoringTest extends TestCase
 {
     use RefreshDatabase;

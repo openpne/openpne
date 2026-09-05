@@ -22,13 +22,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * The unified group page (Look::Unified): the same grammar as the unified member page,
- * about a group — who it is, who is in it, what has been happening in it.
- *
- * Everything the shipped group page can do arrives here already decided: the controller resolves the
- * viewer's role, the read gates, and the rows behind them once for both layouts, and this shapes what
- * it is handed. The two additions the layout brings — the same-category groups and the picture strip —
- * are gathered here, each behind a gate the controller has already answered.
+ * Everything arrives already decided: the controller resolves the viewer's role, the read gates and
+ * the rows behind them once for both layouts. The two additions this layout brings — the
+ * same-category groups and the picture strip — are gathered here, each behind a gate it answered.
  */
 final class UnifiedGroupSerializer
 {
@@ -65,7 +61,6 @@ final class UnifiedGroupSerializer
             'canManage' => $canManage,
             'canJoin' => $canJoin,
             'canLeave' => $canLeave,
-            // The member preview as a row of faces, admins first — the order the controller queried.
             'members' => UnifiedSections::people($members->pluck('member')),
             'categoryGroups' => self::categoryGroups($group),
             'recentTopics' => $recentTopics === null ? null : GroupTopicSerializer::summaries($recentTopics),
@@ -82,9 +77,8 @@ final class UnifiedGroupSerializer
     }
 
     /**
-     * The hero's identity block, in the shape the shared header paints: the group's cover as the two
-     * `srcset` rungs, its description as the body. avatarColor/isAi are the header's member fields,
-     * which a group carries nothing in — the initial badge stands in when there is no cover.
+     * avatarColor / isAi are the shared header's member fields, which a group carries nothing in —
+     * the initial badge stands in when there is no cover.
      *
      * @return array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}
      */
@@ -102,15 +96,11 @@ final class UnifiedGroupSerializer
             'bio' => $group->description,
             'memberCount' => $group->members_count ?? $group->loadCount('members')->members_count,
             'categoryName' => $group->category?->name,
-            // Drives the join button's label: applying is not joining.
             'registerPolicy' => $group->register_policy->slug(),
         ];
     }
 
     /**
-     * The cover cards of the groups filed under the same category (CategoryGroups), each captioned
-     * with its size — what someone choosing between them is asking. The shared card plus that count.
-     *
      * @return list<array{id: int, name: string, imageUrl: string|null, href: string, memberCount: int}>
      */
     private static function categoryGroups(Group $group): array
@@ -125,9 +115,7 @@ final class UnifiedGroupSerializer
     }
 
     /**
-     * The group's latest pictures, from its three kinds of content, newest parent first. Each source
-     * is read only behind the gate its screen is behind, and each tile opens the message, topic or
-     * event the picture was posted with.
+     * Each source is read only behind the gate its own screen is behind.
      *
      * @return list<array{source: string, href: string, image: array}>
      */
@@ -178,9 +166,8 @@ final class UnifiedGroupSerializer
     }
 
     /**
-     * One source's picture-bearing content, newest first and bounded: the strip can hold no more
-     * tiles than this even if every parent brought a single picture. Ordered by when it was posted,
-     * not when it was last touched — a comment on an old topic does not make its pictures new.
+     * Ordered by when it was posted, not when it was last touched — a comment on an old topic does
+     * not make its pictures new.
      *
      * @param  HasMany<GroupMessage|GroupTopic|GroupEvent, Group>  $parents
      * @return Collection<int, GroupMessage|GroupTopic|GroupEvent>
@@ -196,16 +183,9 @@ final class UnifiedGroupSerializer
     }
 
     /**
-     * The pictures on one parent that this viewer may actually be served, shaped for the wire.
-     *
-     * The gate the strip's sources pass is the one on their screens, which is a question about the
-     * group and not about a file: every candidate is asked again here, per file, through the same
-     * policy that guards the bytes (FilePolicy). A file that refuses, or that is no longer there, is
-     * left out in silence — no placeholder, no count, nothing in the payload that would say a picture
-     * had been skipped.
-     *
-     * Lazy on purpose: photosFromParents walks this only as far as the cap reaches, so the policy
-     * runs for the pictures the strip shows rather than for every one it might have shown.
+     * Every candidate is asked again here, per file, through the policy that guards the bytes: one
+     * that refuses or is gone is left out in silence, with nothing in the payload saying so. Lazy on
+     * purpose — photosFromParents walks this only as far as the cap reaches.
      *
      * @param  Collection<int, Model>  $images
      * @param  callable(mixed): array  $shape
@@ -216,15 +196,11 @@ final class UnifiedGroupSerializer
         foreach ($images as $image) {
             $file = $image->file;
 
-            // The join row names a file, but only the file names its owner — FilePolicy authorizes
-            // against the owner the FILE declares, not the row that pointed here. A row whose
-            // file belongs elsewhere (another group's message, a diary, a deleted parent) may
-            // still pass the Gate on its own owner's terms, so it must be refused as not-this-
-            // parent's picture, and leave no trace. instanceof absorbs the legacy morph aliases
-            // (`communityTopic` and kin resolve to the same class).
             if ($file === null || $file->related_entity_id !== $parent->getKey()) {
                 continue;
             }
+            // FilePolicy authorizes against the owner the file declares, so a file belonging elsewhere
+            // could pass the Gate on that owner's terms; instanceof absorbs the legacy morph aliases.
             $ownerClass = Relation::getMorphedModel($file->related_entity_type ?? '');
             if ($ownerClass === null || ! $parent instanceof $ownerClass) {
                 continue;

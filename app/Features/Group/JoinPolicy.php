@@ -3,11 +3,8 @@
 namespace App\Features\Group;
 
 /**
- * How a member joins a group.
- *
- * Values start at 1: OpenPNE 3 stored this as a string, so there is no numeric to
- * preserve, and a 0 case invites PHP falsy-comparison bugs. (Support\Visibility keeps a
- * 0 case only because OpenPNE 3's 1-3 scale needs an extra below-members rung for sort.)
+ * Values start at 1: OpenPNE 3 stored this as a string, so there is no numeric to preserve, and a
+ * 0 case invites PHP falsy-comparison bugs.
  */
 enum JoinPolicy: int
 {
@@ -15,7 +12,6 @@ enum JoinPolicy: int
 
     case Approval = 2;
 
-    /** String slug for serialization. Never pass the raw int to the frontend. */
     /**
      * OpenPNE 3's stored community_config value, the seam the Classic edit form's radio ids keep
      * (`community_config_{field}_{value}`) so a site's CSS and scripts still find them.
@@ -28,6 +24,7 @@ enum JoinPolicy: int
         };
     }
 
+    /** Never pass the raw int to the frontend. */
     public function slug(): string
     {
         return match ($this) {

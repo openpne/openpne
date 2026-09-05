@@ -237,8 +237,7 @@ class GroupEventRoutesTest extends TestCase
 
     public function test_date_only_event_fields_are_serialized_as_ymd(): void
     {
-        // Date-only fields must be Y-m-d, not an ISO midnight a browser would render a day early west
-        // of UTC. Assert the show, board, and community recent-events props all carry the plain date.
+        // The show, the board and the group's recent-events props must all carry the plain date.
         $group = Group::factory()->create();
         $member = $this->joined($group);
         $openDate = now()->addMonth()->startOfDay();

@@ -10,24 +10,20 @@ use App\Support\ViewerRelations;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Bulk-add every member who isn't already in $group as a plain member (OpenPNE 3 "default
- * group" join-all). Existing memberships are left untouched, so admins/sub-admins keep their role.
- *
- * Returns the number actually added. Inserts are chunked (large sites) and idempotent against the
- * (group_id, member_id) unique key, so a concurrent join or a re-run neither duplicates nor throws.
+ * Idempotent against the `(group_id, member_id)` unique key, so a concurrent join or a re-run
+ * neither duplicates nor throws.
  */
 class AddAllMembers
 {
     public function __invoke(Group $group): int
     {
-        // Outside the group-row lock protocol (see AcceptAdminTransfer): this only inserts plain
-        // Member rows and never touches any admin/sub-admin role or pending_admin_member_id.
+        // Outside the group-row lock protocol: this writes plain Member rows only
+        // (docs/internals/group-boards.md, "The group row is the lock").
         $groupId = $group->getKey();
         $now = now();
         $added = 0;
-        // One read for the whole sweep: every row added here joins the same group at the same
-        // moment, so they share a cursor. This is the one membership path with no model behind it,
-        // so the snapshot has to be written into the row literal (TalkReadCursor).
+        // One read for the whole sweep: every row added here joins at the same moment, so they
+        // share a cursor (TalkReadCursor).
         $cursor = TalkReadCursor::snapshot((int) $groupId);
 
         Member::query()

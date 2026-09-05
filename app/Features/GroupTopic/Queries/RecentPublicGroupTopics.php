@@ -8,10 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The most recently active topics across every public group (topic_read_access = Everyone,
- * which GroupUpgrade maps OpenPNE 3's public groups to), for the home "latest topics
- * across the SNS" gadget. Viewer-independent and applies no block filter — OpenPNE 3
- * getPublicCommunityIdList showed the same public feed to every member.
+ * Viewer-independent and applies no block filter — OpenPNE 3 getPublicCommunityIdList showed the
+ * same public feed to every member.
  */
 class RecentPublicGroupTopics
 {

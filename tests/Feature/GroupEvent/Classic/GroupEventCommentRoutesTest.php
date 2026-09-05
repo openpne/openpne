@@ -11,11 +11,6 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The merged RSVP/comment endpoint: OpenPNE 3 posts participation through comment-create. The
- * participate/cancel button toggles the roster and saves the (required) comment; the "comment only"
- * button just saves it. A roster guard (closed / expired / full) aborts both.
- */
 class GroupEventCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
