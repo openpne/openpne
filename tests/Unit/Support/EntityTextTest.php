@@ -103,7 +103,8 @@ class EntityTextTest extends TestCase
     public function test_a_full_width_marker_is_shown_as_typed_while_the_href_carries_the_normalized_tag(): void
     {
         // The range is over the raw body, so the reader sees ＃ and full-width text; the href is the
-        // stored tag (NFKC + lowercase), percent-encoded; route()'s own output is not asserted here.
+        // stored tag (NFKC + lowercase), percent-encoded; route()'s own output is not asserted
+        // here.
         $html = (string) EntityText::render('＃ＴＡＧ です', [$this->tag(0, 4, '/timeline/tag/tag')]);
 
         $this->assertSame('<a href="/timeline/tag/tag" class="hashtag">＃ＴＡＧ</a> です', $html);

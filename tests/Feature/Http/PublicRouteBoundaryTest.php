@@ -56,7 +56,7 @@ class PublicRouteBoundaryTest extends TestCase
     public function test_a_stale_session_is_ended_on_the_home_page(): void
     {
         // Classic serves the member's gadget home at /; a Modern surface renders the day's issue
-        // there and pins the same staleness on its own arm.
+        // there, and the same staleness is pinned on that arm too.
         config(['openpne.surface_mode' => 'classic_default']);
         $member = Member::factory()->create();
 

@@ -6,7 +6,7 @@ use App\Models\File;
 
 /**
  * Byte-level operations only: delivery sits above this seam and is backend-independent
- * (docs/internals/file-storage.md, "The two backends").
+ * (docs/internals/file-storage.md, "File storage").
  */
 interface FileStorage
 {

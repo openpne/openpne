@@ -8,7 +8,10 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** The request half of the mention contract; a row that merely stopped matching is the storage half's. */
+/**
+ * The request half of the mention contract; a row that merely stopped matching is the storage
+ * half's.
+ */
 class MentionRequestTest extends TestCase
 {
     use RefreshDatabase;
