@@ -7,7 +7,10 @@ import { cn } from '@/lib/utils';
  * The 20% tint is what keeps the neutral fill legible on both bg-background and bg-card, and the
  * text needs `foreground/75` rather than `text-muted-foreground` to hold 4.5:1 on it.
  */
-/** Callers pass the a11y semantics: `aria-hidden` when adjacent text names the entity, else `role="img"` with `aria-label`. */
+/**
+ * Callers pass the a11y semantics: `aria-hidden` when adjacent text names the entity, else `role="img"`
+ * with `aria-label`.
+ */
 type Props = { name: string; color?: string | null } & Omit<ComponentProps<'span'>, 'children' | 'color'>;
 
 export function InitialBadge({ name, color = null, className, style, ...props }: Props) {
