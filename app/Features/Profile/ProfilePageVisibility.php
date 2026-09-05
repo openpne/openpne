@@ -2,6 +2,7 @@
 
 namespace App\Features\Profile;
 
+use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
@@ -25,10 +26,16 @@ final class ProfilePageVisibility
         return self::policy() === ProfileVisibilityPolicy::MemberChoice;
     }
 
-    /** @return list<Visibility> OpenPNE 3's two choices; the profile page has no friends or private tier. */
+    /** @return list<Visibility> OpenPNE 3's two choices, web first as it listed them; the profile page has no friends or private tier. */
     public static function options(): array
     {
-        return [Visibility::Members, Visibility::Open];
+        return [Visibility::Open, Visibility::Members];
+    }
+
+    /** Whether the privacy category has anything to set: an age to gate, or the profile-page choice. */
+    public static function privacyCategoryAvailable(): bool
+    {
+        return app(BirthdayFieldExists::class)() || self::memberMayChoose();
     }
 
     public static function rule(): Enum
