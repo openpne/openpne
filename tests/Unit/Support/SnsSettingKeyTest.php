@@ -205,6 +205,57 @@ class SnsSettingKeyTest extends TestCase
         }
     }
 
+    public function test_the_posting_and_search_switches_are_on_by_default_and_fail_open(): void
+    {
+        foreach ([
+            [SnsSettingKey::TimelinePostingEnabled, SettingGroup::Timeline, 'is_allow_post_activity'],
+            [SnsSettingKey::DiarySearchEnabled, SettingGroup::Diary, 'op_diary_plugin_search_enable'],
+        ] as [$key, $group, $source]) {
+            $this->assertTrue($key->default(), $key->value);
+            $this->assertSame($group, $key->group(), $key->value);
+            $this->assertSame($source, $key->op3SourceName(), $key->value);
+            $this->assertTrue($key->isMigratedFromOp3(), $key->value);
+            $this->assertSame('0', $key->encode(false), $key->value);
+            // Only an explicit '0' closes it: a malformed row must not silence every member.
+            $this->assertFalse($key->decode('0'), $key->value);
+            $this->assertTrue($key->decode('1'), $key->value);
+            $this->assertTrue($key->decode(''), $key->value);
+            $this->assertTrue($key->decode('yes'), $key->value);
+        }
+
+        // The web-public switch beside it still keeps out of the upgrade: no OpenPNE 3 row is its source.
+        $this->assertFalse(SnsSettingKey::TimelineAllowWebPublic->isMigratedFromOp3());
+    }
+
+    public function test_the_search_period_switch_reads_as_openpne3_truthy(): void
+    {
+        $key = SnsSettingKey::DiarySearchPeriodEnabled;
+
+        $this->assertFalse($key->default());
+        $this->assertSame('op_diary_plugin_search_period_enable', $key->op3SourceName());
+        $this->assertTrue($key->isMigratedFromOp3());
+        $this->assertFalse($key->decode('0'));
+        $this->assertFalse($key->decode(''));
+        $this->assertTrue($key->decode('1'));
+        $this->assertTrue($key->decode('2'));
+    }
+
+    public function test_the_search_period_days_are_clamped_to_a_century(): void
+    {
+        $key = SnsSettingKey::DiarySearchPeriodDays;
+
+        $this->assertSame(30, $key->default());
+        $this->assertSame('op_diary_plugin_search_period', $key->op3SourceName());
+        $this->assertTrue($key->isMigratedFromOp3());
+        $this->assertSame(30, $key->decode('abc'));
+        $this->assertSame(0, $key->decode('-5'));
+        $this->assertSame(36500, $key->decode('99999'));
+        $this->assertSame(7, $key->decode('7'));
+        $this->assertSame(0, $key->coerce('abc'));
+        $this->assertSame(36500, $key->coerce('99999'));
+        $this->assertSame('7', $key->encode(7));
+    }
+
     public function test_board_comment_reply_links_are_off_by_default_and_upgrade_from_op3(): void
     {
         foreach ([

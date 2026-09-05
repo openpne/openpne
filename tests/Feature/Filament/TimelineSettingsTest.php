@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Timeline\TimelinePosting;
 use App\Filament\Pages\TimelineSettings;
 use App\Models\AdminUser;
 use App\Support\SnsSettingKey;
@@ -40,6 +41,20 @@ class TimelineSettingsTest extends TestCase
 
         Livewire::test(TimelineSettings::class)
             ->assertSet('data.timeline_allow_web_public', true);
+    }
+
+    public function test_closing_posting_takes_effect_and_round_trips(): void
+    {
+        Livewire::test(TimelineSettings::class)
+            ->assertSet('data.timeline_posting_enabled', true)
+            ->fillForm(['timeline_posting_enabled' => false])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'timeline_posting_enabled', 'value' => '0']);
+        $this->assertFalse(TimelinePosting::enabled());
+
+        Livewire::test(TimelineSettings::class)->assertSet('data.timeline_posting_enabled', false);
     }
 
     public function test_defaults_off_when_no_row_exists(): void

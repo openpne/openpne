@@ -25,17 +25,19 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
-              data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
-            @csrf
-            @include('timeline._mention-draft')
-            <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>
-            @error('body')
-                <p role="alert">{{ $message }}</p>
-            @enderror
-            <button type="submit">{{ __('Reply') }}</button>
-        </form>
-        @include('timeline._mention-picker')
+        @if (\App\Features\Timeline\TimelinePosting::enabled())
+            <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
+                  data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+                @csrf
+                @include('timeline._mention-draft')
+                <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>
+                @error('body')
+                    <p role="alert">{{ $message }}</p>
+                @enderror
+                <button type="submit">{{ __('Reply') }}</button>
+            </form>
+            @include('timeline._mention-picker')
+        @endif
 
         <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
     </x-classic.parts>

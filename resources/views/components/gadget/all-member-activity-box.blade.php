@@ -5,7 +5,7 @@
     <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
         <div class="partsHeading"><h3>{{ __("SNS Member's %activity%") }}</h3></div>
         <div class="body">
-            @if ($showForm)
+            @if ($showForm && \App\Features\Timeline\TimelinePosting::enabled())
                 {{-- OpenPNE 3 rendered an inline post form here; the Classic port links to the post page. --}}
                 <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
             @endif

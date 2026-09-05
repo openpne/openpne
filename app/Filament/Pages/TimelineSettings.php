@@ -23,7 +23,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the timeline policy settings (currently: whether members may make a post web-public).
+ * Edit the timeline policy settings (whether members may make a post web-public, and whether they may post at all).
  * `sns_settings` is authoritative; every field is stored verbatim on save and resolves to its
  * fail-closed default (web-public off) while no row exists.
  *
@@ -132,6 +132,9 @@ class TimelineSettings extends Page
             ->schema([
                 Toggle::make(SnsSettingKey::TimelineAllowWebPublic->value)
                     ->label(SnsSettingKey::TimelineAllowWebPublic->label()),
+                Toggle::make(SnsSettingKey::TimelinePostingEnabled->value)
+                    ->label(SnsSettingKey::TimelinePostingEnabled->label())
+                    ->helperText(__('While off, members cannot post or reply; what is already posted stays.')),
             ]);
     }
 }
