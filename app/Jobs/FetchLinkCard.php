@@ -24,9 +24,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * The only job that talks to the network. How duplicates are collapsed, how the fetch is claimed and
- * how a write back is fenced are in [link-cards.md](../../docs/internals/link-cards.md) § Two
- * workers, one URL.
+ * The only job that talks to the network. How duplicates are collapsed, how the fetch is claimed
+ * and how a write back is fenced are in docs/internals/link-cards.md, "Two workers, one URL".
  */
 class FetchLinkCard implements ShouldBeUnique, ShouldQueue
 {
@@ -165,7 +164,7 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
 
     /**
      * A card that already renders is not demoted by a failure; only the schedule moves
-     * ([link-cards.md](../../docs/internals/link-cards.md) § Two workers, one URL).
+     * (docs/internals/link-cards.md, "Two workers, one URL").
      *
      * @return array<string, mixed>
      */

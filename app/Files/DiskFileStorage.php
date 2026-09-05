@@ -8,7 +8,7 @@ use RuntimeException;
 
 /**
  * The disk is one declared in `config/filesystems.php` and named by `openpne.files.disk` — anything
- * other than `blob` ([file-storage.md](../../docs/internals/file-storage.md) § The two backends).
+ * other than `blob` (docs/internals/file-storage.md, "The two backends").
  */
 class DiskFileStorage implements FileStorage
 {

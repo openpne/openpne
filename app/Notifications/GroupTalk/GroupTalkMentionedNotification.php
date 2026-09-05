@@ -49,8 +49,8 @@ class GroupTalkMentionedNotification extends Notification implements FeatureNoti
     }
 
     /**
-     * SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current; the feed
-     * row additionally waits on the reader's cursor (docs/internals/notifications.md,
+     * SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current;
+     * the feed row additionally waits on the reader's cursor (docs/internals/notifications.md,
      * "Delivery-time re-checks").
      */
     public function shouldSend(Member $notifiable, string $channel): bool

@@ -26,9 +26,9 @@ final class WebPushNudge extends Notification implements ShouldQueue
     private const TAG = 'openpne-notifications';
 
     /**
-     * Must stay under the queue's retry_after, past which the job is handed out again mid-send and every
-     * device that answered is pushed twice (docs/internals/outbound-http.md, "The push endpoint
-     * seam").
+     * Must stay under the queue's retry_after, past which the job is handed out again mid-send and
+     * every device that answered is pushed twice (docs/internals/outbound-http.md, "The push
+     * endpoint seam").
      */
     public int $timeout = 60;
 

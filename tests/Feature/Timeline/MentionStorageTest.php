@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** The storage half of the mention contract; a structurally broken payload never gets this far (MentionRequestTest). */
+/** The storage half of the mention contract; a structurally broken payload never gets this far (the request half). */
 class MentionStorageTest extends TestCase
 {
     use RefreshDatabase;

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The chunked walk, the single opt-out query and the union of the two catalog kinds are in
- * [notifications.md](../../docs/internals/notifications.md) § Broadcast fan-out.
+ * docs/internals/notifications.md, "Broadcast fan-out".
  */
 class BroadcastTimelinePosted implements ShouldQueue
 {

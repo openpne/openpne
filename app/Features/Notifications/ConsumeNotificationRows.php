@@ -11,9 +11,8 @@ use Illuminate\Support\Collection;
 /**
  * The feed is an inbox, so a row is spent once the member has read what it announces
  * (docs/internals/notifications.md, "The three layers"). `data` is a TEXT column with no path
- * index, so the
- * SQL narrows by `notifications_notifiable_read_at_index` plus `type` and the ids are matched in PHP over
- * the member's few unread rows.
+ * index, so the SQL narrows by `notifications_notifiable_read_at_index` plus `type` and the ids are
+ * matched in PHP over the member's few unread rows.
  */
 class ConsumeNotificationRows
 {

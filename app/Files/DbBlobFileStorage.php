@@ -11,7 +11,7 @@ use RuntimeException;
  * The connection is resolved per call from the File's own connection and never cached, so the bytes
  * land in the database its metadata is in even if that connection is reconfigured. There is no
  * constant-memory streaming out of a row, so a whole BLOB is buffered in memory on read and write
- * ([file-storage.md](../../docs/internals/file-storage.md) § Memory shape).
+ * (docs/internals/file-storage.md, "Memory shape").
  */
 class DbBlobFileStorage implements FileStorage
 {

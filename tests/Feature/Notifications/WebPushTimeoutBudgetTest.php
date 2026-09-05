@@ -12,9 +12,9 @@ use ReflectionProperty;
 use Tests\TestCase;
 
 /**
- * Each of the three numbers lives somewhere else — a config file, a controller constant, a notification
- * property — and each looks harmless alone, so the relation between them is asserted rather than left as a
- * comment (docs/internals/outbound-http.md, "The push endpoint seam").
+ * Each of the three numbers lives somewhere else — a config file, a controller constant, a
+ * notification property — and each looks harmless alone, so the relation between them is asserted
+ * rather than left as a comment (docs/internals/outbound-http.md, "The push endpoint seam").
  */
 class WebPushTimeoutBudgetTest extends TestCase
 {

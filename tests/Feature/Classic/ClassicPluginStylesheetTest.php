@@ -13,7 +13,6 @@ use Tests\TestCase;
 /**
  * The Classic shell links the page module's OpenPNE 3 plugin stylesheet, in OpenPNE 3's cascade
  * order: skin, then the module's stylesheet, then the admin custom CSS that overrides both.
- * Which module gets which file is covered by Tests\Unit\Compat\PluginStylesheetsTest.
  */
 class ClassicPluginStylesheetTest extends TestCase
 {

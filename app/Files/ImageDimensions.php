@@ -5,7 +5,7 @@ namespace App\Files;
 /**
  * Delivery decodes through intervention/image, which auto-orients before it scales, so a size is
  * only useful to a caller if EXIF Orientation is applied to it first
- * ([images.md](../../docs/internals/images.md) § files.width / files.height).
+ * (docs/internals/images.md, "files.width / files.height").
  */
 final class ImageDimensions
 {

@@ -244,7 +244,7 @@ class HomeIssueRoutesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get('/member')->assertRedirect('/');
     }
 
-    /** PublicRouteBoundaryTest pins `auth.session` on the Classic arm; the Modern arm serves member content too. */
+    /** The Modern arm serves member content too, so `auth.session` is pinned on it as well as on Classic. */
     public function test_a_stale_session_is_ended_on_the_modern_front_page(): void
     {
         $member = Member::factory()->create();

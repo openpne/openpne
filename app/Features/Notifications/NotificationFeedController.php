@@ -47,8 +47,9 @@ class NotificationFeedController extends Controller
         /** @var ?DatabaseNotification $row */
         $row = $this->viewer()->notifications()->whereKey($notification)->first();
 
-        // A missing row returns to the feed rather than erroring; only a row that exists but belongs to
-        // a switched-off unit is refused (docs/internals/notifications.md, "The three layers").
+        // A missing row returns to the feed rather than erroring; only a row that exists but
+        // belongs to a switched-off unit is refused (docs/internals/notifications.md, "The three
+        // layers").
         if ($row === null) {
             return redirect()->route('notifications.index');
         }

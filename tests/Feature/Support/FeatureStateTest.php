@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * The resolved state of a feature unit: absent rows mean enabled, a stored '0' disables, and a
  * disabled container takes its contained units with it. The static registry (keys, prefixes, codec)
- * is covered in Tests\Unit\Support\FeatureTest.
+ * is not this file's.
  */
 class FeatureStateTest extends TestCase
 {
