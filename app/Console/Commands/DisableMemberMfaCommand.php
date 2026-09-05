@@ -9,7 +9,7 @@ use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 
 /**
- * See docs/internals/security.md "Member two-factor authentication".
+ * See docs/internals/security.md, "Member two-factor authentication".
  */
 class DisableMemberMfaCommand extends Command
 {

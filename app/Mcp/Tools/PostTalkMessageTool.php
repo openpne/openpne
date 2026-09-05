@@ -113,7 +113,7 @@ class PostTalkMessageTool extends TalkTool
         string $body,
         ?GroupMessage $replyTo,
     ): GroupMessage {
-        // No body is ever parsed for `@` (docs/internals/group-talk.md "Key invariants"): the only
+        // No body is ever parsed for `@` (docs/internals/group-talk.md, "Key invariants"): the only
         // mentions here are the ones this tool composes.
         $plain = fn (): GroupMessage => $create($member, $group, $body, inReplyTo: $replyTo);
         $addressing = function (Member $author) use ($create, $member, $group, $body, $replyTo): GroupMessage {

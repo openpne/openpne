@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * See docs/internals/mcp.md "Tokens and abilities".
+ * See docs/internals/mcp.md, "Tokens and abilities".
  */
 class McpTokenCommand extends Command
 {

@@ -14,7 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
 /**
- * See docs/internals/home-issues.md "Schedule and idempotency".
+ * See docs/internals/home-issues.md, "Schedule and idempotency".
  */
 class PublishHomeIssueCommand extends Command
 {

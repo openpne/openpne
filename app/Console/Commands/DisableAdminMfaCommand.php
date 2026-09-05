@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * See docs/internals/security.md "Admin two-factor authentication".
+ * See docs/internals/security.md, "Admin two-factor authentication".
  */
 class DisableAdminMfaCommand extends Command
 {

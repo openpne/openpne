@@ -16,7 +16,7 @@ use stdClass;
 use Symfony\Component\Finder\Finder;
 
 /**
- * See docs/internals/i18n.md "CI gate" and "Omission policy ("key === text" pruning)".
+ * See docs/internals/i18n.md, "CI gate" and "Omission policy ("key === text" pruning)".
  */
 class CheckTranslationsCommand extends Command
 {
@@ -1297,7 +1297,7 @@ class CheckTranslationsCommand extends Command
 
     /**
      * Never a deletion list: lang/*.json also holds publisher keys the framework renders at
-     * runtime, which this scan cannot see (docs/internals/i18n.md "Ownership: publisher-managed vs app-authored").
+     * runtime, which this scan cannot see (docs/internals/i18n.md, "Ownership: publisher-managed vs app-authored").
      *
      * @param  array<string, list<string>>  $found
      */

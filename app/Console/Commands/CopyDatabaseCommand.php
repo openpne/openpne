@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use PDO;
 
 /**
- * See docs/changing-database-engine.md "Copying the database".
+ * See docs/changing-database-engine.md, "Copying the database".
  */
 class CopyDatabaseCommand extends Command
 {

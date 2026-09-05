@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * See docs/internals/link-cards.md "Cleaning up".
+ * See docs/internals/link-cards.md, "Cleaning up".
  */
 class PruneLinkCardsCommand extends Command
 {
@@ -59,7 +59,7 @@ class PruneLinkCardsCommand extends Command
 
     /**
      * The conditions are repeated inside the DELETE rather than trusted from the earlier SELECT,
-     * because a card can be adopted between the two (docs/internals/link-cards.md "Cleaning up").
+     * because a card can be adopted between the two (docs/internals/link-cards.md, "Cleaning up").
      */
     private function deleteIfStillUnreferenced(LinkCard $card, CarbonImmutable $cutoff): bool
     {

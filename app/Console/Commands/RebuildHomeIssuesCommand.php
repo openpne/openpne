@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * See docs/internals/home-issues.md "Schedule and idempotency".
+ * See docs/internals/home-issues.md, "Schedule and idempotency".
  */
 class RebuildHomeIssuesCommand extends Command
 {

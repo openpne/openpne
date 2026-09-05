@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * See docs/internals/timeline.md "Bodies the parser never saw".
+ * See docs/internals/timeline.md, "Bodies the parser never saw".
  */
 class BackfillTimelineHashtagsCommand extends Command
 {

@@ -27,9 +27,6 @@ the admin-user list shows which administrators have it enabled.
   the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
   the same trust boundary as `openpne:admin:reset-password`, since an admin has
   no email for a self-service reset.
-- **Admin passwords at the CLI.** `openpne:admin:create` and `openpne:admin:reset-password` prompt
-  twice, or read `OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no
-  `--password` option, which would leak the secret into shell history and the process list.
 - **Session revocation.** Enabling or disabling MFA revokes the admin's other
   sessions (`App\Auth\AdminAppAuthentication` decorates the set-up/disable
   actions, keeping the current session; the CLI revokes all), consistent with a
@@ -221,6 +218,10 @@ The policy has a single definition — `Password::defaults()` in
 [`AppServiceProvider`](../../app/Providers/AppServiceProvider.php) — and every
 password-accepting path (member registration, password reset and change, the
 admin panel forms, the admin CLI commands) validates through `Password::default()`.
+
+At the CLI, `openpne:admin:create` and `openpne:admin:reset-password` prompt twice, or read
+`OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no `--password`
+option, which would leak the secret into shell history and the process list.
 
 - **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1) and matches
   the de-facto floor of large consumer services (large-scale measurement:

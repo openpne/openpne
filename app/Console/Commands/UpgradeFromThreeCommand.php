@@ -42,7 +42,7 @@ class UpgradeFromThreeCommand extends Command
         }
 
         // OpenPNE 3 DATETIMEs are copied through unchanged, so APP_TIMEZONE must already name the zone
-        // the source ran in (docs/internals/runtime.md "Upgrading from OpenPNE 3").
+        // the source ran in (docs/internals/runtime.md, "Upgrading from OpenPNE 3").
         $this->line('Site timezone: '.config('app.timezone').' — migrated timestamps are read as this zone, unconverted.');
 
         $runner = app(UpgradeRunner::class);

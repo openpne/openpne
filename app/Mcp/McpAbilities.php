@@ -6,7 +6,7 @@ namespace App\Mcp;
 
 /**
  * `mcp:read` gates the endpoint; `mcp:write` is asked again inside each tool that writes.
- * See docs/internals/mcp.md "Tokens and abilities".
+ * See docs/internals/mcp.md, "Tokens and abilities".
  */
 final class McpAbilities
 {

@@ -8,7 +8,7 @@ use App\Support\SurfaceMode;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-/** See docs/internals/feature-modules.md "Surface selection". */
+/** See docs/internals/feature-modules.md, "Surface selection". */
 class SurfaceModeCommand extends Command
 {
     protected $signature = 'openpne:surface-mode {mode? : modern_only|classic_default|modern_default}';
