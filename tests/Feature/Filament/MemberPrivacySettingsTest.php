@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Profile\ProfilePageVisibility;
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Filament\Pages\MemberPrivacySettings;
 use App\Models\AdminUser;
+use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -46,5 +50,31 @@ class MemberPrivacySettingsTest extends TestCase
     {
         Livewire::test(MemberPrivacySettings::class)
             ->assertSet('data.allow_web_public_age', false);
+    }
+
+    public function test_the_profile_policy_mounts_as_its_stored_value_and_round_trips(): void
+    {
+        DB::table('sns_settings')->where('key', SnsSettingKey::ProfileVisibilityPolicy->value)->delete();
+        app(SnsSettingService::class)->clearCache();
+
+        // The service returns the typed enum; the radio must hold the backing value or nothing is selected.
+        Livewire::test(MemberPrivacySettings::class)
+            ->assertSet('data.profile_visibility_policy', 'members')
+            ->fillForm(['profile_visibility_policy' => 'web'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'profile_visibility_policy', 'value' => 'web']);
+        $this->assertSame(ProfileVisibilityPolicy::Web, ProfilePageVisibility::policy());
+
+        Livewire::test(MemberPrivacySettings::class)->assertSet('data.profile_visibility_policy', 'web');
+    }
+
+    public function test_an_unknown_profile_policy_is_refused_before_the_save(): void
+    {
+        Livewire::test(MemberPrivacySettings::class)
+            ->fillForm(['profile_visibility_policy' => 'everyone'])
+            ->call('save')
+            ->assertHasErrors(['data.profile_visibility_policy']);
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Unit\Support;
 
 use App\Features\GroupTalk\GroupTalkNotifyMode;
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -225,6 +226,28 @@ class SnsSettingKeyTest extends TestCase
 
         // The web-public switch beside it still keeps out of the upgrade: no OpenPNE 3 row is its source.
         $this->assertFalse(SnsSettingKey::TimelineAllowWebPublic->isMigratedFromOp3());
+    }
+
+    public function test_the_profile_policy_defaults_to_members_only_and_maps_openpne3_codes(): void
+    {
+        $key = SnsSettingKey::ProfileVisibilityPolicy;
+
+        $this->assertSame(ProfileVisibilityPolicy::Members, $key->default());
+        $this->assertSame(SettingGroup::Privacy, $key->group());
+        $this->assertSame('is_allow_config_public_flag_profile_page', $key->op3SourceName());
+        $this->assertTrue($key->isMigratedFromOp3());
+        $this->assertSame(ProfileVisibilityPolicy::Web, $key->decode('web'));
+        $this->assertSame(ProfileVisibilityPolicy::MemberChoice, $key->coerce('member_choice'));
+        $this->assertSame(ProfileVisibilityPolicy::Web, $key->coerce(ProfileVisibilityPolicy::Web));
+        $this->assertSame('web', $key->encode(ProfileVisibilityPolicy::Web));
+        // An unknown stored value, an OpenPNE 3 code the upgrade did not rewrite included, is members-only.
+        $this->assertSame(ProfileVisibilityPolicy::Members, $key->decode('4'));
+        $this->assertSame(ProfileVisibilityPolicy::Members, $key->decode('everyone'));
+        // OpenPNE 3 read the row as PHP truthy, so 0 and the radio's blank both mean member choice.
+        $this->assertSame([
+            '' => 'member_choice', '0' => 'member_choice', '1' => 'members', '4' => 'web',
+        ], $key->op3ValueMap());
+        $this->assertNull(SnsSettingKey::AllowWebPublicAge->op3ValueMap());
     }
 
     public function test_the_search_period_switch_reads_as_openpne3_truthy(): void

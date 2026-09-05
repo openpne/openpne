@@ -16,7 +16,7 @@ final class ProfileAccess
 {
     public static function isWebPublic(Member $subject): bool
     {
-        return $subject->profile_visibility === Visibility::Open;
+        return ProfilePageVisibility::effective($subject) === Visibility::Open;
     }
 
     /** For a caller with no page to redirect or abort from, where refusal means not existing. */

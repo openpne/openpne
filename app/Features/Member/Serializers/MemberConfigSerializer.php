@@ -4,6 +4,7 @@ namespace App\Features\Member\Serializers;
 
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
+use App\Features\Profile\ProfilePageVisibility;
 use App\Models\Member;
 use App\Support\Feature;
 use App\Support\Look;
@@ -45,6 +46,17 @@ class MemberConfigSerializer
                 'options' => array_map(
                     static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
                     DiaryVisibility::options(),
+                ),
+            ];
+        }
+
+        // Offered only under the member-choice policy; the two other policies decide for everyone.
+        if (ProfilePageVisibility::memberMayChoose()) {
+            $form['profileVisibility'] = [
+                'value' => (string) ProfilePageVisibility::defaultFor($member)->value,
+                'options' => array_map(
+                    static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
+                    ProfilePageVisibility::options(),
                 ),
             ];
         }

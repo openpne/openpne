@@ -3,6 +3,7 @@
 namespace Tests\Feature\Member;
 
 use App\Features\Member\Actions\ConfirmEmailChange;
+use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\Profile;
@@ -207,8 +208,10 @@ class MemberConfigTest extends TestCase
 
     public function test_the_age_category_is_hidden_without_a_birthday_profile_item(): void
     {
-        // No birthday item → no age to gate, so the category is dead weight: absent from the nav
-        // and its URL folds into the landing (deliberate divergence from OpenPNE 3's always-on).
+        // No birthday item → no age to gate, and no profile-page choice either, so the category is
+        // dead weight: absent from the nav and its URL folds into the landing (deliberate divergence
+        // from OpenPNE 3's always-on).
+        $this->setSnsSetting(SnsSettingKey::ProfileVisibilityPolicy, ProfileVisibilityPolicy::Members);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/member/config?category=publicFlag')
