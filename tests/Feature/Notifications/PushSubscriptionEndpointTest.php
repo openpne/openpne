@@ -13,11 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
-/**
- * The one endpoint that takes a URL this site will later POST to, so its validation is the ingress
- * half of docs/internals/outbound-http.md#the-push-endpoint-seam — and its store is writable by
- * anyone signed in, hence the cap and the throttle.
- */
+/** The ingress half of the seam (docs/internals/outbound-http.md, The push endpoint seam). */
 class PushSubscriptionEndpointTest extends TestCase
 {
     use FakesWebPushTransport;
@@ -74,10 +70,6 @@ class PushSubscriptionEndpointTest extends TestCase
         $this->assertSame($rotated['keys']['auth'], $subscription->auth_token);
     }
 
-    /**
-     * The endpoint is the subscription's identity, unique across the table, so a shared device
-     * signing in as someone else moves the row rather than leaving two owners for one browser.
-     */
     public function test_re_registering_someone_elses_endpoint_moves_it(): void
     {
         $first = Member::factory()->create();
@@ -149,10 +141,7 @@ class PushSubscriptionEndpointTest extends TestCase
         $this->assertSame(0, $member->pushSubscriptions()->count());
     }
 
-    /**
-     * Real push services issue endpoints past 500 characters. The bound is the column's width, on
-     * every engine: a stored endpoint reads back whole, and the unsubscribe takes the same length.
-     */
+    /** Real push services issue endpoints past 500 characters, and the bound is the column's width. */
     public function test_an_endpoint_at_the_length_bound_registers_and_unsubscribes(): void
     {
         $member = Member::factory()->create();
@@ -166,7 +155,6 @@ class PushSubscriptionEndpointTest extends TestCase
         $this->assertSame(0, $member->pushSubscriptions()->count());
     }
 
-    /** The unsubscribe takes the store's shape too: a value the ascii column cannot hold is a 422, not a query error. */
     #[DataProvider('rejectedEndpoints')]
     public function test_the_unsubscribe_rejects_what_the_store_rejects(string $endpoint): void
     {
@@ -234,9 +222,8 @@ class PushSubscriptionEndpointTest extends TestCase
     }
 
     /**
-     * The endpoint is byte-exact identity: two that differ only in path case are two devices, not a
-     * collision that transfers one over the other. Only MySQL needs forcing — utf8mb4_bin makes its
-     * default case-insensitive collation binary; SQLite TEXT is already BINARY.
+     * Only MySQL needs forcing: utf8mb4_bin makes its default case-insensitive collation binary, and
+     * SQLite TEXT is already BINARY.
      */
     public function test_endpoints_differing_only_in_case_are_distinct_devices(): void
     {

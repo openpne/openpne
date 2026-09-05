@@ -10,9 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells the site admin a member withdrew, sent to sns_admin_mail_address() as an on-demand notifiable.
- * OpenPNE-4-only wording (OpenPNE 3's admin notice was a non-NotificationMail global template). Rendered
- * in the site default locale — it is operator-facing, not addressed to the withdrawing member.
+ * Rendered in the site default locale: it is operator-facing, not addressed to the withdrawing member.
  */
 class WithdrawalAdminNotification extends Notification implements ShouldQueue
 {

@@ -20,7 +20,6 @@ use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** The template-bodied notifications render through the mail-template engine and deliver as plain text (text/plain). */
 class MailTemplateNotificationTest extends TestCase
 {
     use RefreshDatabase;
@@ -39,7 +38,6 @@ class MailTemplateNotificationTest extends TestCase
         $this->assertSame(['ops@example.test', 'My Group'], $mail->from);
         $this->assertSame('My Group Letter of invitation', $mail->subject);
 
-        // Plain text: no HTML shell, no default Laravel notification branding leaking into the body.
         $text = $this->renderMailText($mail);
         $this->assertStringNotContainsString('notification-logo-v2.1.png', $text);
         $this->assertStringNotContainsString('Laravel', $text);
@@ -49,8 +47,8 @@ class MailTemplateNotificationTest extends TestCase
     {
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        // text/plain only. An 'html' view would make Laravel emit a multipart/HTML mail, which
-        // clients then show as HTML and stop auto-linking bare URLs.
+        // An 'html' view would make Laravel emit a multipart/HTML mail, which clients then show as HTML
+        // and stop auto-linking bare URLs.
         $this->assertSame(['text' => 'mail.template-text'], $mail->view);
     }
 
@@ -69,12 +67,6 @@ class MailTemplateNotificationTest extends TestCase
         $this->assertStringContainsString('Bob sent you a friend request', $en);
     }
 
-    /**
-     * A message written as chat may be nothing but pictures, and a site whose wording quotes the
-     * body — the OpenPNE 3 notification extension's, which is why `message_body` is offered at all —
-     * would otherwise mail a blank line. The stand-in says what arrived instead. A body-less message
-     * with no attachment (a legacy subject-only row) stays as wordless as it has always been.
-     */
     public function test_a_picture_only_message_mails_the_stand_in_for_its_body(): void
     {
         $this->quoteTheBodyInTheMessageMail();
@@ -116,8 +108,6 @@ class MailTemplateNotificationTest extends TestCase
 
         $text = $this->renderMailText((new FriendRequestedNotification($requester))->toMail($recipient));
 
-        // text/plain: the name is emitted verbatim (no markdown re-render) and the app never wraps it in
-        // an <a> link — a receiving client may still auto-link a bare URL, but that is its choice, not ours.
         $this->assertStringContainsString('[x](http://evil.test) <script>alert(1)</script>', $text);
         $this->assertStringNotContainsString('<a href="http://evil.test', $text);
     }
@@ -140,7 +130,6 @@ class MailTemplateNotificationTest extends TestCase
             (new EmailChangeConfirmationNotification('the-token', (int) $member->getKey(), 'en'))->toMail(new AnonymousNotifiable),
         );
 
-        // OpenPNE 4 URL is token-only (id/type dropped from the link)...
         $this->assertStringContainsString('/member/config/email/confirm/the-token', $text);
         $this->assertStringNotContainsString('configComplete', $text);
     }
@@ -150,10 +139,8 @@ class MailTemplateNotificationTest extends TestCase
         $requester = Member::factory()->create();
         $recipient = Member::factory()->create();
 
-        // Enabled by default (no row): mail + the in-app record.
         $this->assertSame(['mail', 'database'], (new FriendRequestedNotification($requester))->via($recipient));
 
-        // Admin turns it off: the mail drops, the in-app record stays.
         DB::table('mail_templates')->insert(['key' => MailTemplate::FriendRequested->value, 'is_enabled' => false]);
         app(MailTemplateService::class)->clearCache();
         $this->assertSame(['database'], (new FriendRequestedNotification($requester))->via($recipient));
@@ -172,8 +159,7 @@ class MailTemplateNotificationTest extends TestCase
         $member = Member::factory()->create();
         $text = $this->renderMailText((new ResetPasswordNotification('t', 'en'))->toMail($member));
 
-        // The default signature carries the contact line; it must appear exactly once (service appends it,
-        // the view does not).
+        // The signature must appear exactly once: the service appends it, the view does not.
         $this->assertSame(1, substr_count($text, 'ops@example.test'));
     }
 }

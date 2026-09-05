@@ -16,11 +16,6 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * A switched-off unit's rows leave every notification surface — feed, header center, badges,
- * settings — and come back untouched when it returns. Filtering is by `notifications.type`, the
- * class the row was written by, so the rows themselves are never rewritten.
- */
 class FeatureNotificationVisibilityTest extends TestCase
 {
     use RefreshDatabase;
@@ -57,8 +52,8 @@ class FeatureNotificationVisibilityTest extends TestCase
             'type' => $type,
             'data' => $data,
             'read_at' => null,
-            // Same-second rows tie on created_at and MySQL orders ties arbitrarily; an
-            // order-sensitive test states its timeline explicitly (the #474 deflake pattern).
+            // Same-second rows tie on created_at and MySQL orders ties arbitrarily, so an
+            // order-sensitive test states its timeline explicitly.
             'created_at' => $createdAt,
         ], static fn ($value) => $value !== null));
 

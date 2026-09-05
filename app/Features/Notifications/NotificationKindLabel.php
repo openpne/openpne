@@ -7,10 +7,8 @@ namespace App\Features\Notifications;
 use App\Notifications\CommentReason;
 
 /**
- * The sentence a feed row reads as: the kind picks the wording, the comment kinds' reason picks
- * which of their three it is, and the actor's name fills it — the withdrawn-member fallback when
- * the row's actor is gone. Resolved server-side so both surfaces print one sentence from one
- * source; an unknown kind still gets a line rather than an empty row.
+ * Resolved server-side so both surfaces print one sentence from one source; an unknown kind still gets a
+ * line rather than an empty row.
  */
 final class NotificationKindLabel
 {

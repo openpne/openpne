@@ -9,15 +9,8 @@ use App\Features\GroupTalk\GroupTalkNotifyMode;
 use LogicException;
 
 /**
- * The closed registry of member-configurable notification kinds (the notification catalog; its
- * OpenPNE 3 notification-extension lineage is described in docs/internals/notifications.md).
- * The case value is the stored `member_notification_settings.kind`; each case's registry entry
- * lives in definition().
- *
- * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
- * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
- * surface in the settings UI. A kind without an op3Name is native to OpenPNE 4 — it has no
- * stored choice to import, so the upgrade passes over it.
+ * The closed registry of member-configurable notification kinds; the case value is the stored
+ * `member_notification_settings.kind` (docs/internals/notifications.md, The per-member catalog).
  */
 enum NotificationKind: string
 {
@@ -52,10 +45,6 @@ enum NotificationKind: string
     case DirectMessageNew = 'direct_message_new';
     case DirectMessageNewOnlyFriends = 'direct_message_new_only_friends';
 
-    /**
-     * The full registry entry, colocated so adding/changing a kind is one arm here (same pattern
-     * as MailTemplate::definition()).
-     */
     public function definition(): NotificationKindDefinition
     {
         return match ($this) {
@@ -72,14 +61,8 @@ enum NotificationKind: string
                 dependOnNot: self::TimelineNewPost,
                 isWired: true,
             ),
-            // Dormant. The community timeline it announced is gone, replaced by group talk, whose own
-            // per-message broadcast is a separate kind behind a site setting (GroupTalkNewMessage).
-            // The case and the imported preference rows stay: a member's stored choice is a record of
-            // what they asked for, and reading these rows as consent to that kind would be inventing
-            // it. isWired false takes it off the settings page meanwhile.
-            //
-            // OpenPNE 3 registered this kind and never sent it; OpenPNE 4 wired it for the community
-            // timeline only, so nothing that ever reached a member is being withdrawn.
+            // Dormant: the community timeline it announced is gone, but the case and its imported rows
+            // stay, a member's stored choice for it being no consent to a different kind.
             self::TimelineNewPostCommunity => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostCommunity',
@@ -176,17 +159,12 @@ enum NotificationKind: string
                 caption: 'Comments on events you commented on',
                 isWired: true,
             ),
-            // OpenPNE-4-native: OpenPNE 3 had no group chat, so there is no stored preference to
-            // carry over and no op3Name. The caption states that mute does not gate this kind, since
-            // the control that would suggest otherwise lives on a different screen
-            // (docs/internals/group-talk.md#what-talk-notifies).
+            // OpenPNE 3 had no group chat, so there is no stored preference to import.
             self::GroupTalkMention => new NotificationKindDefinition(
                 category: NotificationCategory::GroupTalk,
                 caption: 'When you are mentioned in a %community% talk message (delivered even while the %community% is muted)',
                 isWired: true,
             ),
-            // Off unless the site says otherwise: its web default is the admin's
-            // group_talk_notify_default, and its mail default is always off (defaultEnabled below).
             self::GroupTalkNewMessage => new NotificationKindDefinition(
                 category: NotificationCategory::GroupTalk,
                 caption: 'New messages in %community% talk',
@@ -225,7 +203,7 @@ enum NotificationKind: string
         return $this->definition()->category;
     }
 
-    /** Member-facing toggle label (translated; %term% placeholders resolve downstream). */
+    /** Translated, but its %term% placeholders are resolved downstream. */
     public function caption(): string
     {
         return __($this->definition()->caption);
@@ -236,21 +214,15 @@ enum NotificationKind: string
         return $this->definition()->dependOnNot;
     }
 
-    /** Whether OpenPNE 4 has a sender for this kind (unwired kinds are hidden from the settings UI). */
     public function isWired(): bool
     {
         return $this->definition()->isWired;
     }
 
     /**
-     * Whether an absent settings row means enabled on $channel. Must stay true on BOTH channels for
-     * imported kinds (an absent source key meant enabled, and the import writes no row for it);
-     * kept per-kind so each kind's default is declared in one place.
-     *
-     * Per-channel because one kind's default is not the same on both: the talk broadcast follows the
-     * site setting on web and is off on mail, since a mail per chat message is a decision each member
-     * makes rather than one an operator makes for them. A kind whose default can be false is read in
-     * both polarities by every fan-out — never as the opted-out set alone (docs/internals/notifications.md).
+     * Must stay true on both channels for an imported kind: an absent source key meant enabled, and the
+     * import writes no row for it. A kind whose default can be false is read in both polarities by every
+     * fan-out (docs/internals/notifications.md, Key invariants).
      */
     public function defaultEnabled(NotificationChannel $channel): bool
     {
@@ -262,12 +234,8 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether this kind's default on $channel comes from an admin setting rather than being fixed.
-     * Per channel, because the talk broadcast's mail default is fixed off whatever the site says —
-     * only its web channel can move under a member. Such a channel stores a row only as an OVERRIDE:
-     * a value equal to the current default is not written, so an administrator's flip still reaches
-     * every member who has not decided otherwise (Member::setNotificationSetting,
-     * docs/internals/notifications.md).
+     * Such a channel stores a row only as an override — a value equal to the current default is not
+     * written (Member::setNotificationSetting; docs/internals/notifications.md, Key invariants).
      */
     public function hasSiteDefault(NotificationChannel $channel): bool
     {
@@ -275,12 +243,10 @@ enum NotificationKind: string
     }
 
     /**
-     * The member_config key for this kind on $channel, in the exact format the OpenPNE 3
-     * notification extension's settings form stored. The upgrade derives its imported name set
-     * from this, so there is no second list to keep in sync.
+     * The member_config key in the exact format the OpenPNE 3 notification extension's settings form
+     * stored.
      *
-     * @throws LogicException for a native kind, which has no source key — callers select their
-     *                        input with importableCases() rather than filtering the result.
+     * @throws LogicException for a native kind — callers select their input with importableCases()
      */
     public function op3ConfigName(NotificationChannel $channel): string
     {
@@ -296,16 +262,13 @@ enum NotificationKind: string
         };
     }
 
-    /** @return list<self> kinds with an OpenPNE 4 sender (the settings UI's inventory). */
+    /** @return list<self> */
     public static function wiredCases(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $kind): bool => $kind->isWired()));
     }
 
-    /**
-     * @return list<self> kinds the OpenPNE 3 upgrade imports (those with a source name). The SSoT
-     *                    for every op3ConfigName() caller, so a native kind cannot reach one.
-     */
+    /** @return list<self> */
     public static function importableCases(): array
     {
         return array_values(array_filter(
@@ -315,8 +278,7 @@ enum NotificationKind: string
     }
 
     /**
-     * Raw caption source strings (pre-__()). Exposed so the i18n:check term-literal gate can
-     * scan captions that reach __() via a variable and never enter the code scanner.
+     * Read by the i18n:check coverage gate, which no call site reaches (docs/internals/i18n.md, CI gate).
      *
      * @return list<string>
      */
@@ -326,8 +288,7 @@ enum NotificationKind: string
     }
 
     /**
-     * Raw captions (pre-__()) of kinds that surface in the settings UI (wired only), fed to the
-     * i18n:check coverage gate — so a kind's ja translation is required exactly when it becomes wired.
+     * Wired kinds only, so a caption needs its ja translation exactly when the kind becomes wired.
      *
      * @return list<string>
      */

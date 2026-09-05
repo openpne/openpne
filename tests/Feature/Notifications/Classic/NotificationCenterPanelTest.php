@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * The panel behind the header sprite: its rows, and the two decisions OpenPNE 3 let a member take
- * without leaving the page. The rows arrive as HTML because their sentences are resolved in PHP;
- * only the decisions answer in JSON.
- */
 class NotificationCenterPanelTest extends TestCase
 {
     use RefreshDatabase;
@@ -34,10 +29,6 @@ class NotificationCenterPanelTest extends TestCase
             ->assertSee('name="_token"', false);
     }
 
-    /**
-     * The badges as JSON, keyed by the span ids the skin positions, so a page restored from the
-     * back/forward cache can redraw them without a reload.
-     */
     public function test_the_counts_answer_the_badges_by_id_and_uncached(): void
     {
         $this->get(route('notifications.center.counts'))->assertRedirect('/login'); // before actingAs: it persists
@@ -51,7 +42,6 @@ class NotificationCenterPanelTest extends TestCase
             ->assertExactJson(['badges' => ['nc_icon1' => 0, 'nc_icon2' => 1, 'nc_icon3' => 1]])
             ->assertHeader('Cache-Control', 'no-store, private');
 
-        // The header hands the script the URL, next to the panel's.
         $this->actingAs($viewer)->get('/')->assertOk()
             ->assertSee('data-notification-center-counts-url="'.e(route('notifications.center.counts')).'"', false);
     }
@@ -66,10 +56,7 @@ class NotificationCenterPanelTest extends TestCase
             ->assertSee('class="push isread nclink"', false);
     }
 
-    /**
-     * A %friend% row is the one OpenPNE 3 did not let you click through: it asks for the decision
-     * in place, so it carries the buttons and no row link.
-     */
+    /** The one row OpenPNE 3 did not let you click through: it asks for the decision in place. */
     public function test_a_pending_friend_row_offers_the_decision_instead_of_a_link(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
@@ -85,10 +72,6 @@ class NotificationCenterPanelTest extends TestCase
             ->assertSee(__('Do you accept %friend% link request?'));
     }
 
-    /**
-     * Reading the panel is not answering it. The buttons follow the request's own state, so marking
-     * everything read must not retract a decision that is still owed.
-     */
     public function test_marking_everything_read_leaves_a_pending_decision_standing(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
@@ -169,7 +152,6 @@ class NotificationCenterPanelTest extends TestCase
         $this->assertDatabaseMissing('friend_requests', ['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
     }
 
-    /** Double-clicking, or answering what was already answered elsewhere, is a stale panel. */
     public function test_answering_twice_reports_the_request_as_already_settled(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
@@ -191,7 +173,6 @@ class NotificationCenterPanelTest extends TestCase
 
         $this->actingAs($viewer)->postJson(route('notifications.center.friendAccept', $row))->assertNotFound();
 
-        // The other member's request is untouched.
         $this->assertDatabaseHas('friend_requests', ['requester_id' => $requester->getKey(), 'target_id' => $other->getKey()]);
     }
 
@@ -204,9 +185,8 @@ class NotificationCenterPanelTest extends TestCase
     }
 
     /**
-     * The decisions are state changes reachable from a page, so they have to sit in the web group —
-     * that is what puts CSRF and the session in front of them. Asserted on the routes because the
-     * framework skips its own forgery check while running tests, so a request cannot show it.
+     * Asserted on the routes because the framework skips its own forgery check while running tests, so a
+     * request cannot show it.
      */
     public function test_the_decisions_sit_behind_the_web_groups_forgery_and_session_checks(): void
     {

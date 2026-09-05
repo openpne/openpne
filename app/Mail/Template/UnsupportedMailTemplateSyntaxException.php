@@ -11,9 +11,8 @@ use Twig\Error\SyntaxError;
 use Twig\Sandbox\SecurityError;
 
 /**
- * A mail template did not render — e.g. `{% include %}`, a disallowed `|filter`, or an `app_url_for` route
- * with no OpenPNE 4 mapping. Surfaced (not silently dropped or sent raw) so the admin editor can reject it
- * and the import preflight can list it, grouped by `fault`.
+ * Surfaced rather than dropped or sent raw, so the admin editor can reject a template before it is stored
+ * and the import preflight can list it.
  */
 class UnsupportedMailTemplateSyntaxException extends RuntimeException
 {
@@ -26,9 +25,9 @@ class UnsupportedMailTemplateSyntaxException extends RuntimeException
     }
 
     /**
-     * Classify a Twig failure by exception type. A runtime error wrapping one of ours is Twig re-throwing
-     * what an `app_url_for` call raised, so the inner fault is the real one; anything else runtime is left
-     * generic, since strict-variable misses and honest runtime faults are the same type (see MailTemplateFault).
+     * A runtime error wrapping one of ours is Twig re-throwing what `app_url_for` raised, so the inner fault
+     * is the real one; anything else runtime stays generic, a strict-variable miss and an honest runtime
+     * fault sharing that type.
      */
     public static function fromTwig(TwigError $e): self
     {

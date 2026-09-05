@@ -8,7 +8,6 @@ use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateDefaults;
 use PHPUnit\Framework\TestCase;
 
-/** Registry self-consistency: every template is fully specified and the OpenPNE 3 mapping is well-formed. */
 class MailTemplateTest extends TestCase
 {
     public function test_every_template_has_defaults_for_both_locales(): void
@@ -69,8 +68,6 @@ class MailTemplateTest extends TestCase
 
     public function test_variable_keys_are_collision_free_dot_paths(): void
     {
-        // representativeContext() undots the declared keys, so a key that is a dot-prefix of another
-        // (e.g. 'member' alongside 'member.name') would clobber one under Arr::undot. Forbid it.
         foreach (MailTemplate::cases() as $template) {
             $keys = array_keys($template->definition()->variables);
             foreach ($keys as $a) {

@@ -18,10 +18,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Tells the topic author (Reply) or a co-commenter (Related) a new comment landed. Mail +
- * database, gated by the recipient's catalog kind for the reason.
- */
 class TopicCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature;

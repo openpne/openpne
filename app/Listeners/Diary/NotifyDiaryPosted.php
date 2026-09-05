@@ -5,10 +5,7 @@ namespace App\Listeners\Diary;
 use App\Features\Diary\Events\DiaryPosted;
 use App\Jobs\BroadcastDiaryPosted;
 
-/**
- * Hands the new-diary fan-out to a queued job: the audience can be member-wide, so it must not run in
- * the request. Only the diary id crosses to the job, which re-reads (and no-ops if it is already gone).
- */
+/** Queued because the audience can be member-wide and must not be walked in the request. */
 class NotifyDiaryPosted
 {
     public function handle(DiaryPosted $event): void

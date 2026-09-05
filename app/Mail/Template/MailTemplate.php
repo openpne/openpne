@@ -7,14 +7,8 @@ namespace App\Mail\Template;
 use Illuminate\Support\Arr;
 
 /**
- * The closed registry of OpenPNE 4 system-mail templates (OpenPNE 3 "NotificationMail"). The case value
- * is the stored `mail_templates.key`. Each case's full registry entry lives in definition() — its
- * OpenPNE 3 import origin, whether an admin may disable it, its admin caption, and its variable set
- * (help + representative sample per variable). The accessors below are thin views over that one entry.
- *
- * Required/security mails (registration, password, email change) are NOT configurable: the service
- * treats them as always-enabled and the OpenPNE 3 import does not carry their is_enabled, so a migrated
- * `is_enabled=0` can never break those flows.
+ * The closed registry of OpenPNE 4 system-mail templates (OpenPNE 3 "NotificationMail"); the case value is
+ * the stored `mail_templates.key`.
  */
 enum MailTemplate: string
 {
@@ -42,14 +36,8 @@ enum MailTemplate: string
     case MfaDisabled = 'mfa-disabled';
     case MfaResetLink = 'mfa-reset-link';
 
-    /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
 
-    /**
-     * The full registry entry, colocated so adding/changing a template is one arm here. Untranslated:
-     * caption and variable help are source strings; __() is applied in the accessors. Variable keys are
-     * dot paths ({{ member.name }} → 'member.name'); see MailTemplateDefinition.
-     */
     public function definition(): MailTemplateDefinition
     {
         return match ($this) {
@@ -148,8 +136,7 @@ enum MailTemplate: string
                 ],
             ),
             self::TimelineMentionNotified => new MailTemplateDefinition(
-                // OpenPNE-4-only: OpenPNE 3's timeline had no @mentions, so there is no source
-                // wording to carry — the default is authored here.
+                // OpenPNE 3's timeline had no @mentions, so there is no source wording to import.
                 op3SourceName: null,
                 isConfigurable: true,
                 caption: 'Mentioned in a %activity% post',
@@ -160,8 +147,7 @@ enum MailTemplate: string
                 ],
             ),
             self::GroupTalkMentionNotified => new MailTemplateDefinition(
-                // OpenPNE-4-only: OpenPNE 3 had no group chat, so there is no source wording to
-                // carry — the default is authored here.
+                // OpenPNE 3 had no group chat, so there is no source wording to import.
                 op3SourceName: null,
                 isConfigurable: true,
                 caption: 'Mentioned in a %community% talk message',
@@ -169,13 +155,11 @@ enum MailTemplate: string
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'community_name' => ['help' => 'The %community% the message was posted in.', 'sample' => 'Example %community%'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
-                    // The conversation, opened on the message that named them (group-talk.md); talk
-                    // has no screen for one message to link to instead.
+                    // Talk has no per-message screen, so the link opens the conversation at the message.
                     'url' => ['help' => 'The %community% talk URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::GroupTalkMessageNotified => new MailTemplateDefinition(
-                // OpenPNE-4-only, like the mention above: OpenPNE 3 had no group chat.
                 op3SourceName: null,
                 isConfigurable: true,
                 caption: 'New %community% talk message',
@@ -220,8 +204,8 @@ enum MailTemplate: string
                 isConfigurable: true,
                 caption: 'Notification of Someone’s Joining Your %Community%',
                 variables: [
-                    // The default body builds its links with app_url_for from these ids, so both the
-                    // name and the id are declared (MailUrlMapper resolves @community_home / @member_profile).
+                    // The default body builds its links with `app_url_for` from these ids, so each id is
+                    // declared beside its name.
                     'new_member.name' => ['help' => 'The joining member’s name.', 'sample' => 'Example'],
                     'new_member.id' => ['help' => 'The joining member’s ID.', 'sample' => 1],
                     'community.name' => ['help' => 'The %community% name.', 'sample' => 'Example community'],
@@ -230,8 +214,7 @@ enum MailTemplate: string
             ),
             self::RegistrationCompleted => new MailTemplateDefinition(
                 op3SourceName: 'pc_registerEnd',
-                // Non-configurable in OpenPNE 3 (registerEnd configurable:false) — a transactional
-                // "your account is ready" mail with no admin toggle and no member opt-out.
+                // Non-configurable in OpenPNE 3 (`registerEnd` configurable:false).
                 isConfigurable: false,
                 caption: 'Registration complete',
                 variables: [
@@ -240,8 +223,7 @@ enum MailTemplate: string
             ),
             self::WithdrawalCompleted => new MailTemplateDefinition(
                 op3SourceName: 'pc_leave',
-                // Non-configurable in OpenPNE 3 (leave configurable:false). Sent to the just-deleted
-                // member's captured address, so it carries no in-app record and no member opt-out.
+                // Non-configurable in OpenPNE 3 (`leave` configurable:false).
                 isConfigurable: false,
                 caption: 'Withdrawal complete',
                 variables: [
@@ -249,8 +231,8 @@ enum MailTemplate: string
                 ],
             ),
             self::WithdrawalAdminNotice => new MailTemplateDefinition(
-                // OpenPNE-4-only: OpenPNE 3's admin withdrawal notice was a global (non-NotificationMail)
-                // template, so there is no source wording to carry — the default is authored here.
+                // OpenPNE 3's admin withdrawal notice was a global template rather than a
+                // NotificationMail, so there is no source wording to import.
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Member withdrawal (admin notice)',
@@ -261,7 +243,7 @@ enum MailTemplate: string
                 ],
             ),
             self::PasswordChanged => new MailTemplateDefinition(
-                // OpenPNE-4-only security alert (takeover detection); OpenPNE 3 had no such mail.
+                // OpenPNE 3 had no such mail.
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Password changed',
@@ -280,7 +262,7 @@ enum MailTemplate: string
                 variables: [],
             ),
             self::MfaResetLink => new MailTemplateDefinition(
-                // OpenPNE-4-only: the admin-issued two-factor reset link; OpenPNE 3 had no such flow.
+                // OpenPNE 3 had no such flow.
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Two-factor authentication reset (link)',
@@ -303,38 +285,30 @@ enum MailTemplate: string
         return $this->definition()->op3SourceName;
     }
 
-    /** Whether an admin may turn this mail off. Required/security mails and the signature are not toggleable. */
     public function isConfigurable(): bool
     {
         return $this->definition()->isConfigurable;
     }
 
-    /** A real outgoing mail (vs the signature, which is appended to other bodies). */
     public function isSendable(): bool
     {
         return $this !== self::Signature;
     }
 
-    /** Admin-facing caption (the editor's section heading). */
     public function caption(): string
     {
         return __($this->definition()->caption);
     }
 
-    /**
-     * The template-specific variables a body/subject may reference, as the bare names the admin writes
-     * inside `{{ … }}`. Keys of the definition's variable set, so the name list cannot drift from the help.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function variables(): array
     {
         return array_keys($this->definition()->variables);
     }
 
     /**
-     * Each template-specific variable with a short description, for the editor's help. The OpenPNE 3
-     * globals (op_config.sns_name, op_term.*) are available everywhere and are not repeated per template.
+     * The OpenPNE 3 globals (op_config.sns_name, op_term.*) are available to every template and are not
+     * repeated per template.
      *
      * @return array<string, string> `{{ name }}` token => description
      */
@@ -344,9 +318,7 @@ enum MailTemplate: string
     }
 
     /**
-     * Raw source strings (pre-__()): every caption and variable-help string across all templates.
-     * Exposed so the i18n:check term-literal gate can scan strings that reach __() via a variable
-     * and never enter the code scanner.
+     * Read by the i18n:check coverage gate, which no call site reaches (docs/internals/i18n.md, CI gate).
      *
      * @return list<string>
      */
@@ -376,10 +348,8 @@ enum MailTemplate: string
     }
 
     /**
-     * Dummy values for this template's variables, enough to render it once for a syntax check: a token so
-     * `app_url_for` resolves (its absence would throw a missing-token error, not a template fault) and a
-     * value for each declared variable. Derived from the same variable set as variableHelp() and undotted
-     * to the nested shape the renderer sees (`member.name` sample → `['member' => ['name' => …]]`).
+     * Every declared variable carries a sample, the token ones included: an absent token would throw a
+     * missing-token error rather than the template fault a syntax check is looking for.
      *
      * @return array<string, mixed>
      */
@@ -398,7 +368,6 @@ enum MailTemplate: string
         return self::defaults($this)[$this->localeKey($locale)]['body'];
     }
 
-    /** ja for any ja-* locale, en otherwise — the two locales the defaults are authored in. */
     private function localeKey(string $locale): string
     {
         return str_starts_with($locale, 'ja') ? 'ja' : 'en';
@@ -410,24 +379,18 @@ enum MailTemplate: string
         return MailTemplateDefaults::all()[$template->value];
     }
 
-    /** @return list<self> the sendable templates (everything but the signature). */
+    /** @return list<self> */
     public static function sendable(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $t): bool => $t->isSendable()));
     }
 
-    /**
-     * The templates the OpenPNE 3 import carries (those with a source name). The SSoT for the upgrade
-     * steps' name filter and key remap, so adding an import origin to a case is all it takes.
-     *
-     * @return list<self>
-     */
+    /** @return list<self> */
     public static function importable(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $t): bool => $t->op3SourceName() !== null));
     }
 
-    /** Resolve a template by its OpenPNE 3 source name, or null. */
     public static function fromOp3SourceName(string $name): ?self
     {
         foreach (self::cases() as $template) {

@@ -9,7 +9,6 @@ use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
 use InvalidArgumentException;
 use Tests\TestCase;
 
-/** The sandboxed Twig engine: OpenPNE 3 dialect fidelity, the sandbox allowlist, setStrict, and SSTI safety. */
 class MailTemplateRendererTest extends TestCase
 {
     private function renderer(): MailTemplateRenderer
@@ -49,8 +48,6 @@ class MailTemplateRendererTest extends TestCase
 
     public function test_constant_function_and_constant_test_are_both_denied(): void
     {
-        // Strict mode denies every `is <test>` outside allowedTests (empty), so the `constant` test is
-        // rejected just like the `constant()` function. Imported OpenPNE 3 templates use no tests.
         $this->assertRejected('{% if 8 is constant("E_NOTICE") %}yes{% else %}no{% endif %}');
         $this->assertRejected('{{ constant("E_NOTICE") }}');
     }
@@ -69,7 +66,6 @@ class MailTemplateRendererTest extends TestCase
                 ['token' => 'T', 'id' => '9', 'type' => 'pc_address'],
             ),
         );
-        // Named-route (@route?id=N) form: the id names the model, resolved to the canonical URL.
         $this->assertSame(
             route('group.show', ['group' => 3]),
             $r->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '3']),
@@ -83,7 +79,6 @@ class MailTemplateRendererTest extends TestCase
     public function test_app_url_for_requires_token_or_id_and_rejects_unmapped_route(): void
     {
         $this->assertRejected("{% app_url_for('pc_frontend', 'member/register', true) %}");
-        // A named route with no / a non-numeric id, and a route with no OpenPNE 4 mapping.
         $this->assertRejected("{% app_url_for('pc_frontend', '@community_home', true) %}");
         $this->assertRejected("{% app_url_for('pc_frontend', '@member_profile?id='~id, true) %}", ['id' => 'x']);
         $this->assertRejected("{% app_url_for('pc_frontend', 'community/deleteComment?id='~id, true) %}", ['id' => '1']);
@@ -91,9 +86,8 @@ class MailTemplateRendererTest extends TestCase
 
     public function test_app_url_for_tag_on_its_own_line_keeps_the_following_line(): void
     {
-        // Twig eats the first newline after a `%}` block tag; the parser re-emits it so an imported
-        // OpenPNE 3 body with the tag mid-text (its own line, followed by more) does not merge the URL
-        // into the next line. The print form and a tag at end-of-body are unaffected.
+        // The re-emitted newline is for the block form mid-text only; the print form and a tag at
+        // end-of-body are unaffected.
         $r = $this->renderer();
         $this->assertSame(
             "Page:\n".url('/groups/3')."\nProfile:",
@@ -114,8 +108,6 @@ class MailTemplateRendererTest extends TestCase
 
     public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void
     {
-        // A real token parser (not a source rewrite): `{% app_url_for %}` inside a string literal is just
-        // string content and must survive verbatim.
         $out = $this->renderer()->render('{{ "before {% app_url_for(1,2) %} after" }}', []);
 
         $this->assertSame('before {% app_url_for(1,2) %} after', $out);

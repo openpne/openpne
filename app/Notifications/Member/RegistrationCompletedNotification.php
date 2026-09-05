@@ -9,11 +9,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * The "your account is ready" mail (OpenPNE 3 registerEnd), sent once a member completes registration.
- * Mail only and always sent — a required transactional mail with no admin toggle and no member opt-out.
- * The locale is captured at dispatch because the notification renders later on the queue.
- */
 class RegistrationCompletedNotification extends Notification implements ShouldQueue
 {
     use Queueable;

@@ -12,16 +12,10 @@ use Illuminate\Notifications\Events\NotificationSent;
 use Throwable;
 
 /**
- * Leaves the member one feed row per talk room: once the new row is written, the room's earlier ones
- * go.
- *
- * On `NotificationSent` rather than before the send, so the deletion can never outrun the insert —
- * a vetoed send or a listener that never ran would otherwise take the member's only row with it.
- * Two messages landing at once can briefly leave two rows; the next one settles it.
- *
- * Everything past the pure filters is wrapped in a `try`/`report()` for the reason
- * App\Listeners\Notifications\SendWebPushNudge is: this runs inside the queued job that wrote the
- * row, so an escaping exception would retry that job and duplicate the row it is here to deduplicate.
+ * On `NotificationSent` rather than before the send, so the deletion can never outrun the insert; two
+ * messages landing at once can briefly leave two rows, which the next one settles.
+ * Everything past the filters is wrapped in a `try`/`report()`: this runs inside the queued job that
+ * wrote the row, and an escaping exception would retry it and duplicate the row.
  */
 final class KeepOneGroupTalkRoomRow
 {

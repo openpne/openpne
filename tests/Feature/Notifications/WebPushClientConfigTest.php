@@ -12,20 +12,10 @@ use ReflectionProperty;
 use Tests\TestCase;
 
 /**
- * Everything that keeps a validated push endpoint from becoming a request somewhere else is a
- * property of one client, so it is asserted on the client the channel would actually send on rather
- * than on the config it was built from.
- *
- * Going through the channel is the point: the package registers a binding for the same client, and
- * on this Laravel version builds it in a way that drops these options. What this does not settle is
- * whose client it is — the package has another branch that would pass the same config straight to
- * Guzzle and satisfy every assertion below. WebPushUpstreamAssumptionsTest is what separates the
- * two, by emptying the config first.
- *
- * `allow_redirects` is asserted for completeness, not because this client decides it: the only
- * method the library calls is Guzzle's PSR-18 sendRequest(), which sets allow_redirects false per
- * request whatever the client was built with. Remove it from the factory and this assertion fails
- * while behaviour does not — the teeth here are `proxy` and the two timeouts.
+ * Asserted on the client the channel would actually send on rather than on the config it was built from,
+ * the package registering a binding for the same client. `allow_redirects` is asserted for completeness
+ * only: Guzzle's PSR-18 sendRequest() sets it false per request whatever the client carries, so the teeth
+ * here are `proxy` and the two timeouts.
  */
 class WebPushClientConfigTest extends TestCase
 {
@@ -49,16 +39,8 @@ class WebPushClientConfigTest extends TestCase
     }
 
     /**
-     * The two options that decide where a request can land outlast a config that says otherwise.
-     *
-     * Both are read from a file an operator edits, and an empty or absent `proxy` is the difference
-     * between ignoring HTTPS_PROXY and honouring it. So the factory applies them after whatever it
-     * was handed, and a site that deletes them keeps them. Said the other way round — through the
-     * `curl` sub-array, which Guzzle applies last of all — the same site can still open both; that
-     * is why this says these options and not the config as a whole.
-     *
-     * The timeout here is deliberately not the factory's own fallback: identical values would let
-     * this pass while the two were swapped for each other.
+     * The timeout here is deliberately not the factory's own fallback: identical values would let this
+     * pass with the two swapped for each other.
      */
     public function test_the_destination_options_outlast_config_that_states_otherwise(): void
     {
@@ -76,7 +58,12 @@ class WebPushClientConfigTest extends TestCase
         $this->assertSame(7, $config['timeout']);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Resolved through the boot the app did, never by registering the provider by hand, so this is what
+     * watches that it is listed in bootstrap/providers.php.
+     *
+     * @return array<string, mixed>
+     */
     private function clientConfig(): array
     {
         $channel = $this->app->make(WebPushChannel::class);

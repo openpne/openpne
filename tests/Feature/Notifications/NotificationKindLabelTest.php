@@ -67,14 +67,12 @@ class NotificationKindLabelTest extends TestCase
         $this->assertSame('Alice commented on your event.', NotificationKindLabel::for('group_event_commented', null, 'Alice'));
     }
 
-    /** A kind this version does not know still gets a line, so the row is never blank. */
     public function test_an_unknown_kind_gets_the_generic_line(): void
     {
         $this->assertSame('New notification', NotificationKindLabel::for('from_a_newer_version', null, 'Alice'));
         $this->assertSame('New notification', NotificationKindLabel::for(null, null, 'Alice'));
     }
 
-    /** The actor is hydrated at render time, so a withdrawn one leaves the sentence intact. */
     public function test_a_withdrawn_actor_keeps_the_sentence(): void
     {
         $this->assertSame('Withdrawn member sent you a friend request.', NotificationKindLabel::for('friend_requested', null, null));

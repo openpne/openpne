@@ -39,7 +39,6 @@ class NotificationFeedTest extends TestCase
                 ->component('notifications/index')
                 ->where('feed.data.0.id', $newer->getKey())
                 ->where('feed.data.0.kind', 'direct_message_received')
-                // The sentence ships resolved; the client prints it rather than holding its own table.
                 ->where('feed.data.0.label', __(':name sent you a message.', ['name' => $actor->name]))
                 ->where('feed.data.0.read', false)
                 ->where('feed.data.0.actor.name', $actor->name)
@@ -157,7 +156,6 @@ class NotificationFeedTest extends TestCase
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
         $root = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
-        // The row addresses the reply that named the viewer; a thread has one address.
         $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $author->getKey()]);
         $row = $this->seedRow($viewer, 'timeline_mentioned', ['author_id' => $author->getKey(), 'post_id' => $reply->getKey()]);
 
@@ -319,10 +317,7 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect(route('notifications.index'));
     }
 
-    /**
-     * Another member's row is not this member's to open, and answers exactly as a row that is no
-     * longer there does — so the response says nothing about whether the id exists.
-     */
+    /** Answers exactly as a row that is no longer there does, so it says nothing about whether the id exists. */
     public function test_open_rejects_another_members_notification(): void
     {
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();
@@ -369,10 +364,6 @@ class NotificationFeedTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('unread.notifications', 1));
     }
 
-    /**
-     * Read-state separation: reading the feed never touches layer-1 truth. A pending friend
-     * request keeps its "needs action" badge at 1 even after every feed row is marked read.
-     */
     public function test_marking_feed_read_does_not_consume_the_layer1_friend_request_badge(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
@@ -388,17 +379,11 @@ class NotificationFeedTest extends TestCase
             );
     }
 
-    /**
-     * Returning to the feed revalidates it rather than showing the history state Inertia restores,
-     * and both props that carry read state have to come back from the partial reload it sends: the
-     * rows, and the count the bell and the mark-all button read.
-     */
     public function test_the_partial_reload_a_restored_feed_sends_answers_with_fresh_read_state(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        // What the member left behind, and what the browser hands back on the way in.
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('feed.data.0.read', false)
@@ -423,9 +408,8 @@ class NotificationFeedTest extends TestCase
     }
 
     /**
-     * The suite runs classic_default, so a test about the Modern payload has to ask for that
-     * surface — the same feed on Classic answers with Blade. Classic's own rendering is
-     * Tests\Feature\Notifications\Classic\NotificationFeedListTest.
+     * The suite runs classic_default, so a test about the Modern payload has to ask for that surface — the
+     * same feed on Classic answers with Blade.
      */
     private function actingOnModern(Member $viewer): static
     {

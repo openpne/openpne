@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Mail\Template;
 
 /**
- * Resolves an OpenPNE 3 `app_url_for` internal URI to the canonical OpenPNE 4 URL. Only the in-scope
- * routes are mapped; the OpenPNE 3 application argument is ignored and obsolete query params (id/type)
- * are dropped — the OpenPNE 4 routes are token-only. An unmapped route or a missing token throws, so the
- * import preflight surfaces it rather than emitting a broken link.
+ * The OpenPNE 3 application argument is ignored and its obsolete query params (id/type) dropped, the
+ * OpenPNE 4 routes being token-only. An unmapped route or a missing token throws, so the import preflight
+ * surfaces it rather than emitting a broken link.
  */
 final class MailUrlMapper
 {
@@ -20,10 +19,9 @@ final class MailUrlMapper
 
         return match ($path) {
             'member/register' => self::tokenUrl('/register/', $token),
-            // OpenPNE 3 carried token+id+type; OpenPNE 4's confirm route is token-only.
             'member/configComplete' => self::tokenUrl('/member/config/email/confirm/', $token),
-            // OpenPNE 3 named-route form (@route?id=N); the id names the model, resolved to the
-            // canonical (surface-agnostic) URL so the mailed link works from any client.
+            // OpenPNE 3's named-route form (@route?id=N), resolved to the canonical surface-agnostic URL so
+            // the mailed link works from any client.
             '@community_home' => route('group.show', ['group' => self::id($params)]),
             '@member_profile' => route('member.profile.show', ['member' => self::id($params)]),
             default => throw new UnsupportedMailTemplateSyntaxException(

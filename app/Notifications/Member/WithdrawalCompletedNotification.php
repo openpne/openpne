@@ -10,9 +10,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * The "your leaving process was finished" mail (OpenPNE 3 leave), sent to the just-withdrawn member's
- * captured address as an on-demand notifiable (Notification::route) — the Member row is already gone.
- * Mail only and always sent. The name and locale travel as scalars, so nothing dereferences the row.
+ * The Member row is already gone, so the address, name and locale travel as scalars
+ * (docs/internals/notifications.md, Gating flow).
  */
 class WithdrawalCompletedNotification extends Notification implements ShouldQueue
 {

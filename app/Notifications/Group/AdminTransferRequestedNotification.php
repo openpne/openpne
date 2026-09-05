@@ -12,9 +12,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells the nominee an admin asked them to take over a group. Database only — the accept/reject
- * response lives on the community's own banner (OpenPNE 3 sends no mail for this), so there is no
- * mail template and no per-member catalog kind to gate.
+ * Database only: OpenPNE 3 sends no mail for this and the response lives on the community's own banner, so
+ * there is no template and no catalog kind to gate.
  */
 class AdminTransferRequestedNotification extends Notification implements FeatureNotification, ShouldQueue
 {

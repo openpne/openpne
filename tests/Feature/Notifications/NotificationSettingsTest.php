@@ -32,7 +32,6 @@ class NotificationSettingsTest extends TestCase
         $member->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
         $this->assertFalse($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Mail));
-        // Channels are independent rows: the web channel keeps its default.
         $this->assertTrue($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Web));
     }
 
@@ -66,7 +65,6 @@ class NotificationSettingsTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::GroupTalkNotifyDefault, GroupTalkNotifyMode::All->value);
 
         $this->assertTrue($member->fresh()->wantsNotification(NotificationKind::GroupTalkNewMessage, NotificationChannel::Web));
-        // Mail is off whatever the site says: a mail per chat message is the member's own decision.
         $this->assertFalse($member->fresh()->wantsNotification(NotificationKind::GroupTalkNewMessage, NotificationChannel::Mail));
     }
 
@@ -103,11 +101,6 @@ class NotificationSettingsTest extends TestCase
         $this->assertTrue($member->fresh()->wantsNotification(NotificationKind::GroupTalkNewMessage, NotificationChannel::Web));
     }
 
-    /**
-     * The reason a row is an override rather than a copy: the Classic settings form posts every kind on
-     * every save, so a member who merely saved the page under `all` must still follow the administrator
-     * back to `mentions` — only a member who chose differently keeps their answer.
-     */
     public function test_a_bulk_save_under_all_does_not_freeze_the_site_default_into_a_row(): void
     {
         $this->setSnsSetting(SnsSettingKey::GroupTalkNotifyDefault, GroupTalkNotifyMode::All->value);
@@ -119,8 +112,6 @@ class NotificationSettingsTest extends TestCase
             ],
         ])->assertRedirect();
 
-        // Web is the site's to move, so the save leaves it no row; mail's default is fixed, so its
-        // row is stored like any other kind's and is no one's to inherit from.
         $this->assertDatabaseMissing('member_notification_settings', [
             'kind' => NotificationKind::GroupTalkNewMessage->value,
             'channel' => NotificationChannel::Web->value,

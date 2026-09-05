@@ -19,10 +19,6 @@ use RuntimeException;
 use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
-/**
- * Push follows the feed: a `database` send is what dispatches it, so what arrives at a device is
- * decided entirely by the gates that already decided the feed row.
- */
 class WebPushNudgeTest extends TestCase
 {
     use FakesWebPushTransport;
@@ -48,7 +44,6 @@ class WebPushNudgeTest extends TestCase
         $pushes = $this->pushesTo(self::ENDPOINT);
         $this->assertCount(1, $pushes);
         $this->assertSame(sns_name(), $pushes[0]['title']);
-        // The feed row's own sentence, so there is no second wording list to drift.
         $this->assertSame(__(':name sent you a message.', ['name' => 'Kaoru']), $pushes[0]['body']);
         $this->assertSame(app_icon_url(192), $pushes[0]['icon']);
         $this->assertSame('openpne-notifications', $pushes[0]['tag']);
@@ -115,11 +110,7 @@ class WebPushNudgeTest extends TestCase
         $this->assertSame('Kaoru sent you a message.', $this->pushesTo('https://push.example.com/en')[0]['body']);
     }
 
-    /**
-     * The nudge carries the actor's id, not the actor: a member who withdraws between the feed row
-     * and the send is exactly the case a serialized model could not restore, and the queued job
-     * would fail instead of delivering. Sent directly here — the interleave has no request shape.
-     */
+    /** Sent directly here: the interleave has no request shape. */
     public function test_an_actor_who_withdrew_before_the_send_degrades_to_the_fallback_label(): void
     {
         $recipient = $this->subscribed();
@@ -173,8 +164,6 @@ class WebPushNudgeTest extends TestCase
             ->post("/diary/{$diary->getKey()}/comment/create", ['body' => 'Nice'])
             ->assertRedirect("/diary/{$diary->getKey()}");
 
-        // The listener runs inside the job that wrote the row: rethrowing would retry it and
-        // duplicate the row, so the failure is reported and dropped instead.
         $this->assertSame(1, $author->notifications()->count());
         Exceptions::assertReported(RuntimeException::class);
     }

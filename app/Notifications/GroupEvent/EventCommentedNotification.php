@@ -18,11 +18,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Tells the event author (Reply) or a co-commenter (Related) a new comment landed. Mail +
- * database, gated by the recipient's catalog kind for the reason. Shares the group-posting
- * template with topics, so the event title binds the template's topic_name variable.
- */
+/** Shares the group-posting template with topics, so the event title binds its topic_name variable. */
 class EventCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature;

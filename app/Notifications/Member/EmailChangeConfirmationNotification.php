@@ -10,10 +10,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * The "confirm your new email address" mail, sent on-demand to the proposed NEW address (so the
- * notifiable is an AnonymousNotifiable, never the Member — its address is the still-current one).
- * Carries the raw token in the confirmation link only; the locale is captured at request time
- * because the notification renders later on the queue.
+ * Sent on-demand to the proposed new address, so the notifiable is an AnonymousNotifiable rather than the
+ * Member, whose address is still the old one.
  */
 class EmailChangeConfirmationNotification extends Notification implements ShouldQueue
 {
