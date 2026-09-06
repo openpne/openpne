@@ -105,21 +105,31 @@ export function FormActions({ className, children }: { className?: string; child
  */
 export function RadioCardGroup({
     legend,
+    description,
     error,
     className,
     children,
 }: {
     legend: ReactNode;
+    /** A qualifier for the whole choice, announced with the group (a section description is not). */
+    description?: ReactNode;
     error?: string;
     className?: string;
     children: ReactNode;
 }) {
     const id = useId();
+    const descriptionId = description ? `${id}-description` : undefined;
     const errorId = error ? `${id}-error` : undefined;
+    const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
 
     return (
-        <fieldset className={cn('space-y-2', className)} aria-invalid={error ? true : undefined} aria-describedby={errorId}>
+        <fieldset className={cn('space-y-2', className)} aria-invalid={error ? true : undefined} aria-describedby={describedBy}>
             <legend className="sr-only">{legend}</legend>
+            {description && (
+                <p id={descriptionId} className="text-sm text-muted-foreground">
+                    {description}
+                </p>
+            )}
             {children}
             {error && (
                 <p id={errorId} role="alert" className="text-xs text-destructive">

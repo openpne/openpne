@@ -26,4 +26,10 @@ enum Surface: string
             self::Modern => 'New mobile-first design.',
         };
     }
+
+    /** Caption key for the surface picker on either surface, translated via __()/t(). */
+    public static function pickerNote(): string
+    {
+        return 'On a phone the site always shows the Modern design; this choice applies to desktop browsers.';
+    }
 }

@@ -128,6 +128,7 @@
             <x-classic.parts id="generalForm" name="form" :title="__('Display')">
                 <form method="POST" action="{{ route('member.config.surface') }}">
                     @csrf
+                    <p>{{ __(Surface::pickerNote()) }}</p>
                     @foreach ([Surface::Classic, Surface::Modern] as $option)
                         <p>
                             <label>

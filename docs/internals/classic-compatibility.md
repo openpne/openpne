@@ -212,9 +212,12 @@ screen. Unlinking follows `executeUnlink`: someone who is not a `%friend%` (a va
 included) gets a notice back on manage rather than a 404, and a self or empty id goes home.
 
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
-broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
-theme switching); the `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
-to switch to); the notification center's badges count unread notification rows rather than OpenPNE
+broken in OpenPNE 3) and its fixed 950px width are kept as-is — and, like the OpenPNE 3 PC
+layout, the Classic shell declares no viewport meta, so a narrow screen scales the skin rather
+than overflowing it; there is a single static skin (no theme switching); the `#SmtSwitch`
+smartphone-view toggle is not ported — a phone client is served Modern
+([feature-modules.md](feature-modules.md#surface-selection)) and the browser's desktop-site mode
+is the way back; the notification center's badges count unread notification rows rather than OpenPNE
 3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
 hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
@@ -302,6 +305,11 @@ classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget 
 modern only:   Modern logo / color / header image / modern layout / login screen message
 both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```
+
+The Classic-only settings never reach a phone client, which is served Modern whatever the
+member chose ([feature-modules.md](feature-modules.md#surface-selection)) — as in OpenPNE 3,
+whose smartphone layout carried none of the PC skin's customization. A migrated site's phone
+visitors therefore see its Modern-only settings, defaults included.
 
 ## Compatibility levels
 

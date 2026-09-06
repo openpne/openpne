@@ -91,10 +91,31 @@ return $this->respondWith($request, [
    a Modern session sticks across links; a deliberate Modern→Classic handoff (the
    surface picker) goes through `Inertia::location`, a full page load;
 3. the install's [`surface_mode`](../../app/Support/SurfaceMode.php) when it is `modern_only` (Classic is not served);
-4. a member's **durable** surface choice
+4. a **phone client** ([`PhoneClient`](../../app/Support/PhoneClient.php)): Modern. The
+   fixed-width Classic skin is not a phone UI, and OpenPNE 3 likewise never showed phones its PC
+   layout by default (it served a separate smartphone layout);
+5. a member's **durable** surface choice
    ([`PreferenceKey::PreferredSurface`](../../app/Support/PreferenceKey.php), see
    [member-preferences.md](member-preferences.md));
-5. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
+6. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
+
+A phone client is decided server-side — Classic is script-free, so the first response must
+already be right — from `Sec-CH-UA-Mobile` when the browser sends it (Chromium does, unasked, on
+secure contexts; `?1` is a phone, any other value is not), else from the user agent (`iPhone` /
+`iPod`, or `Android` together with `Mobile`). Tablets are not phones: iPadOS reports itself as
+Macintosh and Android tablets omit `Mobile`. That is a deliberate divergence from OpenPNE 3, whose
+regex included `iPad` — the motivation is screen size, and a tablet shows the scaled fixed-width
+skin acceptably. The gate is a client attribute, so it applies to guests too (login, registration,
+password reset, policy pages), and the operator's phone-facing branding is the Modern one
+([classic-compatibility.md](classic-compatibility.md)). The way back to Classic on a phone is the
+browser's desktop-site mode, which sends a desktop user agent and `?0`. The `modern_status` seam
+(1) still outranks it: a non-native feature renders Classic on a phone. The surface picker reads
+and compares against [`SurfaceResolver::desktopSurface()`](../../app/Support/SurfaceResolver.php)
+— the chain without the phone gate — so a choice made from a phone edits what the member gets on
+a desktop. No `Vary` header accompanies the gate: HTML responses carry Symfony's default
+`Cache-Control: no-cache, private`, and the one `public, max-age` response near HTML
+([`CustomizingCssController`](../../app/Http/Controllers/CustomizingCssController.php)) is
+surface-independent; a public page cache added later must revisit this.
 
 `surface_mode` is a single [`SurfaceMode`](../../app/Support/SurfaceMode.php) value
 (`modern_only` | `classic_default` | `modern_default`) that folds "is Classic served?"
@@ -111,7 +132,7 @@ The selection logic is wired into every dual-surface controller. There is no
 `config/features.php`, so `modern_status` defaults to `native`. Whether a feature is served
 **at all** is a separate, DB-authoritative mechanism — the `sns_settings` feature toggles
 ([feature-toggles.md](feature-toggles.md)) — which does not use this config. The durable member
-choice (4) is writable — the member config page sets it — so a member can opt into
+choice (5) is writable — the member config page sets it — so a member can opt into
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
