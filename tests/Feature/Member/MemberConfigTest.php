@@ -726,6 +726,18 @@ class MemberConfigTest extends TestCase
         $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
 
+    public function test_the_confirm_landing_carries_the_no_referrer_header(): void
+    {
+        $member = Member::factory()->create();
+        $raw = str_repeat('a', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        $this->get('/member/config/email/confirm/'.$raw)->assertHeader('Referrer-Policy', 'no-referrer');
+    }
+
     public function test_the_confirm_form_renders_for_a_valid_token(): void
     {
         $member = Member::factory()->create();
