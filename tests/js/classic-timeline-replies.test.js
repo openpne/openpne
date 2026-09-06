@@ -97,16 +97,26 @@ document.body.innerHTML = `
             </div>
         </div>
     </div>
-    <dialog data-timeline-lightbox><img src="" alt=""></dialog>`;
+    <dialog data-timeline-lightbox><img src="" alt=""></dialog>
+    <div class="parts line" id="backLink"><a href="/friend/list" data-history-back>前のページに戻る</a></div>
+    <a class="reply" href="#formCommunityTopicComment" data-comment-reply="#comment_body" data-number="3" data-name="Alice">返信</a>
+    <textarea id="comment_body"></textarea>`;
 wire('public/js/classic-timeline-replies.js');
 wire('public/js/classic-timeline-dialogs.js');
 wire('public/js/classic-notification-center.js');
+wire('public/js/classic-history-back.js');
+wire('public/js/classic-comment-reply.js');
+// The back line steps back only with history behind it, so give the document one entry to return to.
+window.history.pushState({}, '', '/topics/1');
 
 const bell = document.querySelector('#notificationCenter .ncbuttonLink');
 const commentLink = document.querySelector('.timeline-comment-link');
 const loadMore = document.querySelector('.timeline-comment-loadmore');
 const deleteLink = document.querySelector('.timeline-post-delete-confirm-link');
 const lightboxLink = document.querySelector('a[rel="lightbox"]');
+const backLink = document.querySelector('a[data-history-back]');
+const replyLink = document.querySelector('a[data-comment-reply]');
+const commentBox = document.getElementById('comment_body');
 const form = document.querySelector('[data-timeline-reply]');
 const confirmDialog = document.getElementById('timeline-post-delete-confirm-1');
 const lightbox = document.querySelector('dialog[data-timeline-lightbox]');
@@ -127,6 +137,24 @@ beforeEach(() => {
         if (dialog.open) dialog.close();
     }
     lightbox.querySelector('img').src = '';
+    commentBox.value = '';
+});
+
+test('a plain click on the back line steps the browser back in place', () => {
+    // With no history the script falls through to the href, so the guard is what is measured
+    // only while there is an entry to go back to.
+    assert.ok(window.history.length > 1);
+    let stepped = false;
+    window.addEventListener('popstate', () => { stepped = true; }, { once: true });
+
+    assert.equal(click(backLink, {}).defaultPrevented, true);
+    assert.equal(stepped, true); // happy-dom dispatches the popstate synchronously
+    window.history.pushState({}, '', '/topics/1'); // restore the entry the step consumed
+});
+
+test('a plain click on a comment Reply link quotes it into the box', () => {
+    assert.equal(click(replyLink, {}).defaultPrevented, true);
+    assert.equal(commentBox.value, '>>3 Alice\n');
 });
 
 test('a plain click on コメントする opens the box in place', () => {
@@ -155,6 +183,7 @@ test('a plain click on the notification bell opens the panel in place', () => {
 });
 
 test('a modified or non-primary click is left to the browser', () => {
+    assert.ok(window.history.length > 1); // else the back line falls through for a plain click too
     for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
         const label = JSON.stringify(init);
         assert.equal(click(bell, init).defaultPrevented, false, label);
@@ -166,5 +195,8 @@ test('a modified or non-primary click is left to the browser', () => {
         assert.equal(confirmDialog.open, false, label);
         assert.equal(click(lightboxLink, init).defaultPrevented, false, label);
         assert.equal(lightbox.open, false, label);
+        assert.equal(click(backLink, init).defaultPrevented, false, label);
+        assert.equal(click(replyLink, init).defaultPrevented, false, label);
+        assert.equal(commentBox.value, '', label);
     }
 });

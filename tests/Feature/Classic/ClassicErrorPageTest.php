@@ -46,7 +46,14 @@ class ClassicErrorPageTest extends TestCase
         $response->assertSee('id="page_default_error"', false);
         $response->assertSee("You can't access this page.");
         $response->assertSee('<div class="parts line" id="backLink">', false);
-        $response->assertSee('onclick="history.back(); return false;"', false);
+        // The back line is the shared history-back control: a real destination first, the script after.
+        $response->assertSee('<a href="'.route('home').'" data-history-back>', false);
+        $response->assertSee('js/classic-history-back.js', false);
+        $this->assertMatchesRegularExpression(
+            '~<div class="parts line" id="backLink">(?:(?!onclick=).)*?</div>~s',
+            $response->getContent(),
+            'the back line carries no inline handler',
+        );
         $this->assertDoesNotMatchRegularExpression(
             '/class="[^"]*alertBox[^"]*"/',
             $response->getContent(),

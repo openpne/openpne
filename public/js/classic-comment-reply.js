@@ -11,6 +11,11 @@
         return value + '>>' + number + ' ' + name + '\n';
     }
 
+    /** False for a modified or non-primary click, which the browser answers itself (a new tab, a saved link). */
+    function plainClick(event) {
+        return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button);
+    }
+
     /** The comment box a Reply link names, or null when the page has none (then the link is a link). */
     function replyTarget(link, doc) {
         var selector = link.getAttribute('data-comment-reply');
@@ -27,7 +32,7 @@
 
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('a[data-comment-reply]') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         var box = replyTarget(link, document);
