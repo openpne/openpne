@@ -69,7 +69,7 @@ class SnsSettingUpgrade extends UpgradeStep
         ));
     }
 
-    /** @param  list<SnsSettingKey>|null  $keys  defaults to every migrated key */
+    /** @param  array<int, SnsSettingKey>|null  $keys  defaults to every migrated key */
     private function nameList(?array $keys = null): string
     {
         return implode(', ', array_map(

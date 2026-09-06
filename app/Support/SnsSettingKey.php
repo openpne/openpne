@@ -260,23 +260,6 @@ enum SnsSettingKey: string
      * The Auth group is never copied from OpenPNE 3, so an OpenPNE 3 value cannot silently override a
      * security key's fail-closed default. The match is exhaustive so a new group must decide for itself.
      */
-    /**
-     * OpenPNE 3 read these straight off sns_config (SnsConfigTable::get), where a NULL value was the
-     * value it rendered or tested; every other migrated key went through opConfig::get, which fell
-     * to the declared default the way a missing sns_settings row does here.
-     */
-    public function op3NullValueIsKept(): bool
-    {
-        return match ($this) {
-            // The gadget layouts are read the same way, but land on layoutA, the fallback their
-            // OpenPNE 3 reader named.
-            self::CustomCss, self::FooterBefore, self::FooterAfter,
-            self::DiaryAllowWebPublic, self::DiarySearchEnabled,
-            self::GroupTopicCommentReply, self::GroupEventCommentReply => true,
-            default => false,
-        };
-    }
-
     public function isMigratedFromOp3(): bool
     {
         return match ($this->group()) {
@@ -287,6 +270,23 @@ enum SnsSettingKey: string
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             SettingGroup::Ai, SettingGroup::Look,
             SettingGroup::GroupTalk => false,
+        };
+    }
+
+    /**
+     * OpenPNE 3 read these straight off sns_config (SnsConfigTable::get), where a NULL value was the
+     * value it rendered or tested; every other migrated key went through opConfig::get, which fell
+     * to the declared default the way a missing sns_settings row does here.
+     */
+    public function op3NullValueIsKept(): bool
+    {
+        return match ($this) {
+            // The gadget layouts are read the same way, but a NULL one drew a page with no gadgets,
+            // so they land on layoutA instead.
+            self::CustomCss, self::FooterBefore, self::FooterAfter,
+            self::DiaryAllowWebPublic, self::DiarySearchEnabled,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => true,
+            default => false,
         };
     }
 
