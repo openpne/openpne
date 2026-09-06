@@ -34,6 +34,8 @@ class GroupMemberManageController extends Controller
 {
     use RespondsWithSurface;
 
+    public function __construct(private readonly ListGroupMembers $members) {}
+
     public function manage(Request $request, int $group, ListGroupMembers $query): View|InertiaResponse
     {
         $found = Group::findOrFail($group);
@@ -198,12 +200,13 @@ class GroupMemberManageController extends Controller
         abort_unless($targetOk($group, $target), 404);
 
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
-            return $this->redirectToManage($group);
+            return $this->redirectToManage($group, $this->pageFrom($request));
         }
 
         return $this->classic('group.member-action', [
             'group' => $group,
             'target' => $target,
+            'page' => $this->pageFrom($request),
             'title' => $title,
             'message' => __($messageKey, ['name' => $target->name]),
             'submitLabel' => $submitLabel,
@@ -218,14 +221,20 @@ class GroupMemberManageController extends Controller
         $group = $this->groupFrom($request);
         abort_unless(Gate::allows($ability, $group), 404);
         $target = Member::findOrFail($request->integer('member_id'));
+        $page = $this->pageFrom($request);
+        $error = null;
 
         try {
             $run($group, $target);
         } catch (GroupActionException $e) {
-            return $this->redirectToManage($group)->with('error', $this->messageFor($e->reason));
+            $error = $this->messageFor($e->reason);
         }
 
-        return $this->redirectToManage($group)->with('status', $status);
+        // Clamped so a page the action emptied is not the one the redirect lands on.
+        $page = $page > 1 ? min($page, ($this->members)($group)->lastPage()) : 1;
+        $redirect = $this->redirectToManage($group, $page);
+
+        return $error === null ? $redirect->with('status', $status) : $redirect->with('error', $error);
     }
 
     private function targetRole(Group $group, Member $target): ?GroupRole
@@ -233,9 +242,14 @@ class GroupMemberManageController extends Controller
         return GroupMembership::roleOf($group, $target);
     }
 
-    private function redirectToManage(Group $group): RedirectResponse
+    private function pageFrom(Request $request): int
     {
-        return redirect()->route('group.members.manage', $group);
+        return max(1, $request->integer('page', 1));
+    }
+
+    private function redirectToManage(Group $group, int $page): RedirectResponse
+    {
+        return redirect()->route('group.members.manage', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : []));
     }
 
     /** The path {group}; the Classic forms still carry the same id in a hidden field. */

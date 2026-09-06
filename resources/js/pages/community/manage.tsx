@@ -31,7 +31,7 @@ export default function CommunityManage() {
     const { members, group, viewerRole, pendingAdminId } = usePage<ManageProps>().props;
 
     const post = (path: 'appoint' | 'demote' | 'drop' | 'transfer', memberId: number) =>
-        router.post(`/groups/${group.id}/members/${path}`, { member_id: memberId }, { preserveScroll: true });
+        router.post(`/groups/${group.id}/members/${path}`, { member_id: memberId, page: members.meta.currentPage }, { preserveScroll: true });
 
     const appoint = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t('Appoint :name as a sub-administrator of this %community%?', { name: member.name }), confirmLabel: t('Appoint') })) {

@@ -5,6 +5,7 @@ namespace Tests\Feature\Group\Modern;
 use App\Features\Group\Events\AdminTransferRequested;
 use App\Features\Group\Events\SubAdminAppointed;
 use App\Features\Group\GroupRole;
+use App\Features\Group\Queries\ListGroupMembers;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -103,6 +104,31 @@ class GroupManageRoutesTest extends TestCase
         $this->actingAs($admin)->post('/groups/'.$group->getKey().'/members/drop', ['member_id' => $member->getKey()])
             ->assertRedirect($manage);
         $this->assertDatabaseMissing('group_members', ['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+    }
+
+    public function test_an_action_returns_to_the_roster_page_it_came_from(): void
+    {
+        Event::fake([SubAdminAppointed::class]);
+        $group = Group::factory()->create();
+        $admin = $this->join($group, GroupRole::Admin);
+        for ($i = 1; $i < ListGroupMembers::PER_PAGE; $i++) {
+            $this->join($group, GroupRole::Member);
+        }
+        $member = $this->join($group, GroupRole::Member); // the one row on page 2
+        $manage = route('group.members.manage', $group);
+
+        $this->actingAs($admin)->get($this->confirmUrl('appoint', $group, $member).'&page=2')->assertRedirect($manage.'?page=2');
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/appoint", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage.'?page=2');
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/demote", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage.'?page=2');
+        // Dropping the last row of the last page lands on the page that remains, and so does a
+        // refused action taken from a page that no longer exists.
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage);
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage)
+            ->assertSessionHas('error');
     }
 
     public function test_show_exposes_the_manage_affordance_to_managers_only(): void

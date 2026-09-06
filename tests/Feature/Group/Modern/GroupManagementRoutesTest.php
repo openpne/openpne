@@ -3,6 +3,7 @@
 namespace Tests\Feature\Group\Modern;
 
 use App\Features\Group\Actions\JoinGroup;
+use App\Features\Group\Queries\ListPendingMembers;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -196,6 +197,26 @@ class GroupManagementRoutesTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
         ]);
+    }
+
+    public function test_approving_and_declining_return_to_the_pending_page_they_came_from(): void
+    {
+        $admin = Member::factory()->create();
+        $group = Group::factory()->approval()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+        $applicants = Member::factory()->count(ListPendingMembers::PER_PAGE + 2)->create();
+        foreach ($applicants as $applicant) {
+            app(JoinGroup::class)($applicant, $group);
+        }
+        $pending = route('group.members.pending', ['group' => $group->getKey()]);
+
+        $this->actingAs($admin)
+            ->post('/groups/'.$group->getKey().'/members/approve', ['member_id' => $applicants[0]->getKey(), 'page' => 2])
+            ->assertRedirect($pending.'?page=2');
+        // Declining the last row of the last page lands on the page that remains.
+        $this->actingAs($admin)
+            ->post('/groups/'.$group->getKey().'/members/decline', ['member_id' => $applicants[1]->getKey(), 'page' => 2])
+            ->assertRedirect($pending);
     }
 
     public function test_modern_pending_returns_404_for_a_non_admin(): void

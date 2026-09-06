@@ -29,7 +29,7 @@ export default function CommunityPending() {
     const { group, applicants } = usePage<PendingProps>().props;
 
     const act = (path: 'approve' | 'decline', memberId: number) =>
-        router.post(`/groups/${group.id}/members/${path}`, { member_id: memberId }, { preserveScroll: true });
+        router.post(`/groups/${group.id}/members/${path}`, { member_id: memberId, page: applicants.meta.currentPage }, { preserveScroll: true });
 
     return (
         <>
