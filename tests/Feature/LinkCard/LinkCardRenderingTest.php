@@ -247,7 +247,7 @@ class LinkCardRenderingTest extends TestCase
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($this->author)->get("/diary/{$diary->id}")
-            ->assertInertia(fn ($page) => $page->where('comments.0.linkCard.title', 'A title from the page')->etc());
+            ->assertInertia(fn ($page) => $page->where('thread.comments.0.linkCard.title', 'A title from the page')->etc());
     }
 
     public function test_card_text_is_escaped_not_rendered(): void

@@ -80,7 +80,7 @@ lists a page oldest-first, and `order=asc` walks from the first comment. "Older"
 comment age, not page index.
 
 Ordering is by `id` (OpenPNE 3 `setSqlOrderColumn('id')`), never by `number`; the diary thread
-pages by `number` and serializes whole under Modern, for the reasons and the gap recorded in
+pages by `number`, for the reasons recorded in
 [diary.md](diary.md#the-thread-pages-by-number). `number` is a racy
 max+1 label that migrated data may carry out of order or duplicated, so paging by it would drift
 the page boundaries away from OpenPNE 3's; `id` is the monotonic insertion order. Modern reuses the

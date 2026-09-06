@@ -59,6 +59,20 @@ export interface DiaryComment {
     deletable: boolean; // viewer-specific, computed server-side
 }
 
+/** One page of the comment thread, listed oldest-first whichever way the pages are walked. */
+export interface DiaryThread {
+    comments: DiaryComment[];
+    total: number;
+    size: number;
+    page: number;
+    lastPage: number;
+    ascending: boolean;
+    hasOlder: boolean;
+    hasNewer: boolean;
+    olderPage: number | null;
+    newerPage: number | null;
+}
+
 export interface PaginatedDiaries {
     data: DiarySummary[];
     meta: {
