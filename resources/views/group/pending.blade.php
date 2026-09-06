@@ -19,6 +19,7 @@
                             <form method="POST" action="{{ route('group.members.approve', ['group' => $group->getKey()]) }}">
                                 @csrf
                                 <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
+                                <input type="hidden" name="page" value="{{ $applicants->currentPage() }}">
                                 <input type="submit" class="input_submit" value="{{ __('Approve') }}">
                             </form>
                         </td>
@@ -26,6 +27,7 @@
                             <form method="POST" action="{{ route('group.members.decline', ['group' => $group->getKey()]) }}">
                                 @csrf
                                 <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
+                                <input type="hidden" name="page" value="{{ $applicants->currentPage() }}">
                                 <input type="submit" class="input_submit" value="{{ __('Decline') }}">
                             </form>
                         </td>
