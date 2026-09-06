@@ -76,6 +76,16 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         $this->assertStringNotContainsString('image_max_filesize', $output);
     }
 
+    public function test_a_null_size_reports_nothing(): void
+    {
+        $this->seedSize(null);
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade]);
+
+        $this->assertTrue($ok);
+        $this->assertStringNotContainsString('image_max_filesize', $output);
+    }
+
     public function test_a_real_run_reports_it_too(): void
     {
         $this->seedSize('2M');
@@ -160,7 +170,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         return [$ok, implode("\n", $lines)];
     }
 
-    private function seedSize(string $value): void
+    private function seedSize(?string $value): void
     {
         DB::table('sns_config')->insert(['name' => 'image_max_filesize', 'value' => $value]);
     }

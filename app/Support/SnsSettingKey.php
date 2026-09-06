@@ -281,7 +281,7 @@ enum SnsSettingKey: string
     public function op3NullValueIsKept(): bool
     {
         return match ($this) {
-            // The gadget layouts are read the same way, but a NULL one drew a page with no gadgets,
+            // The gadget layouts are read the same way, but a NULL one drew no top or side gadgets,
             // so they land on layoutA instead.
             self::CustomCss, self::FooterBefore, self::FooterAfter,
             self::DiaryAllowWebPublic, self::DiarySearchEnabled,
