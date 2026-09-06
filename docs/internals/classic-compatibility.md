@@ -307,11 +307,12 @@ both:          SNS name / terms / basic navigation labels / policy URLs / favico
 ```
 
 The Classic-only settings — custom CSS, HTML insertion, banners, the gadget layout, the
-navigation menu — never reach a phone client, which is served Modern whatever the member chose
-([feature-modules.md](feature-modules.md#surface-selection)), as in OpenPNE 3, whose smartphone
-layout carried none of the PC skin's customization. A migrated site's phone visitors therefore
-see its Modern-only settings, defaults included; the admin copy for those settings says so
-("which every phone visitor gets"), so a `classic_default` operator learns it in-product.
+navigation menu, the comment reply link — never reach a phone client, which is served Modern
+whatever the member chose ([feature-modules.md](feature-modules.md#surface-selection)), as in
+OpenPNE 3, whose smartphone layout carried none of the PC skin's customization. A migrated site's
+phone visitors therefore see its Modern-only settings, defaults included; the brand color, logo
+and login-message helper texts say so ("which every phone visitor gets"), so a `classic_default`
+operator meets it in-product on those three.
 
 ## Compatibility levels
 
