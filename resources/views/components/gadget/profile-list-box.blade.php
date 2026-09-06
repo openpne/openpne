@@ -5,7 +5,7 @@
             @foreach ($rows as $row)
                 <tr>
                     <th>{{ $row['caption'] }}</th>
-                    <td>@if ($row['linkify'])<x-user-text :value="$row['value']" />@else{{ $row['value'] }}@endif</td>
+                    <td>@if ($row['linkify'])<x-user-text :value="$row['value']" />@else{{ $row['value'] }}@endif@if ($row['suffix'] !== null) ({{ __($row['suffix']) }})@endif</td>
                 </tr>
             @endforeach
         </table>

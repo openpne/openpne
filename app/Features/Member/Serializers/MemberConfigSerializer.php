@@ -61,9 +61,7 @@ class MemberConfigSerializer
             ];
         }
 
-        // The setting is checked at creation only, so switching it off must not lock an existing owner
-        // out of the page.
-        if ($aiSettings->enabled() || $member->aiAccounts()->exists()) {
+        if ($aiSettings->availableTo($member)) {
             $form['ai'] = ['count' => $member->aiAccounts()->count()];
         }
 

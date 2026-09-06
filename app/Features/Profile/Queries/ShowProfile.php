@@ -5,7 +5,6 @@ namespace App\Features\Profile\Queries;
 use App\Features\Block\BlockLookup;
 use App\Features\Profile\Data\ProfileFieldValue;
 use App\Models\Member;
-use App\Models\MemberProfile;
 use App\Support\Visibility;
 use Illuminate\Support\Collection;
 
@@ -27,25 +26,10 @@ class ShowProfile
             ->get()
             ->groupBy('profile_id')
             ->map(fn (Collection $rows): ProfileFieldValue => new ProfileFieldValue($rows->first()->profile, $rows))
-            ->filter(fn (ProfileFieldValue $field): bool => $this->effectiveVisibility($field)->value <= $clearance->value)
+            ->filter(fn (ProfileFieldValue $field): bool => $field->visibility()->value <= $clearance->value)
             ->filter(fn (ProfileFieldValue $field): bool => ! $isGuest || $field->profile->is_public_web)
             ->filter(fn (ProfileFieldValue $field): bool => $field->display($lang) !== '')
             ->sortBy(fn (ProfileFieldValue $field): int => $field->profile->sort_order ?? PHP_INT_MAX)
             ->values();
-    }
-
-    private function effectiveVisibility(ProfileFieldValue $field): Visibility
-    {
-        $profile = $field->profile;
-
-        // A multi-value field stores the flag on every row alike, so the first row is enough.
-        /** @var MemberProfile $row */
-        $row = $field->values->first();
-
-        if ($profile->is_edit_public_flag) {
-            return $row->visibility ?? $profile->default_visibility;
-        }
-
-        return $profile->default_visibility;
     }
 }

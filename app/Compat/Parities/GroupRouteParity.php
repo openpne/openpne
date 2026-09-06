@@ -160,7 +160,7 @@ class GroupRouteParity extends RouteParity
                 new ScreenElement('join-notification mail choice', L::Two, S::Ported, 'CommunityConfigForm is_send_pc_joinCommunity_mail (Receive / Don\'t Receive + help line)', 'the two-option radio list with the help line below it'),
                 new ScreenElement('photo upload + remove', L::Two, S::Ported, 'CommunityFileForm file (sfWidgetFormInputFileEditable, with_delete)'),
                 new ScreenElement('delete-community box', L::Two, S::Ported, "op_include_parts('buttonBox', 'deleteForm')", 'GET form to the delete confirm page, administrator only (a sub-admin may edit but not delete)'),
-                new ScreenElement('required-field markers', L::Three, S::Missing, "_partsForm.php mark_required_field + '%0% is required field.'", 'no per-label * marker and no notice line; the inputs carry the HTML required attribute instead'),
+                new ScreenElement('required-field markers', L::Three, S::Partial, "_partsForm.php mark_required_field + '%0% is required field.'", 'starred where GroupRequest requires the field (name and the three choices); OpenPNE 3 also starred the description and the join mail, which OpenPNE 4 accepts empty or absent'),
             ],
             // joinInput.php / joinError.php → group/join.blade.php
             'join' => [

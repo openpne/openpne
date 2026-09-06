@@ -140,10 +140,16 @@ class DirectMessageController extends Controller
         abort_unless($this->ownsLiveDraft($draft), 404);
 
         return $this->respondWith($request, 'directMessage', [
-            SurfaceResolver::CLASSIC => fn () => view('message.edit', [
-                'draft' => $draft,
-                'recipient' => $draft->draftRecipient,
-            ]),
+            SurfaceResolver::CLASSIC => function () use ($draft) {
+                if ($draft->draftRecipient !== null) {
+                    $this->markLocalNavSubject($draft->draftRecipient);
+                }
+
+                return view('message.edit', [
+                    'draft' => $draft,
+                    'recipient' => $draft->draftRecipient,
+                ]);
+            },
             SurfaceResolver::MODERN => function () use ($draft) {
                 $draft->loadMissing('draftRecipient.avatar.file');
 
@@ -256,6 +262,8 @@ class DirectMessageController extends Controller
     /** The OpenPNE 3 compose form, Classic's alone: a Modern viewer writes in the conversation. */
     private function composeForm(Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View
     {
+        $this->markLocalNavSubject($recipient); // OpenPNE 3 setFriendNav on sendToFriend / reply / edit
+
         return $this->classic('message.compose', [
             'recipient' => $recipient,
             'parentId' => $parentId,

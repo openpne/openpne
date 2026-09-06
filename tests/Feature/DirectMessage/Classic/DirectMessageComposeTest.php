@@ -251,4 +251,28 @@ class DirectMessageComposeTest extends TestCase
             'parent_id' => $original->getKey(), 'thread_id' => $original->getKey(),
         ])->assertRedirect(route('message.send'));
     }
+
+    public function test_compose_reply_and_draft_edit_render_the_recipients_friend_localnav(): void
+    {
+        // OpenPNE 3 setFriendNav on sendToFriend / reply / edit: the page is about the recipient.
+        Notification::fake();
+        $this->seed(NavigationSeeder::class);
+        app(NavigationService::class)->clearCache();
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $received = app(SendDirectMessage::class)($other, new DirectMessageComposeData($viewer->getKey(), 'Hi', 'Body'), asDraft: false);
+        $draft = app(SendDirectMessage::class)($viewer, new DirectMessageComposeData($other->getKey(), 'Draft', 'Body'), asDraft: true);
+
+        $urls = [
+            route('message.compose', ['id' => $other->getKey()]),
+            route('message.reply', ['message' => $received->getKey()]),
+            route('message.draft.edit', ['message' => $draft->getKey()]),
+        ];
+        foreach ($urls as $url) {
+            $this->actingAs($viewer)->get($url)
+                ->assertOk()
+                ->assertSee('<ul class="friend">', false)
+                ->assertSee(route('member.profile.show', $other), false)
+                ->assertDontSee('<ul class="default">', false);
+        }
+    }
 }

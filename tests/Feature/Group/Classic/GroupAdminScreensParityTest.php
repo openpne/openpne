@@ -136,4 +136,39 @@ class GroupAdminScreensParityTest extends TestCase
             ->assertSee('>'.e($member->name).'</a>', false)
             ->assertDontSee(e($member->name).' (1)', false);
     }
+
+    public function test_the_edit_form_stars_the_labels_group_request_requires(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
+
+        $response = $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]));
+
+        $response->assertOk();
+        $response->assertSeeInOrder([
+            '<strong>*</strong> is required field.',
+            '<table class="formTable">',
+            '<th>Name <strong>*</strong>',
+            '<th>Description</th>',
+            '<th>Join policy <strong>*</strong>',
+            '<th>Authority to Read Topic <strong>*</strong>',
+            '<th>Authority to Create Topic <strong>*</strong>',
+            '<th>Receive a notice mail when member joined</th>',
+            '<th>Category</th>',
+            '<th>Image</th>',
+        ], false);
+        // The four labels GroupRequest requires, plus the notice line.
+        $this->assertSame(5, substr_count((string) $response->getContent(), '<strong>*</strong>'));
+
+        // A star promises a refusal: an empty description is accepted, so its label carries none.
+        $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
+            'name' => $group->name, 'description' => '', 'register_policy' => 'open',
+            'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('', (string) $group->fresh()->description);
+        $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
+            'name' => '', 'description' => 'kept', 'register_policy' => 'open',
+            'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
+        ])->assertSessionHasErrors('name');
+    }
 }

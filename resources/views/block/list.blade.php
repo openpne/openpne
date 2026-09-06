@@ -2,6 +2,12 @@
 
 @section('title', __('Blocked members'))
 
+{{-- OpenPNE 3 kept access block as a member-config category, so the page sits beside the others
+     in the category nav (layoutB) rather than on its own. --}}
+@section('sidemenu')
+    <x-member.config-sidemenu />
+@endsection
+
 @section('content')
     {{-- Block is OpenPNE 4-native (OpenPNE 3 kept access block as a member-config category), so these
          boxes carry no OpenPNE 3 kind or id to restore. --}}

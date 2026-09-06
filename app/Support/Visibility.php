@@ -72,4 +72,23 @@ enum Visibility: int
             self::Private => 'Private',
         };
     }
+
+    /**
+     * OpenPNE 3 _profileListBox.php: the audience an owner reads after a value that is not for every
+     * member, null for the ones it left bare (Members, Private, and Open on a field kept off the web).
+     */
+    public function ownerCaption(bool $webPublicAllowed): ?string
+    {
+        return match (true) {
+            $this === self::Friends => $this->label(),
+            $this === self::Open && $webPublicAllowed => $this->label(),
+            default => null,
+        };
+    }
+
+    /** The age row's caption: OpenPNE 3 captioned the age for %my_friend% alone, never for the web. */
+    public function ageCaption(): ?string
+    {
+        return $this->ownerCaption(false);
+    }
 }

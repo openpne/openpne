@@ -18,6 +18,12 @@ class BlockRouteParity extends RouteParity
 {
     protected string $module = 'block';
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 drew access block inside member/config, whose view.yml is layoutB.
+        return ['block.list' => 'B'];
+    }
+
     public function openpne3Module(): ?string
     {
         return null;
@@ -55,7 +61,7 @@ class BlockRouteParity extends RouteParity
                 new ScreenElement('block-a-member input', L::Two, S::Partial, 'member_config.yml accessBlock.access_block (the trailing empty input)', 'its own GET form leading to a confirm page, not the last row of the settings form'),
                 new ScreenElement('member ID help text', L::Three, S::Ported, "MemberConfigAccessBlockForm::configure() setHelp('access_block', 'Block access from the selected member with input MemberID…')"),
                 new ScreenElement('category heading', L::Three, S::Partial, 'member_config.yml accessBlock._attributes.caption "Access Block Configuration"', 'two boxes headed for what they do, now that this is a screen of its own rather than a settings category'),
-                new ScreenElement('settings-page sidemenu', L::Two, S::Missing, "member/configSuccess.php op_include_parts('pageNav', 'pageNav')", 'the screen stands outside member config, so it inherits no category nav; the legacy URL reaches it through compatRedirects()'),
+                new ScreenElement('settings-page sidemenu', L::Two, S::Ported, "member/configSuccess.php op_include_parts('pageNav', 'pageNav')", 'x-member.config-sidemenu with no current entry: block is a screen of its own, not a category, so every row stays a link'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, '_pagerNavigation.php + _pagerTotal.php (op_include_pager_navigation)', 'x-classic.pager; the OpenPNE 3 category had no pager because one increased_input held every id'),
             ],
             // block/add.blade.php — no OpenPNE 3 counterpart (saving the settings form was the act)

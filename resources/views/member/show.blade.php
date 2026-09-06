@@ -30,13 +30,13 @@
                     @if ($age !== null)
                         <tr>
                             <th>{{ __('Age') }}</th>
-                            <td>{{ __(':age years old', ['age' => $age]) }}</td>
+                            <td>{{ __(':age years old', ['age' => $age]) }}@if ($isSelf && ($caption = $owner->preference(\App\Support\PreferenceKey::AgeVisibility)->ageCaption()) !== null) ({{ __($caption) }})@endif</td>
                         </tr>
                     @endif
                     @foreach ($fields as $field)
                         <tr>
                             <th>{{ $field->profile->getCaption($lang) }}</th>
-                            <td><x-user-text :value="$field->display($lang)" /></td>
+                            <td><x-user-text :value="$field->display($lang)" />@if ($isSelf && ($caption = $field->ownerCaption()) !== null) ({{ __($caption) }})@endif</td>
                         </tr>
                     @endforeach
                 </table>

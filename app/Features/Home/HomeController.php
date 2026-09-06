@@ -43,6 +43,7 @@ class HomeController extends Controller
         GadgetService $gadgets,
         UnreadCounts $unread,
         CountUnreadDirectMessages $unreadMessages,
+        PendingJoinRequestCounts $pendingApprovals,
         LatestHomeIssue $latest,
         ShowHomeIssue $show,
         AdjacentHomeIssues $adjacent,
@@ -82,6 +83,8 @@ class HomeController extends Controller
             'adminTransferGroups' => Feature::Group->enabled()
                 ? Group::where('pending_admin_member_id', $viewer->getKey())->get()
                 : collect(),
+            // OpenPNE 3 _cautionAboutCommunityMemberPre: one line per group the viewer administers.
+            'pendingJoinGroups' => Feature::Group->enabled() ? $pendingApprovals($viewer) : collect(),
             // The friend-request caution is the header badge number, read from the same
             // request-scoped service the shell reads, so a caution and its badge cannot disagree.
             'unread' => $unread->for($viewer),

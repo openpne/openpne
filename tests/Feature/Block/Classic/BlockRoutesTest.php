@@ -179,4 +179,18 @@ class BlockRoutesTest extends TestCase
 
         $this->actingAs($member)->get('/member/config?category=profile')->assertOk();
     }
+
+    public function test_list_sits_in_the_member_config_category_nav(): void
+    {
+        $member = Member::factory()->create();
+
+        $content = (string) $this->actingAs($member)->get('/block/list')->assertOk()->getContent();
+
+        // OpenPNE 3 drew access block as a member-config category under the pageNav sidemenu; block
+        // is its own screen here, so no row is the current one and every row stays a link.
+        $this->assertStringContainsString('<div class="dparts pageNav" id="pageNav">', $content);
+        $this->assertStringContainsString('<div id="LayoutB" class="Layout">', $content);
+        $this->assertStringContainsString(route('member.config', ['category' => 'general']), $content);
+        $this->assertStringNotContainsString('class="current"', $content);
+    }
 }

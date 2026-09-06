@@ -193,7 +193,21 @@ class FriendRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_friend_link"', false);
-        $response->assertSee('Bob');
+        // OpenPNE 3 linkInput.php: the form's firstRow names the target with a 76px photo row and a
+        // nickname row, both linking to the profile, under the "Add my friends" title.
+        $profile = route('member.profile.show', $bob);
+        $response->assertSeeInOrder([
+            '<div class="dparts form" id="friendLink">',
+            '<h3>Add my friends</h3>',
+            '<table>',
+            '<th>Photo</th>',
+            '<td><a href="'.$profile.'"><img src="'.asset('images/no_image.gif').'" width="76" height="76" alt="Bob">',
+            '<th>Nickname</th>',
+            '<td><a href="'.$profile.'">Bob</a></td>',
+            '</table>',
+            '<div class="operation">',
+        ], false);
+        $response->assertDontSee('<div class="block">', false);
     }
 
     public function test_link_show_page_returns_404_when_target_missing(): void
