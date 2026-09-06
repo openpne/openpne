@@ -66,7 +66,7 @@ class TimelineSettings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema
-            ->components([$this->buildSection()])
+            ->components([$this->buildSection(), $this->buildAnnouncementSection()])
             ->statePath('data');
     }
 
@@ -136,5 +136,15 @@ class TimelineSettings extends Page
                     ->label(SnsSettingKey::TimelinePostingEnabled->label())
                     ->helperText(__('While off, members cannot post or reply; what is already posted stays.')),
             ]);
+    }
+
+    private function buildAnnouncementSection(): Section
+    {
+        $announce = static fn (SnsSettingKey $key): Toggle => Toggle::make($key->value)
+            ->label($key->label());
+
+        return Section::make(__('Automatic posts'))
+            ->description(__('Each new one becomes a line on the %activity%, posted as its author to the same audience. Nothing is posted while the %activity% unit is off.'))
+            ->schema([$announce(SnsSettingKey::DiaryAutoTimelinePost), $announce(SnsSettingKey::GroupAutoTimelinePost)]);
     }
 }

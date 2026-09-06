@@ -224,4 +224,15 @@ class SnsSettingUpgradeSqlTest extends TestCase
     {
         DB::table('sns_config')->insert(['name' => $name, 'value' => $value]);
     }
+
+    public function test_migrates_the_update_activity_switches(): void
+    {
+        $this->seedConfig('op_diary_plugin_update_activity', '1');
+        $this->seedConfig('op_community_topic_plugin_update_activity', '0');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_auto_timeline_post', 'value' => '1']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_auto_timeline_post', 'value' => '0']);
+    }
 }

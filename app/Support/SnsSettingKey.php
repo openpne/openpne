@@ -36,6 +36,12 @@ enum SnsSettingKey: string
     /** Off refuses new posts and replies; what is already posted stays readable. */
     case TimelinePostingEnabled = 'timeline_posting_enabled';
 
+    /** A new %diary% is announced on the %activity% as its author (OpenPNE 3 op_diary_plugin_update_activity). */
+    case DiaryAutoTimelinePost = 'diary_auto_timeline_post';
+
+    /** A new %topic% or event is announced on the %activity% as its author (OpenPNE 3 op_community_topic_plugin_update_activity). */
+    case GroupAutoTimelinePost = 'group_auto_timeline_post';
+
     /** Off also closes the guest-reachable diary screens, as OpenPNE 3 did. */
     case DiaryAllowWebPublic = 'diary_allow_web_public';
 
@@ -156,7 +162,8 @@ enum SnsSettingKey: string
             self::SurfaceMode => SettingGroup::Surface,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::AllowWebPublicAge, self::ProfileVisibilityPolicy => SettingGroup::Privacy,
-            self::TimelineAllowWebPublic, self::TimelinePostingEnabled => SettingGroup::Timeline,
+            self::TimelineAllowWebPublic, self::TimelinePostingEnabled,
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost => SettingGroup::Timeline,
             self::DiaryAllowWebPublic, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::DiarySearchPeriodDays => SettingGroup::Diary,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
@@ -203,6 +210,8 @@ enum SnsSettingKey: string
             // there is nothing to copy; upgraded sites fall back to the same off default.
             self::TimelineAllowWebPublic => null,
             self::TimelinePostingEnabled => 'is_allow_post_activity',
+            self::DiaryAutoTimelinePost => 'op_diary_plugin_update_activity',
+            self::GroupAutoTimelinePost => 'op_community_topic_plugin_update_activity',
             self::DiaryAllowWebPublic => 'op_diary_plugin_use_open_diary',
             self::DiarySearchEnabled => 'op_diary_plugin_search_enable',
             self::DiarySearchPeriodEnabled => 'op_diary_plugin_search_period_enable',
@@ -324,6 +333,8 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic => true,
             // On, as OpenPNE 3 shipped them: posting and the search screen are open until an admin closes them.
             self::TimelinePostingEnabled, self::DiarySearchEnabled => true,
+            // Off, as OpenPNE 3 shipped both update_activity switches.
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost => false,
             self::DiarySearchPeriodEnabled => false,
             self::DiarySearchPeriodDays => 30,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
@@ -373,6 +384,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
             self::AiAccountsEnabled => (bool) $value,
             // A non-numeric submission lands on 0, the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
@@ -398,6 +410,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
             self::AiAccountsEnabled => $value ? '1' : '0',
             self::AiAccountLimit, self::DiarySearchPeriodDays => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
@@ -441,9 +454,9 @@ enum SnsSettingKey: string
             // clamps to 0 rather than inverting the comparison it feeds.
             self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
             self::DiarySearchPeriodDays => is_numeric($value) ? self::clampDays((int) $value) : $this->default(),
-            // OpenPNE 3 read all three as PHP truthy, so '' closes like '0' while any other stored value opens.
-            self::TimelinePostingEnabled, self::DiarySearchEnabled,
-            self::DiarySearchPeriodEnabled => ! in_array($value, ['', '0'], true),
+            // OpenPNE 3 read all of these as PHP truthy, so '' closes like '0' while any other stored value opens.
+            self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost => ! in_array($value, ['', '0'], true),
             // Fail-open, the one place that direction is right: only an explicit '0' takes a feature
             // down, so a malformed value cannot black out a module and strand its content.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
@@ -470,6 +483,8 @@ enum SnsSettingKey: string
             self::ProfileVisibilityPolicy => __('Who can see a member\'s profile page'),
             self::TimelineAllowWebPublic => __('Allow members to make %activity% posts public to the web'),
             self::TimelinePostingEnabled => __('Allow members to post %activity%'),
+            self::DiaryAutoTimelinePost => __('Announce a new %diary% on the %activity%'),
+            self::GroupAutoTimelinePost => __('Announce a new %topic% or event on the %activity%'),
             self::DiaryAllowWebPublic => __('Allow members to make %diary% entries public to the web'),
             self::DiarySearchEnabled => __('Offer %diary% search'),
             self::DiarySearchPeriodEnabled => __('Limit %diary% search to recent entries'),
@@ -517,6 +532,7 @@ enum SnsSettingKey: string
             self::SnsName, self::AdminMailAddress, self::DefaultLook => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge, self::ProfileVisibilityPolicy,
             self::TimelineAllowWebPublic, self::TimelinePostingEnabled, self::DiaryAllowWebPublic, self::DiarySearchEnabled,
+            self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
             self::DiarySearchPeriodEnabled, self::DiarySearchPeriodDays, self::LinkCardEnabled,
             self::AiAccountsEnabled, self::AiAccountLimit,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
