@@ -1,6 +1,7 @@
+import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { test } from 'node:test';
+import { after, beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 
@@ -62,4 +63,59 @@ test('a landed post empties the box only while it still holds what was sent', ()
     assert.equal(clearsBox('hello', 'hello'), true);
     assert.equal(clearsBox('hello', 'hello and more'), false);
     assert.equal(clearsBox('hello', ''), false);
+});
+
+// --- the DOM half: evaluated without `module`, against a happy-dom document ---
+
+GlobalRegistrator.register();
+after(() => GlobalRegistrator.unregister());
+
+window.fetch = () => new Promise(() => {});
+document.body.innerHTML = `
+    <div class="timeline-post">
+        <a class="timeline-comment-link" href="/timeline/1">コメントする</a>
+        <div class="timeline-post-comments">
+            <a class="timeline-comment-loadmore" href="/timeline/1" data-replies-url="/timeline/1/replies">もっと見る</a>
+            <form data-timeline-reply action="/timeline/1/reply">
+                <textarea class="timeline-post-comment-form-input"></textarea>
+                <button type="submit">投稿</button>
+            </form>
+        </div>
+    </div>`;
+runInThisContext(readFileSync(fileURLToPath(new URL('../../public/js/classic-timeline-replies.js', import.meta.url)), 'utf8'), {
+    filename: 'public/js/classic-timeline-replies.js',
+});
+
+const commentLink = document.querySelector('.timeline-comment-link');
+const loadMore = document.querySelector('.timeline-comment-loadmore');
+const form = document.querySelector('[data-timeline-reply]');
+
+const click = (target, init) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+
+    return event;
+};
+
+beforeEach(() => {
+    form.classList.remove('comment-form-show');
+    loadMore.removeAttribute('data-pending');
+});
+
+test('a plain click on コメントする opens the box in place', () => {
+    assert.equal(click(commentLink, {}).defaultPrevented, true);
+    assert.equal(form.classList.contains('comment-form-show'), true);
+});
+
+test('a plain click on the load-more control is taken over', () => {
+    assert.equal(click(loadMore, {}).defaultPrevented, true);
+});
+
+test('a modified or non-primary click is left to the browser', () => {
+    for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+        const label = JSON.stringify(init);
+        assert.equal(click(commentLink, init).defaultPrevented, false, label);
+        assert.equal(form.classList.contains('comment-form-show'), false, label);
+        assert.equal(click(loadMore, init).defaultPrevented, false, label);
+    }
 });

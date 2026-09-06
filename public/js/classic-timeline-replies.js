@@ -35,6 +35,11 @@
         return sent === current;
     }
 
+    /** False for a modified or non-primary click, which the browser turns into a new tab or window. */
+    function plainClick(event) {
+        return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button);
+    }
+
     /**
      * What to tell the member when a reply is refused. Only the validator's line is taken from the
      * payload: `message` is a framework literal, in English whatever the site's language, for the
@@ -133,7 +138,7 @@
 
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('.timeline-comment-link') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         // The thread page's own row has no inline box: there the link is the same-page jump to the
@@ -242,7 +247,7 @@
 
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('.timeline-comment-loadmore') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         var row = link.closest('.timeline-post');
