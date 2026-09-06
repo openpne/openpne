@@ -53,6 +53,7 @@ class RouteParityLayoutTest extends TestCase
         $this->assertSame('B', RouteParityRegistry::layout('diary.show'));
         $this->assertSame('B', RouteParityRegistry::layout('message.receive'));
         $this->assertSame('B', RouteParityRegistry::layout('member.config')); // category pageNav sidemenu
+        $this->assertSame('B', RouteParityRegistry::layout('block.list')); // the same pageNav, kept from member/config
         $this->assertSame('A', RouteParityRegistry::layout('group.show')); // home: top + sidemenu
         // A screen with no non-default entry resolves to null; the shell falls back to layoutC.
         $this->assertNull(RouteParityRegistry::layout('friend.list'));
@@ -83,7 +84,7 @@ class RouteParityLayoutTest extends TestCase
         // Adding a view here is the prompt to declare A or B in the matching RouteParity::layouts(),
         // since the skin floats #Left only under those.
         $this->assertSame([
-            'diary/edit', 'diary/list', 'diary/new', 'diary/show', 'group/show',
+            'block/list', 'diary/edit', 'diary/list', 'diary/new', 'diary/show', 'group/show',
             'member/ai-account', 'member/config', 'message/list', 'message/show',
         ], $found);
     }

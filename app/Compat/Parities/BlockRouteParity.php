@@ -18,6 +18,12 @@ class BlockRouteParity extends RouteParity
 {
     protected string $module = 'block';
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 drew access block inside member/config, whose view.yml is layoutB.
+        return ['block.list' => 'B'];
+    }
+
     public function openpne3Module(): ?string
     {
         return null;
