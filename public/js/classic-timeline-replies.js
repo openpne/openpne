@@ -35,7 +35,7 @@
         return sent === current;
     }
 
-    /** False for a modified or non-primary click, which the browser turns into a new tab or window. */
+    /** False for a modified or non-primary click, which the browser answers itself (a new tab, a saved link). */
     function plainClick(event) {
         return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button);
     }
@@ -53,7 +53,7 @@
         return fallback;
     }
 
-    // `node --test` evaluates this file with a `module` in scope and takes the pure half alone.
+    // `node --test` evaluates this file with a `module` in scope for the pure half, and without one for the DOM half.
     if (typeof module !== 'undefined') {
         module.exports = { bodyLength: bodyLength, canSubmit: canSubmit, errorText: errorText, clearsBox: clearsBox };
 

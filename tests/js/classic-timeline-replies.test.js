@@ -1,7 +1,7 @@
-import { GlobalRegistrator } from '@happy-dom/global-registrator';
+import '../../resources/js/components/compose/test-dom.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { after, beforeEach, test } from 'node:test';
+import { beforeEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 
@@ -67,28 +67,39 @@ test('a landed post empties the box only while it still holds what was sent', ()
 
 // --- the DOM half: evaluated without `module`, against a happy-dom document ---
 
-GlobalRegistrator.register();
-after(() => GlobalRegistrator.unregister());
+const wire = (path) => {
+    runInThisContext(readFileSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)), 'utf8'), { filename: path });
+};
 
 window.fetch = () => new Promise(() => {});
+// The row as timeline/_post.blade.php draws it: every control is a link with a real destination.
 document.body.innerHTML = `
     <div class="timeline-post">
-        <a class="timeline-comment-link" href="/timeline/1">コメントする</a>
-        <div class="timeline-post-comments">
+        <a href="/files/full.jpg" rel="lightbox"><div><img class="timeline-post-image" src="/files/thumb.jpg" alt=""></div></a>
+        <div class="timeline-post-control">
+            <a class="timeline-comment-link" href="/timeline/1#timeline-reply-form">コメントする</a>
+            <a class="timeline-post-delete-confirm-link" href="/timeline/1/delete" data-dialog="timeline-post-delete-confirm-1">削除</a>
             <a class="timeline-comment-loadmore" href="/timeline/1" data-replies-url="/timeline/1/replies">もっと見る</a>
-            <form data-timeline-reply action="/timeline/1/reply">
-                <textarea class="timeline-post-comment-form-input"></textarea>
-                <button type="submit">投稿</button>
-            </form>
+            <div class="timeline-post-comments">
+                <form data-timeline-reply action="/timeline/1/reply">
+                    <textarea class="timeline-post-comment-form-input"></textarea>
+                    <button type="submit">投稿</button>
+                </form>
+            </div>
+            <dialog id="timeline-post-delete-confirm-1"><form method="post" action="/timeline/1/delete"><button type="submit">削除</button></form></dialog>
         </div>
-    </div>`;
-runInThisContext(readFileSync(fileURLToPath(new URL('../../public/js/classic-timeline-replies.js', import.meta.url)), 'utf8'), {
-    filename: 'public/js/classic-timeline-replies.js',
-});
+    </div>
+    <dialog data-timeline-lightbox><img src="" alt=""></dialog>`;
+wire('public/js/classic-timeline-replies.js');
+wire('public/js/classic-timeline-dialogs.js');
 
 const commentLink = document.querySelector('.timeline-comment-link');
 const loadMore = document.querySelector('.timeline-comment-loadmore');
+const deleteLink = document.querySelector('.timeline-post-delete-confirm-link');
+const lightboxLink = document.querySelector('a[rel="lightbox"]');
 const form = document.querySelector('[data-timeline-reply]');
+const confirmDialog = document.getElementById('timeline-post-delete-confirm-1');
+const lightbox = document.querySelector('dialog[data-timeline-lightbox]');
 
 const click = (target, init) => {
     const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
@@ -100,6 +111,11 @@ const click = (target, init) => {
 beforeEach(() => {
     form.classList.remove('comment-form-show');
     loadMore.removeAttribute('data-pending');
+    loadMore.removeAttribute('data-failed');
+    for (const dialog of [confirmDialog, lightbox]) {
+        if (dialog.open) dialog.close();
+    }
+    lightbox.querySelector('img').src = '';
 });
 
 test('a plain click on コメントする opens the box in place', () => {
@@ -111,11 +127,26 @@ test('a plain click on the load-more control is taken over', () => {
     assert.equal(click(loadMore, {}).defaultPrevented, true);
 });
 
+test('a plain click on 削除 opens the row\'s own confirmation', () => {
+    assert.equal(click(deleteLink, {}).defaultPrevented, true);
+    assert.equal(confirmDialog.open, true);
+});
+
+test('a plain click on an attached image opens the lightbox on the full-size file', () => {
+    assert.equal(click(lightboxLink, {}).defaultPrevented, true);
+    assert.equal(lightbox.open, true);
+    assert.equal(lightbox.querySelector('img').getAttribute('src'), lightboxLink.href);
+});
+
 test('a modified or non-primary click is left to the browser', () => {
     for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
         const label = JSON.stringify(init);
         assert.equal(click(commentLink, init).defaultPrevented, false, label);
         assert.equal(form.classList.contains('comment-form-show'), false, label);
         assert.equal(click(loadMore, init).defaultPrevented, false, label);
+        assert.equal(click(deleteLink, init).defaultPrevented, false, label);
+        assert.equal(confirmDialog.open, false, label);
+        assert.equal(click(lightboxLink, init).defaultPrevented, false, label);
+        assert.equal(lightbox.open, false, label);
     }
 });
