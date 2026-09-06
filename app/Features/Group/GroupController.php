@@ -496,19 +496,21 @@ class GroupController extends Controller
         $group = $this->groupFrom($request);
         abort_unless(Gate::allows('manageMembers', $group), 404);
         $applicant = Member::findOrFail($request->integer('member_id'));
+        $page = max(1, $request->integer('page', 1));
 
         try {
             $run($group, $applicant);
         } catch (GroupActionException $e) {
-            return $this->redirectToPending($group)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToPending($group, $page)->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToPending($group)->with('status', $status);
+        return $this->redirectToPending($group, min($page, app(ListPendingMembers::class)($group)->lastPage()))->with('status', $status);
     }
 
-    private function redirectToPending(Group $group): RedirectResponse
+    /** $page is the list page the action was taken from, so the redirect lands back on it. */
+    private function redirectToPending(Group $group, int $page = 1): RedirectResponse
     {
-        return redirect()->route('group.members.pending', ['group' => $group->getKey()]);
+        return redirect()->route('group.members.pending', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : []));
     }
 
     private function redirectToShow(Group $group): RedirectResponse

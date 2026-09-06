@@ -5,6 +5,7 @@ namespace Tests\Feature\Group\Classic;
 use App\Features\Group\Events\AdminTransferRequested;
 use App\Features\Group\Events\SubAdminAppointed;
 use App\Features\Group\GroupRole;
+use App\Features\Group\Queries\ListGroupMembers;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -157,6 +158,27 @@ class GroupManageRoutesTest extends TestCase
         $this->assertDatabaseMissing('group_members', [
             'group_id' => $group->getKey(), 'member_id' => $member->getKey(),
         ]);
+    }
+
+    public function test_the_roster_links_and_the_confirm_carry_the_page(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->join($group, GroupRole::Admin);
+        for ($i = 1; $i < ListGroupMembers::PER_PAGE; $i++) {
+            $this->join($group, GroupRole::Member);
+        }
+        $member = $this->join($group, GroupRole::Member); // the one row on page 2
+        $manage = route('group.members.manage', $group);
+
+        $this->actingAs($admin)->get($manage.'?page=2')
+            ->assertOk()
+            ->assertSee(route('group.members.drop.show', ['group' => $group->getKey(), 'member_id' => $member->getKey(), 'page' => 2]));
+        $this->actingAs($admin)->get($this->confirmUrl('drop', $group, $member).'&page=2')
+            ->assertOk()
+            ->assertSee('name="page" value="2"', false)
+            ->assertSee($manage.'?page=2', false);
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage);
     }
 
     public function test_sub_admin_cannot_post_appoint_or_demote(): void

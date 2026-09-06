@@ -198,12 +198,13 @@ class GroupMemberManageController extends Controller
         abort_unless($targetOk($group, $target), 404);
 
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
-            return $this->redirectToManage($group);
+            return $this->redirectToManage($group, $this->pageFrom($request));
         }
 
         return $this->classic('group.member-action', [
             'group' => $group,
             'target' => $target,
+            'page' => $this->pageFrom($request),
             'title' => $title,
             'message' => __($messageKey, ['name' => $target->name]),
             'submitLabel' => $submitLabel,
@@ -218,14 +219,15 @@ class GroupMemberManageController extends Controller
         $group = $this->groupFrom($request);
         abort_unless(Gate::allows($ability, $group), 404);
         $target = Member::findOrFail($request->integer('member_id'));
+        $page = $this->pageFrom($request);
 
         try {
             $run($group, $target);
         } catch (GroupActionException $e) {
-            return $this->redirectToManage($group)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToManage($group, $page)->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToManage($group)->with('status', $status);
+        return $this->redirectToManage($group, min($page, app(ListGroupMembers::class)($group)->lastPage()))->with('status', $status);
     }
 
     private function targetRole(Group $group, Member $target): ?GroupRole
@@ -233,9 +235,15 @@ class GroupMemberManageController extends Controller
         return GroupMembership::roleOf($group, $target);
     }
 
-    private function redirectToManage(Group $group): RedirectResponse
+    /** The roster page the action was taken from, so the redirect lands back on it. */
+    private function pageFrom(Request $request): int
     {
-        return redirect()->route('group.members.manage', $group);
+        return max(1, $request->integer('page', 1));
+    }
+
+    private function redirectToManage(Group $group, int $page = 1): RedirectResponse
+    {
+        return redirect()->route('group.members.manage', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : []));
     }
 
     /** The path {group}; the Classic forms still carry the same id in a hidden field. */

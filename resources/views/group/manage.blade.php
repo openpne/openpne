@@ -3,6 +3,7 @@
 @section('title', __('Management member'))
 
 @section('content')
+    @php($pageQuery = $members->currentPage() > 1 ? ['page' => $members->currentPage()] : [])
     {{-- OpenPNE 3 memberManageSuccess.php hand-writes this box as a lone .parts with no kind and no
          id, and wraps the roster table in a div.item; the id here is OpenPNE 4's own. --}}
     <x-classic.parts id="community_memberManage" :single="true" :title="__('Management member')">
@@ -18,7 +19,7 @@
                              (admin/sub-admin rows, and therefore self, are never dropped — OpenPNE 3 parity). --}}
                         <td class="drop">
                             @if ($membership->role === \App\Features\Group\GroupRole::Member)
-                                <a href="{{ route('group.members.drop.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __('Drop this member') }}</a>
+                                <a href="{{ route('group.members.drop.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()] + $pageQuery) }}">{{ __('Drop this member') }}</a>
                             @else
                                 &nbsp;
                             @endif
@@ -31,9 +32,9 @@
                         @if ($viewerRole === \App\Features\Group\GroupRole::Admin)
                             <td class="sub_admin_request">
                                 @if ($membership->role === \App\Features\Group\GroupRole::Member && (int) $rowMember->getKey() !== (int) $pendingAdminId)
-                                    <a href="{{ route('group.members.appoint.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __("Appoint this member as this %community%'s sub-administrator") }}</a>
+                                    <a href="{{ route('group.members.appoint.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()] + $pageQuery) }}">{{ __("Appoint this member as this %community%'s sub-administrator") }}</a>
                                 @elseif ($membership->role === \App\Features\Group\GroupRole::SubAdmin)
-                                    <a href="{{ route('group.members.demote.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __("Demote this member from this %community%'s sub-administrator") }}</a>
+                                    <a href="{{ route('group.members.demote.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()] + $pageQuery) }}">{{ __("Demote this member from this %community%'s sub-administrator") }}</a>
                                 @else
                                     &nbsp;
                                 @endif
@@ -47,7 +48,7 @@
                                 @if ((int) $rowMember->getKey() === (int) $pendingAdminId)
                                     {{ __("You are taking over this %community%'s administrator to this member now.") }}
                                 @elseif ($membership->role !== \App\Features\Group\GroupRole::Admin)
-                                    <a href="{{ route('group.members.transfer.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __("Take over this %community%'s administrator to this member") }}</a>
+                                    <a href="{{ route('group.members.transfer.show', ['group' => $group->getKey(), 'member_id' => $rowMember->getKey()] + $pageQuery) }}">{{ __("Take over this %community%'s administrator to this member") }}</a>
                                 @else
                                     &nbsp;
                                 @endif

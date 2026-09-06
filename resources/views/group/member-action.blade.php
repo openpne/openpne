@@ -3,6 +3,7 @@
 @section('title', $title)
 
 @section('content')
+    @php($manageUrl = route('group.members.manage', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : [])))
     {{-- One blade for four confirmations, so the kind and id come from the controller: OpenPNE 3
          asked the drop / demote questions with the yesNo kind (statement, then one li per answer,
          the "no" a GET form back to the roster) and the appoint / take-over ones with the form
@@ -17,11 +18,13 @@
                             @csrf
                             <input type="hidden" name="id" value="{{ $group->getKey() }}">
                             <input type="hidden" name="member_id" value="{{ $target->getKey() }}">
+                <input type="hidden" name="page" value="{{ $page }}">
+                            <input type="hidden" name="page" value="{{ $page }}">
                             <input type="submit" class="input_submit" value="{{ $submitLabel }}">
                         </form>
                     </li>
                     <li>
-                        <form method="get" action="{{ route('group.members.manage', $group) }}">
+                        <form method="get" action="{{ $manageUrl }}">
                             <input type="submit" class="input_submit" value="{{ __('No') }}">
                         </form>
                     </li>
@@ -49,7 +52,7 @@
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ $submitLabel }}"></li>
-                        <li><a href="{{ route('group.members.manage', $group) }}">{{ __('Cancel') }}</a></li>
+                        <li><a href="{{ $manageUrl }}">{{ __('Cancel') }}</a></li>
                     </ul>
                 </div>
             </form>
