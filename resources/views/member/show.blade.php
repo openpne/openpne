@@ -30,7 +30,7 @@
                     @if ($age !== null)
                         <tr>
                             <th>{{ __('Age') }}</th>
-                            <td>{{ __(':age years old', ['age' => $age]) }}@if ($isSelf && ($caption = $owner->preference(\App\Support\PreferenceKey::AgeVisibility)->ownerCaption(false)) !== null) ({{ __($caption) }})@endif</td>
+                            <td>{{ __(':age years old', ['age' => $age]) }}@if ($isSelf && ($caption = $owner->preference(\App\Support\PreferenceKey::AgeVisibility)->ageCaption()) !== null) ({{ __($caption) }})@endif</td>
                         </tr>
                     @endif
                     @foreach ($fields as $field)

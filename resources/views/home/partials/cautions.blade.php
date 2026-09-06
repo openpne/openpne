@@ -23,11 +23,12 @@
             @endforeach
 
             {{-- _cautionAboutCommunityMemberPre: OpenPNE 3 summed the requests into one line for the
-                 confirmation center; each group's pending page is its own line here. --}}
+                 confirmation center; each group's pending page is its own line here, the link naming
+                 the group so no two read alike. --}}
             @foreach ($pendingJoinGroups as $awaitingGroup)
                 <p class="caution">
-                    {{ __("You've gotten :count %community% joining requests for :name", ['count' => $awaitingGroup->applicants_count, 'name' => $awaitingGroup->name]) }}
-                    <a href="{{ route('group.members.pending', $awaitingGroup) }}">{{ __('Go to Confirmation Page') }}</a>
+                    {{ __("You've gotten :count %community% joining requests", ['count' => $awaitingGroup->applicants_count]) }}
+                    <a href="{{ route('group.members.pending', $awaitingGroup) }}">{{ __('Check requests for :name', ['name' => $awaitingGroup->name]) }}</a>
                 </p>
             @endforeach
 

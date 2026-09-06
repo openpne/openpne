@@ -174,7 +174,7 @@ class ClassicHomeTest extends TestCase
         // OpenPNE 3 sorted the customize attribute names: cautionAboutChangeAdminRequest,
         // cautionAboutCommunityMemberPre, cautionAboutFriendPre, then unreadMessage.
         $joinLine = strpos($content, 'Chess Club');
-        $friendLine = strpos($content, e(__('Check requests')));
+        $friendLine = strpos($content, e(route('friend.requests')));
         $messageLine = strpos($content, e(__('Read messages')));
 
         $this->assertGreaterThan(strpos($content, 'Runners Club'), $joinLine);
@@ -233,8 +233,8 @@ class ClassicHomeTest extends TestCase
         // OpenPNE 3 _cautionAboutCommunityMemberPre summed the requests into one line for the
         // confirmation center; each administered group with a queue is its own line here.
         $this->assertMatchesRegularExpression(
-            '~<p class="caution">\s*'.preg_quote(e(__("You've gotten :count %community% joining requests for :name", ['count' => 2, 'name' => 'Busy Club'])), '~')
-            .'\s*<a href="'.preg_quote(e(route('group.members.pending', $busy)), '~').'">'.preg_quote(e(__('Go to Confirmation Page')), '~').'</a>~',
+            '~<p class="caution">\s*'.preg_quote(e(__("You've gotten :count %community% joining requests", ['count' => 2])), '~')
+            .'\s*<a href="'.preg_quote(e(route('group.members.pending', $busy)), '~').'">'.preg_quote(e(__('Check requests for :name', ['name' => 'Busy Club'])), '~').'</a>~',
             $content,
         );
         $this->assertStringNotContainsString('Quiet Club', $content);

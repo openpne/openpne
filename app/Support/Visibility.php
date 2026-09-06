@@ -85,4 +85,10 @@ enum Visibility: int
             default => null,
         };
     }
+
+    /** The age row's caption: OpenPNE 3 captioned the age for %my_friend% alone, never for the web. */
+    public function ageCaption(): ?string
+    {
+        return $this->ownerCaption(false);
+    }
 }

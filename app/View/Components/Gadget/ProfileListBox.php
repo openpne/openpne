@@ -46,7 +46,7 @@ class ProfileListBox extends Component
                 'caption' => __('Age'),
                 'value' => __(':age years old', ['age' => $age]),
                 'linkify' => false,
-                'suffix' => $isOwner ? $subject->preference(PreferenceKey::AgeVisibility)->ownerCaption(false) : null, // OpenPNE 3 captioned the age for %my_friend% only
+                'suffix' => $isOwner ? $subject->preference(PreferenceKey::AgeVisibility)->ageCaption() : null,
             ];
         }
         foreach ($showProfile($viewer, $subject, $this->lang) ?? collect() as $field) {

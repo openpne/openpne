@@ -137,7 +137,7 @@ class GroupAdminScreensParityTest extends TestCase
             ->assertDontSee(e($member->name).' (1)', false);
     }
 
-    public function test_the_edit_form_stars_the_labels_openpne3_validated_as_required(): void
+    public function test_the_edit_form_stars_the_labels_group_request_requires(): void
     {
         $group = Group::factory()->create();
         $admin = $this->joined($group, GroupRole::Admin);
@@ -164,7 +164,8 @@ class GroupAdminScreensParityTest extends TestCase
         $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
             'name' => $group->name, 'description' => '', 'register_policy' => 'open',
             'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
-        ])->assertSessionHasNoErrors();
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('', (string) $group->fresh()->description);
         $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
             'name' => '', 'description' => 'kept', 'register_policy' => 'open',
             'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
