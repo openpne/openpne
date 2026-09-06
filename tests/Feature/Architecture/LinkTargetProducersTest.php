@@ -38,8 +38,8 @@ class LinkTargetProducersTest extends TestCase
             ->in(array_map(base_path(...), ['app', 'config', 'database', 'lang', 'public', 'resources', 'routes']))
             ->name(['*.php', '*.ts', '*.tsx', '*.js', '*.jsx', '*.json', '*.html'])
             ->notName('*.test.*')
-            // Built and published assets (gitignored), not this app's markup.
-            ->filter(fn (\SplFileInfo $file): bool => preg_match('~/public/(build|storage|(css|fonts|js)/filament)/~', (string) $file->getRealPath()) !== 1)
+            // Built and published assets under public/ (gitignored), not this app's markup.
+            ->exclude(['build', 'storage', 'css/filament', 'fonts/filament', 'js/filament'])
             ->contains('_blank');
 
         $found = [];

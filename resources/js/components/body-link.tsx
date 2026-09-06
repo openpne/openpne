@@ -5,6 +5,9 @@ import { inAppHref, isPlainClick } from '@/lib/link-target';
 
 export const EXTERNAL_REL = 'noopener noreferrer nofollow';
 
+/** For a link to this site that opens a new tab all the same. */
+export const OWN_TAB_REL = 'noopener';
+
 /**
  * How a link to this site opens: through the router, or in a new tab where a click must not take
  * the page with it (the compose preview and its draft).
@@ -36,7 +39,7 @@ export function BodyLink({ href, className, children }: { href: string; classNam
 
     if (path === null || mode === 'new-tab') {
         return (
-            <a href={path ?? href} target="_blank" rel={path === null ? EXTERNAL_REL : 'noopener'} className={className}>
+            <a href={path ?? href} target="_blank" rel={path === null ? EXTERNAL_REL : OWN_TAB_REL} className={className}>
                 {children}
                 <span className="sr-only"> {t('Opens in a new tab')}</span>
             </a>

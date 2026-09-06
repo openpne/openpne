@@ -54,7 +54,7 @@ test('a click beside the links, or a modified click on one, is left to the brows
 });
 
 test('where own links are set to open a new tab, a server-rendered link to this site is given the tab and the notice', () => {
-    const { container } = render(
+    const { container, rerender } = render(
         <OwnLinksOpen.Provider value="new-tab">
             <RichBody body="" bodyHtml={html} />
         </OwnLinksOpen.Provider>,
@@ -68,4 +68,25 @@ test('where own links are set to open a new tab, a server-rendered link to this 
     expect(container.querySelectorAll('.sr-only').length).toBe(2);
     expect(clickIsLeftToBrowser(ours)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
+
+    // A second pass over the same markup (the DOM is kept for an unchanged body) adds nothing.
+    rerender(
+        <OwnLinksOpen.Provider value="new-tab">
+            <RichBody body="x" bodyHtml={html} />
+        </OwnLinksOpen.Provider>,
+    );
+    expect(screen.getByText('ours', { exact: false })).toBe(ours);
+    expect(container.querySelectorAll('.sr-only').length).toBe(2);
+
+    // Back to opening in the app, the link is a bare anchor again and the router takes it.
+    rerender(
+        <OwnLinksOpen.Provider value="in-app">
+            <RichBody body="x" bodyHtml={html} />
+        </OwnLinksOpen.Provider>,
+    );
+    expect(ours.getAttribute('target')).toBeNull();
+    expect(ours.textContent).toBe('ours');
+    expect(container.querySelectorAll('.sr-only').length).toBe(1);
+    expect(clickIsLeftToBrowser(ours)).toBe(false);
+    expect(visit).toHaveBeenCalledWith('/diary/1', expect.anything());
 });
