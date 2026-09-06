@@ -138,6 +138,7 @@ class DirectMessageRouteParity extends RouteParity
             // sendToFriendInput.php (PluginSendMessageDataForm) → message/compose.blade.php + edit.blade.php
             'sendToFriend' => [
                 new ScreenElement('recipient (To) + photo', L::Two, S::Partial, 'sendToFriendInput.php firstRow: Photo row (76×76) + To row, both linking to the profile', 'the To row only; the photo row is not drawn'),
+                new ScreenElement('friend localNav for the recipient', L::Two, S::Ported, 'executeSendToFriend setFriendNav($this->sendMember->getId())', 'markLocalNavSubject on the recipient'),
                 new ScreenElement('subject input', L::One, S::Ported, 'sfWidgetFormInput subject (required)'),
                 new ScreenElement('body textarea', L::One, S::Ported, 'body (required)'),
                 new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_message_is_upload_images + MessageFileForm x3', 'PostImages; edit manages existing slots'),
@@ -153,7 +154,7 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('body quoted line by line', L::Three, S::Ported, "SendMessageForm default body '> ' per line"),
                 new ScreenElement('return / thread linkage carried by the form', L::Two, S::Ported, 'SendMessageData setReturnMessageId + setThreadMessageId', 'hidden parent_id / thread_id'),
                 new ScreenElement('receiver-only: anyone else gets a 404', L::Two, S::Ported, 'forward404unless $message->getIsReceiver(memberId)', 'a trashed or purged receipt and a withdrawn sender 404 as well'),
-                new ScreenElement('friend localNav for the recipient', L::Two, S::Missing, 'executeReply setFriendNav($this->sendMember->getId())', 'the compose screens keep the default localNav'),
+                new ScreenElement('friend localNav for the recipient', L::Two, S::Ported, 'executeReply setFriendNav($this->sendMember->getId())', 'markLocalNavSubject on the original sender'),
             ],
             // executeEdit re-renders sendToFriendInput.php for an unsent draft → message/edit.blade.php.
             'edit' => [
@@ -163,7 +164,7 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('existing images with delete + new upload slots', L::Three, S::Partial, 'MessageFileForm x3 + _formEditImage.php (thumbnail + %input% + %delete%)', 'a current-images list with remove_images[] checkboxes; OpenPNE 3 replaced each slot in place'),
                 new ScreenElement('Send + Draft buttons', L::One, S::Ported, "op_include_form button 'Send' + view.yml customize _sendDraftButton.php (is_draft)"),
                 new ScreenElement('owner-only and not-yet-sent guard', L::Two, S::Ported, 'forward404If getIsSend + forward404Unless isDraftOwner'),
-                new ScreenElement('friend localNav for the recipient', L::Two, S::Missing, 'executeEdit setFriendNav($this->sendMember->getId())', 'the compose screens keep the default localNav'),
+                new ScreenElement('friend localNav for the recipient', L::Two, S::Ported, 'executeEdit setFriendNav($this->sendMember->getId())', 'markLocalNavSubject on the draft recipient; a draft whose recipient is gone keeps the default nav'),
             ],
             // deleteConfirmSuccess.php (layoutC) → message/purge_confirm.blade.php; the bulk
             // deleteListConfirmSuccess.php renders from the list action, so it is inventoried under `list`

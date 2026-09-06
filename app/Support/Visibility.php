@@ -63,6 +63,19 @@ enum Visibility: int
      * uniform audience nouns — "Anyone on the web" names the web explicitly so it cannot be
      * confused with "All members" (ja: Web全体 vs メンバー全員).
      */
+    /**
+     * OpenPNE 3 _profileListBox.php: the audience an owner reads after a value that is not for every
+     * member, null for the ones it left bare (Members, Private, and Open on a field kept off the web).
+     */
+    public function ownerCaption(bool $webPublicAllowed = true): ?string
+    {
+        return match (true) {
+            $this === self::Friends => $this->label(),
+            $this === self::Open && $webPublicAllowed => $this->label(),
+            default => null,
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

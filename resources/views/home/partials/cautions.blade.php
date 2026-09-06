@@ -5,10 +5,11 @@
      nothing when there is none. --}}
 @php
     $adminTransferGroups = $adminTransferGroups ?? [];
+    $pendingJoinGroups = $pendingJoinGroups ?? [];
     $friendRequests = $unread['friendRequests'] ?? 0;
     $unreadMessages = $unreadMessages ?? 0;
 @endphp
-@if (count($adminTransferGroups) || $friendRequests || $unreadMessages)
+@if (count($adminTransferGroups) || count($pendingJoinGroups) || $friendRequests || $unreadMessages)
     <x-classic.parts name="informationBox">
         <div class="body">
             {{-- One line per community awaiting the viewer's admin-transfer decision, each linking
@@ -18,6 +19,15 @@
                 <p class="caution">
                     {{ __('The administrator of :name asks you to take over the administration.', ['name' => $nominatingGroup->name]) }}
                     <a href="{{ route('group.show', $nominatingGroup) }}">{{ $nominatingGroup->name }}</a>
+                </p>
+            @endforeach
+
+            {{-- _cautionAboutCommunityMemberPre: OpenPNE 3 summed the requests into one line for the
+                 confirmation center; each group's pending page is its own line here. --}}
+            @foreach ($pendingJoinGroups as $awaitingGroup)
+                <p class="caution">
+                    {{ __("You've gotten :count %community% joining requests", ['count' => $awaitingGroup->applicants_count]) }}
+                    <a href="{{ route('group.members.pending', $awaitingGroup) }}">{{ $awaitingGroup->name }}</a>
                 </p>
             @endforeach
 

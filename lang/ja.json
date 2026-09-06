@@ -181,6 +181,7 @@
     "Active %communities% (last 30 days)": "アクティブな%communities%(過去30日)",
     "Activity Box": "%activity%",
     "Add": "追加",
+    "Add %my_friends%": "%my_friend%に追加",
     "Add :name": ":nameを追加",
     "Add a comment only": "コメントのみ投稿",
     "Add a one-time code from an authenticator app to your own admin login.": "認証アプリのワンタイムコードを自分の管理者ログインに追加しましょう。",
@@ -1641,6 +1642,7 @@
     "You joined the event.": "イベントに参加しました。",
     "You left the event.": "イベントの参加を取り消しました。",
     "You need an authenticator app that generates a one-time code at login. Search your device's app store for \"authenticator\" and install one.": "ログイン時にワンタイムコードを生成する認証アプリが必要です。お使いの端末のアプリストアで「認証アプリ」または「Authenticator」と検索してインストールしてください。",
+    "You've gotten :count %community% joining requests": ":count 件の%community%参加申請があります",
     "You've gotten :count %friend% requests": ":count件の%friend%申請があります",
     "Your %friends%": "%friends%を見る",
     "Your account has been deleted.": "アカウントを削除しました。",
@@ -1657,6 +1659,7 @@
     "Your new access token": "発行したアクセストークン",
     "Your password alone will sign you in again.": "無効にすると、パスワードのみでサインインするようになります。",
     "Your recently posted %diaries%.": "自分の新着%diaries%。",
+    "Your search \":keyword\" did not match any %diaries%.": "「:keyword」に一致する%diaries%は見つかりませんでした。",
     "Your two-factor settings changed while this page was open. Please try again.": "このページを開いている間に2要素認証の設定が変更されました。もう一度お試しください。",
     "Zone": "ゾーン"
 }

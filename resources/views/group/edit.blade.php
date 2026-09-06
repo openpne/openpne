@@ -17,17 +17,18 @@
 
         <form method="POST" action="{{ route('group.save', $group ? ['id' => $group->getKey()] : []) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table class="formTable">
                 <tr>
-                    <th>{{ __('Name') }}</th>
+                    <th>{{ __('Name') }} <x-classic.required-mark /></th>
                     <td><input type="text" name="name" value="{{ old('name', $group?->name) }}" maxlength="64" required></td>
                 </tr>
                 <tr>
-                    <th>{{ __('Description') }}</th>
+                    <th>{{ __('Description') }} <x-classic.required-mark /></th>
                     <td><textarea name="description">{{ old('description', $group?->description) }}</textarea></td>
                 </tr>
                 <tr>
-                    <th>{{ __('Join policy') }}</th>
+                    <th>{{ __('Join policy') }} <x-classic.required-mark /></th>
                     <td>
                         <ul class="radio_list">
                             @foreach ($policies as $policy)
@@ -40,7 +41,7 @@
                      public_flag / topic_authority), radios as its form drew them. The wording is
                      the enums' — the same captions the community home prints. --}}
                 <tr>
-                    <th>{{ __('Authority to Read %Topic%') }}</th>
+                    <th>{{ __('Authority to Read %Topic%') }} <x-classic.required-mark /></th>
                     <td>
                         <ul class="radio_list">
                             @foreach ($topicReadChoices as $choice)
@@ -50,7 +51,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th>{{ __('Authority to Create %Topic%') }}</th>
+                    <th>{{ __('Authority to Create %Topic%') }} <x-classic.required-mark /></th>
                     <td>
                         <ul class="radio_list">
                             @foreach ($topicPostChoices as $choice)
@@ -62,7 +63,7 @@
                 {{-- CommunityConfigForm offered the choice only while the join-notice mail was enabled site-wide. --}}
                 @if (app(\App\Mail\Template\MailTemplateService::class)->isEnabled(\App\Mail\Template\MailTemplate::GroupJoinNotice))
                 <tr>
-                    <th>{{ __('Receive a notice mail when member joined') }}</th>
+                    <th>{{ __('Receive a notice mail when member joined') }} <x-classic.required-mark /></th>
                     <td>
                         {{-- OpenPNE 3 CommunityConfigForm's two-option radio (Receive / Don't Receive) with
                              its help line, under its field name is_send_pc_joinCommunity_mail in the ids; a radio is always submitted, so an unchecked state survives a
