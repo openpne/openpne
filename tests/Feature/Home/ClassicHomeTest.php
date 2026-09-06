@@ -232,11 +232,11 @@ class ClassicHomeTest extends TestCase
 
         // OpenPNE 3 _cautionAboutCommunityMemberPre summed the requests into one line for the
         // confirmation center; each administered group with a queue is its own line here.
-        $this->assertStringContainsString(
-            '<p class="caution">'."\n".'                    '.e(__("You've gotten :count %community% joining requests", ['count' => 2])),
+        $this->assertMatchesRegularExpression(
+            '~<p class="caution">\s*'.preg_quote(e(__("You've gotten :count %community% joining requests for :name", ['count' => 2, 'name' => 'Busy Club'])), '~')
+            .'\s*<a href="'.preg_quote(e(route('group.members.pending', $busy)), '~').'">'.preg_quote(e(__('Go to Confirmation Page')), '~').'</a>~',
             $content,
         );
-        $this->assertStringContainsString('<a href="'.e(route('group.members.pending', $busy)).'">Busy Club</a>', $content);
         $this->assertStringNotContainsString('Quiet Club', $content);
     }
 

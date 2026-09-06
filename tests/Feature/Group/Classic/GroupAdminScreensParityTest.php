@@ -49,7 +49,7 @@ class GroupAdminScreensParityTest extends TestCase
             'name="register_policy" value="approval" id="community_config_register_policy_close" class="input_radio"',
             'name="topic_read_access" value="members_only" id="community_config_public_flag_auth_commu_member" class="input_radio"',
             'name="topic_post_authority" value="admins_only" id="community_config_topic_authority_admin_only" class="input_radio"',
-            '<th>Receive a notice mail when member joined <strong>*</strong>',
+            '<th>Receive a notice mail when member joined</th>',
             'name="is_join_notification_enabled" value="1" id="community_config_is_send_pc_joinCommunity_mail_1" class="input_radio" checked',
             '<label for="community_config_is_send_pc_joinCommunity_mail_1">Receive</label>',
             'name="is_join_notification_enabled" value="0" id="community_config_is_send_pc_joinCommunity_mail_0" class="input_radio"',
@@ -149,15 +149,25 @@ class GroupAdminScreensParityTest extends TestCase
             '<strong>*</strong> is required field.',
             '<table class="formTable">',
             '<th>Name <strong>*</strong>',
-            '<th>Description <strong>*</strong>',
+            '<th>Description</th>',
             '<th>Join policy <strong>*</strong>',
             '<th>Authority to Read Topic <strong>*</strong>',
             '<th>Authority to Create Topic <strong>*</strong>',
-            '<th>Receive a notice mail when member joined <strong>*</strong>',
+            '<th>Receive a notice mail when member joined</th>',
             '<th>Category</th>',
             '<th>Image</th>',
         ], false);
-        // Six starred labels plus the notice line.
-        $this->assertSame(7, substr_count((string) $response->getContent(), '<strong>*</strong>'));
+        // The four labels GroupRequest requires, plus the notice line.
+        $this->assertSame(5, substr_count((string) $response->getContent(), '<strong>*</strong>'));
+
+        // A star promises a refusal: an empty description is accepted, so its label carries none.
+        $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
+            'name' => $group->name, 'description' => '', 'register_policy' => 'open',
+            'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('group.save', ['id' => $group->getKey()]), [
+            'name' => '', 'description' => 'kept', 'register_policy' => 'open',
+            'topic_read_access' => 'everyone', 'topic_post_authority' => 'members',
+        ])->assertSessionHasErrors('name');
     }
 }

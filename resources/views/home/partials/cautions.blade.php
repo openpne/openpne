@@ -26,8 +26,8 @@
                  confirmation center; each group's pending page is its own line here. --}}
             @foreach ($pendingJoinGroups as $awaitingGroup)
                 <p class="caution">
-                    {{ __("You've gotten :count %community% joining requests", ['count' => $awaitingGroup->applicants_count]) }}
-                    <a href="{{ route('group.members.pending', $awaitingGroup) }}">{{ $awaitingGroup->name }}</a>
+                    {{ __("You've gotten :count %community% joining requests for :name", ['count' => $awaitingGroup->applicants_count, 'name' => $awaitingGroup->name]) }}
+                    <a href="{{ route('group.members.pending', $awaitingGroup) }}">{{ __('Go to Confirmation Page') }}</a>
                 </p>
             @endforeach
 

@@ -24,7 +24,7 @@
                     <td><input type="text" name="name" value="{{ old('name', $group?->name) }}" maxlength="64" required></td>
                 </tr>
                 <tr>
-                    <th>{{ __('Description') }} <x-classic.required-mark /></th>
+                    <th>{{ __('Description') }}</th>
                     <td><textarea name="description">{{ old('description', $group?->description) }}</textarea></td>
                 </tr>
                 <tr>
@@ -63,7 +63,7 @@
                 {{-- CommunityConfigForm offered the choice only while the join-notice mail was enabled site-wide. --}}
                 @if (app(\App\Mail\Template\MailTemplateService::class)->isEnabled(\App\Mail\Template\MailTemplate::GroupJoinNotice))
                 <tr>
-                    <th>{{ __('Receive a notice mail when member joined') }} <x-classic.required-mark /></th>
+                    <th>{{ __('Receive a notice mail when member joined') }}</th>
                     <td>
                         {{-- OpenPNE 3 CommunityConfigForm's two-option radio (Receive / Don't Receive) with
                              its help line, under its field name is_send_pc_joinCommunity_mail in the ids; a radio is always submitted, so an unchecked state survives a

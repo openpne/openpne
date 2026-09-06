@@ -2,7 +2,6 @@
 
 namespace App\View\Components\Gadget;
 
-use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
 use App\Models\Member;
@@ -47,7 +46,7 @@ class ProfileListBox extends Component
                 'caption' => __('Age'),
                 'value' => __(':age years old', ['age' => $age]),
                 'linkify' => false,
-                'suffix' => $isOwner ? $subject->preference(PreferenceKey::AgeVisibility)->ownerCaption(AgeVisibility::allowsWebPublic()) : null,
+                'suffix' => $isOwner ? $subject->preference(PreferenceKey::AgeVisibility)->ownerCaption(false) : null, // OpenPNE 3 captioned the age for %my_friend% only
             ];
         }
         foreach ($showProfile($viewer, $subject, $this->lang) ?? collect() as $field) {

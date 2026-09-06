@@ -401,9 +401,23 @@ class MemberProfileRoutesTest extends TestCase
         $this->giveBirthday($owner, '1990-06-23');
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Friends);
 
+        foreach ([false, true] as $withGadget) {
+            if ($withGadget) {
+                Gadget::create(['context' => 'profile', 'zone' => 'contents', 'name' => 'profileListBox', 'sort_order' => 10]);
+                app(GadgetService::class)->clearCache();
+            }
+
+            $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+                ->assertOk()
+                ->assertSee('36 years old (Friends only)');
+        }
+
+        // OpenPNE 3 captioned the age for friends only: a web-public age stays bare.
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            ->assertSee('36 years old (Friends only)');
+            ->assertSee('36 years old</td>', false);
     }
 
     private function giveBirthday(Member $owner, string $date): void

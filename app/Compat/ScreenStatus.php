@@ -8,7 +8,7 @@ enum ScreenStatus: string
     case Ported = 'ported';     // present and faithful
     case Partial = 'partial';   // present but missing a sub-behavior
     case Missing = 'missing';   // not built yet, no blocker
-    case Deferred = 'deferred'; // intentionally waiting on another feature
+    case Deferred = 'deferred'; // intentionally not reproduced: a recorded decision, or waiting on another feature
 
     public function icon(): string
     {
