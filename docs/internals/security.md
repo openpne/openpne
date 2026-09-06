@@ -271,17 +271,21 @@ window.
 
 ## Write rate limits
 
-Content-posting and mail-triggering member writes carry named per-minute limiters
+Content-posting and mail-triggering member writes, and the keystroke-driven endpoints a compose
+form calls, carry named per-minute limiters
 ([`AppServiceProvider`](../../app/Providers/AppServiceProvider.php)), attached per route in
-`routes/web.php` and pinned by `WriteThrottleRoutesTest`. Each has two limbs: a per-member cap
+`routes/web.php` and pinned by `WriteThrottleRoutesTest`, which also sweeps the route inventory so
+a route carrying one of these limiters cannot go unlisted. Each has two limbs: a per-member cap
 (primary) and a looser per-IP cap that bounds multi-account abuse from one address.
 
 | Limiter | Default (member / IP per min) | Key shape | Routes |
 |---|---|---|---|
-| `posting` | 30 / 60 | member id / client IP | diary, community topic and event create + update, their comment posts, timeline post + reply |
-| `direct-message-send` | 10 / 30 | member id / client IP | direct message compose send, draft-edit send |
-| `friend-request` | 15 / 40 | member id / client IP | friend link request, accept |
-| `group-join` | 15 / 40 | member id / client IP | community join, member approve, member decline |
+| `posting` | 30 / 60 | member id / client IP | diary, group topic and event create + update, their comment posts, timeline post + reply, group talk send |
+| `preview` | 60 / 120 | member id / client IP | compose body preview |
+| `mention-search` | 60 / 120 | member id / client IP | @mention candidates (timeline, group talk), chat recipient search |
+| `direct-message-send` | 10 / 30 | member id / client IP | direct message compose send, draft-edit send, chat send |
+| `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (friend page and notification center) |
+| `group-join` | 15 / 40 | member id / client IP | group join, member approve, member decline, AI account group join |
 | `reaction` | 60 / 120 | member id / client IP | group talk reaction add, remove |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
