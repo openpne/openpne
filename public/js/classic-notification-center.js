@@ -159,6 +159,10 @@
     }
 
     trigger.addEventListener('click', function (event) {
+        // A modified or non-primary click is the browser's (a new tab, a saved link).
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button) {
+            return;
+        }
         event.preventDefault();
         if (isOpen()) {
             close();

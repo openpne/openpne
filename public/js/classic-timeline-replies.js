@@ -35,6 +35,11 @@
         return sent === current;
     }
 
+    /** False for a modified or non-primary click, which the browser answers itself (a new tab, a saved link). */
+    function plainClick(event) {
+        return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button);
+    }
+
     /**
      * What to tell the member when a reply is refused. Only the validator's line is taken from the
      * payload: `message` is a framework literal, in English whatever the site's language, for the
@@ -48,7 +53,7 @@
         return fallback;
     }
 
-    // `node --test` evaluates this file with a `module` in scope and takes the pure half alone.
+    // `node --test` evaluates this file with a `module` in scope for the pure half, and without one for the DOM half.
     if (typeof module !== 'undefined') {
         module.exports = { bodyLength: bodyLength, canSubmit: canSubmit, errorText: errorText, clearsBox: clearsBox };
 
@@ -133,7 +138,7 @@
 
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('.timeline-comment-link') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         // The thread page's own row has no inline box: there the link is the same-page jump to the
@@ -242,7 +247,7 @@
 
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('.timeline-comment-loadmore') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         var row = link.closest('.timeline-post');
