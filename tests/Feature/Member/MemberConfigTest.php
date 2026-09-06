@@ -735,7 +735,7 @@ class MemberConfigTest extends TestCase
             'token' => hash('sha256', $raw), 'created_at' => now(),
         ]);
 
-        $this->get('/member/config/email/confirm/'.$raw)->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->get('/member/config/email/confirm/'.$raw)->assertOk()->assertHeader('Referrer-Policy', 'no-referrer');
     }
 
     public function test_the_confirm_form_renders_for_a_valid_token(): void

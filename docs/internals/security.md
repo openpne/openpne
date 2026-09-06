@@ -300,8 +300,15 @@ and retention are in [logging](logging.md).
 same baseline on every response — `X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, a `frame-ancestors 'none'; base-uri 'self'` CSP,
 `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
-`Cross-Origin-Opener-Policy: same-origin`, and (under `force_https`) HSTS. It
-is registered in the `web` group **and** on the Filament panel's own stack:
+`Cross-Origin-Opener-Policy: same-origin`, `Referrer-Policy:
+strict-origin-when-cross-origin` unless the route set one, and (under
+`force_https`) HSTS. A screen whose URL or form carries a secret (login,
+registration, password reset, and the email-change and MFA-reset landings)
+carries [`NoReferrer`](../../app/Http/Middleware/NoReferrer.php) instead: the
+baseline already withholds the path cross-origin, so what `no-referrer` closes
+is the same-origin channel — the landing's own subresources and follow-up
+requests, and `document.referrer`. It is registered in the `web` group **and**
+on the Filament panel's own stack:
 the panel does not inherit the `web` group, so the admin pages — the
 highest-value clickjacking target — would otherwise ship none of these.
 
