@@ -99,23 +99,26 @@ return $this->respondWith($request, [
    [member-preferences.md](member-preferences.md));
 6. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
 
-A phone client is decided server-side — Classic is script-free, so the first response must
-already be right — from `Sec-CH-UA-Mobile` when the browser sends it (Chromium does, unasked, on
-secure contexts; `?1` is a phone, any other value is not), else from the user agent (`iPhone` /
-`iPod`, or `Android` together with `Mobile`). Tablets are not phones: iPadOS reports itself as
-Macintosh and Android tablets omit `Mobile`. That is a deliberate divergence from OpenPNE 3, whose
-regex included `iPad` — the motivation is screen size, and a tablet shows the scaled fixed-width
+A phone client is decided server-side — there is no client-side surface switch, so the first
+response must already be right — from `Sec-CH-UA-Mobile` when the browser sends it (Chromium
+does, unasked, on secure contexts; `?1` is a phone, any other value is not), else from the user
+agent (`iPhone` / `iPod`, or `Android` together with `Mobile`). Tablets are not phones: iPadOS
+reports itself as Macintosh and Android tablets omit `Mobile`. That is a deliberate divergence
+from OpenPNE 3, which sent iPads and Android tablets to its smartphone layout too (its regex was
+`iPhone|iPad|Android`) — the motivation is screen size, and a tablet shows the scaled fixed-width
 skin acceptably. The gate is a client attribute, so it applies to guests too (login, registration,
 password reset, policy pages), and the operator's phone-facing branding is the Modern one
 ([classic-compatibility.md](classic-compatibility.md)). The way back to Classic on a phone is the
-browser's desktop-site mode, which sends a desktop user agent and `?0`. The `modern_status` seam
-(1) still outranks it: a non-native feature renders Classic on a phone. The surface picker reads
-and compares against [`SurfaceResolver::desktopSurface()`](../../app/Support/SurfaceResolver.php)
-— the chain without the phone gate — so a choice made from a phone edits what the member gets on
-a desktop. No `Vary` header accompanies the gate: HTML responses carry Symfony's default
-`Cache-Control: no-cache, private`, and the one `public, max-age` response near HTML
-([`CustomizingCssController`](../../app/Http/Controllers/CustomizingCssController.php)) is
-surface-independent; a public page cache added later must revisit this.
+browser's desktop-site mode, which sends a desktop user agent and `?0`; an in-app browser (a
+messaging or social app's WebView) offers no such mode, so there a Classic-preferring member is
+on Modern for good — accepted, since Modern is the phone surface. The `modern_status` seam (1)
+still outranks it: a non-native feature renders Classic on a phone. The surface picker reads and
+compares against [`SurfaceResolver::desktopSurface()`](../../app/Support/SurfaceResolver.php) —
+the chain without the phone gate — so a choice made from a phone edits what the member gets on a
+desktop. No `Vary` header accompanies the gate: HTML responses carry Symfony's default
+`Cache-Control: no-cache, private`, and the `public, max-age` responses a page references
+(app icon, banner image, public files, customizing CSS) are surface-independent; a public page
+cache added later must revisit this.
 
 `surface_mode` is a single [`SurfaceMode`](../../app/Support/SurfaceMode.php) value
 (`modern_only` | `classic_default` | `modern_default`) that folds "is Classic served?"

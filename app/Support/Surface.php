@@ -32,4 +32,27 @@ enum Surface: string
     {
         return 'On a phone the site always shows the Modern design; this choice applies to desktop browsers.';
     }
+
+    /**
+     * Read by the i18n:check gates: every string here reaches __()/t() through a variable, so the
+     * code scanner never sees it.
+     *
+     * @return list<string>
+     */
+    public static function sourceStrings(): array
+    {
+        $strings = [self::pickerNote()];
+        foreach (self::cases() as $surface) {
+            $strings[] = $surface->label();
+            $strings[] = $surface->description();
+        }
+
+        return $strings;
+    }
+
+    /** @return list<string> */
+    public static function coverageStrings(): array
+    {
+        return self::sourceStrings();
+    }
 }

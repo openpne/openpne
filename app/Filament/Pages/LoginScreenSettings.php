@@ -142,7 +142,7 @@ class LoginScreenSettings extends Page
                     // point at the gadget editor for the other one (docs/internals/classic-compatibility.md);
                     // on a modern_only install the operator never sees Classic, so it must not mention surfaces.
                     ->helperText(SurfaceResolver::classicAvailable()
-                        ? __('Markdown is available. It is shown above the form on the Modern login screen; the Classic login screen is edited under Appearance (Classic) > Gadgets.')
+                        ? __('Markdown is available. It is shown above the form on the Modern login screen, which every phone visitor gets; the Classic login screen is edited under Appearance (Classic) > Gadgets.')
                         : __('Markdown is available. It is shown above the form on the login screen.'))
                     // Bounded by bytes: the TEXT column holds 65535 bytes and a character max would let a
                     // multi-byte value overflow it; the no-arg factory makes Filament pass the closure

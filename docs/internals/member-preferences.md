@@ -93,10 +93,10 @@ out of the write path.
   **no user-facing "follow the default" option**: that abstract state has no user-side signal to
   follow (unlike a device-linked dark-mode "auto") and tested poorly. The tri-state still exists in
   data, preserved by a server-side rule: `updateSurface()` pins only an actual change (chosen ≠
-  current), so saving the surface you are already on is a no-op — an unset member stays unset and
+  desktop surface), so saving your desktop surface is a no-op — an unset member stays unset and
   the operator keeps the ability to move them. This is the binary UI's equivalent of a
-  "disabled until changed" button, enforced identically on both surfaces (the Classic surface is
-  script-free). After a real change the controller lands the member on the config page through a full page load
+  "disabled until changed" button, enforced identically on both surfaces (the Classic picker is
+  a plain form). After a real change the controller lands the member on the config page through a full page load
   (`Inertia::location`): the just-written preference resolves the chosen surface there, and the
   full load re-renders the whole shell — an XHR redirect would keep the Modern SPA alive on a
   Classic choice (an Inertia navigation is always served Modern); from a phone that landing

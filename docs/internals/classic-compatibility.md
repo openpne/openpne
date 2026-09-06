@@ -301,15 +301,17 @@ modern_only install, where the operator never sees Classic and the copy must
 not mention surfaces at all:
 
 ```text
-classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings / the topic and event comment reply link
+classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / legacy gadget layout / navigation menu settings / the topic and event comment reply link
 modern only:   Modern logo / color / header image / modern layout / login screen message
 both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```
 
-The Classic-only settings never reach a phone client, which is served Modern whatever the
-member chose ([feature-modules.md](feature-modules.md#surface-selection)) — as in OpenPNE 3,
-whose smartphone layout carried none of the PC skin's customization. A migrated site's phone
-visitors therefore see its Modern-only settings, defaults included.
+The Classic-only settings — custom CSS, HTML insertion, banners, the gadget layout, the
+navigation menu — never reach a phone client, which is served Modern whatever the member chose
+([feature-modules.md](feature-modules.md#surface-selection)), as in OpenPNE 3, whose smartphone
+layout carried none of the PC skin's customization. A migrated site's phone visitors therefore
+see its Modern-only settings, defaults included; the admin copy for those settings says so
+("which every phone visitor gets"), so a `classic_default` operator learns it in-product.
 
 ## Compatibility levels
 
