@@ -4,6 +4,7 @@ namespace Tests\Feature\GroupTalk;
 
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTalk\Actions\DeleteGroupMessage;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
@@ -294,6 +295,96 @@ class TalkImageTest extends TalkTestCase
         foreach ($files as $file) {
             $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
             $this->assertFalse(app(FileStorage::class)->exists($file));
+        }
+    }
+
+    public function test_a_failed_purge_leaves_the_bytes_on_the_disk(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $group = $this->group();
+        $id = $this->postThreeImages($group, $this->memberOf($group));
+        $files = $this->attachedFiles(GroupMessage::findOrFail($id));
+        $this->assertCount(3, $files);
+
+        GroupMessage::deleting(function (): void {
+            throw new RuntimeException('the delete failed after the sweep');
+        });
+
+        $this->assertPurgeFails(fn () => app(DeleteGroupMessage::class)->purge(GroupMessage::findOrFail($id)), 'the delete failed after the sweep');
+
+        $this->assertDatabaseHas('group_messages', ['id' => $id]);
+        $this->assertFilesKept($files);
+    }
+
+    public function test_a_storage_failure_while_reclaiming_the_bytes_does_not_bring_the_message_back(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $group = $this->group();
+        $id = $this->postThreeImages($group, $this->memberOf($group));
+        $files = $this->attachedFiles(GroupMessage::findOrFail($id));
+        $this->assertCount(3, $files);
+        $this->storageThatCannotDelete();
+
+        $this->assertPurgeFails(fn () => app(DeleteGroupMessage::class)->purge(GroupMessage::findOrFail($id)), 'the storage is down');
+
+        $this->assertDatabaseMissing('group_messages', ['id' => $id]);
+        $this->assertFilesKept($files);
+    }
+
+    public function test_a_storage_failure_while_reclaiming_the_talk_bytes_does_not_bring_the_group_back(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $group = $this->group();
+        $id = $this->postThreeImages($group, $this->adminOf($group));
+        $files = $this->attachedFiles(GroupMessage::findOrFail($id));
+        $this->assertCount(3, $files);
+        $this->storageThatCannotDelete();
+
+        $this->assertPurgeFails(fn () => app(DeleteGroup::class)->purge($group), 'the storage is down');
+
+        $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
+        $this->assertFilesKept($files);
+    }
+
+    private function postThreeImages(Group $group, Member $author): int
+    {
+        return $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
+            ])
+            ->assertCreated()
+            ->json('id');
+    }
+
+    private function storageThatCannotDelete(): void
+    {
+        $this->instance(FileStorage::class, Mockery::mock(FileStorage::class, function ($mock) {
+            $mock->shouldReceive('delete')->andThrow(new RuntimeException('the storage is down'));
+        }));
+    }
+
+    private function assertPurgeFails(callable $purge, string $message): void
+    {
+        $thrown = null;
+        try {
+            $purge();
+        } catch (RuntimeException $e) {
+            $thrown = $e;
+        }
+
+        $this->assertSame($message, $thrown?->getMessage(), 'the purge did not fail the way it was made to');
+    }
+
+    /** @param list<File> $files */
+    private function assertFilesKept(array $files): void
+    {
+        foreach ($files as $file) {
+            $this->assertDatabaseHas('files', ['id' => $file->getKey()]);
+            Storage::disk('local')->assertExists($file->name);
         }
     }
 
