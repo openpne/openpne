@@ -25,6 +25,11 @@
         return element.closest('.timeline-post-comment') || element.closest('.timeline-post');
     }
 
+    /** False for a modified or non-primary click, which the browser answers itself (a new tab, a saved link). */
+    function plainClick(event) {
+        return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button);
+    }
+
     function open(dialog, trigger) {
         dialog.returnFocusTo = trigger;
         dialog.showModal();
@@ -82,7 +87,7 @@
     // --- delete: the row's own confirmation
     document.addEventListener('click', function (event) {
         var link = event.target.closest ? event.target.closest('.timeline-post-delete-confirm-link[data-dialog]') : null;
-        if (!link) {
+        if (!link || !plainClick(event)) {
             return;
         }
         var row = rowOf(link);
@@ -174,7 +179,7 @@
         var link = event.target.closest ? event.target.closest('a[rel="lightbox"]') : null;
         var lightbox = document.querySelector('dialog[data-timeline-lightbox]');
         var image = lightbox ? lightbox.querySelector('img') : null;
-        if (!link || !image) {
+        if (!link || !image || !plainClick(event)) {
             return;
         }
         event.preventDefault();

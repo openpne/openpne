@@ -252,8 +252,9 @@ as a gap (below).
 Where Classic does ship a script of its own — the notification center, the
 timeline's inline replies, load-more, timeago and dialogs — it follows one rule:
 every control is a working link or form first, the script keeps the reader on
-the page, lists arrive as HTML fragments and mutations answer JSON, and a
-fragment carries no script. The timeline's contracts are in
+the page but takes only a plain click (a modified or non-primary one stays the
+browser's, as on Modern), lists arrive as HTML fragments and mutations answer
+JSON, and a fragment carries no script. The timeline's contracts are in
 [timeline](timeline.md#classic-inline-replies).
 
 ## Design-customization compatibility
