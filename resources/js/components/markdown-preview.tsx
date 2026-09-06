@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { OwnLinksOpen } from '@/components/body-link';
 import { RichBody } from '@/components/rich-body';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
@@ -79,7 +80,11 @@ export function MarkdownPreview({ body, enabled }: { body: string; enabled: bool
                         (state === 'pending' ? ' opacity-60 transition-opacity' : '')
                     }
                 >
-                    <RichBody body={body} bodyHtml={html} />
+                    {/* Every link opens a new tab here: a click on a link to this site would
+                        otherwise leave the compose page and take the unsaved draft with it. */}
+                    <OwnLinksOpen.Provider value="new-tab">
+                        <RichBody body={body} bodyHtml={html} />
+                    </OwnLinksOpen.Provider>
                 </div>
             ) : (
                 <p className="text-xs text-muted-foreground" aria-hidden="true">

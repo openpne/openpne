@@ -23,7 +23,7 @@ class GroupDescriptionFormatTest extends TestCase
 
         $this->actingAs(Member::factory()->create())->get(route('group.show', $group))
             ->assertOk()
-            ->assertSee('<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x</a>', false)
+            ->assertSee('<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> Opens in a new tab</span></a>', false)
             ->assertSee('&lt;b&gt;x&lt;/b&gt;', false);
     }
 }

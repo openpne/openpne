@@ -78,8 +78,10 @@ final class BodyText
     private static function link(string $url): string
     {
         $visible = Str::limit($url, self::VISIBLE_URL_LIMIT, '...');
+        $href = self::absolute($url);
+        $target = LinkTarget::of($href);
 
-        return '<a href="'.e(self::absolute($url)).'" target="_blank" rel="noopener noreferrer nofollow">'.e($visible).'</a>';
+        return '<a href="'.e($href).'"'.$target->attributes().'>'.e($visible).$target->notice().'</a>';
     }
 
     /** A matched URL as an absolute one: a bare `www.` host is http, as OpenPNE 3 assumed. */

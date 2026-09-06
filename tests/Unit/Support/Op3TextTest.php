@@ -3,7 +3,7 @@
 namespace Tests\Unit\Support;
 
 use App\Support\Op3Text;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * Golden matrix for the OpenPNE 3 rich-text port. Cases marked "OP3 case N" are ported from the

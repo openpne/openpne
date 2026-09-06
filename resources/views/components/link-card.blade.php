@@ -55,8 +55,9 @@
     {{-- The middle rung: Classic paints one address rather than a srcset, and the widest is a
          detail page's worth of bytes for a gadget's column. --}}
     @php($banner = $wide ? $card['fitSources'][intdiv(count($card['fitSources']), 2)]['url'] : null)
+    @php($target = \App\Support\LinkTarget::of($card['url']))
     <div class="linkCard{{ $wide ? ' linkCardWide' : '' }}">
-        <a href="{{ $card['url'] }}" target="_blank" rel="noopener noreferrer nofollow">
+        <a href="{{ $card['url'] }}"{!! $target->attributes() !!}>
             @if (! $wide && $card['imageUrl'])
                 {{-- Decorative: the title and host beside it already name the destination. --}}
                 <span class="linkCardImage"><img src="{{ $card['imageUrl'] }}" alt="" width="120" height="120" loading="lazy"></span>
@@ -80,6 +81,7 @@
                 <span class="linkCardBannerBox"><img class="linkCardBanner" src="{{ $banner }}" alt="" loading="lazy"
                     style="max-width: min(100%, 24rem, {{ $card['imageWidth'] ? $card['imageWidth'].'px, ' : '' }}calc(20rem * 1.91))"></span>
             @endif
+            {!! $target->notice() !!}
         </a>
     </div>
 @endif

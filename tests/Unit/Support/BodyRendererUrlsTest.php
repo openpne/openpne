@@ -6,7 +6,7 @@ namespace Tests\Unit\Support;
 
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * What a link card is fetched for must be exactly what the reader sees as a link. A URL that is

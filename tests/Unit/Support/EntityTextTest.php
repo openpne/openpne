@@ -4,7 +4,7 @@ namespace Tests\Unit\Support;
 
 use App\Support\BodyText;
 use App\Support\EntityText;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * The shared cases here are mirrored one for one by resources/js/lib/entity-split.test.ts, so both
@@ -44,7 +44,7 @@ class EntityTextTest extends TestCase
 
         $this->assertSame(
             '<a href="/member/7" class="mention">@Alice</a> '
-                .'<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x</a>',
+                .'<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> 新しいタブで開く</span></a>',
             $html,
         );
     }

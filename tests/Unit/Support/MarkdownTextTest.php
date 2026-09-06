@@ -3,7 +3,7 @@
 namespace Tests\Unit\Support;
 
 use App\Support\MarkdownText;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * Pins the Markdown body pipeline: CommonMark + a GitHub-flavoured subset, then a
@@ -62,9 +62,31 @@ class MarkdownTextTest extends TestCase
 
         $this->assertStringContainsString('href="http://example.com"', $html);
         $this->assertStringContainsString('www.foo.org', $html);
-        // The sanitizer forces a hardened rel + a new tab on every link.
+        // The sanitizer forces a hardened rel + a new tab on every link to another site.
         $this->assertStringContainsString('rel="noopener noreferrer nofollow"', $html);
         $this->assertStringContainsString('target="_blank"', $html);
+    }
+
+    public function test_a_link_to_another_site_says_it_opens_a_new_tab(): void
+    {
+        $html = $this->render('[x](https://example.org/x) and <https://example.org/y?a=1&b=2>');
+
+        $this->assertStringContainsString('>x<span class="sr-only"> 新しいタブで開く</span></a>', $html);
+        $this->assertStringContainsString('b&#61;2<span class="sr-only"> 新しいタブで開く</span></a>', $html);
+    }
+
+    public function test_a_link_to_this_site_opens_in_place(): void
+    {
+        // Passes only if the post-pass read the sanitizer's anchor shape: a drift there leaves the
+        // forced target on, which this asserts against.
+        config(['app.url' => 'https://sns.example.test']);
+
+        $html = $this->render('[me](https://sns.example.test/diary/1) or https://sns.example.test/topics/2');
+
+        $this->assertStringContainsString('<a href="https://sns.example.test/diary/1">me</a>', $html);
+        $this->assertStringContainsString('<a href="https://sns.example.test/topics/2">https://sns.example.test/topics/2</a>', $html);
+        $this->assertStringNotContainsString('_blank', $html);
+        $this->assertStringNotContainsString('sr-only', $html);
     }
 
     public function test_raw_script_is_escaped_to_text(): void
@@ -117,8 +139,8 @@ class MarkdownTextTest extends TestCase
 
     public function test_sanitizer_strips_a_disallowed_attribute_and_forces_link_hardening(): void
     {
-        // CommonMark emits <a href title>; only the sanitizer drops the title and forces rel/target,
-        // so this passes only if the sanitizer belt ran.
+        // CommonMark emits <a href title>; only the sanitizer drops the title and forces rel/target
+        // (kept on a link to another site), so this passes only if the sanitizer belt ran.
         $html = $this->render('[x](http://e.com "a title")');
 
         $this->assertStringContainsString('href="http://e.com"', $html);

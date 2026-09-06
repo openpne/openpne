@@ -22,7 +22,7 @@ class TimelineBodyFormatTest extends TestCase
 
         $this->actingAs($member)->get("/timeline/{$post->getKey()}")
             ->assertOk()
-            ->assertSee('<a href="https://example.com/page" target="_blank" rel="noopener noreferrer nofollow">https://example.com/page</a>', false)
+            ->assertSee('<a href="https://example.com/page" target="_blank" rel="noopener noreferrer nofollow">https://example.com/page<span class="sr-only"> Opens in a new tab</span></a>', false)
             ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
             ->assertDontSee('<script>alert(1)</script>', false);
     }
@@ -35,6 +35,6 @@ class TimelineBodyFormatTest extends TestCase
         $this->actingAs($member)->get("/member/{$member->getKey()}/timeline")
             ->assertOk()
             ->assertSee('href="http://www.example.org"', false)
-            ->assertSee('>www.example.org</a>', false);
+            ->assertSee('>www.example.org<span class="sr-only">', false);
     }
 }

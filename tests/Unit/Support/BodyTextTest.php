@@ -3,7 +3,7 @@
 namespace Tests\Unit\Support;
 
 use App\Support\BodyText;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class BodyTextTest extends TestCase
 {
@@ -25,9 +25,18 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render('see https://example.com/x here');
 
         $this->assertStringContainsString(
-            '<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x</a>',
+            '<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> 新しいタブで開く</span></a>',
             $html,
         );
+    }
+
+    public function test_a_url_of_this_site_opens_in_place(): void
+    {
+        config(['app.url' => 'https://sns.example.test']);
+
+        $html = (string) BodyText::render('see http://sns.example.test/diary/1 here');
+
+        $this->assertStringContainsString('<a href="http://sns.example.test/diary/1">http://sns.example.test/diary/1</a>', $html);
     }
 
     public function test_www_url_gets_an_http_scheme_in_the_href(): void
@@ -35,7 +44,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render('go to www.example.com now');
 
         $this->assertStringContainsString('href="http://www.example.com"', $html);
-        $this->assertStringContainsString('>www.example.com</a>', $html);
+        $this->assertStringContainsString('>www.example.com<span class="sr-only">', $html);
     }
 
     public function test_trailing_punctuation_stays_outside_the_link(): void
@@ -79,7 +88,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render($url);
 
         $this->assertStringContainsString('href="'.$url.'"', $html); // full href
-        $this->assertStringContainsString('...</a>', $html);          // truncated visible text
+        $this->assertStringContainsString('...<span class="sr-only">', $html); // truncated visible text
     }
 
     public function test_null_renders_nothing(): void
@@ -96,7 +105,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render($url);
 
         $this->assertStringContainsString('href="'.$url.'"', $html); // full href
-        $this->assertStringContainsString('...</a>', $html);          // width-based truncation adds an ellipsis
+        $this->assertStringContainsString('...<span class="sr-only">', $html); // width-based truncation adds an ellipsis
     }
 
     public function test_excerpt_collapses_newlines_to_spaces(): void

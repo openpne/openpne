@@ -4,7 +4,7 @@ namespace Tests\Unit\Support;
 
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class BodyRendererTest extends TestCase
 {

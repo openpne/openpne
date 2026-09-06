@@ -1,7 +1,7 @@
 /**
  * The URL regex, the www.→http:// href rule and the 57-char visible truncation are kept in lockstep
  * with App\Support\BodyText, with the shared cases pinned on both sides (docs/internals/body-text.md,
- * "Render authority is the server").
+ * "Render authority is the server"). Where a link opens is decided one level up, by <BodyLink>.
  */
 export type Segment = { type: 'text'; value: string } | { type: 'url'; href: string; visible: string };
 

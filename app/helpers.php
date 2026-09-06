@@ -8,6 +8,7 @@ use App\Files\AppIcon;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
+use App\Support\LinkTarget;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
 
@@ -191,9 +192,13 @@ if (! function_exists('classic_banner')) {
         $img = sprintf('<img src="%s" alt="%s">', e(route('banner.image', $file->name)), e((string) $image->name));
         $url = (string) $image->url;
 
-        return $url === ''
-            ? $img
-            : sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', e($url), $img);
+        if ($url === '') {
+            return $img;
+        }
+
+        $target = LinkTarget::of($url);
+
+        return sprintf('<a href="%s"%s>%s%s</a>', e($url), $target->attributes('noopener'), $img, $target->notice());
     }
 }
 

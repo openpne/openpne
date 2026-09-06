@@ -954,6 +954,7 @@
     "Opens from the left, with account actions at the foot.": "左から開く。末尾にアカウント操作",
     "Opens from the left.": "左から開く",
     "Opens full-width from the right, with account actions at the foot.": "右から全幅で開く。末尾にアカウント操作",
+    "Opens in a new tab": "新しいタブで開く",
     "Optional": "任意",
     "Options": "選択肢",
     "Options are only used for select, radio, and checkbox field types.": "選択肢は select / radio / checkbox 形式の項目でのみ使用します。",
