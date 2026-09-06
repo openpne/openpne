@@ -190,12 +190,37 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertSame($before, DB::table('sns_settings')->count());
     }
 
+    public function test_a_null_value_read_through_op_config_is_left_to_the_openpne4_default(): void
+    {
+        $this->seedConfig('sns_name', null);
+        $this->seedConfig('is_allow_web_public_flag_age', null);
+        $this->seedConfig('sns_title', 'Welcome');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'sns_name']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_title', 'value' => 'Welcome']);
+    }
+
+    /** OpenPNE 3 rendered a NULL footer as empty and tested a NULL switch as off; the default would reverse both. */
+    public function test_a_null_value_openpne3_read_directly_is_kept_as_empty(): void
+    {
+        $this->seedConfig('footer_after', null);
+        $this->seedConfig('op_diary_plugin_use_open_diary', null);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after', 'value' => '']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_allow_web_public', 'value' => '']);
+    }
+
     private function runUpgrade(): void
     {
         DB::statement((new InsertSelectCompiler)->compile(new SnsSettingUpgrade));
     }
 
-    private function seedConfig(string $name, string $value): void
+    private function seedConfig(string $name, ?string $value): void
     {
         DB::table('sns_config')->insert(['name' => $name, 'value' => $value]);
     }

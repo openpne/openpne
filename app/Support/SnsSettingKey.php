@@ -274,6 +274,23 @@ enum SnsSettingKey: string
     }
 
     /**
+     * OpenPNE 3 read these straight off sns_config (SnsConfigTable::get), where a NULL value was the
+     * value it rendered or tested; every other migrated key went through opConfig::get, which fell
+     * to the declared default the way a missing sns_settings row does here.
+     */
+    public function op3NullValueIsKept(): bool
+    {
+        return match ($this) {
+            // The gadget layouts are read the same way, but a NULL one drew no top or side gadgets,
+            // so they land on layoutA instead.
+            self::CustomCss, self::FooterBefore, self::FooterAfter,
+            self::DiaryAllowWebPublic, self::DiarySearchEnabled,
+            self::GroupTopicCommentReply, self::GroupEventCommentReply => true,
+            default => false,
+        };
+    }
+
+    /**
      * A security key (SettingGroup::Auth) returns a fixed fail-closed constant, never a config or env
      * value, so a missing row cannot open registration or drop a check.
      */

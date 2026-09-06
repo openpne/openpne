@@ -23,7 +23,8 @@ final class UncopiedSettingsNotice
             ['image_max_filesize'],
         );
 
-        if ($rows === []) {
+        // A NULL value went through opConfig::get in OpenPNE 3, so it read as the default, like no row.
+        if ($rows === [] || $rows[0]->value === null) {
             return [];
         }
 
