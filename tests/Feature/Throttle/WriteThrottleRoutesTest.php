@@ -61,13 +61,12 @@ class WriteThrottleRoutesTest extends TestCase
         $this->assertContains($throttle, $route->gatherMiddleware(), "route [{$name}] lost [{$throttle}]");
     }
 
-    /** The list above is an allowlist, so a new throttled route has to declare itself here. */
     public function test_every_route_carrying_a_write_limiter_is_listed(): void
     {
         $limiters = array_map(static fn (string $limiter): string => "throttle:{$limiter}", self::LIMITERS);
         $carrying = [];
         foreach (Route::getRoutes() as $route) {
-            if (array_intersect($route->gatherMiddleware(), $limiters) !== []) {
+            if (array_intersect(array_filter($route->gatherMiddleware(), 'is_string'), $limiters) !== []) {
                 $carrying[] = $route->getName() ?? $route->uri();
             }
         }
