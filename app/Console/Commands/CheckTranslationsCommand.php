@@ -8,6 +8,7 @@ use App\Mail\Template\MailTemplate;
 use App\Notifications\Settings\NotificationCategory;
 use App\Notifications\Settings\NotificationKind;
 use App\Services\TermService;
+use App\Support\Surface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -70,6 +71,7 @@ class CheckTranslationsCommand extends Command
         NotificationKind::class,
         NotificationCategory::class,
         MailTemplate::class,
+        Surface::class,
     ];
 
     /**

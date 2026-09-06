@@ -84,21 +84,23 @@ out of the write path.
 - **Language** reuses the shared [`locale.switch`](../../routes/web.php) endpoint (durable
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.
-- **Surface** is a **binary** Classic/Modern choice, preselected to the member's current surface
-  ([`SurfaceResolver::canonicalSurface()`](../../app/Support/SurfaceResolver.php) — resolve() minus
-  the Inertia-client stickiness, so it reflects what a fresh page load gets, while still honouring
-  the modern_status / modern_only hard gates so a member already forced onto a surface is shown
-  that surface). There is deliberately
+- **Surface** is a **binary** Classic/Modern choice, preselected to the member's desktop surface
+  ([`SurfaceResolver::desktopSurface()`](../../app/Support/SurfaceResolver.php) — the resolution
+  chain without the phone-client gate, still honouring the modern_status / modern_only hard gates
+  so a member already forced onto a surface is shown that surface). A phone is always Modern
+  ([feature-modules.md](feature-modules.md#surface-selection)), so the picker edits what the
+  member gets on a desktop and its caption says so on both surfaces. There is deliberately
   **no user-facing "follow the default" option**: that abstract state has no user-side signal to
   follow (unlike a device-linked dark-mode "auto") and tested poorly. The tri-state still exists in
   data, preserved by a server-side rule: `updateSurface()` pins only an actual change (chosen ≠
-  current), so saving the surface you are already on is a no-op — an unset member stays unset and
+  desktop surface), so saving your desktop surface is a no-op — an unset member stays unset and
   the operator keeps the ability to move them. This is the binary UI's equivalent of a
-  "disabled until changed" button, enforced identically on both surfaces (the Classic surface is
-  script-free). After a real change the controller lands the member on the config page through a full page load
+  "disabled until changed" button, enforced identically on both surfaces (the Classic picker is
+  a plain form). After a real change the controller lands the member on the config page through a full page load
   (`Inertia::location`): the just-written preference resolves the chosen surface there, and the
   full load re-renders the whole shell — an XHR redirect would keep the Modern SPA alive on a
-  Classic choice (an Inertia navigation is always served Modern). Under `modern_only` the section is not served at all —
+  Classic choice (an Inertia navigation is always served Modern); from a phone that landing
+  resolves Modern and ignores the Classic `?category=`. Under `modern_only` the section is not served at all —
   the serializer omits it and `updateSurface()` 403s a crafted POST — so no latent Classic
   preference can be pinned while Classic is unavailable.
 
@@ -131,7 +133,7 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
    fallback / the site default). Reset deletes the row; it is not `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is
    never written back. The surface section is binary; `updateSurface()` pins only an actual change
-   (chosen ≠ current), keeping an unset member unset, and redirects to the canonical URL when the
-   choice is not Modern.
+   (chosen ≠ desktop surface), keeping an unset member unset, and redirects to the canonical URL
+   when the choice is not Modern (a phone lands on Modern regardless).
 4. The upgrade migrates exactly `PreferenceKey::upgradableCases()` (non-null `op3SourceName()`);
    native keys are never migrated.

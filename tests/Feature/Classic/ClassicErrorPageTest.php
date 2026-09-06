@@ -57,6 +57,17 @@ class ClassicErrorPageTest extends TestCase
         $response->assertSee('id="globalNav"', false);
     }
 
+    public function test_a_phone_client_is_not_served_the_classic_error_shell(): void
+    {
+        $member = Member::factory()->create();
+        $member->setPreferredSurface(Surface::Classic);
+
+        $this->actingAs($member)
+            ->get('/diary/999999', ['User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'])
+            ->assertNotFound()
+            ->assertDontSee('id="page_default_error"', false);
+    }
+
     public function test_the_failing_routes_module_lends_the_error_page_no_stylesheet(): void
     {
         // /diary/* resolves to opDiaryPlugin's stylesheet, but OpenPNE 3's default module declares

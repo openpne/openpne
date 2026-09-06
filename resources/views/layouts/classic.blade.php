@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- No viewport meta, like the OpenPNE 3 PC layout: a narrow screen scales the fixed-width skin instead of overflowing it. --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- The admin favicon applies to both surfaces; the brand color and logo are Modern-only. --}}
     @if ($brandFavicon = brand_favicon_url())

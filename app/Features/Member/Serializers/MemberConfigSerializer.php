@@ -72,6 +72,7 @@ class MemberConfigSerializer
         if (SurfaceResolver::classicAvailable()) {
             $form['surface'] = [
                 'value' => $currentSurface->value,
+                'description' => Surface::pickerNote(),
                 'options' => [
                     ['value' => Surface::Classic->value, 'label' => Surface::Classic->label(), 'description' => Surface::Classic->description()],
                     ['value' => Surface::Modern->value, 'label' => Surface::Modern->label(), 'description' => Surface::Modern->description()],

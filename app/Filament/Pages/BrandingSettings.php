@@ -81,7 +81,7 @@ class BrandingSettings extends Page
                         ColorPicker::make(SnsSettingKey::BrandColor->value)
                             ->label(SnsSettingKey::BrandColor->label())
                             ->helperText(self::surfaceScoped(
-                                __('Applies to the Modern member screens and the browser chrome. Leave it blank for the built-in color.'),
+                                __('Applies to the Modern member screens, which every phone visitor gets, and the browser chrome. Leave it blank for the built-in color.'),
                                 __('Applies to the member screens and the browser chrome. Leave it blank for the built-in color.'),
                             ))
                             // Blank means unbranded; the no-arg factory makes Filament pass the closure
@@ -101,7 +101,7 @@ class BrandingSettings extends Page
                     SnsSettingKey::BrandLogoFile,
                     brand_logo_url(...),
                     self::surfaceScoped(
-                        __('Shown as the brand mark in the Modern member screens. A square image is recommended: it renders in a square slot and is cropped to fill. Classic keeps its text logo.'),
+                        __('Shown as the brand mark in the Modern member screens, which every phone visitor gets. A square image is recommended: it renders in a square slot and is cropped to fill. Classic keeps its text logo.'),
                         __('Shown as the brand mark in the member screens. A square image is recommended: it renders in a square slot and is cropped to fill.'),
                     ),
                     FileUpload::make(SnsSettingKey::BrandLogoFile->value)
