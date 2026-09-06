@@ -88,9 +88,7 @@ test("an Inertia error page is the router's to show, not a reason to reload", ()
     vi.unstubAllGlobals();
 });
 
-test('where own links are set to open a new tab, a click opens one and the page stays', () => {
-    const open = vi.fn();
-    vi.stubGlobal('open', open);
+test('where own links are set to open a new tab, a link to this site is a new-tab link that says so', () => {
     render(
         <OwnLinksOpen.Provider value="new-tab">
             <BodyLink href="https://sns.example.test/diary/1">a diary</BodyLink>
@@ -98,12 +96,12 @@ test('where own links are set to open a new tab, a click opens one and the page 
     );
     const link = screen.getByRole('link');
 
-    // The markup is the saved render's: still a bare anchor, so the preview matches the page.
-    expect(link.getAttribute('target')).toBeNull();
-    expect(clickIsLeftToBrowser(link)).toBe(false);
-    expect(open).toHaveBeenCalledWith('/diary/1', '_blank', 'noopener');
+    expect(link.getAttribute('href')).toBe('/diary/1');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener');
+    expect(link.textContent).toBe('a diary Opens in a new tab');
+    expect(clickIsLeftToBrowser(link)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
 });
 
 test('a plain body links each url by the same rule', () => {

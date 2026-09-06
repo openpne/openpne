@@ -5,7 +5,7 @@ namespace Tests\Unit\Support;
 use App\Support\LinkTarget;
 use Tests\TestCase;
 
-/** The shared cases are mirrored in resources/js/lib/link-target.test.ts. */
+/** The host cases are mirrored in resources/js/lib/link-target.test.ts; the refusals are server-only. */
 class LinkTargetTest extends TestCase
 {
     protected function setUp(): void

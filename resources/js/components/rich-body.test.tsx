@@ -53,17 +53,19 @@ test('a click beside the links, or a modified click on one, is left to the brows
     expect(visit).not.toHaveBeenCalled();
 });
 
-test('where own links are set to open a new tab, a server-rendered link to this site opens one', () => {
-    const open = vi.fn();
-    vi.stubGlobal('open', open);
-    render(
+test('where own links are set to open a new tab, a server-rendered link to this site is given the tab and the notice', () => {
+    const { container } = render(
         <OwnLinksOpen.Provider value="new-tab">
             <RichBody body="" bodyHtml={html} />
         </OwnLinksOpen.Provider>,
     );
+    const ours = screen.getByText('ours', { exact: false });
 
-    expect(clickIsLeftToBrowser(screen.getByText('ours'))).toBe(false);
-    expect(open).toHaveBeenCalledWith('/diary/1', '_blank', 'noopener');
+    expect(ours.getAttribute('target')).toBe('_blank');
+    expect(ours.getAttribute('rel')).toBe('noopener');
+    expect(ours.textContent).toBe('ours Opens in a new tab');
+    // The link that already opened a new tab is not given a second notice.
+    expect(container.querySelectorAll('.sr-only').length).toBe(2);
+    expect(clickIsLeftToBrowser(ours)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
 });

@@ -28,25 +28,15 @@ export function visitInApp(path: string): void {
     });
 }
 
-/** Follows a click on a link to this site the way <BodyLink> does, under the same {@link OwnLinksOpen}. */
-export function followOwnLink(path: string, mode: 'in-app' | 'new-tab'): void {
-    if (mode === 'new-tab') {
-        window.open(path, '_blank', 'noopener');
-
-        return;
-    }
-    visitInApp(path);
-}
-
 /** See docs/internals/body-text.md, "Where a link opens". */
 export function BodyLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
     const t = useT();
     const mode = useContext(OwnLinksOpen);
     const path = inAppHref(href, window.location.host);
 
-    if (path === null) {
+    if (path === null || mode === 'new-tab') {
         return (
-            <a href={href} target="_blank" rel={EXTERNAL_REL} className={className}>
+            <a href={path ?? href} target="_blank" rel={path === null ? EXTERNAL_REL : 'noopener'} className={className}>
                 {children}
                 <span className="sr-only"> {t('Opens in a new tab')}</span>
             </a>
@@ -58,7 +48,7 @@ export function BodyLink({ href, className, children }: { href: string; classNam
             return;
         }
         event.preventDefault();
-        followOwnLink(path, mode);
+        visitInApp(path);
     };
 
     return (

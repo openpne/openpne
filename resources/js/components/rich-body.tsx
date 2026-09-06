@@ -1,6 +1,7 @@
-import { type MouseEvent, useContext } from 'react';
-import { followOwnLink, OwnLinksOpen } from '@/components/body-link';
+import { type MouseEvent, useContext, useLayoutEffect, useRef } from 'react';
+import { OwnLinksOpen, visitInApp } from '@/components/body-link';
 import { UserText } from '@/components/user-text';
+import { useT } from '@/lib/i18n';
 import { inAppHref, isPlainClick } from '@/lib/link-target';
 
 /**
@@ -9,7 +10,28 @@ import { inAppHref, isPlainClick } from '@/lib/link-target';
  * body, which takes the same path as <UserText>.
  */
 export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | null }) {
+    const t = useT();
     const mode = useContext(OwnLinksOpen);
+    const root = useRef<HTMLDivElement>(null);
+
+    // The server left a link to this site as a bare anchor; where own links open a new tab, it is
+    // given the tab and the notice <BodyLink> would give it, before it can be clicked.
+    useLayoutEffect(() => {
+        if (mode !== 'new-tab' || root.current === null) {
+            return;
+        }
+        for (const anchor of root.current.querySelectorAll('a:not([target])')) {
+            if (!(anchor instanceof HTMLAnchorElement) || inAppHref(anchor.href, window.location.host) === null) {
+                continue;
+            }
+            anchor.target = '_blank';
+            anchor.rel = 'noopener';
+            const notice = document.createElement('span');
+            notice.className = 'sr-only';
+            notice.textContent = ` ${t('Opens in a new tab')}`;
+            anchor.append(notice);
+        }
+    }, [bodyHtml, mode, t]);
 
     if (bodyHtml === null) {
         return (
@@ -19,7 +41,7 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
         );
     }
 
-    // The server left a link to this site as a bare anchor; it is followed as <BodyLink> follows one.
+    // A bare anchor to this site is followed as <BodyLink> follows one.
     const onClick = (event: MouseEvent<HTMLDivElement>) => {
         const anchor = event.target instanceof Element ? event.target.closest('a') : null;
 
@@ -34,8 +56,8 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
         }
 
         event.preventDefault();
-        followOwnLink(path, mode);
+        visitInApp(path);
     };
 
-    return <div className="rich-body break-words" onClick={onClick} dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
+    return <div ref={root} className="rich-body break-words" onClick={onClick} dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
 }

@@ -44,17 +44,18 @@ A link to another site opens a new tab — `target="_blank"`, `rel="noopener nor
 A link to this site navigates in place: a bare anchor in server-rendered HTML, the Inertia router on
 Modern. [`LinkTarget`](../../app/Support/LinkTarget.php) decides on the server by host and port
 against `app.url`, reading the URL as a browser does (the scheme's default port dropped, an IDN in
-punycode) and refusing to call ours a URL that `parse_url` and a browser would read differently — a
-backslash or userinfo in it — so a link is only ever un-hardened when the browser will really stay
-here. Any port counts, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php)) knows only
+punycode) and refusing to call ours a URL with a backslash, at which a browser cuts the host and
+`parse_url` does not, or with userinfo, which `LinkUrl` refuses too — so a link is only ever
+un-hardened when the browser will really stay here; the client reads with the browser's own parser
+and needs no such refusal. Any port counts, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php)) knows only
 the two the fetcher dials, and the path is not consulted: the same host is this site's server.
 [`link-target.ts`](../../resources/js/lib/link-target.ts) decides on the client by the page's own
 host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
 is the Modern component, and `RichBody` applies the same rule on click to the bare anchors the server
 left in `bodyHtml`; a page of ours that answers without an Inertia page (a file, the admin) is loaded
 outright rather than shown as the router's error overlay, which means a file of ours is fetched
-twice on such a click. In the compose preview every link opens a new tab (`OwnLinksOpen`), so a click
-there cannot take the draft with it; the markup is the saved render's. The rule covers every body
+twice on such a click. In the compose preview every link opens a new tab and says so (`OwnLinksOpen`),
+so a click there cannot take the draft with it. The rule covers every body
 format, link cards and operator banners, and
 [`LinkTargetProducersTest`](../../tests/Feature/Architecture/LinkTargetProducersTest.php) names the
 only other files that may open a new tab: a photo's full-size link, the lightbox and the footer.

@@ -19,6 +19,7 @@ class LinkTargetProducersTest extends TestCase
         'app/Support/LinkTarget.php',
         'app/Support/MarkdownText.php',
         'resources/js/components/body-link.tsx',
+        'resources/js/components/rich-body.tsx',
         // Carve-outs: a photo's full-size link, the lightbox and the footer keep their new tab.
         'app/Support/SnsSettingKey.php',
         'resources/js/components/lightbox.tsx',
@@ -34,11 +35,11 @@ class LinkTargetProducersTest extends TestCase
     {
         $finder = (new Finder)
             ->files()
-            ->in([base_path('app'), base_path('resources/views'), base_path('resources/js'), base_path('public/js')])
-            ->name(['*.php', '*.ts', '*.tsx', '*.js'])
+            ->in(array_map(base_path(...), ['app', 'config', 'database', 'lang', 'public', 'resources', 'routes']))
+            ->name(['*.php', '*.ts', '*.tsx', '*.js', '*.jsx', '*.json', '*.html'])
             ->notName('*.test.*')
-            // Vendor assets published by filament:assets, not this app's markup.
-            ->filter(fn (\SplFileInfo $file): bool => ! str_contains((string) $file->getRealPath(), '/public/js/filament/'))
+            // Built and published assets (gitignored), not this app's markup.
+            ->filter(fn (\SplFileInfo $file): bool => preg_match('~/public/(build|storage|(css|fonts|js)/filament)/~', (string) $file->getRealPath()) !== 1)
             ->contains('_blank');
 
         $found = [];
@@ -51,6 +52,6 @@ class LinkTargetProducersTest extends TestCase
         $allowed = self::ALLOWED;
         sort($allowed);
 
-        $this->assertSame($allowed, $found, 'A file opens a new tab outside the rule: route it through LinkTarget / <BodyLink>, or name it as a carve-out here and in the docs.');
+        $this->assertSame($allowed, $found, 'The files that open a new tab changed. A new one goes through LinkTarget / <BodyLink>, or is named as a carve-out here and in the docs; one that stopped is dropped from the list.');
     }
 }

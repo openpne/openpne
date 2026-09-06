@@ -36,8 +36,8 @@ final class LinkTarget
 
     /**
      * `host` or `host:port` as a browser reads it (WHATWG URL: the scheme's default port dropped, an
-     * IDN in punycode), or null where parse_url would read a different host than the browser — a
-     * backslash or userinfo, which a browser cuts the host at and parse_url does not.
+     * IDN in punycode), or null for a backslash, at which a browser cuts the host and parse_url does
+     * not, and for userinfo, refused as LinkUrl refuses it.
      */
     private static function authority(string $url): ?string
     {

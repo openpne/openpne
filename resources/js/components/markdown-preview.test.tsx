@@ -14,18 +14,19 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-test('a click on a link to this site inside the preview opens a new tab and keeps the draft', async () => {
+test('a link to this site inside the preview opens a new tab and says so, keeping the draft', async () => {
     // The shape the preview endpoint returns for a link to this site: a bare anchor.
     vi.stubGlobal(
         'fetch',
         vi.fn(async () => ({ ok: true, json: async () => ({ html: '<p><a href="https://sns.example.test/diary/1">a diary</a></p>' }) })),
     );
-    const open = vi.fn();
-    vi.stubGlobal('open', open);
     render(<MarkdownPreview body="[a diary](https://sns.example.test/diary/1)" enabled />);
 
     // The preview debounces its request by half a second.
-    const link = await waitFor(() => screen.getByText('a diary'), { timeout: 3000 });
+    const link = await waitFor(() => screen.getByText('a diary', { exact: false }), { timeout: 3000 });
+
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.textContent).toBe('a diary Opens in a new tab');
 
     let left = true;
     const stop = (event: Event) => {
@@ -36,7 +37,6 @@ test('a click on a link to this site inside the preview opens a new tab and keep
     fireEvent.click(link);
     document.removeEventListener('click', stop);
 
-    expect(left).toBe(false);
-    expect(open).toHaveBeenCalledWith('/diary/1', '_blank', 'noopener');
+    expect(left).toBe(true);
     expect(visit).not.toHaveBeenCalled();
 });

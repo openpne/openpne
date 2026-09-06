@@ -396,10 +396,11 @@ class InternalLinkCardRenderingTest extends TestCase
             ->assertSee('sns.example.com')
             ->getContent();
 
-        // A page of ours opens in place: the card's own anchor carries no new tab and no notice.
-        $this->assertSame(1, preg_match('~<div class="linkCard[^"]*">(.*?)</div>~s', $html, $card));
-        $this->assertStringContainsString('<a href="'.$this->urlFor($target).'">', $card[1]);
-        $this->assertStringNotContainsString('sr-only', $card[1]);
+        // Anchors do not nest, so the lazy match is exactly the card anchor's content.
+        $this->assertSame(1, preg_match('~<a href="'.preg_quote($this->urlFor($target), '~').'"([^>]*)>(.*?)</a>~s', $html, $anchor));
+        $this->assertSame('', $anchor[1]);
+        $this->assertStringContainsString('class="linkCardTitle"', $anchor[2]);
+        $this->assertStringNotContainsString('sr-only', $anchor[2]);
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($this->author)->get("/diary/{$carrier->id}")
