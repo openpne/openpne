@@ -15,7 +15,7 @@ use Tests\TestCase;
  * Pins the auth boundary of the member token-link landings: every MemberConfigController route is
  * authenticated-only, while the mail-link landings (email-change confirm/cancel, the admin-issued MFA
  * reset) are deliberately guest-reachable on their own controllers with only their throttles,
- * NoReferrer where the URL carries a secret and a password, and the issued-token length constraint.
+ * NoReferrer (the URL carries the token), and the issued-token length constraint.
  */
 class MemberTokenLinkBoundaryTest extends TestCase
 {
@@ -48,10 +48,10 @@ class MemberTokenLinkBoundaryTest extends TestCase
     {
         return [
             // The per-token mfa-reset limiter must never leak onto the email-change landings.
-            'email.confirm' => ['member.config.email.confirm', EmailChangeLinkController::class, 'confirmEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
-            'email.confirm.submit' => ['member.config.email.confirm.submit', EmailChangeLinkController::class, 'confirmEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
-            'email.cancel' => ['member.config.email.cancel', EmailChangeLinkController::class, 'cancelEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
-            'email.cancel.submit' => ['member.config.email.cancel.submit', EmailChangeLinkController::class, 'cancelEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
+            'email.confirm' => ['member.config.email.confirm', EmailChangeLinkController::class, 'confirmEmailForm', 'GET', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
+            'email.confirm.submit' => ['member.config.email.confirm.submit', EmailChangeLinkController::class, 'confirmEmail', 'POST', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
+            'email.cancel' => ['member.config.email.cancel', EmailChangeLinkController::class, 'cancelEmailForm', 'GET', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
+            'email.cancel.submit' => ['member.config.email.cancel.submit', EmailChangeLinkController::class, 'cancelEmail', 'POST', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
 
             // The per-token limiter is POST-only: it guards password guesses, and a render must not
             // spend the guess budget.

@@ -70,8 +70,7 @@ class MfaResetLinkTest extends TestCase
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
-        // The URL carries a secret; NoReferrer keeps it out of the Referer header on click-out.
-        $this->get("/member/mfa/reset/{$raw}")->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->get("/member/mfa/reset/{$raw}")->assertOk()->assertHeader('Referrer-Policy', 'no-referrer');
     }
 
     public function test_get_redirects_for_an_invalid_token(): void

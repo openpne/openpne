@@ -304,18 +304,29 @@ and retention are in [logging](logging.md).
 same baseline on every response — `X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, a `frame-ancestors 'none'; base-uri 'self'` CSP,
 `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
-`Cross-Origin-Opener-Policy: same-origin`, and (under `force_https`) HSTS. It
-is registered in the `web` group **and** on the Filament panel's own stack:
+`Cross-Origin-Opener-Policy: same-origin`, `Referrer-Policy:
+strict-origin-when-cross-origin` unless the route set one, and (under
+`force_https`) HSTS. `SecurityHeaders` is registered in the `web` group
+**and** on the Filament panel's own stack:
 the panel does not inherit the `web` group, so the admin pages — the
 highest-value clickjacking target — would otherwise ship none of these.
 
-Where it sits in the `web` group matters: a response that aborts inside the group unwinds only
-through the middleware it had already entered, so a slot at the end of the group would miss the
-419, the guest redirect and the implicit-binding 404 — all pages a member sees. It is therefore
-prepended (only the public-file cookie scrub, which reads the finished response, sits outside
-it). `SetLocale` needs the session, so it is placed right after `ShareErrorsFromSession` and
+Where `SecurityHeaders` sits in the `web` group matters: a response that aborts inside the group
+unwinds only through the middleware it had already entered, so a slot at the end of the group would
+miss the 419, the guest redirect and the implicit-binding 404 — all pages a member sees. It is
+therefore prepended (only the public-file cookie scrub, which reads the finished response, sits
+outside it). `SetLocale` needs the session, so it is placed right after `ShareErrorsFromSession` and
 ahead of the first middleware that can abort, with `PreventRequestForgery` joined to the priority
 list as that anchor ([`bootstrap/app.php`](../../bootstrap/app.php)).
+
+A screen whose URL or form carries a secret — the login and registration
+flows, password reset, and the email-change and MFA-reset landings — carries
+[`NoReferrer`](../../app/Http/Middleware/NoReferrer.php) as route middleware:
+the baseline already withholds the path cross-origin, so what `no-referrer`
+closes is the same-origin channel — the landing's own subresources and
+follow-up requests, and `document.referrer`. It covers the responses the route
+returns; an abort (a 429 from the throttle, a 500) unwinds past it and ships
+the baseline.
 
 Deliberately not set:
 

@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Forces `Referrer-Policy: no-referrer` on screens that carry a secret in the URL or form
- * (login, password reset, registration), so a click-out or third-party asset cannot leak the
- * reset/registration token via the Referer header. Overrides SecurityHeaders' softer default.
+ * Forces `Referrer-Policy: no-referrer` on a screen whose URL or form carries a secret, closing the
+ * same-origin Referer channel the SecurityHeaders baseline leaves open (docs/internals/security.md,
+ * "Response headers").
  */
 class NoReferrer
 {
