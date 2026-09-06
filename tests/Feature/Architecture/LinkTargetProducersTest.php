@@ -38,7 +38,7 @@ class LinkTargetProducersTest extends TestCase
             ->in(array_map(base_path(...), ['app', 'config', 'database', 'lang', 'public', 'resources', 'routes']))
             ->name(['*.php', '*.ts', '*.tsx', '*.js', '*.jsx', '*.json', '*.html'])
             ->notName('*.test.*')
-            // Built and published assets under public/ (gitignored), not this app's markup.
+            // Built and published directories (gitignored), not this app's markup.
             ->exclude(['build', 'storage', 'css/filament', 'fonts/filament', 'js/filament'])
             ->contains('_blank');
 

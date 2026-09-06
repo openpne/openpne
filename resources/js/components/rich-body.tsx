@@ -22,25 +22,29 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
         if (mode !== 'new-tab' || root.current === null) {
             return;
         }
-        const marked: HTMLAnchorElement[] = [];
+        const marked: { anchor: HTMLAnchorElement; rel: string | null; notice: HTMLSpanElement }[] = [];
         for (const anchor of root.current.querySelectorAll('a:not([target])')) {
             if (!(anchor instanceof HTMLAnchorElement) || inAppHref(anchor.href, window.location.host) === null) {
                 continue;
             }
-            anchor.target = '_blank';
-            anchor.rel = OWN_TAB_REL;
             const notice = document.createElement('span');
             notice.className = 'sr-only';
             notice.textContent = ` ${t('Opens in a new tab')}`;
+            marked.push({ anchor, rel: anchor.getAttribute('rel'), notice });
+            anchor.target = '_blank';
+            anchor.rel = OWN_TAB_REL;
             anchor.append(notice);
-            marked.push(anchor);
         }
 
         return () => {
-            for (const anchor of marked) {
+            for (const { anchor, rel, notice } of marked) {
                 anchor.removeAttribute('target');
-                anchor.removeAttribute('rel');
-                anchor.querySelector(':scope > .sr-only')?.remove();
+                if (rel === null) {
+                    anchor.removeAttribute('rel');
+                } else {
+                    anchor.rel = rel;
+                }
+                notice.remove();
             }
         };
     }, [bodyHtml, mode, t]);
