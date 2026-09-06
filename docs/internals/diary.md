@@ -41,7 +41,7 @@ Modern reuses the same pager, as the boards do: both surfaces list a thread iden
 serializes an unbounded thread in one response. Modern's pager shows no size switch — the board
 pagers have none, and one control set serves every Modern thread — but the same route parses `size`,
 so a Classic link at 100 lands on the same page under Modern, and Modern's own links carry the size
-they were given.
+they were given: a reader who arrived at 100 walks the thread at 100 until the parameter is dropped.
 
 ## The comment-history box
 

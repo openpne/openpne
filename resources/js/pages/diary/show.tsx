@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
+import { diaryThreadLink } from './thread-link';
 import type { DiaryDetail, DiaryNeighbor, DiaryThread } from './types';
 
 interface ShowProps extends PageProps {
@@ -33,14 +34,7 @@ export default function DiaryShow() {
     const confirm = useConfirm();
     const { diary, thread, older, newer, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
-
-    // Mirror the Classic pager URL: size always, order dropped when default (desc), page when 1.
-    const threadLink = (page: number, ascending: boolean) => {
-        const params = new URLSearchParams({ size: String(thread.size) });
-        if (ascending) params.set('order', 'asc');
-        if (page > 1) params.set('page', String(page));
-        return `/diary/${diary.id}?${params.toString()}`;
-    };
+    const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: FormEvent) => {

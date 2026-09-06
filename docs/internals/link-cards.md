@@ -638,7 +638,7 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - A card image is authorised exactly as the page that shows it: a reply by its thread root, a comment
   by the body it hangs under. Never by the row's own author when the page does not ask that.
 - A body's comments are asked about on the page that renders them, as talk's are. What bounds that is
-  the page: every comment list pages, at twenty or at the hundred a diary reader may pick.
+  the page: every comment list a page renders pages, at twenty or at the hundred a diary reader may pick.
 - A comment's card answers to its parent body's rule, and that is exactly the page's audience because
   no comment list filters per row — the same thing that makes a reply's root rule exact.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
