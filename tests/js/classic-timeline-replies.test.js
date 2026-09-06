@@ -140,8 +140,18 @@ beforeEach(() => {
     commentBox.value = '';
 });
 
-test('a plain click on the back line steps the browser back in place', () => {
+test('a plain click on the back line steps the browser back in place', async () => {
+    // With no history the script falls through to the href, so the guard is what is measured
+    // only while there is an entry to go back to.
+    assert.ok(window.history.length > 1);
+    let stepped = false;
+    window.addEventListener('popstate', () => { stepped = true; }, { once: true });
+
     assert.equal(click(backLink, {}).defaultPrevented, true);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(stepped, true);
+    window.history.pushState({}, '', '/topics/1'); // restore the entry the step consumed
 });
 
 test('a plain click on a comment Reply link quotes it into the box', () => {
@@ -175,6 +185,7 @@ test('a plain click on the notification bell opens the panel in place', () => {
 });
 
 test('a modified or non-primary click is left to the browser', () => {
+    assert.ok(window.history.length > 1); // else the back line falls through for a plain click too
     for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
         const label = JSON.stringify(init);
         assert.equal(click(bell, init).defaultPrevented, false, label);

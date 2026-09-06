@@ -19,7 +19,5 @@
 @section('content')
     {{ $message }}
 
-    <x-classic.parts id="backLink" name="line">
-        <a href="#" onclick="history.back(); return false;">{{ __('Back to previous page') }}</a>
-    </x-classic.parts>
+    <x-classic.history-back :fallback="route('home')" />
 @endsection
