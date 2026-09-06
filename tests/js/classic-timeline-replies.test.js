@@ -140,7 +140,7 @@ beforeEach(() => {
     commentBox.value = '';
 });
 
-test('a plain click on the back line steps the browser back in place', async () => {
+test('a plain click on the back line steps the browser back in place', () => {
     // With no history the script falls through to the href, so the guard is what is measured
     // only while there is an entry to go back to.
     assert.ok(window.history.length > 1);
@@ -148,9 +148,7 @@ test('a plain click on the back line steps the browser back in place', async () 
     window.addEventListener('popstate', () => { stepped = true; }, { once: true });
 
     assert.equal(click(backLink, {}).defaultPrevented, true);
-
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.equal(stepped, true);
+    assert.equal(stepped, true); // happy-dom dispatches the popstate synchronously
     window.history.pushState({}, '', '/topics/1'); // restore the entry the step consumed
 });
 

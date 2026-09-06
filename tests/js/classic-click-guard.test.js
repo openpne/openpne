@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 /**
  * A Classic script that cancels a click on a link takes only a plain one (docs/internals/
  * classic-compatibility.md, "JavaScript compatibility"); the rest cancel nothing a modified click
- * could open, and say so here.
+ * could open, and say so here. The check is per file: a new handler inside a file that already
+ * carries the predicate is the DOM tests' to catch.
  */
 const PREDICATE = 'event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button';
 const NOT_A_LINK = {
@@ -23,7 +24,12 @@ test('every Classic script that cancels a click carries the plain-click predicat
 
             return source.includes("addEventListener('click'") && source.includes('preventDefault(');
         });
-    assert.ok(cancelling.length >= 5, cancelling.join(', '));
+    // The set is locked: a script joining or leaving it is the prompt to classify it.
+    assert.deepEqual(cancelling.sort(), [
+        'classic-comment-reply.js', 'classic-history-back.js', 'classic-notification-center.js',
+        'classic-timeline-dialogs.js', 'classic-timeline-mention.js', 'classic-timeline-more.js',
+        'classic-timeline-replies.js',
+    ]);
 
     for (const name of cancelling) {
         const source = readFileSync(dir + name, 'utf8');
