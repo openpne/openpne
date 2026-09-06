@@ -36,7 +36,7 @@ interface ConfigForm {
     // Absent for a member the site neither offers AI accounts to nor has given one already.
     ai?: { count: number };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
-    surface?: { value: string; options: Option[] };
+    surface?: { value: string; description: string; options: Option[] };
     // Absent while the site offers fewer than two looks; `current` is the stored choice's label
     // (null = following the site default), never the label of the look being rendered.
     look?: { current: string | null; default: string };
@@ -273,7 +273,11 @@ export default function MemberConfig() {
                             }}
                         >
                             <FormSection title={t('Display')} headingLevel="h3">
-                                <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
+                                <RadioCardGroup
+                                    legend={t('Display')}
+                                    description={t(surfaceField.description)}
+                                    error={surface.errors.preferred_surface}
+                                >
                                     {surfaceField.options.map((opt) => (
                                         <RadioCard
                                             key={opt.value}

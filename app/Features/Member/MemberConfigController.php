@@ -69,7 +69,7 @@ class MemberConfigController extends Controller
         }
 
         $viewer = $this->viewer();
-        $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
+        $currentSurface = Surface::from(SurfaceResolver::desktopSurface($request, 'member'));
 
         return $this->respondWith($request, 'member', [
             // An absent or unrecognized `?category=` is the landing, never a 404.
@@ -266,7 +266,7 @@ class MemberConfigController extends Controller
 
         // Only an actual change pins: saving the surface the member already follows would strip the
         // operator's ability to move them later.
-        $changed = $chosen->value !== SurfaceResolver::canonicalSurface($request, 'member');
+        $changed = $chosen->value !== SurfaceResolver::desktopSurface($request, 'member');
         if ($changed) {
             $viewer->setPreferredSurface($chosen);
             $request->session()->flash('status', __('Settings updated.'));
