@@ -43,7 +43,7 @@ final class MarkdownText
         return new HtmlString(self::retarget(self::sanitized($text)));
     }
 
-    /** The two belts' output; excerpt() and plainText() read this, before the notice a link gains on render. */
+    /** Before retarget(), so text drawn from it carries no notice. */
     private static function sanitized(?string $text): string
     {
         return self::sanitizer()->sanitize(self::converter()->convert((string) $text)->getContent());

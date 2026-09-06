@@ -43,14 +43,21 @@ A link to another site opens a new tab — `target="_blank"`, `rel="noopener nor
 — and says so to assistive technology with a visually hidden "Opens in a new tab" inside the link.
 A link to this site navigates in place: a bare anchor in server-rendered HTML, the Inertia router on
 Modern. [`LinkTarget`](../../app/Support/LinkTarget.php) decides on the server by host and port
-against `app.url` — any port, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php))
-knows only the two the fetcher dials;
+against `app.url`, reading the URL as a browser does (the scheme's default port dropped, an IDN in
+punycode) and refusing to call ours a URL that `parse_url` and a browser would read differently — a
+backslash or userinfo in it — so a link is only ever un-hardened when the browser will really stay
+here. Any port counts, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php)) knows only
+the two the fetcher dials, and the path is not consulted: the same host is this site's server.
 [`link-target.ts`](../../resources/js/lib/link-target.ts) decides on the client by the page's own
 host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
 is the Modern component, and `RichBody` applies the same rule on click to the bare anchors the server
 left in `bodyHtml`; a page of ours that answers without an Inertia page (a file, the admin) is loaded
-outright rather than shown as the router's error overlay. The rule covers every body format, link
-cards and operator banners. A photo's full-size link, the lightbox and the footer keep their new tab.
+outright rather than shown as the router's error overlay, which means a file of ours is fetched
+twice on such a click. In the compose preview every link opens a new tab (`OwnLinksOpen`), so a click
+there cannot take the draft with it; the markup is the saved render's. The rule covers every body
+format, link cards and operator banners, and
+[`LinkTargetProducersTest`](../../tests/Feature/Architecture/LinkTargetProducersTest.php) names the
+only other files that may open a new tab: a photo's full-size link, the lightbox and the footer.
 Classic carries its own `.sr-only` rule in the layout, since the OpenPNE 3 skin has none.
 
 ## `op3` — migration-only, frozen
@@ -162,8 +169,10 @@ raw markdown source must not reach a mail body — as must the MCP diary tools
 - `op3` exists only on rows written by the upgrade; no request path can create or change it.
 - A link card is drawn *beside* the body, never inside it: it is third-party text, and the sanitizer
   allowlist has no `img` ([link-cards.md](link-cards.md)).
-- A link leaves this site only in a new tab that announces itself; a link to this site never opens
-  one ("Where a link opens"). Excerpts and mail text carry no announcement.
+- A body link, a link card or a banner leaves this site only in a new tab that announces itself, and
+  opens one for a link to this site only in the compose preview ("Where a link opens"); the files
+  that may open a new tab otherwise are the carve-outs `LinkTargetProducersTest` names. Excerpts and
+  mail text carry no announcement.
 - Markdown output survives either safety layer being wrong; input size is bounded before the
   pipeline, not inside it.
 - Styling: Modern uses the `.rich-body` block in [`app.css`](../../resources/css/app.css);

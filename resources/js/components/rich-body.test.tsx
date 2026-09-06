@@ -1,6 +1,7 @@
 // @vitest-environment-options { "url": "https://sns.example.test/diary/9" }
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { OwnLinksOpen } from './body-link';
 import { RichBody } from './rich-body';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => (key: string) => key }));
@@ -50,4 +51,19 @@ test('a click beside the links, or a modified click on one, is left to the brows
     expect(clickIsLeftToBrowser(screen.getByText('see', { exact: false }))).toBe(true);
     expect(clickIsLeftToBrowser(screen.getByText('ours'), { metaKey: true })).toBe(true);
     expect(visit).not.toHaveBeenCalled();
+});
+
+test('where own links are set to open a new tab, a server-rendered link to this site opens one', () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
+    render(
+        <OwnLinksOpen.Provider value="new-tab">
+            <RichBody body="" bodyHtml={html} />
+        </OwnLinksOpen.Provider>,
+    );
+
+    expect(clickIsLeftToBrowser(screen.getByText('ours'))).toBe(false);
+    expect(open).toHaveBeenCalledWith('/diary/1', '_blank', 'noopener');
+    expect(visit).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
 });

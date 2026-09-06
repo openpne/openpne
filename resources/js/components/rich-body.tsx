@@ -1,5 +1,5 @@
-import { type MouseEvent } from 'react';
-import { visitInApp } from '@/components/body-link';
+import { type MouseEvent, useContext } from 'react';
+import { followOwnLink, OwnLinksOpen } from '@/components/body-link';
 import { UserText } from '@/components/user-text';
 import { inAppHref, isPlainClick } from '@/lib/link-target';
 
@@ -9,6 +9,8 @@ import { inAppHref, isPlainClick } from '@/lib/link-target';
  * body, which takes the same path as <UserText>.
  */
 export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | null }) {
+    const mode = useContext(OwnLinksOpen);
+
     if (bodyHtml === null) {
         return (
             <div className="whitespace-pre-wrap break-words">
@@ -17,23 +19,23 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
         );
     }
 
-    return <div className="rich-body break-words" onClick={visitOwnLinks} dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
-}
+    // The server left a link to this site as a bare anchor; it is followed as <BodyLink> follows one.
+    const onClick = (event: MouseEvent<HTMLDivElement>) => {
+        const anchor = event.target instanceof Element ? event.target.closest('a') : null;
 
-/** The server left a link to this site as a bare anchor; the router takes it, as <BodyLink> does. */
-function visitOwnLinks(event: MouseEvent<HTMLDivElement>) {
-    const anchor = event.target instanceof Element ? event.target.closest('a') : null;
+        if (!anchor || !event.currentTarget.contains(anchor) || anchor.target !== '' || !isPlainClick(event)) {
+            return;
+        }
 
-    if (!anchor || !event.currentTarget.contains(anchor) || anchor.target !== '' || !isPlainClick(event)) {
-        return;
-    }
+        const path = inAppHref(anchor.href, window.location.host);
 
-    const path = inAppHref(anchor.href, window.location.host);
+        if (path === null) {
+            return;
+        }
 
-    if (path === null) {
-        return;
-    }
+        event.preventDefault();
+        followOwnLink(path, mode);
+    };
 
-    event.preventDefault();
-    visitInApp(path);
+    return <div className="rich-body break-words" onClick={onClick} dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
 }

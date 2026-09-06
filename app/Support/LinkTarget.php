@@ -11,7 +11,6 @@ final class LinkTarget
     public const REL = 'noopener noreferrer nofollow';
 
     private function __construct(
-        /** Whether the link leaves this site. */
         public readonly bool $external,
     ) {}
 
@@ -36,24 +35,46 @@ final class LinkTarget
     }
 
     /**
-     * `host` or `host:port` of an http(s) $url, or null for anything else. 80 and 443 are dropped
-     * whichever scheme carries them, so that a site's two schemes read as one site; any other port
-     * counts, unlike for a card, since no fetch depends on it (docs/internals/link-cards.md, "Links to this site are never fetched").
+     * `host` or `host:port` as a browser reads it (WHATWG URL: the scheme's default port dropped, an
+     * IDN in punycode), or null where parse_url would read a different host than the browser — a
+     * backslash or userinfo, which a browser cuts the host at and parse_url does not.
      */
     private static function authority(string $url): ?string
     {
-        $parts = parse_url(trim($url));
+        $url = trim($url);
 
-        if ($parts === false || ! isset($parts['scheme'], $parts['host'])) {
+        if (str_contains($url, '\\')) {
             return null;
         }
 
-        if (! in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+        $parts = parse_url($url);
+
+        if ($parts === false || ! isset($parts['scheme'], $parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
             return null;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return null;
+        }
+
+        $host = strtolower($parts['host']);
+
+        if (preg_match('/[^\x20-\x7e]/', $host) === 1) {
+            $host = idn_to_ascii($host, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46);
+
+            if ($host === false) {
+                return null;
+            }
         }
 
         $port = $parts['port'] ?? null;
 
-        return strtolower(rtrim($parts['host'], '.')).($port === null || $port === 80 || $port === 443 ? '' : ':'.$port);
+        if ($port === ($scheme === 'https' ? 443 : 80)) {
+            $port = null;
+        }
+
+        return $host.($port === null ? '' : ':'.$port);
     }
 }

@@ -390,13 +390,16 @@ class InternalLinkCardRenderingTest extends TestCase
         $target = Diary::factory()->for($this->author)->create(['title' => 'The linked diary', 'visibility' => Visibility::Members]);
         $carrier = $this->carrier($this->row($this->urlFor($target), ['internal_context' => 'diary', 'internal_record_id' => $target->id]));
 
-        $this->actingAs($this->author)->get("/diary/{$carrier->id}")
+        $html = $this->actingAs($this->author)->get("/diary/{$carrier->id}")
             ->assertOk()
             ->assertSee('The linked diary')
             ->assertSee('sns.example.com')
-            // A page of ours opens in place: no new tab, no notice.
-            ->assertSee('<a href="'.$this->urlFor($target).'">', false)
-            ->assertDontSee('<span class="sr-only">', false);
+            ->getContent();
+
+        // A page of ours opens in place: the card's own anchor carries no new tab and no notice.
+        $this->assertSame(1, preg_match('~<div class="linkCard[^"]*">(.*?)</div>~s', $html, $card));
+        $this->assertStringContainsString('<a href="'.$this->urlFor($target).'">', $card[1]);
+        $this->assertStringNotContainsString('sr-only', $card[1]);
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($this->author)->get("/diary/{$carrier->id}")

@@ -1,7 +1,7 @@
 // @vitest-environment-options { "url": "https://sns.example.test/diary/9" }
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { BodyLink } from './body-link';
+import { BodyLink, OwnLinksOpen } from './body-link';
 import { UserText } from './user-text';
 import { fakeT } from '@/lib/test-i18n';
 
@@ -68,10 +68,41 @@ test('a page of ours that answers without an Inertia page is loaded outright', (
     render(<BodyLink href="https://sns.example.test/img/1.png">a file</BodyLink>);
 
     fireEvent.click(screen.getByRole('link'));
-    const options = visit.mock.calls[0]?.[1] as { onHttpException: () => boolean };
+    const options = visit.mock.calls[0]?.[1] as { onHttpException: (response: { headers: Record<string, string> }) => boolean | void };
 
-    expect(options.onHttpException()).toBe(false);
+    expect(options.onHttpException({ headers: { 'content-type': 'image/png' } })).toBe(false);
     expect(assign).toHaveBeenCalledWith('/img/1.png');
+    vi.unstubAllGlobals();
+});
+
+test("an Inertia error page is the router's to show, not a reason to reload", () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, host: 'sns.example.test', assign });
+    render(<BodyLink href="https://sns.example.test/diary/404">gone</BodyLink>);
+
+    fireEvent.click(screen.getByRole('link'));
+    const options = visit.mock.calls[0]?.[1] as { onHttpException: (response: { headers: Record<string, string> }) => boolean | void };
+
+    expect(options.onHttpException({ headers: { 'x-inertia': 'true' } })).toBeUndefined();
+    expect(assign).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+});
+
+test('where own links are set to open a new tab, a click opens one and the page stays', () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
+    render(
+        <OwnLinksOpen.Provider value="new-tab">
+            <BodyLink href="https://sns.example.test/diary/1">a diary</BodyLink>
+        </OwnLinksOpen.Provider>,
+    );
+    const link = screen.getByRole('link');
+
+    // The markup is the saved render's: still a bare anchor, so the preview matches the page.
+    expect(link.getAttribute('target')).toBeNull();
+    expect(clickIsLeftToBrowser(link)).toBe(false);
+    expect(open).toHaveBeenCalledWith('/diary/1', '_blank', 'noopener');
+    expect(visit).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
 });
 
