@@ -19,11 +19,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
-import type { DiaryComment, DiaryDetail, DiaryNeighbor } from './types';
+import type { DiaryDetail, DiaryNeighbor, DiaryThread } from './types';
 
 interface ShowProps extends PageProps {
     diary: DiaryDetail;
-    comments: DiaryComment[];
+    thread: DiaryThread;
     older: DiaryNeighbor | null; // older entry by the same author
     newer: DiaryNeighbor | null; // newer entry by the same author
 }
@@ -31,8 +31,16 @@ interface ShowProps extends PageProps {
 export default function DiaryShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { diary, comments, older, newer, auth } = usePage<ShowProps>().props;
+    const { diary, thread, older, newer, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
+
+    // Mirror the Classic pager URL: size always, order dropped when default (desc), page when 1.
+    const threadLink = (page: number, ascending: boolean) => {
+        const params = new URLSearchParams({ size: String(thread.size) });
+        if (ascending) params.set('order', 'asc');
+        if (page > 1) params.set('page', String(page));
+        return `/diary/${diary.id}?${params.toString()}`;
+    };
 
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: FormEvent) => {
@@ -115,10 +123,31 @@ export default function DiaryShow() {
                 </nav>
             )}
 
-            {comments.length > 0 && (
-                <Panel title={t('Comments')} flush>
+            {thread.total > 0 && (
+                <Panel title={t(':count comments', { count: thread.total })} flush>
+                    {thread.lastPage > 1 && (
+                        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
+                            {thread.hasOlder && thread.olderPage !== null ? (
+                                <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
+                                    {t('Older')}
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                            <Link href={threadLink(1, !thread.ascending)} preserveScroll className="text-link hover:underline">
+                                {thread.ascending ? t('View Latest') : t('View Oldest First')}
+                            </Link>
+                            {thread.hasNewer && thread.newerPage !== null ? (
+                                <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="text-link hover:underline">
+                                    {t('Newer')}
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                        </div>
+                    )}
                     <List>
-                        {comments.map((comment) => (
+                        {thread.comments.map((comment) => (
                             <li key={comment.id} className="space-y-2 px-4 py-4 sm:px-5">
                                 {/* Flex header (not inline prose) — inline text-link inside a muted
                                     text block trips axe link-in-text-block; this also matches the

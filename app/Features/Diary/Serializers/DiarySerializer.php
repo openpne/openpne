@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Serializers;
 
+use App\Features\Diary\DiaryCommentThread;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\Diary;
@@ -158,6 +159,25 @@ class DiarySerializer
     public static function comments(Collection $comments, ?Member $viewer): array
     {
         return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer))->all();
+    }
+
+    /**
+     * @return array{comments: list<array>, total: int, size: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
+     */
+    public static function thread(DiaryCommentThread $thread, ?Member $viewer): array
+    {
+        return [
+            'comments' => self::comments($thread->comments, $viewer),
+            'total' => $thread->total,
+            'size' => $thread->size,
+            'page' => $thread->page,
+            'lastPage' => $thread->lastPage,
+            'ascending' => $thread->ascending,
+            'hasOlder' => $thread->hasOlder(),
+            'hasNewer' => $thread->hasNewer(),
+            'olderPage' => $thread->hasOlder() ? $thread->olderPage() : null,
+            'newerPage' => $thread->hasNewer() ? $thread->newerPage() : null,
+        ];
     }
 
     /**
