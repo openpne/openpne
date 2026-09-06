@@ -89,8 +89,8 @@ class AiAccountBadgeTest extends TestCase
             ->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('diary.author.isAi', true)
-                ->where('comments.0.author.isAi', false)
-                ->where('comments.1.author.isAi', true));
+                ->where('thread.comments.0.author.isAi', false)
+                ->where('thread.comments.1.author.isAi', true));
     }
 
     public function test_a_conversation_message_says_so(): void

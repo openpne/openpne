@@ -42,13 +42,13 @@ class DiaryCommentRoutesTest extends TestCase
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('diary/show')
-                ->has('comments', 1)
-                ->where('comments.0.body', 'First post')
-                ->where('comments.0.number', 1)
-                ->where('comments.0.author.name', 'Commenter')
-                ->where('comments.0.author.imageUrl', $expectedImageUrl)
-                ->where('comments.0.author.avatarColor', AvatarColor::Green->hex())
-                ->where('comments.0.deletable', false)
+                ->has('thread.comments', 1)
+                ->where('thread.comments.0.body', 'First post')
+                ->where('thread.comments.0.number', 1)
+                ->where('thread.comments.0.author.name', 'Commenter')
+                ->where('thread.comments.0.author.imageUrl', $expectedImageUrl)
+                ->where('thread.comments.0.author.avatarColor', AvatarColor::Green->hex())
+                ->where('thread.comments.0.deletable', false)
             );
     }
 
@@ -61,7 +61,7 @@ class DiaryCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs($author)->get("/diary/{$diary->getKey()}")
-            ->assertInertia(fn ($page) => $page->where('comments.0.deletable', true));
+            ->assertInertia(fn ($page) => $page->where('thread.comments.0.deletable', true));
     }
 
     public function test_withdrawn_author_serializes_as_null(): void
@@ -70,7 +70,60 @@ class DiaryCommentRoutesTest extends TestCase
         DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => null]);
 
         $this->actingAs(Member::factory()->create())->get("/diary/{$diary->getKey()}")
-            ->assertInertia(fn ($page) => $page->where('comments.0.author', null));
+            ->assertInertia(fn ($page) => $page->where('thread.comments.0.author', null));
+    }
+
+    public function test_modern_show_pages_the_thread_newest_first_listed_oldest_first(): void
+    {
+        $diary = Diary::factory()->create();
+        foreach (range(1, 25) as $number) {
+            DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => $number]);
+        }
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->has('thread.comments', 20)
+                ->where('thread.comments.0.number', 6)
+                ->where('thread.comments.19.number', 25)
+                ->where('thread.total', 25)
+                ->where('thread.size', 20)
+                ->where('thread.page', 1)
+                ->where('thread.lastPage', 2)
+                ->where('thread.ascending', false)
+                ->where('thread.hasOlder', true)
+                ->where('thread.olderPage', 2)
+                ->where('thread.hasNewer', false)
+                ->where('thread.newerPage', null)
+            );
+
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}?page=2")
+            ->assertInertia(fn ($page) => $page
+                ->has('thread.comments', 5)
+                ->where('thread.comments.0.number', 1)
+                ->where('thread.hasOlder', false)
+                ->where('thread.newerPage', 1)
+            );
+    }
+
+    public function test_modern_show_honours_the_classic_size_and_order_parameters(): void
+    {
+        $diary = Diary::factory()->create();
+        foreach (range(1, 25) as $number) {
+            DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => $number]);
+        }
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}?size=100")
+            ->assertInertia(fn ($page) => $page->has('thread.comments', 25)->where('thread.size', 100)->where('thread.lastPage', 1));
+
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}?order=asc")
+            ->assertInertia(fn ($page) => $page
+                ->where('thread.comments.0.number', 1)
+                ->where('thread.ascending', true)
+                ->where('thread.hasNewer', true)
+                ->where('thread.newerPage', 2)
+            );
     }
 
     public function test_modern_store_creates_comment_and_redirects_to_show(): void

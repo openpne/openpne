@@ -237,14 +237,16 @@ class DiaryController extends Controller
                     'nextDiary' => $newer,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer, $older, $newer, $linkCards) {
-                $comments = $found->comments()->with(['member.avatar.file', 'images.file', 'linkCard.image'])->orderBy('number')->get();
-                $comments->each->setRelation('diary', $found);
-                $linkCards->ensureAll($comments);
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $older, $newer, $linkCards) {
+                $thread = DiaryCommentThread::paginate(
+                    $found, $request->query('size'), $request->query('order'), $request->query('page'),
+                );
+                $thread->comments->each->setRelation('diary', $found);
+                $linkCards->ensureAll($thread->comments);
 
                 return Inertia::render('diary/show', [
                     'diary' => DiarySerializer::detail($found, $viewer),
-                    'comments' => DiarySerializer::comments($comments, $viewer),
+                    'thread' => DiarySerializer::thread($thread, $viewer),
                     'older' => DiarySerializer::neighbor($older),
                     'newer' => DiarySerializer::neighbor($newer),
                 ]);
