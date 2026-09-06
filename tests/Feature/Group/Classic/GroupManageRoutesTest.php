@@ -173,10 +173,22 @@ class GroupManageRoutesTest extends TestCase
         $this->actingAs($admin)->get($manage.'?page=2')
             ->assertOk()
             ->assertSee(route('group.members.drop.show', ['group' => $group->getKey(), 'member_id' => $member->getKey(), 'page' => 2]));
-        $this->actingAs($admin)->get($this->confirmUrl('drop', $group, $member).'&page=2')
+        // The yesNo confirm: the POST form and the "No" GET form each carry the page as a field, the
+        // GET form's action bare because a browser replaces its query with the fields.
+        $drop = $this->actingAs($admin)->get($this->confirmUrl('drop', $group, $member).'&page=2')
             ->assertOk()
-            ->assertSee('name="page" value="2"', false)
-            ->assertSee($manage.'?page=2', false);
+            ->assertSee('<form method="get" action="'.$manage.'">', false);
+        $this->assertSame(2, substr_count($drop->getContent(), 'name="page" value="2"'));
+        // The form confirm: one POST form, the cancel link with the page.
+        $appoint = $this->actingAs($admin)->get($this->confirmUrl('appoint', $group, $member).'&page=2')
+            ->assertOk()
+            ->assertSee('href="'.$manage.'?page=2"', false);
+        $this->assertSame(1, substr_count($appoint->getContent(), 'name="page" value="2"'));
+
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/appoint", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage.'?page=2');
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/demote", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage.'?page=2');
         $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
             ->assertRedirect($manage);
     }

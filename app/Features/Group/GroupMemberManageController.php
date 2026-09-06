@@ -34,6 +34,8 @@ class GroupMemberManageController extends Controller
 {
     use RespondsWithSurface;
 
+    public function __construct(private readonly ListGroupMembers $members) {}
+
     public function manage(Request $request, int $group, ListGroupMembers $query): View|InertiaResponse
     {
         $found = Group::findOrFail($group);
@@ -220,14 +222,19 @@ class GroupMemberManageController extends Controller
         abort_unless(Gate::allows($ability, $group), 404);
         $target = Member::findOrFail($request->integer('member_id'));
         $page = $this->pageFrom($request);
+        $error = null;
 
         try {
             $run($group, $target);
         } catch (GroupActionException $e) {
-            return $this->redirectToManage($group, $page)->with('error', $this->messageFor($e->reason));
+            $error = $this->messageFor($e->reason);
         }
 
-        return $this->redirectToManage($group, min($page, app(ListGroupMembers::class)($group)->lastPage()))->with('status', $status);
+        // Clamped so a page the action emptied is not the one the redirect lands on.
+        $page = $page > 1 ? min($page, ($this->members)($group)->lastPage()) : 1;
+        $redirect = $this->redirectToManage($group, $page);
+
+        return $error === null ? $redirect->with('status', $status) : $redirect->with('error', $error);
     }
 
     private function targetRole(Group $group, Member $target): ?GroupRole
@@ -235,13 +242,12 @@ class GroupMemberManageController extends Controller
         return GroupMembership::roleOf($group, $target);
     }
 
-    /** The roster page the action was taken from, so the redirect lands back on it. */
     private function pageFrom(Request $request): int
     {
         return max(1, $request->integer('page', 1));
     }
 
-    private function redirectToManage(Group $group, int $page = 1): RedirectResponse
+    private function redirectToManage(Group $group, int $page): RedirectResponse
     {
         return redirect()->route('group.members.manage', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : []));
     }

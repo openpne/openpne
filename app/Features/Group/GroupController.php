@@ -54,6 +54,8 @@ use Inertia\Response as InertiaResponse;
 
 class GroupController extends Controller
 {
+    public function __construct(private readonly ListPendingMembers $pendingList) {}
+
     use RespondsWithSurface;
 
     public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread, ConsumeNotificationRows $feedRows): View|InertiaResponse
@@ -497,18 +499,22 @@ class GroupController extends Controller
         abort_unless(Gate::allows('manageMembers', $group), 404);
         $applicant = Member::findOrFail($request->integer('member_id'));
         $page = max(1, $request->integer('page', 1));
+        $error = null;
 
         try {
             $run($group, $applicant);
         } catch (GroupActionException $e) {
-            return $this->redirectToPending($group, $page)->with('error', $this->messageFor($e->reason));
+            $error = $this->messageFor($e->reason);
         }
 
-        return $this->redirectToPending($group, min($page, app(ListPendingMembers::class)($group)->lastPage()))->with('status', $status);
+        // Clamped so a page the action emptied is not the one the redirect lands on.
+        $page = $page > 1 ? min($page, ($this->pendingList)($group)->lastPage()) : 1;
+        $redirect = $this->redirectToPending($group, $page);
+
+        return $error === null ? $redirect->with('status', $status) : $redirect->with('error', $error);
     }
 
-    /** $page is the list page the action was taken from, so the redirect lands back on it. */
-    private function redirectToPending(Group $group, int $page = 1): RedirectResponse
+    private function redirectToPending(Group $group, int $page): RedirectResponse
     {
         return redirect()->route('group.members.pending', ['group' => $group->getKey()] + ($page > 1 ? ['page' => $page] : []));
     }

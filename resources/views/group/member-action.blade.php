@@ -18,13 +18,16 @@
                             @csrf
                             <input type="hidden" name="id" value="{{ $group->getKey() }}">
                             <input type="hidden" name="member_id" value="{{ $target->getKey() }}">
-                <input type="hidden" name="page" value="{{ $page }}">
                             <input type="hidden" name="page" value="{{ $page }}">
                             <input type="submit" class="input_submit" value="{{ $submitLabel }}">
                         </form>
                     </li>
                     <li>
-                        <form method="get" action="{{ $manageUrl }}">
+                        {{-- A GET form replaces its action's query with its fields, so the page rides as one. --}}
+                        <form method="get" action="{{ route('group.members.manage', $group) }}">
+                            @if ($page > 1)
+                                <input type="hidden" name="page" value="{{ $page }}">
+                            @endif
                             <input type="submit" class="input_submit" value="{{ __('No') }}">
                         </form>
                     </li>
@@ -35,6 +38,7 @@
                 @csrf
                 <input type="hidden" name="id" value="{{ $group->getKey() }}">
                 <input type="hidden" name="member_id" value="{{ $target->getKey() }}">
+                <input type="hidden" name="page" value="{{ $page }}">
                 {{-- OpenPNE 3's appoint/take-over forms: the nominee as the table's firstRow (photo +
                      nickname, both linking to the profile). They pass no body option (no .block);
                      the question is an OpenPNE 4 addition. --}}

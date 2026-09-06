@@ -122,9 +122,13 @@ class GroupManageRoutesTest extends TestCase
             ->assertRedirect($manage.'?page=2');
         $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/demote", ['member_id' => $member->getKey(), 'page' => 2])
             ->assertRedirect($manage.'?page=2');
-        // Dropping the last row of the last page lands on the page that remains.
+        // Dropping the last row of the last page lands on the page that remains, and so does a
+        // refused action taken from a page that no longer exists.
         $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
             ->assertRedirect($manage);
+        $this->actingAs($admin)->post("/groups/{$group->getKey()}/members/drop", ['member_id' => $member->getKey(), 'page' => 2])
+            ->assertRedirect($manage)
+            ->assertSessionHas('error');
     }
 
     public function test_show_exposes_the_manage_affordance_to_managers_only(): void
