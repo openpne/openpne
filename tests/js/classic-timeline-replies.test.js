@@ -72,27 +72,37 @@ const wire = (path) => {
 };
 
 window.fetch = () => new Promise(() => {});
-// The row as timeline/_post.blade.php draws it: every control is a link with a real destination.
+// The controls as the Classic partials draw them: every one is a link with a real destination.
 document.body.innerHTML = `
-    <div class="timeline-post">
+    <div id="notificationCenter">
+        <a href="/notifications" class="ncbuttonLink" aria-expanded="false" aria-controls="notificationCenterDetail"
+           data-notification-center-url="/notifications/center" data-notification-center-counts-url="/notifications/center/counts"><img alt=""></a>
+        <div id="notificationCenterDetail">
+            <div id="notificationCenterLoading"></div>
+            <div id="notificationCenterError"></div>
+        </div>
+    </div>
+    <div class="timeline-post" data-timeline-id="1">
+        <dialog id="timeline-post-delete-confirm-1"><form method="post" action="/timeline/1/delete"><button type="submit">削除</button></form></dialog>
         <a href="/files/full.jpg" rel="lightbox"><div><img class="timeline-post-image" src="/files/thumb.jpg" alt=""></div></a>
         <div class="timeline-post-control">
             <a class="timeline-comment-link" href="/timeline/1#timeline-reply-form">コメントする</a>
             <a class="timeline-post-delete-confirm-link" href="/timeline/1/delete" data-dialog="timeline-post-delete-confirm-1">削除</a>
-            <a class="timeline-comment-loadmore" href="/timeline/1" data-replies-url="/timeline/1/replies">もっと見る</a>
+            <a class="timeline-comment-loadmore" href="/timeline/1" data-replies-url="/timeline/1/replies">もっと見る<span class="timeline-comment-loader"></span></a>
             <div class="timeline-post-comments">
                 <form data-timeline-reply action="/timeline/1/reply">
                     <textarea class="timeline-post-comment-form-input"></textarea>
                     <button type="submit">投稿</button>
                 </form>
             </div>
-            <dialog id="timeline-post-delete-confirm-1"><form method="post" action="/timeline/1/delete"><button type="submit">削除</button></form></dialog>
         </div>
     </div>
     <dialog data-timeline-lightbox><img src="" alt=""></dialog>`;
 wire('public/js/classic-timeline-replies.js');
 wire('public/js/classic-timeline-dialogs.js');
+wire('public/js/classic-notification-center.js');
 
+const bell = document.querySelector('#notificationCenter .ncbuttonLink');
 const commentLink = document.querySelector('.timeline-comment-link');
 const loadMore = document.querySelector('.timeline-comment-loadmore');
 const deleteLink = document.querySelector('.timeline-post-delete-confirm-link');
@@ -109,6 +119,7 @@ const click = (target, init) => {
 };
 
 beforeEach(() => {
+    bell.setAttribute('aria-expanded', 'false');
     form.classList.remove('comment-form-show');
     loadMore.removeAttribute('data-pending');
     loadMore.removeAttribute('data-failed');
@@ -138,9 +149,16 @@ test('a plain click on an attached image opens the lightbox on the full-size fil
     assert.equal(lightbox.querySelector('img').getAttribute('src'), lightboxLink.href);
 });
 
+test('a plain click on the notification bell opens the panel in place', () => {
+    assert.equal(click(bell, {}).defaultPrevented, true);
+    assert.equal(bell.getAttribute('aria-expanded'), 'true');
+});
+
 test('a modified or non-primary click is left to the browser', () => {
     for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
         const label = JSON.stringify(init);
+        assert.equal(click(bell, init).defaultPrevented, false, label);
+        assert.equal(bell.getAttribute('aria-expanded'), 'false', label);
         assert.equal(click(commentLink, init).defaultPrevented, false, label);
         assert.equal(form.classList.contains('comment-form-show'), false, label);
         assert.equal(click(loadMore, init).defaultPrevented, false, label);
