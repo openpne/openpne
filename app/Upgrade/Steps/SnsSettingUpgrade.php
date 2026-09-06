@@ -22,15 +22,18 @@ class SnsSettingUpgrade extends UpgradeStep
     {
         return [
             'key' => Column::expr($this->keyCase(), uses: ['name']),
-            'value' => $this->valueCase() === null ? Column::source('value') : Column::expr($this->valueCase(), uses: ['name', 'value']),
+            'value' => Column::expr(sprintf("COALESCE(%s, '')", $this->valueCase() ?? '`value`'), uses: ['name', 'value']),
         ];
     }
 
     public function filter(): ?string
     {
-        // A NULL value is not copied: OpenPNE 3 read it as unset (opConfig::get fell to the default),
-        // which is what a missing sns_settings row means here.
-        return sprintf('`name` IN (%s) AND `value` IS NOT NULL', $this->nameList());
+        $kept = array_filter($this->migratedKeys(), static fn (SnsSettingKey $key): bool => $key->op3NullValueIsKept());
+        $nullRule = $kept === []
+            ? '`value` IS NOT NULL'
+            : sprintf('(`value` IS NOT NULL OR `name` IN (%s))', $this->nameList($kept));
+
+        return sprintf('`name` IN (%s) AND %s', $this->nameList(), $nullRule);
     }
 
     public function filterColumns(): array
@@ -66,11 +69,12 @@ class SnsSettingUpgrade extends UpgradeStep
         ));
     }
 
-    private function nameList(): string
+    /** @param  list<SnsSettingKey>|null  $keys  defaults to every migrated key */
+    private function nameList(?array $keys = null): string
     {
         return implode(', ', array_map(
             static fn (SnsSettingKey $key): string => "'{$key->op3SourceName()}'",
-            $this->migratedKeys(),
+            $keys ?? $this->migratedKeys(),
         ));
     }
 
