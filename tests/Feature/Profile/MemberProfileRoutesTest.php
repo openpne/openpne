@@ -3,6 +3,7 @@
 namespace Tests\Feature\Profile;
 
 use App\Models\Diary;
+use App\Models\Gadget;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -10,6 +11,7 @@ use App\Models\MemberImage;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Models\TimelinePost;
+use App\Services\GadgetService;
 use App\Support\AvatarColor;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
@@ -341,6 +343,81 @@ class MemberProfileRoutesTest extends TestCase
             ->assertOk()
             ->assertSee('<th>Age</th>', false)
             ->assertSee('36 years old');
+    }
+
+    public function test_the_owner_reads_the_audience_after_a_value_kept_from_some_members(): void
+    {
+        $owner = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($owner, $friend);
+        $this->fieldFor($owner, Visibility::Friends, 'friends-value');
+        $this->fieldFor($owner, Visibility::Members, 'members-value');
+        $this->fieldFor($owner, Visibility::Private, 'private-value');
+
+        // OpenPNE 3 _profileListBox.php suffixed the owner's own rows alone, on the fixed box and the profileListBox gadget alike.
+        foreach ([false, true] as $withGadget) {
+            if ($withGadget) {
+                Gadget::create(['context' => 'profile', 'zone' => 'contents', 'name' => 'profileListBox', 'sort_order' => 10]);
+                app(GadgetService::class)->clearCache();
+            }
+
+            // x-user-text ends its output on a newline, so the suffix follows on the next line.
+            $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+                ->assertOk()
+                ->assertSee("friends-value\n (Friends only)</td>", false)
+                ->assertSee("private-value\n</td>", false)
+                ->assertSee("members-value\n</td>", false);
+
+            $this->actingAs($friend)->get("/member/{$owner->getKey()}")
+                ->assertOk()
+                ->assertSee("friends-value\n</td>", false)
+                ->assertDontSee('Friends only');
+        }
+    }
+
+    public function test_the_owner_reads_the_web_audience_only_where_the_field_allows_it(): void
+    {
+        $owner = Member::factory()->create();
+        $webField = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => true]);
+        $memberField = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => false]);
+        foreach ([[$webField, 'web-value'], [$memberField, 'open-but-kept']] as [$profile, $value]) {
+            MemberProfile::factory()->create([
+                'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+                'value' => $value, 'visibility' => Visibility::Open,
+            ]);
+        }
+
+        // OpenPNE 3: ' (All Users on the Web)' only when the profile field itself is web-public.
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee("web-value\n (Anyone on the web)</td>", false)
+            ->assertSee("open-but-kept\n</td>", false);
+    }
+
+    public function test_the_owner_reads_the_age_audience_on_the_age_row(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create();
+        $this->giveBirthday($owner, '1990-06-23');
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Friends);
+
+        foreach ([false, true] as $withGadget) {
+            if ($withGadget) {
+                Gadget::create(['context' => 'profile', 'zone' => 'contents', 'name' => 'profileListBox', 'sort_order' => 10]);
+                app(GadgetService::class)->clearCache();
+            }
+
+            $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+                ->assertOk()
+                ->assertSee('36 years old (Friends only)');
+        }
+
+        // OpenPNE 3 captioned the age for friends only: a web-public age stays bare.
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('36 years old</td>', false);
     }
 
     private function giveBirthday(Member $owner, string $date): void

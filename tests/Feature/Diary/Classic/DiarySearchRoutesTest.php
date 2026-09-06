@@ -99,4 +99,15 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('/diary/list?page=2');
         $response->assertDontSee('/diary/search?page=2');
     }
+
+    public function test_a_search_with_no_match_names_the_keyword_in_the_diary_list_box(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/diary/search?keyword=zebra')
+            ->assertOk()
+            ->assertSee('id="diaryList"', false)
+            ->assertSee('Your search &quot;zebra&quot; did not match any', false)
+            ->assertDontSee('entries to show');
+    }
 }

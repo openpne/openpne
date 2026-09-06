@@ -2,8 +2,9 @@
      ?category=. The privacy category is offered only while it has something to set (an age to
      gate, or a profile-page choice the policy allows), the diary category only while the unit is
      switched on, and the AI category to a member the site offers them to or who already owns one. --}}
-@props(['current' => null, 'publicFlagAvailable' => null, 'aiAvailable' => false])
+@props(['current' => null, 'publicFlagAvailable' => null, 'aiAvailable' => null])
 @php($publicFlagAvailable ??= \App\Features\Profile\ProfilePageVisibility::privacyCategoryAvailable())
+@php($aiAvailable ??= app(\App\Features\AiAccount\AiAccountSettings::class)->availableTo(auth()->user()))
 <x-classic.parts id="pageNav" name="pageNav">
     <ul>
         @foreach (\App\Features\Member\MemberConfigCategory::cases() as $category)

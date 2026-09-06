@@ -58,8 +58,8 @@ class FriendRouteParity extends RouteParity
             // linkInput.php: the friend-request form, a form parts with the target member as its first rows.
             'link' => [
                 new ScreenElement('form box id friendLink (form kind)', L::Two, S::Ported, "op_include_form('friendLink', \$form, title 'Add %my_friend%')"),
-                new ScreenElement("box title 'Add %my_friend%'", L::Three, S::Partial, "linkInput.php 'Add %my_friend%'", "headed 'Send a %friend% request'"),
-                new ScreenElement('target member rows (76×76 photo + %nickname%, linking to the profile)', L::Two, S::Missing, "linkInput.php firstRow: Photo row op_image_tag_sf_image 76x76 + %nickname% row link_to('@member_profile')", 'the question sentence sits in a div.block instead; no table rows and no photo'),
+                new ScreenElement("box title 'Add %my_friend%'", L::Three, S::Ported, "linkInput.php 'Add %my_friend%' (my_friend pluralized)", '%my_friends%'),
+                new ScreenElement('target member rows (76×76 photo + %nickname%, linking to the profile)', L::Two, S::Ported, "linkInput.php firstRow: Photo row op_image_tag_sf_image 76x76 + %nickname% row link_to('@member_profile')"),
                 new ScreenElement('submit-only form (FriendLinkForm has no fields)', L::One, S::Ported, 'FriendLinkForm::configure() name format friend_link[%s] + submit', 'POST friend.link with the target id in a hidden input; a Cancel link back to the roster is an OpenPNE 4 addition'),
             ],
             // unlinkInput.php: the yesNo confirm.

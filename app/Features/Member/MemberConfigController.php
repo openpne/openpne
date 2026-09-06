@@ -92,9 +92,7 @@ class MemberConfigController extends Controller
                     $category = null;
                 }
 
-                // AI accounts hide only from a member who has neither the offer nor any account:
-                // the setting is creation-only, so an owner keeps their way in after it is switched off.
-                $aiAvailable = $this->aiSettings->enabled() || $viewer->aiAccounts()->exists();
+                $aiAvailable = $this->aiSettings->availableTo($viewer);
                 if ($category === MemberConfigCategory::Ai && ! $aiAvailable) {
                     $category = null;
                 }

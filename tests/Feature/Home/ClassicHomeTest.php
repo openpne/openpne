@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Home;
 
+use App\Features\Group\GroupRole;
 use App\Features\Home\HomeIssueSection;
 use App\Models\Diary;
 use App\Models\DirectMessage;
@@ -164,15 +165,20 @@ class ClassicHomeTest extends TestCase
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $administered = Group::factory()->approval()->create(['name' => 'Chess Club']);
+        GroupMember::factory()->admin()->create(['group_id' => $administered->getKey(), 'member_id' => $viewer->getKey()]);
+        DB::table('group_join_requests')->insert(['group_id' => $administered->getKey(), 'member_id' => $sender->getKey()]);
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
         // OpenPNE 3 sorted the customize attribute names: cautionAboutChangeAdminRequest,
-        // cautionAboutFriendPre, then unreadMessage.
-        $friendLine = strpos($content, e(__('Check requests')));
+        // cautionAboutCommunityMemberPre, cautionAboutFriendPre, then unreadMessage.
+        $joinLine = strpos($content, 'Chess Club');
+        $friendLine = strpos($content, e(route('friend.requests')));
         $messageLine = strpos($content, e(__('Read messages')));
 
-        $this->assertGreaterThan(strpos($content, 'Runners Club'), $friendLine);
+        $this->assertGreaterThan(strpos($content, 'Runners Club'), $joinLine);
+        $this->assertGreaterThan($joinLine, $friendLine);
         $this->assertGreaterThan($friendLine, $messageLine);
     }
 
@@ -208,5 +214,43 @@ class ClassicHomeTest extends TestCase
         $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
         // No notification rows were written, so the center has nothing to badge.
         $this->assertStringNotContainsString('id="nc_icon', $content);
+    }
+
+    public function test_a_group_administrator_sees_a_join_request_caution_per_group(): void
+    {
+        $admin = Member::factory()->create();
+        $quiet = Group::factory()->approval()->create(['name' => 'Quiet Club']);
+        $busy = Group::factory()->approval()->create(['name' => 'Busy Club']);
+        foreach ([$quiet, $busy] as $group) {
+            GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+        }
+        foreach (Member::factory()->count(2)->create() as $applicant) {
+            DB::table('group_join_requests')->insert(['group_id' => $busy->getKey(), 'member_id' => $applicant->getKey()]);
+        }
+
+        $content = (string) $this->actingAs($admin)->get('/')->assertOk()->getContent();
+
+        // OpenPNE 3 _cautionAboutCommunityMemberPre summed the requests into one line for the
+        // confirmation center; each administered group with a queue is its own line here.
+        $this->assertMatchesRegularExpression(
+            '~<p class="caution">\s*'.preg_quote(e(__("You've gotten :count %community% joining requests", ['count' => 2])), '~')
+            .'\s*<a href="'.preg_quote(e(route('group.members.pending', $busy)), '~').'">'.preg_quote(e(__('Check requests for :name', ['name' => 'Busy Club'])), '~').'</a>~',
+            $content,
+        );
+        $this->assertStringNotContainsString('Quiet Club', $content);
+    }
+
+    public function test_only_the_administrator_reads_the_join_request_caution(): void
+    {
+        $group = Group::factory()->approval()->create(['name' => 'Busy Club']);
+        $subAdmin = Member::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $subAdmin->getKey(), 'role' => GroupRole::SubAdmin]);
+        DB::table('group_join_requests')->insert(['group_id' => $group->getKey(), 'member_id' => Member::factory()->create()->getKey()]);
+
+        // The approval page is Admin-only, so a sub-administrator gets no line pointing at a 403.
+        $this->actingAs($subAdmin)->get('/')
+            ->assertOk()
+            ->assertDontSee('joining requests')
+            ->assertDontSee('class="parts informationBox"', false);
     }
 }
