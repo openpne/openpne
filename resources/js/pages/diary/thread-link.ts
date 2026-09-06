@@ -1,4 +1,4 @@
-/** Mirrors the Classic pager URL: size always, order dropped when default (desc), page when 1. */
+/** Spelled as Classic's DiaryCommentThread::link() spells it, so a page is one URL under both surfaces. */
 export function diaryThreadLink(diaryId: number, size: number, page: number, ascending: boolean): string {
     const params = new URLSearchParams({ size: String(size) });
     if (ascending) params.set('order', 'asc');
