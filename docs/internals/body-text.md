@@ -37,6 +37,22 @@ shared case table, pinned on both sides). Entities add no `bodyHtml`: the ranges
 data and the client links them, so `RichBody` stays the sole `dangerouslySetInnerHTML` sink. See
 [timeline.md](timeline.md).
 
+## Where a link opens
+
+A link to another site opens a new tab — `target="_blank"`, `rel="noopener noreferrer nofollow"`
+— and says so to assistive technology with a visually hidden "Opens in a new tab" inside the link.
+A link to this site navigates in place: a bare anchor in server-rendered HTML, the Inertia router on
+Modern. [`LinkTarget`](../../app/Support/LinkTarget.php) decides on the server by host and port
+against `app.url` — any port, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php))
+knows only the two the fetcher dials;
+[`link-target.ts`](../../resources/js/lib/link-target.ts) decides on the client by the page's own
+host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
+is the Modern component, and `RichBody` applies the same rule on click to the bare anchors the server
+left in `bodyHtml`; a page of ours that answers without an Inertia page (a file, the admin) is loaded
+outright rather than shown as the router's error overlay. The rule covers every body format, link
+cards and operator banners. A photo's full-size link, the lightbox and the footer keep their new tab.
+Classic carries its own `.sr-only` rule in the layout, since the OpenPNE 3 skin has none.
+
 ## `op3` — migration-only, frozen
 
 The upgrade tags every migrated diary body `op3`; `Op3Text` ports OpenPNE 3's PC-mode
@@ -146,6 +162,8 @@ raw markdown source must not reach a mail body — as must the MCP diary tools
 - `op3` exists only on rows written by the upgrade; no request path can create or change it.
 - A link card is drawn *beside* the body, never inside it: it is third-party text, and the sanitizer
   allowlist has no `img` ([link-cards.md](link-cards.md)).
+- A link leaves this site only in a new tab that announces itself; a link to this site never opens
+  one ("Where a link opens"). Excerpts and mail text carry no announcement.
 - Markdown output survives either safety layer being wrong; input size is bounded before the
   pipeline, not inside it.
 - Styling: Modern uses the `.rich-body` block in [`app.css`](../../resources/css/app.css);

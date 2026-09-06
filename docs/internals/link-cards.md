@@ -466,6 +466,9 @@ so the reader gets it before the claim rather than after it. It is the host from
 that show a site name here are not followed in that. `www.` is dropped because it distinguishes
 nothing a reader acts on.
 
+The card is one link and opens where a body link would: a page of ours in place, another site in a
+new tab that says so ([body-text.md](body-text.md), "Where a link opens").
+
 ### Two shapes, chosen by the picture
 
 A big landscape picture is a preview and is drawn **across the card, under the words**; a small or

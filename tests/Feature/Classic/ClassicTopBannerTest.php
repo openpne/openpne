@@ -38,7 +38,19 @@ class ClassicTopBannerTest extends TestCase
             ->assertSee('id="topBanner"', false)
             ->assertSee(route('banner.image', $image->file->name), false)
             ->assertSee('alt="Promo"', false)
-            ->assertSee('<a href="https://ad.example.test" target="_blank" rel="noopener">', false);
+            ->assertSee('<a href="https://ad.example.test" target="_blank" rel="noopener">', false)
+            ->assertSee('<span class="sr-only"> Opens in a new tab</span></a>', false);
+    }
+
+    public function test_a_banner_linking_to_this_site_opens_in_place(): void
+    {
+        $member = Member::factory()->create();
+        $this->addImage(Banner::create(['name' => 'top_after']), config('app.url').'/groups/1', 'Promo');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<a href="'.config('app.url').'/groups/1"><img', false)
+            ->assertDontSee('<a href="'.config('app.url').'/groups/1" target', false);
     }
 
     public function test_a_guest_sees_the_before_login_banner(): void

@@ -393,7 +393,10 @@ class InternalLinkCardRenderingTest extends TestCase
         $this->actingAs($this->author)->get("/diary/{$carrier->id}")
             ->assertOk()
             ->assertSee('The linked diary')
-            ->assertSee('sns.example.com');
+            ->assertSee('sns.example.com')
+            // A page of ours opens in place: no new tab, no notice.
+            ->assertSee('<a href="'.$this->urlFor($target).'">', false)
+            ->assertDontSee('<span class="sr-only">', false);
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($this->author)->get("/diary/{$carrier->id}")

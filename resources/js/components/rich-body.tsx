@@ -1,4 +1,7 @@
+import { type MouseEvent } from 'react';
+import { visitInApp } from '@/components/body-link';
 import { UserText } from '@/components/user-text';
+import { inAppHref, isPlainClick } from '@/lib/link-target';
 
 /**
  * `bodyHtml` is exclusively the output of the server-side sanitizer pipeline, never constructed
@@ -14,5 +17,23 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
         );
     }
 
-    return <div className="rich-body break-words" dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
+    return <div className="rich-body break-words" onClick={visitOwnLinks} dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
+}
+
+/** The server left a link to this site as a bare anchor; the router takes it, as <BodyLink> does. */
+function visitOwnLinks(event: MouseEvent<HTMLDivElement>) {
+    const anchor = event.target instanceof Element ? event.target.closest('a') : null;
+
+    if (!anchor || !event.currentTarget.contains(anchor) || anchor.target !== '' || !isPlainClick(event)) {
+        return;
+    }
+
+    const path = inAppHref(anchor.href, window.location.host);
+
+    if (path === null) {
+        return;
+    }
+
+    event.preventDefault();
+    visitInApp(path);
 }

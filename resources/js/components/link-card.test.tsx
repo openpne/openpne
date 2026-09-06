@@ -1,7 +1,13 @@
+// @vitest-environment-options { "url": "https://sns.example.test/diary/9" }
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { HERO_SIZES } from './image-grid';
 import { LinkCard, type LinkCardData } from './link-card';
+import { fakeT } from '@/lib/test-i18n';
+
+// useT reads the Inertia page for its term map, which a component test has no page to give it.
+vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
+vi.mock('@inertiajs/react', () => ({ router: { visit: () => undefined } }));
 
 afterEach(cleanup);
 
@@ -120,4 +126,25 @@ test('no card draws nothing', () => {
     const { container } = render(<LinkCard card={null} />);
 
     expect(container.innerHTML).toBe('');
+});
+
+test('a card of another site opens a new tab and says so, in both shapes', () => {
+    for (const card of [base, wide]) {
+        cleanup();
+        render(<LinkCard card={card} />);
+        const link = screen.getByRole('link');
+
+        expect(link.getAttribute('target')).toBe('_blank');
+        expect(link.getAttribute('rel')).toBe('noopener noreferrer nofollow');
+        expect(link.querySelector('.sr-only')?.textContent).toBe(' Opens in a new tab');
+    }
+});
+
+test('a card of one of this site\'s own pages opens in place', () => {
+    render(<LinkCard card={{ ...base, url: 'https://sns.example.test/diary/1', domain: 'sns.example.test' }} />);
+    const link = screen.getByRole('link');
+
+    expect(link.getAttribute('target')).toBeNull();
+    expect(link.getAttribute('href')).toBe('/diary/1');
+    expect(link.querySelector('.sr-only')).toBeNull();
 });

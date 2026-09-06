@@ -1,3 +1,4 @@
+import { BodyLink } from '@/components/body-link';
 import { boxedPictureMaxWidth, HERO_SIZES } from '@/components/image-grid';
 import { type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
@@ -41,7 +42,7 @@ export function LinkCard({ card, className }: { card: LinkCardData | null; class
 
     if (card.layout === 'wide' && card.fitSources.length > 0) {
         return (
-            <a href={card.url} target="_blank" rel="noopener noreferrer nofollow" className={cn('block', frame)}>
+            <BodyLink href={card.url} className={cn('block', frame)}>
                 <div className="min-w-0 p-3">
                     {host}
                     {title}
@@ -57,12 +58,12 @@ export function LinkCard({ card, className }: { card: LinkCardData | null; class
                         style={{ aspectRatio: `${BANNER_RATIO}`, maxWidth: boxedPictureMaxWidth(card.imageWidth, `${BANNER_RATIO}`) }}
                     />
                 </div>
-            </a>
+            </BodyLink>
         );
     }
 
     return (
-        <a href={card.url} target="_blank" rel="noopener noreferrer nofollow" className={cn('flex', frame)}>
+        <BodyLink href={card.url} className={cn('flex', frame)}>
             {card.imageUrl && (
                 // Decorative: the title and host beside it already name the destination.
 
@@ -82,6 +83,6 @@ export function LinkCard({ card, className }: { card: LinkCardData | null; class
                 {title}
                 {card.description && <p className="mt-1 line-clamp-1 text-sm break-words text-muted-foreground">{card.description}</p>}
             </div>
-        </a>
+        </BodyLink>
     );
 }

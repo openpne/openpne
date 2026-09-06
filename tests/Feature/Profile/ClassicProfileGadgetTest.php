@@ -200,7 +200,7 @@ class ClassicProfileGadgetTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            ->assertSee('<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x</a>', false);
+            ->assertSee('<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> Opens in a new tab</span></a>', false);
     }
 
     public function test_nickname_row_is_not_auto_linked(): void
