@@ -510,7 +510,7 @@
     "Duplicate :name": ":nameを複製",
     "e.g. 19:00 start": "例: 19:00 開始",
     "Each field on it still keeps its own audience.": "各項目の公開範囲はそれぞれの設定のままです。",
-    "Each new one becomes a line on the %activity%, posted as its author to the same audience. Nothing is posted while the %activity% unit is off.": "作成のたびに投稿者名義で%activity%に 1 行流れます(公開範囲は元の投稿と同じ)。%activity%ユニットが無効のあいだは流れません。",
+    "Each new one becomes a line on the %activity%, posted as its author: a %diary% to its own audience (web-public falls to members while the %activity% cannot be web-public), a %topic% or event to every member when anyone may read its %community%, and not at all for a members-only %community%. Nothing is posted while the %activity% unit is off.": "作成のたびに投稿者名義で%activity%に 1 行流れます。%diary%は元の公開範囲(%activity%が Web 公開不可のあいだ、Web 全体公開はメンバー公開に落ちます)、%topic%・イベントは誰でも読める%community%なら全メンバーに、メンバー限定の%community%では流れません。%activity%ユニットが無効のあいだは流れません。",
     "Each recovery code can be used once, if you no longer have your authenticator.": "認証アプリが使えない場合は、リカバリーコードを1回ずつ使ってサインインできます。",
     "Earlier day": "前の日",
     "Earliest date that can be entered (YYYY-MM-DD).": "入力できる最も古い日付（YYYY-MM-DD）。",

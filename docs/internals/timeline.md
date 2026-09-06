@@ -160,12 +160,16 @@ The body is [`Announcement`](../../app/Features/Timeline/Announcement.php): a li
 holds — the line gives way, the URL never does, and a URL that does not fit alone means no post
 (logged as a warning). The URL is an internal link, so the post carries the record's link card and
 opens in place; a URL inside the title takes the card instead, because a card follows the body's
-first URL. The line is rendered in the site's base locale (`app.fallback_locale` — `app.locale` is
-whatever `SetLocale` resolved for the current request), never the author's, because it is stored once
-and read by everyone; terms are settled before the title goes in, so `%Diary%` in a title stays text. Hashtags in the line are parsed like any other body.
+first URL. The line is rendered in the site's own language (`SiteLocale`, the `APP_LOCALE` the app
+starts from — `app.locale` itself is whatever `SetLocale` resolved for the current request), never
+the author's, because it is stored once and read by everyone; the template is translated, terms
+included, before the title goes in, so `%Diary%` in a title stays text. OpenPNE 3 emoji codes in a
+title render through the upgrade's `EmojiMap`, the one table for them, which is why runtime code
+reaches into `App\Upgrade` here. Hashtags in the line are parsed like any other body.
 
 Audience: a diary's line copies the diary's visibility, except that Open falls to Members while
-`TimelineAllowWebPublic` is off (OpenPNE 3 did the same with `op_activity_is_open`). A topic or
+`TimelineAllowWebPublic` is off (OpenPNE 3 did the same with `op_activity_is_open`); a line stored
+Open stays Open if the diary's own web-public switch is turned off later, as in OpenPNE 3. A topic or
 event in a group anyone may read is announced to Members; a members-only group gets no line at
 all, where OpenPNE 3 wrote one only its author could read. `NotifyTimelinePosted` skips an
 announcement: a diary's own notification already reaches the same audience, and a topic's or

@@ -16,13 +16,15 @@ use App\Models\Group;
 use App\Models\Member;
 use App\Support\Feature;
 use App\Support\LocalizedDate;
+use App\Support\SiteLocale;
 use App\Support\Visibility;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * OpenPNE 3's update_activity: a new diary, topic or event becomes one timeline line by its author.
- * Runs after the record's commit, so every reason not to post is a silent skip rather than a failure
- * of the request that created it (docs/internals/timeline.md, "Automatic posts").
+ * The record is committed before this runs, so nothing here may fail the request that created it:
+ * every reason not to post, a failed insert included, is a skip (docs/internals/timeline.md, "Automatic posts").
  */
 class AnnounceOnTimeline
 {
@@ -97,12 +99,15 @@ class AnnounceOnTimeline
             return;
         }
 
-        ($this->create)($author, new TimelinePostFormData($body, $visibility), null, TimelinePostOrigin::Auto);
+        try {
+            ($this->create)($author, new TimelinePostFormData($body, $visibility), null, TimelinePostOrigin::Auto);
+        } catch (Throwable $e) {
+            Log::warning('Timeline announcement skipped: the post could not be written.', ['member_id' => $author->getKey(), 'exception' => $e]);
+        }
     }
 
-    /** The site's base locale, not the author's: SetLocale rewrites app.locale per request, fallback_locale it never touches. */
     private function locale(): string
     {
-        return (string) config('app.fallback_locale');
+        return SiteLocale::default();
     }
 }

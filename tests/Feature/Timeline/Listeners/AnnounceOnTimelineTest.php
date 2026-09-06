@@ -8,6 +8,7 @@ use App\Features\Diary\Events\DiaryPosted;
 use App\Features\GroupEvent\Events\EventPosted;
 use App\Features\GroupTopic\Events\TopicPosted;
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Events\TimelinePostPosted;
 use App\Features\Timeline\TimelinePostOrigin;
 use App\Jobs\BroadcastTimelinePosted;
@@ -26,6 +27,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
+use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 class AnnounceOnTimelineTest extends TestCase
@@ -35,7 +38,7 @@ class AnnounceOnTimelineTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['app.fallback_locale' => 'en']);
+        config(['openpne.site_locale' => 'en']);
         URL::forceRootUrl('http://sns.example');
     }
 
@@ -124,7 +127,7 @@ class AnnounceOnTimelineTest extends TestCase
     public function test_the_line_is_written_in_the_site_locale_not_the_authors(): void
     {
         $this->setSnsSetting(SnsSettingKey::DiaryAutoTimelinePost, true);
-        config(['app.fallback_locale' => 'ja']);
+        config(['openpne.site_locale' => 'ja']);
         app()->setLocale('en'); // what SetLocale resolved for the author's request
         $author = Member::factory()->create(['locale' => 'en']);
         $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'こんにちは']);
@@ -145,6 +148,60 @@ class AnnounceOnTimelineTest extends TestCase
         $body = TimelinePost::sole()->body;
         $this->assertSame(140, mb_strlen($body));
         $this->assertStringEndsWith("…\nhttp://sns.example/diary/{$diary->getKey()}", $body);
+    }
+
+    public function test_a_diary_the_author_keeps_private_is_announced_privately(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::DiaryAutoTimelinePost, true);
+        $author = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Private]);
+
+        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted($diary, $author));
+
+        $this->assertSame(Visibility::Private, TimelinePost::sole()->visibility);
+    }
+
+    public function test_a_topic_is_not_announced_while_the_timeline_unit_is_off(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::GroupAutoTimelinePost, true);
+        $this->setSnsSetting(SnsSettingKey::FeatureTimelineEnabled, false);
+        $author = Member::factory()->create();
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        app(AnnounceOnTimeline::class)->handleTopicPosted(new TopicPosted($topic, $author));
+
+        $this->assertSame(0, TimelinePost::count());
+    }
+
+    public function test_a_body_of_140_code_points_of_four_byte_emoji_is_stored_whole(): void
+    {
+        // varchar(140) counts characters, not bytes: the MySQL lane is where this has teeth.
+        $this->setSnsSetting(SnsSettingKey::DiaryAutoTimelinePost, true);
+        $author = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => str_repeat("\u{1F600}", 200)]);
+
+        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted($diary, $author));
+
+        $body = TimelinePost::sole()->body;
+        $this->assertSame(140, mb_strlen($body));
+        $this->assertStringEndsWith("…\nhttp://sns.example/diary/{$diary->getKey()}", $body);
+    }
+
+    public function test_a_failed_insert_is_logged_and_never_fails_the_creating_request(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::DiaryAutoTimelinePost, true);
+        Log::spy();
+        $this->mock(CreateTimelinePost::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('__invoke')->once()->andThrow(new RuntimeException('deadlock'));
+        });
+        $author = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+
+        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted($diary, $author));
+
+        $this->assertSame(0, TimelinePost::count());
+        Log::shouldHaveReceived('warning')->once();
     }
 
     public function test_a_url_that_cannot_fit_skips_the_post_and_logs_a_warning(): void

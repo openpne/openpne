@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade\SnsSetting;
 
+use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\SnsSettingUpgrade;
@@ -228,11 +229,12 @@ class SnsSettingUpgradeSqlTest extends TestCase
     public function test_migrates_the_update_activity_switches(): void
     {
         $this->seedConfig('op_diary_plugin_update_activity', '1');
-        $this->seedConfig('op_community_topic_plugin_update_activity', '0');
+        $this->seedConfig('op_community_topic_plugin_update_activity', null); // OpenPNE 3 read NULL as off
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'diary_auto_timeline_post', 'value' => '1']);
-        $this->assertDatabaseHas('sns_settings', ['key' => 'group_auto_timeline_post', 'value' => '0']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'group_auto_timeline_post']);
+        $this->assertFalse(SnsSettingKey::GroupAutoTimelinePost->decode(null));
     }
 }

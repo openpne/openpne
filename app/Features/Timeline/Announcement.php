@@ -2,20 +2,17 @@
 
 namespace App\Features\Timeline;
 
-use App\Services\TermService;
 use App\Upgrade\Runner\EmojiMap;
 
 /**
  * The body of an announcement post: one line about the thing created, then its URL, fitted into
- * the OpenPNE 3 activity length. Terms are settled before the member's own words go in, so a
- * title spelling "%Diary%" is not read as a placeholder (docs/internals/timeline.md, "Automatic posts").
+ * the OpenPNE 3 activity length. The template is translated (terms included) before the member's
+ * own words go in, so a title spelling "%Diary%" is not read as a placeholder (docs/internals/timeline.md, "Automatic posts").
  */
 final class Announcement
 {
     /** OpenPNE 3 activity_data.body is string(140); timeline_posts.body keeps that cap. */
     public const MAX = 140;
-
-    public function __construct(private readonly TermService $terms) {}
 
     public function diary(string $title, string $url, string $locale, int $max = self::MAX): ?string
     {
@@ -62,7 +59,7 @@ final class Announcement
     /** @param  array<string, string>  $params */
     private function line(string $key, array $params, string $locale): string
     {
-        $template = $this->terms->replace(__($key, [], $locale), $locale);
+        $template = __($key, [], $locale); // TermTranslator: the %term% placeholders are resolved here
 
         $replacements = [];
         foreach ($params as $name => $value) {
