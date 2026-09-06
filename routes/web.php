@@ -162,16 +162,16 @@ Route::get('/member/configNotification', fn () => redirect()->route('member.conf
 // Neither guest- nor auth-restricted (the link may be opened on another device), and the change
 // happens on POST so a mail scanner's prefetch cannot consume the token.
 Route::get('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmailForm'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.confirm');
 Route::post('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmail'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm.submit');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.confirm.submit');
 
 // Same shape as confirmation, with its own token, so the old-address holder can void a change
 // without signing in.
 Route::get('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmailForm'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.cancel');
 Route::post('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmail'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel.submit');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.cancel.submit');
 
 // Same public shape as the email links, plus a per-token limiter on the POST so distributed password
 // guessing cannot pool onto one link.
