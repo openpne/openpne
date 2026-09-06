@@ -32,11 +32,21 @@ final class MarkdownText
 
     private static ?HtmlSanitizer $sanitizer = null;
 
+    /**
+     * The anchor the sanitizer emits for every link, hardened for another site; retarget() reads this
+     * exact shape, so a drift in it leaves every link hardened rather than one of ours opening in place.
+     */
+    private const SANITIZED_ANCHOR = '~<a href="([^"]*+)" rel="noopener noreferrer nofollow" target="_blank">(.*?)</a>~s';
+
     public static function render(?string $text): HtmlString
     {
-        $html = self::converter()->convert((string) $text)->getContent();
+        return new HtmlString(self::retarget(self::sanitized($text)));
+    }
 
-        return new HtmlString(self::sanitizer()->sanitize($html));
+    /** Before retarget(), so text drawn from it carries no notice. */
+    private static function sanitized(?string $text): string
+    {
+        return self::sanitizer()->sanitize(self::converter()->convert((string) $text)->getContent());
     }
 
     /**
@@ -67,7 +77,7 @@ final class MarkdownText
      */
     public static function excerpt(?string $text, int $width = BodyText::EXCERPT_WIDTH): string
     {
-        $plain = strip_tags(self::render($text)->toHtml());
+        $plain = strip_tags(self::sanitized($text));
         $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $plain = trim((string) preg_replace('/\s+/u', ' ', $plain));
 
@@ -80,7 +90,7 @@ final class MarkdownText
      */
     public static function plainText(?string $text): string
     {
-        $html = self::render($text)->toHtml();
+        $html = self::sanitized($text);
         // Keep link targets, which strip_tags would drop: a label that is the URL itself stays a single
         // URL, and an unsafe-scheme link has no href after the sanitizer so it keeps its label only.
         $html = (string) preg_replace_callback(
@@ -108,6 +118,16 @@ final class MarkdownText
         $plain = (string) preg_replace("/\n{3,}/", "\n\n", $plain);
 
         return trim($plain);
+    }
+
+    /** A link to this site loses the new tab the sanitizer forced; one to another site gains the notice. */
+    private static function retarget(string $html): string
+    {
+        return preg_replace_callback(self::SANITIZED_ANCHOR, function (array $m): string {
+            $target = LinkTarget::of(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5));
+
+            return '<a href="'.$m[1].'"'.$target->attributes().'>'.$m[2].$target->notice().'</a>';
+        }, $html) ?? $html;
     }
 
     private static function converter(): MarkdownConverter

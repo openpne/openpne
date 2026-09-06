@@ -31,6 +31,9 @@
     @if ($customCssUrl = classic_custom_css_url())
         <link rel="stylesheet" href="{{ $customCssUrl }}">
     @endif
+    {{-- The OpenPNE 3 skin has no visually-hidden class, and the body HTML the server renders for
+         both surfaces carries Tailwind's (docs/internals/body-text.md, "Where a link opens"). --}}
+    <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
     {{-- Operator HTML insertion in <head>; admin-trusted, output raw. --}}
     {!! classic_html_slot('head') !!}
 </head>

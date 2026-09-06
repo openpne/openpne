@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { BodyLink } from '@/components/body-link';
 import { linkify } from '@/lib/linkify';
 
 /**
@@ -10,17 +11,11 @@ export function UserText({ text }: { text: string | null | undefined }) {
         <>
             {linkify(text).map((segment, i) =>
                 segment.type === 'url' ? (
-                    <a
-                        key={i}
-                        href={segment.href}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        // Always underlined, not hover-only: these sit inline in body prose, where a
-                        // color-only link fails WCAG 1.4.1 (axe link-in-text-block).
-                        className="break-all text-link underline"
-                    >
+                    // Always underlined, not hover-only: these sit inline in body prose, where a
+                    // color-only link fails WCAG 1.4.1 (axe link-in-text-block).
+                    <BodyLink key={i} href={segment.href} className="break-all text-link underline">
                         {segment.visible}
-                    </a>
+                    </BodyLink>
                 ) : (
                     <Fragment key={i}>{segment.value}</Fragment>
                 ),

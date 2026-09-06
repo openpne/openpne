@@ -53,7 +53,7 @@ class DiaryBodyFormatTest extends TestCase
         $response = $this->actingAs($owner)->get("/diary/{$diary->getKey()}");
 
         $response->assertOk();
-        $response->assertSee('<a href="https://example.com/page" target="_blank" rel="noopener noreferrer nofollow">https://example.com/page</a>', false);
+        $response->assertSee('<a href="https://example.com/page" target="_blank" rel="noopener noreferrer nofollow">https://example.com/page<span class="sr-only"> Opens in a new tab</span></a>', false);
         $response->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false); // escaped, not executed
         $response->assertDontSee('<script>alert(1)</script>', false);
     }
@@ -70,7 +70,7 @@ class DiaryBodyFormatTest extends TestCase
         $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
             ->assertOk()
             ->assertSee('href="http://www.example.org"', false)
-            ->assertSee('>www.example.org</a>', false)
+            ->assertSee('>www.example.org<span class="sr-only">', false)
             ->assertSee('&lt;b&gt;x&lt;/b&gt;', false);
     }
 }

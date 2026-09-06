@@ -6,7 +6,7 @@ namespace Tests\Unit\Upgrade;
 
 use App\Support\MarkdownText;
 use App\Upgrade\Runner\Op3PolicyMarkdown;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * The OpenPNE 3 policy body → Markdown rewrite, asserted on what the reader ends up seeing: the

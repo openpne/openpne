@@ -390,10 +390,17 @@ class InternalLinkCardRenderingTest extends TestCase
         $target = Diary::factory()->for($this->author)->create(['title' => 'The linked diary', 'visibility' => Visibility::Members]);
         $carrier = $this->carrier($this->row($this->urlFor($target), ['internal_context' => 'diary', 'internal_record_id' => $target->id]));
 
-        $this->actingAs($this->author)->get("/diary/{$carrier->id}")
+        $html = $this->actingAs($this->author)->get("/diary/{$carrier->id}")
             ->assertOk()
             ->assertSee('The linked diary')
-            ->assertSee('sns.example.com');
+            ->assertSee('sns.example.com')
+            ->getContent();
+
+        // Anchors do not nest, so the lazy match is exactly the card anchor's content.
+        $this->assertSame(1, preg_match('~<a href="'.preg_quote($this->urlFor($target), '~').'"([^>]*)>(.*?)</a>~s', $html, $anchor));
+        $this->assertSame('', $anchor[1]);
+        $this->assertStringContainsString('class="linkCardTitle"', $anchor[2]);
+        $this->assertStringNotContainsString('sr-only', $anchor[2]);
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($this->author)->get("/diary/{$carrier->id}")
