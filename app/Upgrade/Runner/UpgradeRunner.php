@@ -70,17 +70,26 @@ final class UpgradeRunner
             ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase))
             : [];
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors) as $error) {
+        // The activity routing's counts and the one-owner-per-file count, both reading rows the
+        // structural verdict guards; their errors are rows a step would fail on mid-run.
+        $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
+            ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
+            : new ActivityPreflightReport([], []);
+        $sharedFileError = $migratesFiles && ! $report->hasErrors()
+            ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+            : null;
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : []) as $error) {
             $out("ERROR {$error}");
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach ($mailReport->warnings as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== []) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
@@ -114,8 +123,10 @@ final class UpgradeRunner
                 $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
             (new PasswordWrap)->plan($out);
+            (new ActivityTemplateTransform)->plan($out);
             (new EmojiTransform)->plan($out);
             (new SitePolicyMarkdownTransform)->plan($out);
+            (new TalkReadCursorBackfill)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -149,6 +160,12 @@ final class UpgradeRunner
                 $walked = (new PasswordWrap)->run($this->targetTables(), $out);
             }
 
+            // Render the template activities after the walk: PHP over serialized parameters, and the
+            // source is read again for them.
+            if ($walked) {
+                $walked = (new ActivityTemplateTransform)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
+            }
+
             // Rewrite carrier-emoji codes to Unicode after the walk: the mapping is per-row PHP, not
             // expressible in an INSERT...SELECT, and only now is every text table populated.
             if ($walked) {
@@ -159,6 +176,12 @@ final class UpgradeRunner
             // newlines, OpenPNE 4 renders them as Markdown, and no INSERT...SELECT can bridge that.
             if ($walked) {
                 $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $out);
+            }
+
+            // Only after the messages landed: the membership step leaves the read cursor at the
+            // schema default, a wall-clock stamp the migrated history must not be measured against.
+            if ($walked) {
+                $walked = (new TalkReadCursorBackfill)->run($this->targetTables(), $out);
             }
 
             // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row
@@ -415,5 +438,16 @@ final class UpgradeRunner
         }
 
         return false;
+    }
+
+    /** @return list<string> */
+    private function readSourceTables(): array
+    {
+        $tables = [];
+        foreach ($this->steps() as $step) {
+            $tables = array_merge($tables, $step->readSourceTables());
+        }
+
+        return array_values(array_unique($tables));
     }
 }
