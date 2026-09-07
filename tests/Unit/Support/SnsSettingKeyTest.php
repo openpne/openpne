@@ -298,4 +298,23 @@ class SnsSettingKeyTest extends TestCase
             $this->assertSame(false, $key->decode('yes'));
         }
     }
+
+    public function test_the_announcement_switches_are_off_by_default_and_copy_the_openpne3_update_activity_rows(): void
+    {
+        foreach ([
+            [SnsSettingKey::DiaryAutoTimelinePost, 'op_diary_plugin_update_activity'],
+            [SnsSettingKey::GroupAutoTimelinePost, 'op_community_topic_plugin_update_activity'],
+        ] as [$key, $source]) {
+            $this->assertFalse($key->default(), $key->value);
+            $this->assertSame(SettingGroup::Timeline, $key->group(), $key->value);
+            $this->assertSame($source, $key->op3SourceName(), $key->value);
+            $this->assertTrue($key->isMigratedFromOp3(), $key->value);
+            $this->assertFalse($key->op3NullValueIsKept(), $key->value);
+            $this->assertSame('1', $key->encode(true), $key->value);
+            // OpenPNE 3 read the row as PHP truthy.
+            $this->assertFalse($key->decode('0'), $key->value);
+            $this->assertFalse($key->decode(''), $key->value);
+            $this->assertTrue($key->decode('1'), $key->value);
+        }
+    }
 }

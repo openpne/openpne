@@ -87,6 +87,10 @@ return [
     // The diary and timeline web-public switches are admin settings
     // (SnsSettingKey::DiaryAllowWebPublic / TimelineAllowWebPublic), not env flags.
 
+    // The site's own language, for text the site writes once for every reader (App\Support\SiteLocale).
+    // The same variable app.locale starts from; that key is then rewritten per request by SetLocale.
+    'site_locale' => env('APP_LOCALE', 'ja'),
+
     /*
     |--------------------------------------------------------------------------
     | Registration

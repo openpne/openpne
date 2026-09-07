@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Timeline\TimelineAutoPost;
 use App\Features\Timeline\TimelinePosting;
 use App\Filament\Pages\TimelineSettings;
 use App\Models\AdminUser;
@@ -61,5 +62,24 @@ class TimelineSettingsTest extends TestCase
     {
         Livewire::test(TimelineSettings::class)
             ->assertSet('data.timeline_allow_web_public', false);
+    }
+
+    public function test_the_announcement_switches_are_off_until_turned_on_and_round_trip(): void
+    {
+        Livewire::test(TimelineSettings::class)
+            ->assertSet('data.diary_auto_timeline_post', false)
+            ->assertSet('data.group_auto_timeline_post', false)
+            ->fillForm(['diary_auto_timeline_post' => true, 'group_auto_timeline_post' => true])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'diary_auto_timeline_post', 'value' => '1']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_auto_timeline_post', 'value' => '1']);
+        $this->assertTrue(TimelineAutoPost::forDiaries());
+        $this->assertTrue(TimelineAutoPost::forGroups());
+
+        Livewire::test(TimelineSettings::class)
+            ->assertSet('data.diary_auto_timeline_post', true)
+            ->assertSet('data.group_auto_timeline_post', true);
     }
 }

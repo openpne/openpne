@@ -23,7 +23,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the timeline policy settings (whether members may make a post web-public, and whether they may post at all).
+ * Edit the timeline policy settings (whether members may make a post web-public, whether they may post
+ * at all, and which records the site announces on the timeline).
  * `sns_settings` is authoritative; every field is stored verbatim on save and resolves to its
  * fail-closed default (web-public off) while no row exists.
  *
@@ -66,7 +67,7 @@ class TimelineSettings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema
-            ->components([$this->buildSection()])
+            ->components([$this->buildSection(), $this->buildAnnouncementSection()])
             ->statePath('data');
     }
 
@@ -136,5 +137,15 @@ class TimelineSettings extends Page
                     ->label(SnsSettingKey::TimelinePostingEnabled->label())
                     ->helperText(__('While off, members cannot post or reply; what is already posted stays.')),
             ]);
+    }
+
+    private function buildAnnouncementSection(): Section
+    {
+        $announce = static fn (SnsSettingKey $key): Toggle => Toggle::make($key->value)
+            ->label($key->label());
+
+        return Section::make(__('Automatic posts'))
+            ->description(__('Each new one becomes a line on the %activity%, posted as its author: a %diary% to its own audience (web-public falls to members while the %activity% cannot be web-public), a %topic% or event to every member when anyone may read its %community%, and not at all for a members-only %community%. Nothing is posted while the %activity% unit is off.'))
+            ->schema([$announce(SnsSettingKey::DiaryAutoTimelinePost), $announce(SnsSettingKey::GroupAutoTimelinePost)]);
     }
 }

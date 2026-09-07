@@ -5,6 +5,7 @@ namespace App\Features\Timeline\Actions;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Features\Timeline\Events\TimelinePostPosted;
 use App\Features\Timeline\HashtagParser;
+use App\Features\Timeline\TimelinePostOrigin;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
 use App\Models\Member;
@@ -22,7 +23,7 @@ class CreateTimelinePost
      * OpenPNE 3 allows one image per post; $image is attached as slot 1, with its bytes rolled back
      * if the transaction fails.
      */
-    public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
+    public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null, TimelinePostOrigin $origin = TimelinePostOrigin::Member): TimelinePost
     {
         $post = $this->images->attach(
             'timelinePost',
@@ -30,7 +31,7 @@ class CreateTimelinePost
             // Mentions resolve inside the transaction: resolution share-locks the mentioned
             // members, so one deleted mid-request fails resolution (row dropped, post goes
             // through) instead of failing the FK insert (post rolled back).
-            persist: function () use ($author, $data): TimelinePost {
+            persist: function () use ($author, $data, $origin): TimelinePost {
                 $post = TimelinePost::create([
                     'member_id' => $author->getKey(),
                     'body' => $data->body,
@@ -43,7 +44,7 @@ class CreateTimelinePost
 
                 // Dispatched here so the snapshot is taken from the rows just written; delivery
                 // waits for the commit (ShouldDispatchAfterCommit).
-                TimelinePostPosted::dispatch($post, $author, ResolveMentions::memberIds($mentions));
+                TimelinePostPosted::dispatch($post, $author, ResolveMentions::memberIds($mentions), $origin);
 
                 return $post;
             },
