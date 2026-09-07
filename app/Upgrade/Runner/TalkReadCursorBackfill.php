@@ -69,7 +69,7 @@ final class TalkReadCursorBackfill
             return false;
         }
 
-        $out('DONE '.self::KEY.": {$updated} memberships");
+        $out('DONE '.self::KEY.": {$updated} memberships changed");
 
         return true;
     }

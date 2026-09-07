@@ -24,10 +24,10 @@ final class SourcePreflight
      * The KV config tables whose recognised names are enumerable, so an unrecognised one can be
      * counted. Both are read by correlated subquery, so their `name` is also required structurally.
      */
+    private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
+
     /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */
     private const PASS_READ_COLUMNS = ['activity_data' => ['template', 'template_param', 'uri']];
-
-    private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
 
     /**
      * The source tables scanned for names the upgrade does not recognise, each with the one name prefix

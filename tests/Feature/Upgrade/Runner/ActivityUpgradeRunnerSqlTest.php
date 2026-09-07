@@ -85,7 +85,7 @@ class ActivityUpgradeRunnerSqlTest extends TestCase
 
         $lines = $this->runUpgrade(new RunOptions);
 
-        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships', $lines);
+        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships changed', $lines);
         $this->assertDatabaseHas('group_messages', ['id' => 1, 'group_id' => 5, 'in_reply_to_id' => null, 'body' => "[Group topic] Marathon (Runners \u{2600}\u{FE0F})\nhttp://sns.example/topics/7"]);
         $this->assertDatabaseHas('group_messages', ['id' => 2, 'group_id' => 5, 'in_reply_to_id' => 1, 'body' => "reply \u{2600}\u{FE0F}"]);
         $this->assertDatabaseHas('timeline_posts', ['id' => 3, 'body' => "hello \u{2600}\u{FE0F}"]);
@@ -94,14 +94,26 @@ class ActivityUpgradeRunnerSqlTest extends TestCase
         $this->assertSame(0, app(UnreadTalkCounts::class)($reader)[5]['count']);
         $this->assertDatabaseHas('group_members', ['group_id' => 5, 'member_id' => $reader->id, 'talk_read_at' => $tomorrow, 'talk_read_message_id' => 1]);
 
-        $this->assertStringContainsString("PASS talk_read_cursor: no membership is behind its group's latest migrated message", $this->verify());
+        $this->assertStringContainsString("PASS talk_read_cursor: every membership is read up to its group's migrated talk", $this->verify());
 
-        // Talk written after the upgrade is the site's own: a member yet to read it is not drift.
-        GroupMessage::factory()->create(['id' => 100, 'group_id' => 5, 'member_id' => $author->id, 'created_at' => now()->addDays(2), 'updated_at' => now()->addDays(2)]);
+        // Talk written after the upgrade is the site's own: a member yet to read it is not drift, and
+        // the native row takes id 3 — the timeline activity's id — so "migrated" cannot mean "id exists".
+        $native = GroupMessage::factory()->create(['group_id' => 5, 'member_id' => $author->id, 'created_at' => now()->addDays(2), 'updated_at' => now()->addDays(2)]);
+        $this->assertSame(3, $native->id);
+        $this->assertStringContainsString('PASS talk_read_cursor', $this->verify());
+        // A cursor advanced onto the native message is a read, not drift.
+        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_at' => $native->created_at, 'talk_read_message_id' => $native->id]);
         $this->assertStringContainsString('PASS talk_read_cursor', $this->verify());
 
-        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_message_id' => 0]);
-        $this->assertStringContainsString("FAIL talk_read_cursor: 1 membership(s) are behind their group's latest migrated message (e.g. group:member 5:{$reader->id})", $this->verify());
+        // The message read since may be gone: the cursor is a copied value, not a foreign key.
+        $native->delete();
+        $this->assertStringContainsString('PASS talk_read_cursor', $this->verify());
+
+        // The schema default the walk leaves — later than every migrated message, naming none — is what the pass removes.
+        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_at' => now()->addDays(3), 'talk_read_message_id' => 0]);
+        $this->assertStringContainsString("FAIL talk_read_cursor: 1 membership(s) are not read up to their group's migrated talk (e.g. group:member 5:{$reader->id})", $this->verify());
+        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_at' => '2015-01-01 00:00:00', 'talk_read_message_id' => 2]);
+        $this->assertStringContainsString('FAIL talk_read_cursor: 1 membership(s)', $this->verify());
 
         DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_message_id' => 1]);
         UpgradeState::query()->where('step_key', 'talk_read_cursor_backfill')->delete();

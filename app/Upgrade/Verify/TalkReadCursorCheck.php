@@ -5,13 +5,16 @@ namespace App\Upgrade\Verify;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\SourceRef;
+use App\Upgrade\Steps\ActivityThread;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Re-checks the cursor backfill without trusting its checkpoint: no membership may sit behind its
- * group's latest migrated message (the `(created_at, id)` order a join writes), so no migrated
- * history arrives unread; messages written since, and cursors moved past, are the site's own (docs/internals/upgrade.md, "Verify").
+ * Re-checks the backfill without trusting its checkpoint: in a group with migrated messages, each
+ * membership must sit at or past the latest migrated `(created_at, id)` tuple and name a message
+ * (`talk_read_message_id <> 0`). Only a join's snapshot or an advance() writes a message id, so the
+ * schema default `(now, 0)` fails whatever its stamp (docs/internals/upgrade.md, "Verify").
  */
 final class TalkReadCursorCheck
 {
@@ -35,20 +38,21 @@ final class TalkReadCursorCheck
             return;
         }
 
-        $source = InsertSelectCompiler::qualify($options->sourceDatabase, $options->sourcePrefix, 'activity_data');
-        $migrated = "`m`.`group_id` = `group_members`.`group_id` AND EXISTS (SELECT 1 FROM {$source} AS `a` WHERE `a`.`id` = `m`.`id`)";
+        $migrated = '`m`.`group_id` = `group_members`.`group_id` AND EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data')
+            .' AS `a` WHERE `a`.`id` = `m`.`id` AND '.ActivityThread::landsInGroup('a').')';
         $latest = static fn (string $column): string => "(SELECT `m`.`{$column}` FROM `group_messages` AS `m` WHERE {$migrated}"
             .' ORDER BY `m`.`created_at` DESC, `m`.`id` DESC LIMIT 1)';
-        $behind = DB::select(
-            'SELECT `group_id`, `member_id` FROM `group_members`'
-            ." WHERE EXISTS (SELECT 1 FROM `group_messages` AS `m` WHERE {$migrated})"
-            .' AND (`talk_read_at` < '.$latest('created_at').' OR (`talk_read_at` = '.$latest('created_at').' AND `talk_read_message_id` < '.$latest('id').'))'
-            .' ORDER BY `group_id`, `member_id`',
-        );
+        $atOrPastLatest = '(`talk_read_at` > '.$latest('created_at').' OR (`talk_read_at` = '.$latest('created_at').' AND `talk_read_message_id` >= '.$latest('id').'))';
+        $where = " WHERE EXISTS (SELECT 1 FROM `group_messages` AS `m` WHERE {$migrated}) AND NOT (`talk_read_message_id` <> 0 AND {$atOrPastLatest})";
+        $compiler = new InsertSelectCompiler;
+        $resolve = static fn (string $sql): string => $compiler->resolveSourceRefs($sql, $options->sourcePrefix, $options->sourceDatabase);
 
-        $record('talk_read_cursor', $behind === [], $behind === []
-            ? 'no membership is behind its group\'s latest migrated message'
-            : count($behind).' membership(s) are behind their group\'s latest migrated message (e.g. group:member '
-                .implode(', ', array_map(static fn (object $r): string => "{$r->group_id}:{$r->member_id}", array_slice($behind, 0, self::SAMPLE))).')');
+        $behind = (int) DB::scalar($resolve('SELECT COUNT(*) FROM `group_members`'.$where));
+        $sample = $behind === 0 ? [] : DB::select($resolve('SELECT `group_id`, `member_id` FROM `group_members`'.$where.' ORDER BY `group_id`, `member_id` LIMIT '.self::SAMPLE));
+
+        $record('talk_read_cursor', $behind === 0, $behind === 0
+            ? 'every membership is read up to its group\'s migrated talk'
+            : "{$behind} membership(s) are not read up to their group's migrated talk (e.g. group:member "
+                .implode(', ', array_map(static fn (object $r): string => "{$r->group_id}:{$r->member_id}", $sample)).')');
     }
 }

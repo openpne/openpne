@@ -3,6 +3,7 @@
 namespace Tests\Feature\Upgrade\Runner;
 
 use App\Features\GroupTalk\Queries\UnreadTalkCounts;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
@@ -40,7 +41,7 @@ class TalkReadCursorBackfillTest extends TestCase
         $this->assertSame(0, app(UnreadTalkCounts::class)($viewer)[$group->id]['count']);
         $this->assertDatabaseHas('group_members', ['group_id' => $group->id, 'member_id' => $viewer->id, 'talk_read_message_id' => $message->id]);
         $this->assertSame(2, (int) UpgradeState::where('step_key', 'talk_read_cursor_backfill')->value('rows_affected'));
-        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships', $this->out);
+        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships changed', $this->out);
     }
 
     public function test_a_same_second_tie_goes_to_the_higher_id_and_a_silent_group_keeps_the_default(): void
@@ -56,6 +57,9 @@ class TalkReadCursorBackfillTest extends TestCase
         $this->assertTrue($this->runPass());
 
         $this->assertDatabaseHas('group_members', ['group_id' => $talking->id, 'talk_read_at' => '2015-05-06 07:08:09', 'talk_read_message_id' => 2]);
+        // The pass's SQL and the join-time snapshot are two spellings of one rule.
+        $snapshot = TalkReadCursor::snapshot($talking->id);
+        $this->assertSame(['talk_read_at' => '2015-05-06 07:08:09', 'talk_read_message_id' => 2], ['talk_read_at' => $snapshot['talk_read_at']->format('Y-m-d H:i:s'), 'talk_read_message_id' => $snapshot['talk_read_message_id']]);
         $this->assertDatabaseHas('group_members', ['group_id' => $silent->id, 'talk_read_message_id' => 0]);
     }
 
@@ -79,7 +83,7 @@ class TalkReadCursorBackfillTest extends TestCase
         $this->assertDatabaseMissing('group_members', ['group_id' => $group->id, 'talk_read_message_id' => $later->id]);
     }
 
-    public function test_a_failure_leaves_every_cursor_untouched_and_records_it(): void
+    public function test_a_failure_after_the_write_rolls_every_cursor_back_and_records_it(): void
     {
         [$first, $second] = Group::factory()->count(2)->create();
         $member = Member::factory()->create();
@@ -88,7 +92,7 @@ class TalkReadCursorBackfillTest extends TestCase
         foreach ([$first, $second] as $group) {
             GroupMessage::factory()->create(['group_id' => $group->id, 'member_id' => $member->id, 'created_at' => '2015-05-06 07:08:09', 'updated_at' => '2015-05-06 07:08:09']);
         }
-        $this->refuseTheCursorWrite();
+        $this->refuseTheCheckpointAfterTheWrite();
 
         $this->assertFalse($this->runPass());
 
@@ -105,10 +109,15 @@ class TalkReadCursorBackfillTest extends TestCase
             ->update(['talk_read_at' => now(), 'talk_read_message_id' => 0]);
     }
 
-    private function refuseTheCursorWrite(): void
+    /** The cursors are written, then the COMPLETED checkpoint throws: only the transaction takes the cursors back. */
+    private function refuseTheCheckpointAfterTheWrite(): void
     {
-        DB::connection()->beforeExecuting(function (string $query): void {
-            if (preg_match('/^UPDATE `group_members`/', $query)) {
+        $written = false;
+        $thrown = false;
+        DB::connection()->beforeExecuting(function (string $query) use (&$written, &$thrown): void {
+            $written = $written || str_starts_with($query, 'UPDATE `group_members`');
+            if ($written && ! $thrown && preg_match('/^(update|insert into) [`"]openpne4_upgrade_state[`"]/', $query)) {
+                $thrown = true; // once: the FAILED checkpoint that follows must get through
                 throw new RuntimeException('refused');
             }
         });

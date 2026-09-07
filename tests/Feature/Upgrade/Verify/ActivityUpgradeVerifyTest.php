@@ -87,12 +87,13 @@ class ActivityUpgradeVerifyTest extends TestCase
     {
         // Switching the site language or moving it after the upgrade is not drift.
         config(['openpne.site_locale' => 'ja']);
-        URL::forceRootUrl('http://moved.example');
+        URL::forceRootUrl('https://moved.example');
+        URL::forceScheme('https'); // forceRootUrl pins the host only: TLS added after the upgrade must not read as drift
 
         [$report, $out] = $this->verify();
 
         $this->assertStringContainsString('PASS activity_template:timeline_posts', $out);
-        $this->assertSame('http://moved.example', URL::to('/'));
+        $this->assertSame('https://moved.example', URL::to('/'));
     }
 
     public function test_a_template_body_that_is_not_the_render_and_a_missing_pass_checkpoint_fail(): void

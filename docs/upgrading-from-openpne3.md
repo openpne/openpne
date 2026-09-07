@@ -180,8 +180,8 @@ Read-only, and takes the same option you upgraded with. It does not trust what t
 it re-counts the source and the target independently, and fails if any check fails. It checks that
 each step's source rows, the number it recorded, and the rows it owns in the target all agree; that
 every file has its bytes at the right length and pointing at the right place; that every migrated
-template activity holds the line the upgrade renders for it; that no group membership sits behind
-its group's latest migrated message; and that no OpenPNE 3 password hash is left behind. The template
+template activity holds the line the upgrade renders for it; that every group membership is read up to
+its group's migrated talk (a message read since counts, the untouched default does not); and that no OpenPNE 3 password hash is left behind. The template
 lines are compared against a fresh render, so leave the site's terms as they were until verification
 passes (the language and address it was upgraded under are remembered); a term renamed later makes
 this check report the lines it touched.
