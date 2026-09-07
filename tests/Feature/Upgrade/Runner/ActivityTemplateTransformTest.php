@@ -111,6 +111,26 @@ class ActivityTemplateTransformTest extends TestCase
         $this->assertContains('SKIP activity_template_timeline_posts: already completed', $this->runPass(['timeline_posts']));
     }
 
+    public function test_a_resume_renders_under_the_locale_and_url_the_first_run_recorded(): void
+    {
+        $member = Member::factory()->create();
+        foreach ([1, 2] as $id) {
+            $this->seedActivity($id, $member->id, ['body' => '[Diary] a'] + $this->templateRow('diary', ['%1%' => 'a'], "@diary_show?id={$id}"));
+            TimelinePost::factory()->create(['id' => $id, 'member_id' => $member->id, 'body' => '[Diary] a']);
+        }
+        // Chunk 1 rendered under (en, http://sns.example); the operator then changed the site before resuming.
+        UpgradeState::create(['step_key' => 'activity_template_timeline_posts', 'status' => UpgradeState::STATUS_FAILED,
+            'metadata' => ['last_id' => 1, 'kept' => [], 'rendered' => 1, 'locale' => 'en', 'root_url' => 'http://sns.example']]);
+        config(['openpne.site_locale' => 'ja']);
+        URL::forceRootUrl('https://moved.example');
+        URL::forceScheme('https');
+
+        $this->runPass(['timeline_posts']);
+
+        $this->assertSame("[Diary] a\nhttp://sns.example/diary/2", TimelinePost::find(2)->body);
+        $this->assertSame('https://moved.example', URL::to('/')); // the live generator is handed back as it was
+    }
+
     public function test_only_tables_owned_by_the_run_are_touched_and_plan_writes_nothing(): void
     {
         $member = Member::factory()->create();
