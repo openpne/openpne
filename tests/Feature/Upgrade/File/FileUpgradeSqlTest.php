@@ -34,9 +34,8 @@ class FileUpgradeSqlTest extends TestCase
         'message',
         'message_type',
         'banner_image',
-        // Not read by the owner CASE; seeded so a file only an unstepped table points at is shown to
-        // stay ownerless.
         'activity_image',
+        'activity_data',
     ];
 
     protected function setUp(): void
@@ -204,16 +203,36 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 41, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
-    public function test_a_file_only_an_unowned_source_points_at_is_migrated_ownerless(): void
+    public function test_an_activity_image_is_owned_by_where_its_thread_lands(): void
     {
-        $this->seedFile(50);
-        // activity_image rows are not migrated and carry no owner mapping, so a file only
-        // it points at keeps a null owner — the FileUpgrade fail-closed default.
-        DB::table('activity_image')->insert(['id' => 1, 'activity_data_id' => 7, 'mime_type' => 'image/png', 'uri' => null, 'file_id' => 50, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        DB::table('community')->insert(['id' => 5, 'name' => 'c', 'file_id' => null, 'community_category_id' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        // 7: a timeline thread; 8: a reply in a community thread; 9: a thread scoped to a diary (not migrated).
+        $this->seedActivity(7, null);
+        $this->seedActivity(70, 'community', 5);
+        $this->seedActivity(8, null, replyTo: 70);
+        $this->seedActivity(9, 'diary', 1);
+        $this->seedActivity(10, 'community', 5, publicFlag: 2); // a friends-only community thread has no talk landing
+        foreach ([[1, 7, 50], [2, 8, 51], [3, 9, 52], [4, 10, 53]] as [$id, $activityId, $fileId]) {
+            $this->seedFile($fileId);
+            DB::table('activity_image')->insert(['id' => $id, 'activity_data_id' => $activityId, 'mime_type' => 'image/png', 'uri' => null, 'file_id' => $fileId, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        }
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('files', ['id' => 50, 'related_entity_type' => null, 'related_entity_id' => null]);
+        $this->assertDatabaseHas('files', ['id' => 50, 'related_entity_type' => 'timelinePost', 'related_entity_id' => 7]);
+        $this->assertDatabaseHas('files', ['id' => 51, 'related_entity_type' => 'groupMessage', 'related_entity_id' => 8]);
+        // No arm claims it, so the FileUpgrade fail-closed default stays.
+        $this->assertDatabaseHas('files', ['id' => 52, 'related_entity_type' => null, 'related_entity_id' => null]);
+        $this->assertDatabaseHas('files', ['id' => 53, 'related_entity_type' => null, 'related_entity_id' => null]);
+    }
+
+    private function seedActivity(int $id, ?string $foreignTable, ?int $foreignId = null, ?int $replyTo = null, int $publicFlag = 1): void
+    {
+        DB::table('activity_data')->insert([
+            'id' => $id, 'member_id' => 1, 'in_reply_to_activity_id' => $replyTo, 'body' => 'b', 'uri' => null, 'public_flag' => $publicFlag,
+            'is_pc' => 1, 'is_mobile' => 1, 'source' => null, 'source_uri' => null, 'foreign_table' => $foreignTable, 'foreign_id' => $foreignId,
+            'template' => null, 'template_param' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00',
+        ]);
     }
 
     private function runUpgrade(): void

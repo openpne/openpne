@@ -86,7 +86,8 @@ interactive content. The mention reads as text in the preview and links in the t
 
 ## OpenPNE 3 mentions are not migrated
 
-The upgrade carries a timeline body over verbatim and writes no mention rows. The feature was
+The upgrade carries a hand-written timeline body over verbatim (a template line is re-rendered, see
+above) and writes no mention rows. The feature was
 removed from OpenPNE 3 itself: the structured storage lost its callers in 2012, the
 screen-name settings UI and the mentions gadget went in 2013, and what remains renders `@text` as
 plain text — the list templates never linkify it, and the one index that would have fed a mentions
@@ -249,6 +250,17 @@ by ordinary navigation. Three things it deliberately does not do:
   "what I have plus twenty"; this asks for all of them, as the thread page already shows all of them.
   A long thread therefore answers with a long fragment, with no cap — an L3 difference, and the same
   unbounded response the thread page has always served.
+
+## OpenPNE 3 activity rows
+
+The upgrade lands `activity_data` here by thread root: an unscoped thread becomes posts and
+replies (ids verbatim, a reply attached to the root with the root's visibility), a community
+thread becomes that group's talk, and the rest is counted and left behind
+([upgrade](upgrade.md#activity-threads)). A template line — the row OpenPNE 3's diary and
+community-topic plugins wrote on creation — is rewritten after the copy into the same body
+`Announcement` writes today, in the site's base locale with the record's link, so an old line and a
+new one read alike; a row whose template, parameters or `uri` cannot be read keeps its stored body.
+`openpne:timeline-backfill-hashtags` runs afterwards over the timeline rows only.
 
 ## The community timeline was replaced by group talk
 

@@ -113,9 +113,11 @@ Writes nothing. It prints the SQL each step would run, and — the part worth re
 **`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive:
 a required table or column missing (an older or customised OpenPNE 3), a plugin whose tables are
 only partly present, files whose bytes are missing, two mail translations that would land on the same
-template and locale, or a diary, message, topic or event belonging to a member who never finished
-registering (see [Members who never finished registering](#members-who-never-finished-registering)).
-Fix the source and dry-run again.
+template and locale, a diary, message, topic, event or timeline post belonging to a member who never
+finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
+a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
+attached files, or a file that two records point at (OpenPNE 4 gives a file one owner, so one
+record's readers would see it from the other's page). Fix the source and dry-run again.
 
 **`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
 
@@ -124,6 +126,12 @@ Fix the source and dry-run again.
 | A `name` the upgrade does not recognise, with a row count | A third-party plugin or a local customisation put it there. OpenPNE 4 has no home for it, so those rows are not migrated. |
 | A mail template that does not render | An admin customised it into something OpenPNE 4 cannot render, or it links through an OpenPNE 3 address that no longer exists. |
 | A mail translation in a locale OpenPNE 4 never reads | It migrates but is never sent: OpenPNE 4 sends each recipient `ja` or `en`. |
+| Timeline replies answering another reply, or nested deeper than 4 | OpenPNE 4 threads are one level deep. A reply to a reply is attached to the thread's first post (where OpenPNE 3 showed it too); one nested deeper than 4 is not migrated — point its `in_reply_to_activity_id` at the first post in the source to carry it. |
+| Timeline replies whose parent row is missing | An incomplete dump (OpenPNE 3 deletes a reply with its parent). Each is migrated as a post of its own. |
+| Community timeline threads whose community is gone, or that were not posted to every member | Not migrated: a group's talk belongs to a group, and holds no per-message audience. The friends-only and private community posts OpenPNE 3 allowed have nowhere to land. |
+| Timeline threads scoped to something other than a community, or replies scoped differently from their thread | A thread lands where its first post does; any other scope is not migrated. |
+| Activity images held only as a URL | OpenPNE 4 keeps an image as a file, so these are not migrated. |
+| Template activities (`diary` / `community_topic` / `community_event`), with where they land | The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; a template OpenPNE 4 does not know keeps its stored text. |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
 cutover. A template OpenPNE 4 cannot parse, one using something it does not allow, or one linking to
@@ -171,8 +179,12 @@ $ php artisan openpne:verify-upgrade
 Read-only, and takes the same option you upgraded with. It does not trust what the upgrade reported:
 it re-counts the source and the target independently, and fails if any check fails. It checks that
 each step's source rows, the number it recorded, and the rows it owns in the target all agree; that
-every file has its bytes at the right length and pointing at the right place; and that no OpenPNE 3
-password hash is left behind.
+every file has its bytes at the right length and pointing at the right place; that every migrated
+template activity holds the line the upgrade renders for it; that every group membership is read up to
+its group's migrated talk (a message read since counts, the untouched default does not); and that no OpenPNE 3 password hash is left behind. The template
+lines are compared against a fresh render, so leave the site's terms as they were until verification
+passes (the language and address it was upgraded under are remembered); a term renamed later makes
+this check report the lines it touched.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a
 source table was not what you assumed, or because it matched no rows — reports the same pass as one
@@ -183,6 +195,14 @@ $ php artisan openpne:verify-upgrade | grep ': 0 rows'
 ```
 
 (`--json` emits the same report as JSON if you would rather consume it from a script.)
+
+Then index the hashtags of the migrated timeline posts, which the copy carries as plain text:
+
+```console
+$ php artisan openpne:timeline-backfill-hashtags
+```
+
+It is safe to run again, and only the timeline is indexed — a group's talk never parses hashtags.
 
 Some are expected: a step carries an OpenPNE 3 plugin your site never installed, or a setting whose
 absence already means what you want. The rest are the ones to look into. That judgement is yours —
@@ -220,6 +240,18 @@ change from a problem when you go through it.
   OpenPNE 4 renders them. Worth reading once to see how they came out.
 - **Mail templates** — any warning you have not resolved yet is still unresolved here; stage 3 covers
   where to fix it so the fix is still there after the cutover.
+- **Timeline** — OpenPNE 3's activities arrive as timeline posts and replies with their dates and
+  audiences, a reply attached to its thread's first post with that post's audience. The lines the
+  diary and community-topic plugins wrote on creation are rewritten into the OpenPNE 4 wording with
+  a link to the record — so run the upgrade with `APP_URL` already set to the address the site will
+  live at, since those links are stored. Whether new diaries, topics and events keep announcing
+  themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
+- **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
+  the group to everyone who may open the group today, including messages by people who have since
+  left it and by people who have blocked the reader (OpenPNE 3 hid both); each member starts with the
+  talk read up to its latest message, so nothing arrives marked unread. Messages the old
+  community timeline showed to friends only, to their author alone or to everyone on the web, and
+  the timelines of communities already deleted, are not carried (the dry run counts them).
 - **Member count** — expect it to be lower than the number of rows in OpenPNE 3's `member` table, and
   to match what OpenPNE 3's own member list showed. The difference is the registrations below.
 

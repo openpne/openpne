@@ -15,6 +15,8 @@ use App\Upgrade\Steps\GroupCategoryUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
+use App\Upgrade\Steps\TimelinePostUpgrade;
+use App\Upgrade\Steps\TimelineReplyUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +34,7 @@ class InactiveMemberPreflightTest extends TestCase
 
     private const SOURCE_TABLES = ['member', 'diary', 'diary_image', 'member_relationship', 'message', 'message_type',
         'message_send_list', 'deleted_message', 'community', 'community_config', 'community_category',
-        'community_member', 'community_member_position', 'member_config'];
+        'community_member', 'community_member_position', 'member_config', 'activity_data', 'activity_image'];
 
     protected function setUp(): void
     {
@@ -81,6 +83,29 @@ class InactiveMemberPreflightTest extends TestCase
 
         $this->assertTrue($ok, $output);
         $this->assertDatabaseCount('diaries', 1);
+    }
+
+    public function test_an_activity_is_counted_over_every_landing_not_the_first_steps_filter(): void
+    {
+        // TimelinePostUpgrade is the first step FROM activity_data and takes only thread starters; a
+        // reply by an inactive member reaches a target column through TimelineReplyUpgrade.
+        $this->createSources('member', 'activity_data', 'activity_image', 'community');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        Member::factory()->create(['id' => 1]);
+        $this->seedActivity(10, memberId: 1);
+        $this->seedActivity(11, memberId: 2, replyTo: 10);
+        $this->seedActivity(12, memberId: 2, foreignTable: 'diary'); // not migrated, so not an abort
+
+        [$ok, $output] = $this->runSteps([new TimelinePostUpgrade, new TimelineReplyUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('activity_data.member_id', 1), $output);
+
+        DB::table('activity_data')->where('id', 11)->delete();
+        [$ok, $output] = $this->runSteps([new TimelinePostUpgrade, new TimelineReplyUpgrade]);
+
+        $this->assertTrue($ok, $output);
     }
 
     public function test_a_rows_own_step_filter_scopes_the_count(): void
@@ -352,6 +377,15 @@ class InactiveMemberPreflightTest extends TestCase
     {
         DB::table('member')->insert(['id' => $id, 'name' => "Member {$id}", 'is_login_rejected' => 0,
             'is_active' => $isActive, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
+    }
+
+    private function seedActivity(int $id, int $memberId, ?int $replyTo = null, ?string $foreignTable = null): void
+    {
+        DB::table('activity_data')->insert([
+            'id' => $id, 'member_id' => $memberId, 'in_reply_to_activity_id' => $replyTo, 'body' => 'b', 'uri' => null, 'public_flag' => 1,
+            'is_pc' => 1, 'is_mobile' => 1, 'source' => null, 'source_uri' => null, 'foreign_table' => $foreignTable, 'foreign_id' => $foreignTable === null ? null : 1,
+            'template' => null, 'template_param' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00',
+        ]);
     }
 
     private function seedDiary(int $id, int $memberId): void

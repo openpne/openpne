@@ -2,6 +2,7 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\ActivityThread;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 
@@ -72,13 +73,16 @@ final class ActiveMember
             // older admin_confirm duplicate is never read at all.
             'community_member_position.member_id' => ['treatment' => self::REFUSE,
                 'scope' => GroupUpgrade::pendingAdminRowSelector(), 'scopeColumns' => ['id', 'name', 'community_id']],
+            // Three steps select FROM activity_data under different filters and fromStepFilter() would
+            // count only the first, so the scope is every row some landing copies.
+            'activity_data.member_id' => ['treatment' => self::REFUSE,
+                'scope' => ActivityThread::migrated('activity_data'), 'scopeColumns' => ['id', 'in_reply_to_activity_id', 'foreign_table', 'foreign_id', 'public_flag']],
 
             // --- UNUSED: no member id reaches a target row through these ---
             'member.invite_member_id' => ['treatment' => self::UNUSED,
                 'reason' => 'Gapped by MemberUpgrade: the inviter is not carried, so no target column holds it.'],
             'deleted_message.member_id' => ['treatment' => self::UNUSED,
                 'reason' => "Correlates a message's trash/purge state with its own sender; produces a timestamp, not a member id."],
-            'activity_data.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (the timeline is not migrated).'],
             'diary_comment_unread.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (per-member read state is not migrated).'],
             'diary_comment_update.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (per-member read state is not migrated).'],
             'nice.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (opLikePlugin has no OpenPNE 4 counterpart yet).'],

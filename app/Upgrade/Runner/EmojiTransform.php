@@ -35,6 +35,8 @@ final class EmojiTransform
         'group_events' => ['name', 'body', 'open_date_comment', 'area'],
         'group_event_comments' => ['body'],
         'direct_messages' => ['subject', 'body'],
+        'timeline_posts' => ['body'],
+        'group_messages' => ['body'],
     ];
 
     // Double-escaped so the MySQL string literal yields `\[` and `\]` for the regex engine, literal

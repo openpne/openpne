@@ -162,9 +162,11 @@ no-op; the count simply falls as the row stops existing.
 [`TalkReadCursor::snapshot()`](../../app/Features/GroupTalk/TalkReadCursor.php) reads the group's
 newest live message and every membership-creating path writes it: group creation, open join,
 join-request approval, and the bulk add-all. (Registration does not auto-join default groups, so
-there is no fifth path; the OpenPNE 3 upgrade is exempt by
-[`GroupMemberUpgrade::targetDefaults()`](../../app/Upgrade/Steps/GroupMemberUpgrade.php), since an
-upgraded site has no talk yet and the history transfer re-establishes cursors afterwards.)
+there is no fifth path.) The OpenPNE 3 upgrade copies memberships before messages, so
+[`GroupMemberUpgrade::targetDefaults()`](../../app/Upgrade/Steps/GroupMemberUpgrade.php) leaves the
+columns at their defaults and the `TalkReadCursorBackfill` pass writes the same tuple once the
+history is in — a bulk initialization before any native write, not an `advance()`
+([upgrade](upgrade.md#post-walk-passes)), and `openpne:verify-upgrade` re-checks it.
 
 The columns' DB defaults (`useCurrent()`, `0`) are a **backstop for paths this helper cannot reach,
 not the initialization**. `(now(), 0)` is not the same boundary as the real latest tuple: a MySQL
@@ -803,9 +805,8 @@ A refusal is always 404, so whether a group has a conversation is not observable
 
 ### History carries no per-row filter
 
-This is a contract, not an omission. `TimelineFeedScope::applyGroup()` filters a group feed row by
-row: the author must still be a member, and must not have blocked the viewer. **Talk applies
-neither**, and shows every surviving row.
+This is a contract, not an omission. The OpenPNE 3 community feed filtered a row by its author: still
+a member, and not having blocked the viewer. **Talk applies neither**, and shows every surviving row.
 
 Two reasons. The precedent for content that belongs to a place is topic and event comments, which
 have never filtered on either count. And a conversation with holes in it is not the conversation
@@ -813,8 +814,8 @@ that happened — removing one side of an exchange leaves the other side answeri
 
 Blocking keeps working where a block is about people rather than about a room: mention delivery,
 mention candidates, and member pages. Talk therefore shows two classes of row the community feed it
-replaced used to hide — posts by authors who have since left the group, and posts by authors in a
-block relationship with the viewer. That is the contract, not an oversight.
+replaced used to hide — posts by authors who have since left the group, and posts by authors who have
+blocked the viewer. That is the contract, not an oversight.
 
 Because a page renders a whole conversation, the per-message questions ("is this mine", "may I delete
 it") must not each cost a query:

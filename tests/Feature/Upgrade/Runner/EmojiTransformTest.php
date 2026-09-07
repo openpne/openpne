@@ -6,7 +6,9 @@ use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Models\GroupMessage;
 use App\Models\Member;
+use App\Models\TimelinePost;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
@@ -64,6 +66,17 @@ class EmojiTransformTest extends TestCase
         foreach (['emoji_members', 'emoji_diaries', 'emoji_direct_messages', 'emoji_group_events'] as $key) {
             $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => $key, 'status' => UpgradeState::STATUS_COMPLETED]);
         }
+    }
+
+    public function test_converts_the_timeline_and_talk_bodies(): void
+    {
+        $post = TimelinePost::factory()->create(['body' => 'p[i:1]']);
+        $message = GroupMessage::factory()->create(['body' => 'm[i:98]']);
+
+        $this->runTransform(['timeline_posts', 'group_messages']);
+
+        $this->assertSame('p'.EmojiMap::convert('[i:1]'), $post->fresh()->body);
+        $this->assertSame('m'.EmojiMap::convert('[i:98]'), $message->fresh()->body);
     }
 
     public function test_unmapped_codes_stay_literal_and_codeless_rows_are_untouched(): void

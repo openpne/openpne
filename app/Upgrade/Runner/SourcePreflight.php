@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Upgrade\ActiveMember;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\UpgradeStep;
@@ -24,6 +25,9 @@ final class SourcePreflight
      * counted. Both are read by correlated subquery, so their `name` is also required structurally.
      */
     private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
+
+    /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */
+    private const PASS_READ_COLUMNS = ['activity_data' => ['template', 'template_param', 'uri']];
 
     /**
      * The source tables scanned for names the upgrade does not recognise, each with the one name prefix
@@ -178,15 +182,19 @@ final class SourcePreflight
         // A REFUSE check resolves against `member` even when no step's own SQL names it (a content step
         // has no guard), so declaring it here makes a source without it abort on the structural check
         // instead of mid-count.
+        $extra = [];
         foreach (ActiveMember::references() as $reference => $meta) {
             [$table] = explode('.', $reference);
             if ($meta['treatment'] === ActiveMember::REFUSE && isset($tables[$table])) {
-                $tables['member'] = true;
-                break;
+                $extra['member'] = true;
+                // A scope's own subquery tables likewise: the count reads them after the verdict.
+                foreach (SourceRef::tablesIn($meta['scope'] ?? '') as $scopeTable) {
+                    $extra[$scopeTable] = true;
+                }
             }
         }
 
-        return array_keys($tables);
+        return array_keys($tables + $extra);
     }
 
     /**
@@ -216,6 +224,17 @@ final class SourcePreflight
         // `member` by subquery; a REFUSE table may be no step's FROM), so they are required here instead
         // of surfacing as a SQL exception or a silent count.
         $readTables = $this->readTables();
+
+        // The post-walk template pass and its verify check SELECT these themselves, so no step
+        // attributes them; a pre-3.6 core has no template columns and would fail after the walk.
+        foreach (self::PASS_READ_COLUMNS as $table => $columns) {
+            if (isset($present[$table]) && in_array($table, $readTables, true)) {
+                foreach ($columns as $column) {
+                    $required[$table][$column] = true;
+                }
+            }
+        }
+
         $readsMember = false;
 
         foreach ($this->steps as $step) {
