@@ -43,7 +43,8 @@ class FileUpgrade extends UpgradeStep
 
     /**
      * The OpenPNE 3 `table.file_id` references this step assigns an owner to, keyed by "table.column"
-     * for the coverage audit. Each value is the morph alias plus the columns the owner id is read from:
+     * (suffixed "#type" where one column is owned by several types with disjoint `extra`s) for the
+     * coverage audit. Each value is the morph alias plus the columns the owner id is read from:
      * `id` the owner-id source column, optional `extra` an extra correlation appended to the WHERE.
      *
      * @return array<string, array{type: string, table: string, file: string, id: string, extra?: string}>
@@ -69,7 +70,27 @@ class FileUpgrade extends UpgradeStep
             // The banner image row itself is the owner (groups/messages own by the parent id;
             // banners own through the banner_image pool, mirroring how the app stores them).
             'banner_image.file_id' => ['type' => 'bannerImage', 'table' => 'banner_image', 'file' => 'file_id', 'id' => 'id'],
+            // An activity image is owned by the post or talk message its thread lands as (ActivityThread);
+            // an image whose activity is not migrated matches neither arm and keeps the null owner.
+            'activity_image.file_id#timelinePost' => ['type' => 'timelinePost', 'table' => 'activity_image', 'file' => 'file_id', 'id' => 'activity_data_id',
+                'extra' => ' AND '.ActivityThread::imageOf(ActivityThread::landsOnTimeline('activity_data'))],
+            'activity_image.file_id#groupMessage' => ['type' => 'groupMessage', 'table' => 'activity_image', 'file' => 'file_id', 'id' => 'activity_data_id',
+                'extra' => ' AND '.ActivityThread::imageOf(ActivityThread::landsInGroup('activity_data'))],
         ];
+    }
+
+    /**
+     * One reference's owner rows as a SELECT of file_id / owner_type / owner_id, for a query over every
+     * owner at once (the shared-file preflight).
+     *
+     * @param  array{type: string, table: string, file: string, id: string, extra?: string}  $reference
+     */
+    public static function ownerRowsSelect(array $reference): string
+    {
+        return sprintf(
+            "SELECT `%2\$s`.`%3\$s` AS `file_id`, '%4\$s' AS `owner_type`, `%2\$s`.`%5\$s` AS `owner_id` FROM %1\$s AS `%2\$s` WHERE `%2\$s`.`%3\$s` IS NOT NULL%6\$s",
+            SourceRef::table($reference['table']), $reference['table'], $reference['file'], $reference['type'], $reference['id'], $reference['extra'] ?? '',
+        );
     }
 
     /** CASE returning the morph alias of the owning entity, or NULL when none owns the file. */

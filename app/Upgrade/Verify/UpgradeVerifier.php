@@ -62,6 +62,10 @@ final class UpgradeVerifier
             $this->verifyFileBin($report, $out);
         }
 
+        if ($this->readsSourceTable('activity_data')) {
+            (new ActivityTemplateCheck)->verify($options, $this->targetTables(), fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail));
+        }
+
         $this->verifyPasswords($report, $out);
 
         return $report;
@@ -212,5 +216,16 @@ final class UpgradeVerifier
     private function targetTables(): array
     {
         return array_values(array_unique(array_map(static fn (UpgradeStep $s): string => $s->targetTable(), $this->steps())));
+    }
+
+    private function readsSourceTable(string $table): bool
+    {
+        foreach ($this->steps() as $step) {
+            if ($step->sourceTable() === $table) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -52,6 +52,9 @@ use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
+use App\Upgrade\Steps\TimelinePostImageUpgrade;
+use App\Upgrade\Steps\TimelinePostUpgrade;
+use App\Upgrade\Steps\TimelineReplyUpgrade;
 
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
 final class StepRegistry
@@ -87,6 +90,10 @@ final class StepRegistry
             DiaryUpgrade::class,
             // diary_comments.diary_id references diaries.id, so comments run after diaries.
             DiaryCommentUpgrade::class,
+            // timeline_posts reference members; a reply references its root through the cascading
+            // self-FK, so the thread starters run first (ActivityThread decides which rows are which).
+            TimelinePostUpgrade::class,
+            TimelineReplyUpgrade::class,
             // Profile definitions before member values (FK order: a member_profile row
             // references profiles and profile_options).
             ProfileUpgrade::class,
@@ -138,6 +145,7 @@ final class StepRegistry
             GroupTopicCommentImageUpgrade::class,
             GroupEventImageUpgrade::class,
             GroupEventCommentImageUpgrade::class,
+            TimelinePostImageUpgrade::class,
             // banner_images reference files; banner_use_images reference banners and banner_images.
             BannerUpgrade::class,
             BannerImageUpgrade::class,
@@ -170,7 +178,6 @@ final class StepRegistry
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
             // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
-            'activity_image' => 'OpenPNE 3 activity (timeline) images. The activity rows themselves are not migrated, so there is no owner to point at; the binaries are kept with a null owner.',
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];
     }

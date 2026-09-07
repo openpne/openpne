@@ -70,17 +70,26 @@ final class UpgradeRunner
             ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase))
             : [];
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors) as $error) {
+        // The activity routing's counts and the one-owner-per-file count, both reading rows the
+        // structural verdict guards; their errors are rows a step would fail on mid-run.
+        $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
+            ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
+            : new ActivityPreflightReport([], []);
+        $sharedFileError = $migratesFiles && ! $report->hasErrors()
+            ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+            : null;
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : []) as $error) {
             $out("ERROR {$error}");
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach ($mailReport->warnings as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== []) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
@@ -114,6 +123,7 @@ final class UpgradeRunner
                 $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
             (new PasswordWrap)->plan($out);
+            (new ActivityTemplateTransform)->plan($out);
             (new EmojiTransform)->plan($out);
             (new SitePolicyMarkdownTransform)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
@@ -147,6 +157,12 @@ final class UpgradeRunner
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
             if ($walked) {
                 $walked = (new PasswordWrap)->run($this->targetTables(), $out);
+            }
+
+            // Render the template activities after the walk: PHP over serialized parameters, and the
+            // source is read again for them.
+            if ($walked) {
+                $walked = (new ActivityTemplateTransform)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
             }
 
             // Rewrite carrier-emoji codes to Unicode after the walk: the mapping is per-row PHP, not
@@ -415,5 +431,16 @@ final class UpgradeRunner
         }
 
         return false;
+    }
+
+    /** @return list<string> */
+    private function readSourceTables(): array
+    {
+        $tables = [];
+        foreach ($this->steps() as $step) {
+            $tables = array_merge($tables, $step->readSourceTables());
+        }
+
+        return array_values(array_unique($tables));
     }
 }

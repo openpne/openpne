@@ -142,7 +142,11 @@ class UpgradeMatrixAuditTest extends TestCase
         // would be silently dropped.
         $references = SourceSchema::default()->fileReferencingColumns();
 
-        $owned = array_keys((new FileUpgrade)->ownedFileReferences());
+        // From the spec, not the key: one column owned by two types is keyed "table.column#type".
+        $owned = array_values(array_unique(array_map(
+            static fn (array $spec): string => "{$spec['table']}.{$spec['file']}",
+            (new FileUpgrade)->ownedFileReferences(),
+        )));
         $unsteppedTables = array_keys(StepRegistry::unsteppedSourceTables());
         $unowned = array_keys(StepRegistry::unownedFileColumns());
 

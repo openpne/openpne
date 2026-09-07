@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Upgrade\ActiveMember;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\UpgradeStep;
@@ -182,7 +183,10 @@ final class SourcePreflight
             [$table] = explode('.', $reference);
             if ($meta['treatment'] === ActiveMember::REFUSE && isset($tables[$table])) {
                 $tables['member'] = true;
-                break;
+                // A scope's own subquery tables likewise: the count reads them after the verdict.
+                foreach (SourceRef::tablesIn($meta['scope'] ?? '') as $scopeTable) {
+                    $tables[$scopeTable] = true;
+                }
             }
         }
 
