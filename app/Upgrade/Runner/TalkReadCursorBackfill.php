@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\Upgrade\Runner;
 
-use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\UpgradeState;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Post-walk pass writing each migrated membership's talk read cursor as TalkReadCursor::snapshot()
- * of its group, the tuple a join writes, once the messages have landed (docs/internals/upgrade.md,
- * "Post-walk passes"). A bulk initialization before any native write, not a forward-only advance():
- * the tuple is a function of the migrated rows, so a rescan writes the same one.
+ * Post-walk pass writing each migrated membership's talk read cursor as the tuple a join writes,
+ * TalkReadCursor::snapshot()'s `(created_at DESC, id DESC)` pick, in one statement once the messages
+ * have landed (docs/internals/upgrade.md, "Post-walk passes"). A bulk initialization before any
+ * native write, not a forward-only advance(): the tuple is a function of the migrated rows.
  */
 final class TalkReadCursorBackfill
 {
@@ -78,14 +77,13 @@ final class TalkReadCursorBackfill
     /** @return int memberships written; a group with no message keeps the schema default */
     private function backfill(): int
     {
-        $updated = 0;
-        foreach (DB::table('group_messages')->distinct()->orderBy('group_id')->pluck('group_id') as $groupId) {
-            $updated += DB::table('group_members')
-                ->where('group_id', $groupId)
-                ->update(TalkReadCursor::snapshot((int) $groupId));
-        }
+        $latest = static fn (string $column): string => "(SELECT `m`.`{$column}` FROM `group_messages` AS `m`"
+            .' WHERE `m`.`group_id` = `group_members`.`group_id` ORDER BY `m`.`created_at` DESC, `m`.`id` DESC LIMIT 1)';
 
-        return $updated;
+        return DB::update(
+            'UPDATE `group_members` SET `talk_read_at` = '.$latest('created_at').', `talk_read_message_id` = '.$latest('id')
+            .' WHERE EXISTS (SELECT 1 FROM `group_messages` AS `m` WHERE `m`.`group_id` = `group_members`.`group_id`)'
+        );
     }
 
     private function isCompleted(): bool

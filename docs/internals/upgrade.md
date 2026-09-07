@@ -144,7 +144,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | Pass | Why after the walk | Resume model |
 |---|---|---|
 | `PasswordWrap` | bcrypt is not computable in SQL | the bare-MD5 predicate never matches a wrapped row, so rescanning is idempotent |
-| `ActivityTemplateTransform` | the OpenPNE 3 template lines carry PHP-serialized parameters; the body is re-derived from them and `uri` by `ActivityTemplateRenderer` (the same `Announcement` a new record gets), in the site's base locale, in `timeline_posts` and `group_messages` alike | id cursor plus the per-reason kept counts, committed with each chunk; the body is a function of the source row, so a restart from 0 rewrites the same text. Runs before the emoji pass because the parameters carry carrier codes, which `Announcement` converts itself |
+| `ActivityTemplateTransform` | the OpenPNE 3 template lines carry PHP-serialized parameters; the body is re-derived from them and `uri` by `ActivityTemplateRenderer` (the same `Announcement` a new record gets), in the site's base locale, in `timeline_posts` (cut to 140 code points) and `group_messages` (the talk body length, so never cut) alike | id cursor plus the per-reason kept counts, committed with each chunk; the body is a function of the source row, so a restart from 0 rewrites the same text. Runs before the emoji pass because the parameters carry carrier codes, which `Announcement` converts itself |
 | `EmojiTransform` | per-row PHP mapping; 16 carrier-logo ids stay literal | id cursor in `metadata.last_id`, because a "contains a code" predicate never drains |
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
 | `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes `TalkReadCursor::snapshot()` per group once they have landed | a function of the migrated rows, so a rescan writes the same tuple; every group and the COMPLETED checkpoint commit in one transaction |
@@ -178,7 +178,9 @@ Check A, per step: source rows under `effectiveFilter()` == recorded `rows_affec
 rows under `targetFilter()`; a FROM or filter-subquery table that is an absent optional plugin
 counts as 0. `ActivityTemplateCheck` re-derives every migrated template row from the source and
 compares it with the stored body (a rendered row must hold the render, a kept row its stored body
-after the emoji pass), and fails when the template pass has no completed checkpoint. Check B: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and
+after the emoji pass), and fails when the template pass has no completed checkpoint. `TalkReadCursorCheck` requires no
+membership to sit behind its group's latest *migrated* message (later messages and cursors moved past
+are the site's own), and the backfill's completed checkpoint. Check B: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and
 the FK is rewired. Check C: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and
 no unknown scheme exists.
 

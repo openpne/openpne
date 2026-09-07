@@ -180,8 +180,11 @@ Read-only, and takes the same option you upgraded with. It does not trust what t
 it re-counts the source and the target independently, and fails if any check fails. It checks that
 each step's source rows, the number it recorded, and the rows it owns in the target all agree; that
 every file has its bytes at the right length and pointing at the right place; that every migrated
-template activity holds the line the upgrade renders for it; and that no OpenPNE 3 password hash is
-left behind.
+template activity holds the line the upgrade renders for it; that no group membership sits behind
+its group's latest migrated message; and that no OpenPNE 3 password hash is left behind. The template
+lines are compared against a fresh render, so leave the site's terms as they were until verification
+passes (the language and address it was upgraded under are remembered); a term renamed later makes
+this check report the lines it touched.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a
 source table was not what you assumed, or because it matched no rows — reports the same pass as one
@@ -245,10 +248,10 @@ change from a problem when you go through it.
   themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
 - **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
   the group to everyone who may open the group today, including messages by people who have since
-  left it and by people the reader has blocked (OpenPNE 3 hid both); each member starts with the
+  left it and by people who have blocked the reader (OpenPNE 3 hid both); each member starts with the
   talk read up to its latest message, so nothing arrives marked unread. Messages the old
-  community timeline showed to friends only or to their author alone, and the timelines of
-  communities already deleted, are not carried (the dry run counts them).
+  community timeline showed to friends only, to their author alone or to everyone on the web, and
+  the timelines of communities already deleted, are not carried (the dry run counts them).
 - **Member count** — expect it to be lower than the number of rows in OpenPNE 3's `member` table, and
   to match what OpenPNE 3's own member list showed. The difference is the registrations below.
 

@@ -55,13 +55,14 @@ class ActivityTemplateTransformTest extends TestCase
         $this->seedActivity(5, $member->id, ['body' => '[Community Topic] t', 'foreign_table' => 'community', 'foreign_id' => $group->id]
             + $this->templateRow('community_topic', ['%1%' => 'Runners', '%2%' => 'Marathon'], '@communityTopic_show?id=7'));
         foreach ([1, 2, 3, 4] as $id) {
-            TimelinePost::factory()->create(['id' => $id, 'member_id' => $member->id, 'body' => DB::table('activity_data')->where('id', $id)->value('body')]);
+            TimelinePost::factory()->create(['id' => $id, 'member_id' => $member->id, 'body' => DB::table('activity_data')->where('id', $id)->value('body'), 'updated_at' => '2015-05-06 07:08:09']);
         }
         GroupMessage::factory()->create(['id' => 5, 'group_id' => $group->id, 'member_id' => $member->id, 'body' => '[Community Topic] t']);
 
         $lines = $this->runPass(['timeline_posts', 'group_messages']);
 
         $this->assertSame("[Diary] a\nhttp://sns.example/diary/1", TimelinePost::find(1)->body);
+        $this->assertSame('2015-05-06 07:08:09', TimelinePost::find(1)->updated_at->format('Y-m-d H:i:s')); // a rewrite is not an edit
         $this->assertSame('plain', TimelinePost::find(2)->body);
         $this->assertSame('kept', TimelinePost::find(3)->body);
         $this->assertSame('kept too', TimelinePost::find(4)->body);

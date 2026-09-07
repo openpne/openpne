@@ -79,7 +79,7 @@ class TalkReadCursorBackfillTest extends TestCase
         $this->assertDatabaseMissing('group_members', ['group_id' => $group->id, 'talk_read_message_id' => $later->id]);
     }
 
-    public function test_a_failure_rolls_every_group_back_and_records_it(): void
+    public function test_a_failure_leaves_every_cursor_untouched_and_records_it(): void
     {
         [$first, $second] = Group::factory()->count(2)->create();
         $member = Member::factory()->create();
@@ -88,11 +88,12 @@ class TalkReadCursorBackfillTest extends TestCase
         foreach ([$first, $second] as $group) {
             GroupMessage::factory()->create(['group_id' => $group->id, 'member_id' => $member->id, 'created_at' => '2015-05-06 07:08:09', 'updated_at' => '2015-05-06 07:08:09']);
         }
-        $this->refuseTheSecondCursorWrite();
+        $this->refuseTheCursorWrite();
 
         $this->assertFalse($this->runPass());
 
         $this->assertDatabaseHas('group_members', ['group_id' => $first->id, 'talk_read_message_id' => 0]);
+        $this->assertDatabaseHas('group_members', ['group_id' => $second->id, 'talk_read_message_id' => 0]);
         $this->assertSame(UpgradeState::STATUS_FAILED, UpgradeState::where('step_key', 'talk_read_cursor_backfill')->value('status'));
         $this->assertStringContainsString('FAIL talk_read_cursor_backfill', implode("\n", $this->out));
     }
@@ -104,12 +105,10 @@ class TalkReadCursorBackfillTest extends TestCase
             ->update(['talk_read_at' => now(), 'talk_read_message_id' => 0]);
     }
 
-    /** The second cursor write throws, so the pass fails after the first group's write. */
-    private function refuseTheSecondCursorWrite(): void
+    private function refuseTheCursorWrite(): void
     {
-        $writes = 0;
-        DB::connection()->beforeExecuting(function (string $query) use (&$writes): void {
-            if (preg_match('/^update [`"]group_members[`"]/', $query) && ++$writes === 2) {
+        DB::connection()->beforeExecuting(function (string $query): void {
+            if (preg_match('/^UPDATE `group_members`/', $query)) {
                 throw new RuntimeException('refused');
             }
         });

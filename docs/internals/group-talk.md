@@ -162,11 +162,11 @@ no-op; the count simply falls as the row stops existing.
 [`TalkReadCursor::snapshot()`](../../app/Features/GroupTalk/TalkReadCursor.php) reads the group's
 newest live message and every membership-creating path writes it: group creation, open join,
 join-request approval, and the bulk add-all. (Registration does not auto-join default groups, so
-there is no fifth path. The OpenPNE 3 upgrade copies memberships before messages, so
+there is no fifth path.) The OpenPNE 3 upgrade copies memberships before messages, so
 [`GroupMemberUpgrade::targetDefaults()`](../../app/Upgrade/Steps/GroupMemberUpgrade.php) leaves the
-columns at their defaults and the `TalkReadCursorBackfill` pass writes the snapshot once the history
-is in — a bulk initialization before any native write, not an `advance()`
-([upgrade](upgrade.md#post-walk-passes)).)
+columns at their defaults and the `TalkReadCursorBackfill` pass writes the same tuple once the
+history is in — a bulk initialization before any native write, not an `advance()`
+([upgrade](upgrade.md#post-walk-passes)), and `openpne:verify-upgrade` re-checks it.
 
 The columns' DB defaults (`useCurrent()`, `0`) are a **backstop for paths this helper cannot reach,
 not the initialization**. `(now(), 0)` is not the same boundary as the real latest tuple: a MySQL

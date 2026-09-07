@@ -65,11 +65,15 @@ class GroupMessageUpgradeSqlTest extends TestCase
         $this->seedActivity(2, $member->id, ['in_reply_to_activity_id' => 1]); // unscoped reply under a community root
         $this->seedActivity(3, $member->id); // timeline root
         $this->seedActivity(4, $member->id, ['in_reply_to_activity_id' => 3, 'foreign_table' => 'community', 'foreign_id' => 5]);
+        Group::factory()->create(['id' => 6]);
+        $this->seedSourceCommunity(6);
+        $this->seedActivity(5, $member->id, ['in_reply_to_activity_id' => 1, 'foreign_table' => 'community', 'foreign_id' => 6]); // names another live community
 
         $this->runStep();
 
-        $this->assertSame([1, 2], DB::table('group_messages')->orderBy('id')->pluck('id')->all());
+        $this->assertSame([1, 2, 5], DB::table('group_messages')->orderBy('id')->pluck('id')->all());
         $this->assertDatabaseHas('group_messages', ['id' => 2, 'group_id' => 5, 'in_reply_to_id' => 1]);
+        $this->assertDatabaseHas('group_messages', ['id' => 5, 'group_id' => 5, 'in_reply_to_id' => 1]);
     }
 
     public function test_a_reply_whose_parent_is_missing_starts_a_thread_in_its_own_community(): void

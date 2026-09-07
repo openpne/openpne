@@ -60,14 +60,19 @@ final class ActivityTemplateTransform
     private function transformTable(string $table, int $max, string $key, string $sourcePrefix, ?string $sourceDatabase, Closure $out): bool
     {
         $renderer = app(ActivityTemplateRenderer::class);
-        $locale = SiteLocale::default();
         $source = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'activity_data');
+        $liveRootUrl = URL::to('/');
 
         try {
             $metadata = UpgradeState::query()->where('step_key', $key)->value('metadata');
-            $cursor = is_array($metadata) ? (int) ($metadata['last_id'] ?? 0) : 0;
-            $kept = is_array($metadata) ? (array) ($metadata['kept'] ?? []) : [];
-            $rendered = is_array($metadata) ? (int) ($metadata['rendered'] ?? 0) : 0;
+            $metadata = is_array($metadata) ? $metadata : [];
+            $cursor = (int) ($metadata['last_id'] ?? 0);
+            $kept = (array) ($metadata['kept'] ?? []);
+            $rendered = (int) ($metadata['rendered'] ?? 0);
+            // The render inputs are fixed on the first run and kept by a resume, so every chunk and
+            // the verify check derive the same text whatever the site runs later.
+            $locale = (string) ($metadata['locale'] ?? SiteLocale::default());
+            $rootUrl = (string) ($metadata['root_url'] ?? $liveRootUrl);
 
             UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_RUNNING,
@@ -75,7 +80,10 @@ final class ActivityTemplateTransform
                 'finished_at' => null,
                 'rows_affected' => null,
                 'error' => null,
+                'metadata' => ['last_id' => $cursor, 'kept' => $kept, 'rendered' => $rendered, 'locale' => $locale, 'root_url' => $rootUrl],
             ]);
+            URL::forceRootUrl($rootUrl);
+            URL::forceScheme(parse_url($rootUrl, PHP_URL_SCHEME) ?: null); // forceRootUrl pins the host only; the scheme follows the live request
 
             while (true) {
                 $rows = DB::select(
@@ -89,7 +97,7 @@ final class ActivityTemplateTransform
                     break;
                 }
 
-                DB::transaction(function () use ($rows, $renderer, $table, $max, $locale, $key, &$cursor, &$kept, &$rendered): void {
+                DB::transaction(function () use ($rows, $renderer, $table, $max, $locale, $rootUrl, $key, &$cursor, &$kept, &$rendered): void {
                     foreach ($rows as $row) {
                         $result = $renderer->render((string) $row->template, $row->template_param, $row->uri, $locale, $max);
 
@@ -104,9 +112,8 @@ final class ActivityTemplateTransform
                     }
 
                     $cursor = (int) end($rows)->id;
-                    // The render inputs travel with the checkpoint so verify re-renders under them, not under whatever the site runs later.
                     UpgradeState::updateOrCreate(['step_key' => $key], [
-                        'metadata' => ['last_id' => $cursor, 'kept' => $kept, 'rendered' => $rendered, 'locale' => $locale, 'root_url' => URL::to('/')],
+                        'metadata' => ['last_id' => $cursor, 'kept' => $kept, 'rendered' => $rendered, 'locale' => $locale, 'root_url' => $rootUrl],
                     ]);
                 });
             }
@@ -133,6 +140,9 @@ final class ActivityTemplateTransform
             $out("FAIL {$key}: {$e->getMessage()}");
 
             return false;
+        } finally {
+            URL::forceRootUrl($liveRootUrl);
+            URL::forceScheme(parse_url($liveRootUrl, PHP_URL_SCHEME) ?: null);
         }
     }
 
@@ -140,7 +150,7 @@ final class ActivityTemplateTransform
     {
         $why = match ($reason) {
             ActivityTemplateRenderer::UNKNOWN_TEMPLATE => 'OpenPNE 4 knows no such template',
-            ActivityTemplateRenderer::BAD_PARAMS => 'their template_param could not be read',
+            ActivityTemplateRenderer::BAD_PARAMS => 'their template_param is not the parameter set OpenPNE 3 wrote',
             ActivityTemplateRenderer::NO_LINK => 'their uri names no OpenPNE 4 page',
             ActivityTemplateRenderer::UNFIT => 'the link alone exceeds the body length',
             default => $reason,

@@ -63,7 +63,9 @@ final class UpgradeVerifier
         }
 
         if ($this->readsSourceTable('activity_data')) {
-            (new ActivityTemplateCheck)->verify($options, $this->targetTables(), fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail));
+            $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
+            (new ActivityTemplateCheck)->verify($options, $this->targetTables(), $record);
+            (new TalkReadCursorCheck)->verify($options, $this->targetTables(), $record);
         }
 
         $this->verifyPasswords($report, $out);

@@ -24,6 +24,9 @@ final class SourcePreflight
      * The KV config tables whose recognised names are enumerable, so an unrecognised one can be
      * counted. Both are read by correlated subquery, so their `name` is also required structurally.
      */
+    /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */
+    private const PASS_READ_COLUMNS = ['activity_data' => ['template', 'template_param', 'uri']];
+
     private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
 
     /**
@@ -221,6 +224,17 @@ final class SourcePreflight
         // `member` by subquery; a REFUSE table may be no step's FROM), so they are required here instead
         // of surfacing as a SQL exception or a silent count.
         $readTables = $this->readTables();
+
+        // The post-walk template pass and its verify check SELECT these themselves, so no step
+        // attributes them; a pre-3.6 core has no template columns and would fail after the walk.
+        foreach (self::PASS_READ_COLUMNS as $table => $columns) {
+            if (isset($present[$table]) && in_array($table, $readTables, true)) {
+                foreach ($columns as $column) {
+                    $required[$table][$column] = true;
+                }
+            }
+        }
+
         $readsMember = false;
 
         foreach ($this->steps as $step) {

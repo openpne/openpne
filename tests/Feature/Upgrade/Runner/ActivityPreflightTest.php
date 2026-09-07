@@ -162,6 +162,20 @@ class ActivityPreflightTest extends TestCase
         $this->assertDatabaseCount('timeline_posts', 0);
     }
 
+    public function test_a_source_without_the_template_columns_aborts_on_the_structural_check(): void
+    {
+        // OpenPNE 3.6 added template / template_param; the post-walk pass reads them, no step does.
+        $member = $this->activeMember();
+        $this->seedActivity(1, $member->id);
+        DB::statement('ALTER TABLE `activity_data` DROP COLUMN `template_param`');
+
+        [$ok, $output] = $this->runActivitySteps();
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('ERROR '.SourcePreflight::missingColumnMessage('activity_data', 'template_param'), $output);
+        $this->assertDatabaseCount('timeline_posts', 0);
+    }
+
     /** @return array{bool, string} */
     private function runActivitySteps(): array
     {

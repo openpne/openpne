@@ -60,12 +60,14 @@ final class ActivityTemplateCheck
             $sample = [];
             $checked = 0;
 
-            $liveRootUrl = URL::to('/');
+            $liveRootUrl = URL::to('/'); // the CLI generator's root is app.url, so restoring it by value restores it
             URL::forceRootUrl($rootUrl);
+            URL::forceScheme(parse_url($rootUrl, PHP_URL_SCHEME) ?: null); // forceRootUrl pins the host only
             try {
                 $this->compare($renderer, $source, $table, $max, $locale, $mismatched, $sample, $checked);
             } finally {
                 URL::forceRootUrl($liveRootUrl);
+                URL::forceScheme(parse_url($liveRootUrl, PHP_URL_SCHEME) ?: null);
             }
 
             $record($name, $mismatched === 0, $mismatched === 0

@@ -4,6 +4,8 @@ namespace Tests\Feature\Upgrade\Runner;
 
 use App\Features\GroupTalk\Queries\UnreadTalkCounts;
 use App\Models\Group;
+use App\Models\GroupMessage;
+use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
@@ -12,6 +14,8 @@ use App\Upgrade\Steps\GroupMemberUpgrade;
 use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
+use App\Upgrade\UpgradeStep;
+use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
@@ -89,14 +93,42 @@ class ActivityUpgradeRunnerSqlTest extends TestCase
         // backfill the reader's default cursor would leave it unread.
         $this->assertSame(0, app(UnreadTalkCounts::class)($reader)[5]['count']);
         $this->assertDatabaseHas('group_members', ['group_id' => 5, 'member_id' => $reader->id, 'talk_read_at' => $tomorrow, 'talk_read_message_id' => 1]);
+
+        $this->assertStringContainsString("PASS talk_read_cursor: no membership is behind its group's latest migrated message", $this->verify());
+
+        // Talk written after the upgrade is the site's own: a member yet to read it is not drift.
+        GroupMessage::factory()->create(['id' => 100, 'group_id' => 5, 'member_id' => $author->id, 'created_at' => now()->addDays(2), 'updated_at' => now()->addDays(2)]);
+        $this->assertStringContainsString('PASS talk_read_cursor', $this->verify());
+
+        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_message_id' => 0]);
+        $this->assertStringContainsString("FAIL talk_read_cursor: 1 membership(s) are behind their group's latest migrated message (e.g. group:member 5:{$reader->id})", $this->verify());
+
+        DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_message_id' => 1]);
+        UpgradeState::query()->where('step_key', 'talk_read_cursor_backfill')->delete();
+        $this->assertStringContainsString('FAIL talk_read_cursor: not completed', $this->verify());
+    }
+
+    private function verify(): string
+    {
+        $lines = [];
+        (new UpgradeVerifier(new InsertSelectCompiler, $this->steps()))->verify(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        return implode("\n", $lines);
+    }
+
+    /** @return list<UpgradeStep> */
+    private function steps(): array
+    {
+        return [new GroupMemberUpgrade, new TimelinePostUpgrade, new TimelineReplyUpgrade, new GroupMessageUpgrade];
     }
 
     /** @return list<string> */
     private function runUpgrade(RunOptions $options): array
     {
         $lines = [];
-        $steps = [new GroupMemberUpgrade, new TimelinePostUpgrade, new TimelineReplyUpgrade, new GroupMessageUpgrade];
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, $steps))->run($options, function (string $line) use (&$lines): void {
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run($options, function (string $line) use (&$lines): void {
             $lines[] = $line;
         });
         $this->assertTrue($ok, implode("\n", $lines));
