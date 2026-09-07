@@ -174,18 +174,23 @@ the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
 ## Verify
 
 `openpne:verify-upgrade` re-counts source and target without trusting the runner's report.
-Check A, per step: source rows under `effectiveFilter()` == recorded `rows_affected` == target
-rows under `targetFilter()`; a FROM or filter-subquery table that is an absent optional plugin
-counts as 0. `ActivityTemplateCheck` re-derives every migrated template row from the source and
-compares it with the stored body (a rendered row must hold the render, a kept row its stored body
-after the emoji pass), and fails when the template pass has no completed checkpoint. `TalkReadCursorCheck` requires every
-membership of a group with migrated messages to sit at or past the latest migrated `(created_at, id)`
-tuple and to name a message (`talk_read_message_id <> 0`): a join's snapshot or a later `advance()`
-does, the schema default never does, and a message deleted since does not matter. It also requires
-the backfill's completed checkpoint. "Migrated" is the routing's own predicate over the source,
-not an id match: a native message can reuse the id of an activity that landed elsewhere. Check B: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and
-the FK is rewired. Check C: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and
-no unknown scheme exists.
+
+- **Check A**, per step: source rows under `effectiveFilter()` == recorded `rows_affected` == target
+  rows under `targetFilter()`; a FROM or filter-subquery table that is an absent optional plugin
+  counts as 0.
+- **`ActivityTemplateCheck`** re-derives every migrated template row from the source and compares it
+  with the stored body (a rendered row must hold the render, a kept row its stored body after the
+  emoji pass), and fails when the template pass has no completed checkpoint.
+- **`TalkReadCursorCheck`** requires every membership of a group with migrated messages to sit at or
+  past the latest migrated `(created_at, id)` tuple and to name a message (`talk_read_message_id <> 0`):
+  a join's snapshot or a later `advance()` does, the schema default never does, and a message deleted
+  since does not matter. It also requires the backfill's completed checkpoint. "Migrated" is the
+  routing's own predicate over the source, not an id match: a native message can reuse the id of an
+  activity that landed elsewhere.
+- **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and the FK is
+  rewired.
+- **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown
+  scheme exists.
 
 ## Site policy bodies
 

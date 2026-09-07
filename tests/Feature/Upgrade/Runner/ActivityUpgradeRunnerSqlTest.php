@@ -97,9 +97,9 @@ class ActivityUpgradeRunnerSqlTest extends TestCase
         $this->assertStringContainsString("PASS talk_read_cursor: every membership is read up to its group's migrated talk", $this->verify());
 
         // Talk written after the upgrade is the site's own: a member yet to read it is not drift, and
-        // the native row takes id 3 — the timeline activity's id — so "migrated" cannot mean "id exists".
-        $native = GroupMessage::factory()->create(['group_id' => 5, 'member_id' => $author->id, 'created_at' => now()->addDays(2), 'updated_at' => now()->addDays(2)]);
-        $this->assertSame(3, $native->id);
+        // the native row is given id 3 — the timeline activity's id — so "migrated" cannot mean "id exists".
+        $this->assertTrue(DB::table('activity_data')->where('id', 3)->whereNull('foreign_table')->exists());
+        $native = GroupMessage::factory()->create(['id' => 3, 'group_id' => 5, 'member_id' => $author->id, 'created_at' => now()->addDays(2), 'updated_at' => now()->addDays(2)]);
         $this->assertStringContainsString('PASS talk_read_cursor', $this->verify());
         // A cursor advanced onto the native message is a read, not drift.
         DB::table('group_members')->where('member_id', $reader->id)->update(['talk_read_at' => $native->created_at, 'talk_read_message_id' => $native->id]);
