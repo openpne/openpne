@@ -229,12 +229,22 @@ class SnsSettingUpgradeSqlTest extends TestCase
     public function test_migrates_the_update_activity_switches(): void
     {
         $this->seedConfig('op_diary_plugin_update_activity', '1');
-        $this->seedConfig('op_community_topic_plugin_update_activity', null); // OpenPNE 3 read NULL as off
+        $this->seedConfig('op_community_topic_plugin_update_activity', '0');
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'diary_auto_timeline_post', 'value' => '1']);
-        $this->assertDatabaseMissing('sns_settings', ['key' => 'group_auto_timeline_post']);
-        $this->assertFalse(SnsSettingKey::GroupAutoTimelinePost->decode(null));
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_auto_timeline_post', 'value' => '0']);
+    }
+
+    public function test_a_null_update_activity_row_is_left_to_the_off_default(): void
+    {
+        // OpenPNE 3 read the row through SnsConfigTable::get($name, false), so NULL was off, like no row.
+        $this->seedConfig('op_diary_plugin_update_activity', null);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'diary_auto_timeline_post']);
+        $this->assertFalse(SnsSettingKey::DiaryAutoTimelinePost->decode(null));
     }
 }

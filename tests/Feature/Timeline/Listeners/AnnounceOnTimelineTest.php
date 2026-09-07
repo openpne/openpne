@@ -24,7 +24,9 @@ use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Mockery\MockInterface;
@@ -188,20 +190,25 @@ class AnnounceOnTimelineTest extends TestCase
         $this->assertStringEndsWith("…\nhttp://sns.example/diary/{$diary->getKey()}", $body);
     }
 
-    public function test_a_failed_insert_is_logged_and_never_fails_the_creating_request(): void
+    public function test_a_failure_anywhere_is_reported_and_never_fails_the_creating_request(): void
     {
         $this->setSnsSetting(SnsSettingKey::DiaryAutoTimelinePost, true);
-        Log::spy();
+        $author = Member::factory()->create();
+
+        // The insert itself, and a step before it (the URL of a diary without a key): both are swallowed and reported.
         $this->mock(CreateTimelinePost::class, function (MockInterface $mock): void {
             $mock->shouldReceive('__invoke')->once()->andThrow(new RuntimeException('deadlock'));
         });
-        $author = Member::factory()->create();
-        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        Exceptions::fake();
+        Log::spy();
 
-        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted($diary, $author));
+        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted(Diary::factory()->create(['member_id' => $author->getKey()]), $author));
+        app(AnnounceOnTimeline::class)->handleDiaryPosted(new DiaryPosted(Diary::factory()->make(['member_id' => $author->getKey()]), $author));
 
         $this->assertSame(0, TimelinePost::count());
-        Log::shouldHaveReceived('warning')->once();
+        Exceptions::assertReported(RuntimeException::class);
+        Exceptions::assertReported(UrlGenerationException::class);
+        Log::shouldHaveReceived('warning')->twice();
     }
 
     public function test_a_url_that_cannot_fit_skips_the_post_and_logs_a_warning(): void

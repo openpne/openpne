@@ -18,6 +18,7 @@ use App\Support\Feature;
 use App\Support\LocalizedDate;
 use App\Support\SiteLocale;
 use App\Support\Visibility;
+use Closure;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -34,6 +35,27 @@ class AnnounceOnTimeline
     ) {}
 
     public function handleDiaryPosted(DiaryPosted $event): void
+    {
+        $this->guarded($event->author, function () use ($event): void {
+            $this->announceDiary($event);
+        });
+    }
+
+    public function handleTopicPosted(TopicPosted $event): void
+    {
+        $this->guarded($event->author, function () use ($event): void {
+            $this->announceTopic($event);
+        });
+    }
+
+    public function handleEventPosted(EventPosted $event): void
+    {
+        $this->guarded($event->author, function () use ($event): void {
+            $this->announceEvent($event);
+        });
+    }
+
+    private function announceDiary(DiaryPosted $event): void
     {
         if (! Feature::Timeline->enabled() || ! TimelineAutoPost::forDiaries()) {
             return;
@@ -53,7 +75,7 @@ class AnnounceOnTimeline
         );
     }
 
-    public function handleTopicPosted(TopicPosted $event): void
+    private function announceTopic(TopicPosted $event): void
     {
         if (! $this->groupAnnounces($event->topic->group)) {
             return;
@@ -66,7 +88,7 @@ class AnnounceOnTimeline
         );
     }
 
-    public function handleEventPosted(EventPosted $event): void
+    private function announceEvent(EventPosted $event): void
     {
         $record = $event->event;
         if (! $this->groupAnnounces($record->group)) {
@@ -99,10 +121,17 @@ class AnnounceOnTimeline
             return;
         }
 
+        ($this->create)($author, new TimelinePostFormData($body, $visibility), null, TimelinePostOrigin::Auto);
+    }
+
+    /** Whatever fails — a setting read, the rendering, the insert — is reported and the announcement dropped. */
+    private function guarded(Member $author, Closure $announce): void
+    {
         try {
-            ($this->create)($author, new TimelinePostFormData($body, $visibility), null, TimelinePostOrigin::Auto);
+            $announce();
         } catch (Throwable $e) {
-            Log::warning('Timeline announcement skipped: the post could not be written.', ['member_id' => $author->getKey(), 'exception' => $e]);
+            report($e);
+            Log::warning('Timeline announcement skipped: it could not be posted.', ['member_id' => $author->getKey()]);
         }
     }
 
