@@ -134,7 +134,7 @@ final class ActivityThread
             'is_mobile' => 'Per-device display flag; the feature-phone frontend is out of scope.',
             'source' => 'The "via" caption of an API-posted activity; OpenPNE 4 has no source attribution.',
             'source_uri' => 'The "via" link; OpenPNE 4 has no source attribution.',
-            'activity_image' => 'Migrated by the ActivityImageUpgrade join-row steps, not the record steps.',
+            'activity_image' => 'Migrated by TimelinePostImageUpgrade / GroupMessageImageUpgrade (join-row steps), not the record steps.',
         ];
     }
 }

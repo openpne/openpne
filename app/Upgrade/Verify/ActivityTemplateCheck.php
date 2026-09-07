@@ -12,6 +12,7 @@ use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\RunOptions;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Re-derives every migrated template row's body from the source and compares: a rendered row must
@@ -36,7 +37,6 @@ final class ActivityTemplateCheck
     public function verify(RunOptions $options, array $targetTables, Closure $record): void
     {
         $renderer = app(ActivityTemplateRenderer::class);
-        $locale = SiteLocale::default();
         $source = InsertSelectCompiler::qualify($options->sourceDatabase, $options->sourcePrefix, 'activity_data');
 
         foreach (self::TABLES as $table => $max) {
@@ -45,46 +45,65 @@ final class ActivityTemplateCheck
             }
 
             $name = "activity_template:{$table}";
-            $completed = UpgradeState::query()->where('step_key', 'activity_template_'.$table)
-                ->where('status', UpgradeState::STATUS_COMPLETED)->exists();
-            if (! $completed) {
+            $state = UpgradeState::query()->where('step_key', 'activity_template_'.$table)
+                ->where('status', UpgradeState::STATUS_COMPLETED)->first();
+            if ($state === null) {
                 $record($name, false, 'not completed — no completed upgrade-state row for the template pass');
 
                 continue;
             }
+            $metadata = is_array($state->metadata) ? $state->metadata : [];
+            $locale = (string) ($metadata['locale'] ?? SiteLocale::default());
+            $rootUrl = (string) ($metadata['root_url'] ?? URL::to('/'));
 
-            $mismatched = [];
+            $mismatched = 0;
+            $sample = [];
             $checked = 0;
-            $cursor = 0;
 
-            while (true) {
-                $rows = DB::select(
-                    "SELECT `a`.`id`, `a`.`template`, `a`.`template_param`, `a`.`uri`, `a`.`body` AS `source_body`, `t`.`body` FROM {$source} AS `a`"
-                    ." JOIN `{$table}` AS `t` ON `t`.`id` = `a`.`id`"
-                    .' WHERE `a`.`template` IS NOT NULL AND `a`.`id` > ? ORDER BY `a`.`id` LIMIT '.self::CHUNK,
-                    [$cursor],
-                );
-
-                if ($rows === []) {
-                    break;
-                }
-
-                foreach ($rows as $row) {
-                    $expected = $renderer->render((string) $row->template, $row->template_param, $row->uri, $locale, $max)['body']
-                        ?? EmojiMap::convert((string) $row->source_body);
-
-                    if ((string) $row->body !== $expected) {
-                        $mismatched[] = (int) $row->id;
-                    }
-                    $checked++;
-                }
-
-                $cursor = (int) end($rows)->id;
+            $liveRootUrl = URL::to('/');
+            URL::forceRootUrl($rootUrl);
+            try {
+                $this->compare($renderer, $source, $table, $max, $locale, $mismatched, $sample, $checked);
+            } finally {
+                URL::forceRootUrl($liveRootUrl);
             }
 
-            $record($name, $mismatched === [], $mismatched === []
+            $record($name, $mismatched === 0, $mismatched === 0
                 ? "{$checked} template rows hold their rendered body"
-                : count($mismatched).' template row(s) differ from the render (e.g. ids '.implode(', ', array_slice($mismatched, 0, self::SAMPLE)).')');
+                : "{$mismatched} template row(s) differ from the render (e.g. ids ".implode(', ', $sample).") — rendered with locale {$locale} at {$rootUrl}; a term renamed since the upgrade differs the same way");
+        }
+    }
+
+    /** @param  list<int>  $sample */
+    private function compare(ActivityTemplateRenderer $renderer, string $source, string $table, int $max, string $locale, int &$mismatched, array &$sample, int &$checked): void
+    {
+        $cursor = 0;
+        while (true) {
+            $rows = DB::select(
+                "SELECT `a`.`id`, `a`.`template`, `a`.`template_param`, `a`.`uri`, `a`.`body` AS `source_body`, `t`.`body` FROM {$source} AS `a`"
+                ." JOIN `{$table}` AS `t` ON `t`.`id` = `a`.`id`"
+                .' WHERE `a`.`template` IS NOT NULL AND `a`.`id` > ? ORDER BY `a`.`id` LIMIT '.self::CHUNK,
+                [$cursor],
+            );
+
+            if ($rows === []) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                // The emoji pass ran over the stored body, rendered or kept, so the expectation gets it too.
+                $expected = EmojiMap::convert($renderer->render((string) $row->template, $row->template_param, $row->uri, $locale, $max)['body'] ?? (string) $row->source_body);
+
+                if ((string) $row->body !== $expected) {
+                    $mismatched++;
+                    if (count($sample) < self::SAMPLE) {
+                        $sample[] = (int) $row->id;
+                    }
+                }
+                $checked++;
+            }
+
+            $cursor = (int) end($rows)->id;
         }
     }
 }

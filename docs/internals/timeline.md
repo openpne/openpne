@@ -255,7 +255,7 @@ by ordinary navigation. Three things it deliberately does not do:
 
 The upgrade lands `activity_data` here by thread root: an unscoped thread becomes posts and
 replies (ids verbatim, a reply attached to the root with the root's visibility), a community
-thread is the group's (routed to talk, never here), and the rest is counted and left behind
+thread becomes that group's talk, and the rest is counted and left behind
 ([upgrade](upgrade.md#activity-threads)). A template line — the row OpenPNE 3's diary and
 community-topic plugins wrote on creation — is rewritten after the copy into the same body
 `Announcement` writes today, in the site's base locale with the record's link, so an old line and a

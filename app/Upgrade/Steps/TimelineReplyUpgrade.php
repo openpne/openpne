@@ -8,7 +8,7 @@ use App\Upgrade\UpgradeStep;
 /**
  * OpenPNE 3 `activity_data` replies whose thread starts outside any community → OpenPNE 4
  * `timeline_posts`, attached to the thread root with the root's audience: the OpenPNE 4 thread is
- * flat and gated as one (docs/internals/timeline.md), and OpenPNE 3 drew a reply under its root's
+ * flat and gated as one (docs/internals/timeline.md, "OpenPNE 3 activity rows"), and OpenPNE 3 drew a reply under its root's
  * flag too.
  */
 class TimelineReplyUpgrade extends UpgradeStep

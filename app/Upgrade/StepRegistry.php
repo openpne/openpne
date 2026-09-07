@@ -31,6 +31,8 @@ use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\GroupEventUpgrade;
 use App\Upgrade\Steps\GroupJoinRequestUpgrade;
 use App\Upgrade\Steps\GroupMemberUpgrade;
+use App\Upgrade\Steps\GroupMessageImageUpgrade;
+use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentUpgrade;
 use App\Upgrade\Steps\GroupTopicImageUpgrade;
@@ -114,6 +116,8 @@ final class StepRegistry
             GroupEventUpgrade::class,
             GroupEventCommentUpgrade::class,
             GroupEventMemberUpgrade::class,
+            // group_messages reference groups and members; a reply's lineage column carries no FK.
+            GroupMessageUpgrade::class,
             // navigation_translations.id references navigations.id, so translations run after.
             NavigationUpgrade::class,
             NavigationTranslationUpgrade::class,
@@ -146,6 +150,7 @@ final class StepRegistry
             GroupEventImageUpgrade::class,
             GroupEventCommentImageUpgrade::class,
             TimelinePostImageUpgrade::class,
+            GroupMessageImageUpgrade::class,
             // banner_images reference files; banner_use_images reference banners and banner_images.
             BannerUpgrade::class,
             BannerImageUpgrade::class,

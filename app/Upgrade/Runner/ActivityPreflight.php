@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class ActivityPreflight
 {
-    /** The template names ActivityTemplateRenderer renders; any other keeps its stored body. */
-    public const KNOWN_TEMPLATES = ['diary', 'community_topic', 'community_event'];
-
     /** Ids shown per finding; the runbook's SQL lists the rest. */
     private const SAMPLE = 5;
 
@@ -37,15 +34,18 @@ final class ActivityPreflight
         $errors = [];
         $warnings = [];
 
+        // Only rows a step selects: a community root's flag gates its landing (counted per value
+        // below) and any other scope is not migrated, so only a timeline root's flag reaches a CASE.
         $flags = implode(', ', array_map(static fn (Visibility $v): int => $v->value, Visibility::cases()));
-        [$rows, $ids] = $this->rows(ActivityThread::startsThread($a)." AND `{$a}`.`public_flag` NOT IN ({$flags})");
+        [$rows, $ids] = $this->rows(ActivityThread::startsThread($a)." AND `{$a}`.`foreign_table` IS NULL AND (`{$a}`.`public_flag` IS NULL OR `{$a}`.`public_flag` NOT IN ({$flags}))");
         if ($rows > 0) {
             $errors[] = self::unknownPublicFlagMessage($rows, $ids);
         }
 
+        $ofMigrated = 'EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data').' AS `activity_data` WHERE `activity_data`.`id` = `activity_image`.`activity_data_id` AND '.ActivityThread::migrated('activity_data').')';
         $crowded = DB::select($this->resolve(
-            'SELECT `activity_data_id` AS `id`, COUNT(*) AS `images` FROM '.SourceRef::table('activity_image')
-            .' WHERE `file_id` IS NOT NULL GROUP BY `activity_data_id` HAVING `images` > '.self::MAX_IMAGES.' ORDER BY `activity_data_id`',
+            'SELECT `activity_data_id` AS `id`, COUNT(*) AS `images` FROM '.SourceRef::table('activity_image').' AS `activity_image`'
+            ." WHERE `file_id` IS NOT NULL AND {$ofMigrated} GROUP BY `activity_data_id` HAVING `images` > ".self::MAX_IMAGES.' ORDER BY `activity_data_id`',
         ));
         if ($crowded !== []) {
             $errors[] = self::tooManyImagesMessage(count($crowded), array_slice(array_map(static fn (object $r): int => (int) $r->id, $crowded), 0, self::SAMPLE));
@@ -55,7 +55,7 @@ final class ActivityPreflight
         $parentIsReply = 'EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data')." AS `parent_of` WHERE `parent_of`.`id` = `{$a}`.`in_reply_to_activity_id` AND NOT ".ActivityThread::startsThread('parent_of').')';
         $rootId = ActivityThread::rootId($a);
 
-        [$rows, $ids] = $this->rows("{$isReply} AND {$parentIsReply} AND {$rootId} IS NOT NULL");
+        [$rows, $ids] = $this->rows("{$isReply} AND {$parentIsReply} AND ".ActivityThread::migrated($a));
         if ($rows > 0) {
             $warnings[] = self::deepReplyMessage($rows, $ids);
         }
@@ -82,7 +82,7 @@ final class ActivityPreflight
             $warnings[] = self::orphanGroupThreadMessage($rows, $ids);
         }
 
-        foreach ($this->grouped("`{$a}`.`public_flag`", "{$communityRoot} AND {$groupExists} AND `{$a}`.`public_flag` <> ".ActivityThread::MEMBERS_FLAG) as $flag => [$rows, $ids]) {
+        foreach ($this->grouped("`{$a}`.`public_flag`", "{$communityRoot} AND {$groupExists} AND NOT (`{$a}`.`public_flag` <=> ".ActivityThread::MEMBERS_FLAG.')') as $flag => [$rows, $ids]) {
             $warnings[] = self::nonMembersGroupThreadMessage((int) $flag, $rows, $ids);
         }
 
@@ -93,7 +93,7 @@ final class ActivityPreflight
             $warnings[] = self::crossScopeReplyMessage($rows, $ids);
         }
 
-        $uriOnly = DB::select($this->resolve('SELECT `id` FROM '.SourceRef::table('activity_image').' WHERE `file_id` IS NULL ORDER BY `id`'));
+        $uriOnly = DB::select($this->resolve('SELECT `id` FROM '.SourceRef::table('activity_image').' AS `activity_image`'." WHERE `file_id` IS NULL AND {$ofMigrated} ORDER BY `id`"));
         if ($uriOnly !== []) {
             $warnings[] = self::uriOnlyImageMessage(count($uriOnly), array_slice(array_map(static fn (object $r): int => (int) $r->id, $uriOnly), 0, self::SAMPLE));
         }
@@ -171,7 +171,7 @@ final class ActivityPreflight
 
     public static function templateMessage(string $template, string $landing, int $rows): string
     {
-        $known = in_array($template, self::KNOWN_TEMPLATES, true);
+        $known = isset(ActivityTemplateRenderer::TEMPLATES[$template]);
 
         return match (true) {
             $landing === 'none' => "source `activity_data` has {$rows} `{$template}` template row(s) in threads that are not migrated.",

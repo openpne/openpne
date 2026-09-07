@@ -126,6 +126,7 @@ final class UpgradeRunner
             (new ActivityTemplateTransform)->plan($out);
             (new EmojiTransform)->plan($out);
             (new SitePolicyMarkdownTransform)->plan($out);
+            (new TalkReadCursorBackfill)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -175,6 +176,12 @@ final class UpgradeRunner
             // newlines, OpenPNE 4 renders them as Markdown, and no INSERT...SELECT can bridge that.
             if ($walked) {
                 $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $out);
+            }
+
+            // Only after the messages landed: the membership step leaves the read cursor at the
+            // schema default, a wall-clock stamp the migrated history must not be measured against.
+            if ($walked) {
+                $walked = (new TalkReadCursorBackfill)->run($this->targetTables(), $out);
             }
 
             // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row

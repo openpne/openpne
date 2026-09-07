@@ -33,8 +33,8 @@ was created. Every SQL that routes a row lives in
   root. The root's `foreign_table` decides where the whole thread lands — `NULL` on the timeline
   (`TimelinePostUpgrade` for the starters, `TimelineReplyUpgrade` for the replies, split because
   `timeline_posts.in_reply_to_id` is a cascading self-FK), `'community'` in that group's talk
-  (`landsInGroup()`, which so far routes only the file owners and the `REFUSE` scope; the talk
-  steps come with the talk import). A reply's own scope is ignored; `ActivityPreflight` counts the ones that differ from their root.
+  (`GroupMessageUpgrade`, starters and replies in one step: the lineage column has carried no FK
+  since `2026_08_18_000001` dropped it). A reply's own scope is ignored; `ActivityPreflight` counts the ones that differ from their root.
 - A reply attaches to the root, never to another reply, and takes the root's `public_flag`: the
   OpenPNE 4 thread is flat and gated as one audience, and OpenPNE 3 listed a reply under its root's
   flag as well. The root is walked up in fixed SQL to `ActivityThread::MAX_DEPTH` hops; a deeper
@@ -46,8 +46,8 @@ was created. Every SQL that routes a row lives in
 - `public_flag` is the activity scale, `0` open / `1` members / `2` friends / `3` private — the
   identity onto `Visibility`, pinned by `visibilityCase()` — not the diary scale
   `Visibility::fromOpenPne3PublicFlag()` reads, where Open is `4`.
-- `activity_image` rows follow their activity (`TimelinePostImageUpgrade`; the talk side will share
-  `ActivityImageUpgrade`), numbered 1..N by id among the file-backed rows; a URL-only image has
+- `activity_image` rows follow their activity (`TimelinePostImageUpgrade` /
+  `GroupMessageImageUpgrade`, both `ActivityImageUpgrade`), numbered 1..N by id among the file-backed rows; a URL-only image has
   no OpenPNE 4 form. `FileUpgrade` owns the file as `timelinePost` or `groupMessage` by the same
   routing, so the two arms of one source column are keyed `activity_image.file_id#<type>`.
 - `activity_data.member_id` is `REFUSE`d over the union of what both landings copy (its ledger
@@ -110,9 +110,10 @@ structural check guards, so they run only on a clean structural verdict; the not
 when a step has `sns_config` as its source table.
 
 `ActivityPreflight` counts what the activity routing ("Activity threads" above) drops, re-parents or
-refuses, one WARN per class with the first ids, so no disposition is silent; a thread starter whose
-`public_flag` is outside the activity scale or an activity with more than 255 file-backed images is
-an ERROR, because the step would fail on the row mid-run. `FileOwnerPreflight` counts files that
+refuses, one WARN per class with the first ids, so no disposition is silent; a timeline thread starter whose
+`public_flag` is outside the activity scale or a migrated activity with more than 255 file-backed
+images is an ERROR, because the step would fail on the row mid-run (a row no step selects is left to
+its WARN). `FileOwnerPreflight` counts files that
 more than one owning row points at, across every `FileUpgrade::ownedFileReferences()` arm: OpenPNE 3
 never made the file columns unique, and a file with two owners would be read under one owner's
 audience from the other's page, so it is an ERROR.
@@ -146,6 +147,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | `ActivityTemplateTransform` | the OpenPNE 3 template lines carry PHP-serialized parameters; the body is re-derived from them and `uri` by `ActivityTemplateRenderer` (the same `Announcement` a new record gets), in the site's base locale, in `timeline_posts` and `group_messages` alike | id cursor plus the per-reason kept counts, committed with each chunk; the body is a function of the source row, so a restart from 0 rewrites the same text. Runs before the emoji pass because the parameters carry carrier codes, which `Announcement` converts itself |
 | `EmojiTransform` | per-row PHP mapping; 16 carrier-logo ids stay literal | id cursor in `metadata.last_id`, because a "contains a code" predicate never drains |
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
+| `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes `TalkReadCursor::snapshot()` per group once they have landed | a function of the migrated rows, so a rescan writes the same tuple; every group and the COMPLETED checkpoint commit in one transaction |
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 

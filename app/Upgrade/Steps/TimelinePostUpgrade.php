@@ -53,7 +53,7 @@ class TimelinePostUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return ActivityThread::recordGaps() + [
-            'foreign_id' => "Only meaningful with foreign_table = 'community': the talk landing's group id.",
+            'foreign_id' => "Only meaningful with foreign_table = 'community'; GroupMessageUpgrade reads it as the group id.",
         ];
     }
 }

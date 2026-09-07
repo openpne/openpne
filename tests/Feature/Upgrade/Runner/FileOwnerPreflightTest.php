@@ -71,6 +71,17 @@ class FileOwnerPreflightTest extends TestCase
         $this->assertNull((new FileOwnerPreflight)->inspect('', null, (new FileUpgrade)->readSourceTables()));
     }
 
+    public function test_two_references_from_one_row_are_one_owner(): void
+    {
+        // OpenPNE 3 ActivityDataTable::updateActivity() does not dedupe its images, so one activity can hold one file twice.
+        $member = $this->activeMember();
+        $this->seedActivity(1, $member->id);
+        $this->seedActivityImage(1, 1, 44);
+        $this->seedActivityImage(2, 1, 44);
+
+        $this->assertNull((new FileOwnerPreflight)->inspect('', null, (new FileUpgrade)->readSourceTables()));
+    }
+
     public function test_an_absent_optional_table_is_left_out_of_the_count(): void
     {
         DB::statement('DROP TABLE `diary_image`');

@@ -211,7 +211,8 @@ class FileUpgradeSqlTest extends TestCase
         $this->seedActivity(70, 'community', 5);
         $this->seedActivity(8, null, replyTo: 70);
         $this->seedActivity(9, 'diary', 1);
-        foreach ([[1, 7, 50], [2, 8, 51], [3, 9, 52]] as [$id, $activityId, $fileId]) {
+        $this->seedActivity(10, 'community', 5, publicFlag: 2); // a friends-only community thread has no talk landing
+        foreach ([[1, 7, 50], [2, 8, 51], [3, 9, 52], [4, 10, 53]] as [$id, $activityId, $fileId]) {
             $this->seedFile($fileId);
             DB::table('activity_image')->insert(['id' => $id, 'activity_data_id' => $activityId, 'mime_type' => 'image/png', 'uri' => null, 'file_id' => $fileId, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
         }
@@ -222,12 +223,13 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 51, 'related_entity_type' => 'groupMessage', 'related_entity_id' => 8]);
         // No arm claims it, so the FileUpgrade fail-closed default stays.
         $this->assertDatabaseHas('files', ['id' => 52, 'related_entity_type' => null, 'related_entity_id' => null]);
+        $this->assertDatabaseHas('files', ['id' => 53, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
-    private function seedActivity(int $id, ?string $foreignTable, ?int $foreignId = null, ?int $replyTo = null): void
+    private function seedActivity(int $id, ?string $foreignTable, ?int $foreignId = null, ?int $replyTo = null, int $publicFlag = 1): void
     {
         DB::table('activity_data')->insert([
-            'id' => $id, 'member_id' => 1, 'in_reply_to_activity_id' => $replyTo, 'body' => 'b', 'uri' => null, 'public_flag' => 1,
+            'id' => $id, 'member_id' => 1, 'in_reply_to_activity_id' => $replyTo, 'body' => 'b', 'uri' => null, 'public_flag' => $publicFlag,
             'is_pc' => 1, 'is_mobile' => 1, 'source' => null, 'source_uri' => null, 'foreign_table' => $foreignTable, 'foreign_id' => $foreignId,
             'template' => null, 'template_param' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00',
         ]);

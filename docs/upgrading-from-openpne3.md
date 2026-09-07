@@ -243,6 +243,12 @@ change from a problem when you go through it.
   a link to the record — so run the upgrade with `APP_URL` already set to the address the site will
   live at, since those links are stored. Whether new diaries, topics and events keep announcing
   themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
+- **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
+  the group to everyone who may open the group today, including messages by people who have since
+  left it and by people the reader has blocked (OpenPNE 3 hid both); each member starts with the
+  talk read up to its latest message, so nothing arrives marked unread. Messages the old
+  community timeline showed to friends only or to their author alone, and the timelines of
+  communities already deleted, are not carried (the dry run counts them).
 - **Member count** — expect it to be lower than the number of rows in OpenPNE 3's `member` table, and
   to match what OpenPNE 3's own member list showed. The difference is the registrations below.
 

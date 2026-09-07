@@ -5,6 +5,7 @@ namespace Tests\Feature\Upgrade\Runner;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\ActivityPreflight;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
@@ -63,6 +64,13 @@ class ActivityPreflightTest extends TestCase
             $this->seedActivityImage($i, 3, 1000 + $i);
         }
         $this->seedActivityImage(300, 3, null); // URL-only rows do not count toward the slot cap
+        // A row no step selects cannot fail a step: another scope's root with the same flaws is left to its WARN.
+        $this->seedActivity(4, $member->id, ['foreign_table' => 'diary', 'foreign_id' => 1, 'public_flag' => 7]);
+        for ($i = 1; $i <= 256; $i++) {
+            $this->seedActivityImage(400 + $i, 4, 2000 + $i);
+        }
+        $this->seedSourceCommunity(5);
+        $this->seedActivity(5, $member->id, ['foreign_table' => 'community', 'foreign_id' => 5, 'public_flag' => 7]);
 
         $report = (new ActivityPreflight)->inspect('', null);
 
@@ -70,6 +78,7 @@ class ActivityPreflightTest extends TestCase
             ActivityPreflight::unknownPublicFlagMessage(1, [1]),
             ActivityPreflight::tooManyImagesMessage(1, [3]),
         ], $report->errors);
+        $this->assertContains(ActivityPreflight::nonMembersGroupThreadMessage(7, 1, [5]), $report->warnings);
     }
 
     public function test_every_disposition_is_a_warning_with_its_first_ids(): void
@@ -91,6 +100,9 @@ class ActivityPreflightTest extends TestCase
         $this->seedActivity(14, $member->id, ['in_reply_to_activity_id' => 1, 'foreign_table' => 'community', 'foreign_id' => 5]); // the reverse
         $this->seedActivity(15, $member->id, ['in_reply_to_activity_id' => 12, 'foreign_table' => 'community', 'foreign_id' => 6]); // another community
         $this->seedActivityImage(1, 1, null, 'http://img.example/a.png');
+        $this->seedActivityImage(2, 8, null, 'http://img.example/b.png'); // on a row that is not migrated: nothing is lost
+        $this->seedActivity(20, $member->id, ['in_reply_to_activity_id' => 9, 'foreign_table' => 'community', 'foreign_id' => 404]);
+        $this->seedActivity(21, $member->id, ['in_reply_to_activity_id' => 20, 'foreign_table' => 'community', 'foreign_id' => 404]); // deep, but its root is not migrated
         $this->seedActivity(16, $member->id, $this->templateRow('diary', ['%1%' => 't'], '@diary_show?id=1'));
         $this->seedActivity(17, $member->id, ['foreign_table' => 'community', 'foreign_id' => 5] + $this->templateRow('community_topic', ['%1%' => 'g', '%2%' => 'n'], '@communityTopic_show?id=1'));
         $this->seedActivity(18, $member->id, ['foreign_table' => 'diary'] + $this->templateRow('diary', ['%1%' => 't'], '@diary_show?id=1'));
@@ -134,6 +146,20 @@ class ActivityPreflightTest extends TestCase
 
         $this->assertTrue($ok, $output);
         $this->assertDatabaseCount('timeline_posts', 2);
+    }
+
+    public function test_a_source_without_community_aborts_on_the_structural_check(): void
+    {
+        // No step's own SQL names `community` for the timeline; the REFUSE scope's routing does.
+        $member = $this->activeMember();
+        $this->seedActivity(1, $member->id);
+        DB::statement('DROP TABLE `community`');
+
+        [$ok, $output] = $this->runActivitySteps();
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('ERROR '.SourcePreflight::missingTableMessage('community'), $output);
+        $this->assertDatabaseCount('timeline_posts', 0);
     }
 
     /** @return array{bool, string} */

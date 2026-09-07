@@ -55,9 +55,8 @@ class GroupMemberUpgrade extends UpgradeStep
     }
 
     /**
-     * The talk columns are OpenPNE 4's own and stay at their schema defaults: an upgraded site has
-     * no talk history, so "read up to now, nothing muted" is the true state of every membership it
-     * creates (docs/internals/group-talk.md).
+     * The talk columns have no OpenPNE 3 source: the read cursor is written by TalkReadCursorBackfill
+     * once the messages have landed, and nothing starts muted (docs/internals/group-talk.md, "The cursor is snapshotted, not defaulted").
      */
     public function targetDefaults(): array
     {

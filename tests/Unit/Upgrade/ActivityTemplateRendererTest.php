@@ -50,15 +50,38 @@ class ActivityTemplateRendererTest extends TestCase
         $this->assertSame(5000, mb_strlen($renderer->render('diary', serialize(['%1%' => str_repeat('x', 6000)]), '@diary_show?id=3', 'en', 5000)['body']));
     }
 
+    public function test_every_registered_template_has_a_rendering_arm(): void
+    {
+        $renderer = app(ActivityTemplateRenderer::class);
+
+        foreach (ActivityTemplateRenderer::TEMPLATES as $template => [$route, $arity]) {
+            $params = array_combine(array_map(static fn (int $n): string => "%{$n}%", range(1, $arity)), array_fill(0, $arity, 'x'));
+            $this->assertNull($renderer->render($template, serialize($params), "{$route}?id=3", 'en', 140)['reason'], $template);
+        }
+    }
+
     public function test_a_row_it_cannot_render_says_why(): void
     {
         $renderer = app(ActivityTemplateRenderer::class);
         $params = serialize(['%1%' => 'x']);
 
         $this->assertSame(ActivityTemplateRenderer::UNKNOWN_TEMPLATE, $renderer->render('friend_link', $params, '@diary_show?id=3', 'en', 140)['reason']);
+        // Unknown first, whatever else the row carries: the operator reads one reason per row.
+        $this->assertSame(ActivityTemplateRenderer::UNKNOWN_TEMPLATE, $renderer->render('friend_link', 'not serialized', '@member_profile?id=3', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::NO_LINK, $renderer->render('diary', $params, '@member_profile?id=3', 'en', 140)['reason']);
+        // The uri must name the template's own route: a topic line linking a diary is not rendered.
+        $this->assertSame(ActivityTemplateRenderer::NO_LINK, $renderer->render('community_topic', serialize(['%1%' => 'g', '%2%' => 't']), '@diary_show?id=3', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::NO_LINK, $renderer->render('diary', $params, '@diary_show?id=abc', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::NO_LINK, $renderer->render('diary', $params, null, 'en', 140)['reason']);
+        // Free text in the source column: an array id, zero, a leading zero or an overflow is no link, never an exception.
+        foreach (['@diary_show?id[]=3', '@diary_show?id=0', '@diary_show?id=03', '@diary_show?id=99999999999999999999', '@diary_show?id=-3', '@diary_show', '@diary_show?id='] as $uri) {
+            $this->assertSame(ActivityTemplateRenderer::NO_LINK, $renderer->render('diary', $params, $uri, 'en', 140)['reason'], $uri);
+        }
+        // The params must be exactly the template's `%n%` set: OpenPNE 3 wrote one for a diary, two for a topic, three for an event.
+        $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('diary', serialize([]), '@diary_show?id=3', 'en', 140)['reason']);
+        $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('diary', serialize(['%1%' => 'x', '%2%' => 'y']), '@diary_show?id=3', 'en', 140)['reason']);
+        $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('community_topic', $params, '@communityTopic_show?id=3', 'en', 140)['reason']);
+        $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('community_event', serialize(['%1%' => 'g', '%2%' => 'e']), '@communityEvent_show?id=3', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('diary', 'not serialized', '@diary_show?id=3', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('diary', serialize('a string'), '@diary_show?id=3', 'en', 140)['reason']);
         $this->assertSame(ActivityTemplateRenderer::BAD_PARAMS, $renderer->render('diary', serialize(['title' => 'x']), '@diary_show?id=3', 'en', 140)['reason']);

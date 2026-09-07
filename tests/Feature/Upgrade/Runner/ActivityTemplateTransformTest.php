@@ -70,7 +70,7 @@ class ActivityTemplateTransformTest extends TestCase
         $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 1), $lines);
         $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::NO_LINK, 1), $lines);
         $this->assertContains('DONE activity_template_group_messages: 1 rows', $lines);
-        $this->assertEquals(['last_id' => 4, 'kept' => [ActivityTemplateRenderer::UNKNOWN_TEMPLATE => 1, ActivityTemplateRenderer::NO_LINK => 1], 'rendered' => 1],
+        $this->assertEquals(['last_id' => 4, 'kept' => [ActivityTemplateRenderer::UNKNOWN_TEMPLATE => 1, ActivityTemplateRenderer::NO_LINK => 1], 'rendered' => 1, 'locale' => 'en', 'root_url' => 'http://sns.example'],
             UpgradeState::query()->where('step_key', 'activity_template_timeline_posts')->value('metadata'));
     }
 

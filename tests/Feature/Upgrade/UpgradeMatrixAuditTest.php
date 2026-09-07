@@ -147,6 +147,14 @@ class UpgradeMatrixAuditTest extends TestCase
             static fn (array $spec): string => "{$spec['table']}.{$spec['file']}",
             (new FileUpgrade)->ownedFileReferences(),
         )));
+        // The key form is pinned, since a PHP literal keeps the last of two equal keys without a word.
+        $arms = [];
+        foreach ((new FileUpgrade)->ownedFileReferences() as $key => $spec) {
+            $column = "{$spec['table']}.{$spec['file']}";
+            $this->assertContains($key, [$column, "{$column}#{$spec['type']}"], "owner key {$key} is not table.column or table.column#type");
+            $arms[$column][] = $spec['type'];
+        }
+        $this->assertSame(['timelinePost', 'groupMessage'], $arms['activity_image.file_id']);
         $unsteppedTables = array_keys(StepRegistry::unsteppedSourceTables());
         $unowned = array_keys(StepRegistry::unownedFileColumns());
 

@@ -9,6 +9,7 @@ use App\Support\SiteLocale;
 use App\Upgrade\InsertSelectCompiler;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Throwable;
 
 /**
@@ -103,8 +104,9 @@ final class ActivityTemplateTransform
                     }
 
                     $cursor = (int) end($rows)->id;
+                    // The render inputs travel with the checkpoint so verify re-renders under them, not under whatever the site runs later.
                     UpgradeState::updateOrCreate(['step_key' => $key], [
-                        'metadata' => ['last_id' => $cursor, 'kept' => $kept, 'rendered' => $rendered],
+                        'metadata' => ['last_id' => $cursor, 'kept' => $kept, 'rendered' => $rendered, 'locale' => $locale, 'root_url' => URL::to('/')],
                     ]);
                 });
             }

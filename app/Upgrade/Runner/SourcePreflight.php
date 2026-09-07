@@ -179,18 +179,19 @@ final class SourcePreflight
         // A REFUSE check resolves against `member` even when no step's own SQL names it (a content step
         // has no guard), so declaring it here makes a source without it abort on the structural check
         // instead of mid-count.
+        $extra = [];
         foreach (ActiveMember::references() as $reference => $meta) {
             [$table] = explode('.', $reference);
             if ($meta['treatment'] === ActiveMember::REFUSE && isset($tables[$table])) {
-                $tables['member'] = true;
+                $extra['member'] = true;
                 // A scope's own subquery tables likewise: the count reads them after the verdict.
                 foreach (SourceRef::tablesIn($meta['scope'] ?? '') as $scopeTable) {
-                    $tables[$scopeTable] = true;
+                    $extra[$scopeTable] = true;
                 }
             }
         }
 
-        return array_keys($tables);
+        return array_keys($tables + $extra);
     }
 
     /**
