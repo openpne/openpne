@@ -2,6 +2,7 @@
 
 namespace App\Features\Timeline\Events;
 
+use App\Features\Timeline\TimelinePostOrigin;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
@@ -20,5 +21,6 @@ class TimelinePostPosted implements ShouldDispatchAfterCommit
         public readonly TimelinePost $post,
         public readonly Member $author,
         public readonly array $mentionedMemberIds,
+        public readonly TimelinePostOrigin $origin = TimelinePostOrigin::Member,
     ) {}
 }

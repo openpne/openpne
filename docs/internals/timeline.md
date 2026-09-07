@@ -143,6 +143,39 @@ reply affordance on both surfaces reads [`TimelinePosting`](../../app/Features/T
 and disappears; what is already posted stays readable, and deleting is untouched. This is a policy
 on top of the timeline unit, not the unit's own toggle ([feature-toggles](feature-toggles.md)).
 
+## Automatic posts
+
+OpenPNE 3's `update_activity` switches posted a line to the timeline whenever a diary, topic or
+event was created. Two settings carry that over — `SnsSettingKey::DiaryAutoTimelinePost`
+(`op_diary_plugin_update_activity`) and `SnsSettingKey::GroupAutoTimelinePost`
+(`op_community_topic_plugin_update_activity`), both off by default as OpenPNE 3 shipped them and
+copied by the upgrade. [`AnnounceOnTimeline`](../../app/Listeners/Timeline/AnnounceOnTimeline.php)
+listens to `DiaryPosted` / `TopicPosted` / `EventPosted` and writes one post through
+[`CreateTimelinePost`](../../app/Features/Timeline/Actions/CreateTimelinePost.php) as the author,
+with `TimelinePostOrigin::Auto`. It is independent of the posting switch above: the site is the
+writer, not a member, as OpenPNE 3's hooks were.
+
+The body is [`Announcement`](../../app/Features/Timeline/Announcement.php): a line such as
+`[日記] title` and, on the next line, the record's URL, fitted into the 140 code points a post
+holds — the line gives way, the URL never does, and a URL that does not fit alone means no post
+(logged as a warning). The URL is an internal link, so the post carries the record's link card and
+opens in place; a URL inside the title takes the card instead, because a card follows the body's
+first URL. The line is rendered in the site's own language (`SiteLocale`, the `APP_LOCALE` the app
+starts from — `app.locale` itself is whatever `SetLocale` resolved for the current request), never
+the author's, because it is stored once and read by everyone; the template is translated, terms
+included, before the title goes in, so `%Diary%` in a title stays text. OpenPNE 3 emoji codes in a
+title render through the upgrade's `EmojiMap`, the one table for them, which is why runtime code
+reaches into `App\Upgrade` here. Hashtags in the line are parsed like any other body.
+
+Audience: a diary's line copies the diary's visibility, except that Open falls to Members while
+`TimelineAllowWebPublic` is off (OpenPNE 3 did the same with `op_activity_is_open`); a line stored
+Open stays Open if the diary's own web-public switch is turned off later, as in OpenPNE 3. A topic or
+event in a group anyone may read is announced to Members; a members-only group gets no line at
+all, where OpenPNE 3 wrote one only its author could read. `NotifyTimelinePosted` skips an
+announcement: a diary's own notification already reaches the same audience, and a topic's or
+event's reaches its group, so the line would add a site-wide notification nobody asked for.
+Deleting the record does not remove its line, as in OpenPNE 3 — the post carries no reference back.
+
 ## Key invariants
 
 - Offsets and lengths are Unicode code points, half-open, ascending, non-overlapping. The write path
