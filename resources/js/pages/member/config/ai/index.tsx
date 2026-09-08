@@ -72,7 +72,7 @@ export default function AiAccountIndex() {
                                         <AiChip isAi={account.isAi} />
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        {t('In :count %communities%', { count: account.groupCount })}
+                                        {account.groupCount === 1 ? t('In 1 %community%') : t('In :count %communities%', { count: account.groupCount })}
                                     </p>
                                 </div>
                             </ListRow>

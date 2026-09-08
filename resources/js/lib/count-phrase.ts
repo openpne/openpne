@@ -17,3 +17,27 @@ export function unreadMessagesPhrase(t: Translate, count: number): string {
 export function jumpToUnreadPhrase(t: Translate, count: number): string {
     return count === 1 ? t('Jump to 1 unread message') : t('Jump to :count unread messages', { count });
 }
+
+export function membersPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 member') : t(':count members', { count });
+}
+
+export function commentsPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 comment') : t(':count comments', { count });
+}
+
+export function repliesPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 reply') : t(':count replies', { count });
+}
+
+export function participantsPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 participant') : t(':count participants', { count });
+}
+
+export function entriesPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 entry') : t(':count entries', { count });
+}
+
+export function messagesPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 message') : t(':count messages', { count });
+}

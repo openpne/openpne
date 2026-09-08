@@ -8,6 +8,7 @@ import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
+import { membersPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityCategory, PaginatedCommunities } from './types';
@@ -105,7 +106,7 @@ export default function CommunitySearch() {
                                             <CountBadge
                                                 icon={Users}
                                                 count={group.memberCount}
-                                                srLabel={t(':count members', { count: group.memberCount })}
+                                                srLabel={membersPhrase(t, group.memberCount)}
                                             />
                                         </p>
                                         {group.description && (

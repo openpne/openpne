@@ -6,6 +6,7 @@ import { SearchSubmitButton } from '@/components/search-submit-button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
+import { entriesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
@@ -91,7 +92,7 @@ export default function DiaryList() {
                     <Panel
                         flush
                         title={monthHeading ?? undefined}
-                        right={monthHeading ? <span className="text-xs font-normal text-muted-foreground">{t(':count entries', { count: diaries.meta.total })}</span> : undefined}
+                        right={monthHeading ? <span className="text-xs font-normal text-muted-foreground">{entriesPhrase(t, diaries.meta.total)}</span> : undefined}
                     >
                         <List>
                             {diaries.data.map((entry) => (
