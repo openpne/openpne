@@ -59,8 +59,8 @@ final class UncopiedSettingsNotice
             array_push($bindings, $name, $name);
         }
 
-        // The CASE resolves a hand-edited spelling under the source collation (case-insensitive, PAD SPACE),
-        // the same comparison the step's own name CASE copies it by.
+        // Built from the same names as the IN, the ELSE-less CASE resolves every returned row's spelling under
+        // the column's collation (case-insensitive, PAD SPACE), the comparison the step's own name CASE copies by.
         $rows = DB::select(
             'select `name`, CASE `name` '.str_repeat('WHEN ? THEN ? ', count($names)).'END as `canonical` from '.$table
             .' where `value` is null and `name` in ('.implode(', ', array_fill(0, count($names), '?')).') order by `name`',

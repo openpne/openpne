@@ -337,7 +337,7 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
-    /** @return list<string> the top-level AND conjuncts of a SQL boolean, each stripped of wrapping parentheses */
+    /** @return list<string> the top-level AND conjuncts of a SQL boolean, each stripped of wrapping parentheses; none for a top-level disjunction */
     private function conjuncts(string $sql): array
     {
         $sql = trim($sql);
