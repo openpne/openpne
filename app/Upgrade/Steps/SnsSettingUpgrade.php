@@ -53,6 +53,19 @@ class SnsSettingUpgrade extends UpgradeStep
         )));
     }
 
+    /** @return array<string, SnsSettingKey> OpenPNE 3 name => key, for the migrated keys whose NULL row the filter leaves out */
+    public function leftOutWhenNull(): array
+    {
+        $keys = [];
+        foreach ($this->migratedKeys() as $key) {
+            if (! $key->op3NullValueIsKept()) {
+                $keys[$key->op3SourceName()] = $key;
+            }
+        }
+
+        return $keys;
+    }
+
     public function gaps(): array
     {
         return [

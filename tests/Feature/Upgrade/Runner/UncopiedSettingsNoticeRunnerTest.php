@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
@@ -94,6 +95,66 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString('OPENPNE_IMAGE_MAX_UPLOAD_KB=2048', $output);
+    }
+
+    public function test_a_null_value_of_a_migrated_setting_is_reported_with_the_default_that_applies(): void
+    {
+        DB::table('sns_config')->insert(['name' => 'is_allow_web_public_flag_age', 'value' => null]);
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(
+            "WARN sns_config `is_allow_web_public_flag_age` is NULL and is not copied: OpenPNE 3 read its default there, and `allow_web_public_age` keeps its default here ('0').",
+            $output,
+        );
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
+    }
+
+    public function test_a_hand_edited_spelling_the_source_collation_still_matches_is_reported(): void
+    {
+        // Case, a trailing space and a full-width letter are all one name under utf8mb3_unicode_ci.
+        DB::table('sns_config')->insert(['name' => 'Ｉs_Allow_Web_Public_Flag_Age ', 'value' => null]);
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString('sns_config `Ｉs_Allow_Web_Public_Flag_Age ` is NULL and is not copied', $output);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
+    }
+
+    public function test_every_migrated_setting_with_a_null_value_is_copied_or_reported(): void
+    {
+        // The notice's name list and the step's filter are built apart from the same disposition; a key
+        // one has and the other lacks would be dropped in silence.
+        $keys = array_filter(SnsSettingKey::cases(), static fn (SnsSettingKey $key): bool => $key->isMigratedFromOp3());
+        foreach ($keys as $key) {
+            DB::table('sns_config')->insert(['name' => $key->op3SourceName(), 'value' => null]);
+        }
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
+
+        $this->assertTrue($ok);
+        foreach ($keys as $key) {
+            $notice = "sns_config `{$key->op3SourceName()}` is NULL";
+            if ($key->op3NullValueIsKept()) {
+                $this->assertDatabaseHas('sns_settings', ['key' => $key->value, 'value' => '']);
+                $this->assertStringNotContainsString($notice, $output, "{$key->op3SourceName()} is copied as empty, not reported");
+            } else {
+                $this->assertDatabaseMissing('sns_settings', ['key' => $key->value]);
+                $this->assertStringContainsString($notice, $output, "{$key->op3SourceName()} is left out and must be reported");
+            }
+        }
+    }
+
+    public function test_a_null_value_of_a_setting_never_copied_is_not_reported(): void
+    {
+        DB::table('sns_config')->insert(['name' => 'enable_pc', 'value' => null]);
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
+
+        $this->assertTrue($ok);
+        $this->assertStringNotContainsString('enable_pc', $output);
     }
 
     public function test_the_command_prints_a_value_that_looks_like_a_console_tag(): void

@@ -19,8 +19,11 @@ cannot be wired into one without the other.
 
 `StepRegistry::classes()` is the run order (FK order: `files` first, image join rows last).
 `tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source column to a mapping or a
-`gaps()` entry, every target column to a mapping, `targetDefaults()` or `pendingTargets()`, and
-every `file` / `member` FK to a treatment.
+`gaps()` entry, every target column to a mapping, `targetDefaults()` or `pendingTargets()`, every
+`file` / `member` FK to a treatment, and every nullable FROM-table column a mapping reads
+(`Column::uses`) into a NOT NULL target column to a filter clause that pins it, an outermost
+`COALESCE`, or a `nullGuards()` reason — the INSERT would otherwise fail mid-run on the first NULL
+row. A value a correlated subquery yields is outside that audit.
 
 ## Activity threads
 
@@ -105,7 +108,9 @@ connection's own database. A missing core table or consumed FROM column, or a pa
 optional plugin group (`StepRegistry::optionalPluginSources()`), aborts; a fully absent optional
 group is created empty from the DDL fixture so its steps no-op, and dropped after the run. The
 unknown-name scan, the member-reference counts and the `UncopiedSettingsNotice` (the
-`sns_config` values that live in `.env` here, printed with the value to set) read columns the
+`sns_config` values that live in `.env` here, printed with the value to set, and the NULL rows the
+settings step leaves out because OpenPNE 3 read its default there —
+`SnsSettingKey::op3NullValueIsKept()` names the keys it copies as empty instead) read columns the
 structural check guards, so they run only on a clean structural verdict; the notice also runs only
 when a step has `sns_config` as its source table.
 
