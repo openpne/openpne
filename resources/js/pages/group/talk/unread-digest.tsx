@@ -30,9 +30,8 @@ export function TalkUnreadDigestCard({
 
     return (
         <Card className={cn('px-4 py-3 sm:px-5', className)}>
-            {/* Plural only: the card exists from TalkAbsenceDigest::THRESHOLD messages up, never at
-                one. */}
             <Heading as="h2" variant="minor">
+                {/* eslint-disable-next-line no-restricted-syntax -- never one: the card starts at TalkAbsenceDigest::THRESHOLD */}
                 {t(':count messages while you were away', { count: digest.count })}
             </Heading>
             <p className="mt-0.5 text-xs text-muted-foreground">{t('Since :time', { time: absolute(digest.since) })}</p>

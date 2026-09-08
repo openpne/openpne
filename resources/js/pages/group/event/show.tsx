@@ -14,6 +14,7 @@ import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { commentsPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, EventDetail, EventThread } from '@/pages/community/types';
@@ -135,7 +136,7 @@ export default function GroupEventShow() {
                 )}
             </Panel>
 
-            <Panel title={t(':count comments', { count: thread.total })} flush>
+            <Panel title={commentsPhrase(t, thread.total)} flush>
                 {thread.lastPage > 1 && (
                     <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
                         {thread.hasOlder && thread.olderPage !== null ? (

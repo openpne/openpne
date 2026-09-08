@@ -14,6 +14,7 @@ import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { membersPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import type { MemberRef } from '@/pages/community/types';
@@ -83,7 +84,7 @@ function GroupRowItem({ group, action }: { group: GroupRow; action: React.ReactN
                     </Link>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                    {t(':count members', { count: group.memberCount })}
+                    {membersPhrase(t, group.memberCount)}
                     {/* Stated, not only implied by the button's verb: what "apply" leads to is a wait
                         for someone else, and the row should say so before it is pressed. */}
                     {group.registerPolicy === 'approval' && (

@@ -9,6 +9,7 @@ import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
 import { dangerActionClass } from '@/components/ui/danger-link';
+import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { TimelinePostEntry } from './types';
@@ -40,7 +41,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                     <AiChip isAi={post.author.isAi} />
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
-                    <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
+                    <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={repliesPhrase(t, post.replyCount)} />
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
                         <Timestamp at={post.createdAt} preset="relative" />
                     </Link>

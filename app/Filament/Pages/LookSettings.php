@@ -116,7 +116,9 @@ class LookSettings extends Page
         if ($released > 0) {
             // Narrowing the set moves members off their choice, so the save reports how many rather
             // than leaving it to be discovered.
-            $saved->body(__('Cleared the layout choice of :count members', ['count' => $released]));
+            $saved->body($released === 1
+                ? __('Cleared the layout choice of 1 member')
+                : __('Cleared the layout choice of :count members', ['count' => $released]));
         }
         $saved->send();
 
