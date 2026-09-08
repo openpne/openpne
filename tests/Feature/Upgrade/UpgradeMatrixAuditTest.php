@@ -292,7 +292,7 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
-    public function test_every_nullable_source_column_feeding_a_not_null_target_is_guarded(): void
+    public function test_every_nullable_from_table_column_feeding_a_not_null_target_is_guarded(): void
     {
         // The INSERT fails mid-run on the first NULL row; the guards the audit can read are a filter
         // conjunct that pins the column and an outermost COALESCE, and nullGuards() names any other.
@@ -332,7 +332,7 @@ class UpgradeMatrixAuditTest extends TestCase
                 }
 
                 $this->assertArrayHasKey($target, $declared,
-                    "{$name} copies nullable `{$step->sourceTable()}`.`".implode('` / `', $exposed)."` into NOT NULL `{$step->targetTable()}`.`{$target}` with no guard the audit can read: pin the column in filter(), wrap the value in COALESCE, or name the guard in nullGuards()");
+                    "{$name} copies nullable `{$step->sourceTable()}`.`".implode('` / `', $exposed)."` into NOT NULL `{$step->targetTable()}`.`{$target}` with no guard the audit can read: keep the row out in filter(), give the value a literal fallback with an outermost COALESCE where one is right, or name the guard in nullGuards()");
             }
         }
     }
@@ -346,6 +346,11 @@ class UpgradeMatrixAuditTest extends TestCase
         }
         if ($sql === '') {
             return [];
+        }
+
+        // AND binds tighter than OR, so a disjunction outside parentheses guarantees no conjunct at all.
+        if (count($this->splitOutsideParentheses($sql, ' OR ')) > 1) {
+            return [$sql];
         }
 
         $parts = $this->splitOutsideParentheses($sql, ' AND ');

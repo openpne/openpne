@@ -58,10 +58,21 @@ final class UncopiedSettingsNotice
             array_keys($keys),
         );
 
-        return array_map(static fn (object $row): string => self::nullValueMessage($row->name, $keys[$row->name]), $rows);
+        // The source collation is case-insensitive and PAD SPACE, so the IN matches a hand-edited spelling the
+        // step copies under the same key; the lookup here has to match it the same way.
+        $byLowerName = array_change_key_case($keys, CASE_LOWER);
+        $notices = [];
+        foreach ($rows as $row) {
+            $key = $byLowerName[strtolower(rtrim($row->name, ' '))] ?? null;
+            if ($key !== null) {
+                $notices[] = self::nullValueMessage($row->name, $key);
+            }
+        }
+
+        return $notices;
     }
 
-    public static function nullValueMessage(string $name, SnsSettingKey $key): string
+    private static function nullValueMessage(string $name, SnsSettingKey $key): string
     {
         return sprintf(
             "sns_config `%s` is NULL and is not copied: OpenPNE 3 read its default there, and `%s` keeps its default here ('%s').",
