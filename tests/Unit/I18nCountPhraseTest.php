@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Every `:count` key in lang/ja.json has a `1 …` sibling whose ja reads as the plural does at one,
- * unless EXEMPT says why one is never read from it; that a screen picks the sibling is the ESLint
+ * unless EXEMPT says why the plural stands at one; that a screen picks the sibling is the ESLint
  * rule on resources/js and, for `__()` in app/ and resources/views, the call-site scan here.
  */
 class I18nCountPhraseTest extends TestCase
@@ -63,7 +63,7 @@ class I18nCountPhraseTest extends TestCase
 
             $singular = self::singularOf($key);
             $this->assertTrue($singular !== null && array_key_exists($singular, $ja),
-                "`{$key}` has no singular key".($singular === null ? '' : " `{$singular}`").': add it and pick it at one (resources/js/lib/count-phrase.ts), or list the key in EXEMPT with why one is never read from it');
+                "`{$key}` has no singular key".($singular === null ? '' : " `{$singular}`").': add it and pick it at one (resources/js/lib/count-phrase.ts), or list the key in EXEMPT with why the plural stands at one');
 
             // Japanese has no plural, so the two keys must read the same at one — else fixing one
             // wording leaves the other behind for exactly one.
@@ -81,7 +81,7 @@ class I18nCountPhraseTest extends TestCase
 
         foreach ($finder as $file) {
             $contents = $file->getContents();
-            preg_match_all('/__\(\s*([\'"])((?:(?!\1).)*?:count (?:(?!\1).)*)\1/', $contents, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+            preg_match_all('/(?:__|trans|@lang)\(\s*([\'"])((?:(?!\1).)*?:count (?:(?!\1).)*)\1/', $contents, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
 
             foreach ($matches as $match) {
                 [$call, $offset] = $match[0];
@@ -90,10 +90,10 @@ class I18nCountPhraseTest extends TestCase
                     continue;
                 }
 
-                // The ternary may open a line or two above the plural arm.
-                $before = substr($contents, max(0, $offset - 160), min(160, $offset));
-                $this->assertStringContainsString('=== 1', $before,
-                    "{$file->getRelativePathname()}: `{$key}` is read at one as a plural: make it one arm of a `=== 1` ternary beside its `1 …` key, or list the key in EXEMPT with why one is never read from it");
+                // The statement the call sits in: back to the last `;`, `{` or `}` (a Blade echo opens with `{{`).
+                $start = max(array_map(static fn (string $stop): int => (int) strrpos(substr($contents, 0, $offset), $stop), [';', '{', '}']));
+                $this->assertStringContainsString('=== 1', substr($contents, $start, $offset - $start),
+                    "{$file->getRelativePathname()}: `{$key}` is read at one as a plural: make it one arm of a `=== 1` ternary beside its `1 …` key, or list the key in EXEMPT with why the plural stands at one");
             }
         }
     }
