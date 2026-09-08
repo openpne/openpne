@@ -8,6 +8,7 @@ import type { GridImage } from '@/components/image-grid';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
+import { commentsPhrase, repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
@@ -83,9 +84,7 @@ function Byline({ story }: { story: IssueStory }) {
                         icon={MessageCircle}
                         count={story.commentCount}
                         srLabel={
-                            story.kind === 'timeline'
-                                ? t(':count replies', { count: story.commentCount })
-                                : t(':count comments', { count: story.commentCount })
+                            story.kind === 'timeline' ? repliesPhrase(t, story.commentCount) : commentsPhrase(t, story.commentCount)
                         }
                     />
                 </>

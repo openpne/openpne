@@ -85,7 +85,7 @@ class GroupsTable
                         Notification::make()
                             ->success()
                             ->title(__('Members added'))
-                            ->body(__(':count members added.', ['count' => $added]))
+                            ->body($added === 1 ? __('1 member added.') : __(':count members added.', ['count' => $added]))
                             ->send();
                     }),
                 // Admin delete runs DeleteGroup's author-less core (purges the group's and all

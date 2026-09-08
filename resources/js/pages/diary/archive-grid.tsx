@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
+import { entriesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
@@ -48,7 +49,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
                                 const isSelected = selected?.year === row.year && selected?.month === cell.month;
                                 const label =
                                     cell.count > 0
-                                        ? `${date.civilMonth(row.year, cell.month)}, ${t(':count entries', { count: cell.count })}`
+                                        ? `${date.civilMonth(row.year, cell.month)}, ${entriesPhrase(t, cell.count)}`
                                         : date.civilMonth(row.year, cell.month);
                                 const cellClass = cn(
                                     'flex min-h-11 flex-col items-center justify-center gap-0.5 rounded text-sm',

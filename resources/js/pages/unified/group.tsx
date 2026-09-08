@@ -5,7 +5,7 @@ import { CountPill } from '@/components/count-pill';
 import { CivilDate, Timestamp } from '@/components/timestamp';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
-import { unreadMessagesPhrase } from '@/lib/count-phrase';
+import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityRoleSlug, EventSummary, TopicSummary } from '../community/types';
@@ -93,7 +93,7 @@ export default function UnifiedGroup() {
                         {group.categoryName && <p>{group.categoryName}</p>}
                         <p>
                             <Link href={memberListHref} className="text-link hover:underline">
-                                {t(':count members', { count: group.memberCount })}
+                                {membersPhrase(t, group.memberCount)}
                             </Link>
                         </p>
                     </div>
@@ -189,7 +189,7 @@ export default function UnifiedGroup() {
                     <GroupGrid
                         groups={categoryGroups.map((related) => ({
                             ...related,
-                            caption: t(':count members', { count: related.memberCount }),
+                            caption: membersPhrase(t, related.memberCount),
                         }))}
                     />
                 </HomeSection>

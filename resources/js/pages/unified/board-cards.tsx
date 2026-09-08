@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { CountBadge } from '@/components/entry-row';
+import { commentsPhrase, participantsPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 
 export interface BoardCardRow {
@@ -40,12 +41,12 @@ export function BoardCards({ rows, icon: Icon }: { rows: BoardCardRow[]; icon: L
                                 <CountBadge
                                     icon={MessageCircle}
                                     count={row.commentCount}
-                                    srLabel={t(':count comments', { count: row.commentCount })}
+                                    srLabel={commentsPhrase(t, row.commentCount)}
                                 />
                                 <CountBadge
                                     icon={Users}
                                     count={row.participantCount ?? 0}
-                                    srLabel={t(':count participants', { count: row.participantCount ?? 0 })}
+                                    srLabel={participantsPhrase(t, row.participantCount ?? 0)}
                                 />
                             </div>
                         )}

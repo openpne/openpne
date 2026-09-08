@@ -5,6 +5,7 @@ import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
+import { commentsPhrase, participantsPhrase, repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
@@ -78,13 +79,13 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
     const showPhotoMarker = hasImages && !(thumbnails && thumbnails.length > 0);
     const counts: ReactNode[] = [];
     if (commentCount > 0) {
-        counts.push(<CountBadge key="comments" icon={MessageCircle} count={commentCount} srLabel={t(':count comments', { count: commentCount })} />);
+        counts.push(<CountBadge key="comments" icon={MessageCircle} count={commentCount} srLabel={commentsPhrase(t, commentCount)} />);
     }
     if (replyCount > 0) {
-        counts.push(<CountBadge key="replies" icon={MessageCircle} count={replyCount} srLabel={t(':count replies', { count: replyCount })} />);
+        counts.push(<CountBadge key="replies" icon={MessageCircle} count={replyCount} srLabel={repliesPhrase(t, replyCount)} />);
     }
     if (participantCount > 0) {
-        counts.push(<CountBadge key="participants" icon={Users} count={participantCount} srLabel={t(':count participants', { count: participantCount })} />);
+        counts.push(<CountBadge key="participants" icon={Users} count={participantCount} srLabel={participantsPhrase(t, participantCount)} />);
     }
     if (showPhotoMarker) {
         counts.push(

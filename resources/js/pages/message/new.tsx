@@ -78,7 +78,9 @@ export default function MessageNew() {
                     ? t('The search failed. Wait a moment and try again.')
                     : candidates === null
                       ? ''
-                      : t(':count members found', { count: candidates.length })}
+                      : candidates.length === 1
+                        ? t('1 member found')
+                        : t(':count members found', { count: candidates.length })}
             </p>
 
             {failed && (

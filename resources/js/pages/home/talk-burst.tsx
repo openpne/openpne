@@ -6,6 +6,7 @@ import { CommunityImage } from '@/components/community-image';
 import { EntityText } from '@/components/entity-text';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
+import { messagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { PictureStrip } from './picture-strip';
 import type { TalkBurst, TalkExcerptMessage } from './types';
@@ -64,7 +65,7 @@ export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
             </div>
 
             <Heading as="h2" variant="group">
-                {t(':count messages', { count: burst.count })}
+                {messagesPhrase(t, burst.count)}
             </Heading>
 
             {burst.messages.length > 0 && (

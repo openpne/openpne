@@ -11,7 +11,7 @@ import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
-import { unreadMessagesPhrase } from '@/lib/count-phrase';
+import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
@@ -74,7 +74,7 @@ export default function CommunityShow() {
                         <Heading variant="page">{group.name}</Heading>
                         {group.category && <p className="text-sm text-muted-foreground">{group.category.name}</p>}
                         <Link href={`/groups/${group.id}/members`} className="text-sm text-link hover:underline">
-                            {t(':count members', { count: group.memberCount })}
+                            {membersPhrase(t, group.memberCount)}
                         </Link>
                     </div>
                 </div>

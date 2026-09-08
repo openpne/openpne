@@ -46,6 +46,19 @@ const GLOB_RESTRICTIONS = [
     },
 ];
 
+// A `:count …s` phrase read at one says "1 messages", the count a pill shows most; the singular is a
+// key of its own picked by hand (the dictionary is flat), so the plural call has to be one arm of a
+// `=== 1` ternary — the direct parent, so an arm wrapped in JSX calls a helper in lib/count-phrase.ts
+// instead. A phrase that never reaches one carries an eslint-disable naming why;
+// tests/Unit/I18nCountPhraseTest.php checks the dictionary and the PHP / Blade side.
+const ONE_TERNARY_ARM = ['test.right.value=1', 'test.left.value=1']
+    .map((one) => `:not(ConditionalExpression[test.operator='==='][${one}] > CallExpression)`)
+    .join('');
+const COUNT_PHRASE_RESTRICTION = {
+    selector: `CallExpression[callee.name='t'][arguments.0.type='Literal'][arguments.0.value=/(^|\\s):count .*s\\b/]${ONE_TERNARY_ARM}`,
+    message: "Say one in the singular: `n === 1 ? t('1 …') : t(':count …s', { count: n })`, or a helper in lib/count-phrase.ts.",
+};
+
 const DATE_FORMATTING_RESTRICTIONS = [
     {
         // The member access, not the call: `Intl.DateTimeFormat(...)` is valid without `new`, and
@@ -75,16 +88,27 @@ export default tseslint.config(
     },
     {
         files: ['resources/js/**/*.{ts,tsx}'],
-        ignores: ['resources/js/lib/date.ts'],
+        ignores: ['resources/js/lib/date.ts', 'resources/js/lib/member-chrome.ts'],
         rules: {
-            'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS],
+            'no-restricted-syntax': [
+                'error',
+                ...DATE_FORMATTING_RESTRICTIONS,
+                JSX_LINE_COMMENT_RESTRICTION,
+                ...GLOB_RESTRICTIONS,
+                COUNT_PHRASE_RESTRICTION,
+            ],
         },
     },
     {
         // date.ts is the one place Intl belongs; `ignores` takes a file out of the whole block, so the
-        // other two restrictions have to be said again for it.
+        // other restrictions have to be said again for it.
         files: ['resources/js/lib/date.ts'],
-        rules: { 'no-restricted-syntax': ['error', JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS] },
+        rules: { 'no-restricted-syntax': ['error', JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS, COUNT_PHRASE_RESTRICTION] },
+    },
+    {
+        // member-chrome.ts builds CountBadge key objects, whose type requires the `one` key beside `label`.
+        files: ['resources/js/lib/member-chrome.ts'],
+        rules: { 'no-restricted-syntax': ['error', ...DATE_FORMATTING_RESTRICTIONS, JSX_LINE_COMMENT_RESTRICTION, ...GLOB_RESTRICTIONS] },
     },
     {
         // The raw formatters take an explicit locale + timezone, so a caller can pass the wrong pair.
@@ -163,6 +187,7 @@ export default tseslint.config(
                 ...DATE_FORMATTING_RESTRICTIONS,
                 JSX_LINE_COMMENT_RESTRICTION,
                 ...GLOB_RESTRICTIONS,
+                COUNT_PHRASE_RESTRICTION,
             ],
         },
     },
