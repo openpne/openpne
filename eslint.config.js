@@ -47,11 +47,15 @@ const GLOB_RESTRICTIONS = [
 ];
 
 // A `:count …s` phrase read at one says "1 messages", the count a pill shows most; the singular is a
-// key of its own picked by hand (the dictionary is flat), so the plural call has to sit in a `=== 1`
-// ternary or behind a helper in lib/count-phrase.ts. A phrase that never reaches one carries an
-// eslint-disable naming why. tests/Unit/I18nCountPhraseTest.php checks the dictionary side.
+// key of its own picked by hand (the dictionary is flat), so the plural call has to be one arm of a
+// `=== 1` ternary — the direct parent, so an arm wrapped in JSX calls a helper in lib/count-phrase.ts
+// instead. A phrase that never reaches one carries an eslint-disable naming why;
+// tests/Unit/I18nCountPhraseTest.php checks the dictionary and the PHP / Blade side.
+const ONE_TERNARY_ARM = ['test.right.value=1', 'test.left.value=1']
+    .map((one) => `:not(ConditionalExpression[test.operator='==='][${one}] > CallExpression)`)
+    .join('');
 const COUNT_PHRASE_RESTRICTION = {
-    selector: "CallExpression[callee.name='t'][arguments.0.type='Literal'][arguments.0.value=/^:count .*s\\b/]:not(ConditionalExpression > CallExpression)",
+    selector: `CallExpression[callee.name='t'][arguments.0.type='Literal'][arguments.0.value=/(^|\\s):count .*s\\b/]${ONE_TERNARY_ARM}`,
     message: "Say one in the singular: `n === 1 ? t('1 …') : t(':count …s', { count: n })`, or a helper in lib/count-phrase.ts.",
 };
 
@@ -183,6 +187,7 @@ export default tseslint.config(
                 ...DATE_FORMATTING_RESTRICTIONS,
                 JSX_LINE_COMMENT_RESTRICTION,
                 ...GLOB_RESTRICTIONS,
+                COUNT_PHRASE_RESTRICTION,
             ],
         },
     },

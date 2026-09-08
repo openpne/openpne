@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use Illuminate\Support\Str;
+use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
 
 /**
  * Every `:count` key in lang/ja.json has a `1 …` sibling whose ja reads as the plural does at one,
- * unless EXEMPT says why one is never read from it; that a screen picks the sibling is the ESLint rule.
+ * unless EXEMPT says why one is never read from it; that a screen picks the sibling is the ESLint
+ * rule on resources/js and, for `__()` in app/ and resources/views, the call-site scan here.
  */
 class I18nCountPhraseTest extends TestCase
 {
@@ -70,6 +72,29 @@ class I18nCountPhraseTest extends TestCase
                 self::withSingularTerms($ja[$singular]),
                 "`{$singular}` reads differently in ja from `{$key}` at one",
             );
+        }
+    }
+
+    public function test_every_plural_count_call_in_php_or_blade_is_one_arm_of_a_one_ternary(): void
+    {
+        $finder = Finder::create()->files()->in([base_path('app'), base_path('resources/views')])->name('*.php');
+
+        foreach ($finder as $file) {
+            $contents = $file->getContents();
+            preg_match_all('/__\(\s*([\'"])((?:(?!\1).)*?:count (?:(?!\1).)*)\1/', $contents, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+
+            foreach ($matches as $match) {
+                [$call, $offset] = $match[0];
+                $key = $match[2][0];
+                if (! preg_match('/(^|\s):count .*s\b/', $key) || array_key_exists($key, self::EXEMPT)) {
+                    continue;
+                }
+
+                // The ternary may open a line or two above the plural arm.
+                $before = substr($contents, max(0, $offset - 160), min(160, $offset));
+                $this->assertStringContainsString('=== 1', $before,
+                    "{$file->getRelativePathname()}: `{$key}` is read at one as a plural: make it one arm of a `=== 1` ternary beside its `1 …` key, or list the key in EXEMPT with why one is never read from it");
+            }
         }
     }
 
