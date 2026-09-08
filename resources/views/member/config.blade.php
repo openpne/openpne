@@ -222,7 +222,7 @@
                             @foreach ($ai['accounts'] as $account)
                                 <li>
                                     <a href="{{ route('member.config.ai.show', ['member' => $account['id']]) }}">{{ $account['name'] }}</a>
-                                    — {{ __('In :count %communities%', ['count' => $account['groupCount']]) }}
+                                    — {{ $account['groupCount'] === 1 ? __('In 1 %community%') : __('In :count %communities%', ['count' => $account['groupCount']]) }}
                                 </li>
                             @endforeach
                         </ul>

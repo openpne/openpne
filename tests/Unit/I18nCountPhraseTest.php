@@ -8,8 +8,8 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Every `:count` key in lang/ja.json has the singular key the Modern surface picks at exactly one
- * (resources/js/lib/count-phrase.ts), unless EXEMPT says why one is never read from it.
+ * Every `:count` key in lang/ja.json has a `1 …` sibling whose ja reads as the plural does at one,
+ * unless EXEMPT says why one is never read from it; that a screen picks the sibling is the ESLint rule.
  */
 class I18nCountPhraseTest extends TestCase
 {
@@ -22,11 +22,12 @@ class I18nCountPhraseTest extends TestCase
         'Digit :number of :count' => null,
         '%Friends% (:count)' => null,
         'Joined %communities% (:count)' => null,
-        // Never one: an expiry in minutes, the Laravel validation summary's own singular.
+        // Read by the framework, not the app: the reset mail's expiry is config (60), and the validation
+        // summary carries its own singular.
         'This password reset link will expire in :count minutes.' => null,
         '(and :count more error)' => null,
         '(and :count more errors)' => '(and :count more error)',
-        // Relative time says it with an article (lib/use-date-format.ts, the Classic timeago script).
+        // Relative time says it with an article.
         ':count minutes ago' => 'A minute ago',
         ':count hours ago' => 'An hour ago',
         ':count days ago' => 'A day ago',
@@ -39,9 +40,6 @@ class I18nCountPhraseTest extends TestCase
         'There are new :count messages!' => null,
         "You've gotten :count %community% joining requests" => null,
         "You've gotten :count %friend% requests" => null,
-        // Admin notifications.
-        ':count members added.' => null,
-        'Cleared the layout choice of :count members' => null,
     ];
 
     public function test_every_count_key_has_the_singular_the_surface_picks_at_one(): void
@@ -64,6 +62,14 @@ class I18nCountPhraseTest extends TestCase
             $singular = self::singularOf($key);
             $this->assertTrue($singular !== null && array_key_exists($singular, $ja),
                 "`{$key}` has no singular key".($singular === null ? '' : " `{$singular}`").': add it and pick it at one (resources/js/lib/count-phrase.ts), or list the key in EXEMPT with why one is never read from it');
+
+            // Japanese has no plural, so the two keys must read the same at one — else fixing one
+            // wording leaves the other behind for exactly one.
+            $this->assertSame(
+                self::withSingularTerms(str_replace(':count', '1', $ja[$key])),
+                self::withSingularTerms($ja[$singular]),
+                "`{$singular}` reads differently in ja from `{$key}` at one",
+            );
         }
     }
 
@@ -87,7 +93,6 @@ class I18nCountPhraseTest extends TestCase
         $this->assertSame('In 1 %community%', self::singularOf('In :count %communities%'));
     }
 
-    /** `:count` becomes `1`, and the first plural word after it its singular (a `%term%` keeps its marks); null when `:count` is not a word of its own. */
     private static function singularOf(string $key): ?string
     {
         $words = explode(' ', $key);
@@ -110,6 +115,11 @@ class I18nCountPhraseTest extends TestCase
         }
 
         return implode(' ', $words);
+    }
+
+    private static function withSingularTerms(string $text): string
+    {
+        return (string) preg_replace_callback('/%([a-z]+)%/i', static fn (array $m): string => '%'.Str::singular($m[1]).'%', $text);
     }
 
     /** @return array<string, string> */
