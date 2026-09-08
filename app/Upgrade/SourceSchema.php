@@ -47,6 +47,21 @@ final class SourceSchema
         return $matches[1];
     }
 
+    /** @return list<string> columns of a source table whose DDL lets them be NULL, in definition order */
+    public function nullableColumns(string $table): array
+    {
+        preg_match_all('/^\s+`([a-z0-9_]+)`\s+(\S[^\n]*)$/im', $this->createStatement($table), $matches, PREG_SET_ORDER);
+
+        $nullable = [];
+        foreach ($matches as [, $column, $definition]) {
+            if (! preg_match('/\bNOT NULL\b/', $definition)) {
+                $nullable[] = $column;
+            }
+        }
+
+        return $nullable;
+    }
+
     /**
      * Every `table.column` that is a foreign key onto `file.id`, in fixture order. Coverage is per
      * column, not per table: a file owner can be a join table or a plain column on another table.

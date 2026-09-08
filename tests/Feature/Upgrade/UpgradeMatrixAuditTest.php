@@ -292,6 +292,172 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
+    public function test_every_nullable_from_table_column_feeding_a_not_null_target_is_guarded(): void
+    {
+        // The INSERT fails mid-run on the first NULL row; the guards the audit can read are a filter
+        // conjunct that pins the column and an outermost COALESCE, and nullGuards() names any other.
+        $schema = SourceSchema::default();
+
+        foreach (StepRegistry::all() as $step) {
+            $name = class_basename($step);
+            $nullable = $schema->nullableColumns($step->sourceTable());
+            $required = [];
+            foreach (Schema::getColumns($step->targetTable()) as $column) {
+                if (! $column['nullable']) {
+                    $required[$column['name']] = true;
+                }
+            }
+            $conjuncts = $this->conjuncts($step->effectiveFilter() ?? '');
+            $declared = $step->nullGuards();
+
+            foreach ($declared as $target => $reason) {
+                $this->assertArrayHasKey($target, $step->columns(), "{$name} declares a null guard for `{$target}`, which it does not map");
+                $this->assertNotEmpty($reason, "{$name} declares a null guard for `{$target}` without a reason");
+            }
+
+            foreach ($step->columns() as $target => $mapping) {
+                $exposed = isset($required[$target]) && ! $this->fallsBackToALiteral($mapping->selectSql())
+                    ? array_values(array_filter(
+                        array_intersect($mapping->uses, $nullable),
+                        fn (string $column): bool => ! $this->filterPins($conjuncts, $step->sourceTable(), $column),
+                    ))
+                    : [];
+
+                if ($exposed === []) {
+                    // No stale declaration: beside a guard the audit can read, the reason is a second, unchecked story.
+                    $this->assertArrayNotHasKey($target, $declared,
+                        "{$name} declares a null guard for `{$target}`, but no nullable source column reaches it unguarded");
+
+                    continue;
+                }
+
+                $this->assertArrayHasKey($target, $declared,
+                    "{$name} copies nullable `{$step->sourceTable()}`.`".implode('` / `', $exposed)."` into NOT NULL `{$step->targetTable()}`.`{$target}` with no guard the audit can read: keep the row out in filter(), give the value a literal fallback with an outermost COALESCE where one is right, or name the guard in nullGuards()");
+            }
+        }
+    }
+
+    /** @return list<string> the top-level AND conjuncts of a SQL boolean, each stripped of wrapping parentheses; none for a top-level disjunction */
+    private function conjuncts(string $sql): array
+    {
+        $sql = trim($sql);
+        while ($sql !== '' && $this->isParenthesised($sql)) {
+            $sql = trim(substr($sql, 1, -1));
+        }
+        if ($sql === '') {
+            return [];
+        }
+
+        // AND binds tighter than OR, so a disjunction outside parentheses guarantees no conjunct at all.
+        if (count($this->splitOutsideParentheses($sql, ' OR ')) > 1) {
+            return [];
+        }
+
+        $parts = $this->splitOutsideParentheses($sql, ' AND ');
+
+        return count($parts) === 1
+            ? [$sql]
+            : array_merge(...array_map(fn (string $part): array => $this->conjuncts($part), $parts));
+    }
+
+    /** @param  list<string>  $conjuncts */
+    private function filterPins(array $conjuncts, string $table, string $column): bool
+    {
+        $qualified = '`'.preg_quote($table, '/').'`\.`'.preg_quote($column, '/').'`';
+        $reference = '(?:`'.preg_quote($table, '/').'`\.)?`'.preg_quote($column, '/').'`';
+        $other = '`[a-z0-9_]+`(?:\.`[a-z0-9_]+`)?';
+
+        foreach ($conjuncts as $conjunct) {
+            if (preg_match("/^{$reference} IS NOT NULL$/", $conjunct)) {
+                return true;
+            }
+            if (preg_match("/^{$reference} IN (\(SELECT .*\))$/s", $conjunct, $m) && $this->isParenthesised($m[1])) {
+                return true;
+            }
+
+            // A correlated EXISTS whose WHERE equates the column: NULL matches no row, so the row is left out.
+            if (preg_match('/^EXISTS \((SELECT .*)\)$/s', $conjunct, $m)) {
+                $where = $this->splitOutsideParentheses($m[1], ' WHERE ');
+                foreach ($this->conjuncts(implode(' WHERE ', array_slice($where, 1))) as $predicate) {
+                    if (preg_match("/^{$other} = {$qualified}$/", $predicate) || preg_match("/^{$qualified} = {$other}$/", $predicate)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** An outermost COALESCE / IFNULL whose last argument is a literal, so the value cannot be NULL. */
+    private function fallsBackToALiteral(string $select): bool
+    {
+        $select = trim($select);
+
+        if (! preg_match('/^(?:COALESCE|IFNULL)\((.*)\)$/is', $select, $m)
+            || ! $this->isParenthesised(substr($select, (int) strpos($select, '(')))) {
+            return false;
+        }
+
+        $arguments = $this->splitOutsideParentheses($m[1], ',');
+
+        return preg_match("/^(?:'[^']*'|-?\d+)$/", trim((string) end($arguments))) === 1;
+    }
+
+    private function isParenthesised(string $sql): bool
+    {
+        if (! str_starts_with($sql, '(') || ! str_ends_with($sql, ')')) {
+            return false;
+        }
+
+        $depth = 0;
+        $quoted = false;
+        $last = strlen($sql) - 1;
+        for ($i = 0; $i <= $last; $i++) {
+            $char = $sql[$i];
+            if ($char === "'") {
+                $quoted = ! $quoted;
+            } elseif ($quoted) {
+                continue;
+            } elseif ($char === '(') {
+                $depth++;
+            } elseif ($char === ')' && --$depth === 0) {
+                return $i === $last;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return list<string> $sql split at every $separator outside parentheses and string literals */
+    private function splitOutsideParentheses(string $sql, string $separator): array
+    {
+        $parts = [];
+        $depth = 0;
+        $quoted = false;
+        $start = 0;
+        $length = strlen($separator);
+        for ($i = 0, $n = strlen($sql); $i < $n; $i++) {
+            $char = $sql[$i];
+            if ($char === "'") {
+                $quoted = ! $quoted;
+            } elseif ($quoted) {
+                continue;
+            } elseif ($char === '(') {
+                $depth++;
+            } elseif ($char === ')') {
+                $depth--;
+            } elseif ($depth === 0 && substr($sql, $i, $length) === $separator) {
+                $parts[] = trim(substr($sql, $start, $i - $start));
+                $start = $i + $length;
+                $i += $length - 1;
+            }
+        }
+        $parts[] = trim(substr($sql, $start));
+
+        return $parts;
+    }
+
     public function test_optional_plugin_tables_are_read_tables_and_disjoint(): void
     {
         $readTables = [];

@@ -61,6 +61,17 @@ abstract class UpgradeStep
     }
 
     /**
+     * NOT NULL target columns fed by a nullable source column where what keeps NULL out is neither a
+     * filter clause on that column nor an outermost COALESCE (the audit reads only those), with the reason.
+     *
+     * @return array<string, string> target column => reason
+     */
+    public function nullGuards(): array
+    {
+        return [];
+    }
+
+    /**
      * Optional SQL boolean restricting which source rows are copied (the WHERE clause),
      * e.g. when one source table feeds several target tables by a flag. null = all rows.
      */

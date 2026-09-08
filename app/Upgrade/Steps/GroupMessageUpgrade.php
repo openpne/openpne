@@ -49,6 +49,13 @@ class GroupMessageUpgrade extends UpgradeStep
         return ['reactions_version', 'link_card_id', 'link_card_synced_at'];
     }
 
+    public function nullGuards(): array
+    {
+        return [
+            'group_id' => "The root row's foreign_id: the filter's EXISTS requires that root and a community it points at (ActivityThread::groupRoot), and in_reply_to_activity_id only locates the root.",
+        ];
+    }
+
     public function gaps(): array
     {
         return ActivityThread::recordGaps() + [
