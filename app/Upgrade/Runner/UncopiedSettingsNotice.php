@@ -53,23 +53,21 @@ final class UncopiedSettingsNotice
             return [];
         }
 
-        $rows = DB::select(
-            'select `name` from '.$table.' where `value` is null and `name` in ('.implode(', ', array_fill(0, count($keys), '?')).') order by `name`',
-            array_keys($keys),
-        );
-
-        // The source collation is case-insensitive and PAD SPACE, so the IN matches a hand-edited spelling the
-        // step copies under the same key; the lookup here has to match it the same way.
-        $byLowerName = array_change_key_case($keys, CASE_LOWER);
-        $notices = [];
-        foreach ($rows as $row) {
-            $key = $byLowerName[strtolower(rtrim($row->name, ' '))] ?? null;
-            if ($key !== null) {
-                $notices[] = self::nullValueMessage($row->name, $key);
-            }
+        $names = array_keys($keys);
+        $bindings = [];
+        foreach ($names as $name) {
+            array_push($bindings, $name, $name);
         }
 
-        return $notices;
+        // The CASE resolves a hand-edited spelling under the source collation (case-insensitive, PAD SPACE),
+        // the same comparison the step's own name CASE copies it by.
+        $rows = DB::select(
+            'select `name`, CASE `name` '.str_repeat('WHEN ? THEN ? ', count($names)).'END as `canonical` from '.$table
+            .' where `value` is null and `name` in ('.implode(', ', array_fill(0, count($names), '?')).') order by `name`',
+            [...$bindings, ...$names],
+        );
+
+        return array_map(static fn (object $row): string => self::nullValueMessage($row->name, $keys[$row->canonical]), $rows);
     }
 
     private static function nullValueMessage(string $name, SnsSettingKey $key): string

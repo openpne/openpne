@@ -113,12 +113,13 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
     public function test_a_hand_edited_spelling_the_source_collation_still_matches_is_reported(): void
     {
-        DB::table('sns_config')->insert(['name' => 'Is_Allow_Web_Public_Flag_Age ', 'value' => null]);
+        // Case, a trailing space and a full-width letter are all one name under utf8mb3_unicode_ci.
+        DB::table('sns_config')->insert(['name' => 'Ｉs_Allow_Web_Public_Flag_Age ', 'value' => null]);
 
         [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
 
         $this->assertTrue($ok);
-        $this->assertStringContainsString('sns_config `Is_Allow_Web_Public_Flag_Age ` is NULL and is not copied', $output);
+        $this->assertStringContainsString('sns_config `Ｉs_Allow_Web_Public_Flag_Age ` is NULL and is not copied', $output);
         $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
     }
 

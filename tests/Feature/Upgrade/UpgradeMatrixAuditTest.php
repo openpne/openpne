@@ -350,7 +350,7 @@ class UpgradeMatrixAuditTest extends TestCase
 
         // AND binds tighter than OR, so a disjunction outside parentheses guarantees no conjunct at all.
         if (count($this->splitOutsideParentheses($sql, ' OR ')) > 1) {
-            return [$sql];
+            return [];
         }
 
         $parts = $this->splitOutsideParentheses($sql, ' AND ');
@@ -368,7 +368,10 @@ class UpgradeMatrixAuditTest extends TestCase
         $other = '`[a-z0-9_]+`(?:\.`[a-z0-9_]+`)?';
 
         foreach ($conjuncts as $conjunct) {
-            if (preg_match("/^{$reference} IS NOT NULL$/", $conjunct) || preg_match("/^{$reference} IN \(SELECT /", $conjunct)) {
+            if (preg_match("/^{$reference} IS NOT NULL$/", $conjunct)) {
+                return true;
+            }
+            if (preg_match("/^{$reference} IN (\(SELECT .*\))$/s", $conjunct, $m) && $this->isParenthesised($m[1])) {
                 return true;
             }
 
