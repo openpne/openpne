@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('read-diary')]
 #[Title('Read a diary')]
-#[Description('One diary in full — its whole body as plain text, and its whole comment thread in the order it was written. Reads any entry you may see, whether or not the feed lists it.')]
+#[Description('One diary in full — its whole body as plain text, and its whole comment thread in number order. Reads any entry you may see, whether or not the feed lists it.')]
 #[IsReadOnly]
 class ReadDiaryTool extends DiaryTool
 {
