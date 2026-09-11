@@ -13,9 +13,9 @@ use InvalidArgumentException;
 final class StreamQuery
 {
     /**
-     * Consumes the query, whose own clauses must hold no top-level `orWhere`: the order is replaced
-     * and the predicate and limit are added. A row whose time column is NULL is left out, having no
-     * place in the order.
+     * Consumes the query: the order is replaced and the predicate and limit are added, so a top-level
+     * `orWhere`, which would absorb the predicate and re-serve rows, is refused. A row whose time
+     * column is NULL is left out, having no place in the order.
      *
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
@@ -30,6 +30,11 @@ final class StreamQuery
         }
 
         $builder = $query instanceof HasOneOrMany ? $query->getQuery() : $query;
+        foreach ($builder->getQuery()->wheres as $where) {
+            if (($where['boolean'] ?? 'and') === 'or') {
+                throw new InvalidArgumentException('A stream query groups its own OR clauses.');
+            }
+        }
         $time = $builder->qualifyColumn($column);
         $key = $builder->getModel()->getQualifiedKeyName();
 

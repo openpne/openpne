@@ -27,6 +27,6 @@ final class StreamRequest
         $query = Arr::except($request->query(), 'page');
 
         // Relative, so the Location never repeats a forwarded host.
-        return new RedirectResponse($request->getBaseUrl().$request->getPathInfo().($query === [] ? '' : '?'.Arr::query($query)));
+        return new RedirectResponse('/'.ltrim($request->getBaseUrl().$request->getPathInfo(), '/').($query === [] ? '' : '?'.Arr::query($query)));
     }
 }

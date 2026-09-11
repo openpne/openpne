@@ -61,9 +61,9 @@ interface RevalidateRouter {
 }
 
 /**
- * The props a full reload has to reset: Inertia's InfiniteScroll keeps its next cursor in its own
- * state and drops it only for a prop the request named in `reset`, so a reload that replaced the
- * rows without naming the prop would have the next page skip what it replaced.
+ * Inertia's InfiniteScroll drops its stored next cursor only for a prop the request named in
+ * `reset`; without it the next page skips the rows a full reload replaced. Only props present at the
+ * last navigate are known here, so a stream must not arrive deferred.
  */
 export function scrollPropNames(page: RevalidatedPage | undefined): string[] {
     return Object.keys(page?.scrollProps ?? {});

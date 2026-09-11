@@ -85,6 +85,20 @@ class StreamQueryTest extends TestCase
         $this->assertFalse($page->hasOlder);
     }
 
+    public function test_a_top_level_or_clause_is_refused_rather_than_absorbing_the_predicate(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        StreamQuery::older(TimelinePost::query()->where('member_id', 1)->orWhere('member_id', 2), null, self::PER_PAGE);
+    }
+
+    public function test_a_grouped_or_clause_is_the_caller_s_own_business(): void
+    {
+        $page = StreamQuery::older(TimelinePost::query()->where(fn ($q) => $q->where('member_id', 1)->orWhere('member_id', 2)), null, self::PER_PAGE);
+
+        $this->assertCount(20, $page->rows);
+    }
+
     public function test_a_page_holds_at_least_one_row(): void
     {
         $this->expectException(InvalidArgumentException::class);
