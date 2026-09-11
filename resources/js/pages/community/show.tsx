@@ -6,6 +6,7 @@ import { EntryRow } from '@/components/entry-row';
 import { MemberTile } from '@/components/member-tile';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CivilDate, Timestamp } from '@/components/timestamp';
+import { BoardStamp, EventBoardStamp } from './board-stamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
@@ -185,7 +186,7 @@ export default function CommunityShow() {
                                     href={`/topics/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={<>{topic.commentCount > 0 ? t('Last comment') : t('Posted')}: <Timestamp at={topic.bumpedAt} preset="listStamp" /></>}
+                                    date={<BoardStamp commentCount={topic.commentCount} bumpedAt={topic.bumpedAt} />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}
@@ -222,7 +223,12 @@ export default function CommunityShow() {
                                     href={`/events/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} weekday /></>}
+                                    date={
+                                        <>
+                                            {t('Open date')}: <CivilDate value={event.openDate} weekday />
+                                            <EventBoardStamp commentCount={event.commentCount} bumpedAt={event.bumpedAt} />
+                                        </>
+                                    }
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />

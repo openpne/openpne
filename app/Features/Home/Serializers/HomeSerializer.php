@@ -73,7 +73,7 @@ class HomeSerializer
             'kind' => $row instanceof GroupTopic ? 'topic' : 'event',
             'id' => $row->getKey(),
             'name' => $row->name,
-            'commentCount' => $row->comments_count ?? 0,
+            'commentCount' => $row->comments_count ?? $row->loadCount('comments')->comments_count,
             // Topics have no roster; only events carry a participant count (null suppresses the badge).
             'participantCount' => $row instanceof GroupEvent ? ($row->participants_count ?? 0) : null,
             'group' => [
