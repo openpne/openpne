@@ -45,7 +45,8 @@ class NotificationFeedTest extends TestCase
                 ->where('feed.data.0.read', false)
                 ->where('feed.data.0.actor.name', $actor->name)
                 ->where('feed.data.1.id', $older->getKey())
-                ->where('feed.meta.total', 2),
+                ->has('feed.data', 2)
+                ->missing('feed.meta'),
             );
     }
 
@@ -56,14 +57,24 @@ class NotificationFeedTest extends TestCase
         $ids = collect(range(1, 35))->map(fn () => $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: $at)->getKey());
         $expected = $ids->sortDesc()->values()->all();
 
-        $first = $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['feed']['data'];
-        $second = $this->actingOnModern($viewer)->get('/notifications?page=2')->viewData('page')['props']['feed']['data'];
+        $head = $this->actingOnModern($viewer)->get('/notifications')->viewData('page');
+        $cursor = $head['scrollProps']['feed']['nextPage'];
+        $next = $this->actingOnModern($viewer)->get('/notifications?before='.urlencode($cursor))->viewData('page');
 
-        $this->assertSame(array_slice($expected, 0, 30), array_column($first, 'id'));
-        $this->assertSame(array_slice($expected, 30), array_column($second, 'id'));
+        $this->assertSame(array_slice($expected, 0, 30), array_column($head['props']['feed']['data'], 'id'));
+        $this->assertSame(array_slice($expected, 30), array_column($next['props']['feed']['data'], 'id'));
+        $this->assertSame($expected[29], explode('|', $cursor)[1]);
+        $this->assertNull($next['scrollProps']['feed']['nextPage']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $head['props']['streamGeneration']);
+        $this->assertNotSame($head['props']['streamGeneration'], $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['streamGeneration']);
+        // A "load more" asks for the rows only, so the generation it holds stays and the list is not remounted mid-scroll.
+        $partial = $this->actingOnModern($viewer)->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) Inertia::getVersion(), 'X-Inertia-Partial-Component' => 'notifications/index', 'X-Inertia-Partial-Data' => 'feed'])->get('/notifications')->assertOk()->json('props');
+        $this->assertArrayHasKey('feed', $partial);
+        $this->assertArrayNotHasKey('streamGeneration', $partial);
+        $this->actingOnModern($viewer)->get('/notifications?page=2')->assertRedirect('/notifications');
         // MySQL returns a same-second tie in id order even without the clause, so the SQL is pinned too.
         $orders = $this->orderClausesOn('notifications', fn () => $this->actingOnModern($viewer)->get('/notifications'));
-        $this->assertContains('order by created_at desc, id desc', $orders);
+        $this->assertContains('order by notifications.created_at desc, notifications.id desc', $orders);
     }
 
     public function test_feed_does_not_show_another_members_notifications(): void
@@ -73,7 +84,7 @@ class NotificationFeedTest extends TestCase
 
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.meta.total', 0));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('feed.data', 0));
     }
 
     public function test_withdrawn_actor_degrades_to_a_null_actor(): void

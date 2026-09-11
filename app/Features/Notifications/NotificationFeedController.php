@@ -7,6 +7,9 @@ use App\Features\Notifications\Queries\VisibleNotifications;
 use App\Features\Notifications\Serializers\NotificationFeedSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
+use App\Support\Stream\StreamProps;
+use App\Support\Stream\StreamQuery;
+use App\Support\Stream\StreamRequest;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,19 +28,27 @@ class NotificationFeedController extends Controller
 
     private const PAGE = 30;
 
-    public function index(Request $request, CountUnreadNotifications $unread): View|Response
+    public function index(Request $request, CountUnreadNotifications $unread): View|Response|RedirectResponse
     {
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
         $viewer = $this->viewer();
-        $rows = VisibleNotifications::newestFirst(VisibleNotifications::apply($viewer->notifications()))->paginate(self::PAGE);
+        $before = StreamRequest::before($request);
+        $page = StreamQuery::older(VisibleNotifications::apply($viewer->notifications()), $before, self::PAGE);
+        $older = $page->olderCursor();
 
         return $this->respondWith($request, 'notifications', [
             // Counted over the whole feed, not the header center's window: this page pages past it.
             SurfaceResolver::CLASSIC => fn (): View => view('notifications.index', [
-                'feed' => NotificationFeedSerializer::classicRows($rows),
+                'feed' => NotificationFeedSerializer::classicRows($page),
                 'unreadCount' => $unread($viewer),
+                'olderUrl' => $older === null ? null : route('notifications.index', ['before' => (string) $older]),
+                'newerUrl' => $before === null ? null : route('notifications.index'),
             ]),
             SurfaceResolver::MODERN => fn (): Response => Inertia::render('notifications/index', [
-                'feed' => NotificationFeedSerializer::paginator($rows),
+                'feed' => NotificationFeedSerializer::stream($page, $before),
+                'streamGeneration' => StreamProps::generation(),
             ]),
         ]);
     }

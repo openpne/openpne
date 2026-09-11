@@ -24,9 +24,12 @@ use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamProps;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
+use Inertia\ScrollProp;
 
 /**
  * Everything displayed is hydrated at render time, so a withdrawn actor degrades to a fallback label
@@ -35,41 +38,30 @@ use Illuminate\Support\Collection;
 class NotificationFeedSerializer
 {
     /**
-     * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
-     * @return array{data: list<array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @param  StreamPage<DatabaseNotification>  $page
+     * @return ScrollProp<array{data: list<array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}>}>
      */
-    public static function paginator(LengthAwarePaginator $rows): array
+    public static function stream(StreamPage $page, ?StreamCursor $before): ScrollProp
     {
-        $actors = self::actors(collect($rows->items()));
+        $actors = self::actors($page->rows);
 
-        return [
-            'data' => array_map(fn (DatabaseNotification $row): array => self::row($row, $actors), $rows->items()),
-            'meta' => [
-                'currentPage' => $rows->currentPage(),
-                'lastPage' => $rows->lastPage(),
-                'perPage' => $rows->perPage(),
-                'total' => $rows->total(),
-            ],
-        ];
+        return StreamProps::scroll($page, fn (DatabaseNotification $row): array => self::row($row, $actors), $before);
     }
 
     /**
-     * The same rows for the Classic list, which pages with <x-classic.pager> and so needs the
-     * paginator itself rather than a meta array.
-     *
-     * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
-     * @return LengthAwarePaginator<int, NotificationFeedRow>
+     * @param  StreamPage<DatabaseNotification>  $page
+     * @return Collection<int, NotificationFeedRow>
      */
-    public static function classicRows(LengthAwarePaginator $rows): LengthAwarePaginator
+    public static function classicRows(StreamPage $page): Collection
     {
-        $actors = self::actors(collect($rows->items()));
+        $actors = self::actors($page->rows);
 
-        return $rows->through(fn (DatabaseNotification $row): NotificationFeedRow => new NotificationFeedRow(
+        return $page->rows->map(fn (DatabaseNotification $row): NotificationFeedRow => new NotificationFeedRow(
             id: $row->getKey(),
             label: self::label($row, $actors),
             createdAt: $row->created_at,
             read: $row->read_at !== null,
-        ));
+        ))->values();
     }
 
     /**

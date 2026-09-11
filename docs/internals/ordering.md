@@ -46,8 +46,9 @@ mailbox on the box's own time column and row id. A link that walked `id` while t
 A **stream** — newest first, growing while it is read, consumed by scrolling — pages by keyset: the
 client names the row it has and asks for what lies beyond it, so a row posted meanwhile shifts
 nothing. An **archive** — a list a reader jumps into by page number — pages by OFFSET. Group talk,
-direct-message conversations, the timeline feeds and the recent and friend diary feeds are streams
-today; which of the remaining lists are streams is decided list by list in the feature documents.
+direct-message conversations, the timeline feeds, the recent and friend diary feeds and the
+notification feed are streams today; which of the remaining lists are streams is decided list by
+list in the feature documents.
 
 The keyset comparison is written out, SQLite having no row-value comparison, and a stream writes it
 as `t <= ? AND (t < ? OR id < ?)`: SQLite cannot see that the two bound times are equal, so the
@@ -97,18 +98,22 @@ which the upgrade tool does as well.
 
 An index follows a paging axis, not a WHERE clause: `(scope…, time column, id)`, one per axis a
 table is paged along; the feature documents list which axes are indexed today. Visibility ranges,
-block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an index
-of their own. That is a trade: a feed page's row query falls from a sort over every visible row to a
-few index reads (its OFFSET count still scans the table), while a keyword search whose hits are sparse
-or absent walks the whole axis index looking for them and runs slower than the table scan it replaced
-(measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a six-hit search 0.23 s → 0.35 s).
-The feed is every member's page; the sparse search is the price. The `id` suffix is implied on both
-engines — InnoDB stores the primary key at the end of every secondary index and SQLite stores the
-rowid — but writing it keeps the axis legible in the schema. A site-wide index leads with the time
-column so that InnoDB does not adopt it to back a foreign key; a scoped `(parent_id, time column)`
-index is adopted by design and is replaced by creating the new one before dropping the old (errno
-1553 on a drop that leaves the key unbacked). `timeline_posts` is the exception on the site-wide
-side: its axis leads with the reply flag, a foreign-key column, and is treated as adopted.
+block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an
+index of their own. That is a trade: a feed page's row query falls from a sort over every visible
+row to a few index reads (its OFFSET count still scans the table), while a keyword search whose hits
+are sparse or absent walks the whole axis index looking for them and runs slower than the table scan
+it replaced (measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a six-hit search 0.23
+s → 0.35 s). The feed is every member's page; the sparse search is the price. The `id` suffix is
+implied on both engines — InnoDB stores the primary key at the end of every secondary index and
+SQLite stores the rowid — but writing it keeps the axis legible in the schema. A UUID-keyed table is
+the exception: `notifications` orders by its UUID after `created_at`, which SQLite's rowid suffix
+cannot serve, so a tie there is settled in a temp B-tree the size of that one second (0.3 ms with
+seconds spread out, 8 ms with 20k rows in one second; MySQL scans the index backwards either way). A
+site-wide index leads with the time column so that InnoDB does not adopt it to back a foreign key; a
+scoped `(parent_id, time column)` index is adopted by design and is replaced by creating the new one
+before dropping the old (errno 1553 on a drop that leaves the key unbacked). `timeline_posts` is the
+exception on the site-wide side: its axis leads with the reply flag, a foreign-key column, and is
+treated as adopted.
 
 | Table | Site-wide axis | Scoped axis |
 |---|---|---|
