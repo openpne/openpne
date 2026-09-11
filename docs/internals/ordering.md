@@ -77,15 +77,15 @@ index is adopted by design and is replaced by creating the new one before droppi
 | `timeline_posts` | `(created_at, id)` — home, all-member and tag feeds | `(member_id, created_at)` — a member's timeline |
 | `members` | `(created_at, id)` — member search, newcomers | — |
 | `groups` | `(created_at, id)` — group search, a member's groups | — |
-| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent lists | `(group_id, bumped_at)` — a group's board |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |
 
-Lists bounded to one viewer's own rows are left to the engine's sort: the mailbox boxes, and the
-friend, block and friend-request pages, whose pivots carry only their primary key. The talk room list
-and the conversation list sort on a correlated latest-message subquery; the subquery itself reads the
-scoped index above, the outer sort over the computed column is the engine's.
+Lists bounded to one viewer's or one group's rows are left to the engine's sort: the mailbox boxes,
+and the friend, block, friend-request and group-applicant pages, whose pivots carry no time-axis
+index. The talk room list sorts on a correlated latest-message subquery that reads the
+`group_messages` index above; the conversation list's subquery reads the mailbox rows; in both the
+outer sort over the computed column is the engine's.
 
 ## SQLite foreign-key indexes
 
