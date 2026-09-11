@@ -76,13 +76,17 @@ so a page holds one stream. The Classic pager of a stream offers "next" as the o
 is the cursor, not a page number. Group talk and direct-message conversations keep their own
 cursors: they page in both directions and around an anchor, which a feed never does.
 
-Two client contracts follow from Inertia's data manager keeping the next cursor in its own state,
+Three client contracts follow from Inertia's data manager keeping the next cursor in its own state,
 which it drops only for a prop the request named in `reset`, a header only the client can send. The
 restore revalidation in `resources/js/lib/revalidate-on-restore.ts`, the one full reload the app
-issues, names every scroll prop of the current page there, or the next "Older" would skip the rows
-the reload replaced. A Classic tab from before a list became a stream still holds a `?page=2`
-load-more URL; its rows route answers 400 rather than serve the head twice, and the no-JS pager takes
-over.
+issues, names every scroll prop of the current page there. Every other visit that lands on the same
+page with its rows replaced rather than merged, a delete or a post redirecting back, carries no such
+header, so every full render hands out a `streamGeneration` (`StreamProps::generation()`) that the
+stream component is keyed on: a new value remounts it and its stored cursor with it, and a partial
+"load more", which asks only for the rows, leaves it unchanged. Without either, the next "Older"
+would skip the rows the reload replaced. A Classic tab from before a list became a stream still
+holds a `?page=2` load-more URL; its rows route answers 400 rather than serve the head twice, and
+the no-JS pager takes over.
 
 A time column from `timestamps()` is nullable, and a row with no time has no place in the order:
 the prev / next queries answer "no neighbours" for it rather than compare against NULL, a stream

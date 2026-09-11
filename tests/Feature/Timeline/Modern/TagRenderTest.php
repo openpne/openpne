@@ -82,6 +82,7 @@ class TagRenderTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page->component('timeline/tag')->has('posts.data', 0));
         $this->assertSame('before', $response->viewData('page')['scrollProps']['posts']['pageName']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $response->viewData('page')['props']['streamGeneration']);
     }
 
     private function createPost(Member $author, string $body, Visibility $visibility = Visibility::Members): TimelinePost

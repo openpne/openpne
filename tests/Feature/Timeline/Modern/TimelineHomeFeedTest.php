@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Inertia;
 use Tests\TestCase;
 
 class TimelineHomeFeedTest extends TestCase
@@ -41,6 +42,10 @@ class TimelineHomeFeedTest extends TestCase
         $generation = $response->viewData('page')['props']['streamGeneration'];
         $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $generation);
         $this->assertNotSame($generation, $this->actingAs($member)->get('/timeline')->viewData('page')['props']['streamGeneration']);
+        // A "load more" asks for the rows only, so the generation it holds stays and the list is not remounted mid-scroll.
+        $partial = $this->actingAs($member)->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) Inertia::getVersion(), 'X-Inertia-Partial-Component' => 'timeline/index', 'X-Inertia-Partial-Data' => 'posts'])->get('/timeline')->assertOk()->json('props');
+        $this->assertArrayHasKey('posts', $partial);
+        $this->assertArrayNotHasKey('streamGeneration', $partial);
     }
 
     public function test_the_feed_pages_by_cursor_and_the_cursor_travels_in_the_scroll_metadata(): void

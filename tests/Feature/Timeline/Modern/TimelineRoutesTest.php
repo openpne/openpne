@@ -36,6 +36,7 @@ class TimelineRoutesTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page->component('timeline/member'));
         $this->assertSame('before', $response->viewData('page')['scrollProps']['posts']['pageName']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $response->viewData('page')['props']['streamGeneration']);
     }
 
     public function test_the_member_timeline_owner_ref_carries_the_avatar_the_chrome_scope_draws(): void

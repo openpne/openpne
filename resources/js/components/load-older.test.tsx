@@ -74,6 +74,19 @@ test('the button asks for the older page and stays focusable while it loads', ()
     expect(fetch).toHaveBeenCalledOnce();
 });
 
+test('a list that fits its first page shows neither a button nor an end line', () => {
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: false };
+    render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
+
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('rows')).toBeTruthy();
+});
+
 test('an exhausted stream says so where the button was and takes the focus there', () => {
     scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
     const view = render(

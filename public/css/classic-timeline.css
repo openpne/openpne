@@ -5,6 +5,11 @@
     display: none;
 }
 
+/* The pager's next link steps aside for the button; the skin's display:inline would beat the attribute. */
+[data-timeline-pager] .next[hidden] {
+    display: none;
+}
+
 /* OpenPNE 3 confirmed a deletion in a colorbox over timelineTemplate's hidden block; here the same
    block sits in a <dialog>, so the vendored display:none lifts only while the dialog is open. */
 dialog.timeline-post-delete-dialog {

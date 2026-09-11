@@ -1,5 +1,5 @@
 import { InfiniteScroll } from '@inertiajs/react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 
@@ -41,14 +41,25 @@ interface ControlProps {
 function Control({ fetch, loading, hasMore, label, busy, end }: ControlProps) {
     const endRef = useRef<HTMLParagraphElement>(null);
     const hadMore = useRef(hasMore);
+    // Only a load that reached the end has something to say; a list that fits its first page says nothing.
+    const [ended, setEnded] = useState(false);
 
     // The button leaves with the last page; focus moves to the line that says so rather than to the body.
     useEffect(() => {
         if (hadMore.current && !hasMore) {
-            endRef.current?.focus();
+            setEnded(true);
         }
         hadMore.current = hasMore;
     }, [hasMore]);
+    useEffect(() => {
+        if (ended) {
+            endRef.current?.focus();
+        }
+    }, [ended]);
+
+    if (!hasMore && !ended) {
+        return null;
+    }
 
     return (
         <div className="flex justify-center py-3">
