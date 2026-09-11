@@ -5,26 +5,32 @@ import { useT } from '@/lib/i18n';
 interface StreamEmptyProps {
     /** The head of the stream when the page was reached by a cursor; null at the head itself. */
     headUrl: string | null | undefined;
-    /** What an empty head says. */
     empty: string;
-    /** What a cursor page with no rows left says. */
     older: string;
 }
 
-// A cursor page whose rows are gone is not an empty stream: it says so and leads back to the head.
 export function StreamEmpty({ headUrl, empty, older }: StreamEmptyProps) {
-    const t = useT();
-
     return (
         <Panel>
             <p className="text-sm text-muted-foreground">{headUrl ? older : empty}</p>
-            {headUrl && (
-                <p className="mt-2 text-sm">
-                    <Link href={headUrl} className="text-link hover:underline">
-                        {t('Jump to latest')}
-                    </Link>
-                </p>
-            )}
+            <StreamHead headUrl={headUrl} className="mt-2" />
         </Panel>
+    );
+}
+
+/** The way back to the head from any cursor page, rows or none (docs/internals/ordering.md, "Keyset and offset"). */
+export function StreamHead({ headUrl, className }: { headUrl: string | null | undefined; className?: string }) {
+    const t = useT();
+
+    if (!headUrl) {
+        return null;
+    }
+
+    return (
+        <p className={className ? `${className} text-sm` : 'text-sm'}>
+            <Link href={headUrl} className="text-link hover:underline">
+                {t('Jump to latest')}
+            </Link>
+        </p>
     );
 }

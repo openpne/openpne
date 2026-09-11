@@ -3,7 +3,7 @@ import { type FormEvent } from 'react';
 import { LoadOlder } from '@/components/load-older';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
-import { StreamEmpty } from '@/components/stream-empty';
+import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -82,15 +82,18 @@ export default function DiaryFeed() {
                     <Pagination meta={diaries.meta} />
                 </>
             ) : (
-                <LoadOlder data="diaries" generation={streamGeneration ?? ''} end={t('No older %diary% entries.')}>
-                    <Panel flush>
-                        <List>
-                            {diaries.data.map((entry) => (
-                                <DiaryRow key={entry.id} diary={entry} rich />
-                            ))}
-                        </List>
-                    </Panel>
-                </LoadOlder>
+                <>
+                    <StreamHead headUrl={headUrl} />
+                    <LoadOlder data="diaries" generation={streamGeneration ?? ''} end={t('No older %diary% entries.')}>
+                        <Panel flush>
+                            <List>
+                                {diaries.data.map((entry) => (
+                                    <DiaryRow key={entry.id} diary={entry} rich />
+                                ))}
+                            </List>
+                        </Panel>
+                    </LoadOlder>
+                </>
             )}
         </>
     );

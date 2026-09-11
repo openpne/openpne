@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { LoadOlder } from '@/components/load-older';
-import { StreamEmpty } from '@/components/stream-empty';
+import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -25,15 +25,18 @@ export default function TimelineIndex() {
             {posts.data.length === 0 ? (
                 <StreamEmpty headUrl={headUrl} empty={t('No %activity% posts to show.')} older={t('No older posts.')} />
             ) : (
-                <LoadOlder data="posts" generation={streamGeneration}>
-                    <Panel flush>
-                        <List>
-                            {posts.data.map((post) => (
-                                <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
-                            ))}
-                        </List>
-                    </Panel>
-                </LoadOlder>
+                <>
+                    <StreamHead headUrl={headUrl} />
+                    <LoadOlder data="posts" generation={streamGeneration}>
+                        <Panel flush>
+                            <List>
+                                {posts.data.map((post) => (
+                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
+                                ))}
+                            </List>
+                        </Panel>
+                    </LoadOlder>
+                </>
             )}
         </>
     );
