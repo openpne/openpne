@@ -65,6 +65,14 @@ derived form recomputes from the surviving rows, so a diary drops out once the v
 left on it, and deleting whichever non-owner comment was latest moves the box's time back to the one
 before it.
 
+## Lists order by created_at, then id
+
+Every diary list — the recent feed, the friend feed, search, a member's archive and their recent
+five — orders by `created_at` descending and breaks a tie by `id`, as the timeline feeds do.
+`created_at` has second precision, so two entries posted in the same second are a normal tie, not
+a migration artefact; with `created_at` alone an OFFSET page edge inside that tie is engine-dependent
+and MySQL's sort can repeat one row on both pages while another appears on neither.
+
 ## The archive
 
 [`ArchivePeriod`](../../app/Features/Diary/ArchivePeriod.php) is a whole month or a single day as a

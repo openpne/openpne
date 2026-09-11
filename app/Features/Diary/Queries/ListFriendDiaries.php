@@ -45,6 +45,6 @@ class ListFriendDiaries
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
-        return $query->orderByDesc('created_at');
+        return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }

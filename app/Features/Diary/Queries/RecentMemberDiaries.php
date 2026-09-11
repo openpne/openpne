@@ -17,6 +17,6 @@ class RecentMemberDiaries
         $query = Diary::where('member_id', $owner->getKey())->with('member.avatar.file')->withCount(['comments', 'images']);
         DiaryVisibilityScope::apply($query, $viewer, $owner);
 
-        return $query->orderByDesc('created_at')->limit($limit)->get();
+        return $query->orderByDesc('created_at')->orderByDesc('id')->limit($limit)->get();
     }
 }
