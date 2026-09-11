@@ -7,8 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
  * InnoDB backs every foreign key with an index and SQLite backs none, so this one is added on the
- * SQLite lane only; the schemas differ by an index, acceptable since each engine,
- * `openpne:copy-database` included, is migrated from scratch.
+ * SQLite lane only (the general, introspecting form is 2026_09_11_000003_index_foreign_key_columns_lacking_one).
  */
 return new class extends Migration
 {
