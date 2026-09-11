@@ -94,8 +94,11 @@ outer sort over the computed column is the engine's.
 ## SQLite foreign-key indexes
 
 Laravel's `constrained()` creates an index on MySQL, where InnoDB requires one for the constraint,
-and none on SQLite. A foreign-key column a query filters or joins on is therefore indexed explicitly
-in the migration, or it is unindexed on the SQLite lane.
+and none on SQLite, where a join on the column or a cascade from its parent scans the table. One
+migration adds the missing index to every foreign-key column no index already leads, by
+introspection rather than a driver gate, so MySQL gains no duplicate; an architecture test reads the
+live schema on both engines and fails on any foreign key that no index leads. A new table declares
+`->index()` on its foreign-key columns itself, or the test names the omission.
 
 ## Guards
 
