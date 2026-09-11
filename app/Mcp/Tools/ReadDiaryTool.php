@@ -32,7 +32,7 @@ class ReadDiaryTool extends DiaryTool
         }
 
         // Deliberately unpaged: a page of a diary's comments would leave a reader asking for the rest.
-        $comments = $diary->comments()->with('member')->withCount('images')->orderBy('number')->get();
+        $comments = $diary->comments()->with('member')->withCount('images')->orderBy('number')->orderBy('id')->get();
 
         return Response::structured(['diary' => McpDiarySerializer::detail($diary, $comments)]);
     }

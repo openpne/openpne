@@ -83,6 +83,7 @@ Ordering is by `id` (OpenPNE 3 `setSqlOrderColumn('id')`), never by `number`; th
 pages by `number`, for the reasons recorded in
 [diary.md](diary.md#the-thread-pages-by-number). `number` is a racy
 max+1 label that migrated data may carry out of order or duplicated, so paging by it would drift
-the page boundaries away from OpenPNE 3's; `id` is the monotonic insertion order. Modern reuses the
+the page boundaries away from OpenPNE 3's (the diary pager breaks a duplicate by `id`, a departure
+it did not need); `id` is the monotonic insertion order. Modern reuses the
 same pager rather than shaping its own: the two surfaces must list a thread identically, and
 neither may serialize an unbounded thread in one response.

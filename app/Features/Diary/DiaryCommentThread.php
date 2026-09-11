@@ -8,8 +8,8 @@ use Illuminate\Support\Collection;
 
 /**
  * OpenPNE 3's `diaryComment` list pager: a page is fetched by `number` in either order and always
- * listed oldest-first (docs/internals/diary.md, "The thread pages by number"). Ties in `number` break
- * by `id` so a migrated duplicate has the same page edge on every engine.
+ * listed oldest-first (docs/internals/diary.md, "The thread pages by number"). Unlike OpenPNE 3, a tie
+ * in `number` breaks by `id` so a migrated duplicate has the same page edge on every engine.
  */
 final class DiaryCommentThread
 {
