@@ -110,16 +110,36 @@ class StreamQueryTest extends TestCase
         $order = $this->orderClausesOn('timeline_posts', fn () => StreamQuery::older(TimelinePost::query()->latest(), $cursor, self::PER_PAGE));
 
         $this->assertCount(1, $sql);
-        $this->assertStringContainsString('where timeline_posts.created_at is not null and (timeline_posts.created_at < ? or (timeline_posts.created_at = ? and timeline_posts.id < ?))', $sql[0]);
+        $this->assertStringContainsString('where timeline_posts.created_at <= ? and (timeline_posts.created_at < ? or timeline_posts.id < ?) order by', $sql[0]);
+        $this->assertStringNotContainsString('is not null', $sql[0]);
+        $this->assertStringContainsString('where timeline_posts.created_at is not null order by', $this->querySqlOn('timeline_posts', fn () => StreamQuery::older(TimelinePost::query(), null, self::PER_PAGE))[0]);
         $this->assertStringEndsWith(' limit 21', $sql[0]);
         $this->assertSame(['order by timeline_posts.created_at desc, timeline_posts.id desc'], $order);
+    }
+
+    public function test_the_scope_the_caller_built_survives_on_every_page(): void
+    {
+        $other = Member::factory()->create();
+        TimelinePost::factory()->for($other, 'member')->create(['id' => 50, 'created_at' => self::SECOND, 'updated_at' => self::SECOND]);
+        TimelinePost::factory()->for($other, 'member')->create(['id' => 51, 'created_at' => '2026-02-15 00:00:00', 'updated_at' => '2026-02-15 00:00:00']);
+        $mine = fn () => TimelinePost::query()->where('member_id', $this->author->getKey());
+
+        $head = StreamQuery::older($mine(), null, self::PER_PAGE);
+        $next = StreamQuery::older($mine(), $head->olderCursor(), self::PER_PAGE);
+
+        $this->assertSame(range(21, 2), $head->rows->modelKeys());
+        $this->assertSame([1, 100], $next->rows->modelKeys());
     }
 
     public function test_a_relation_with_uuid_keys_pages_by_the_same_tuple(): void
     {
         $ids = collect(['aaaaaaaa-0000-4000-8000-000000000000', 'bbbbbbbb-0000-4000-8000-000000000000', 'cccccccc-0000-4000-8000-000000000000']);
+        $someoneElse = Member::factory()->create();
         DB::table('notifications')->insert($ids->map(fn (string $id) => [
             'id' => $id, 'type' => 'x', 'notifiable_type' => $this->author->getMorphClass(), 'notifiable_id' => $this->author->getKey(),
+            'data' => '{}', 'created_at' => self::SECOND, 'updated_at' => self::SECOND,
+        ])->push([
+            'id' => 'dddddddd-0000-4000-8000-000000000000', 'type' => 'x', 'notifiable_type' => $someoneElse->getMorphClass(), 'notifiable_id' => $someoneElse->getKey(),
             'data' => '{}', 'created_at' => self::SECOND, 'updated_at' => self::SECOND,
         ])->all());
 

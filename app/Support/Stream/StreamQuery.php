@@ -7,14 +7,15 @@ use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use InvalidArgumentException;
 
 /**
- * The keyset comparison is written out rather than as SQL's row constructor, which SQLite does not
- * support (docs/internals/ordering.md, "Keyset and offset").
+ * The keyset comparison is `t <= ? AND (t < ? OR id < ?)`: SQLite has no row constructor and turns
+ * the OR form into a scan (docs/internals/ordering.md, "Keyset and offset").
  */
 final class StreamQuery
 {
     /**
-     * Consumes the query: its order is replaced and the predicate and limit stay on it. A row whose
-     * time column is NULL is left out, having no place in the order (docs/internals/ordering.md, "Keyset and offset").
+     * Consumes the query, whose own clauses must hold no top-level `orWhere`: the order is replaced
+     * and the predicate and limit are added. A row whose time column is NULL is left out, having no
+     * place in the order.
      *
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
@@ -32,13 +33,14 @@ final class StreamQuery
         $time = $builder->qualifyColumn($column);
         $key = $builder->getModel()->getQualifiedKeyName();
 
-        $builder->whereNotNull($time);
-        if ($before !== null) {
-            $builder->where(fn (Builder $q) => $q
-                ->where($time, '<', $before->at)
-                ->orWhere(fn (Builder $tie) => $tie
-                    ->where($time, '=', $before->at)
-                    ->where($key, '<', $before->id)));
+        if ($before === null) {
+            $builder->whereNotNull($time);
+        } else {
+            $builder
+                ->where($time, '<=', $before->at)
+                ->where(fn (Builder $q) => $q
+                    ->where($time, '<', $before->at)
+                    ->orWhere($key, '<', $before->id));
         }
 
         $rows = $builder

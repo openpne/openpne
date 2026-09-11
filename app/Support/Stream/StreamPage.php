@@ -18,6 +18,7 @@ final readonly class StreamPage
         private string $column = 'created_at',
     ) {}
 
+    /** The rows carry the time column: a query that narrowed its `select` past it fails here, not silently. */
     public function olderCursor(): ?StreamCursor
     {
         return $this->hasOlder ? StreamCursor::of($this->rows->last(), $this->column) : null;

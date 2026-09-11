@@ -49,10 +49,14 @@ An **archive** — a list a reader jumps into by page number — pages by OFFSET
 direct-message conversations are streams today; which of the remaining lists are streams is decided
 list by list in the feature documents.
 
-The keyset comparison is written out as `t < ? OR (t = ? AND id < ?)`: SQLite has no row-value
-comparison. A cursor is `{iso8601}|{id}`, opaque to the client, and names a position rather than a
-permission; the id is the row's primary key, an integer or a UUID, and the time is normalized to the
-site timezone on parse. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one
+The keyset comparison is written out, SQLite having no row-value comparison, and a stream writes it
+as `t <= ? AND (t < ? OR id < ?)`: SQLite cannot see that the two bound times are equal, so the
+familiar `t < ? OR (t = ? AND id < ?)` becomes an index scan whose cost grows with the depth of the
+page (16 ms at 190k rows), while the leading range keeps every page at a few index reads on both
+engines. A cursor is `{iso8601}|{id}`, opaque to the client, and names a position rather than a
+permission; the id is the row's primary key, an integer or a UUID, the time is the ATOM form the
+server emitted, normalized to the site timezone on parse, and it carries a `+`, so a URL it goes into
+percent-encodes it. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one
 it did not hand out ([mcp.md](mcp.md)).
 
 Feeds share one implementation, `App\Support\Stream`: `StreamQuery::older` applies the predicate and
@@ -61,8 +65,9 @@ carried, leaving out a row whose time is NULL, and reading one row past the page
 older rows exist; `StreamPage` holds the rows newest first and names its last row as the older
 cursor; `StreamProps::scroll` hands Inertia's `InfiniteScroll` the cursor in the scroll metadata
 under `before`, with no previous page, so the payload is rows only; `StreamRequest` reads `?before=`
-and answers a bookmarked `?page=N` (N > 1) from the OFFSET days with a redirect to the same URL
-without `page`. One stream per page: the client writes `before` back into the URL, so two on one page
+and answers a bookmarked `?page=` other than 1 from the OFFSET days with a redirect to the same URL
+without `page`. The query handed in carries the list's own scope, visibility and ownership included,
+with no top-level `orWhere`. One stream per page: the client writes `before` back into the URL, so two on one page
 would read each other's cursor. Group talk and direct-message conversations keep their own cursors:
 they page in both directions and around an anchor, which a feed never does.
 
