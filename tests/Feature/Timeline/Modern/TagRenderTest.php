@@ -78,9 +78,11 @@ class TagRenderTest extends TestCase
 
     public function test_a_tag_nobody_used_renders_an_empty_feed(): void
     {
-        $this->actingAs(Member::factory()->create())->get('/timeline/tag/nobody')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('timeline/tag')->has('posts.data', 0));
+        $response = $this->actingAs(Member::factory()->create())->get('/timeline/tag/nobody')->assertOk();
+
+        $response->assertInertia(fn ($page) => $page->component('timeline/tag')->has('posts.data', 0));
+        $this->assertSame('before', $response->viewData('page')['scrollProps']['posts']['pageName']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $response->viewData('page')['props']['streamGeneration']);
     }
 
     private function createPost(Member $author, string $body, Visibility $visibility = Visibility::Members): TimelinePost

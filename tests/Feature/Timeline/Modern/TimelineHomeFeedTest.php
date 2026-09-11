@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Inertia;
 use Tests\TestCase;
 
 class TimelineHomeFeedTest extends TestCase
@@ -28,14 +29,39 @@ class TimelineHomeFeedTest extends TestCase
         $member = Member::factory()->create();
         TimelinePost::factory()->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
 
-        $this->actingAs($member)
-            ->get('/timeline')
-            ->assertInertia(fn ($page) => $page
-                ->component('timeline/index')
-                ->where('viewerId', $member->getKey())
-                ->has('posts.data', 1)
-                ->has('posts.meta')
-            );
+        $response = $this->actingAs($member)->get('/timeline');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('timeline/index')
+            ->where('viewerId', $member->getKey())
+            ->has('posts.data', 1)
+            ->missing('posts.meta')
+        );
+        $this->assertSame(['pageName' => 'before', 'previousPage' => null, 'nextPage' => null, 'currentPage' => null, 'reset' => false], $response->viewData('page')['scrollProps']['posts']);
+        // A full render hands out a fresh generation, so a replaced list remounts the client's stream state.
+        $generation = $response->viewData('page')['props']['streamGeneration'];
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $generation);
+        $this->assertNotSame($generation, $this->actingAs($member)->get('/timeline')->viewData('page')['props']['streamGeneration']);
+        // A "load more" asks for the rows only, so the generation it holds stays and the list is not remounted mid-scroll.
+        $partial = $this->actingAs($member)->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) Inertia::getVersion(), 'X-Inertia-Partial-Component' => 'timeline/index', 'X-Inertia-Partial-Data' => 'posts'])->get('/timeline')->assertOk()->json('props');
+        $this->assertArrayHasKey('posts', $partial);
+        $this->assertArrayNotHasKey('streamGeneration', $partial);
+    }
+
+    public function test_the_feed_pages_by_cursor_and_the_cursor_travels_in_the_scroll_metadata(): void
+    {
+        $member = Member::factory()->create();
+        TimelinePost::factory()->count(21)->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
+
+        $head = $this->actingAs($member)->get('/timeline')->viewData('page');
+        $cursor = $head['scrollProps']['posts']['nextPage'];
+        $next = $this->actingAs($member)->get('/timeline?before='.urlencode($cursor))->viewData('page');
+
+        $this->assertCount(20, $head['props']['posts']['data']);
+        $this->assertCount(1, $next['props']['posts']['data']);
+        $this->assertSame($cursor, $next['scrollProps']['posts']['currentPage']);
+        $this->assertNull($next['scrollProps']['posts']['nextPage']);
+        $this->assertSame([], array_intersect(array_column($head['props']['posts']['data'], 'id'), array_column($next['props']['posts']['data'], 'id')));
     }
 
     public function test_modern_home_feed_carries_the_reply_count_on_top_level_posts(): void

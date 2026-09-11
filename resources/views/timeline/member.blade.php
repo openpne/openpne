@@ -24,12 +24,11 @@
                         @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                     @endforeach
                 </div>
-                @if ($posts->hasMorePages())
-                    @include('timeline._loadmore', ['nextUrl' => route('timeline.member.rows', ['member' => $owner, 'page' => $posts->currentPage() + 1])])
+                @if ($loadMoreUrl !== null)
+                    @include('timeline._loadmore', ['nextUrl' => $loadMoreUrl])
                 @endif
             </div>
-
-            <div data-timeline-pager><x-classic.pager :paginator="$posts" /></div>
         @endif
+        <div data-timeline-pager><x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" /></div>
     </x-classic.parts>
 @endsection

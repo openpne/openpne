@@ -96,7 +96,7 @@ class PostingSwitchTest extends TestCase
     {
         $this->setSnsSetting(SnsSettingKey::TimelinePostingEnabled, false);
 
-        $response = $this->actingAs($this->member)->get(route('timeline.index.rows', ['page' => 1]))->assertOk();
+        $response = $this->actingAs($this->member)->get(route('timeline.index.rows'))->assertOk();
 
         $response->assertSee('already here');
         $response->assertDontSee('timeline-comment-link', false);

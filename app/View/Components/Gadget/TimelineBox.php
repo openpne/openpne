@@ -5,6 +5,7 @@ namespace App\View\Components\Gadget;
 use App\Features\Timeline\Queries\RecentReplies;
 use App\Features\Timeline\Queries\RowsPage;
 use App\Models\TimelinePost;
+use App\Support\Stream\StreamPage;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\View\Component;
@@ -18,8 +19,8 @@ abstract class TimelineBox extends Component
     /** @var Collection<int, TimelinePost> */
     public Collection $posts;
 
-    /** Whether a page past these rows exists — read from one row past the limit, not a count. */
-    public bool $hasMore = false;
+    /** The load-more cursor, null when the rows end here. */
+    public ?string $olderCursor = null;
 
     /** @param array<string, mixed> $config */
     protected static function limit(array $config): int
@@ -27,16 +28,11 @@ abstract class TimelineBox extends Component
         return min(RowsPage::MAX, max(1, (int) ($config['limit'] ?? RowsPage::DEFAULT)));
     }
 
-    /**
-     * Keep $limit rows of a fetch that asked for one more, and remember whether that one came:
-     * exactly $limit rows would otherwise offer a load-more that fetches nothing.
-     *
-     * @param  Collection<int, TimelinePost>  $rows
-     */
-    protected function keep(Collection $rows, int $limit): void
+    /** @param  StreamPage<TimelinePost>  $page */
+    protected function keep(StreamPage $page): void
     {
-        $this->hasMore = $rows->count() > $limit;
-        $this->posts = $rows->take($limit);
+        $this->posts = $page->rows;
+        $this->olderCursor = $page->olderCursor()?->__toString();
     }
 
     /**

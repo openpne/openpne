@@ -22,7 +22,7 @@ class TimelineAll extends TimelineBox
         $this->limit = self::limit($config);
         $this->posts = collect();
         if ($subject !== null) {
-            $this->keep($feed->take($subject, $this->limit + 1), $this->limit);
+            $this->keep($feed($subject, null, $this->limit));
         }
         $this->attachInlineReplies($recentReplies);
     }

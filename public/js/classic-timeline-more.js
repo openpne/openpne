@@ -60,19 +60,19 @@
     }
 
     /**
-     * Show the controls, and hide a pager only where a button stands in for it: a last page
-     * reached by its own URL has no next to offer, and keeps the pager as its way back.
+     * Show the controls, and hide only the pager link the button stands in for: the way back to
+     * the head stays on a page reached by its own cursor.
      */
     function apply(root) {
         var boxes = root.querySelectorAll('[data-timeline-loadmore-box]');
-        var pagers = root.querySelectorAll('[data-timeline-pager]');
+        var nexts = root.querySelectorAll('[data-timeline-pager] .next');
         var i;
         for (i = 0; i < boxes.length; i += 1) {
             boxes[i].removeAttribute('hidden');
         }
-        for (i = 0; i < pagers.length; i += 1) {
-            if (pagers[i].parentNode && pagers[i].parentNode.querySelector('[data-timeline-loadmore-box]')) {
-                pagers[i].setAttribute('hidden', '');
+        for (i = 0; i < nexts.length; i += 1) {
+            if (nexts[i].closest('[data-timeline-pager]').parentNode.querySelector('[data-timeline-loadmore-box]')) {
+                nexts[i].setAttribute('hidden', '');
             }
         }
     }
@@ -138,7 +138,8 @@
                 settle();
                 button.style.display = '';
                 var pager = pagerFor(container);
-                if (pager) pager.removeAttribute('hidden');
+                var next = pager ? pager.querySelector('.next') : null;
+                if (next) next.removeAttribute('hidden');
             });
     });
 

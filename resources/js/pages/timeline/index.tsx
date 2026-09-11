@@ -1,19 +1,20 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Pagination } from '@/components/pagination';
+import { LoadOlder } from '@/components/load-older';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
-import type { PaginatedTimelinePosts } from './types';
+import type { TimelineStream } from './types';
 
 interface IndexProps extends PageProps {
     viewerId: number;
-    posts: PaginatedTimelinePosts;
+    posts: TimelineStream;
+    streamGeneration: string;
 }
 
 export default function TimelineIndex() {
     const t = useT();
-    const { viewerId, posts } = usePage<IndexProps>().props;
+    const { viewerId, posts, streamGeneration } = usePage<IndexProps>().props;
     const title = t('%Activity%');
 
     return (
@@ -24,7 +25,7 @@ export default function TimelineIndex() {
                     <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
                 </Panel>
             ) : (
-                <>
+                <LoadOlder data="posts" generation={streamGeneration}>
                     <Panel flush>
                         <List>
                             {posts.data.map((post) => (
@@ -32,8 +33,7 @@ export default function TimelineIndex() {
                             ))}
                         </List>
                     </Panel>
-                    <Pagination meta={posts.meta} />
-                </>
+                </LoadOlder>
             )}
         </>
     );

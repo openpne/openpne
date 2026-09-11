@@ -34,3 +34,10 @@ test('no next, another relation or another origin is nothing to follow', () => {
     assert.equal(nextUrl('<http://sns.example/timeline/rows?page=3>; rel="next"', BASE), null);
     assert.equal(nextUrl('<https://>; rel="next"', BASE), null);
 });
+
+test('the pager link the script hides has the display rule the skin would otherwise beat', () => {
+    const css = readFileSync(fileURLToPath(new URL('../../public/css/classic-timeline.css', import.meta.url)), 'utf8');
+
+    assert.match(css, /\[data-timeline-pager\] \.next\[hidden\]\s*\{\s*display:\s*none;/);
+    assert.match(css, /\[data-timeline-loadmore-box\]\[hidden\]\s*\{\s*display:\s*none;/);
+});
