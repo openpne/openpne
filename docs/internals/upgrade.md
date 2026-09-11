@@ -153,6 +153,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | `EmojiTransform` | per-row PHP mapping; 16 carrier-logo ids stay literal | id cursor in `metadata.last_id`, because a "contains a code" predicate never drains |
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
 | `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes each group's latest `(created_at, id)` tuple, the one `TalkReadCursor::snapshot()` picks, in one UPDATE once they have landed | a function of the migrated rows, so a rescan writes the same tuple; the UPDATE and the COMPLETED checkpoint commit in one transaction |
+| `BoardBumpBackfill` | `GroupTopicUpgrade` / `GroupEventUpgrade` run before the comments exist, so they write `created_at` as the placeholder; the pass settles each thread's `bumped_at` to `COALESCE(MAX(comments.created_at), created_at)` in one UPDATE per table ([group-boards.md](group-boards.md#the-board-key-is-bumped_at)) | a function of the migrated rows, so a rescan writes the same value; the UPDATE and the COMPLETED checkpoint commit in one transaction |
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 
@@ -192,6 +193,8 @@ the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
   since does not matter. It also requires the backfill's completed checkpoint. "Migrated" is the
   routing's own predicate over the source, not an id match: a native message can reuse the id of an
   activity that landed elsewhere.
+- **`BoardBumpCheck`** recomputes every topic's and event's `bumped_at` from its comments and fails on
+  any row that differs, or when the backfill has no completed checkpoint.
 - **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and the FK is
   rewired.
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown

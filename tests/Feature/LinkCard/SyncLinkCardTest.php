@@ -177,8 +177,7 @@ class SyncLinkCardTest extends TestCase
 
     public function test_syncing_does_not_bump_the_record_timestamp(): void
     {
-        // Group topic and event lists order by `updated_at`, so a synced card would float an old post
-        // back to the top; `saveQuietly` still goes through `performUpdate`, which touches the timestamp.
+        // `saveQuietly` still goes through `performUpdate`, which touches the timestamp.
         Queue::fake();
         $diary = $this->diary('https://example.com/a');
         $before = $diary->updated_at;

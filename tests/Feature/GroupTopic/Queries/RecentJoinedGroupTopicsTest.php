@@ -39,7 +39,7 @@ class RecentJoinedGroupTopicsTest extends TestCase
         $this->assertSame($mine->getKey(), $result->first()->getKey());
     }
 
-    public function test_orders_by_updated_at_desc_and_caps_at_the_limit(): void
+    public function test_orders_by_bumped_at_desc_and_caps_at_the_limit(): void
     {
         $viewer = Member::factory()->create();
         $group = Group::factory()->create();
@@ -48,14 +48,14 @@ class RecentJoinedGroupTopicsTest extends TestCase
         foreach (range(1, 6) as $i) {
             GroupTopic::factory()->create([
                 'group_id' => $group->getKey(),
-                'updated_at' => now()->subDays(6 - $i), // i=6 newest
+                'bumped_at' => now()->subDays(6 - $i), // i=6 newest
             ]);
         }
 
         $result = (new RecentJoinedGroupTopics)($viewer, 3);
 
         $this->assertCount(3, $result);
-        $this->assertTrue($result->first()->updated_at->gt($result->last()->updated_at));
+        $this->assertTrue($result->first()->bumped_at->gt($result->last()->bumped_at));
     }
 
     public function test_loads_the_comment_count(): void

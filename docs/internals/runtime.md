@@ -23,7 +23,10 @@ stock install.
    it only relocates paths, never changes behavior.
 2. `OPENPNE_ENV_PATH` MUST NOT be set inside `.env` — it is resolved before the
    `.env` file is loaded and is what tells the framework where that file lives.
-3. Stored bytes are never served from a bare disk URL: every file, thumbnail and
+3. A migration that adds a column the running code writes runs with the site in maintenance mode
+   (`php artisan down`), because the code before and after it cannot share the table
+   ([group-boards.md](group-boards.md#the-board-key-is-bumped_at) is one).
+4. Stored bytes are never served from a bare disk URL: every file, thumbnail and
    the custom stylesheet streams through the app, so an install never needs
    `storage:link` and the storage path can live anywhere `LARAVEL_STORAGE_PATH`
    points.

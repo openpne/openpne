@@ -20,7 +20,7 @@ class EventQueriesTest extends TestCase
     private function eventWithUpdatedAt(Group $group, string $updatedAt): GroupEvent
     {
         $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
-        DB::table('group_events')->where('id', $event->getKey())->update(['updated_at' => $updatedAt]);
+        DB::table('group_events')->where('id', $event->getKey())->update(['bumped_at' => $updatedAt]);
 
         return $event->fresh();
     }

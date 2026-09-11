@@ -82,7 +82,8 @@ class EventActionsTest extends TestCase
         $this->assertSame($group->getKey(), $event->group_id);
         $this->assertSame($author->getKey(), $event->member_id);
         $this->assertSame('Shibuya', $event->area);
-        $this->assertNotNull($event->event_updated_at);
+        $this->assertTrue($event->bumped_at->equalTo($event->created_at));
+        $this->assertNull($event->edited_at);
     }
 
     public function test_create_event_is_blocked_when_posting_is_admin_only(): void
@@ -98,26 +99,28 @@ class EventActionsTest extends TestCase
         );
     }
 
-    public function test_update_event_bumps_event_updated_at_only_on_a_content_change(): void
+    public function test_update_event_sets_edited_at_only_on_a_content_change_and_never_lifts_the_board(): void
     {
         $group = Group::factory()->create();
         $author = $this->joined($group, GroupRole::Member);
         $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('group_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
-            'event_updated_at' => now()->subDay(),
+            'bumped_at' => now()->subDay(),
         ]);
 
         // No-op edit (same content) does not touch the timestamps.
         app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event), ImageEdit::none());
         $this->assertTrue($event->fresh()->updated_at->lessThan(now()->subHour()));
+        $this->assertNull($event->fresh()->edited_at);
 
-        // A name change bumps both updated_at (board key) and event_updated_at.
+        // A name change sets edited_at (and Laravel's updated_at) but leaves the board key alone.
         app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['name' => 'Edited']), ImageEdit::none());
         $fresh = $event->fresh();
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
-        $this->assertTrue($fresh->event_updated_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->edited_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->bumped_at->lessThan(now()->subHour()));
     }
 
     public function test_update_event_cannot_change_an_op3_rows_format(): void
@@ -135,24 +138,23 @@ class EventActionsTest extends TestCase
         $this->assertSame(BodyFormat::Op3, $event->fresh()->format);
     }
 
-    public function test_update_event_scheduling_only_change_bumps_updated_at_not_event_updated_at(): void
+    public function test_update_event_scheduling_only_change_moves_updated_at_but_neither_edited_at_nor_bumped_at(): void
     {
         $group = Group::factory()->create();
         $author = $this->joined($group, GroupRole::Member);
         $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('group_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
-            'event_updated_at' => now()->subDay(),
+            'bumped_at' => now()->subDay(),
         ]);
 
-        // Changing only the capacity (not name/body) lifts the board (updated_at) but not the
-        // content timestamp (event_updated_at).
         app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['capacity' => 50]), ImageEdit::none());
 
         $fresh = $event->fresh();
         $this->assertSame(50, $fresh->capacity);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
-        $this->assertTrue($fresh->event_updated_at->lessThan(now()->subHour()));
+        $this->assertNull($fresh->edited_at);
+        $this->assertTrue($fresh->bumped_at->lessThan(now()->subHour()));
     }
 
     public function test_update_event_is_blocked_for_a_non_author_non_admin(): void
@@ -183,14 +185,14 @@ class EventActionsTest extends TestCase
         $this->assertSame(0, DB::table('group_event_members')->count());
     }
 
-    public function test_comments_are_numbered_per_event_and_lift_both_timestamps(): void
+    public function test_comments_are_numbered_per_event_and_lift_the_board_timestamp(): void
     {
         $group = Group::factory()->create();
         $author = $this->joined($group, GroupRole::Member);
         $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('group_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
-            'event_updated_at' => now()->subDay(),
+            'bumped_at' => now()->subDay(),
         ]);
 
         $first = app(CreateEventComment::class)($author, $event, 'one');
@@ -199,8 +201,36 @@ class EventActionsTest extends TestCase
 
         $this->assertSame([1, 2, 3], [$first->number, $second->number, $third->number]);
         $fresh = $event->fresh();
-        $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
-        $this->assertTrue($fresh->event_updated_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->bumped_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->updated_at->lessThan(now()->subHour()));
+    }
+
+    public function test_an_rsvp_does_not_lift_the_event(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        DB::table('group_events')->where('id', $event->getKey())->update(['bumped_at' => now()->subDay()]);
+
+        app(ToggleParticipation::class)($this->joined($group, GroupRole::Member), $event);
+
+        $this->assertTrue($event->fresh()->bumped_at->lessThan(now()->subHour()));
+    }
+
+    public function test_deleting_a_comment_settles_the_event_back_to_its_last_surviving_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Admin);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'created_at' => '2026-03-01 09:00:00']);
+        $early = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'number' => 1, 'created_at' => '2026-03-01 10:00:00']);
+        $late = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'number' => 2, 'created_at' => '2026-03-01 11:00:00']);
+        DB::table('group_events')->where('id', $event->getKey())->update(['bumped_at' => '2026-03-01 11:00:00']);
+
+        app(DeleteEventComment::class)($author, $late);
+        $this->assertTrue($event->fresh()->bumped_at->equalTo('2026-03-01 10:00:00'));
+
+        app(DeleteEventComment::class)($author, $early);
+        $this->assertTrue($event->fresh()->bumped_at->equalTo('2026-03-01 09:00:00'));
     }
 
     public function test_commenting_is_blocked_for_a_non_member(): void

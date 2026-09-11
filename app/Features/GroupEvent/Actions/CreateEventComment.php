@@ -2,6 +2,7 @@
 
 namespace App\Features\GroupEvent\Actions;
 
+use App\Features\Group\BoardBumpedAt;
 use App\Features\GroupEvent\Events\EventCommentPosted;
 use App\Features\GroupEvent\Exceptions\GroupEventActionException;
 use App\Features\GroupEvent\Exceptions\GroupEventActionFailure;
@@ -21,7 +22,7 @@ class CreateEventComment
     /**
      * Lock the parent event row first so concurrent commenters serialize on a row that always
      * exists: an empty thread has no comment rows, so max(number) alone would let two posts both
-     * claim 1. The same save bumps event_updated_at and updated_at, lifting the event on the board.
+     * claim 1. The comment lifts the event's bumped_at without a model save, so updated_at stays.
      *
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap
      */
@@ -55,8 +56,7 @@ class CreateEventComment
             'body' => $body,
         ]);
 
-        $event->event_updated_at = now();
-        $event->save();
+        BoardBumpedAt::lift($event);
 
         foreach (array_values($images) as $index => $upload) {
             $file = $store($upload, 'groupEventComment', (int) $comment->getKey());

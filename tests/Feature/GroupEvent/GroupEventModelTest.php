@@ -19,14 +19,16 @@ class GroupEventModelTest extends TestCase
         $event = GroupEvent::factory()->create([
             'open_date' => '2026-07-01 00:00:00',
             'application_deadline' => '2026-06-25 00:00:00',
-            'event_updated_at' => '2026-06-20 09:00:00',
+            'bumped_at' => '2026-06-20 09:00:00',
+            'edited_at' => '2026-06-21 09:00:00',
             'capacity' => 30,
         ]);
 
         $event->refresh();
         $this->assertTrue($event->open_date->equalTo('2026-07-01 00:00:00'));
         $this->assertTrue($event->application_deadline->equalTo('2026-06-25 00:00:00'));
-        $this->assertTrue($event->event_updated_at->equalTo('2026-06-20 09:00:00'));
+        $this->assertTrue($event->bumped_at->equalTo('2026-06-20 09:00:00'));
+        $this->assertTrue($event->edited_at->equalTo('2026-06-21 09:00:00'));
         $this->assertSame(30, $event->capacity);
     }
 

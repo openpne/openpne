@@ -59,13 +59,13 @@ class GroupEventRoutesTest extends TestCase
         $group = Group::factory()->create();
         $stale = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'name' => 'Stale event']);
         $fresh = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'name' => 'Fresh event']);
-        DB::table('group_events')->where('id', $stale->getKey())->update(['updated_at' => now()->subDays(3)]);
+        DB::table('group_events')->where('id', $stale->getKey())->update(['bumped_at' => now()->subDays(3)]);
 
         $response = $this->actingAs($this->joined($group))->get(route('group.events.index', $group));
 
         $response->assertOk();
         $response->assertSee('id="page_communityEvent_listCommunity"', false);
-        // Board order is updated_at DESC (activity), not open_date.
+        // Board order is bumped_at DESC (activity), not open_date.
         $response->assertSeeInOrder(['Fresh event', 'Stale event']);
     }
 
@@ -91,7 +91,7 @@ class GroupEventRoutesTest extends TestCase
             'group_id' => $group->getKey(), 'name' => 'A meetup',
             'member_id' => $author->getKey(), 'open_date' => '2026-07-01',
         ]);
-        DB::table('group_events')->where('id', $event->getKey())->update(['updated_at' => '2026-06-04 13:44:00']);
+        DB::table('group_events')->where('id', $event->getKey())->update(['bumped_at' => '2026-06-04 13:44:00']);
 
         $response = $this->actingAs($this->joined($group))
             ->withSession(['locale' => 'ja'])

@@ -28,8 +28,6 @@ class CreateEvent
             throw new GroupEventActionException(GroupEventActionFailure::CannotPost);
         }
 
-        // event_updated_at starts at creation time (OpenPNE 3 sets it whenever name/body change,
-        // which a fresh event does).
         $event = $this->images->attach(
             'groupEvent',
             $images,
@@ -42,7 +40,7 @@ class CreateEvent
                 'area' => $data->area,
                 'application_deadline' => $data->application_deadline,
                 'capacity' => $data->capacity,
-                'event_updated_at' => now(),
+                'bumped_at' => now(),
                 'format' => $data->format ?? BodyFormat::Plain,
             ]),
             relation: fn (GroupEvent $event) => $event->images(),

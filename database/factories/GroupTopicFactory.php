@@ -20,7 +20,7 @@ class GroupTopicFactory extends Factory
             'member_id' => Member::factory(),
             'name' => fake()->sentence(4),
             'body' => fake()->paragraphs(2, true),
-            'topic_updated_at' => null,
+            'bumped_at' => fn (array $attributes) => $attributes['created_at'] ?? now(),
             // A make()d model carries no DB default, so pin the format the serializers read.
             'format' => BodyFormat::Plain,
         ];

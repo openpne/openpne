@@ -35,7 +35,7 @@ class JoinedGroupActivity
         // id, and a keyed merge would silently collapse them into one row.
         return $topics->toBase()
             ->concat($events)
-            ->sortByDesc(fn (GroupTopic|GroupEvent $row): int => $row->updated_at->getTimestamp())
+            ->sortByDesc(fn (GroupTopic|GroupEvent $row): array => [$row->bumped_at->getTimestamp(), $row->getKey()])
             ->take($limit)
             ->values();
     }

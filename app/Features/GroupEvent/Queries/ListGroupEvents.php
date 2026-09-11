@@ -20,7 +20,7 @@ class ListGroupEvents
         return $group->events()
             ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->paginate($perPage);
     }

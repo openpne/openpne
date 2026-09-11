@@ -28,8 +28,6 @@ class CreateTopic
             throw new GroupTopicActionException(GroupTopicActionFailure::CannotPost);
         }
 
-        // topic_updated_at starts at creation time (OpenPNE 3 bumps it whenever name/body change,
-        // which a fresh topic does); created_at = updated_at keep the board ordering sane.
         $topic = $this->images->attach(
             'groupTopic',
             $images,
@@ -37,7 +35,7 @@ class CreateTopic
                 'member_id' => $author->getKey(),
                 'name' => $data->name,
                 'body' => $data->body,
-                'topic_updated_at' => now(),
+                'bumped_at' => now(),
                 'format' => $data->format ?? BodyFormat::Plain,
             ]),
             relation: fn (GroupTopic $topic) => $topic->images(),

@@ -40,7 +40,7 @@ class GroupTopicCommentRoutesTest extends TestCase
         $group = Group::factory()->create();
         $member = $this->joined($group);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
-        DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay()]);
+        DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay(), 'bumped_at' => now()->subDay()]);
 
         $response = $this->actingAs($member)->post(route('group.topics.comment.store', $topic), ['body' => 'First reply']);
 
@@ -50,8 +50,9 @@ class GroupTopicCommentRoutesTest extends TestCase
             'number' => 1,
             'body' => 'First reply',
         ]);
-        // The new comment lifts the topic's activity timestamp (board ordering key).
-        $this->assertTrue($topic->fresh()->updated_at->greaterThan(now()->subMinute()));
+        // The new comment lifts the topic's bumped_at and leaves updated_at alone.
+        $this->assertTrue($topic->fresh()->bumped_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($topic->fresh()->updated_at->lessThan(now()->subHour()));
     }
 
     public function test_a_non_member_cannot_comment(): void
