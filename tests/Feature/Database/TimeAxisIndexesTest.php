@@ -13,9 +13,19 @@ class TimeAxisIndexesTest extends TestCase
 
     public function test_every_site_wide_posting_time_list_has_its_axis_index(): void
     {
-        foreach (['diaries', 'members', 'groups', 'timeline_posts'] as $table) {
+        foreach (['diaries', 'members', 'groups'] as $table) {
             $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
         }
+    }
+
+    /** The reply flag leads: a single-column index on it would win the feeds' IS NULL on SQLite and sort the table. */
+    public function test_the_timeline_axis_is_scoped_to_top_level_posts(): void
+    {
+        $columns = $this->indexColumns('timeline_posts');
+
+        $this->assertContains(['in_reply_to_id', 'created_at', 'id'], $columns);
+        $this->assertNotContains(['in_reply_to_id'], $columns);
+        $this->assertNotContains(['created_at', 'id'], $columns);
     }
 
     public function test_the_member_scoped_axes_keep_their_index(): void
