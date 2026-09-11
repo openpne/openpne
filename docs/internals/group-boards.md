@@ -102,6 +102,13 @@ forgets it fails rather than storing the engine's clock. Deleting a comment lock
 in the order a new comment takes it; a thread deleted meanwhile ends the request with "not found",
 its comments already gone with it.
 
+A Modern list row shows `bumped_at` under the label its count decides, "Last comment" with comments
+and "Posted" without, since after the last comment goes the two are the same instant; the Modern
+detail shows `created_at` with an "Edited" mark when `edited_at` is set. The two screens name
+different instants on purpose, and the labels are what keep them from reading as one; the mark
+follows `edited_at`, so a name or body change earns it and an image swap alone does not. Classic
+draws the bare datetimes OpenPNE 3 drew.
+
 The lists order by `(bumped_at, id)` ([ordering.md](ordering.md#axes)), on `(group_id, bumped_at)`
 within a group and `(bumped_at, id)` across the site. OpenPNE 3 ordered its board by `updated_at`,
 which its cascade-save moved on every comment and every edit; its `topic_updated_at` /

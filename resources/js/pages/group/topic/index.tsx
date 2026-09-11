@@ -1,7 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { EntryRow } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
-import { Timestamp } from '@/components/timestamp';
+import { BoardStamp } from '@/pages/community/board-stamp';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -34,7 +34,7 @@ export default function GroupTopicIndex() {
                                     href={`/topics/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={<Timestamp at={topic.bumpedAt} preset="listStamp" />}
+                                    date={<BoardStamp commentCount={topic.commentCount} bumpedAt={topic.bumpedAt} />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}
