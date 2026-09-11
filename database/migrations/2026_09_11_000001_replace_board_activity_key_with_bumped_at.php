@@ -19,6 +19,14 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Checked before any DDL, so a refusal leaves the schema untouched.
+        foreach (array_keys(self::BOARDS) as $table) {
+            $untimed = DB::table($table)->whereNull('created_at')->count();
+            if ($untimed > 0) {
+                throw new RuntimeException("{$table}: {$untimed} row(s) have no created_at; bumped_at needs a time to fall back to.");
+            }
+        }
+
         foreach (self::BOARDS as $table => [$comments, $fk, $dead]) {
             // Every phase is guarded, so a run that failed on the second table resumes on the first.
             if (! Schema::hasColumn($table, 'bumped_at')) {
@@ -27,11 +35,6 @@ return new class extends Migration
                     $t->timestamp('bumped_at')->nullable();
                     $t->timestamp('edited_at')->nullable();
                 });
-            }
-
-            $untimed = DB::table($table)->whereNull('created_at')->count();
-            if ($untimed > 0) {
-                throw new RuntimeException("{$table}: {$untimed} row(s) have no created_at; bumped_at needs a time to fall back to.");
             }
 
             DB::update("UPDATE {$table} SET bumped_at = COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)");
@@ -64,6 +67,8 @@ return new class extends Migration
     public function down(): void
     {
         foreach (self::BOARDS as $table => [, , $dead]) {
+            // The old code orders by updated_at, so a comment made since the upgrade is folded back into it.
+            DB::update("UPDATE {$table} SET updated_at = CASE WHEN bumped_at > updated_at THEN bumped_at ELSE updated_at END");
             Schema::table($table, function (Blueprint $t) use ($dead) {
                 $t->timestamp($dead)->nullable();
                 $t->index(['group_id', 'updated_at']);

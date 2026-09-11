@@ -35,12 +35,19 @@ final class BoardBumpedAt
         DB::update("UPDATE {$table} SET bumped_at = ".self::definition($table, $comments, $fk).' WHERE id = ?', [$thread->getKey()]);
     }
 
-    /** @param  class-string<GroupTopic|GroupEvent>  $model */
+    /**
+     * Returns the threads settled, counted before the write: an UPDATE's own count is changed rows on
+     * MySQL and matched rows on SQLite.
+     *
+     * @param  class-string<GroupTopic|GroupEvent>  $model
+     */
     public static function settleAll(string $model): int
     {
         [$table, $comments, $fk] = self::BOARDS[$model];
+        $threads = (int) DB::table($table)->count();
+        DB::update("UPDATE {$table} SET bumped_at = ".self::definition($table, $comments, $fk));
 
-        return DB::update("UPDATE {$table} SET bumped_at = ".self::definition($table, $comments, $fk));
+        return $threads;
     }
 
     /** The one SQL spelling of the definition; the migration that introduced the column carries the same text. */
