@@ -94,9 +94,13 @@ class StreamQueryTest extends TestCase
 
     public function test_a_grouped_or_clause_is_the_caller_s_own_business(): void
     {
-        $page = StreamQuery::older(TimelinePost::query()->where(fn ($q) => $q->where('member_id', 1)->orWhere('member_id', 2)), null, self::PER_PAGE);
+        $other = Member::factory()->create();
+        TimelinePost::factory()->for($other, 'member')->create(['id' => 50, 'created_at' => '2026-03-03 00:00:00', 'updated_at' => '2026-03-03 00:00:00']);
+        $either = fn ($q) => $q->where('member_id', $this->author->getKey())->orWhere('member_id', $other->getKey());
 
-        $this->assertCount(20, $page->rows);
+        $page = StreamQuery::older(TimelinePost::query()->where($either), null, self::PER_PAGE);
+
+        $this->assertSame([50, ...range(21, 3)], $page->rows->modelKeys());
     }
 
     public function test_a_page_holds_at_least_one_row(): void
