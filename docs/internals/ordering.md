@@ -56,24 +56,28 @@ site timezone on parse. A web surface reads a malformed cursor as no cursor; the
 it did not hand out ([mcp.md](mcp.md)).
 
 Feeds share one implementation, `App\Support\Stream`: `StreamQuery::older` applies the predicate and
-the `(time, id)` order to any Eloquent query or relation, replacing an order the query carried, and
-reads one row past the page to learn whether older rows exist; `StreamPage` holds the rows newest
-first and names its last row as the older cursor; `StreamProps::scroll` hands Inertia's
-`InfiniteScroll` the cursor in the scroll metadata under `before`, with no previous page, so the
-payload is rows only; `StreamRequest` reads `?before=` and turns a bookmarked `?page=N` (N > 1) from
-the OFFSET days into a redirect to the head. Group talk and direct-message conversations keep their
-own cursors: they page in both directions and around an anchor, which a feed never does.
+the `(time, id)` order to an Eloquent builder or a has-many relation, replacing an order the query
+carried, leaving out a row whose time is NULL, and reading one row past the page to learn whether
+older rows exist; `StreamPage` holds the rows newest first and names its last row as the older
+cursor; `StreamProps::scroll` hands Inertia's `InfiniteScroll` the cursor in the scroll metadata
+under `before`, with no previous page, so the payload is rows only; `StreamRequest` reads `?before=`
+and answers a bookmarked `?page=N` (N > 1) from the OFFSET days with a redirect to the same URL
+without `page`. One stream per page: the client writes `before` back into the URL, so two on one page
+would read each other's cursor. Group talk and direct-message conversations keep their own cursors:
+they page in both directions and around an anchor, which a feed never does.
 
-Two client contracts follow from Inertia's data manager keeping the next cursor in its own state. A
-full reload of a page holding a stream passes the stream's prop names in `reset`, or the next "Older"
-would skip the rows the reload already replaced. A Classic tab from before a list became a stream
-still holds a `?page=2` load-more URL; its rows route answers 400 rather than serve the head twice,
-and the no-JS pager takes over.
+Two client contracts follow from Inertia's data manager keeping the next cursor in its own state,
+which it drops only for a prop the request named in `reset`, a header only the client can send. The
+restore revalidation in `resources/js/lib/revalidate-on-restore.ts`, the one full reload the app
+issues, names every scroll prop of the current page there, or the next "Older" would skip the rows
+the reload replaced. A Classic tab from before a list became a stream still holds a `?page=2`
+load-more URL; its rows route answers 400 rather than serve the head twice, and the no-JS pager takes
+over.
 
 A time column from `timestamps()` is nullable, and a row with no time has no place in the order:
-the prev / next queries answer "no neighbours" for it rather than compare against NULL, and no
-cursor reaches it. The lists here rely on every write path filling the column, which the upgrade
-tool does as well.
+the prev / next queries answer "no neighbours" for it rather than compare against NULL, a stream
+leaves it out, and no cursor reaches it. The lists here rely on every write path filling the column,
+which the upgrade tool does as well.
 
 ## One index per axis
 

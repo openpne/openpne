@@ -25,7 +25,7 @@ final readonly class StreamCursor
             throw new LogicException(sprintf('%s #%s has no %s to take a cursor from.', $row::class, $row->getKey(), $column));
         }
 
-        return new self(CarbonImmutable::instance($at), $row->getKey());
+        return new self($at instanceof DateTimeInterface ? CarbonImmutable::instance($at) : CarbonImmutable::parse($at), $row->getKey());
     }
 
     public static function tryParse(mixed $value): ?self
@@ -42,7 +42,7 @@ final readonly class StreamCursor
         try {
             // Normalized to the site timezone: the query binds a DateTime by its own offset, so a
             // cursor carrying a different one would slice at the wrong wall-clock instant.
-            $parsed = CarbonImmutable::parse($at)->setTimezone(date_default_timezone_get());
+            $parsed = CarbonImmutable::createFromFormat(DateTimeInterface::ATOM, $at)->setTimezone(date_default_timezone_get());
         } catch (Throwable) {
             return null;
         }

@@ -4,6 +4,7 @@ namespace App\Support\Stream;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 final class StreamRequest
 {
@@ -15,7 +16,7 @@ final class StreamRequest
         return StreamCursor::tryParse($request->query(self::PARAM));
     }
 
-    /** A bookmarked `?page=N` from before the list became a stream lands on the head; `?page=1` is left alone. */
+    /** A bookmarked `?page=N` from before the list became a stream is sent on without `page`; `?page=1` is left alone. */
     public static function legacyPageRedirect(Request $request): ?RedirectResponse
     {
         $page = $request->query('page');
@@ -23,6 +24,9 @@ final class StreamRequest
             return null;
         }
 
-        return redirect()->to($request->fullUrlWithoutQuery('page'));
+        $query = Arr::except($request->query(), 'page');
+
+        // Relative, so the Location never repeats a forwarded host.
+        return new RedirectResponse($request->getBaseUrl().$request->getPathInfo().($query === [] ? '' : '?'.Arr::query($query)));
     }
 }

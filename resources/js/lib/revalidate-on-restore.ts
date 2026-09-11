@@ -51,9 +51,22 @@ export function createRestoreRevalidator(reload: () => void): RestoreRevalidator
     };
 }
 
+interface RevalidatedPage {
+    scrollProps?: Record<string, unknown>;
+}
+
 interface RevalidateRouter {
-    on(type: 'navigate', callback: () => void): () => void;
-    reload(): void;
+    on(type: 'navigate', callback: (event: { detail: { page: RevalidatedPage } }) => void): () => void;
+    reload(options: { reset: string[] }): void;
+}
+
+/**
+ * The props a full reload has to reset: Inertia's InfiniteScroll keeps its next cursor in its own
+ * state and drops it only for a prop the request named in `reset`, so a reload that replaced the
+ * rows without naming the prop would have the next page skip what it replaced.
+ */
+export function scrollPropNames(page: RevalidatedPage | undefined): string[] {
+    return Object.keys(page?.scrollProps ?? {});
 }
 
 let installed = false;
@@ -70,7 +83,8 @@ export function installRevalidateOnRestore(router: RevalidateRouter): void {
     }
     installed = true;
 
-    const revalidator = createRestoreRevalidator(() => router.reload());
+    let page: RevalidatedPage | undefined;
+    const revalidator = createRestoreRevalidator(() => router.reload({ reset: scrollPropNames(page) }));
 
     const arrival = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
     revalidator.handleArrival(arrival?.type ?? 'navigate');
@@ -79,5 +93,8 @@ export function installRevalidateOnRestore(router: RevalidateRouter): void {
         revalidator.handlePopstate((event.state as { page?: unknown } | null)?.page !== undefined),
     );
     window.addEventListener('pageshow', (event) => revalidator.handlePageshow(event.persisted));
-    router.on('navigate', () => revalidator.handleNavigate());
+    router.on('navigate', (event) => {
+        page = event.detail.page;
+        revalidator.handleNavigate();
+    });
 }

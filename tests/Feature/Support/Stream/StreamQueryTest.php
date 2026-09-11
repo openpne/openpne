@@ -9,6 +9,7 @@ use App\Support\Stream\StreamProps;
 use App\Support\Stream\StreamQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
@@ -73,6 +74,24 @@ class StreamQueryTest extends TestCase
         $this->assertSame([1, 100], StreamQuery::older(TimelinePost::query(), $cursor, self::PER_PAGE)->rows->modelKeys());
     }
 
+    public function test_a_row_without_a_time_is_not_in_the_stream(): void
+    {
+        DB::table('timeline_posts')->insert(['id' => 300, 'member_id' => $this->author->getKey(), 'body' => 'x', 'visibility' => 1, 'created_at' => null, 'updated_at' => null]);
+        TimelinePost::query()->whereKey(range(3, 21))->delete();
+
+        $page = StreamQuery::older(TimelinePost::query(), null, self::PER_PAGE);
+
+        $this->assertSame([2, 1, 100], $page->rows->modelKeys());
+        $this->assertFalse($page->hasOlder);
+    }
+
+    public function test_a_page_holds_at_least_one_row(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        StreamQuery::older(TimelinePost::query(), null, 0);
+    }
+
     public function test_a_page_that_is_exactly_full_has_nothing_older(): void
     {
         TimelinePost::query()->whereKey([1, 100])->delete();
@@ -91,7 +110,7 @@ class StreamQueryTest extends TestCase
         $order = $this->orderClausesOn('timeline_posts', fn () => StreamQuery::older(TimelinePost::query()->latest(), $cursor, self::PER_PAGE));
 
         $this->assertCount(1, $sql);
-        $this->assertStringContainsString('where (timeline_posts.created_at < ? or (timeline_posts.created_at = ? and timeline_posts.id < ?))', $sql[0]);
+        $this->assertStringContainsString('where timeline_posts.created_at is not null and (timeline_posts.created_at < ? or (timeline_posts.created_at = ? and timeline_posts.id < ?))', $sql[0]);
         $this->assertStringEndsWith(' limit 21', $sql[0]);
         $this->assertSame(['order by timeline_posts.created_at desc, timeline_posts.id desc'], $order);
     }

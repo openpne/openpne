@@ -21,7 +21,7 @@ class StreamRequestTest extends TestCase
         $redirect = StreamRequest::legacyPageRedirect(Request::create('http://sns.test/timeline?page=3&per_page=5'));
 
         $this->assertSame(302, $redirect->getStatusCode());
-        $this->assertSame('http://sns.test/timeline?per_page=5', $redirect->getTargetUrl());
+        $this->assertSame('/timeline?per_page=5', $redirect->getTargetUrl());
     }
 
     public function test_the_first_page_and_no_page_pass_through(): void
@@ -32,6 +32,7 @@ class StreamRequestTest extends TestCase
 
     public function test_a_page_that_is_not_a_number_still_redirects(): void
     {
-        $this->assertSame('http://localhost/timeline', StreamRequest::legacyPageRedirect(Request::create('/timeline?page=abc'))->getTargetUrl());
+        $this->assertSame('/timeline', StreamRequest::legacyPageRedirect(Request::create('/timeline?page=abc'))->getTargetUrl());
+        $this->assertSame('/timeline?before=x', StreamRequest::legacyPageRedirect(Request::create('/timeline?before=x&page=2'))->getTargetUrl());
     }
 }
