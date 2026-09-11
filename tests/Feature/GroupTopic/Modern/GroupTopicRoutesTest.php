@@ -64,6 +64,28 @@ class GroupTopicRoutesTest extends TestCase
             );
     }
 
+    /** The row label reads the count: with the last comment gone the stamp must be the post's own, or "Posted" would name a comment's instant. */
+    public function test_a_board_row_falls_back_to_the_posting_instant_once_its_last_comment_is_deleted(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey(), 'created_at' => '2026-03-01 09:00:00', 'bumped_at' => '2026-03-01 09:00:00']);
+        $this->travelTo('2026-03-02 09:00:00');
+        $this->actingAs($member)->post(route('group.topics.comment.store', $topic), ['body' => 'a comment'])->assertRedirect();
+        $comment = GroupTopicComment::query()->sole();
+
+        $lifted = $this->actingAs($member)->get(route('group.topics.index', $group))->viewData('page')['props']['topics']['data'][0];
+        $this->actingAs($member)->post(route('group.topics.comment.delete', $comment))->assertRedirect();
+        $settled = $this->actingAs($member)->get(route('group.topics.index', $group))->viewData('page')['props']['topics']['data'][0];
+        $detail = $this->actingAs($member)->get(route('group.topics.show', $topic))->viewData('page')['props']['topic'];
+
+        $this->assertSame(1, $lifted['commentCount']);
+        $this->assertNotSame($detail['createdAt'], $lifted['bumpedAt']);
+        $this->assertSame(0, $settled['commentCount']);
+        $this->assertSame($detail['createdAt'], $settled['bumpedAt']);
+        $this->assertNull($detail['editedAt']);
+    }
+
     public function test_modern_show_renders_the_topic_with_its_comments(): void
     {
         $group = Group::factory()->create();

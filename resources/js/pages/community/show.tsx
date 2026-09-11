@@ -185,7 +185,7 @@ export default function CommunityShow() {
                                     href={`/topics/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={<Timestamp at={topic.bumpedAt} preset="listStamp" />}
+                                    date={<>{topic.commentCount > 0 ? t('Last comment') : t('Posted')}: <Timestamp at={topic.bumpedAt} preset="listStamp" /></>}
                                     commentCount={topic.commentCount}
                                 />
                             ))}

@@ -224,7 +224,7 @@ export default function UnifiedGroup() {
                                         id: topic.id,
                                         href: `/topics/${topic.id}`,
                                         name: topic.name,
-                                        date: <Timestamp at={topic.bumpedAt} preset="listStamp" />,
+                                        date: <>{topic.commentCount > 0 ? t('Last comment') : t('Posted')}: <Timestamp at={topic.bumpedAt} preset="listStamp" /></>,
                                         commentCount: topic.commentCount,
                                     }))}
                                 />
