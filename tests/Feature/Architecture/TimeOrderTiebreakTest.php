@@ -8,51 +8,59 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * A literal time-column order in app/ is followed, before the statement ends, by a unique-key
- * tiebreak (docs/internals/ordering.md, "Guards"). Queries that order by a variable, and orders
- * assembled across statements, are outside its sight and rely on their SQL pins.
+ * A literal time-column order in app/ is followed, before the call that executes or caps it, by a
+ * unique-key tiebreak (docs/internals/ordering.md, "Guards"). Queries that order by a variable, and
+ * orders assembled across statements, are outside its sight and rely on their SQL pins.
  */
 class TimeOrderTiebreakTest extends TestCase
 {
     private const TIME_COLUMNS = 'created_at|updated_at|sort_at|bumped_at|last_comment_time|published_at|open_date|latest_message_at|latest_at|last_said|window_start|ym';
 
-    /** Keys unique on their own, on any table: primary keys, a thread's number, the union's row id, a subquery's message id. */
-    private const UNIQUE_KEYS = 'id|row_id|number|latest_id|latest_message_id';
+    /** A primary key, bare or table-qualified, is the one tiebreak unique on any table; `min(id)` is its aggregate over a group. */
+    private const PRIMARY_KEY = '/->(?:orderBy|orderByDesc)\(\'(?:[a-z_]+\.)?id\'|->orderByRaw\(\'min\(id\)\'\)/';
 
-    /** @var array<string, string> pivot columns that complete a composite primary key, by the file that orders on them */
-    private const PIVOT_KEYS = [
-        'app/Features/Friend/Queries/ListFriends.php' => 'friend_id',
-        'app/Features/Friend/Queries/ListPendingRequests.php' => 'target_id|requester_id',
-        'app/Features/Block/Queries/ListBlocks.php' => 'blocked_id',
-        'app/Features/Group/Queries/ListPendingMembers.php' => 'member_id',
+    /**
+     * Tails that are unique only in one query, by file: a pivot's other key column, the union's
+     * `(role, row_id)`, the conversation heads' counterpart after a shared latest message.
+     *
+     * @var array<string, string>
+     */
+    private const COMPOSITE_TAILS = [
+        'app/Features/Friend/Queries/ListFriends.php' => '/->orderByPivot\(\'friend_id\'/',
+        'app/Features/Friend/Queries/ListPendingRequests.php' => '/->orderByPivot\(\'(?:target_id|requester_id)\'/',
+        'app/Features/Block/Queries/ListBlocks.php' => '/->orderByPivot\(\'blocked_id\'/',
+        'app/Features/Group/Queries/ListPendingMembers.php' => '/->orderByPivot\(\'member_id\'/',
+        'app/Features/DirectMessage/Queries/ListDirectMessages.php' => '/->orderByDesc\(\'role\'\)->orderByDesc\(\'row_id\'\)/',
+        'app/Features/DirectMessage/Queries/ShowDirectMessage.php' => '/->orderBy\(\'role\', \$direction\)->orderBy\(\'row_id\', \$direction\)/',
+        'app/Features/DirectMessage/Queries/ConversationList.php' => '/->orderByDesc\(\'heads\.counterpart_id\'\)/',
     ];
 
-    /** @var array<string, string> orders on a column that is itself unique in that query, with the reason */
+    /** @var array<string, string> orders whose column is unique in that one query, with the reason, by file:line */
     private const UNIQUE_ON_ITS_OWN = [
-        'app/Features/Diary/Queries/MemberDiaryMonthlyCounts.php' => 'ym is the group key',
-        'app/Console/Commands/PublishHomeIssueCommand.php' => 'one issue per window (issue_date is unique)',
-        'app/Console/Commands/RebuildHomeIssuesCommand.php' => 'one issue per window (issue_date is unique)',
+        'app/Features/Diary/Queries/MemberDiaryMonthlyCounts.php:30' => 'ym is the group key',
+        'app/Console/Commands/PublishHomeIssueCommand.php:136' => 'windows do not overlap (windowIsClear), so one issue per window_start',
+        'app/Console/Commands/RebuildHomeIssuesCommand.php:56' => 'windows do not overlap (windowIsClear), so one issue per window_start',
+        'app/Console/Commands/RebuildHomeIssuesCommand.php:153' => 'windows do not overlap (windowIsClear), so one issue per window_start',
     ];
 
     public function test_every_literal_time_order_ends_on_a_unique_key(): void
     {
         $root = base_path();
-        $pattern = '/->(?:orderBy|orderByDesc|orderByPivot|reorder)\(\'(?:[a-z_]+\.)?(?:'.self::TIME_COLUMNS.')\'|->(?:latest|oldest)\((?:\)|\'[a-z_.]+\'\))/';
+        $time = '(?:[a-z_]+\.)?(?:'.self::TIME_COLUMNS.')';
+        $pattern = '/->(?:orderBy|orderByDesc|orderByPivot|reorder)\(\''.$time.'\'|->orderByRaw\(\'[^\']*\b'.$time.'\b[^\']*\'|->(?:latest|oldest)\((?:\)|\''.$time.'\'\))/';
         $matches = 0;
         $untied = [];
 
         foreach ($this->phpFilesUnder($root.'/app') as $path) {
             $relative = substr($path, strlen($root) + 1);
-            if (isset(self::UNIQUE_ON_ITS_OWN[$relative])) {
-                continue;
-            }
             $source = file_get_contents($path);
 
             foreach ($this->statementsMatching($pattern, $source) as [$line, $chain]) {
                 $matches++;
-                if (! $this->hasTiebreak($chain, $relative)) {
-                    $untied[] = "{$relative}:{$line}";
+                if (isset(self::UNIQUE_ON_ITS_OWN["{$relative}:{$line}"]) || $this->hasTiebreak($chain, $relative)) {
+                    continue;
                 }
+                $untied[] = "{$relative}:{$line}";
             }
         }
 
@@ -82,11 +90,11 @@ class TimeOrderTiebreakTest extends TestCase
 
     private function hasTiebreak(string $chain, string $relative): bool
     {
-        if (preg_match('/->(?:orderBy|orderByDesc)\(\'(?:[a-z_]+\.)?(?:'.self::UNIQUE_KEYS.')\'/', $chain) === 1) {
+        if (preg_match(self::PRIMARY_KEY, $chain) === 1) {
             return true;
         }
 
-        return isset(self::PIVOT_KEYS[$relative]) && preg_match('/->orderByPivot\(\'(?:'.self::PIVOT_KEYS[$relative].')\'/', $chain) === 1;
+        return isset(self::COMPOSITE_TAILS[$relative]) && preg_match(self::COMPOSITE_TAILS[$relative], $chain) === 1;
     }
 
     /** @return list<string> */

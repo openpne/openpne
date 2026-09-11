@@ -148,9 +148,11 @@ per query. Such a list also pins its `order by` clause through the query log
 ([`PinsOrderBy`](../../tests/Support/PinsOrderBy.php)); the pin is the assertion that bites on both
 engines.
 
-An architecture test reads every literal time-column order in `app/` and requires a unique-key
-tiebreak before the statement ends: a primary key, a thread number, the union's row id, or, for a
-pivot, the column that completes its composite key, named per file. An order on a column that is
-unique in its own query is listed there with its reason. The guard sees the width of the code base
-and no deeper than one statement: an order built from a variable, or spread across statements, is
-invisible to it, and every stream and paged list also pins its SQL as above.
+An architecture test reads every literal time-column order in `app/`, raw orders naming a time
+column included, and requires a tiebreak before the call that executes or caps the query: a primary
+key, bare or table-qualified, or, for the few queries whose unique tail is composite, that tail
+named per file (a pivot's other key column, the mailbox union's `(role, row_id)`, the conversation
+list's counterpart after a shared latest message). An order on a column unique in its own query is
+listed per line with its reason. The guard sees the width of the code base and no deeper than one
+chain: an order built from a variable, or spread across statements, is invisible to it, and every
+stream and paged list also pins its SQL as above.
