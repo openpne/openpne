@@ -90,7 +90,7 @@ class AiAccountController extends Controller
         $joined = $groupsOn ? $joinedGroups->all($member) : new EloquentCollection;
         /** @var EloquentCollection<int, Group> $pending */
         $pending = $groupsOn
-            ? $member->groupJoinRequests()->with(['category', 'image'])->withCount('members')->orderByDesc('groups.id')->get()
+            ? $member->groupJoinRequests()->with(['category', 'image'])->withCount('members')->orderByDesc('groups.created_at')->orderByDesc('groups.id')->get()
             : new EloquentCollection;
         $browse = $groupsOn ? $searchGroups($keyword) : null;
         $tokens = AiAccountSerializer::tokens($member, $request->session());

@@ -24,7 +24,8 @@ class ShowDirectMessage
         $message = DirectMessage::query()
             ->with(['sender.avatar.file', 'recipients.recipient.avatar.file', 'draftRecipient.avatar.file', 'files.file'])
             ->find($messageId);
-        if ($message === null || ! $this->inBox($viewer, $box, $messageId)) {
+        $position = $message === null ? null : $this->position($viewer, $box, $messageId);
+        if ($message === null || $position === null) {
             return null;
         }
 
@@ -39,14 +40,22 @@ class ShowDirectMessage
             $box,
             $viewerIsSender,
             $this->counterparties($message, $viewerIsSender),
-            $this->adjacentId($viewer, $box, $messageId, older: true),
-            $this->adjacentId($viewer, $box, $messageId, older: false),
+            $this->adjacentId($viewer, $box, $position, older: true),
+            $this->adjacentId($viewer, $box, $position, older: false),
         );
     }
 
-    private function inBox(Member $viewer, DirectMessageBox $box, int $messageId): bool
+    /**
+     * The message's row in the box, or null when the viewer may not read it there. A message with two
+     * rows in one box (a duplicate receipt, or trashed on both sides) is placed at its later row.
+     */
+    private function position(Member $viewer, DirectMessageBox $box, int $messageId): ?object
     {
-        return DB::query()->fromSub($this->boxMessageIds($viewer, $box), 'box')->where('id', $messageId)->exists();
+        return DB::query()
+            ->fromSub($this->boxRows($viewer, $box), 'box')
+            ->where('id', $messageId)
+            ->orderByDesc('sort_at')->orderByDesc('role')->orderByDesc('row_id')
+            ->first();
     }
 
     private function markRead(Member $viewer, DirectMessage $message): void
@@ -79,34 +88,54 @@ class ShowDirectMessage
             : $message->recipients->map(fn (DirectMessageRecipient $r) => $r->recipient)->filter()->values()->all();
     }
 
-    private function adjacentId(Member $viewer, DirectMessageBox $box, int $messageId, bool $older): ?int
+    private function adjacentId(Member $viewer, DirectMessageBox $box, object $position, bool $older): ?int
     {
-        // Wrap in a subquery so the id filter applies to the whole box set, including the trash UNION.
+        $op = $older ? '<' : '>';
+        $direction = $older ? 'desc' : 'asc';
+
+        // The box list orders by (sort_at, role, row_id); the neighbour is the next row in that order.
         $row = DB::query()
-            ->fromSub($this->boxMessageIds($viewer, $box), 'box')
-            ->where('id', $older ? '<' : '>', $messageId)
-            ->orderBy('id', $older ? 'desc' : 'asc')
+            ->fromSub($this->boxRows($viewer, $box), 'box')
+            ->where(fn (QueryBuilder $q) => $q
+                ->where('sort_at', $op, $position->sort_at)
+                ->orWhere(fn (QueryBuilder $tie) => $tie
+                    ->where('sort_at', '=', $position->sort_at)
+                    ->where(fn (QueryBuilder $r) => $r
+                        ->where('role', $op, $position->role)
+                        ->orWhere(fn (QueryBuilder $rr) => $rr
+                            ->where('role', '=', $position->role)
+                            ->where('row_id', $op, $position->row_id)))))
+            ->orderBy('sort_at', $direction)->orderBy('role', $direction)->orderBy('row_id', $direction)
             ->first();
 
         return $row !== null ? (int) $row->id : null;
     }
 
-    private function boxMessageIds(Member $viewer, DirectMessageBox $box): QueryBuilder
+    /**
+     * Every arm yields (id = message id, sort_at, role, row_id): the box list's order columns, so the
+     * show page walks the list the reader came from (docs/internals/direct-messages.md, "Ordering and paging").
+     */
+    private function boxRows(Member $viewer, DirectMessageBox $box): QueryBuilder
     {
         $id = $viewer->getKey();
 
         return match ($box) {
             DirectMessageBox::Receive => DirectMessageRecipient::query()->ofDelivered()->recipientLive()
-                ->where('recipient_id', $id)->select('direct_message_id as id')->toBase(),
+                ->where('recipient_id', $id)
+                ->select('direct_message_id as id', 'created_at as sort_at', DB::raw("'received' as role"), 'id as row_id')->toBase(),
             DirectMessageBox::Sent => DirectMessage::query()->senderLive()
-                ->where('sender_id', $id)->where('is_draft', false)->select('id')->toBase(),
+                ->where('sender_id', $id)->where('is_draft', false)
+                ->select('id', 'created_at as sort_at', DB::raw("'sent' as role"), 'id as row_id')->toBase(),
             DirectMessageBox::Trash => DirectMessageRecipient::query()->ofDelivered()->recipientTrashed()
-                ->where('recipient_id', $id)->select('direct_message_id as id')->toBase()
+                ->where('recipient_id', $id)
+                ->select('direct_message_id as id', 'recipient_deleted_at as sort_at', DB::raw("'received' as role"), 'id as row_id')->toBase()
                 ->unionAll(
-                    DirectMessage::query()->senderTrashed()->where('sender_id', $id)->select('id')->toBase()
+                    DirectMessage::query()->senderTrashed()->where('sender_id', $id)
+                        ->select('id', 'sender_deleted_at as sort_at', DB::raw("'sent' as role"), 'id as row_id')->toBase()
                 ),
             // A draft has no show page, so no id is in this box.
-            DirectMessageBox::Draft => DirectMessage::query()->whereRaw('1 = 0')->select('id')->toBase(),
+            DirectMessageBox::Draft => DirectMessage::query()->whereRaw('1 = 0')
+                ->select('id', 'created_at as sort_at', DB::raw("'sent' as role"), 'id as row_id')->toBase(),
         };
     }
 }

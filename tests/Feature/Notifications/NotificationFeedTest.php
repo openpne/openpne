@@ -47,6 +47,20 @@ class NotificationFeedTest extends TestCase
             );
     }
 
+    public function test_two_pages_of_one_second_split_at_the_uuid_with_no_row_repeated_or_lost(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $at = now()->setTime(12, 0, 0);
+        $ids = collect(range(1, 35))->map(fn () => $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: $at)->getKey());
+        $expected = $ids->sortDesc()->values()->all();
+
+        $first = $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['feed']['data'];
+        $second = $this->actingOnModern($viewer)->get('/notifications?page=2')->viewData('page')['props']['feed']['data'];
+
+        $this->assertSame(array_slice($expected, 0, 30), array_column($first, 'id'));
+        $this->assertSame(array_slice($expected, 30), array_column($second, 'id'));
+    }
+
     public function test_feed_does_not_show_another_members_notifications(): void
     {
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();

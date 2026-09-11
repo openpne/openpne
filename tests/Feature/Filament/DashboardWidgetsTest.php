@@ -94,6 +94,17 @@ class DashboardWidgetsTest extends TestCase
         $this->assertSame(1, OverviewStatsWidget::activeGroupCount($since));
     }
 
+    public function test_recent_members_break_a_shared_second_by_id_descending(): void
+    {
+        $sameSecond = Member::factory()->count(12)->create(['created_at' => '2026-03-01 12:00:00']);
+        $expected = array_slice(array_reverse($sameSecond->modelKeys()), 0, 10);
+
+        Livewire::test(RecentMembersWidget::class)
+            ->assertSuccessful()
+            ->assertCanSeeTableRecords(Member::query()->whereIn('id', $expected)->orderByDesc('id')->get(), inOrder: true)
+            ->assertCanNotSeeTableRecords($sameSecond->take(2));
+    }
+
     public function test_recent_members_shows_latest_capped_at_ten(): void
     {
         $recent = Member::factory()->count(10)->create();

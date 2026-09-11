@@ -116,7 +116,7 @@ class DirectMessageRouteParity extends RouteParity
             // showSuccess.php → message/show.blade.php
             'show' => [
                 new ScreenElement('box nav sidemenu', L::Two, S::Ported, "include_partial('message/sidemenu')", 'x-message.sidemenu'),
-                new ScreenElement('previous / next links within box', L::Two, S::Ported, 'getPrevious/getNext($type, $myMemberId)', 'adjacent by id within the box'),
+                new ScreenElement('previous / next links within box', L::Two, S::Ported, 'getPrevious/getNext($type, $myMemberId)', 'adjacent in the box list order (its time column, then the row id)'),
                 new ScreenElement('From / To members', L::One, S::Ported, '$fromOrToMembers (getIsSender)'),
                 new ScreenElement('counterparty thumbnail', L::Two, S::Ported, 'image_tag_sf_image 76x76', 'x-classic.image 76 in the rowspan photo cell, linked to the profile'),
                 new ScreenElement('subject + created-at', L::One, S::Ported, '$message->getSubject() / format_datetime'),

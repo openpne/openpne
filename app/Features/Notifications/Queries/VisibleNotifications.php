@@ -26,6 +26,18 @@ final class VisibleNotifications
         return $disabled === [] ? $query : $query->whereNotIn('type', $disabled);
     }
 
+    /**
+     * The relation's own latest() is dropped so the id tiebreak sits on one created_at order
+     * (docs/internals/ordering.md, "The tuple").
+     *
+     * @param  MorphMany<DatabaseNotification, *>  $query
+     * @return MorphMany<DatabaseNotification, *>
+     */
+    public static function newestFirst(MorphMany $query): MorphMany
+    {
+        return $query->reorder('created_at', 'desc')->orderByDesc('id');
+    }
+
     /** The same rule against a row already in hand, so a caller holding one needs no second query. */
     public static function hides(DatabaseNotification $row): bool
     {

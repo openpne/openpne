@@ -79,16 +79,64 @@ class ShowDirectMessageTest extends TestCase
         $this->assertNull(app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $purged->getKey()));
     }
 
-    public function test_previous_and_next_walk_the_box_by_id(): void
+    public function test_previous_and_next_follow_the_inbox_order_receipt_time_then_row(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
-        $older = $this->deliver($sender, $recipient);
-        $middle = $this->deliver($sender, $recipient);
-        $newer = $this->deliver($sender, $recipient);
+        // Authored later but received earlier: the inbox lists by the receipt, so must the links.
+        $receivedFirst = $this->deliver($sender, $recipient, ['created_at' => '2026-03-01 12:00:00'], ['created_at' => '2026-03-01 09:00:00']);
+        $middle = $this->deliver($sender, $recipient, ['created_at' => '2026-03-01 08:00:00'], ['created_at' => '2026-03-01 10:00:00']);
+        $receivedLast = $this->deliver($sender, $recipient, ['created_at' => '2026-03-01 07:00:00'], ['created_at' => '2026-03-01 11:00:00']);
 
         $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $middle->getKey());
 
-        $this->assertSame($older->getKey(), $view->previousId); // older = smaller id
-        $this->assertSame($newer->getKey(), $view->nextId);     // newer = larger id
+        $this->assertSame($receivedFirst->getKey(), $view->previousId);
+        $this->assertSame($receivedLast->getKey(), $view->nextId);
+    }
+
+    public function test_previous_and_next_split_one_receipt_second_at_the_receipt_row(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $rows = [];
+        foreach (range(1, 3) as $i) {
+            $rows[] = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 10:00:00']);
+        }
+
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $rows[1]->getKey());
+
+        $this->assertSame($rows[0]->getKey(), $view->previousId);
+        $this->assertSame($rows[2]->getKey(), $view->nextId);
+        $this->assertNull(app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $rows[0]->getKey())->previousId);
+        $this->assertNull(app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $rows[2]->getKey())->nextId);
+    }
+
+    public function test_sent_previous_and_next_follow_created_at_then_id(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $older = $this->deliver($sender, $recipient, ['created_at' => '2026-03-01 10:00:00']);
+        $middle = $this->deliver($sender, $recipient, ['created_at' => '2026-03-01 10:00:00']);
+        $newer = $this->deliver($sender, $recipient, ['created_at' => '2026-03-02 10:00:00']);
+
+        $view = app(ShowDirectMessage::class)($sender, DirectMessageBox::Sent, $middle->getKey());
+
+        $this->assertSame($older->getKey(), $view->previousId);
+        $this->assertSame($newer->getKey(), $view->nextId);
+    }
+
+    /** Both sides trashed in the same second: the list puts the sent row before the received one, so do the links. */
+    public function test_trash_previous_and_next_cross_the_two_sides_in_list_order(): void
+    {
+        [$me, $other] = Member::factory()->count(2)->create();
+        $at = '2026-03-01 10:00:00';
+        $received = $this->deliver($other, $me, receipt: ['recipient_deleted_at' => $at]);
+        $sent = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => $at]);
+        $earlier = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => '2026-02-01 10:00:00']);
+
+        $fromSent = app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $sent->getKey());
+        $fromReceived = app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $received->getKey());
+
+        $this->assertSame($received->getKey(), $fromSent->previousId);
+        $this->assertNull($fromSent->nextId);
+        $this->assertSame($earlier->getKey(), $fromReceived->previousId);
+        $this->assertSame($sent->getKey(), $fromReceived->nextId);
     }
 }

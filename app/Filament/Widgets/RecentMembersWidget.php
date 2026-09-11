@@ -49,7 +49,8 @@ class RecentMembersWidget extends TableWidget
     private function getQuery(): Builder
     {
         return Member::query()
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->limit(10);
     }
 }
