@@ -81,7 +81,7 @@ export default function DiaryFeed() {
                     <Pagination meta={diaries.meta} />
                 </>
             ) : (
-                <LoadOlder data="diaries" generation={streamGeneration ?? ''}>
+                <LoadOlder data="diaries" generation={streamGeneration ?? ''} end={t('No older %diary% entries.')}>
                     <Panel flush>
                         <List>
                             {diaries.data.map((entry) => (

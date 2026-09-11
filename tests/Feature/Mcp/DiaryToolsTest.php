@@ -146,11 +146,14 @@ class DiaryToolsTest extends McpTestCase
             ->assertStructuredContent(fn ($json) => $json->where('hasOlder', false)->where('olderCursor', null)->count('diaries', 1)->etc());
     }
 
-    public function test_a_cursor_the_server_did_not_hand_out_is_refused(): void
+    public function test_a_cursor_that_cannot_name_a_diary_is_refused_rather_than_read_as_the_head(): void
     {
+        Diary::factory()->count(2)->create(['member_id' => Member::factory()->create()->getKey()]);
         $this->acting(Member::factory()->create());
 
         OpenPneServer::tool(ListDiariesTool::class, ['before' => 'page-2'])->assertHasErrors(['No such']);
+        // Well formed, but a UUID names no diary: read as the head it would hand the same page out forever.
+        OpenPneServer::tool(ListDiariesTool::class, ['before' => '2026-01-01T00:00:00+09:00|550e8400-e29b-41d4-a716-446655440000'])->assertHasErrors(['No such']);
     }
 
     /** An AI account is friends with nobody, which is the ordinary case for a bot. */

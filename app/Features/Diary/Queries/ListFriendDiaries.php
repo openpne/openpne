@@ -28,7 +28,7 @@ class ListFriendDiaries
     }
 
     /**
-     * First $limit diaries, unpaginated — for the home gadget list, which must not read the host page's `?before=`.
+     * First $limit diaries, unpaginated — for the home gadget list.
      *
      * @return Collection<int, Diary>
      */

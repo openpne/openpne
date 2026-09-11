@@ -57,8 +57,8 @@ index reads on both engines. A cursor is `{iso8601}|{id}`, opaque to the client,
 position rather than a permission; the id is the row's primary key, an integer or a UUID, the time
 is the ATOM form the server emitted, to the second as the time columns are, normalized to the site
 timezone on parse, and a URL carries the whole cursor percent-encoded as a query value. A web
-surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not hand out
-([mcp.md](mcp.md)).
+surface reads a malformed cursor as no cursor; the MCP realm refuses one it cannot read, a
+well-formed cursor of the wrong key type included ([mcp.md](mcp.md)).
 
 Feeds share one implementation, `App\Support\Stream`: `StreamQuery::older` applies the predicate and
 the `(time, id)` order to an Eloquent builder or a has-many relation, replacing an order the query

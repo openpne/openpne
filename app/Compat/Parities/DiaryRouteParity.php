@@ -151,7 +151,7 @@ class DiaryRouteParity extends RouteParity
             'list' => [
                 new ScreenElement('feed scope: every entry open to the membership (Open included)', L::Two, S::Ported, 'getDiaryPager PUBLIC_FLAG_SNS (saving an Open diary normalizes it to public_flag=1 + is_open, which that query matches)', 'DiaryVisibilityScope::applyFeed visibility <= Members'),
                 new ScreenElement('keyword search form', L::Two, S::Ported, "url_for('@diary_search')"),
-                new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation', 'keyset on (created_at, id): next is the older page, previous the head, and no count is read out'),
+                new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation', 'keyset on (created_at, id): next is the older page, previous the head, no count is read out, and a feed that fits one page draws no band'),
                 new ScreenElement('author nickname', L::Two, S::Ported, '$diary->Member->name'),
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),
@@ -176,7 +176,7 @@ class DiaryRouteParity extends RouteParity
             ],
             // listFriendSuccess.php → diary/feed.blade.php (variant=friends, no search form)
             'listFriend' => [
-                new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation', 'keyset on (created_at, id): next is the older page, previous the head, and no count is read out'),
+                new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation', 'keyset on (created_at, id): next is the older page, previous the head, no count is read out, and a feed that fits one page draws no band'),
                 new ScreenElement('author nickname', L::Two, S::Ported, 'op_diary_link_to_show withName'),
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('per-entry title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),

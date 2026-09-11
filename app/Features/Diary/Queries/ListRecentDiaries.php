@@ -27,7 +27,7 @@ class ListRecentDiaries
     }
 
     /**
-     * First $limit diaries, unpaginated — for the home dashboard digest, which must not read the host page's `?before=`.
+     * First $limit diaries, unpaginated — for the home dashboard digest.
      *
      * @return Collection<int, Diary>
      */

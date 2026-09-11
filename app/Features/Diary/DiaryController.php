@@ -179,8 +179,9 @@ class DiaryController extends Controller
 
     /**
      * OpenPNE 3 listSuccess.php: the all-member feed and search share one template carrying the
-     * search form; the friend feed drops it. Search is the archive here: it pages by OFFSET.
+     * search form. Search is the archive here: it pages by OFFSET.
      *
+     * @param  'search'  $variant
      * @param  LengthAwarePaginator<int, Diary>  $diaries
      */
     private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
@@ -194,8 +195,6 @@ class DiaryController extends Controller
                 'keyword' => $keyword,
                 'hasKeyword' => $hasKeyword,
                 'diaries' => $diaries,
-                'olderUrl' => null,
-                'newerUrl' => null,
             ]),
             SurfaceResolver::MODERN => function () use ($variant, $searchable, $keyword, $hasKeyword, $diaries) {
                 $diaries->loadMissing('images.file');

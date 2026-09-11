@@ -29,9 +29,9 @@ class ListDiariesTool extends DiaryTool
 
         $before = null;
         if (isset($validated['before'])) {
-            // A cursor this server did not hand out is refused, as every other opaque id here is.
+            // A cursor that cannot name a diary is refused rather than read as the head, which would hand the same page out forever.
             $before = StreamCursor::tryParse($validated['before']);
-            if ($before === null) {
+            if ($before === null || ! is_int($before->id)) {
                 return $this->refused();
             }
         }
