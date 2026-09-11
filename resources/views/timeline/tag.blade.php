@@ -17,14 +17,13 @@
                     @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                 @endforeach
             </div>
-            @if ($posts->hasMorePages())
-                @include('timeline._loadmore', ['nextUrl' => route('timeline.tag.rows', ['tag' => $tag, 'page' => $posts->currentPage() + 1])])
+            @if ($loadMoreUrl !== null)
+                @include('timeline._loadmore', ['nextUrl' => $loadMoreUrl])
             @endif
         </div>
         @if ($posts->isEmpty())
             <p>{{ __('No %activity% posts to show.') }}</p>
-        @else
-            <div data-timeline-pager><x-classic.pager :paginator="$posts" /></div>
         @endif
+        <div data-timeline-pager><x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" /></div>
     </x-classic.parts>
 @endsection

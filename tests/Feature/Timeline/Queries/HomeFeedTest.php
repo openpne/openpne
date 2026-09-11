@@ -131,15 +131,15 @@ class HomeFeedTest extends TestCase
         $this->assertSame([$tieB->getKey(), $tieA->getKey(), $older->getKey()], $ids);
     }
 
-    public function test_feed_is_paginated(): void
+    public function test_a_full_page_says_more_lies_beyond_it(): void
     {
         $member = Member::factory()->create();
         TimelinePost::factory()->count(25)->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
 
         $result = (new HomeFeed)($member, perPage: 20);
 
-        $this->assertSame(20, $result->perPage());
-        $this->assertSame(25, $result->total());
+        $this->assertCount(20, $result->rows);
+        $this->assertTrue($result->hasOlder);
     }
 
     // Helpers -------------------------------------------------------------------
@@ -147,7 +147,7 @@ class HomeFeedTest extends TestCase
     /** @return list<int> */
     private function feedIds(Member $viewer): array
     {
-        return collect((new HomeFeed)($viewer)->items())->map->getKey()->all();
+        return (new HomeFeed)($viewer)->rows->modelKeys();
     }
 
     private function postFor(Member $member, Visibility $visibility, ?string $createdAt = null): TimelinePost

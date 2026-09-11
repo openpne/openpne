@@ -24,10 +24,12 @@ use App\Http\Requests\Timeline\StoreTimelinePostRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamProps;
+use App\Support\Stream\StreamRequest;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,41 +37,52 @@ use Illuminate\Http\Response;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Inertia\ScrollProp;
 
 class TimelineController extends Controller
 {
     use RespondsWithSurface;
 
-    public function index(Request $request, HomeFeed $query, RecentReplies $recentReplies): View|InertiaResponse
+    public function index(Request $request, HomeFeed $query, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
     {
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
         $viewer = $this->viewer();
-        $posts = $query($viewer);
+        $before = StreamRequest::before($request);
+        $page = $query($viewer, $before);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.index', [
                 'viewer' => $viewer,
-                'posts' => $this->withInlineReplies($posts, $recentReplies),
+                'posts' => $this->withInlineReplies($page, $recentReplies)->rows,
+                ...$this->streamLinks($page, $before, 'timeline.index', 'timeline.index.rows'),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
-                'posts' => TimelinePostSerializer::paginator($posts, $viewer),
+                'posts' => $this->stream($page, $before, $viewer),
                 'canPost' => TimelinePosting::enabled(),
             ]),
         ]);
     }
 
-    public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): View|InertiaResponse
+    public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
     {
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
         $viewer = $this->viewer();
         $owner = $this->memberSubject($member);
-        $posts = $query($viewer, $owner);
+        $before = StreamRequest::before($request);
+        $page = $query($viewer, $owner, $before);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.member', [
                 'owner' => $owner,
-                'posts' => $this->withInlineReplies($posts, $recentReplies),
+                'posts' => $this->withInlineReplies($page, $recentReplies)->rows,
+                ...$this->streamLinks($page, $before, 'timeline.member', 'timeline.member.rows', ['member' => $owner]),
             ]),
-            SurfaceResolver::MODERN => function () use ($owner, $viewer, $posts) {
+            SurfaceResolver::MODERN => function () use ($owner, $viewer, $page, $before) {
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
                 $owner->loadMissing('avatar.file');
 
@@ -78,7 +91,7 @@ class TimelineController extends Controller
                     'isOwner' => $viewer->is($owner),
                     'canPost' => TimelinePosting::enabled(),
                     'viewerId' => $viewer->getKey(),
-                    'posts' => TimelinePostSerializer::paginator($posts, $viewer),
+                    'posts' => $this->stream($page, $before, $viewer),
                 ]);
             },
         ]);
@@ -89,22 +102,27 @@ class TimelineController extends Controller
      * query, so `#Tag` and `#ＴＡＧ` reach the same page; the normalized form is what the page shows,
      * since that is the topic the reader is actually on.
      */
-    public function tag(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): View|InertiaResponse
+    public function tag(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
     {
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
         $viewer = $this->viewer();
         $normalized = HashtagParser::normalize($tag);
-        $posts = $query($viewer, $tag);
+        $before = StreamRequest::before($request);
+        $page = $query($viewer, $tag, $before);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.tag', [
                 'viewer' => $viewer,
                 'tag' => $normalized,
-                'posts' => $this->withInlineReplies($posts, $recentReplies),
+                'posts' => $this->withInlineReplies($page, $recentReplies)->rows,
+                ...$this->streamLinks($page, $before, 'timeline.tag', 'timeline.tag.rows', ['tag' => $normalized]),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/tag', [
                 'viewerId' => $viewer->getKey(),
                 'tag' => $normalized,
-                'posts' => TimelinePostSerializer::paginator($posts, $viewer),
+                'posts' => $this->stream($page, $before, $viewer),
             ]),
         ]);
     }
@@ -229,26 +247,26 @@ class TimelineController extends Controller
     public function indexRows(Request $request, HomeFeed $query, RecentReplies $recentReplies): Response
     {
         $perPage = $this->rowsPerPage($request);
-        $posts = $this->withInlineReplies($query($this->viewer(), $perPage), $recentReplies);
+        $page = $this->withInlineReplies($query($this->viewer(), StreamRequest::before($request), $perPage), $recentReplies);
 
-        return $this->rows($posts, 'timeline.index.rows', ['per_page' => $perPage]);
+        return $this->rows($page, 'timeline.index.rows', ['per_page' => $perPage]);
     }
 
     public function memberRows(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): Response
     {
         $perPage = $this->rowsPerPage($request);
         $owner = $this->memberSubject($member);
-        $posts = $this->withInlineReplies($query($this->viewer(), $owner, $perPage), $recentReplies);
+        $page = $this->withInlineReplies($query($this->viewer(), $owner, StreamRequest::before($request), $perPage), $recentReplies);
 
-        return $this->rows($posts, 'timeline.member.rows', ['member' => $owner, 'per_page' => $perPage]);
+        return $this->rows($page, 'timeline.member.rows', ['member' => $owner, 'per_page' => $perPage]);
     }
 
     public function tagRows(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): Response
     {
         $perPage = $this->rowsPerPage($request);
-        $posts = $this->withInlineReplies($query($this->viewer(), $tag, $perPage), $recentReplies);
+        $page = $this->withInlineReplies($query($this->viewer(), $tag, StreamRequest::before($request), $perPage), $recentReplies);
 
-        return $this->rows($posts, 'timeline.tag.rows', ['tag' => HashtagParser::normalize($tag), 'per_page' => $perPage]);
+        return $this->rows($page, 'timeline.tag.rows', ['tag' => HashtagParser::normalize($tag), 'per_page' => $perPage]);
     }
 
     public function replies(int $timelinePost, ShowTimelinePost $query): Response
@@ -303,19 +321,20 @@ class TimelineController extends Controller
 
     /**
      * A page of rows as a fragment, naming the page after it in a Link header. The URL is built by
-     * route name rather than nextPageUrl(): the paginator's drops the query the request carried,
+     * `route()` rather than echoed from the request, so the client cannot steer where it is sent
      * and a gadget's per_page has to survive to its third page.
      *
+     * @param  StreamPage<TimelinePost>  $page
      * @param  array<string, mixed>  $params
      */
-    private function rows(LengthAwarePaginator $posts, string $route, array $params): Response
+    private function rows(StreamPage $page, string $route, array $params): Response
     {
         $response = response()
-            ->view('timeline._rows', ['posts' => $posts])
+            ->view('timeline._rows', ['posts' => $page->rows])
             ->header('Cache-Control', 'private, no-store');
 
-        if ($posts->hasMorePages()) {
-            $next = route($route, [...$params, 'page' => $posts->currentPage() + 1]);
+        if ($page->hasOlder) {
+            $next = route($route, [...$params, 'before' => (string) $page->olderCursor()]);
             $response->header('Link', "<{$next}>; rel=\"next\"");
         }
 
@@ -324,8 +343,10 @@ class TimelineController extends Controller
 
     private function rowsPerPage(Request $request): int
     {
+        // A load-more URL from before the list became a stream: the head served again would be appended twice.
+        abort_if($request->query('page') !== null, 400);
+
         $validated = $request->validate([
-            'page' => ['integer', 'min:1'],
             'per_page' => ['integer', 'min:1', 'max:'.RowsPage::MAX],
         ]);
 
@@ -333,16 +354,38 @@ class TimelineController extends Controller
     }
 
     /**
-     * @param  LengthAwarePaginator<int, TimelinePost>  $posts
-     * @return LengthAwarePaginator<int, TimelinePost>
+     * @param  StreamPage<TimelinePost>  $page
+     * @return StreamPage<TimelinePost>
      */
-    private function withInlineReplies(LengthAwarePaginator $posts, RecentReplies $recentReplies): LengthAwarePaginator
+    private function withInlineReplies(StreamPage $page, RecentReplies $recentReplies): StreamPage
     {
-        // items(), not getCollection(): only the former is on the contract the feed queries return,
-        // and both hand back the same instances the view walks.
-        $recentReplies(new EloquentCollection($posts->items()));
+        $recentReplies($page->rows);
 
-        return $posts;
+        return $page;
+    }
+
+    /** @param  StreamPage<TimelinePost>  $page */
+    private function stream(StreamPage $page, ?StreamCursor $before, Member $viewer): ScrollProp
+    {
+        return StreamProps::scroll($page, fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer), $before);
+    }
+
+    /**
+     * The Classic pager's two links and the load-more URL; the newer link is the head, as OpenPNE 3's pager offered no way back into a stream.
+     *
+     * @param  StreamPage<TimelinePost>  $page
+     * @param  array<string, mixed>  $params
+     * @return array{olderUrl: ?string, newerUrl: ?string, loadMoreUrl: ?string}
+     */
+    private function streamLinks(StreamPage $page, ?StreamCursor $before, string $screen, string $rows, array $params = []): array
+    {
+        $older = $page->olderCursor();
+
+        return [
+            'olderUrl' => $older === null ? null : route($screen, [...$params, 'before' => (string) $older]),
+            'newerUrl' => $before === null ? null : route($screen, $params),
+            'loadMoreUrl' => $older === null ? null : route($rows, [...$params, 'before' => (string) $older]),
+        ];
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */

@@ -5,7 +5,9 @@ namespace App\Features\Timeline\Queries;
 use App\Features\Timeline\TimelineVisibilityScope;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -15,15 +17,14 @@ use Illuminate\Support\Collection;
  */
 class MemberTimeline
 {
-    /** @return LengthAwarePaginator<int, TimelinePost> */
-    public function __invoke(Member $viewer, Member $owner, int $perPage = 20): LengthAwarePaginator
+    /** @return StreamPage<TimelinePost> */
+    public function __invoke(Member $viewer, Member $owner, ?StreamCursor $before = null, int $perPage = RowsPage::DEFAULT): StreamPage
     {
-        return $this->query($viewer, $owner)->paginate($perPage);
+        return StreamQuery::older($this->query($viewer, $owner), $before, $perPage);
     }
 
     /**
-     * First $limit posts, unpaginated — for the profile timeline gadget, which shows no pager and
-     * must not read the host page's ?page=.
+     * First $limit posts, unpaginated — for the profile timeline gadget, which must not read the host page's `?before=`.
      *
      * @return Collection<int, TimelinePost>
      */
@@ -43,8 +44,6 @@ class MemberTimeline
 
         TimelineVisibilityScope::apply($query, $viewer, $owner);
 
-        // created_at is the human-meaningful order, with id DESC as the stable tiebreaker for
-        // same-second and migrated rows (OpenPNE 3 opActivityQueryBuilder ordered by id alone).
         return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }

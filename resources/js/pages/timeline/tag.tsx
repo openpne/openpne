@@ -1,15 +1,15 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Pagination } from '@/components/pagination';
+import { LoadOlder } from '@/components/load-older';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
-import type { PaginatedTimelinePosts } from './types';
+import type { TimelineStream } from './types';
 
 interface TagProps extends PageProps {
     tag: string;
     viewerId: number;
-    posts: PaginatedTimelinePosts;
+    posts: TimelineStream;
 }
 
 // A reading page: the home feed's list with no compose box, since nothing here says which tag a new
@@ -26,7 +26,7 @@ export default function TimelineTag() {
                     <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
                 </Panel>
             ) : (
-                <>
+                <LoadOlder data="posts">
                     <Panel flush>
                         <List>
                             {posts.data.map((post) => (
@@ -34,8 +34,7 @@ export default function TimelineTag() {
                             ))}
                         </List>
                     </Panel>
-                    <Pagination meta={posts.meta} />
-                </>
+                </LoadOlder>
             )}
         </>
     );

@@ -24,7 +24,7 @@ class MemberTimelineTest extends TestCase
         $this->postFor($owner, Visibility::Friends);
         $this->postFor($owner, Visibility::Members);
 
-        $this->assertSame(3, (new MemberTimeline)($owner, $owner)->total());
+        $this->assertSame(3, (new MemberTimeline)($owner, $owner)->rows->count());
     }
 
     public function test_friend_sees_friends_and_members_not_private(): void
@@ -35,7 +35,7 @@ class MemberTimelineTest extends TestCase
         $this->postFor($owner, Visibility::Friends);
         $this->postFor($owner, Visibility::Members);
 
-        $this->assertSame(2, (new MemberTimeline)($friend, $owner)->total());
+        $this->assertSame(2, (new MemberTimeline)($friend, $owner)->rows->count());
     }
 
     public function test_non_friend_member_sees_only_members_level(): void
@@ -45,7 +45,7 @@ class MemberTimelineTest extends TestCase
         $this->postFor($owner, Visibility::Friends);
         $this->postFor($owner, Visibility::Members);
 
-        $this->assertSame(1, (new MemberTimeline)($other, $owner)->total());
+        $this->assertSame(1, (new MemberTimeline)($other, $owner)->rows->count());
     }
 
     public function test_blocked_viewer_sees_nothing(): void
@@ -54,7 +54,7 @@ class MemberTimelineTest extends TestCase
         $this->postFor($owner, Visibility::Members);
         $this->block($owner, $viewer);
 
-        $this->assertSame(0, (new MemberTimeline)($viewer, $owner)->total());
+        $this->assertSame(0, (new MemberTimeline)($viewer, $owner)->rows->count());
     }
 
     public function test_owner_self_view_unaffected_by_unrelated_block(): void
@@ -63,7 +63,7 @@ class MemberTimelineTest extends TestCase
         $this->postFor($owner, Visibility::Private);
         $this->block($other, $owner);
 
-        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->total());
+        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->rows->count());
     }
 
     public function test_open_post_is_visible_to_all_logged_in_viewers(): void
@@ -72,9 +72,9 @@ class MemberTimelineTest extends TestCase
         $this->makeFriends($owner, $friend);
         $this->postFor($owner, Visibility::Open);
 
-        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->total());
-        $this->assertSame(1, (new MemberTimeline)($friend, $owner)->total());
-        $this->assertSame(1, (new MemberTimeline)($other, $owner)->total());
+        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->rows->count());
+        $this->assertSame(1, (new MemberTimeline)($friend, $owner)->rows->count());
+        $this->assertSame(1, (new MemberTimeline)($other, $owner)->rows->count());
     }
 
     // Top-level only ------------------------------------------------------------
@@ -86,7 +86,7 @@ class MemberTimelineTest extends TestCase
         TimelinePost::factory()->replyTo($parent)->create(['member_id' => $owner->getKey()]);
 
         // Only the top-level post; the reply belongs to a thread, not the stream.
-        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->total());
+        $this->assertSame(1, (new MemberTimeline)($owner, $owner)->rows->count());
     }
 
     // Ordering + pagination -----------------------------------------------------
@@ -97,7 +97,7 @@ class MemberTimelineTest extends TestCase
         $first = $this->postFor($owner, Visibility::Members, createdAt: '2026-01-01');
         $second = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01');
 
-        $items = (new MemberTimeline)($owner, $owner)->items();
+        $items = (new MemberTimeline)($owner, $owner)->rows->all();
 
         $this->assertSame($second->getKey(), $items[0]->getKey());
         $this->assertSame($first->getKey(), $items[1]->getKey());
@@ -109,22 +109,22 @@ class MemberTimelineTest extends TestCase
         $first = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01 12:00:00');
         $second = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01 12:00:00');
 
-        $items = (new MemberTimeline)($owner, $owner)->items();
+        $items = (new MemberTimeline)($owner, $owner)->rows->all();
 
         // Same created_at → higher id first (OpenPNE 3 orders by id DESC).
         $this->assertSame($second->getKey(), $items[0]->getKey());
         $this->assertSame($first->getKey(), $items[1]->getKey());
     }
 
-    public function test_result_is_paginated(): void
+    public function test_a_full_page_says_more_lies_beyond_it(): void
     {
         $owner = Member::factory()->create();
         TimelinePost::factory()->count(25)->create(['member_id' => $owner->getKey()]);
 
         $result = (new MemberTimeline)($owner, $owner, perPage: 20);
 
-        $this->assertSame(20, $result->perPage());
-        $this->assertSame(25, $result->total());
+        $this->assertCount(20, $result->rows);
+        $this->assertTrue($result->hasOlder);
     }
 
     // take() (unpaginated slice for the profile gadget) -------------------------

@@ -97,15 +97,15 @@ class AllMemberFeedTest extends TestCase
         $this->assertNotContains($older->getKey(), $posts->modelKeys());
     }
 
-    public function test_invoke_is_paginated(): void
+    public function test_a_full_page_says_more_lies_beyond_it(): void
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
         TimelinePost::factory()->count(25)->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
 
         $result = (new AllMemberFeed)($viewer, perPage: 20);
 
-        $this->assertSame(20, $result->perPage());
-        $this->assertSame(25, $result->total());
+        $this->assertCount(20, $result->rows);
+        $this->assertTrue($result->hasOlder);
     }
 
     // Helpers -------------------------------------------------------------------
@@ -113,7 +113,7 @@ class AllMemberFeedTest extends TestCase
     /** @return list<int> */
     private function feedIds(Member $viewer): array
     {
-        return collect((new AllMemberFeed)($viewer)->items())->map->getKey()->all();
+        return (new AllMemberFeed)($viewer)->rows->modelKeys();
     }
 
     private function postFor(Member $member, Visibility $visibility, ?string $createdAt = null): TimelinePost

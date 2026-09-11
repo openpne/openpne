@@ -29,7 +29,7 @@ class TimelineProfile extends TimelineBox
         $viewer = auth()->user();
         $this->posts = collect();
         if ($viewer !== null && $subject !== null) {
-            $this->keep($query->take($viewer, $subject, self::LIMIT + 1), self::LIMIT);
+            $this->keep($query($viewer, $subject, null, self::LIMIT));
         }
         $this->attachInlineReplies($recentReplies);
     }

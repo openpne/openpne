@@ -28,14 +28,31 @@ class TimelineHomeFeedTest extends TestCase
         $member = Member::factory()->create();
         TimelinePost::factory()->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
 
-        $this->actingAs($member)
-            ->get('/timeline')
-            ->assertInertia(fn ($page) => $page
-                ->component('timeline/index')
-                ->where('viewerId', $member->getKey())
-                ->has('posts.data', 1)
-                ->has('posts.meta')
-            );
+        $response = $this->actingAs($member)->get('/timeline');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('timeline/index')
+            ->where('viewerId', $member->getKey())
+            ->has('posts.data', 1)
+            ->missing('posts.meta')
+        );
+        $this->assertSame(['pageName' => 'before', 'previousPage' => null, 'nextPage' => null, 'currentPage' => null, 'reset' => false], $response->viewData('page')['scrollProps']['posts']);
+    }
+
+    public function test_the_feed_pages_by_cursor_and_the_cursor_travels_in_the_scroll_metadata(): void
+    {
+        $member = Member::factory()->create();
+        TimelinePost::factory()->count(21)->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
+
+        $head = $this->actingAs($member)->get('/timeline')->viewData('page');
+        $cursor = $head['scrollProps']['posts']['nextPage'];
+        $next = $this->actingAs($member)->get('/timeline?before='.urlencode($cursor))->viewData('page');
+
+        $this->assertCount(20, $head['props']['posts']['data']);
+        $this->assertCount(1, $next['props']['posts']['data']);
+        $this->assertSame($cursor, $next['scrollProps']['posts']['currentPage']);
+        $this->assertNull($next['scrollProps']['posts']['nextPage']);
+        $this->assertSame([], array_intersect(array_column($head['props']['posts']['data'], 'id'), array_column($next['props']['posts']['data'], 'id')));
     }
 
     public function test_modern_home_feed_carries_the_reply_count_on_top_level_posts(): void
