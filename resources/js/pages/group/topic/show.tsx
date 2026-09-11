@@ -82,6 +82,7 @@ export default function GroupTopicShow() {
                     )}
                     <AiChip isAi={topic.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
+                    {topic.editedAt && <span className="text-xs">({t('Edited')})</span>}
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />

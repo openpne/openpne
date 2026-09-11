@@ -88,6 +88,7 @@ export default function GroupEventShow() {
                     )}
                     <AiChip isAi={event.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>
+                    {event.editedAt && <span className="text-xs">({t('Edited')})</span>}
                 </div>
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">

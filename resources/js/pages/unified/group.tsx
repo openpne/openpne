@@ -3,6 +3,7 @@ import { Activity, CalendarDays, MessageSquareText, MessagesSquare, Plus, UserCi
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountPill } from '@/components/count-pill';
 import { CivilDate, Timestamp } from '@/components/timestamp';
+import { BoardStamp, EventBoardStamp } from '@/pages/community/board-stamp';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
@@ -224,7 +225,7 @@ export default function UnifiedGroup() {
                                         id: topic.id,
                                         href: `/topics/${topic.id}`,
                                         name: topic.name,
-                                        date: <Timestamp at={topic.bumpedAt} preset="listStamp" />,
+                                        date: <BoardStamp commentCount={topic.commentCount} bumpedAt={topic.bumpedAt} />,
                                         commentCount: topic.commentCount,
                                     }))}
                                 />
@@ -257,6 +258,7 @@ export default function UnifiedGroup() {
                                         date: (
                                             <>
                                                 {t('Open date')}: <CivilDate value={event.openDate} weekday />
+                                                <EventBoardStamp commentCount={event.commentCount} bumpedAt={event.bumpedAt} />
                                             </>
                                         ),
                                         commentCount: event.commentCount,

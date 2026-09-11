@@ -1,5 +1,5 @@
 import { EntryRow } from '@/components/entry-row';
-import { Timestamp } from '@/components/timestamp';
+import { BoardStamp } from './board-stamp';
 import { useT } from '@/lib/i18n';
 
 export interface CommunityActivityEntry {
@@ -12,8 +12,8 @@ export interface CommunityActivityEntry {
     bumpedAt: string;
 }
 
-/** The group, not a member, is the byline subject: bumped_at is the last commenter's instant, so an
- *  author byline would misattribute the row. */
+/** The group, not a member, is the byline subject: bumped_at is the last commenter's instant when
+ *  there is a comment, so an author byline would misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (
@@ -22,7 +22,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
             group={entry.group}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            date={<Timestamp at={entry.bumpedAt} preset="listStamp" />}
+            date={<BoardStamp commentCount={entry.commentCount} bumpedAt={entry.bumpedAt} />}
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />
