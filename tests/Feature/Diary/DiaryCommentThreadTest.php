@@ -6,6 +6,7 @@ use App\Features\Diary\DiaryCommentThread;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DiaryCommentThreadTest extends TestCase
@@ -104,6 +105,47 @@ class DiaryCommentThreadTest extends TestCase
         $this->assertSame($base, $thread->link(1, 20, false));                 // default: no order, no page
         $this->assertStringContainsString('order=asc', $thread->link(1, 20, true));
         $this->assertStringContainsString('page=2', $thread->link(2, 20, false));
+    }
+
+    /** The duplicate at 5 sits on the newest-first page edge and the one at 19 on the oldest-first edge. */
+    public function test_a_duplicate_number_on_a_page_edge_splits_in_insertion_order(): void
+    {
+        $diary = Diary::factory()->create();
+        $ids = [];
+        foreach ([1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 23] as $number) {
+            $ids[] = DiaryComment::factory()->for($diary)->create(['number' => $number])->id;
+        }
+        [$first5, $second5, $first19, $second19] = [$ids[4], $ids[5], $ids[19], $ids[20]];
+
+        $newest = DiaryCommentThread::paginate($diary);
+        $this->assertSame(array_slice($ids, 5), $newest->comments->pluck('id')->all());
+        $this->assertSame($second5, $newest->comments->first()->id);
+        $this->assertSame($first5, DiaryCommentThread::paginate($diary, page: 2)->comments->last()->id);
+
+        $oldest = DiaryCommentThread::paginate($diary, order: 'asc');
+        $this->assertSame(array_slice($ids, 0, 20), $oldest->comments->pluck('id')->all());
+        $this->assertSame($first19, $oldest->comments->last()->id);
+        $this->assertSame($second19, DiaryCommentThread::paginate($diary, order: 'asc', page: 2)->comments->first()->id);
+    }
+
+    /** SQLite's index scan already returns a tie in id order, so the edge assertion above passes without the clause. */
+    public function test_the_page_query_orders_by_number_then_id_in_one_direction(): void
+    {
+        $diary = $this->diaryWithComments(3);
+
+        DB::enableQueryLog();
+        DiaryCommentThread::paginate($diary);
+        DiaryCommentThread::paginate($diary, order: 'asc');
+        $orders = collect(DB::getQueryLog())->pluck('query')
+            ->filter(fn (string $sql) => preg_match('/from [`"]diary_comments[`"].* order by/', $sql) === 1)
+            ->map(fn (string $sql) => preg_replace('/[`"]/', '', substr($sql, strpos($sql, 'order by'))))
+            ->values()->all();
+        DB::disableQueryLog();
+
+        $this->assertSame([
+            'order by number desc, id desc limit 20 offset 0',
+            'order by number asc, id asc limit 20 offset 0',
+        ], $orders);
     }
 
     private function diaryWithComments(int $count): Diary
