@@ -69,6 +69,20 @@ engines — InnoDB stores the primary key at the end of every secondary index an
 rowid — but writing it keeps the axis legible in the schema. A time column leads so that InnoDB does
 not adopt the index to back a foreign key (errno 1553 on a later drop).
 
+| Table | Site-wide axis | Scoped axis |
+|---|---|---|
+| `diaries` | `(created_at, id)` — recent feed, search | `(member_id, created_at)` — archive, recent five, prev / next |
+| `timeline_posts` | `(created_at, id)` — home, all-member and tag feeds | `(member_id, created_at)` — a member's timeline |
+| `members` | `(created_at, id)` — member search, newcomers | — |
+| `groups` | `(created_at, id)` — group search, a member's groups | — |
+| `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
+| `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
+| comment tables | — | `(parent id, number)` — the thread pagers |
+
+The mailbox boxes filter and sort within one viewer's rows and are left to the engine's sort; the
+conversation list and the talk room list order by a correlated latest-message subquery, which no index
+serves.
+
 ## SQLite foreign-key indexes
 
 Laravel's `constrained()` creates an index on MySQL, where InnoDB requires one for the constraint,
