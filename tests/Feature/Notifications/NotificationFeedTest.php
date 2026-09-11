@@ -21,10 +21,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Testing\AssertableInertia;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class NotificationFeedTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     public function test_feed_lists_own_notifications_newest_first_with_hydrated_actors(): void
@@ -59,6 +61,9 @@ class NotificationFeedTest extends TestCase
 
         $this->assertSame(array_slice($expected, 0, 30), array_column($first, 'id'));
         $this->assertSame(array_slice($expected, 30), array_column($second, 'id'));
+        // MySQL returns a same-second tie in id order even without the clause, so the SQL is pinned too.
+        $orders = $this->orderClausesOn('notifications', fn () => $this->actingOnModern($viewer)->get('/notifications'));
+        $this->assertContains('order by created_at desc, id desc', $orders);
     }
 
     public function test_feed_does_not_show_another_members_notifications(): void

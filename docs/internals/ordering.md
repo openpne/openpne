@@ -53,9 +53,10 @@ comparison. A cursor is `{iso8601}|{id}`, opaque to the client, and names a posi
 permission. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not
 hand out ([mcp.md](mcp.md)).
 
-A time column from `timestamps()` is nullable, and a keyset comparison against NULL is unknown: a row
-with no time never has neighbours and is never reached from a cursor. The lists here rely on every
-write path filling the column, which the upgrade tool does as well.
+A time column from `timestamps()` is nullable, and a keyset comparison cannot bind a NULL: a row
+with no time cannot be positioned (the query builder rejects the bound) and is never reached from a
+cursor. The lists here rely on every write path filling the column, which the upgrade tool does as
+well.
 
 ## One index per axis
 

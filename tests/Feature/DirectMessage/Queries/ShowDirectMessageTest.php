@@ -126,8 +126,10 @@ class ShowDirectMessageTest extends TestCase
     {
         [$me, $other] = Member::factory()->count(2)->create();
         $at = '2026-03-01 10:00:00';
-        $received = $this->deliver($other, $me, receipt: ['recipient_deleted_at' => $at]);
+        // Receipts elsewhere first, so the receipt row id outruns the message ids and row_id alone would flip the order.
+        DirectMessageRecipient::factory()->count(5)->create();
         $sent = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => $at]);
+        $received = $this->deliver($other, $me, receipt: ['recipient_deleted_at' => $at]);
         $earlier = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => '2026-02-01 10:00:00']);
 
         $fromSent = app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $sent->getKey());
@@ -143,14 +145,17 @@ class ShowDirectMessageTest extends TestCase
     public function test_a_duplicate_receipt_does_not_make_a_message_its_own_neighbour(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
-        $older = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 09:00:00']);
-        $twice = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 10:00:00']);
-        DirectMessageRecipient::factory()->create(['direct_message_id' => $twice->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => '2026-03-01 10:00:00']);
-        $newer = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 11:00:00']);
+        $first = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 08:00:00']);
+        $twice = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 09:00:00']);
+        $between = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 10:00:00']);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $twice->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => '2026-03-01 11:00:00']);
+        $last = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 12:00:00']);
 
         $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $twice->getKey());
 
-        $this->assertSame($older->getKey(), $view->previousId);
-        $this->assertSame($newer->getKey(), $view->nextId);
+        // Placed at its later (11:00) row: the 10:00 message is behind it, never the 08:00 one.
+        $this->assertSame($between->getKey(), $view->previousId);
+        $this->assertSame($last->getKey(), $view->nextId);
+        $this->assertNotSame($first->getKey(), $view->previousId);
     }
 }
