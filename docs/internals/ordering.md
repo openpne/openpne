@@ -111,8 +111,8 @@ keep the plan on the unique key. `IS NULL` counts as an equality for the same pu
 `timeline_posts.in_reply_to_id` index alone made SQLite pick it for every feed's top-level filter and
 sort the whole table per page (100k rows: 0.02 ms → 20 ms, with or without `ANALYZE`), so the feed
 axis there is `(in_reply_to_id, created_at, id)` and the member axis `(member_id, in_reply_to_id,
-created_at)`, each an equality on every filter the readers apply, so neither engine has a cheaper-
-looking index to prefer; on MySQL the composite replaces InnoDB's own index for the key.
+created_at)`, each an equality on every filter the readers apply, so neither engine has an index
+that looks cheaper; on MySQL the composite replaces InnoDB's own index for the key.
 
 ## Guards
 
