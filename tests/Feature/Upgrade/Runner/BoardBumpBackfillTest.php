@@ -30,7 +30,8 @@ class BoardBumpBackfillTest extends TestCase
         $commented = GroupTopic::factory()->create(['group_id' => $group->id, 'created_at' => '2018-01-01 09:00:00', 'bumped_at' => '2018-01-01 09:00:00']);
         GroupTopicComment::factory()->create(['group_topic_id' => $commented->id, 'number' => 1, 'created_at' => '2018-02-01 09:00:00']);
         GroupTopicComment::factory()->create(['group_topic_id' => $commented->id, 'number' => 2, 'created_at' => '2018-03-01 09:00:00']);
-        $silent = GroupTopic::factory()->create(['group_id' => $group->id, 'created_at' => '2018-01-05 09:00:00', 'bumped_at' => '2018-01-05 09:00:00']);
+        // Every row differs from its final value: MySQL counts changed rows, SQLite matched rows.
+        $silent = GroupTopic::factory()->create(['group_id' => $group->id, 'created_at' => '2018-01-05 09:00:00', 'bumped_at' => '2000-01-01 00:00:00']);
         $event = GroupEvent::factory()->create(['group_id' => $group->id, 'created_at' => '2018-01-01 09:00:00', 'bumped_at' => '2018-01-01 09:00:00']);
         GroupEventComment::factory()->create(['group_event_id' => $event->id, 'number' => 1, 'created_at' => '2018-04-01 09:00:00']);
 
