@@ -8,10 +8,12 @@ use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class ShowDirectMessageTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     private function deliver(Member $sender, Member $recipient, array $message = [], array $receipt = []): DirectMessage
@@ -122,23 +124,40 @@ class ShowDirectMessageTest extends TestCase
         $this->assertSame($newer->getKey(), $view->nextId);
     }
 
+    /** Ids are explicit: the row ids must not depend on the auto-increment position a prior test left. */
     public function test_trash_previous_and_next_cross_the_two_sides_in_list_order(): void
     {
         [$me, $other] = Member::factory()->count(2)->create();
         $at = '2026-03-01 10:00:00';
-        // Receipts elsewhere first, so the receipt row id outruns the message ids and row_id alone would flip the order.
-        DirectMessageRecipient::factory()->count(5)->create();
-        $sent = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => $at]);
-        $received = $this->deliver($other, $me, receipt: ['recipient_deleted_at' => $at]);
-        $earlier = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => '2026-02-01 10:00:00']);
+        $sent = DirectMessage::factory()->create(['id' => 1, 'sender_id' => $me->getKey(), 'sender_deleted_at' => $at]);
+        $receivedA = DirectMessage::factory()->create(['id' => 2, 'sender_id' => $other->getKey()]);
+        DirectMessageRecipient::factory()->create(['id' => 1, 'direct_message_id' => 2, 'recipient_id' => $me->getKey(), 'recipient_deleted_at' => $at]);
+        $receivedB = DirectMessage::factory()->create(['id' => 3, 'sender_id' => $other->getKey()]);
+        DirectMessageRecipient::factory()->create(['id' => 2, 'direct_message_id' => 3, 'recipient_id' => $me->getKey(), 'recipient_deleted_at' => $at]);
+        $earlier = DirectMessage::factory()->create(['id' => 4, 'sender_id' => $me->getKey(), 'sender_deleted_at' => '2026-02-01 10:00:00']);
 
-        $fromSent = app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $sent->getKey());
-        $fromReceived = app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $received->getKey());
+        // The list reads [sent 1, received 3, received 2, earlier 4]: sent before received, then row id.
+        $show = fn (DirectMessage $m) => app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $m->getKey());
 
-        $this->assertSame($received->getKey(), $fromSent->previousId);
-        $this->assertNull($fromSent->nextId);
-        $this->assertSame($earlier->getKey(), $fromReceived->previousId);
-        $this->assertSame($sent->getKey(), $fromReceived->nextId);
+        $this->assertSame([null, $receivedB->getKey()], [$show($sent)->nextId, $show($sent)->previousId]);
+        $this->assertSame([$sent->getKey(), $receivedA->getKey()], [$show($receivedB)->nextId, $show($receivedB)->previousId]);
+        $this->assertSame([$receivedB->getKey(), $earlier->getKey()], [$show($receivedA)->nextId, $show($receivedA)->previousId]);
+        $this->assertSame([$receivedA->getKey(), null], [$show($earlier)->nextId, $show($earlier)->previousId]);
+    }
+
+    /** Both engines return a same-second neighbour in list order without the role arms, so the SQL is pinned. */
+    public function test_the_neighbour_queries_compare_and_order_by_the_full_box_tuple(): void
+    {
+        [$me, $other] = Member::factory()->count(2)->create();
+        $sent = DirectMessage::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => '2026-03-01 10:00:00']);
+        $this->deliver($other, $me, receipt: ['recipient_deleted_at' => '2026-03-01 10:00:00']);
+
+        $neighbours = $this->orderClausesOn('direct_messages', fn () => app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $sent->getKey()));
+        $sql = $this->querySqlOn('direct_messages', fn () => app(ShowDirectMessage::class)($me, DirectMessageBox::Trash, $sent->getKey()));
+
+        $this->assertContains('order by sort_at desc, role desc, row_id desc', $neighbours);
+        $this->assertContains('order by sort_at asc, role asc, row_id asc', $neighbours);
+        $this->assertSame(2, count(array_filter($sql, fn (string $q) => preg_match('/role < \? or \(role = \? and row_id < \?\)/', $q) === 1 || preg_match('/role > \? or \(role = \? and row_id > \?\)/', $q) === 1)));
     }
 
     /** OpenPNE 3 data may carry two receipts of one message for one member; neither is the other's neighbour. */
@@ -176,5 +195,20 @@ class ShowDirectMessageTest extends TestCase
         $this->assertNotNull($view);
         $this->assertNull($view->previousId);
         $this->assertNull($view->nextId);
+    }
+
+    /** The window ranks a NULL time last on MySQL 8 and SQLite alike, so the timed receipt is the message's place. */
+    public function test_a_timeless_duplicate_receipt_yields_to_the_timed_one(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $older = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 09:00:00']);
+        $twice = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 10:00:00']);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $twice->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => null]);
+        $newer = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 11:00:00']);
+
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $twice->getKey());
+
+        $this->assertSame($older->getKey(), $view->previousId);
+        $this->assertSame($newer->getKey(), $view->nextId);
     }
 }

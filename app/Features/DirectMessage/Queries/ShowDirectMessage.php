@@ -113,7 +113,7 @@ class ShowDirectMessage
     }
 
     /**
-     * A message with two rows in one box (a duplicate receipt, or trashed on both sides) keeps its
+     * A message with two rows in one box (a duplicate receipt, which OpenPNE 3 data may carry) keeps its
      * later row only, so the walk visits each message once and never turns back on itself. The window
      * ranks a row with a NULL time last on MySQL 8 and SQLite alike, so the timed row is the one kept.
      */
