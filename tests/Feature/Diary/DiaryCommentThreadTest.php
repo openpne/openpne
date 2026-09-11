@@ -128,19 +128,22 @@ class DiaryCommentThreadTest extends TestCase
         $this->assertSame($second19, DiaryCommentThread::paginate($diary, order: 'asc', page: 2)->comments->first()->id);
     }
 
-    /** SQLite's index scan already returns a tie in id order, so the edge assertion above passes without the clause. */
+    /** An index scan on (diary_id, number) already returns a tie in id order on both engines, so only this SQL pin goes red without the clause. */
     public function test_the_page_query_orders_by_number_then_id_in_one_direction(): void
     {
         $diary = $this->diaryWithComments(3);
 
         DB::enableQueryLog();
-        DiaryCommentThread::paginate($diary);
-        DiaryCommentThread::paginate($diary, order: 'asc');
-        $orders = collect(DB::getQueryLog())->pluck('query')
-            ->filter(fn (string $sql) => preg_match('/from [`"]diary_comments[`"].* order by/', $sql) === 1)
-            ->map(fn (string $sql) => preg_replace('/[`"]/', '', substr($sql, strpos($sql, 'order by'))))
-            ->values()->all();
-        DB::disableQueryLog();
+        try {
+            DiaryCommentThread::paginate($diary);
+            DiaryCommentThread::paginate($diary, order: 'asc');
+            $orders = collect(DB::getQueryLog())->pluck('query')
+                ->filter(fn (string $sql) => preg_match('/from [`"]diary_comments[`"].* order by/', $sql) === 1)
+                ->map(fn (string $sql) => preg_replace('/[`"]/', '', substr($sql, strpos($sql, 'order by'))))
+                ->values()->all();
+        } finally {
+            DB::disableQueryLog();
+        }
 
         $this->assertSame([
             'order by number desc, id desc limit 20 offset 0',
