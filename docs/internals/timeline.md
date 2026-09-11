@@ -207,15 +207,18 @@ Two contracts, because they fail differently:
 |---|---|---|
 | the whole reply list | `GET timeline.replies`, HTML fragment, `private, no-store` | the rows the page would have drawn, so the script inserts server markup rather than assembling any |
 | posting a reply | `POST timeline.reply.store`, `wantsJson()` → `201 {html}` | 422 / 419 / 429 then arrive as Laravel's own JSON, and the answer is the row to insert |
-| the next page of rows | `GET timeline.{index,member,tag}.rows`, HTML fragment, `private, no-store`, next page in `Link: <…>; rel="next"` | the もっと読む button appends what the pager's next page would have drawn; the script follows a `Link` only on its own origin |
+| the next page of rows | `GET timeline.{index,member,tag}.rows?before=`, HTML fragment, `private, no-store`, next page in `Link: <…>; rel="next"`; a `?page=` from the OFFSET days is 400 | the もっと読む button appends what the pager's next page would have drawn; the script follows a `Link` only on its own origin |
 
 Without the script the Classic pager stands in for もっと読む, and it comes back when a fetch fails.
-The gadgets fetch one row past their limit to know whether to offer the button (timelineAll → the
+The gadgets read one row past their limit to know whether to offer the button (timelineAll → the
 home feed's rows at the gadget's own `per_page`, timelineProfile → the member's at the default 20;
-timelineFriend has no page of its own to fetch from). Paging is by offset where OpenPNE 3 keyed on
-`max_id`: a post made meanwhile shifts the next page by one. Classic posts from the home gadget's
-box (its standalone page without the script); a site whose home draws no timeline gadget links to no
-Classic way to post, as OpenPNE 3 linked none — the standalone page stays routable.
+timelineFriend has no page of its own to fetch from). The feeds are streams: every page, screen,
+fragment or Modern "load more", is keyed on `(created_at, id)` as OpenPNE 3 keyed on `max_id`, so a
+post made meanwhile shifts nothing, the Classic pager offers "previous" only as the head and reads
+out no count, and a bookmarked `?page=N` is redirected to the head
+([ordering.md](ordering.md), "Keyset and offset"). Classic posts from the home gadget's box (its
+standalone page without the script); a site whose home draws no timeline gadget links to no Classic
+way to post, as OpenPNE 3 linked none — the standalone page stays routable.
 
 Three more things the row does in place, each a working link without the script:
 

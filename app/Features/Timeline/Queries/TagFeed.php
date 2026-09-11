@@ -6,7 +6,9 @@ use App\Features\Timeline\HashtagParser;
 use App\Features\Timeline\TimelineFeedScope;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamQuery;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
@@ -18,8 +20,8 @@ use Illuminate\Support\Facades\DB;
  */
 class TagFeed
 {
-    /** @return LengthAwarePaginator<int, TimelinePost> */
-    public function __invoke(Member $viewer, string $tag, int $perPage = 20): LengthAwarePaginator
+    /** @return StreamPage<TimelinePost> */
+    public function __invoke(Member $viewer, string $tag, ?StreamCursor $before = null, int $perPage = RowsPage::DEFAULT): StreamPage
     {
         $query = TimelinePost::query()
             ->whereNull('in_reply_to_id')
@@ -32,8 +34,6 @@ class TagFeed
 
         TimelineFeedScope::apply($query, $viewer);
 
-        // created_at is the human-meaningful order; id DESC is the stable tiebreaker for same-second
-        // posts (and migrated rows sharing a timestamp), matching the other timeline feeds.
-        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage);
+        return StreamQuery::older($query, $before, $perPage);
     }
 }

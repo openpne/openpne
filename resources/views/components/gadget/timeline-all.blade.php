@@ -19,8 +19,8 @@
                 @endforeach
             </div>
         @endif
-        @if ($hasMore)
-            @include('timeline._loadmore', ['nextUrl' => route('timeline.index.rows', ['page' => 2, 'per_page' => $limit])])
+        @if ($olderCursor !== null)
+            @include('timeline._loadmore', ['nextUrl' => route('timeline.index.rows', ['before' => $olderCursor, 'per_page' => $limit])])
         @endif
     </div>
 </div></div>

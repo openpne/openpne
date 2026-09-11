@@ -9,6 +9,16 @@ use Inertia\ScrollProp;
 final class StreamProps
 {
     /**
+     * A value only a full page render refreshes: keying the client's stream component on it remounts
+     * the component, and with it Inertia's stored next cursor, whenever the rows were replaced rather
+     * than merged (docs/internals/ordering.md, "Keyset and offset").
+     */
+    public static function generation(): string
+    {
+        return bin2hex(random_bytes(4));
+    }
+
+    /**
      * The cursor travels in the scroll metadata only, which is what InfiniteScroll reads; the payload
      * carries rows and nothing else.
      *

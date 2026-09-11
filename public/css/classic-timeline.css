@@ -1,7 +1,14 @@
-/* First-party rules beside the vendored opTimelinePlugin/css/timeline.css, which is byte-locked. */
+/* First-party rules beside the vendored opTimelinePlugin/css/timeline.css, which is byte-locked.
+   Every element the scripts hide with the `hidden` attribute needs its display:none here: the skin
+   and the vendored CSS set display on those elements and beat the attribute. */
 
 /* The load-more box is hidden until its script runs; nothing in the vendored CSS styles the box. */
 [data-timeline-loadmore-box][hidden] {
+    display: none;
+}
+
+/* The pager's next link steps aside for the button; the skin's display:inline would beat the attribute. */
+[data-timeline-pager] .next[hidden] {
     display: none;
 }
 

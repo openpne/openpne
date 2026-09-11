@@ -18,8 +18,8 @@
                         @include('timeline._post', ['post' => $post, 'canPost' => $canPost])
                     @endforeach
                 </div>
-                @if ($hasMore)
-                    @include('timeline._loadmore', ['nextUrl' => route('timeline.member.rows', ['member' => $subject, 'page' => 2])])
+                @if ($olderCursor !== null)
+                    @include('timeline._loadmore', ['nextUrl' => route('timeline.member.rows', ['member' => $subject, 'before' => $olderCursor])])
                 @endif
             </div>
         @else

@@ -26,12 +26,7 @@ export interface TimelinePostEntry {
     createdAt: string;
 }
 
-export interface PaginatedTimelinePosts {
+/** The rows of one feed page; the older cursor travels in Inertia's scroll metadata, not here. */
+export interface TimelineStream {
     data: TimelinePostEntry[];
-    meta: {
-        currentPage: number;
-        lastPage: number;
-        perPage: number;
-        total: number;
-    };
 }

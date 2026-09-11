@@ -9,7 +9,6 @@ use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use App\Models\TimelinePostMention;
 use App\Models\TimelinePostTag;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * `visibility` is always a string slug, never the raw int: Open is 0 and reads as falsy in JS.
@@ -83,23 +82,6 @@ class TimelinePostSerializer
             ] : [],
             'width' => $file?->width,
             'height' => $file?->height,
-        ];
-    }
-
-    /**
-     * @param  LengthAwarePaginator<int, TimelinePost>  $paginator
-     * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
-     */
-    public static function paginator(LengthAwarePaginator $paginator, ?Member $viewer): array
-    {
-        return [
-            'data' => array_map(fn (TimelinePost $post): array => self::entry($post, $viewer), $paginator->items()),
-            'meta' => [
-                'currentPage' => $paginator->currentPage(),
-                'lastPage' => $paginator->lastPage(),
-                'perPage' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
         ];
     }
 }

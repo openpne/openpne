@@ -30,6 +30,10 @@ final class StreamQuery
         }
 
         $builder = $query instanceof HasOneOrMany ? $query->getQuery() : $query;
+        // A cursor of the other key type reads as no cursor: compared against the key it would drop or repeat the boundary second.
+        if ($before !== null && is_int($before->id) !== ($builder->getModel()->getKeyType() === 'int')) {
+            $before = null;
+        }
         foreach ($builder->getQuery()->wheres as $where) {
             if (($where['boolean'] ?? 'and') === 'or') {
                 throw new InvalidArgumentException('A stream query groups its own OR clauses.');

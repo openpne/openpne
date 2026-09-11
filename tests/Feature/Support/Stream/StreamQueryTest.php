@@ -85,6 +85,13 @@ class StreamQueryTest extends TestCase
         $this->assertFalse($page->hasOlder);
     }
 
+    public function test_a_cursor_of_the_other_key_type_reads_as_the_head(): void
+    {
+        $uuid = StreamCursor::tryParse('2026-03-01T12:00:00+09:00|9b2f1c3e-4d5a-4b6c-8d7e-0f1a2b3c4d5e');
+
+        $this->assertSame(range(21, 2), StreamQuery::older(TimelinePost::query(), $uuid, self::PER_PAGE)->rows->modelKeys());
+    }
+
     public function test_a_top_level_or_clause_is_refused_rather_than_absorbing_the_predicate(): void
     {
         $this->expectException(InvalidArgumentException::class);

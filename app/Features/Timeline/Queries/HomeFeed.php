@@ -5,7 +5,9 @@ namespace App\Features\Timeline\Queries;
 use App\Features\Timeline\TimelineFeedScope;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -15,15 +17,14 @@ use Illuminate\Support\Collection;
  */
 class HomeFeed
 {
-    /** @return LengthAwarePaginator<int, TimelinePost> */
-    public function __invoke(Member $viewer, int $perPage = 20): LengthAwarePaginator
+    /** @return StreamPage<TimelinePost> */
+    public function __invoke(Member $viewer, ?StreamCursor $before = null, int $perPage = RowsPage::DEFAULT): StreamPage
     {
-        return $this->query($viewer)->paginate($perPage);
+        return StreamQuery::older($this->query($viewer), $before, $perPage);
     }
 
     /**
-     * First $limit posts, unpaginated — for the home dashboard digest, which shows no pager and
-     * must not read the host page's ?page=.
+     * First $limit posts, unpaginated — for the home dashboard digest, which must not read the host page's `?before=`.
      *
      * @return Collection<int, TimelinePost>
      */
@@ -42,8 +43,6 @@ class HomeFeed
 
         TimelineFeedScope::apply($query, $viewer);
 
-        // created_at is the human-meaningful order; id DESC is the stable tiebreaker for same-second
-        // posts (and migrated rows sharing a timestamp), matching MemberTimeline.
         return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }

@@ -110,7 +110,7 @@ class TagFeedTest extends TestCase
         $this->assertSame([$post->getKey()], $this->feedIds($viewer, 'tag'));
     }
 
-    public function test_the_feed_is_newest_first_and_paginated(): void
+    public function test_the_feed_is_newest_first_and_says_more_lies_beyond_it(): void
     {
         $viewer = Member::factory()->create();
         $older = $this->createPost($viewer, 'older #tag');
@@ -119,8 +119,8 @@ class TagFeedTest extends TestCase
 
         $feed = (new TagFeed)($viewer, 'tag', perPage: 1);
 
-        $this->assertSame([$newer->getKey()], collect($feed->items())->map->getKey()->all());
-        $this->assertSame(2, $feed->total());
+        $this->assertSame([$newer->getKey()], $feed->rows->modelKeys());
+        $this->assertTrue($feed->hasOlder);
     }
 
     // Helpers -------------------------------------------------------------------
@@ -128,7 +128,7 @@ class TagFeedTest extends TestCase
     /** @return list<int> */
     private function feedIds(Member $viewer, string $tag): array
     {
-        return collect((new TagFeed)($viewer, $tag)->items())->map->getKey()->all();
+        return (new TagFeed)($viewer, $tag)->rows->modelKeys();
     }
 
     private function createPost(Member $author, string $body, Visibility $visibility = Visibility::Members): TimelinePost
