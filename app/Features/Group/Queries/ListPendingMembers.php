@@ -16,6 +16,7 @@ class ListPendingMembers
         return $group->applicants()
             ->with('avatar.file')
             ->orderByPivot('created_at')
+            ->orderByPivot('member_id')
             ->paginate($perPage);
     }
 }

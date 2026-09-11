@@ -141,7 +141,8 @@ visibility submitted for a non-editable field is ignored (the value follows the 
 ## Member search
 
 [`SearchMembers`](../../app/Features/Member/Queries/SearchMembers.php) (OpenPNE 3
-`/member/search`) ANDs an EXISTS subquery per field, matching by the same storage model.
+`/member/search`) ANDs an EXISTS subquery per field, matching by the same storage model. Results
+list newest members first on `(created_at, id)` ([ordering.md](ordering.md#the-tuple)).
 Privacy is enforced **in SQL**, not after the fact:
 
 - A match counts only when the value's effective visibility is within the viewer's

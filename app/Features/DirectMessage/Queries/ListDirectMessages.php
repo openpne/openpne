@@ -47,6 +47,7 @@ class ListDirectMessages
             ->with('directMessage.sender.avatar.file')
             // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message.
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage, ['*'], $pageName);
 
         $replied = $withRepliedStatus ? $this->repliedTo($viewer, $page->getCollection()->map(
@@ -105,6 +106,7 @@ class ListDirectMessages
             ->senderLive()
             ->with($draft ? 'draftRecipient.avatar.file' : 'recipients.recipient.avatar.file')
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage, ['*'], $pageName)
             ->through(fn (DirectMessage $m): DirectMessageListItem => new DirectMessageListItem(
                 (int) $m->getKey(),
@@ -132,16 +134,17 @@ class ListDirectMessages
             ->ofDelivered()
             ->recipientTrashed()
             ->where('recipient_id', $id)
-            ->select('direct_message_id', 'recipient_deleted_at as sort_at', DB::raw("'received' as role"))
+            ->select('direct_message_id', 'recipient_deleted_at as sort_at', DB::raw("'received' as role"), 'id as row_id')
             ->toBase();
 
         $sent = DirectMessage::query()
             ->senderTrashed()
             ->where('sender_id', $id)
-            ->select('id as direct_message_id', 'sender_deleted_at as sort_at', DB::raw("'sent' as role"))
+            ->select('id as direct_message_id', 'sender_deleted_at as sort_at', DB::raw("'sent' as role"), 'id as row_id')
             ->toBase();
 
-        $page = $received->unionAll($sent)->orderByDesc('sort_at')->paginate($perPage, ['*'], $pageName);
+        // The two arms share no key space, so (role, row_id) is the unique tail of the union's order.
+        $page = $received->unionAll($sent)->orderByDesc('sort_at')->orderByDesc('role')->orderByDesc('row_id')->paginate($perPage, ['*'], $pageName);
 
         /** @var array<int, \stdClass> $rows */
         $rows = $page->items();

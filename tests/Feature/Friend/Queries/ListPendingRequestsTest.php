@@ -6,6 +6,7 @@ use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -43,6 +44,29 @@ class ListPendingRequestsTest extends TestCase
         $this->assertEqualsCanonicalizing([$bob->getKey(), $carol->getKey()], $ids);
     }
 
+    public function test_both_directions_split_one_second_at_the_other_key_with_no_row_repeated_or_lost(): void
+    {
+        $alice = Member::factory()->create();
+        $others = Member::factory()->count(25)->create();
+        DB::table('friend_requests')->insert($others->map(fn (Member $m) => [
+            'requester_id' => $m->getKey(), 'target_id' => $alice->getKey(), 'created_at' => '2026-03-01 12:00:00',
+        ])->all());
+        $expected = array_reverse($others->modelKeys());
+
+        $received = fn (int $page) => $this->onPage($page, fn () => (new ListPendingRequests)($alice, PendingRequestDirection::Received))->getCollection()->modelKeys();
+        $this->assertSame(array_slice($expected, 0, 20), $received(1));
+        $this->assertSame(array_slice($expected, 20), $received(2));
+
+        DB::table('friend_requests')->delete();
+        DB::table('friend_requests')->insert($others->map(fn (Member $m) => [
+            'requester_id' => $alice->getKey(), 'target_id' => $m->getKey(), 'created_at' => '2026-03-01 12:00:00',
+        ])->all());
+        $sent = fn (int $page) => $this->onPage($page, fn () => (new ListPendingRequests)($alice, PendingRequestDirection::Sent))->getCollection()->modelKeys();
+
+        $this->assertSame(array_slice($expected, 0, 20), $sent(1));
+        $this->assertSame(array_slice($expected, 20), $sent(2));
+    }
+
     public function test_paginator_uses_custom_page_name(): void
     {
         $alice = Member::factory()->create();
@@ -72,5 +96,15 @@ class ListPendingRequestsTest extends TestCase
         $this->assertSame(0, (new ListPendingRequests)($alice, PendingRequestDirection::Received)->total());
         $this->assertSame(0, (new ListPendingRequests)($bob, PendingRequestDirection::Sent)->total());
         $this->assertSame(1, (new ListPendingRequests)($bob, PendingRequestDirection::Received)->total());
+    }
+
+    private function onPage(int $page, callable $run): mixed
+    {
+        Paginator::currentPageResolver(fn () => $page);
+        try {
+            return $run();
+        } finally {
+            Paginator::currentPageResolver(fn () => 1);
+        }
     }
 }

@@ -45,6 +45,14 @@ arrived: exactly the design [group-talk.md](group-talk.md#ordering-is-the-create
 describes, down to the expanded tuple comparison SQLite forces and the `latest` / `history` windows
 the client keeps.
 
+The mailbox pages by OFFSET, each box on its own time column and a unique key: the inbox on the
+receipt's `created_at` and the receipt id (OpenPNE 3 dated the inbox by the receipt), the sent and
+draft boxes on the message's `created_at` and id, the trash on the moved-to-trash time, then the arm
+(`sent` before `received`), then that arm's row id. The show page's previous / next links walk the
+same tuple ([ordering.md](ordering.md#prev--next-derive-from-the-list)); a message the box holds
+twice — a duplicate receipt, or trashed on both sides — is listed twice but walked once, at its
+later row.
+
 The code is **not** shared, and that is deliberate — see [Separate from group talk](#separate-from-group-talk).
 [`ConversationMessages`](../../app/Features/DirectMessage/Queries/ConversationMessages.php) and
 [`ConversationCursor`](../../app/Features/DirectMessage/ConversationCursor.php) are the direct-message
@@ -293,7 +301,9 @@ published content, and a private message is not that.
    relationship between the two members may hide a row.
 3. A null counterpart means the withdrawn bucket, and every comparison against it is `IS NULL` — never
    a bound null.
-4. `(created_at, id)` is the order, everywhere — reads and cursors alike.
+4. Every read of messages orders by a time column and a unique key: `(created_at, id)` in the
+   conversation reads and cursors, and each mailbox box's own time column and row id in the list and
+   its prev / next.
 5. `read` is answered by the receipt of the conversation being read, never by whichever receipt the
    relation holds first.
 6. The chat screens add no column and no table: everything they show is the mailbox's own rows, and

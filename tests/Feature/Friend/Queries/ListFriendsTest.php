@@ -5,6 +5,7 @@ namespace Tests\Feature\Friend\Queries;
 use App\Features\Friend\Queries\ListFriends;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -84,18 +85,33 @@ class ListFriendsTest extends TestCase
      * Friendships made in the same request share a timestamp (`created_at` defaults to useCurrent), so
      * the tie-break is what the decorative row's "same set on every visit" actually rests on.
      */
-    public function test_take_newest_breaks_a_tie_on_the_friend_id(): void
+    public function test_two_pages_of_one_second_split_at_the_friend_id_with_no_row_repeated_or_lost(): void
+    {
+        $owner = Member::factory()->create();
+        $friends = Member::factory()->count(25)->create();
+        foreach ($friends as $friend) {
+            $this->makeFriends($owner, $friend, '2026-03-01 12:00:00');
+        }
+        $expected = array_reverse($friends->modelKeys());
+
+        $page = fn (int $n) => $this->onPage($n, fn () => (new ListFriends)($owner, $owner))->getCollection()->modelKeys();
+
+        $this->assertSame(array_slice($expected, 0, 20), $page(1));
+        $this->assertSame(array_slice($expected, 20), $page(2));
+    }
+
+    public function test_take_breaks_a_tie_on_the_friend_id(): void
     {
         [$owner, $early, $late] = Member::factory()->count(3)->create()->all();
         $this->makeFriends($owner, $early, '2026-08-01 10:00:00');
         $this->makeFriends($owner, $late, '2026-08-01 10:00:00');
 
-        $friends = (new ListFriends)->takeNewest($owner, $owner, 2);
+        $friends = (new ListFriends)->take($owner, $owner, 2);
 
         $this->assertSame([$late->getKey(), $early->getKey()], $friends->modelKeys());
     }
 
-    public function test_take_newest_returns_empty_when_owner_has_blocked_viewer(): void
+    public function test_take_returns_empty_when_owner_has_blocked_viewer(): void
     {
         [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
         $this->makeFriends($alice, $carol);
@@ -104,7 +120,7 @@ class ListFriendsTest extends TestCase
             'blocked_id' => $bob->getKey(),
         ]);
 
-        $this->assertSame([], (new ListFriends)->takeNewest($bob, $alice, 9)->modelKeys());
+        $this->assertSame([], (new ListFriends)->take($bob, $alice, 9)->modelKeys());
     }
 
     /** `$at` defaults to useCurrent, which is what production writes. */
@@ -116,5 +132,15 @@ class ListFriendsTest extends TestCase
             ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],
             ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), ...$when],
         ]);
+    }
+
+    private function onPage(int $page, callable $run): mixed
+    {
+        Paginator::currentPageResolver(fn () => $page);
+        try {
+            return $run();
+        } finally {
+            Paginator::currentPageResolver(fn () => 1);
+        }
     }
 }

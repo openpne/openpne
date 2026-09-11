@@ -81,7 +81,8 @@ order, and a page boundary landing inside one second would drop or repeat a mess
 that tuple rather than by offset — a conversation is written to while it is being read, and an offset
 page would shift under the reader every time a message arrived. The comparison is written out as
 `created_at > ? OR (created_at = ? AND id > ?)`, not as SQL's row constructor, which SQLite has no
-support for. `(group_id, created_at, id)` is the index that serves it.
+support for. `(group_id, created_at, id)` is the index that serves it. The same rule holds for every
+list ([ordering.md](ordering.md)).
 
 Each serialized message carries its own **cursor** (`{iso8601}|{id}`, opaque). The client hands one
 back to ask for the page before it (`?before=`) or what has arrived after it (`?after=`), so the

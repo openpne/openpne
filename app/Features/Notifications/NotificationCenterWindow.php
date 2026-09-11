@@ -26,10 +26,7 @@ class NotificationCenterWindow
     {
         // created_at is second-granular, so without the UUID tiebreak "the newest N" is not a defined
         // set and the badge request and the panel request could window differently.
-        return $this->cache[$viewer->getKey()] ??= VisibleNotifications::apply($viewer->notifications())
-            // The relation adds a latest() this would otherwise stack under.
-            ->reorder('created_at', 'desc')
-            ->orderByDesc('id')
+        return $this->cache[$viewer->getKey()] ??= VisibleNotifications::newestFirst(VisibleNotifications::apply($viewer->notifications()))
             ->limit(self::LIMIT)
             ->get();
     }

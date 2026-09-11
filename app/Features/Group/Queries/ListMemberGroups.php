@@ -61,6 +61,7 @@ class ListMemberGroups
             ->withExists(['members as owner_is_admin' => fn ($q) => $q
                 ->where('member_id', $member->getKey())
                 ->where('role', GroupRole::Admin)])
+            ->orderByDesc('created_at')
             ->orderByDesc('id');
     }
 }

@@ -10,6 +10,9 @@ class ListBlocks
     /** @return LengthAwarePaginator<int, Member> */
     public function __invoke(Member $blocker, int $perPage = 20): LengthAwarePaginator
     {
-        return $blocker->blocksMade()->with('avatar.file')->paginate($perPage);
+        return $blocker->blocksMade()->with('avatar.file')
+            ->orderByPivot('created_at', 'desc')
+            ->orderByPivot('blocked_id', 'desc')
+            ->paginate($perPage);
     }
 }

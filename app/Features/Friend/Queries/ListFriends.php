@@ -27,22 +27,6 @@ class ListFriends
         return $this->query($viewer, $owner)->limit($limit)->get();
     }
 
-    /**
-     * Both order keys are the pivot's, so the sort finishes on `friendships`; ordering by `members.id`
-     * selects the same rows but sorts after the join, at a row lookup per friendship. Separate from
-     * take() rather than an order on it, because take()'s callers print rows as the table returns them.
-     *
-     * @return Collection<int, Member>
-     */
-    public function takeNewest(Member $viewer, Member $owner, int $limit): Collection
-    {
-        return $this->query($viewer, $owner)
-            ->orderByPivot('created_at', 'desc')
-            ->orderByPivot('friend_id', 'desc')
-            ->limit($limit)
-            ->get();
-    }
-
     public function count(Member $viewer, Member $owner): int
     {
         return $this->query($viewer, $owner)->count();
@@ -51,7 +35,10 @@ class ListFriends
     /** @return BelongsToMany<Member, Member> */
     private function query(Member $viewer, Member $owner): BelongsToMany
     {
-        $query = $owner->friendships()->with('avatar.file');
+        // Both keys are the pivot's, so the sort finishes on `friendships` before the member join.
+        $query = $owner->friendships()->with('avatar.file')
+            ->orderByPivot('created_at', 'desc')
+            ->orderByPivot('friend_id', 'desc');
 
         if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             $query->whereRaw('1 = 0');

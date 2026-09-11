@@ -23,6 +23,7 @@ class SearchGroups
             ->when($categoryId !== null, fn ($q) => $q->where('group_category_id', $categoryId))
             ->with(['category', 'image'])
             ->withCount('members')
+            ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
