@@ -154,6 +154,9 @@ class DiaryToolsTest extends McpTestCase
         OpenPneServer::tool(ListDiariesTool::class, ['before' => 'page-2'])->assertHasErrors(['No such']);
         // Well formed, but a UUID names no diary: read as the head it would hand the same page out forever.
         OpenPneServer::tool(ListDiariesTool::class, ['before' => '2026-01-01T00:00:00+09:00|550e8400-e29b-41d4-a716-446655440000'])->assertHasErrors(['No such']);
+        OpenPneServer::tool(ListDiariesTool::class, ['before' => ''])->assertHasErrors(['No such']);
+        // An explicit null is the omitted argument, as a client that always sends every key would put it.
+        OpenPneServer::tool(ListDiariesTool::class, ['before' => null])->assertOk()->assertStructuredContent(fn ($json) => $json->count('diaries', 2)->etc());
     }
 
     /** An AI account is friends with nobody, which is the ordinary case for a bot. */
