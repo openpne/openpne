@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Schema;
+namespace Tests\Feature\Database;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -28,7 +28,8 @@ class TimeAxisIndexesTest extends TestCase
     public function test_no_index_leads_with_the_unused_thread_id(): void
     {
         $this->assertNotContains('thread_id', array_column($this->indexColumns('direct_messages'), 0));
-        $this->assertGreaterThan(0, count($this->indexColumns('direct_messages')));
+        $this->assertContains(['sender_id', 'is_draft', 'sender_deleted_at'], $this->indexColumns('direct_messages'));
+        $this->assertContains(['recipient_id', 'recipient_deleted_at'], $this->indexColumns('direct_message_recipients'));
     }
 
     /** @return list<list<string>> */

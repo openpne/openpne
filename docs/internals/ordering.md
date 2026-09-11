@@ -66,8 +66,10 @@ table is paged along; the feature documents list which axes are indexed today. V
 block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an index
 of their own. The `id` suffix is implied on both
 engines — InnoDB stores the primary key at the end of every secondary index and SQLite stores the
-rowid — but writing it keeps the axis legible in the schema. A time column leads so that InnoDB does
-not adopt the index to back a foreign key (errno 1553 on a later drop).
+rowid — but writing it keeps the axis legible in the schema. A site-wide index leads with the time
+column so that InnoDB does not adopt it to back a foreign key; a scoped `(parent_id, time column)`
+index is adopted by design and is replaced by creating the new one before dropping the old (errno
+1553 on a drop that leaves the key unbacked).
 
 | Table | Site-wide axis | Scoped axis |
 |---|---|---|
@@ -75,13 +77,15 @@ not adopt the index to back a foreign key (errno 1553 on a later drop).
 | `timeline_posts` | `(created_at, id)` — home, all-member and tag feeds | `(member_id, created_at)` — a member's timeline |
 | `members` | `(created_at, id)` — member search, newcomers | — |
 | `groups` | `(created_at, id)` — group search, a member's groups | — |
+| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent lists | `(group_id, bumped_at)` — a group's board |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |
 
-The mailbox boxes filter and sort within one viewer's rows and are left to the engine's sort; the
-conversation list and the talk room list order by a correlated latest-message subquery, which no index
-serves.
+Lists bounded to one viewer's own rows are left to the engine's sort: the mailbox boxes, and the
+friend, block and friend-request pages, whose pivots carry only their primary key. The talk room list
+and the conversation list sort on a correlated latest-message subquery; the subquery itself reads the
+scoped index above, the outer sort over the computed column is the engine's.
 
 ## SQLite foreign-key indexes
 
