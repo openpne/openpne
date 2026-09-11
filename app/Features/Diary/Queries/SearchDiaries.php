@@ -30,7 +30,7 @@ class SearchDiaries
         // The window is this screen's alone: applyTerms is shared with the member archive, which OpenPNE 3 never narrowed.
         $query->when(DiarySearch::periodLowerBound(), fn ($q, $lower) => $q->where('created_at', '>=', $lower));
 
-        return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
+        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
     }
 
     /**
