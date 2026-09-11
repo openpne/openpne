@@ -11,6 +11,7 @@ use App\Models\GroupTopicComment;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\BoardBumpBackfill;
 use App\Upgrade\Verify\BoardBumpCheck;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -112,5 +113,13 @@ class BoardBumpBackfillTest extends TestCase
             $expected = str_replace(['{$table}', '{$comments}', '{$fk}'], [$table, $comments, $fk], substr($template, strlen('UPDATE {$table} SET bumped_at = ')));
             $this->assertSame($expected, BoardBumpedAt::definition($table, $comments, $fk));
         }
+    }
+
+    public function test_a_thread_written_without_bumped_at_is_refused_on_both_engines(): void
+    {
+        $group = Group::factory()->create();
+
+        $this->expectException(QueryException::class);
+        DB::table('group_topics')->insert(['group_id' => $group->id, 'name' => 'n', 'body' => 'b', 'created_at' => now(), 'updated_at' => now()]);
     }
 }

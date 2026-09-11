@@ -30,6 +30,7 @@ class DeleteTopicComment
 
         // Unlike OpenPNE 3, the topic settles back to its last surviving comment; the numbers stay.
         DB::transaction(function () use ($comment): void {
+            // Parent before comment row: the reverse order deadlocks against a topic delete.
             $thread = $comment->topic()->lockForUpdate()->firstOrFail();
             $comment->delete();
             BoardBumpedAt::settle($thread);

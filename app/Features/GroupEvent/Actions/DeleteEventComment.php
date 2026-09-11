@@ -30,6 +30,7 @@ class DeleteEventComment
 
         // Unlike OpenPNE 3, the event settles back to its last surviving comment; the numbers stay.
         DB::transaction(function () use ($comment): void {
+            // Parent before comment row: the reverse order deadlocks against a event delete.
             $thread = $comment->event()->lockForUpdate()->firstOrFail();
             $comment->delete();
             BoardBumpedAt::settle($thread);
