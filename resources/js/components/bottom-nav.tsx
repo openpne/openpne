@@ -93,12 +93,12 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                         >
                             <span className="relative inline-flex">
                                 <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
-                                {mark === 'count' && badge && (
-                                    <CountPill count={count} label={badgePhrase(t, badge, count)} className="absolute -top-2 -right-2.5" />
-                                )}
+                                {mark === 'count' && badge && <CountPill count={count} className="absolute -top-2 -right-2.5" />}
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
                             <span className="max-w-full truncate text-[11px] leading-none">{t(label.key, label.replacements)}</span>
+                            {/* After the word, so the name reads word first like the nav and the hub tabs. */}
+                            {mark === 'count' && badge && count > 0 && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
                         </Link>
                     </li>
                 );

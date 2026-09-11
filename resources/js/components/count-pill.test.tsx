@@ -62,13 +62,14 @@ const named = (...names: string[]): void => {
 const counted = { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 };
 
 /*
- * The orders differ deliberately: the bar's tab puts the pill ahead of the visible word in the DOM,
- * so its name leads with the count.
+ * The bar's tab draws the pill ahead of the visible word, so its phrase is a separate sr-only span
+ * after the word: every control names itself word first.
  */
-test('the bar tab is named count first, as it was', () => {
+test('the bar tab is named word first', () => {
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
 
-    named('3 %communities% with new messages %Communities%', '2 unread notifications Notifications');
+    named('%Communities% 3 %communities% with new messages', 'Notifications 2 unread notifications');
+    expect(screen.queryByRole('link', { name: '3 %communities% with new messages %Communities%' })).toBeNull();
 });
 
 test('a nav entry is named word first, as it was', () => {
@@ -99,7 +100,7 @@ test('the bar tab says one in the singular too', () => {
     const unread = { friendRequests: 1, unreadMessages: 1, notifications: 1, groupTalks: 1 };
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread })} />);
 
-    named('1 %community% with new messages %Communities%', '1 unread notification Notifications');
+    named('%Communities% 1 %community% with new messages', 'Notifications 1 unread notification');
 });
 
 test('a hub tab is named word first, as it was', () => {
