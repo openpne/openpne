@@ -30,6 +30,6 @@ class ListDiaries
 
         SearchDiaries::applyTerms($query, $keyword);
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage);
     }
 }

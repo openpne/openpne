@@ -48,6 +48,6 @@ class ListRecentDiaries
 
         DiaryVisibilityScope::applyFeed($query, $viewer);
 
-        return $query->orderByDesc('created_at');
+        return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }
