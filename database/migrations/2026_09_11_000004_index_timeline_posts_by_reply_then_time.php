@@ -29,15 +29,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('timeline_posts', function (Blueprint $table) {
-            $table->index(['created_at', 'id']);
-            $table->index(['member_id', 'created_at']);
-            // Named as InnoDB names its own, so the foreign-key migration's down() leaves it alone and the key stays backed.
-            $table->index('in_reply_to_id', 'timeline_posts_in_reply_to_id_foreign');
-        });
-        Schema::table('timeline_posts', function (Blueprint $table) {
-            $table->dropIndex(['in_reply_to_id', 'created_at', 'id']);
-            $table->dropIndex(['member_id', 'in_reply_to_id', 'created_at']);
-        });
+        // Named as InnoDB names its own, so the foreign-key migration's down() leaves it alone and the key stays backed.
+        foreach ([['created_at', 'id'], ['member_id', 'created_at'], ['in_reply_to_id']] as $columns) {
+            if (! Schema::hasIndex('timeline_posts', $columns)) {
+                Schema::table('timeline_posts', fn (Blueprint $table) => $columns === ['in_reply_to_id']
+                    ? $table->index($columns, 'timeline_posts_in_reply_to_id_foreign')
+                    : $table->index($columns));
+            }
+        }
+        foreach ([['in_reply_to_id', 'created_at', 'id'], ['member_id', 'in_reply_to_id', 'created_at']] as $columns) {
+            if (Schema::hasIndex('timeline_posts', $columns)) {
+                Schema::table('timeline_posts', fn (Blueprint $table) => $table->dropIndex($columns));
+            }
+        }
     }
 };

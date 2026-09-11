@@ -23,7 +23,7 @@ class TimeAxisIndexesTest extends TestCase
         $columns = $this->indexColumns('timeline_posts');
 
         $this->assertContains(['in_reply_to_id', 'created_at', 'id'], $columns);
-        $this->assertSame(1, count(array_keys(array_column($columns, 0), 'in_reply_to_id', true)));
+        $this->assertSame(1, count(array_keys(array_column($columns, 0), 'in_reply_to_id', true)), 'indexes leading with in_reply_to_id');
         $this->assertNotContains(['created_at', 'id'], $columns);
         $this->assertNotContains(['member_id', 'created_at'], $columns);
     }
