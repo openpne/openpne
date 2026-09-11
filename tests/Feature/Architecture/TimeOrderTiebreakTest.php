@@ -59,14 +59,13 @@ class TimeOrderTiebreakTest extends TestCase
 
             foreach ($this->statementsMatching($pattern, $source) as [$line, $chain]) {
                 $matches++;
-                $key = $this->allowanceFor($relative, $line);
-                if ($key !== null) {
-                    $unused = array_values(array_diff($unused, [$key]));
-                }
-                if ($key !== null && isset(self::UNIQUE_ON_ITS_OWN[$key])) {
+                if (preg_match(self::PRIMARY_KEY, $chain) === 1) {
                     continue;
                 }
-                if (preg_match(self::PRIMARY_KEY, $chain) === 1 || ($key !== null && preg_match(self::COMPOSITE_TAILS[$key], $chain) === 1)) {
+                $key = $this->allowanceFor($relative, $line);
+                if ($key !== null && (isset(self::UNIQUE_ON_ITS_OWN[$key]) || preg_match(self::COMPOSITE_TAILS[$key], $chain) === 1)) {
+                    $unused = array_values(array_diff($unused, [$key]));
+
                     continue;
                 }
                 $untied[] = "{$relative}:{$line}";
@@ -79,7 +78,6 @@ class TimeOrderTiebreakTest extends TestCase
         $this->assertSame([], $unused);
     }
 
-    /** The allowance that applies to this order: its line first, then its file. */
     private function allowanceFor(string $relative, int $line): ?string
     {
         foreach (["{$relative}:{$line}", $relative] as $key) {
