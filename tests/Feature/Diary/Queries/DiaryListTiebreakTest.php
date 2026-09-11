@@ -28,7 +28,7 @@ class DiaryListTiebreakTest extends TestCase
     /** @var list<int> ids of both friends' entries newest-first, all sharing one created_at */
     private array $ids;
 
-    /** @var list<int> the owner's share of, newest-first */
+    /** @var list<int> the owner's share of those, newest-first */
     private array $ownerIds;
 
     /** Two friends alternate within the second so no feed is scoped to one member's index. */

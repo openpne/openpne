@@ -70,9 +70,9 @@ before it.
 The lists that order by posting time — the recent feed, the friend feed, search, a member's
 archive and their recent five — order by the `(created_at, id)` tuple, as the timeline feeds do;
 [group-talk.md](group-talk.md#ordering-is-the-created_at-id-tuple) records why a second-precise
-timestamp alone is not a total order. OpenPNE 3 ordered these lists by `created_at` alone. They
-still page by OFFSET, so an entry posted between two page loads shifts the edge; only the tie
-inside one second is settled here.
+timestamp alone is not a total order. OpenPNE 3 ordered these lists by `created_at` alone. The
+paged ones still page by OFFSET, so an entry posted between two page loads shifts the edge; only
+the tie inside one second is settled here.
 
 ## The archive
 
