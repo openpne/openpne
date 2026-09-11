@@ -61,6 +61,7 @@ class TimelineController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
                 'posts' => $this->stream($page, $before, $viewer),
+                'streamGeneration' => StreamProps::generation(),
                 'canPost' => TimelinePosting::enabled(),
             ]),
         ]);
@@ -93,6 +94,7 @@ class TimelineController extends Controller
                     'canPost' => TimelinePosting::enabled(),
                     'viewerId' => $viewer->getKey(),
                     'posts' => $this->stream($page, $before, $viewer),
+                    'streamGeneration' => StreamProps::generation(),
                 ]);
             },
         ]);
@@ -124,6 +126,7 @@ class TimelineController extends Controller
                 'viewerId' => $viewer->getKey(),
                 'tag' => $normalized,
                 'posts' => $this->stream($page, $before, $viewer),
+                'streamGeneration' => StreamProps::generation(),
             ]),
         ]);
     }
@@ -214,7 +217,7 @@ class TimelineController extends Controller
         $viewer = $this->viewer();
         $action($viewer, $request->toData(), $request->file('image'));
 
-        // The inline forms return to their own page (allowlisted token), page 1, where the fresh
+        // The inline forms return to their own page (allowlisted token), its head, where the fresh
         // post now leads the feed; the standalone compose page keeps its member-timeline landing.
         return redirect()
             ->route($request->returnRoute() ?? 'timeline.member', $request->returnRoute() !== null ? [] : ['member' => $viewer->getKey()])
@@ -255,8 +258,9 @@ class TimelineController extends Controller
 
     public function memberRows(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): Response
     {
-        $perPage = $this->rowsPerPage($request);
+        // The subject first: a blocked viewer gets the uniform 404 before any input error could say the member exists.
         $owner = $this->memberSubject($member);
+        $perPage = $this->rowsPerPage($request);
         $page = $this->withInlineReplies($query($this->viewer(), $owner, StreamRequest::before($request), $perPage), $recentReplies);
 
         return $this->rows($page, 'timeline.member.rows', ['member' => $owner, 'per_page' => $perPage]);

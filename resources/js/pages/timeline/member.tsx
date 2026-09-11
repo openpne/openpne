@@ -11,11 +11,12 @@ interface MemberProps extends PageProps {
     isOwner: boolean;
     viewerId: number;
     posts: TimelineStream;
+    streamGeneration: string;
 }
 
 export default function TimelineMember() {
     const t = useT();
-    const { owner, isOwner, viewerId, posts } = usePage<MemberProps>().props;
+    const { owner, isOwner, viewerId, posts, streamGeneration } = usePage<MemberProps>().props;
     const title = isOwner ? t('%Activity%') : t(":name's %activity%", { name: owner.name });
 
     return (
@@ -26,7 +27,7 @@ export default function TimelineMember() {
                     <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
                 </Panel>
             ) : (
-                <LoadOlder data="posts">
+                <LoadOlder data="posts" generation={streamGeneration}>
                     <Panel flush>
                         <List>
                             {posts.data.map((post) => (

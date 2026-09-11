@@ -37,6 +37,10 @@ class TimelineHomeFeedTest extends TestCase
             ->missing('posts.meta')
         );
         $this->assertSame(['pageName' => 'before', 'previousPage' => null, 'nextPage' => null, 'currentPage' => null, 'reset' => false], $response->viewData('page')['scrollProps']['posts']);
+        // A full render hands out a fresh generation, so a replaced list remounts the client's stream state.
+        $generation = $response->viewData('page')['props']['streamGeneration'];
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $generation);
+        $this->assertNotSame($generation, $this->actingAs($member)->get('/timeline')->viewData('page')['props']['streamGeneration']);
     }
 
     public function test_the_feed_pages_by_cursor_and_the_cursor_travels_in_the_scroll_metadata(): void

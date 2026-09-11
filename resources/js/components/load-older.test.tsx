@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { LoadOlder } from './load-older';
 import { fakeT } from '@/lib/test-i18n';
@@ -12,23 +12,48 @@ interface Slot {
     hasMore: boolean;
 }
 
-const scroll = vi.hoisted(() => ({ slot: { fetch: () => {}, loading: false, hasMore: true } as Slot }));
+const scroll = vi.hoisted(() => ({
+    slot: { fetch: () => {}, loading: false, hasMore: true } as Slot,
+    props: {} as Record<string, unknown>,
+    mounts: 0,
+}));
 
 vi.mock('@inertiajs/react', () => ({
-    InfiniteScroll: ({ children, next }: { children: ReactNode; next: (slot: Slot) => ReactNode }) => (
-        <div>
-            {children}
-            {next(scroll.slot)}
-        </div>
-    ),
+    InfiniteScroll: ({ children, next, ...rest }: { children: ReactNode; next: (slot: Slot) => ReactNode }) => {
+        scroll.props = rest;
+        useEffect(() => {
+            scroll.mounts += 1;
+        }, []);
+        return (
+            <div>
+                {children}
+                {next(scroll.slot)}
+            </div>
+        );
+    },
 }));
 
 afterEach(cleanup);
 
-test('the button asks for the older page and stays out of the way while it loads', () => {
+test('the list is manual, older-only and leaves the URL alone', () => {
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
+    render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
+
+    expect(scroll.props).toMatchObject({ data: 'posts', manual: true, onlyNext: true, preserveUrl: true });
+});
+
+test('the button asks for the older page and stays focusable while it loads', () => {
     const fetch = vi.fn();
     scroll.slot = { fetch, loading: false, hasMore: true };
-    render(<LoadOlder data="posts">rows</LoadOlder>);
+    render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
 
@@ -36,8 +61,11 @@ test('the button asks for the older page and stays out of the way while it loads
 
     cleanup();
     scroll.slot = { fetch, loading: true, hasMore: true };
-    render(<LoadOlder data="posts">rows</LoadOlder>);
-
+    render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
     const busy = screen.getByRole('button', { name: 'Loading…' });
     fireEvent.click(busy);
 
@@ -46,10 +74,46 @@ test('the button asks for the older page and stays out of the way while it loads
     expect(fetch).toHaveBeenCalledOnce();
 });
 
-test('an exhausted stream offers no button', () => {
+test('an exhausted stream says so where the button was and takes the focus there', () => {
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
+    const view = render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
+    screen.getByRole('button', { name: 'Load more' }).focus();
+
     scroll.slot = { fetch: () => {}, loading: false, hasMore: false };
-    render(<LoadOlder data="posts">rows</LoadOlder>);
+    view.rerender(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
 
     expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.getByText('rows')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('No older posts.');
+    expect(document.activeElement).toBe(screen.getByRole('status'));
+});
+
+test('a new generation remounts the list, an unchanged one does not', () => {
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
+    scroll.mounts = 0;
+    const view = render(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
+    view.rerender(
+        <LoadOlder data="posts" generation="g1">
+            rows
+        </LoadOlder>,
+    );
+    expect(scroll.mounts).toBe(1);
+
+    view.rerender(
+        <LoadOlder data="posts" generation="g2">
+            rows
+        </LoadOlder>,
+    );
+    expect(scroll.mounts).toBe(2);
 });

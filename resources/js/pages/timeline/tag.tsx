@@ -10,13 +10,14 @@ interface TagProps extends PageProps {
     tag: string;
     viewerId: number;
     posts: TimelineStream;
+    streamGeneration: string;
 }
 
 // A reading page: the home feed's list with no compose box, since nothing here says which tag a new
 // post would carry.
 export default function TimelineTag() {
     const t = useT();
-    const { tag, viewerId, posts } = usePage<TagProps>().props;
+    const { tag, viewerId, posts, streamGeneration } = usePage<TagProps>().props;
 
     return (
         <>
@@ -26,7 +27,7 @@ export default function TimelineTag() {
                     <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
                 </Panel>
             ) : (
-                <LoadOlder data="posts">
+                <LoadOlder data="posts" generation={streamGeneration}>
                     <Panel flush>
                         <List>
                             {posts.data.map((post) => (

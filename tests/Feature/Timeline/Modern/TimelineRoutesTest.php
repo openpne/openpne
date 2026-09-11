@@ -32,9 +32,10 @@ class TimelineRoutesTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)
-            ->get("/member/{$member->getKey()}/timeline")
-            ->assertInertia(fn ($page) => $page->component('timeline/member'));
+        $response = $this->actingAs($member)->get("/member/{$member->getKey()}/timeline");
+
+        $response->assertInertia(fn ($page) => $page->component('timeline/member'));
+        $this->assertSame('before', $response->viewData('page')['scrollProps']['posts']['pageName']);
     }
 
     public function test_the_member_timeline_owner_ref_carries_the_avatar_the_chrome_scope_draws(): void

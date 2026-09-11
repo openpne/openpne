@@ -55,9 +55,10 @@ familiar `t < ? OR (t = ? AND id < ?)` becomes an index scan whose cost grows wi
 page (16 ms for a page 190k rows into the list), while the leading range keeps every page at a few
 index reads on both engines. A cursor is `{iso8601}|{id}`, opaque to the client, and names a
 position rather than a permission; the id is the row's primary key, an integer or a UUID, the time
-is the ATOM form the server emitted, normalized to the site timezone on parse, and a URL carries the
-whole cursor percent-encoded as a query value. A web surface reads a malformed cursor as no cursor;
-the MCP realm refuses one it did not hand out ([mcp.md](mcp.md)).
+is the ATOM form the server emitted, to the second as the time columns are, normalized to the site
+timezone on parse, and a URL carries the whole cursor percent-encoded as a query value. A web
+surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not hand out
+([mcp.md](mcp.md)).
 
 Feeds share one implementation, `App\Support\Stream`: `StreamQuery::older` applies the predicate and
 the `(time, id)` order to an Eloquent builder or a has-many relation, replacing an order the query
@@ -67,10 +68,13 @@ cursor; `StreamProps::scroll` hands Inertia's `InfiniteScroll` the cursor in the
 under `before`, with no previous page, so the payload is rows only; `StreamRequest` reads `?before=`
 and answers a bookmarked `?page=` other than 1 from the OFFSET days with a redirect to the same URL
 without `page`. The query handed in carries the list's own scope, visibility and ownership included;
-a top-level `orWhere` in it is refused, since the predicate would land in one of its arms. One
-stream per page: the client writes `before` back into the URL, so two on one page would read each
-other's cursor. Group talk and direct-message conversations keep their own cursors: they page in
-both directions and around an anchor, which a feed never does.
+a top-level `orWhere` in it is refused, since the predicate would land in one of its arms. The
+Modern component keeps the URL at the head (`preserveUrl`), so a reload or a shared link starts
+there; a stream that wrote its cursor into the URL would also collide with a second one on the page,
+so a page holds one stream. The Classic pager of a stream offers "next" as the older page and
+"previous" as the head, never the page before: a stream is read from its head, and a position in it
+is the cursor, not a page number. Group talk and direct-message conversations keep their own
+cursors: they page in both directions and around an anchor, which a feed never does.
 
 Two client contracts follow from Inertia's data manager keeping the next cursor in its own state,
 which it drops only for a prop the request named in `reset`, a header only the client can send. The

@@ -28,8 +28,7 @@
                     @include('timeline._loadmore', ['nextUrl' => $loadMoreUrl])
                 @endif
             </div>
-
-            <div data-timeline-pager><x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" /></div>
         @endif
+        <div data-timeline-pager><x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" /></div>
     </x-classic.parts>
 @endsection

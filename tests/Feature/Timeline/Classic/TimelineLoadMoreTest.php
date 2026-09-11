@@ -218,6 +218,8 @@ class TimelineLoadMoreTest extends TestCase
         $blocked = Member::factory()->create();
         DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
         $this->actingAs($blocked)->get("/member/{$author->getKey()}/timeline?page=3")->assertNotFound();
+        $this->actingAs($blocked)->getJson("/member/{$author->getKey()}/timeline/rows?page=2")->assertNotFound();
+        $this->actingAs($blocked)->getJson("/member/{$author->getKey()}/timeline/rows?per_page=999")->assertNotFound();
     }
 
     public function test_a_gadget_offers_more_only_past_its_limit(): void
