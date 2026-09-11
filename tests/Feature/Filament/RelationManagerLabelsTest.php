@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * Wherever a relation manager sets no model label, Filament humanises the model class name into the
- * empty state and every action modal ("group topic comment 削除"), a string no i18n gate sees because
+ * empty state and every action modal ("group topic comment"), a string no i18n gate sees because
  * it never goes through __(). The label is set on the table: the static property and getModelLabel()
  * are deprecated in Filament.
  */
@@ -48,10 +48,10 @@ class RelationManagerLabelsTest extends TestCase
             }
         }
 
-        $this->assertSame([], $missing, 'These relation managers do not call ->modelLabel(...) with a value in table(), so Filament would show the humanised class name in the empty state and the action modals.');
+        $this->assertSame([], $missing, 'These relation managers do not call ->modelLabel(__(...)) in table(), so Filament would show the humanised class name in the empty state and the action modals.');
     }
 
-    /** Comments are dropped first, so a comment naming the method cannot stand in for the call. */
+    /** Comments are dropped first, so a comment naming the method cannot stand in for the call; the argument must be a __() call, since a bare string is as invisible to i18n:check as the humanised name. */
     private function setsModelLabel(string $file): bool
     {
         $tokens = array_values(array_filter(
@@ -68,11 +68,9 @@ class RelationManagerLabelsTest extends TestCase
             if (! is_array($previous) || $previous[0] !== T_OBJECT_OPERATOR || ($tokens[$index + 1] ?? null) !== '(') {
                 continue;
             }
-            if (is_array($argument) && $argument[0] === T_STRING && strtolower($argument[1]) === 'null') {
-                continue;
+            if (is_array($argument) && $argument[0] === T_STRING && $argument[1] === '__' && ($tokens[$index + 3] ?? null) === '(') {
+                return true;
             }
-
-            return true;
         }
 
         return false;
