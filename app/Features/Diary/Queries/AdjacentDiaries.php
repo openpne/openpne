@@ -18,6 +18,11 @@ class AdjacentDiaries
     /** @return array{older: ?Diary, newer: ?Diary} */
     public function __invoke(?Member $viewer, Diary $diary): array
     {
+        // A row with no time has no place in the archive's order, so it has no neighbours.
+        if ($diary->created_at === null) {
+            return ['older' => null, 'newer' => null];
+        }
+
         $owner = $diary->member;
 
         $visible = function () use ($viewer, $owner) {

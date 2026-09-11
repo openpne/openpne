@@ -45,17 +45,12 @@ class ShowDirectMessage
         );
     }
 
-    /**
-     * The message's row in the box, or null when the viewer may not read it there. A message with two
-     * rows in one box (a duplicate receipt, or trashed on both sides) is placed at its later row, and
-     * its other row is not its own neighbour.
-     */
+    /** The message's place in the box, or null when the viewer may not read it there. */
     private function position(Member $viewer, DirectMessageBox $box, int $messageId): ?object
     {
         return DB::query()
-            ->fromSub($this->boxRows($viewer, $box), 'box')
+            ->fromSub($this->onePlacePerMessage($viewer, $box), 'box')
             ->where('id', $messageId)
-            ->orderByDesc('sort_at')->orderByDesc('role')->orderByDesc('row_id')
             ->first();
     }
 
@@ -91,13 +86,17 @@ class ShowDirectMessage
 
     private function adjacentId(Member $viewer, DirectMessageBox $box, object $position, bool $older): ?int
     {
+        // A row with no time has no place in the order, so it has no neighbours.
+        if ($position->sort_at === null) {
+            return null;
+        }
+
         $op = $older ? '<' : '>';
         $direction = $older ? 'desc' : 'asc';
 
-        // The box list orders by (sort_at, role, row_id); the neighbour is the next row in that order.
+        // The box list orders by (sort_at, role, row_id); the neighbour is the next message in that order.
         $row = DB::query()
-            ->fromSub($this->boxRows($viewer, $box), 'box')
-            ->where('id', '<>', $position->id)
+            ->fromSub($this->onePlacePerMessage($viewer, $box), 'box')
             ->where(fn (QueryBuilder $q) => $q
                 ->where('sort_at', $op, $position->sort_at)
                 ->orWhere(fn (QueryBuilder $tie) => $tie
@@ -111,6 +110,30 @@ class ShowDirectMessage
             ->first();
 
         return $row !== null ? (int) $row->id : null;
+    }
+
+    /**
+     * A message with two rows in one box (a duplicate receipt, or trashed on both sides) keeps its
+     * later row only, so the walk visits each message once and never turns back on itself.
+     */
+    private function onePlacePerMessage(Member $viewer, DirectMessageBox $box): QueryBuilder
+    {
+        $later = fn (QueryBuilder $q) => $q
+            ->whereColumn('later.sort_at', '>', 'b.sort_at')
+            ->orWhere(fn (QueryBuilder $tie) => $tie
+                ->whereColumn('later.sort_at', '=', 'b.sort_at')
+                ->where(fn (QueryBuilder $r) => $r
+                    ->whereColumn('later.role', '>', 'b.role')
+                    ->orWhere(fn (QueryBuilder $rr) => $rr
+                        ->whereColumn('later.role', '=', 'b.role')
+                        ->whereColumn('later.row_id', '>', 'b.row_id'))));
+
+        return DB::query()
+            ->fromSub($this->boxRows($viewer, $box), 'b')
+            ->whereNotExists(fn (QueryBuilder $q) => $q
+                ->fromSub($this->boxRows($viewer, $box), 'later')
+                ->whereColumn('later.id', 'b.id')
+                ->where($later));
     }
 
     /**

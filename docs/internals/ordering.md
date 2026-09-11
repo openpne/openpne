@@ -27,9 +27,10 @@ The key only has to be unique; it need not be monotonic (a notification's id is 
 pivot table it is the other half of the composite primary key. Across a UNION it is a pair no two
 arms share — the mailbox's trash orders by `(sort_at, role, row_id)`, where `role` names the arm.
 
-Filament appends the table's primary key to any sort it renders — in the sort's own direction under
-`defaultSort`, ascending otherwise — so an admin table's `defaultSort('id', 'desc')` is a structural
-order, and a query-level time order states its own key so the two directions agree.
+Filament appends the table's primary key to any sort it renders, in the direction of the sort the
+reader or `defaultSort` chose and ascending when neither did, so an admin table's
+`defaultSort('id', 'desc')` is a structural order; a query-level time order states its own key so
+the two directions agree.
 
 ## Prev / next derive from the list
 
@@ -53,10 +54,10 @@ comparison. A cursor is `{iso8601}|{id}`, opaque to the client, and names a posi
 permission. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not
 hand out ([mcp.md](mcp.md)).
 
-A time column from `timestamps()` is nullable, and a keyset comparison cannot bind a NULL: a row
-with no time cannot be positioned (the query builder rejects the bound) and is never reached from a
-cursor. The lists here rely on every write path filling the column, which the upgrade tool does as
-well.
+A time column from `timestamps()` is nullable, and a row with no time has no place in the order:
+the prev / next queries answer "no neighbours" for it rather than compare against NULL, and no
+cursor reaches it. The lists here rely on every write path filling the column, which the upgrade
+tool does as well.
 
 ## One index per axis
 
@@ -76,7 +77,8 @@ in the migration, or it is unindexed on the SQLite lane.
 
 ## Guards
 
-A same-second fixture alone rarely bites where a scoped index already returns a tie in key order,
-so a list scoped to one row's key (a member's search page, a mailbox) also pins its `order by` clause
-through the query log ([`PinsOrderBy`](../../tests/Support/PinsOrderBy.php)); a list the engine has
-to sort is caught by the fixture itself.
+A same-second fixture alone stays green wherever the engine's natural order already matches the key
+(an index scan, a pivot's primary key, MySQL's handling of a tie), and which engine that is differs
+per query. Such a list also pins its `order by` clause through the query log
+([`PinsOrderBy`](../../tests/Support/PinsOrderBy.php)); the pin is the assertion that bites on both
+engines.

@@ -53,6 +53,17 @@ class AdjacentDiariesTest extends TestCase
         $this->assertSame($c->getKey(), $newer?->getKey());
     }
 
+    public function test_an_entry_with_no_time_has_no_neighbors(): void
+    {
+        $owner = Member::factory()->create();
+        $this->diary($owner);
+        $timeless = $this->diary($owner);
+        $this->diary($owner);
+        DB::table('diaries')->where('id', $timeless->getKey())->update(['created_at' => null]);
+
+        $this->assertSame(['older' => null, 'newer' => null], (new AdjacentDiaries)($owner, $timeless->fresh()));
+    }
+
     public function test_endpoints_have_only_one_neighbor(): void
     {
         $owner = Member::factory()->create();

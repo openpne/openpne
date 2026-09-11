@@ -156,6 +156,25 @@ class ShowDirectMessageTest extends TestCase
         // Placed at its later (11:00) row: the 10:00 message is behind it, never the 08:00 one.
         $this->assertSame($between->getKey(), $view->previousId);
         $this->assertSame($last->getKey(), $view->nextId);
-        $this->assertNotSame($first->getKey(), $view->previousId);
+        // Walking back from the newest visits each message once and ends at the oldest.
+        $walk = [];
+        for ($id = $last->getKey(); $id !== null; $id = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $id)->previousId) {
+            $walk[] = $id;
+        }
+        $this->assertSame([$last->getKey(), $twice->getKey(), $between->getKey(), $first->getKey()], $walk);
+    }
+
+    public function test_a_receipt_with_no_time_has_no_neighbours(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $this->deliver($sender, $recipient);
+        $timeless = $this->deliver($sender, $recipient);
+        DirectMessageRecipient::query()->where('direct_message_id', $timeless->getKey())->update(['created_at' => null]);
+
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $timeless->getKey());
+
+        $this->assertNotNull($view);
+        $this->assertNull($view->previousId);
+        $this->assertNull($view->nextId);
     }
 }
