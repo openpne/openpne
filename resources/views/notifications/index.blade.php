@@ -26,7 +26,7 @@
         @if ($feed->isEmpty())
             <div class="body">{{ __('No notifications yet.') }}</div>
         @else
-            <x-classic.pager :paginator="$feed" />
+            <x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" />
             @foreach ($feed as $item)
                 <dl>
                     <dt>@if ($item->createdAt){{ \App\Support\LocalizedDate::dateTime($item->createdAt) }}@endif</dt>
@@ -40,7 +40,7 @@
                     </dd>
                 </dl>
             @endforeach
-            <x-classic.pager :paginator="$feed" />
+            <x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" />
         @endif
         @if ($unreadCount > 0)
             <div class="operation">

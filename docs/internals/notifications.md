@@ -24,8 +24,9 @@ document covers the delivery model around it.
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing. Reading what a row points at marks it read too: the feed is an inbox, so a
-   row is spent by the thing it announces.
+   feed marks nothing. The feed is a stream, paged by keyset on `(created_at, id)` with the row's
+   UUID as the tiebreak ([ordering.md](ordering.md#keyset-and-offset)). Reading what a row points
+   at marks it read too: the feed is an inbox, so a row is spent by the thing it announces.
    [`NotificationTarget`](../../app/Features/Notifications/NotificationTarget.php) is the per-kind
    table of what that is, and
    [`ConsumeNotificationRows`](../../app/Features/Notifications/ConsumeNotificationRows.php) the

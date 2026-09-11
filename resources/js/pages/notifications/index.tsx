@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Settings } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
-import { Pagination, type PaginationMeta } from '@/components/pagination';
+import { LoadOlder } from '@/components/load-older';
 import { PushPrompt } from '@/components/push-prompt';
 import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
@@ -32,14 +32,15 @@ interface FeedItem {
 }
 
 interface FeedProps extends PageProps {
-    feed: { data: FeedItem[]; meta: PaginationMeta };
+    feed: { data: FeedItem[] };
+    streamGeneration: string;
 }
 
 /** Opening a row marks it read, and so does reaching that target any other way
  *  (docs/internals/notifications.md, "The three layers"); the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
-    const { feed, unread } = usePage<FeedProps>().props;
+    const { feed, unread, streamGeneration } = usePage<FeedProps>().props;
     const title = t('Notifications');
 
     // Nothing re-reads the feed here: the app-wide revalidation on a restore does it
@@ -79,8 +80,9 @@ export default function NotificationsIndex() {
                     <p className="text-sm text-muted-foreground">{t('No notifications yet.')}</p>
                 </Panel>
             ) : (
-                <Panel flush>
-                    <List>
+                <LoadOlder data="feed" generation={streamGeneration}>
+                    <Panel flush>
+                        <List>
                         {feed.data.map((item) => (
                             <li key={item.id}>
                                 <Link
@@ -109,10 +111,10 @@ export default function NotificationsIndex() {
                                 </Link>
                             </li>
                         ))}
-                    </List>
-                </Panel>
+                        </List>
+                    </Panel>
+                </LoadOlder>
             )}
-            {feed.data.length > 0 && <Pagination meta={feed.meta} />}
         </>
     );
 }

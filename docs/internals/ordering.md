@@ -46,8 +46,9 @@ mailbox on the box's own time column and row id. A link that walked `id` while t
 A **stream** — newest first, growing while it is read, consumed by scrolling — pages by keyset: the
 client names the row it has and asks for what lies beyond it, so a row posted meanwhile shifts
 nothing. An **archive** — a list a reader jumps into by page number — pages by OFFSET. Group talk,
-direct-message conversations, the timeline feeds and the recent and friend diary feeds are streams
-today; which of the remaining lists are streams is decided list by list in the feature documents.
+direct-message conversations, the timeline feeds, the recent and friend diary feeds and the
+notification feed are streams today; which of the remaining lists are streams is decided list by
+list in the feature documents.
 
 The keyset comparison is written out, SQLite having no row-value comparison, and a stream writes it
 as `t <= ? AND (t < ? OR id < ?)`: SQLite cannot see that the two bound times are equal, so the

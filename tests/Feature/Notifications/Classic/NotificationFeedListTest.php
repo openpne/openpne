@@ -63,16 +63,34 @@ class NotificationFeedListTest extends TestCase
             ->assertDontSee('js/classic-refresh-on-restore.js', false);
     }
 
-    public function test_the_pager_brackets_the_list(): void
+    public function test_the_pager_brackets_the_list_once_there_is_an_older_page(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        foreach (range(1, 31) as $i) {
+            $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subMinutes(31 - $i));
+        }
+
+        $head = (string) $this->actingAs($viewer)->get('/notifications')->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($head, 'class="pagerRelative"'));
+        $this->assertLessThan(strpos($head, '<dl>'), strpos($head, 'class="pagerRelative"'));
+        $this->assertGreaterThan(strrpos($head, '</dl>'), strrpos($head, 'class="pagerRelative"'));
+        $this->assertStringNotContainsString('<p class="prev">', $head);
+        preg_match('/<p class="next"><a href="([^"]+)">/', $head, $m);
+        $this->assertStringContainsString('/notifications?before=', html_entity_decode($m[1]));
+
+        $older = (string) $this->actingAs($viewer)->get(html_entity_decode($m[1]))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($older, '<dl>'));
+        $this->assertStringContainsString('<p class="prev"><a href="'.e(route('notifications.index')).'">', $older);
+        $this->assertStringNotContainsString('<p class="next">', $older);
+    }
+
+    public function test_a_single_page_draws_no_pager(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $body = (string) $this->actingAs($viewer)->get('/notifications')->assertOk()->getContent();
-
-        $this->assertSame(2, substr_count($body, 'class="pagerRelative"'));
-        $this->assertLessThan(strpos($body, '<dl>'), strpos($body, 'class="pagerRelative"'));
-        $this->assertGreaterThan(strrpos($body, '</dl>'), strrpos($body, 'class="pagerRelative"'));
+        $this->actingAs($viewer)->get('/notifications')->assertOk()->assertSee('<dl>', false)->assertDontSee('class="pagerRelative"', false);
     }
 
     public function test_mark_all_shows_only_while_something_is_unread(): void
