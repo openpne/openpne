@@ -62,6 +62,7 @@ class TimelineController extends Controller
                 'viewerId' => $viewer->getKey(),
                 'posts' => $this->stream($page, $before, $viewer),
                 'streamGeneration' => StreamProps::generation(),
+                'headUrl' => $before === null ? null : route('timeline.index'),
                 'canPost' => TimelinePosting::enabled(),
             ]),
         ]);
@@ -95,6 +96,7 @@ class TimelineController extends Controller
                     'viewerId' => $viewer->getKey(),
                     'posts' => $this->stream($page, $before, $viewer),
                     'streamGeneration' => StreamProps::generation(),
+                    'headUrl' => $before === null ? null : route('timeline.member', ['member' => $owner]),
                 ]);
             },
         ]);
@@ -127,6 +129,7 @@ class TimelineController extends Controller
                 'tag' => $normalized,
                 'posts' => $this->stream($page, $before, $viewer),
                 'streamGeneration' => StreamProps::generation(),
+                'headUrl' => $before === null ? null : route('timeline.tag', ['tag' => $normalized]),
             ]),
         ]);
     }

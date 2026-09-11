@@ -94,7 +94,8 @@ class NotificationFeedListTest extends TestCase
         $row->delete();
 
         $this->actingAs($viewer)->get('/notifications?before='.urlencode($cursor))->assertOk()
-            ->assertSee(__('No notifications yet.'))
+            ->assertSee(__('No older notifications.'))
+            ->assertDontSee(__('No notifications yet.'))
             ->assertSee('<p class="prev"><a href="'.e(route('notifications.index')).'">', false);
     }
 

@@ -288,4 +288,31 @@ class TimelineLoadMoreTest extends TestCase
             ->assertSee('data-timeline-container', false)
             ->assertDontSee('data-timeline-loadmore-box', false);
     }
+
+    public function test_a_cursor_page_with_nothing_older_says_so_rather_than_calling_the_feed_empty(): void
+    {
+        $author = Member::factory()->create();
+        $this->posts($author, 1);
+
+        $this->actingAs($author)->get(route('timeline.index', ['before' => $this->cursorOf('Row 01')]))->assertOk()
+            ->assertSee(__('No older posts.'))
+            ->assertDontSee(__('No %activity% posts to show.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('timeline.index')).'">', false);
+        $this->actingAs($author)->get(route('timeline.member', ['member' => $author, 'before' => $this->cursorOf('Row 01')]))->assertOk()
+            ->assertSee(__('No older posts.'))
+            ->assertDontSee(__('No %activity% posts to show.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('timeline.member', ['member' => $author])).'">', false);
+        // The tag arrives unnormalized; the head link names the normalized form the page is on.
+        $this->actingAs($author)->get(route('timeline.tag', ['tag' => 'ＲＯＷ', 'before' => $this->cursorOf('Row 01')]))->assertOk()
+            ->assertSee(__('No older posts.'))
+            ->assertDontSee(__('No %activity% posts to show.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('timeline.tag', ['tag' => 'row'])).'">', false);
+
+        // The head with no rows at all is the empty feed, with no pager to draw.
+        $other = Member::factory()->create();
+        $this->actingAs($other)->get(route('timeline.member', ['member' => $other]))->assertOk()
+            ->assertSee(__('No %activity% posts to show.'))
+            ->assertDontSee(__('No older posts.'))
+            ->assertDontSee('<p class="prev">', false);
+    }
 }

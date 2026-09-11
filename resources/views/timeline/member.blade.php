@@ -14,7 +14,7 @@
          as OpenPNE 3 had none: posting is the home gadget's box. --}}
     <x-classic.parts :id="'profileTimeline_'.$owner->getKey()" name="profileTimeline" :title="$title">
         @if ($posts->isEmpty())
-            <p>{{ __('No %activity% posts to show.') }}</p>
+            <p>{{ $newerUrl !== null ? __('No older posts.') : __('No %activity% posts to show.') }}</p>
         @else
             {{-- OpenPNE 3's div.timeline > div#timeline-list shell with the load-more control; the
                  server pager beside it is the way on without the script. --}}

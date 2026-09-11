@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary\Modern;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\Stream\StreamCursor;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -143,5 +144,19 @@ class DiaryFeedRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get('/diary/list')
             ->assertInertia(fn ($page) => $page->has('diaries.data', 0));
+    }
+
+    public function test_a_page_reached_by_cursor_names_the_head_and_the_head_names_nothing(): void
+    {
+        $viewer = Member::factory()->create();
+        $entry = Diary::factory()->create(['visibility' => Visibility::Members]);
+        $cursor = (string) StreamCursor::of($entry);
+
+        $this->actingAs($viewer)->get('/diary/list')->assertInertia(fn ($page) => $page->where('headUrl', null));
+        $this->actingAs($viewer)->get('/diary/list?before='.urlencode($cursor))->assertInertia(fn ($page) => $page
+            ->has('diaries.data', 0)
+            ->where('headUrl', route('diary.list')));
+        $this->actingAs($viewer)->get('/diary/listFriend?before='.urlencode($cursor))->assertInertia(fn ($page) => $page
+            ->where('headUrl', route('diary.list_friend')));
     }
 }

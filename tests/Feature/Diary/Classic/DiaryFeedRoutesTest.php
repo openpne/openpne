@@ -264,8 +264,13 @@ class DiaryFeedRoutesTest extends TestCase
         $cursor = (string) StreamCursor::of($entry);
 
         $this->actingAs($viewer)->get(route('diary.list', ['before' => $cursor]))->assertOk()
-            ->assertSee(__('No %diary% entries to show.'))
+            ->assertSee(__('No older %diary% entries.'))
+            ->assertDontSee(__('No %diary% entries to show.'))
             ->assertSee('<p class="prev"><a href="'.e(route('diary.list')).'">', false);
+        $this->actingAs($viewer)->get(route('diary.list_friend', ['before' => $cursor]))->assertOk()
+            ->assertSee(__('No older %diary% entries.'))
+            ->assertDontSee(__('No %diary% entries to show.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('diary.list_friend')).'">', false);
     }
 
     public function test_friend_feed_omits_the_author_thumbnail(): void

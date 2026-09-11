@@ -231,7 +231,7 @@ class DiaryController extends Controller
                 'olderUrl' => $older === null ? null : route($route, ['before' => (string) $older]),
                 'newerUrl' => $before === null ? null : route($route),
             ]),
-            SurfaceResolver::MODERN => function () use ($variant, $searchable, $page, $before) {
+            SurfaceResolver::MODERN => function () use ($variant, $searchable, $page, $before, $route) {
                 $page->rows->loadMissing('images.file');
 
                 return Inertia::render('diary/feed', [
@@ -241,6 +241,7 @@ class DiaryController extends Controller
                     'hasKeyword' => false,
                     'diaries' => StreamProps::scroll($page, fn (Diary $diary): array => DiarySerializer::summary($diary), $before),
                     'streamGeneration' => StreamProps::generation(),
+                    'headUrl' => $before === null ? null : route($route),
                 ]);
             },
         ], bodyIdRoute: $bodyIdRoute);

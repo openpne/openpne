@@ -3,6 +3,7 @@ import { type FormEvent } from 'react';
 import { LoadOlder } from '@/components/load-older';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
+import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -18,11 +19,13 @@ interface FeedProps extends PageProps {
     /** Search is the archive and comes paginated; the feeds are streams and load older rows in place. */
     diaries: PaginatedDiaries | DiaryStream;
     streamGeneration?: string;
+    /** The feeds only; search is the archive and has no head to return to. */
+    headUrl?: string | null;
 }
 
 export default function DiaryFeed() {
     const t = useT();
-    const { variant, searchable, keyword, hasKeyword, diaries, streamGeneration } = usePage<FeedProps>().props;
+    const { variant, searchable, keyword, hasKeyword, diaries, streamGeneration, headUrl } = usePage<FeedProps>().props;
     // The hub header (h1 = nav label, tabs, write action) comes from the frame; the browser Head
     // title keeps the fuller per-view description.
     const headTitle =
@@ -66,9 +69,7 @@ export default function DiaryFeed() {
             )}
 
             {diaries.data.length === 0 ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
-                </Panel>
+                <StreamEmpty headUrl={headUrl} empty={t('No %diary% entries to show.')} older={t('No older %diary% entries.')} />
             ) : 'meta' in diaries ? (
                 <>
                     <Panel flush>
@@ -81,15 +82,18 @@ export default function DiaryFeed() {
                     <Pagination meta={diaries.meta} />
                 </>
             ) : (
-                <LoadOlder data="diaries" generation={streamGeneration ?? ''} end={t('No older %diary% entries.')}>
-                    <Panel flush>
-                        <List>
-                            {diaries.data.map((entry) => (
-                                <DiaryRow key={entry.id} diary={entry} rich />
-                            ))}
-                        </List>
-                    </Panel>
-                </LoadOlder>
+                <>
+                    <StreamHead headUrl={headUrl} />
+                    <LoadOlder data="diaries" generation={streamGeneration ?? ''} end={t('No older %diary% entries.')}>
+                        <Panel flush>
+                            <List>
+                                {diaries.data.map((entry) => (
+                                    <DiaryRow key={entry.id} diary={entry} rich />
+                                ))}
+                            </List>
+                        </Panel>
+                    </LoadOlder>
+                </>
             )}
         </>
     );

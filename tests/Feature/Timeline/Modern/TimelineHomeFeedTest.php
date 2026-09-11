@@ -4,6 +4,7 @@ namespace Tests\Feature\Timeline\Modern;
 
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Stream\StreamCursor;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Inertia;
@@ -92,5 +93,21 @@ class TimelineHomeFeedTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_timeline_sns"', false);
+    }
+
+    public function test_a_page_reached_by_cursor_names_the_head_and_the_head_names_nothing(): void
+    {
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey(), 'visibility' => Visibility::Members]);
+        $cursor = (string) StreamCursor::of($post);
+
+        $this->actingAs($member)->get('/timeline')->assertInertia(fn ($page) => $page->where('headUrl', null));
+        $this->actingAs($member)->get('/timeline?before='.urlencode($cursor))->assertInertia(fn ($page) => $page
+            ->has('posts.data', 0)
+            ->where('headUrl', route('timeline.index')));
+        $this->actingAs($member)->get(route('timeline.member', ['member' => $member, 'before' => $cursor]))->assertInertia(fn ($page) => $page
+            ->where('headUrl', route('timeline.member', ['member' => $member])));
+        $this->actingAs($member)->get(route('timeline.tag', ['tag' => 'ＴＡＧ', 'before' => $cursor]))->assertInertia(fn ($page) => $page
+            ->where('headUrl', route('timeline.tag', ['tag' => 'tag'])));
     }
 }

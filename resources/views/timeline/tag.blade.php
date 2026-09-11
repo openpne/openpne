@@ -22,7 +22,7 @@
             @endif
         </div>
         @if ($posts->isEmpty())
-            <p>{{ __('No %activity% posts to show.') }}</p>
+            <p>{{ $newerUrl !== null ? __('No older posts.') : __('No %activity% posts to show.') }}</p>
         @endif
         <div data-timeline-pager><x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" /></div>
     </x-classic.parts>
