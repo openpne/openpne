@@ -13,8 +13,6 @@ use Tests\TestCase;
  */
 class BoardBumpedAtMigrationTest extends TestCase
 {
-    private const MIGRATION = '2026_09_11_000001_replace_board_activity_key_with_bumped_at';
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,7 +29,10 @@ class BoardBumpedAtMigrationTest extends TestCase
 
     protected function tearDown(): void
     {
-        Artisan::call('migrate:fresh', ['--force' => true]);
+        // A skipped setUp still reaches here; the rebuild is only ever for the SQLite lane.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            Artisan::call('migrate:fresh', ['--force' => true]);
+        }
 
         parent::tearDown();
     }
@@ -67,5 +68,21 @@ class BoardBumpedAtMigrationTest extends TestCase
     private function topic(int $id, string $createdAt): void
     {
         DB::table('group_topics')->insert(['id' => $id, 'group_id' => 1, 'member_id' => 1, 'name' => 'a', 'body' => 'b', 'created_at' => $createdAt, 'updated_at' => $createdAt, 'topic_updated_at' => null]);
+    }
+
+    public function test_a_row_without_created_at_refuses_the_migration_before_any_ddl(): void
+    {
+        $this->topic(1, '2018-01-01 09:00:00');
+        DB::table('group_events')->insert(['id' => 1, 'group_id' => 1, 'member_id' => 1, 'name' => 'e', 'body' => 'b', 'open_date' => '2018-02-01 00:00:00', 'open_date_comment' => '', 'area' => '', 'created_at' => null, 'updated_at' => null, 'event_updated_at' => null]);
+
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            $this->fail('the migration ran with an untimed event');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('group_events: 1 row(s) have no created_at', $e->getMessage());
+        }
+
+        $this->assertFalse(Schema::hasColumn('group_topics', 'bumped_at'));
+        $this->assertTrue(Schema::hasColumn('group_topics', 'topic_updated_at'));
     }
 }

@@ -97,9 +97,10 @@ it: not a name or body edit (that sets `edited_at`, which the detail serializer 
 `editedAt`), not an RSVP, not a link-card sync; an administrator deleting a comment settles it like
 anyone else. `updated_at` is Laravel's and means nothing to the board, which is why
 [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through the query builder: a
-model save, even a quiet one, bumps `updated_at`. The column's `DEFAULT CURRENT_TIMESTAMP` exists
-only so MySQL adds no `ON UPDATE` clause; every write path sets the value, and the default is never
-what a row means.
+model save, even a quiet one, bumps `updated_at`. The column has no default, so a write path that
+forgets it fails rather than storing the engine's clock. Deleting a comment locks its thread first,
+in the order a new comment takes it; a thread deleted meanwhile ends the request with "not found",
+its comments already gone with it.
 
 The lists order by `(bumped_at, id)` ([ordering.md](ordering.md#axes)), on `(group_id, bumped_at)`
 within a group and `(bumped_at, id)` across the site. OpenPNE 3 ordered its board by `updated_at`,

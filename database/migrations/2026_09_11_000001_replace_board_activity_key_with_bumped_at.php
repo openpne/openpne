@@ -41,9 +41,9 @@ return new class extends Migration
 
             // change() rebuilds the table on SQLite, safe only because neither table has a composite primary key or a unique index.
             $sequence = $this->sqliteSequence($table);
-            // The explicit DEFAULT keeps MySQL (explicit_defaults_for_timestamp=OFF) from adding ON UPDATE CURRENT_TIMESTAMP.
+            // No DEFAULT: a write path that forgets bumped_at fails instead of storing the engine's clock.
             Schema::table($table, function (Blueprint $t) {
-                $t->timestamp('bumped_at')->nullable(false)->useCurrent()->change();
+                $t->timestamp('bumped_at')->nullable(false)->change();
             });
             $this->restoreSqliteSequence($table, $sequence);
 
