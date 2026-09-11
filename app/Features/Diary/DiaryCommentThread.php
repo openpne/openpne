@@ -8,7 +8,8 @@ use Illuminate\Support\Collection;
 
 /**
  * OpenPNE 3's `diaryComment` list pager: a page is fetched by `number` in either order and always
- * listed oldest-first (docs/internals/diary.md, "The thread pages by number").
+ * listed oldest-first (docs/internals/diary.md, "The thread pages by number"). Unlike OpenPNE 3, a tie
+ * in `number` breaks by `id` so a migrated duplicate has the same page edge on every engine.
  */
 final class DiaryCommentThread
 {
@@ -34,8 +35,10 @@ final class DiaryCommentThread
         $lastPage = max(1, (int) ceil($total / $size));
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
+        $direction = $ascending ? 'asc' : 'desc';
         $comments = $diary->comments()->with(['member.avatar.file', 'images.file', 'linkCard.image'])
-            ->orderBy('number', $ascending ? 'asc' : 'desc')
+            ->orderBy('number', $direction)
+            ->orderBy('id', $direction)
             ->forPage($page, $size)
             ->get();
 

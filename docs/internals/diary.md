@@ -34,8 +34,11 @@ comment age rather than page index, so they read the same in either order.
 The boards page by `id` instead, and for their own reason
 ([group-boards.md](group-boards.md#comment-threads-page-by-id)) — the two pagers are ports of two
 different OpenPNE 3 configurations, not one shape that drifted. Paging by `number` therefore keeps
-OpenPNE 3's own page boundaries for a diary, at a known cost the boards avoided: a thread whose
-migrated numbers are duplicated has engine-dependent page edges, and no test pins them.
+OpenPNE 3's own page boundaries for a diary, with one deliberate departure: OpenPNE 3's pager
+ordered by `number` alone, so inside a run of duplicated migrated numbers
+([Comment numbering](#comment-numbering)) its page edge fell wherever the engine's scan put it.
+OpenPNE 4 breaks the tie by `id`, so that edge falls at insertion order on every engine. The
+[`read-diary`](mcp.md) MCP tool orders the same thread the same way.
 
 Modern reuses the same pager, as the boards do: both surfaces list a thread identically, and neither
 serializes an unbounded thread in one response. Modern's pager shows no size switch — the board
