@@ -25,7 +25,7 @@
     <x-classic.parts id="notification_feed" name="recentList" :title="__('Notifications')">
         <x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" />
         @if ($feed->isEmpty())
-            <div class="body">{{ __('No notifications yet.') }}</div>
+            <div class="body">{{ $newerUrl !== null ? __('No older notifications.') : __('No notifications yet.') }}</div>
         @else
             @foreach ($feed as $item)
                 <dl>
