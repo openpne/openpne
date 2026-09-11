@@ -69,7 +69,7 @@ function Control({ fetch, loading, hasMore, label, busy, end }: ControlProps) {
                     {loading ? busy : label}
                 </Button>
             ) : (
-                <p ref={endRef} tabIndex={-1} role="status" className="text-sm text-muted-foreground outline-none">
+                <p ref={endRef} tabIndex={-1} role="status" className="text-sm text-muted-foreground">
                     {end}
                 </p>
             )}
