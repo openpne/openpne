@@ -84,6 +84,7 @@ class ProfileOptionsRelationManager extends RelationManager
                     ->after(fn (ProfileOption $record, array $data) => $this->writeLabels($record, $data)),
                 DeleteAction::make(),
             ] : [])
+            ->modelLabel(__('Option'))
             ->emptyStateHeading($editable ? __('No options yet') : __('Options not applicable'))
             ->emptyStateDescription($this->emptyStateDescription($editable))
             ->reorderable('sort_order')
