@@ -97,8 +97,14 @@ Laravel's `constrained()` creates an index on MySQL, where InnoDB requires one f
 and none on SQLite, where a join on the column or a cascade from its parent scans the table. One
 migration adds the missing index to every foreign-key column no index already leads, by
 introspection rather than a driver gate, so MySQL gains no duplicate; an architecture test reads the
-live schema on both engines and fails on any foreign key that no index leads. A new table declares
-`->index()` on its foreign-key columns itself, or the test names the omission.
+live schema and fails on any foreign key that no index leads. It runs on both lanes but only SQLite
+can fail it, since InnoDB indexes every foreign key itself. A new table declares `->index()` on its
+foreign-key columns itself, or the test names the omission.
+
+SQLite plans without statistics, so a single-column index is not always harmless: on a mention table
+a `member_id`-only index wins the correlated `EXISTS` of the room list over the `(post, offset)`
+unique key and scans every mention of the viewer. Those two tables carry `(member_id, post id)`
+instead, which the planner prefers with or without statistics.
 
 ## Guards
 

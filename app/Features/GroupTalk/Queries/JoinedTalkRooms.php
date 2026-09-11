@@ -90,9 +90,9 @@ class JoinedTalkRooms
 
     /**
      * A semi-join rather than a join, and one OR rather than two counts, so a message that both names
-     * the viewer and answers them is one unread message. Both arms are written outwards from
-     * `group_messages` because that direction is indexed on both engines: `group_message_id` leads
-     * the mentions table's unique index, which on SQLite is the only index there.
+     * the viewer and answers them is one unread message. The mentions arm relies on the composite
+     * `(member_id, group_message_id)` index, without which SQLite, having no statistics, scans every
+     * mention of the viewer (docs/internals/ordering.md, "SQLite foreign-key indexes").
      */
     private function unreadMentions(int $viewerId): Builder
     {

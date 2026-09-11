@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Every foreign key's columns lead some index, on whichever engine the test runs
+ * Every foreign key's columns lead some index; only SQLite can fail this, InnoDB indexes its own
  * (docs/internals/ordering.md, "SQLite foreign-key indexes"). RefreshDatabase is required: the SQLite
  * lane is in-memory, and an unmigrated schema has no foreign keys to fail on.
  */
@@ -37,7 +37,7 @@ class ForeignKeyIndexCoverageTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(30, $foreignKeys, 'the schema under test has too few foreign keys to be the migrated one');
+        $this->assertGreaterThan(80, $foreignKeys, 'the schema under test has too few foreign keys to be the migrated one');
         $this->assertSame([], $unindexed);
     }
 }
