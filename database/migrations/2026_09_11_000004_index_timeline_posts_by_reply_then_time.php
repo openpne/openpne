@@ -12,23 +12,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('timeline_posts', function (Blueprint $table) {
-            $table->index(['in_reply_to_id', 'created_at', 'id']);
-            $table->index(['member_id', 'in_reply_to_id', 'created_at']);
-        });
+        // Every step checks the schema first, so an interrupted run resumes where it stopped.
+        foreach ([['in_reply_to_id', 'created_at', 'id'], ['member_id', 'in_reply_to_id', 'created_at']] as $columns) {
+            if (! Schema::hasIndex('timeline_posts', $columns)) {
+                Schema::table('timeline_posts', fn (Blueprint $table) => $table->index($columns));
+            }
+        }
         // By columns, not name: SQLite holds the index the foreign-key migration added, MySQL keeps
         // InnoDB's own until another index backs the key, and both are dead once the composite does.
         foreach (Schema::getIndexes('timeline_posts') as $index) {
-            if ($index['columns'] === ['in_reply_to_id']) {
-                Schema::table('timeline_posts', function (Blueprint $table) use ($index) {
-                    $table->dropIndex($index['name']);
-                });
+            if (in_array($index['columns'], [['in_reply_to_id'], ['created_at', 'id'], ['member_id', 'created_at']], true)) {
+                Schema::table('timeline_posts', fn (Blueprint $table) => $table->dropIndex($index['name']));
             }
         }
-        Schema::table('timeline_posts', function (Blueprint $table) {
-            $table->dropIndex(['created_at', 'id']);
-            $table->dropIndex(['member_id', 'created_at']);
-        });
     }
 
     public function down(): void
