@@ -3,6 +3,7 @@
 namespace Tests\Feature\Architecture;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -20,7 +21,9 @@ class ForeignKeyIndexCoverageTest extends TestCase
         $unindexed = [];
         $foreignKeys = 0;
 
-        foreach (Schema::getTables() as $table) {
+        // MySQL's getTables() spans every user schema on the server; only the connected one is the subject.
+        $schema = DB::connection()->getDriverName() === 'mysql' ? DB::connection()->getDatabaseName() : null;
+        foreach (Schema::getTables($schema) as $table) {
             $name = $table['name'];
             $indexes = array_map(fn (array $index) => $index['columns'], Schema::getIndexes($name));
 

@@ -61,6 +61,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // The default index name is the mark of an index this migration created; InnoDB's are *_foreign.
         foreach (self::COLUMNS as [$table, $column]) {
             if (Schema::hasIndex($table, "{$table}_{$column}_index")) {
                 Schema::table($table, function (Blueprint $t) use ($column) {

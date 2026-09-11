@@ -3,7 +3,8 @@
 OpenPNE 4 runs on either MySQL or SQLite. A fresh install starts on SQLite because it needs no server
 to set up; [the OpenPNE 3 upgrade](upgrading-from-openpne3.md) requires MySQL. `openpne:copy-database`
 moves an existing site's data from one to the other, in either direction. Both engines carry the same
-indexes, foreign-key columns included, so a copied site pages and joins as the original did.
+indexes, foreign-key columns included, so a query that read an index on one engine reads one on the
+other; what the engines sort and match differently is described below.
 
 Converting a site that already serves people is not a step anyone has to take, and it is not part of
 any upgrade. It changes what those people see — searching and sorting behave differently on each
