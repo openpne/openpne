@@ -225,6 +225,33 @@ class DiaryToolsTest extends McpTestCase
                 ->etc());
     }
 
+    /** The body order alone holds without the id clause on both engines; the SQL pin is the assertion with teeth. */
+    public function test_a_duplicated_number_comes_back_in_insertion_order(): void
+    {
+        $diary = $this->diary(Member::factory()->create());
+        DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1, 'body' => 'earlier']);
+        DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1, 'body' => 'later']);
+        $this->acting(Member::factory()->create());
+
+        DB::enableQueryLog();
+        try {
+            OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $diary->getKey()])
+                ->assertOk()
+                ->assertStructuredContent(fn ($json) => $json
+                    ->where('diary.comments.0.body', 'earlier')
+                    ->where('diary.comments.1.body', 'later')
+                    ->etc());
+            $orders = collect(DB::getQueryLog())->pluck('query')
+                ->filter(fn (string $sql) => preg_match('/from [`"]diary_comments[`"].* order by/', $sql) === 1)
+                ->map(fn (string $sql) => preg_replace('/[`"]/', '', substr($sql, strpos($sql, 'order by'))))
+                ->values()->all();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertSame(['order by number asc, id asc'], $orders);
+    }
+
     public function test_a_body_arrives_flattened_whatever_it_is_stored_as(): void
     {
         $author = Member::factory()->create();
