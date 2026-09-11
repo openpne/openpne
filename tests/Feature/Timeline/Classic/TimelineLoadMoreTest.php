@@ -213,6 +213,11 @@ class TimelineLoadMoreTest extends TestCase
         $this->actingAs($author)->get("/member/{$author->getKey()}/timeline?page=3")->assertRedirect("/member/{$author->getKey()}/timeline");
         $this->actingAs($author)->get('/timeline/tag/tag?page=2')->assertRedirect('/timeline/tag/tag');
         $this->actingAs($author)->get('/timeline?page=1')->assertOk();
+
+        // A blocked viewer sees the uniform 404 before the redirect could confirm the member exists.
+        $blocked = Member::factory()->create();
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
+        $this->actingAs($blocked)->get("/member/{$author->getKey()}/timeline?page=3")->assertNotFound();
     }
 
     public function test_a_gadget_offers_more_only_past_its_limit(): void

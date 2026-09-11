@@ -68,11 +68,12 @@ class TimelineController extends Controller
 
     public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
     {
+        $viewer = $this->viewer();
+        // The subject first: a blocked viewer gets the uniform 404 before any redirect could say the member exists.
+        $owner = $this->memberSubject($member);
         if ($redirect = StreamRequest::legacyPageRedirect($request)) {
             return $redirect;
         }
-        $viewer = $this->viewer();
-        $owner = $this->memberSubject($member);
         $before = StreamRequest::before($request);
         $page = $query($viewer, $owner, $before);
 
