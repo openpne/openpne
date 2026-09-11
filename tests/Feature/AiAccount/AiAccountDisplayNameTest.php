@@ -12,9 +12,8 @@ use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
+use App\Support\Stream\StreamQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Testing\AssertableInertia;
 use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
@@ -112,8 +111,7 @@ class AiAccountDisplayNameTest extends TestCase
         $reader = Member::factory()->create();
         $this->deliver($aiAccount, $reader);
 
-        $rows = $reader->notifications()->paginate();
-        $feed = NotificationFeedSerializer::paginator($rows);
+        $feed = NotificationFeedSerializer::stream(StreamQuery::older($reader->notifications(), null, 30), null)();
 
         $this->assertSame(__(':name sent you a message.', ['name' => __(':name (AI)', ['name' => 'Shirabe'])]), $feed['data'][0]['label']);
         $this->assertSame('Shirabe', $feed['data'][0]['actor']['name']);
@@ -138,9 +136,7 @@ class AiAccountDisplayNameTest extends TestCase
         $this->deliver($sender, $reader);
         $sender->delete();
 
-        /** @var LengthAwarePaginator<int, DatabaseNotification> $rows */
-        $rows = $reader->notifications()->paginate();
-        $feed = NotificationFeedSerializer::paginator($rows);
+        $feed = NotificationFeedSerializer::stream(StreamQuery::older($reader->notifications(), null, 30), null)();
 
         $this->assertSame(__(':name sent you a message.', ['name' => __('Withdrawn member')]), $feed['data'][0]['label']);
         $this->assertNull($feed['data'][0]['actor']);
