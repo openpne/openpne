@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    /** @var list<array{string, list<string>}> every single-column foreign key no index led when this ran */
+    /** @var list<array{string, list<string>}> table and index columns; the first column is a foreign key no index led when this ran */
     private const COLUMNS = [
         ['banner_images', ['file_id']],
         ['banner_use_images', ['banner_image_id']],

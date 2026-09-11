@@ -40,4 +40,15 @@ class ForeignKeyIndexCoverageTest extends TestCase
         $this->assertGreaterThan(80, $foreignKeys, 'the schema under test has too few foreign keys to be the migrated one');
         $this->assertSame([], $unindexed);
     }
+
+    public function test_mention_tables_index_member_id_with_the_post_on_sqlite(): void
+    {
+        $sqlite = DB::connection()->getDriverName() === 'sqlite';
+
+        foreach (['group_message_mentions' => 'group_message_id', 'timeline_post_mentions' => 'timeline_post_id'] as $table => $post) {
+            $columns = array_map(fn (array $index) => $index['columns'], Schema::getIndexes($table));
+
+            $this->assertContains($sqlite ? ['member_id', $post] : ['member_id'], $columns, $table);
+        }
+    }
 }
