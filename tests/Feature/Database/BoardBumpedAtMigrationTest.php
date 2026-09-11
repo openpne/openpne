@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Schema;
+namespace Tests\Feature\Database;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
