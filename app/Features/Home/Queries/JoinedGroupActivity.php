@@ -35,7 +35,8 @@ class JoinedGroupActivity
         // id, and a keyed merge would silently collapse them into one row.
         return $topics->toBase()
             ->concat($events)
-            ->sortByDesc(fn (GroupTopic|GroupEvent $row): array => [$row->bumped_at->getTimestamp(), $row->getKey()])
+            // The arm is part of the key: a topic and an event can share an id, and topics lead a tie.
+            ->sortByDesc(fn (GroupTopic|GroupEvent $row): array => [$row->bumped_at->getTimestamp(), $row instanceof GroupTopic ? 1 : 0, $row->getKey()])
             ->take($limit)
             ->values();
     }

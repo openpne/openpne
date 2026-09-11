@@ -32,7 +32,9 @@ class DeleteTopicComment
         DB::transaction(function () use ($comment): void {
             $thread = $comment->topic()->lockForUpdate()->first();
             $comment->delete();
-            BoardBumpedAt::settle($thread);
+            if ($thread !== null) {
+                BoardBumpedAt::settle($thread);
+            }
         });
 
         foreach ($files as $file) {

@@ -93,7 +93,7 @@ A thread's `bumped_at` always equals `COALESCE(MAX(comments.created_at), created
 creation, a comment lifts it, and deleting a comment settles it back to the last surviving one — a
 departure from OpenPNE 3, which left the stamp where the deleted comment put it. Nothing else moves
 it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as `editedAt`),
-not an RSVP, not a link-card sync, not an admin action. `updated_at` is Laravel's and means nothing to
+not an RSVP, not a link-card sync; an administrator deleting a comment settles it like anyone else. `updated_at` is Laravel's and means nothing to
 the board, which is why [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through
 the query builder: a model save, even a quiet one, bumps `updated_at`.
 

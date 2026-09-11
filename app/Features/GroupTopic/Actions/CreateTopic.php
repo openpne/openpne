@@ -31,14 +31,13 @@ class CreateTopic
         $topic = $this->images->attach(
             'groupTopic',
             $images,
-            persist: fn (): GroupTopic => $group->topics()->create([
+            // One instant for created_at and bumped_at: created_at is not fillable, so it is forced.
+            persist: fn (): GroupTopic => tap($group->topics()->make([
                 'member_id' => $author->getKey(),
                 'name' => $data->name,
                 'body' => $data->body,
-                'created_at' => $now = now(),
-                'bumped_at' => $now,
                 'format' => $data->format ?? BodyFormat::Plain,
-            ]),
+            ])->forceFill(['created_at' => $now = now(), 'bumped_at' => $now]))->save(),
             relation: fn (GroupTopic $topic) => $topic->images(),
         );
 

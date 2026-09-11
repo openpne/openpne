@@ -65,8 +65,9 @@ class JoinedGroupActivityTest extends TestCase
         $group = $this->joinedGroup($viewer);
         $at = now();
 
-        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => $at]);
-        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => $at]);
+        // The event's id is the larger, so only the arm can put the topic first.
+        GroupTopic::factory()->create(['id' => 3, 'group_id' => $group->getKey(), 'bumped_at' => $at]);
+        GroupEvent::factory()->create(['id' => 7, 'group_id' => $group->getKey(), 'bumped_at' => $at]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 

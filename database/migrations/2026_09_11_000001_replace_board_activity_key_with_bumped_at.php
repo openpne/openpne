@@ -40,9 +40,11 @@ return new class extends Migration
             DB::update("UPDATE {$table} SET bumped_at = COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)");
 
             // change() rebuilds the table on SQLite, safe only because neither table has a composite primary key or a unique index.
+            $sequence = $this->sqliteSequence($table);
             Schema::table($table, function (Blueprint $t) {
                 $t->timestamp('bumped_at')->nullable(false)->change();
             });
+            $this->restoreSqliteSequence($table, $sequence);
 
             // Add before drop: InnoDB backs the group_id foreign key with whichever of these indexes exists (errno 1553).
             Schema::table($table, function (Blueprint $t) use ($table) {
@@ -62,6 +64,26 @@ return new class extends Migration
                 }
             });
         }
+    }
+
+    /** The rebuild drops the table, and with it the AUTOINCREMENT high-water mark; a deleted id must not come back. */
+    private function sqliteSequence(string $table): ?int
+    {
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            return null;
+        }
+        $seq = DB::table('sqlite_sequence')->where('name', $table)->value('seq');
+
+        return $seq === null ? null : (int) $seq;
+    }
+
+    private function restoreSqliteSequence(string $table, ?int $sequence): void
+    {
+        if ($sequence === null) {
+            return;
+        }
+        DB::table('sqlite_sequence')->where('name', $table)->delete();
+        DB::table('sqlite_sequence')->insert(['name' => $table, 'seq' => $sequence]);
     }
 
     public function down(): void

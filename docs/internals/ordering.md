@@ -81,6 +81,7 @@ index is adopted by design and is replaced by creating the new one before droppi
 | `timeline_posts` | `(created_at, id)` — home, all-member and tag feeds | `(member_id, created_at)` — a member's timeline |
 | `members` | `(created_at, id)` — the member list without a name filter, newcomers | — |
 | `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
+| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent boards | `(group_id, bumped_at)` — a group's board |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |

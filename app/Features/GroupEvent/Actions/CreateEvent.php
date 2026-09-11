@@ -31,7 +31,8 @@ class CreateEvent
         $event = $this->images->attach(
             'groupEvent',
             $images,
-            persist: fn (): GroupEvent => $group->events()->create([
+            // One instant for created_at and bumped_at: created_at is not fillable, so it is forced.
+            persist: fn (): GroupEvent => tap($group->events()->make([
                 'member_id' => $author->getKey(),
                 'name' => $data->name,
                 'body' => $data->body,
@@ -40,10 +41,8 @@ class CreateEvent
                 'area' => $data->area,
                 'application_deadline' => $data->application_deadline,
                 'capacity' => $data->capacity,
-                'created_at' => $now = now(),
-                'bumped_at' => $now,
                 'format' => $data->format ?? BodyFormat::Plain,
-            ]),
+            ])->forceFill(['created_at' => $now = now(), 'bumped_at' => $now]))->save(),
             relation: fn (GroupEvent $event) => $event->images(),
         );
 
