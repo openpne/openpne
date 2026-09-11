@@ -60,6 +60,8 @@ class DiaryFeedRoutesTest extends TestCase
         // A stream: the older cursor travels in the scroll metadata and a full render carries a generation.
         $this->assertSame('before', $response->viewData('page')['scrollProps']['diaries']['pageName']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $response->viewData('page')['props']['streamGeneration']);
+        // Two full renders, two generations: the recent and friend feeds share one component, so a tab switch must remount the list.
+        $this->assertNotSame($response->viewData('page')['props']['streamGeneration'], $this->actingAs($viewer)->get('/diary/listFriend')->viewData('page')['props']['streamGeneration']);
     }
 
     public function test_the_recent_feed_pages_by_cursor_and_a_legacy_page_is_sent_to_the_head(): void

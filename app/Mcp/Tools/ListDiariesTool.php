@@ -25,7 +25,7 @@ class ListDiariesTool extends DiaryTool
 {
     public function handle(Request $request, ListRecentDiaries $recent): ResponseFactory|Response
     {
-        $validated = $request->validate(['before' => ['sometimes', 'string']]);
+        $validated = $request->validate(['before' => ['sometimes', 'nullable', 'string']]);
 
         $before = null;
         if (isset($validated['before'])) {

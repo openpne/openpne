@@ -87,6 +87,17 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('name="keyword"', false);
     }
 
+    public function test_a_keyword_search_keeps_the_counted_pager(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->count(25)->create(['visibility' => Visibility::Members, 'title' => 'needle']);
+
+        $response = $this->actingAs($viewer)->get('/diary/search?keyword=needle')->assertOk();
+
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+        $response->assertSee('/diary/search?keyword=needle&amp;page=2', false)->assertSee('1 - 20');
+    }
+
     public function test_empty_search_pages_through_the_list_url(): void
     {
         $viewer = Member::factory()->create();
