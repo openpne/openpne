@@ -121,7 +121,7 @@ class ShowDirectMessage
     {
         $ranked = DB::query()
             ->fromSub($this->boxRows($viewer, $box), 'b')
-            ->selectRaw('b.*, row_number() over (partition by b.id order by b.sort_at desc, b.role desc, b.row_id desc) as place');
+            ->selectRaw('b.*, row_number() over (partition by b.id order by b.sort_at desc, b.row_id desc) as place');
 
         return DB::query()->fromSub($ranked, 'ranked')->where('place', 1);
     }
