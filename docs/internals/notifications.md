@@ -18,14 +18,15 @@ document covers the delivery model around it.
    Classic home cautions. The notice panel reads layer 1 alone: "needs action" items only, so the
    layer-3 unread-row count stays with the bell — a panel row would restate that badge without
    adding anything. The Classic header's notification center reads layer 3 alone (below).
-3. **Per-event records** — one row per event in the standard Laravel `notifications` table
-   (the `database` channel of each notification class), carrying a `kind` discriminator plus
-   entity ids. Read state is the row's own `read_at`. Read by the feed
-   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
-   rows are hydrated at render time from their ids (a withdrawn actor degrades to
-   a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing. Reading what a row points at marks it read too: the feed is an inbox, so a
-   row is spent by the thing it announces.
+3. **Per-event records** — one row per event in the standard Laravel `notifications` table (the
+   `database` channel of each notification class), carrying a `kind` discriminator plus entity ids.
+   Read state is the row's own `read_at`. Read by the feed
+   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`): rows are
+   hydrated at render time from their ids (a withdrawn actor degrades to a fallback label), opening
+   a row marks it read and redirects to its target, and viewing the feed marks nothing. The feed is
+   a stream, paged by keyset on `(created_at, id)` with the row's UUID as the tiebreak
+   ([ordering.md](ordering.md#keyset-and-offset)). Reading what a row points at marks it read too:
+   the feed is an inbox, so a row is spent by the thing it announces.
    [`NotificationTarget`](../../app/Features/Notifications/NotificationTarget.php) is the per-kind
    table of what that is, and
    [`ConsumeNotificationRows`](../../app/Features/Notifications/ConsumeNotificationRows.php) the
@@ -35,19 +36,20 @@ document covers the delivery model around it.
    that no prefetch can spend them. What a prefetch spends here is a bell number: the domain state
    the row is about is untouched. A row that is no longer there — the talk broadcast replaces a
    room's row with each message — returns to the feed rather than erroring; only a row that exists
-   but belongs to a switched-off unit is refused.
-   **Returning to the feed re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
-   popstate, the whole document from the back/forward cache — which is the state before the row the
-   member just opened was marked read. Modern re-reads every restored page, this one included
+   but belongs to a switched-off unit is refused. **Returning to the feed re-reads it**: a restore
+   hands back the page as it was left — Inertia's stored page state on a popstate, the whole
+   document from the back/forward cache — which is the state before the row the member just opened
+   was marked read. Modern re-reads every restored page, this one included, so pages loaded below
+   the head fold back to the first thirty
    ([`revalidate-on-restore.ts`](../../resources/js/lib/revalidate-on-restore.ts)); on Classic —
    full documents, where revalidating means a whole re-request — only this screen reloads
    ([`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js)); every other
-   Classic page keeps its restored document and has its header ask `GET /notifications/center/counts`
-   for the badges again ([`classic-notification-center.js`](../../public/js/classic-notification-center.js)),
-   with the panel fetching its rows afresh when next opened. Modern reports the
-   unread-row count (via `UnreadCounts`, alongside the layer-1 numbers) in the nav badge and the
-   phone bottom bar's notifications tab. Both read the shared `unread` prop, so they cannot
-   disagree.
+   Classic page keeps its restored document and has its header ask `GET
+   /notifications/center/counts` for the badges again
+   ([`classic-notification-center.js`](../../public/js/classic-notification-center.js)), with the
+   panel fetching its rows afresh when next opened. Modern reports the unread-row count (via
+   `UnreadCounts`, alongside the layer-1 numbers) in the nav badge and the phone bottom bar's
+   notifications tab. Both read the shared `unread` prop, so they cannot disagree.
 
    Both surfaces serve it. A row's sentence is
    [`NotificationKindLabel`](../../app/Features/Notifications/NotificationKindLabel.php)'s, so

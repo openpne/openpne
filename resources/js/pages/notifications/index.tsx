@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Settings } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
-import { Pagination, type PaginationMeta } from '@/components/pagination';
+import { LoadOlder } from '@/components/load-older';
 import { PushPrompt } from '@/components/push-prompt';
 import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
@@ -32,14 +32,15 @@ interface FeedItem {
 }
 
 interface FeedProps extends PageProps {
-    feed: { data: FeedItem[]; meta: PaginationMeta };
+    feed: { data: FeedItem[] };
+    streamGeneration: string;
 }
 
 /** Opening a row marks it read, and so does reaching that target any other way
  *  (docs/internals/notifications.md, "The three layers"); the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
-    const { feed, unread } = usePage<FeedProps>().props;
+    const { feed, unread, streamGeneration } = usePage<FeedProps>().props;
     const title = t('Notifications');
 
     // Nothing re-reads the feed here: the app-wide revalidation on a restore does it
@@ -79,40 +80,41 @@ export default function NotificationsIndex() {
                     <p className="text-sm text-muted-foreground">{t('No notifications yet.')}</p>
                 </Panel>
             ) : (
-                <Panel flush>
-                    <List>
-                        {feed.data.map((item) => (
-                            <li key={item.id}>
-                                <Link
-                                    method="post"
-                                    as="button"
-                                    href={`/notifications/${item.id}/open`}
-                                    className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-foreground sm:px-5 transition-colors hover:bg-muted/40 active:bg-muted/60"
-                                >
-                                    <Avatar
-                                        id={item.actor?.id ?? 0}
-                                        name={item.actor?.name ?? t('Withdrawn member')}
-                                        src={item.actor?.imageUrl ?? null}
-                                        color={item.actor?.avatarColor ?? null}
-                                        isAi={item.actor?.isAi ?? false}
-                                        size="md"
-                                        decorative
-                                    />
-                                    <span className="min-w-0 flex-1">
-                                        <span className={cn('block text-sm', unreadTextClass(!item.read))}>
-                                            {!item.read && <UnreadLabel />}
-                                            {item.label}
+                <LoadOlder data="feed" generation={streamGeneration} end={t('No older notifications.')}>
+                    <Panel flush>
+                        <List>
+                            {feed.data.map((item) => (
+                                <li key={item.id}>
+                                    <Link
+                                        method="post"
+                                        as="button"
+                                        href={`/notifications/${item.id}/open`}
+                                        className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-foreground sm:px-5 transition-colors hover:bg-muted/40 active:bg-muted/60"
+                                    >
+                                        <Avatar
+                                            id={item.actor?.id ?? 0}
+                                            name={item.actor?.name ?? t('Withdrawn member')}
+                                            src={item.actor?.imageUrl ?? null}
+                                            color={item.actor?.avatarColor ?? null}
+                                            isAi={item.actor?.isAi ?? false}
+                                            size="md"
+                                            decorative
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className={cn('block text-sm', unreadTextClass(!item.read))}>
+                                                {!item.read && <UnreadLabel />}
+                                                {item.label}
+                                            </span>
+                                            <Timestamp at={item.createdAt} preset="relative" className="block text-xs text-muted-foreground" />
                                         </span>
-                                        <Timestamp at={item.createdAt} preset="relative" className="block text-xs text-muted-foreground" />
-                                    </span>
-                                    {!item.read && <UnreadDot />}
-                                </Link>
-                            </li>
-                        ))}
-                    </List>
-                </Panel>
+                                        {!item.read && <UnreadDot />}
+                                    </Link>
+                                </li>
+                            ))}
+                        </List>
+                    </Panel>
+                </LoadOlder>
             )}
-            {feed.data.length > 0 && <Pagination meta={feed.meta} />}
         </>
     );
 }

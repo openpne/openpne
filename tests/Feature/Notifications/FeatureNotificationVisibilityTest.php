@@ -74,13 +74,13 @@ class FeatureNotificationVisibilityTest extends TestCase
         $friendRow = $this->seedFriendRow($viewer, $actor);
 
         $this->actingOnModern($viewer)->get('/notifications')
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.meta.total', 2));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('feed.data', 2));
 
         $this->switchMessages(false);
 
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('feed.meta.total', 1)
+                ->has('feed.data', 1)
                 ->where('feed.data.0.id', $friendRow->getKey()),
             );
     }
@@ -113,7 +113,7 @@ class FeatureNotificationVisibilityTest extends TestCase
 
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('feed.meta.total', 2)
+                ->has('feed.data', 2)
                 ->where('feed.data.0.id', $visible->getKey())
                 ->where('feed.data.0.read', true)
                 ->where('feed.data.1.id', $hidden->getKey())
