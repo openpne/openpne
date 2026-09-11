@@ -87,6 +87,17 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('name="keyword"', false);
     }
 
+    public function test_a_keyword_search_keeps_the_counted_pager(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->count(25)->create(['visibility' => Visibility::Members, 'title' => 'needle']);
+
+        $response = $this->actingAs($viewer)->get('/diary/search?keyword=needle')->assertOk();
+
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+        $response->assertSee('/diary/search?keyword=needle&amp;page=2', false)->assertSee('1 - 20');
+    }
+
     public function test_empty_search_pages_through_the_list_url(): void
     {
         $viewer = Member::factory()->create();
@@ -96,8 +107,8 @@ class DiarySearchRoutesTest extends TestCase
 
         $response->assertOk();
         // OpenPNE 3's forward-to-list pager targets @diary_list, not /diary/search.
-        $response->assertSee('/diary/list?page=2');
-        $response->assertDontSee('/diary/search?page=2');
+        $response->assertSee('/diary/list?before=');
+        $response->assertDontSee('/diary/search?before=');
     }
 
     public function test_a_search_with_no_match_names_the_keyword_in_the_diary_list_box(): void

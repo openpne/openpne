@@ -73,6 +73,11 @@ export interface DiaryThread {
     newerPage: number | null;
 }
 
+/** The rows of one feed page; the older cursor travels in Inertia's scroll metadata, not here. */
+export interface DiaryStream {
+    data: DiarySummary[];
+}
+
 export interface PaginatedDiaries {
     data: DiarySummary[];
     meta: {

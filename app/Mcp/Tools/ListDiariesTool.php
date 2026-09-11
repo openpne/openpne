@@ -6,6 +6,7 @@ namespace App\Mcp\Tools;
 
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Serializers\McpDiarySerializer;
+use App\Support\Stream\StreamCursor;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -22,18 +23,20 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class ListDiariesTool extends DiaryTool
 {
-    public function handle(Request $request, ListRecentDiaries $recent): ResponseFactory
+    public function handle(Request $request, ListRecentDiaries $recent): ResponseFactory|Response
     {
-        $validated = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
+        $validated = $request->validate(['before' => ['sometimes', 'nullable', 'string']]);
 
-        // There is no URL here, so the query's own page resolver would answer page one every time.
-        $page = $recent(
-            $this->member($request),
-            ListRecentDiaries::PER_PAGE,
-            (int) ($validated['page'] ?? 1),
-        );
+        $before = null;
+        if (isset($validated['before'])) {
+            // A cursor that cannot name a diary is refused rather than read as the head, which would hand the same page out forever.
+            $before = StreamCursor::tryParse($validated['before']);
+            if ($before === null || ! is_int($before->id)) {
+                return $this->refused();
+            }
+        }
 
-        return Response::structured(McpDiarySerializer::diaries($page));
+        return Response::structured(McpDiarySerializer::diaries($recent($this->member($request), $before)));
     }
 
     /**
@@ -42,8 +45,8 @@ class ListDiariesTool extends DiaryTool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'page' => $schema->integer()->min(1)->default(1)
-                ->description('Which page of diaries to return, '.ListRecentDiaries::PER_PAGE.' to a page.'),
+            'before' => $schema->string()
+                ->description('The olderCursor of an earlier answer, to read the '.ListRecentDiaries::PER_PAGE.' diaries before it; omit for the newest.'),
         ];
     }
 }

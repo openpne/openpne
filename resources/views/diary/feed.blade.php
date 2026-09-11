@@ -26,13 +26,17 @@
         {{-- OpenPNE 3 listSuccess.php swaps the result list for a plain box once the pager is empty. --}}
         <x-classic.parts id="diaryList" name="box" :title="$title">
             <div class="body">{{ $variant === 'search' && $hasKeyword ? __('Your search ":keyword" did not match any %diaries%.', ['keyword' => $keyword]) : __('No %diary% entries to show.') }}</div>
+            {{-- A cursor whose rows are gone since still needs its way back to the head. --}}
+            @unless ($diaries instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator)
+                <x-classic.stream-pager :older-url="null" :newer-url="$newerUrl" />
+            @endunless
         </x-classic.parts>
     @elseif ($variant === 'friends')
         {{-- listFriendSuccess.php renders the recentList skin: one dl per entry, datetime in the dt
              and op_diary_link_to_show in the dd. Neither the author photo nor the body excerpt the
              all-member feed carries appears here. --}}
         <x-classic.parts id="diary_feed" name="recentList" :title="$title">
-            <x-classic.pager :paginator="$diaries" />
+            @include('diary._feed-pager')
             @foreach ($diaries as $entry)
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
@@ -40,7 +44,7 @@
                     <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->images_count" /></dd>
                 </dl>
             @endforeach
-            <x-classic.pager :paginator="$diaries" />
+            @include('diary._feed-pager')
         </x-classic.parts>
     @else
         {{-- listSuccess.php renders the searchResultList skin but hand-writes the band rather than
@@ -50,7 +54,7 @@
              differences into <x-classic.search-result-list> would parameterise the shared partial for
              a single caller. --}}
         <x-classic.parts id="diary_feed" name="searchResultList" :title="$title">
-            <x-classic.pager :paginator="$diaries" />
+            @include('diary._feed-pager')
             <div class="block">
                 @foreach ($diaries as $entry)
                     @php($url = route('diary.show', $entry))
@@ -73,7 +77,7 @@
                     </tbody></table></div></div>
                 @endforeach
             </div>
-            <x-classic.pager :paginator="$diaries" />
+            @include('diary._feed-pager')
         </x-classic.parts>
     @endif
 @endsection
