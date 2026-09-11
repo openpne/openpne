@@ -8,11 +8,13 @@ interface LoadOlderProps {
     data: string;
     /** Refreshed by every full render of the page and by nothing else, so a replaced list starts over. */
     generation: string;
+    /** What the end of the stream says; the default names posts. */
+    end?: string;
     children: ReactNode;
 }
 
 // Older rows only and only on request; the URL stays the head, so a reload or a share starts there.
-export function LoadOlder({ data, generation, children }: LoadOlderProps) {
+export function LoadOlder({ data, generation, end, children }: LoadOlderProps) {
     const t = useT();
 
     return (
@@ -22,7 +24,7 @@ export function LoadOlder({ data, generation, children }: LoadOlderProps) {
             manual
             onlyNext
             preserveUrl
-            next={({ fetch, loading, hasMore }) => <Control fetch={fetch} loading={loading} hasMore={hasMore} label={t('Load more')} busy={t('Loading…')} end={t('No older posts.')} />}
+            next={({ fetch, loading, hasMore }) => <Control fetch={fetch} loading={loading} hasMore={hasMore} label={t('Load more')} busy={t('Loading…')} end={end ?? t('No older posts.')} />}
         >
             {children}
         </InfiniteScroll>

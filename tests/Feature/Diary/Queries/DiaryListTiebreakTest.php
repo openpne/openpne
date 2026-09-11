@@ -9,6 +9,7 @@ use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Stream\StreamCursor;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\Paginator;
@@ -65,19 +66,29 @@ class DiaryListTiebreakTest extends TestCase
 
     public function test_two_pages_of_one_second_split_at_id_with_no_row_repeated_or_lost(): void
     {
-        $lists = [
-            'recent feed' => [fn () => (new ListRecentDiaries)($this->viewer, 20), $this->ids, 20],
-            'friend feed' => [fn () => (new ListFriendDiaries)($this->viewer, 20), $this->ids, 20],
+        $archives = [
             'search' => [fn () => (new SearchDiaries)($this->viewer, 'same', 20), $this->ids, 20],
             'archive' => [fn () => (new ListDiaries)($this->viewer, $this->owner, 10), $this->ownerIds, 10],
         ];
+        $streams = [
+            'recent feed' => fn (?StreamCursor $before) => (new ListRecentDiaries)($this->viewer, $before, 20),
+            'friend feed' => fn (?StreamCursor $before) => (new ListFriendDiaries)($this->viewer, $before, 20),
+        ];
 
-        foreach ($lists as $name => [$list, $expected, $size]) {
+        foreach ($archives as $name => [$list, $expected, $size]) {
             $first = collect($this->onPage(1, $list)->items())->map->getKey()->all();
             $second = collect($this->onPage(2, $list)->items())->map->getKey()->all();
 
             $this->assertSame(array_slice($expected, 0, $size), $first, $name);
             $this->assertSame(array_slice($expected, $size, $size), $second, $name);
+        }
+        foreach ($streams as $name => $list) {
+            $head = $list(null);
+            $next = $list(StreamCursor::tryParse((string) $head->olderCursor()));
+
+            $this->assertSame(array_slice($this->ids, 0, 20), $head->rows->modelKeys(), $name);
+            $this->assertSame(array_slice($this->ids, 20, 20), $next->rows->modelKeys(), $name);
+            $this->assertFalse($next->hasOlder, $name);
         }
     }
 
@@ -111,7 +122,8 @@ class DiaryListTiebreakTest extends TestCase
         }
 
         $this->assertCount(7, $orders);
-        $this->assertSame(['order by created_at desc, id desc'], array_values(array_unique($orders)));
+        // The streams qualify the tuple (StreamQuery does), the archives name it bare; both are the same order.
+        $this->assertEqualsCanonicalizing(['order by created_at desc, id desc', 'order by diaries.created_at desc, diaries.id desc'], array_values(array_unique($orders)));
     }
 
     private function onPage(int $page, callable $run): mixed

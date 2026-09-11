@@ -47,14 +47,39 @@ class DiaryFeedRoutesTest extends TestCase
             'visibility' => Visibility::Members,
         ]);
 
-        $this->actingAs($viewer)->get('/diary/list')
-            ->assertInertia(fn ($page) => $page
-                ->component('diary/feed')
-                ->where('variant', 'recent')
-                ->has('diaries.data', 1)
-                ->where('diaries.data.0.title', 'Hello world')
-                ->where('diaries.data.0.author.name', 'Author')
-            );
+        $response = $this->actingAs($viewer)->get('/diary/list');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('diary/feed')
+            ->where('variant', 'recent')
+            ->has('diaries.data', 1)
+            ->missing('diaries.meta')
+            ->where('diaries.data.0.title', 'Hello world')
+            ->where('diaries.data.0.author.name', 'Author')
+        );
+        // A stream: the older cursor travels in the scroll metadata and a full render carries a generation.
+        $this->assertSame('before', $response->viewData('page')['scrollProps']['diaries']['pageName']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $response->viewData('page')['props']['streamGeneration']);
+        // Two full renders, two generations: the recent and friend feeds share one component, so a tab switch must remount the list.
+        $this->assertNotSame($response->viewData('page')['props']['streamGeneration'], $this->actingAs($viewer)->get('/diary/listFriend')->viewData('page')['props']['streamGeneration']);
+        $this->assertNotSame($response->viewData('page')['props']['streamGeneration'], $this->actingAs($viewer)->get('/diary/list')->viewData('page')['props']['streamGeneration']);
+    }
+
+    public function test_the_recent_feed_pages_by_cursor_and_a_legacy_page_is_sent_to_the_head(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->count(21)->create(['visibility' => Visibility::Members]);
+
+        $head = $this->actingAs($viewer)->get('/diary/list')->viewData('page');
+        $cursor = $head['scrollProps']['diaries']['nextPage'];
+        $next = $this->actingAs($viewer)->get('/diary/list?before='.urlencode($cursor))->viewData('page');
+
+        $this->assertCount(20, $head['props']['diaries']['data']);
+        $this->assertCount(1, $next['props']['diaries']['data']);
+        $this->assertNull($next['scrollProps']['diaries']['nextPage']);
+        $this->assertSame([], array_intersect(array_column($head['props']['diaries']['data'], 'id'), array_column($next['props']['diaries']['data'], 'id')));
+        $this->actingAs($viewer)->get('/diary/list?page=2')->assertRedirect('/diary/list');
+        $this->actingAs($viewer)->get('/diary/listFriend?page=2')->assertRedirect('/diary/listFriend');
     }
 
     public function test_friend_feed_renders_inertia_with_friends_variant(): void
@@ -71,13 +96,15 @@ class DiaryFeedRoutesTest extends TestCase
             'visibility' => Visibility::Friends,
         ]);
 
-        $this->actingAs($viewer)->get('/diary/listFriend')
-            ->assertInertia(fn ($page) => $page
-                ->component('diary/feed')
-                ->where('variant', 'friends')
-                ->has('diaries.data', 1)
-                ->where('diaries.data.0.title', 'Friend entry')
-            );
+        $response = $this->actingAs($viewer)->get('/diary/listFriend');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('diary/feed')
+            ->where('variant', 'friends')
+            ->has('diaries.data', 1)
+            ->where('diaries.data.0.title', 'Friend entry')
+        );
+        $this->assertSame('before', $response->viewData('page')['scrollProps']['diaries']['pageName']);
     }
 
     public function test_rich_feed_row_carries_the_excerpt_and_thumbnails(): void

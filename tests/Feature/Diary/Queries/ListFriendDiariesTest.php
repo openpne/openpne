@@ -28,7 +28,7 @@ class ListFriendDiariesTest extends TestCase
         $result = (new ListFriendDiaries)($viewer);
 
         // Open + Members + Friends, but not the friend's Private diary.
-        $this->assertSame(3, $result->total());
+        $this->assertSame(3, $result->rows->count());
     }
 
     public function test_excludes_non_friends_diaries(): void
@@ -37,7 +37,7 @@ class ListFriendDiariesTest extends TestCase
         $stranger = Member::factory()->create();
         $this->createDiaryFor($stranger, Visibility::Members);
 
-        $this->assertSame(0, (new ListFriendDiaries)($viewer)->total());
+        $this->assertSame(0, (new ListFriendDiaries)($viewer)->rows->count());
     }
 
     public function test_is_empty_without_friends(): void
@@ -45,7 +45,7 @@ class ListFriendDiariesTest extends TestCase
         $viewer = Member::factory()->create();
         $this->createDiaryFor($viewer, Visibility::Members);
 
-        $this->assertSame(0, (new ListFriendDiaries)($viewer)->total());
+        $this->assertSame(0, (new ListFriendDiaries)($viewer)->rows->count());
     }
 
     public function test_excludes_a_friend_who_blocks_the_viewer(): void
@@ -59,7 +59,7 @@ class ListFriendDiariesTest extends TestCase
             'blocked_id' => $viewer->getKey(),
         ]);
 
-        $this->assertSame(0, (new ListFriendDiaries)($viewer)->total());
+        $this->assertSame(0, (new ListFriendDiaries)($viewer)->rows->count());
     }
 
     public function test_orders_by_created_at_descending(): void
@@ -72,8 +72,8 @@ class ListFriendDiariesTest extends TestCase
 
         $result = (new ListFriendDiaries)($viewer);
 
-        $this->assertSame($second->getKey(), $result->items()[0]->getKey());
-        $this->assertSame($first->getKey(), $result->items()[1]->getKey());
+        $this->assertSame($second->getKey(), $result->rows[0]->getKey());
+        $this->assertSame($first->getKey(), $result->rows[1]->getKey());
     }
 
     public function test_take_caps_the_result_and_returns_a_plain_collection(): void

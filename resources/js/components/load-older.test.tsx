@@ -108,6 +108,23 @@ test('an exhausted stream says so where the button was and takes the focus there
     expect(document.activeElement).toBe(screen.getByRole('status'));
 });
 
+test('a stream can name what ran out in its own words', () => {
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
+    const view = render(
+        <LoadOlder data="diaries" generation="g1" end="No older diaries.">
+            rows
+        </LoadOlder>,
+    );
+    scroll.slot = { fetch: () => {}, loading: false, hasMore: false };
+    view.rerender(
+        <LoadOlder data="diaries" generation="g1" end="No older diaries.">
+            rows
+        </LoadOlder>,
+    );
+
+    expect(screen.getByRole('status').textContent).toBe('No older diaries.');
+});
+
 test('a new generation remounts the list, an unchanged one does not', () => {
     scroll.slot = { fetch: () => {}, loading: false, hasMore: true };
     scroll.mounts = 0;

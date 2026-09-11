@@ -28,6 +28,10 @@ use App\LinkCard\LinkCardSync;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\GuestLoginRedirect;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamProps;
+use App\Support\Stream\StreamRequest;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -126,17 +130,27 @@ class DiaryController extends Controller
         ]);
     }
 
-    public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
+    public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse|RedirectResponse
     {
-        return $this->feed($request, 'recent', $query($this->viewerOrGuest()));
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
+        $before = StreamRequest::before($request);
+
+        return $this->stream($request, 'recent', $query($this->viewerOrGuest(), $before), $before, 'diary.list');
     }
 
-    public function listFriend(Request $request, ListFriendDiaries $query): View|InertiaResponse
+    public function listFriend(Request $request, ListFriendDiaries $query): View|InertiaResponse|RedirectResponse
     {
-        return $this->feed($request, 'friends', $query($this->viewer()));
+        if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+            return $redirect;
+        }
+        $before = StreamRequest::before($request);
+
+        return $this->stream($request, 'friends', $query($this->viewer(), $before), $before, 'diary.list_friend');
     }
 
-    public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
+    public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse|RedirectResponse
     {
         abort_unless(DiarySearch::enabled(), 404);
 
@@ -146,12 +160,12 @@ class DiaryController extends Controller
         // OpenPNE 3 forwards an empty search to the list action, so this delegates rather than
         // rendering its own: identical results, body id, and pager links pointing at /diary/list.
         if (SearchDiaries::terms($keyword) === []) {
-            return $this->feed(
-                $request,
-                'recent',
-                $recent($viewer)->withPath(route('diary.list')),
-                bodyIdRoute: 'diary.list',
-            );
+            if ($redirect = StreamRequest::legacyPageRedirect($request)) {
+                return $redirect;
+            }
+            $before = StreamRequest::before($request);
+
+            return $this->stream($request, 'recent', $recent($viewer, $before), $before, 'diary.list', bodyIdRoute: 'diary.list');
         }
 
         return $this->feed(
@@ -165,9 +179,9 @@ class DiaryController extends Controller
 
     /**
      * OpenPNE 3 listSuccess.php: the all-member feed and search share one template carrying the
-     * search form; the friend feed drops it.
+     * search form. Search is the archive here: it pages by OFFSET.
      *
-     * @param  'recent'|'friends'|'search'  $variant
+     * @param  'search'  $variant
      * @param  LengthAwarePaginator<int, Diary>  $diaries
      */
     private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
@@ -191,6 +205,42 @@ class DiaryController extends Controller
                     'keyword' => $keyword,
                     'hasKeyword' => $hasKeyword,
                     'diaries' => DiarySerializer::paginator($diaries),
+                ]);
+            },
+        ], bodyIdRoute: $bodyIdRoute);
+    }
+
+    /**
+     * The recent and friend feeds are streams (docs/internals/ordering.md, "Keyset and offset").
+     *
+     * @param  'recent'|'friends'  $variant
+     * @param  StreamPage<Diary>  $page
+     */
+    private function stream(Request $request, string $variant, StreamPage $page, ?StreamCursor $before, string $route, ?string $bodyIdRoute = null): View|InertiaResponse
+    {
+        $searchable = $variant !== 'friends' && DiarySearch::enabled();
+        $older = $page->olderCursor();
+
+        return $this->respondWith($request, 'diary', [
+            SurfaceResolver::CLASSIC => fn () => $this->classicScreen('diary.feed', [
+                'variant' => $variant,
+                'searchable' => $searchable,
+                'keyword' => '',
+                'hasKeyword' => false,
+                'diaries' => $page->rows,
+                'olderUrl' => $older === null ? null : route($route, ['before' => (string) $older]),
+                'newerUrl' => $before === null ? null : route($route),
+            ]),
+            SurfaceResolver::MODERN => function () use ($variant, $searchable, $page, $before) {
+                $page->rows->loadMissing('images.file');
+
+                return Inertia::render('diary/feed', [
+                    'variant' => $variant,
+                    'searchable' => $searchable,
+                    'keyword' => '',
+                    'hasKeyword' => false,
+                    'diaries' => StreamProps::scroll($page, fn (Diary $diary): array => DiarySerializer::summary($diary), $before),
+                    'streamGeneration' => StreamProps::generation(),
                 ]);
             },
         ], bodyIdRoute: $bodyIdRoute);

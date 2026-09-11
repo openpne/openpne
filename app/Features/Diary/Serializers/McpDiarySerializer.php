@@ -9,7 +9,7 @@ use App\Mcp\Tools\ReadDiaryImagesTool;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Support\BodyRenderer;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamPage;
 use Illuminate\Support\Collection;
 
 /**
@@ -83,16 +83,15 @@ class McpDiarySerializer
     }
 
     /**
-     * @param  LengthAwarePaginator<int, Diary>  $paginator
-     * @return array{diaries: list<array<string, mixed>>, page: int, lastPage: int, total: int}
+     * @param  StreamPage<Diary>  $page
+     * @return array{diaries: list<array<string, mixed>>, hasOlder: bool, olderCursor: ?string}
      */
-    public static function diaries(LengthAwarePaginator $paginator): array
+    public static function diaries(StreamPage $page): array
     {
         return [
-            'diaries' => array_map([self::class, 'summary'], $paginator->items()),
-            'page' => $paginator->currentPage(),
-            'lastPage' => $paginator->lastPage(),
-            'total' => $paginator->total(),
+            'diaries' => $page->rows->map([self::class, 'summary'])->values()->all(),
+            'hasOlder' => $page->hasOlder,
+            'olderCursor' => $page->olderCursor()?->__toString(),
         ];
     }
 

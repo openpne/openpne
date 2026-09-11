@@ -24,7 +24,7 @@ class ListRecentDiariesTest extends TestCase
 
         $result = (new ListRecentDiaries)($viewer);
 
-        $this->assertSame(3, $result->total());
+        $this->assertSame(3, $result->rows->count());
     }
 
     public function test_hides_friends_and_private_visibility(): void
@@ -39,7 +39,7 @@ class ListRecentDiariesTest extends TestCase
 
         // The all-members tier excludes Friends/Private even for a friend; those belong
         // to the friend feed and the owner's own archive.
-        $this->assertSame(1, $result->total());
+        $this->assertSame(1, $result->rows->count());
     }
 
     public function test_excludes_diaries_whose_owner_blocks_the_viewer(): void
@@ -52,7 +52,7 @@ class ListRecentDiariesTest extends TestCase
             'blocked_id' => $viewer->getKey(),
         ]);
 
-        $this->assertSame(0, (new ListRecentDiaries)($viewer)->total());
+        $this->assertSame(0, (new ListRecentDiaries)($viewer)->rows->count());
     }
 
     public function test_orders_by_created_at_descending(): void
@@ -63,19 +63,19 @@ class ListRecentDiariesTest extends TestCase
 
         $result = (new ListRecentDiaries)($viewer);
 
-        $this->assertSame($second->getKey(), $result->items()[0]->getKey());
-        $this->assertSame($first->getKey(), $result->items()[1]->getKey());
+        $this->assertSame($second->getKey(), $result->rows[0]->getKey());
+        $this->assertSame($first->getKey(), $result->rows[1]->getKey());
     }
 
-    public function test_paginates(): void
+    public function test_a_full_page_says_more_lies_beyond_it(): void
     {
         $viewer = Member::factory()->create();
         Diary::factory()->count(25)->create(['visibility' => Visibility::Members]);
 
         $result = (new ListRecentDiaries)($viewer, perPage: 20);
 
-        $this->assertSame(20, $result->perPage());
-        $this->assertSame(25, $result->total());
+        $this->assertCount(20, $result->rows);
+        $this->assertTrue($result->hasOlder);
     }
 
     private function createDiaryFor(Member $member, Visibility $visibility, ?string $createdAt = null): Diary

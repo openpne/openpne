@@ -30,6 +30,21 @@ class DiarySearchRoutesTest extends TestCase
         );
     }
 
+    public function test_a_keyword_search_stays_an_offset_page_while_an_empty_one_streams_the_list(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->count(2)->create(['visibility' => Visibility::Members, 'title' => 'needle']);
+
+        $search = $this->actingAs($viewer)->get('/diary/search?keyword=needle');
+        $search->assertInertia(fn ($page) => $page->component('diary/feed')->where('variant', 'search')->has('diaries.meta')->has('diaries.data', 2));
+        $this->assertArrayNotHasKey('diaries', $search->viewData('page')['scrollProps'] ?? []);
+
+        $empty = $this->actingAs($viewer)->get('/diary/search');
+        $empty->assertInertia(fn ($page) => $page->component('diary/feed')->where('variant', 'recent')->missing('diaries.meta')->has('diaries.data', 2));
+        $this->assertSame('before', $empty->viewData('page')['scrollProps']['diaries']['pageName']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $empty->viewData('page')['props']['streamGeneration']);
+    }
+
     public function test_search_renders_inertia_with_keyword_and_filtered_results(): void
     {
         $viewer = Member::factory()->create();

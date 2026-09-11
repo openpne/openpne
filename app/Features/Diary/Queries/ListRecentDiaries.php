@@ -5,7 +5,9 @@ namespace App\Features\Diary\Queries;
 use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -18,21 +20,14 @@ class ListRecentDiaries
 {
     public const PER_PAGE = 20;
 
-    /**
-     * $page is null for a caller that has a URL behind it — paginate() then reads `?page=` as it
-     * always did. A caller with no request (the MCP tool) names the page, or every call would answer
-     * the first one.
-     *
-     * @return LengthAwarePaginator<int, Diary>
-     */
-    public function __invoke(?Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator
+    /** @return StreamPage<Diary> */
+    public function __invoke(?Member $viewer, ?StreamCursor $before = null, int $perPage = self::PER_PAGE): StreamPage
     {
-        return $this->query($viewer)->paginate($perPage, page: $page);
+        return StreamQuery::older($this->query($viewer), $before, $perPage);
     }
 
     /**
-     * First $limit diaries, unpaginated — for the home dashboard digest, which shows no pager and
-     * must not read the host page's ?page=.
+     * First $limit diaries, unpaginated — for the home dashboard digest.
      *
      * @return Collection<int, Diary>
      */
