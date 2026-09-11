@@ -23,45 +23,61 @@ class DiaryListTiebreakTest extends TestCase
 
     private Member $owner;
 
-    /** @var list<int> ids newest-first, all sharing one created_at */
+    private Member $otherFriend;
+
+    /** @var list<int> ids of both friends' entries newest-first, all sharing one created_at */
     private array $ids;
 
+    /** @var list<int> the owner's share of, newest-first */
+    private array $ownerIds;
+
+    /** Two friends alternate within the second so no feed is scoped to one member's index. */
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->viewer = Member::factory()->create();
         $this->owner = Member::factory()->create();
-        $this->viewer->friendships()->attach($this->owner);
-        $this->owner->friendships()->attach($this->viewer);
+        $this->otherFriend = Member::factory()->create();
+        foreach ([$this->owner, $this->otherFriend] as $friend) {
+            $this->viewer->friendships()->attach($friend);
+            $friend->friendships()->attach($this->viewer);
+        }
 
         $ids = [];
+        $ownerIds = [];
         for ($i = 0; $i < 25; $i++) {
-            $ids[] = Diary::factory()->create([
-                'member_id' => $this->owner->getKey(),
+            $author = $i % 2 === 0 ? $this->owner : $this->otherFriend;
+            $id = Diary::factory()->create([
+                'member_id' => $author->getKey(),
                 'visibility' => Visibility::Members,
                 'title' => 'same second',
                 'created_at' => '2026-03-01 12:00:00',
             ])->getKey();
+            $ids[] = $id;
+            if ($author === $this->owner) {
+                $ownerIds[] = $id;
+            }
         }
         $this->ids = array_reverse($ids);
+        $this->ownerIds = array_reverse($ownerIds);
     }
 
     public function test_two_pages_of_one_second_split_at_id_with_no_row_repeated_or_lost(): void
     {
         $lists = [
-            'recent feed' => fn () => (new ListRecentDiaries)($this->viewer, 20),
-            'friend feed' => fn () => (new ListFriendDiaries)($this->viewer, 20),
-            'search' => fn () => (new SearchDiaries)($this->viewer, 'same', 20),
-            'archive' => fn () => (new ListDiaries)($this->viewer, $this->owner, 20),
+            'recent feed' => [fn () => (new ListRecentDiaries)($this->viewer, 20), $this->ids, 20],
+            'friend feed' => [fn () => (new ListFriendDiaries)($this->viewer, 20), $this->ids, 20],
+            'search' => [fn () => (new SearchDiaries)($this->viewer, 'same', 20), $this->ids, 20],
+            'archive' => [fn () => (new ListDiaries)($this->viewer, $this->owner, 10), $this->ownerIds, 10],
         ];
 
-        foreach ($lists as $name => $list) {
+        foreach ($lists as $name => [$list, $expected, $size]) {
             $first = collect($this->onPage(1, $list)->items())->map->getKey()->all();
             $second = collect($this->onPage(2, $list)->items())->map->getKey()->all();
 
-            $this->assertSame(array_slice($this->ids, 0, 20), $first, $name);
-            $this->assertSame(array_slice($this->ids, 20), $second, $name);
+            $this->assertSame(array_slice($expected, 0, $size), $first, $name);
+            $this->assertSame(array_slice($expected, $size, $size), $second, $name);
         }
     }
 
@@ -69,12 +85,12 @@ class DiaryListTiebreakTest extends TestCase
     {
         $top = array_slice($this->ids, 0, 20);
 
-        $this->assertSame($top, (new RecentMemberDiaries)($this->viewer, $this->owner, 20)->map->getKey()->all());
+        $this->assertSame(array_slice($this->ownerIds, 0, 10), (new RecentMemberDiaries)($this->viewer, $this->owner, 10)->map->getKey()->all());
         $this->assertSame($top, (new ListRecentDiaries)->take($this->viewer, 20)->map->getKey()->all());
         $this->assertSame($top, (new ListFriendDiaries)->take($this->viewer, 20)->map->getKey()->all());
     }
 
-    /** The member-scoped lists read the (member_id, created_at) index, which already yields id order within a tie, so for them only this SQL pin goes red. */
+    /** The two member-scoped lists read the (member_id, created_at) index, which already yields id order within a tie, so for them only this SQL pin goes red. */
     public function test_every_list_orders_by_created_at_then_id(): void
     {
         DB::enableQueryLog();
