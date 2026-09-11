@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Every foreign key's columns lead some index; only SQLite can fail this, InnoDB indexes its own
+ * Every foreign key's columns lead some index; only SQLite can fail the coverage test, InnoDB indexes its own
  * (docs/internals/ordering.md, "SQLite foreign-key indexes"). RefreshDatabase is required: the SQLite
  * lane is in-memory, and an unmigrated schema has no foreign keys to fail on.
  */
@@ -41,7 +41,7 @@ class ForeignKeyIndexCoverageTest extends TestCase
         $this->assertSame([], $unindexed);
     }
 
-    public function test_mention_tables_index_member_id_with_the_post_on_sqlite(): void
+    public function test_mention_tables_carry_the_engine_specific_member_id_index(): void
     {
         $sqlite = DB::connection()->getDriverName() === 'sqlite';
 
