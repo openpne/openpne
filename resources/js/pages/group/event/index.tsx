@@ -34,7 +34,15 @@ export default function GroupEventIndex() {
                                     href={`/events/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} weekday /> &middot; {event.commentCount > 0 ? t('Last comment') : t('Posted')}: <Timestamp at={event.bumpedAt} preset="listStamp" /></>}
+                                    date={
+                                        <>
+                                            {t('Open date')}: <CivilDate value={event.openDate} weekday />
+                                            {/* The board sorts on this stamp, but a phone-wide row has room for the open date alone. */}
+                                            <span className="hidden sm:inline">
+                                                {' '}&middot; {event.commentCount > 0 ? t('Last comment') : t('Posted')}: <Timestamp at={event.bumpedAt} preset="listStamp" />
+                                            </span>
+                                        </>
+                                    }
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />
