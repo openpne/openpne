@@ -257,6 +257,17 @@ class DiaryFeedRoutesTest extends TestCase
         }
     }
 
+    public function test_an_older_page_whose_rows_are_gone_still_leads_back_to_the_head(): void
+    {
+        $viewer = Member::factory()->create();
+        $entry = Diary::factory()->create(['visibility' => Visibility::Members, 'created_at' => '2026-03-01 12:00:00']);
+        $cursor = (string) StreamCursor::of($entry);
+
+        $this->actingAs($viewer)->get(route('diary.list', ['before' => $cursor]))->assertOk()
+            ->assertSee(__('No %diary% entries to show.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('diary.list')).'">', false);
+    }
+
     public function test_friend_feed_omits_the_author_thumbnail(): void
     {
         // OpenPNE 3 listFriendSuccess.php has no author photo, unlike the all-member list.

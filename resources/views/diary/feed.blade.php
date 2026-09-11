@@ -26,6 +26,10 @@
         {{-- OpenPNE 3 listSuccess.php swaps the result list for a plain box once the pager is empty. --}}
         <x-classic.parts id="diaryList" name="box" :title="$title">
             <div class="body">{{ $variant === 'search' && $hasKeyword ? __('Your search ":keyword" did not match any %diaries%.', ['keyword' => $keyword]) : __('No %diary% entries to show.') }}</div>
+            {{-- A cursor whose rows are gone since still needs its way back to the head. --}}
+            @if ($variant !== 'search')
+                <x-classic.stream-pager :older-url="null" :newer-url="$newerUrl" />
+            @endif
         </x-classic.parts>
     @elseif ($variant === 'friends')
         {{-- listFriendSuccess.php renders the recentList skin: one dl per entry, datetime in the dt
