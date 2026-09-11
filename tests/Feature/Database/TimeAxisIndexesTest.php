@@ -13,15 +13,25 @@ class TimeAxisIndexesTest extends TestCase
 
     public function test_every_site_wide_posting_time_list_has_its_axis_index(): void
     {
-        foreach (['diaries', 'members', 'groups', 'timeline_posts'] as $table) {
+        foreach (['diaries', 'members', 'groups'] as $table) {
             $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
         }
+    }
+
+    public function test_the_timeline_axes_carry_the_reply_flag_and_nothing_else_leads_with_it(): void
+    {
+        $columns = $this->indexColumns('timeline_posts');
+
+        $this->assertContains(['in_reply_to_id', 'created_at', 'id'], $columns);
+        $this->assertSame(1, count(array_keys(array_column($columns, 0), 'in_reply_to_id', true)), 'indexes leading with in_reply_to_id');
+        $this->assertNotContains(['created_at', 'id'], $columns);
+        $this->assertNotContains(['member_id', 'created_at'], $columns);
     }
 
     public function test_the_member_scoped_axes_keep_their_index(): void
     {
         $this->assertContains(['member_id', 'created_at'], $this->indexColumns('diaries'));
-        $this->assertContains(['member_id', 'created_at'], $this->indexColumns('timeline_posts'));
+        $this->assertContains(['member_id', 'in_reply_to_id', 'created_at'], $this->indexColumns('timeline_posts'));
         $this->assertContains(['group_id', 'created_at', 'id'], $this->indexColumns('group_messages'));
     }
 
