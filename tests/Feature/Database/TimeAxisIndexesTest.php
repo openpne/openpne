@@ -18,20 +18,20 @@ class TimeAxisIndexesTest extends TestCase
         }
     }
 
-    /** The reply flag leads: a single-column index on it would win the feeds' IS NULL on SQLite and sort the table. */
-    public function test_the_timeline_axis_is_scoped_to_top_level_posts(): void
+    public function test_the_timeline_axes_carry_the_reply_flag_and_nothing_else_leads_with_it(): void
     {
         $columns = $this->indexColumns('timeline_posts');
 
         $this->assertContains(['in_reply_to_id', 'created_at', 'id'], $columns);
         $this->assertNotContains(['in_reply_to_id'], $columns);
         $this->assertNotContains(['created_at', 'id'], $columns);
+        $this->assertNotContains(['member_id', 'created_at'], $columns);
     }
 
     public function test_the_member_scoped_axes_keep_their_index(): void
     {
         $this->assertContains(['member_id', 'created_at'], $this->indexColumns('diaries'));
-        $this->assertContains(['member_id', 'created_at'], $this->indexColumns('timeline_posts'));
+        $this->assertContains(['member_id', 'in_reply_to_id', 'created_at'], $this->indexColumns('timeline_posts'));
         $this->assertContains(['group_id', 'created_at', 'id'], $this->indexColumns('group_messages'));
     }
 

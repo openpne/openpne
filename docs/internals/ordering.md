@@ -73,12 +73,13 @@ engines — InnoDB stores the primary key at the end of every secondary index an
 rowid — but writing it keeps the axis legible in the schema. A site-wide index leads with the time
 column so that InnoDB does not adopt it to back a foreign key; a scoped `(parent_id, time column)`
 index is adopted by design and is replaced by creating the new one before dropping the old (errno
-1553 on a drop that leaves the key unbacked).
+1553 on a drop that leaves the key unbacked). `timeline_posts` is the exception on the site-wide
+side: its axis leads with the reply flag, a foreign-key column, and is treated as adopted.
 
 | Table | Site-wide axis | Scoped axis |
 |---|---|---|
 | `diaries` | `(created_at, id)` — recent feed (search pays for it, above) | `(member_id, created_at)` — archive, recent five, prev / next |
-| `timeline_posts` | `(in_reply_to_id, created_at, id)` — home, all-member and tag feeds, every one of them top-level posts; it backs the self-referencing foreign key as well | `(member_id, created_at)` — a member's timeline |
+| `timeline_posts` | `(in_reply_to_id, created_at, id)` — the home, friend, all-member and tag feeds and the story candidates, all of them top-level posts; it backs the self-referencing foreign key | `(member_id, in_reply_to_id, created_at)` — a member's timeline and post count, also top-level only; it backs the member key |
 | `members` | `(created_at, id)` — the member list without a name filter, newcomers | — |
 | `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
@@ -109,8 +110,9 @@ column instead; on MySQL the foreign key's own single-column index stays, since 
 keep the plan on the unique key. `IS NULL` counts as an equality for the same purpose: a
 `timeline_posts.in_reply_to_id` index alone made SQLite pick it for every feed's top-level filter and
 sort the whole table per page (100k rows: 0.02 ms → 20 ms, with or without `ANALYZE`), so the feed
-axis there is `(in_reply_to_id, created_at, id)`, which InnoDB adopts for the key on both engines in
-place of its own index.
+axis there is `(in_reply_to_id, created_at, id)` and the member axis `(member_id, in_reply_to_id,
+created_at)`, each an equality on every filter the readers apply, so neither engine has a cheaper-
+looking index to prefer; on MySQL the composite replaces InnoDB's own index for the key.
 
 ## Guards
 
