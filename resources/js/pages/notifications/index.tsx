@@ -83,34 +83,34 @@ export default function NotificationsIndex() {
                 <LoadOlder data="feed" generation={streamGeneration} end={t('No older notifications.')}>
                     <Panel flush>
                         <List>
-                        {feed.data.map((item) => (
-                            <li key={item.id}>
-                                <Link
-                                    method="post"
-                                    as="button"
-                                    href={`/notifications/${item.id}/open`}
-                                    className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-foreground sm:px-5 transition-colors hover:bg-muted/40 active:bg-muted/60"
-                                >
-                                    <Avatar
-                                        id={item.actor?.id ?? 0}
-                                        name={item.actor?.name ?? t('Withdrawn member')}
-                                        src={item.actor?.imageUrl ?? null}
-                                        color={item.actor?.avatarColor ?? null}
-                                        isAi={item.actor?.isAi ?? false}
-                                        size="md"
-                                        decorative
-                                    />
-                                    <span className="min-w-0 flex-1">
-                                        <span className={cn('block text-sm', unreadTextClass(!item.read))}>
-                                            {!item.read && <UnreadLabel />}
-                                            {item.label}
+                            {feed.data.map((item) => (
+                                <li key={item.id}>
+                                    <Link
+                                        method="post"
+                                        as="button"
+                                        href={`/notifications/${item.id}/open`}
+                                        className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-foreground sm:px-5 transition-colors hover:bg-muted/40 active:bg-muted/60"
+                                    >
+                                        <Avatar
+                                            id={item.actor?.id ?? 0}
+                                            name={item.actor?.name ?? t('Withdrawn member')}
+                                            src={item.actor?.imageUrl ?? null}
+                                            color={item.actor?.avatarColor ?? null}
+                                            isAi={item.actor?.isAi ?? false}
+                                            size="md"
+                                            decorative
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className={cn('block text-sm', unreadTextClass(!item.read))}>
+                                                {!item.read && <UnreadLabel />}
+                                                {item.label}
+                                            </span>
+                                            <Timestamp at={item.createdAt} preset="relative" className="block text-xs text-muted-foreground" />
                                         </span>
-                                        <Timestamp at={item.createdAt} preset="relative" className="block text-xs text-muted-foreground" />
-                                    </span>
-                                    {!item.read && <UnreadDot />}
-                                </Link>
-                            </li>
-                        ))}
+                                        {!item.read && <UnreadDot />}
+                                    </Link>
+                                </li>
+                            ))}
                         </List>
                     </Panel>
                 </LoadOlder>

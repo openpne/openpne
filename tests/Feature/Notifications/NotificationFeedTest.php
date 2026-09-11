@@ -66,6 +66,11 @@ class NotificationFeedTest extends TestCase
         $this->assertSame($expected[29], explode('|', $cursor)[1]);
         $this->assertNull($next['scrollProps']['feed']['nextPage']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{8}$/', $head['props']['streamGeneration']);
+        $this->assertNotSame($head['props']['streamGeneration'], $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['streamGeneration']);
+        // A "load more" asks for the rows only, so the generation it holds stays and the list is not remounted mid-scroll.
+        $partial = $this->actingOnModern($viewer)->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) Inertia::getVersion(), 'X-Inertia-Partial-Component' => 'notifications/index', 'X-Inertia-Partial-Data' => 'feed'])->get('/notifications')->assertOk()->json('props');
+        $this->assertArrayHasKey('feed', $partial);
+        $this->assertArrayNotHasKey('streamGeneration', $partial);
         $this->actingOnModern($viewer)->get('/notifications?page=2')->assertRedirect('/notifications');
         // MySQL returns a same-second tie in id order even without the clause, so the SQL is pinned too.
         $orders = $this->orderClausesOn('notifications', fn () => $this->actingOnModern($viewer)->get('/notifications'));
