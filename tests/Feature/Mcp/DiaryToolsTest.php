@@ -90,9 +90,8 @@ class DiaryToolsTest extends McpTestCase
                 ->where('diaries.0.authorIsAi', false)
                 ->where('diaries.1.diaryId', $older->getKey())
                 ->where('diaries.1.visibility', 'open')
-                ->where('page', 1)
-                ->where('lastPage', 1)
-                ->where('total', 2)
+                ->where('hasOlder', false)
+                ->where('olderCursor', null)
                 ->etc());
     }
 
@@ -108,7 +107,7 @@ class DiaryToolsTest extends McpTestCase
             ->assertOk()
             ->assertDontSee('a note to myself')
             ->assertDontSee('for my friends')
-            ->assertStructuredContent(fn ($json) => $json->where('total', 0)->where('diaries', [])->etc());
+            ->assertStructuredContent(fn ($json) => $json->where('hasOlder', false)->where('diaries', [])->etc());
 
         OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $mine->getKey()])
             ->assertOk()
@@ -119,7 +118,7 @@ class DiaryToolsTest extends McpTestCase
                 ->etc());
     }
 
-    public function test_the_feed_pages_where_it_is_told_to(): void
+    public function test_the_feed_walks_older_pages_by_the_cursor_it_handed_out(): void
     {
         Diary::factory()->count(ListRecentDiaries::PER_PAGE + 1)->create([
             'member_id' => Member::factory()->create()->getKey(),
@@ -127,10 +126,31 @@ class DiaryToolsTest extends McpTestCase
 
         $this->acting(Member::factory()->create());
 
-        OpenPneServer::tool(ListDiariesTool::class, ['page' => 2])
+        $cursor = null;
+        OpenPneServer::tool(ListDiariesTool::class)
             ->assertOk()
-            ->assertStructuredContent(fn ($json) => $json
-                ->where('page', 2)->where('lastPage', 2)->count('diaries', 1)->etc());
+            ->assertStructuredContent(function ($json) use (&$cursor) {
+                $json->where('hasOlder', true)
+                    ->where('olderCursor', function (string $value) use (&$cursor): bool {
+                        $cursor = $value;
+
+                        return true;
+                    })
+                    ->count('diaries', ListRecentDiaries::PER_PAGE)
+                    ->etc();
+            });
+        $this->assertIsString($cursor);
+
+        OpenPneServer::tool(ListDiariesTool::class, ['before' => $cursor])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json->where('hasOlder', false)->where('olderCursor', null)->count('diaries', 1)->etc());
+    }
+
+    public function test_a_cursor_the_server_did_not_hand_out_is_refused(): void
+    {
+        $this->acting(Member::factory()->create());
+
+        OpenPneServer::tool(ListDiariesTool::class, ['before' => 'page-2'])->assertHasErrors(['No such']);
     }
 
     /** An AI account is friends with nobody, which is the ordinary case for a bot. */
@@ -170,7 +190,7 @@ class DiaryToolsTest extends McpTestCase
         OpenPneServer::tool(ListDiariesTool::class)
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json
-                ->where('total', 1)
+                ->where('hasOlder', false)
                 ->where('diaries.0.diaryId', $readable->getKey())
                 ->etc());
     }

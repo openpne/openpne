@@ -5,8 +5,10 @@ namespace App\Features\Diary\Queries;
 use App\Features\Block\BlockLookup;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Stream\StreamCursor;
+use App\Support\Stream\StreamPage;
+use App\Support\Stream\StreamQuery;
 use App\Support\Visibility;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -17,15 +19,16 @@ use Illuminate\Support\Collection;
  */
 class ListFriendDiaries
 {
-    /** @return LengthAwarePaginator<int, Diary> */
-    public function __invoke(Member $viewer, int $perPage = 20): LengthAwarePaginator
+    public const PER_PAGE = 20;
+
+    /** @return StreamPage<Diary> */
+    public function __invoke(Member $viewer, ?StreamCursor $before = null, int $perPage = self::PER_PAGE): StreamPage
     {
-        return $this->query($viewer)->paginate($perPage);
+        return StreamQuery::older($this->query($viewer), $before, $perPage);
     }
 
     /**
-     * First $limit diaries, unpaginated — for the home gadget list, which shows no pager and must
-     * not read the host page's ?page=.
+     * First $limit diaries, unpaginated — for the home gadget list, which must not read the host page's `?before=`.
      *
      * @return Collection<int, Diary>
      */

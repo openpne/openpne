@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary\Classic;
 use App\Features\Member\Actions\SetAvatar;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Stream\StreamCursor;
 use App\Support\Visibility;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -203,8 +204,8 @@ class DiaryFeedRoutesTest extends TestCase
         // The title cell prints unlinked — the photo cell and the operation row carry the links.
         $response->assertSee('<th>Title</th><td>Hello world (0)<', false);
         $response->assertDontSee('>Hello world (0)</a>', false);
-        // The pager brackets the list, as op_include_pager_navigation does above and below the block.
-        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+        // A stream's pager has no count to read out, so one page shows none; the paged case is pinned below.
+        $response->assertDontSee('pagerRelative', false);
     }
 
     public function test_friend_feed_draws_the_openpne3_recent_list(): void
@@ -228,8 +229,32 @@ class DiaryFeedRoutesTest extends TestCase
         // op_diary_link_to_show in the dd — the author trails the link rather than sitting inside it.
         $response->assertSee('<dt>2026年06月04日 13:44</dt>', false);
         $response->assertSee('<dd><a href="'.route('diary.show', $diary).'">Friend entry (0)</a> (Fran)</dd>', false);
-        // The pager brackets the list, as op_include_pager_navigation does above and below it.
-        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+        $response->assertDontSee('pagerRelative', false);
+    }
+
+    public function test_the_feeds_page_by_cursor_with_a_pager_above_and_below_the_list(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+        for ($i = 1; $i <= 21; $i++) {
+            Diary::factory()->create(['member_id' => $friend->getKey(), 'title' => sprintf('Entry %02d', $i), 'visibility' => Visibility::Members, 'created_at' => now()->subMinutes(21 - $i)]);
+        }
+        $cursor = (string) StreamCursor::of(Diary::query()->where('title', 'Entry 02')->sole());
+
+        foreach (['/diary/list' => 'diary.list', '/diary/listFriend' => 'diary.list_friend'] as $url => $route) {
+            $head = $this->actingAs($viewer)->get($url)->assertOk()->assertSee('Entry 21')->assertSee('Entry 02')->assertDontSee('Entry 01');
+            // op_include_pager_navigation above and below the list; "next" is the older page, no "previous" at the head.
+            $this->assertSame(2, substr_count((string) $head->getContent(), 'class="pagerRelative"'), $url);
+            $head->assertSee('<p class="next"><a href="'.e(route($route, ['before' => $cursor])).'">', false)->assertDontSee('<p class="prev">', false);
+
+            $older = $this->actingAs($viewer)->get(route($route, ['before' => $cursor]))->assertOk()->assertSee('Entry 01')->assertDontSee('Entry 02');
+            $older->assertSee('<p class="prev"><a href="'.e(route($route)).'">', false)->assertDontSee('<p class="next">', false);
+            $this->actingAs($viewer)->get($url.'?page=2')->assertRedirect($url);
+        }
     }
 
     public function test_friend_feed_omits_the_author_thumbnail(): void

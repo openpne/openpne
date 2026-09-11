@@ -72,8 +72,9 @@ archive and their recent five — order by the `(created_at, id)` tuple
 ([ordering.md](ordering.md#the-tuple)). OpenPNE 3 ordered these lists by `created_at` alone, and
 its previous / next links walked `id`; here they walk the archive's own tuple
 ([`AdjacentDiaries`](../../app/Features/Diary/Queries/AdjacentDiaries.php)), so a backdated or
-migrated entry is neighboured by its date. The paged ones still page by OFFSET, so an entry posted
-between two page loads shifts the edge; only the tie inside one second is settled here.
+migrated entry is neighboured by its date. The recent and friend feeds are streams and page by
+keyset on that tuple, so an entry posted between two page loads shifts nothing; search and the
+archive are OFFSET pages ([ordering.md](ordering.md#keyset-and-offset)).
 
 ## The archive
 

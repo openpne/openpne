@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { LoadOlder } from '@/components/load-older';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
@@ -7,19 +8,21 @@ import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { DiaryRow } from './diary-row';
-import type { PaginatedDiaries } from './types';
+import type { DiaryStream, PaginatedDiaries } from './types';
 
 interface FeedProps extends PageProps {
     variant: 'recent' | 'friends' | 'search';
     searchable: boolean;
     keyword: string;
     hasKeyword: boolean;
-    diaries: PaginatedDiaries;
+    /** Search is the archive and comes paginated; the feeds are streams and load older rows in place. */
+    diaries: PaginatedDiaries | DiaryStream;
+    streamGeneration?: string;
 }
 
 export default function DiaryFeed() {
     const t = useT();
-    const { variant, searchable, keyword, hasKeyword, diaries } = usePage<FeedProps>().props;
+    const { variant, searchable, keyword, hasKeyword, diaries, streamGeneration } = usePage<FeedProps>().props;
     // The hub header (h1 = nav label, tabs, write action) comes from the frame; the browser Head
     // title keeps the fuller per-view description.
     const headTitle =
@@ -66,7 +69,7 @@ export default function DiaryFeed() {
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
                 </Panel>
-            ) : (
+            ) : 'meta' in diaries ? (
                 <>
                     <Panel flush>
                         <List>
@@ -77,6 +80,16 @@ export default function DiaryFeed() {
                     </Panel>
                     <Pagination meta={diaries.meta} />
                 </>
+            ) : (
+                <LoadOlder data="diaries" generation={streamGeneration ?? ''}>
+                    <Panel flush>
+                        <List>
+                            {diaries.data.map((entry) => (
+                                <DiaryRow key={entry.id} diary={entry} rich />
+                            ))}
+                        </List>
+                    </Panel>
+                </LoadOlder>
             )}
         </>
     );

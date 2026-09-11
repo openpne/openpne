@@ -96,8 +96,8 @@ class DiarySearchRoutesTest extends TestCase
 
         $response->assertOk();
         // OpenPNE 3's forward-to-list pager targets @diary_list, not /diary/search.
-        $response->assertSee('/diary/list?page=2');
-        $response->assertDontSee('/diary/search?page=2');
+        $response->assertSee('/diary/list?before=');
+        $response->assertDontSee('/diary/search?before=');
     }
 
     public function test_a_search_with_no_match_names_the_keyword_in_the_diary_list_box(): void
