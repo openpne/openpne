@@ -46,8 +46,7 @@ class EventMembersRelationManager extends RelationManager
                 // Plain row delete: removes the group_event_members RSVP row (no images, no nesting).
                 DeleteAction::make(),
             ])
-            // Without an explicit heading Filament humanises the model class into an untranslated
-            // label for the empty state.
+            ->modelLabel(__('Participant'))
             ->emptyStateHeading(__('No participants yet'))
             ->defaultSort('id', 'asc');
     }
