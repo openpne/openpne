@@ -3,6 +3,7 @@ import { Settings } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { LoadOlder } from '@/components/load-older';
 import { PushPrompt } from '@/components/push-prompt';
+import { StreamEmpty } from '@/components/stream-empty';
 import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { ActionLink } from '@/components/ui/action-link';
@@ -34,13 +35,14 @@ interface FeedItem {
 interface FeedProps extends PageProps {
     feed: { data: FeedItem[] };
     streamGeneration: string;
+    headUrl: string | null;
 }
 
 /** Opening a row marks it read, and so does reaching that target any other way
  *  (docs/internals/notifications.md, "The three layers"); the feed itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
-    const { feed, unread, streamGeneration } = usePage<FeedProps>().props;
+    const { feed, unread, streamGeneration, headUrl } = usePage<FeedProps>().props;
     const title = t('Notifications');
 
     // Nothing re-reads the feed here: the app-wide revalidation on a restore does it
@@ -76,9 +78,7 @@ export default function NotificationsIndex() {
                 </ActionLink>
             </div>
             {feed.data.length === 0 ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No notifications yet.')}</p>
-                </Panel>
+                <StreamEmpty headUrl={headUrl} empty={t('No notifications yet.')} older={t('No older notifications.')} />
             ) : (
                 <LoadOlder data="feed" generation={streamGeneration} end={t('No older notifications.')}>
                     <Panel flush>

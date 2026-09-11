@@ -264,7 +264,8 @@ class DiaryFeedRoutesTest extends TestCase
         $cursor = (string) StreamCursor::of($entry);
 
         $this->actingAs($viewer)->get(route('diary.list', ['before' => $cursor]))->assertOk()
-            ->assertSee(__('No %diary% entries to show.'))
+            ->assertSee(__('No older %diary% entries.'))
+            ->assertDontSee(__('No %diary% entries to show.'))
             ->assertSee('<p class="prev"><a href="'.e(route('diary.list')).'">', false);
     }
 

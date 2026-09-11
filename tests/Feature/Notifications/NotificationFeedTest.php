@@ -15,6 +15,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
+use App\Support\Stream\StreamCursor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
@@ -461,5 +462,18 @@ class NotificationFeedTest extends TestCase
         ]);
 
         return $row;
+    }
+
+    public function test_a_page_reached_by_cursor_names_the_head_and_the_head_names_nothing(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subHour());
+        $cursor = (string) StreamCursor::of($row);
+        $row->delete();
+
+        $this->actingOnModern($viewer)->get('/notifications')->assertInertia(fn (AssertableInertia $page) => $page->where('headUrl', null));
+        $this->actingOnModern($viewer)->get('/notifications?before='.urlencode($cursor))->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('feed.data', 0)
+            ->where('headUrl', route('notifications.index')));
     }
 }

@@ -49,6 +49,7 @@ class NotificationFeedController extends Controller
             SurfaceResolver::MODERN => fn (): Response => Inertia::render('notifications/index', [
                 'feed' => NotificationFeedSerializer::stream($page, $before),
                 'streamGeneration' => StreamProps::generation(),
+                'headUrl' => $before === null ? null : route('notifications.index'),
             ]),
         ]);
     }

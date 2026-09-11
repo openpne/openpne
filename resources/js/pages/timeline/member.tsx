@@ -1,5 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { LoadOlder } from '@/components/load-older';
+import { StreamEmpty } from '@/components/stream-empty';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -12,20 +13,19 @@ interface MemberProps extends PageProps {
     viewerId: number;
     posts: TimelineStream;
     streamGeneration: string;
+    headUrl: string | null;
 }
 
 export default function TimelineMember() {
     const t = useT();
-    const { owner, isOwner, viewerId, posts, streamGeneration } = usePage<MemberProps>().props;
+    const { owner, isOwner, viewerId, posts, streamGeneration, headUrl } = usePage<MemberProps>().props;
     const title = isOwner ? t('%Activity%') : t(":name's %activity%", { name: owner.name });
 
     return (
         <>
             <Head title={title} />
             {posts.data.length === 0 ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
-                </Panel>
+                <StreamEmpty headUrl={headUrl} empty={t('No %activity% posts to show.')} older={t('No older posts.')} />
             ) : (
                 <LoadOlder data="posts" generation={streamGeneration}>
                     <Panel flush>
