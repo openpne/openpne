@@ -49,8 +49,6 @@ class NotificationFeedSerializer
     }
 
     /**
-     * The same rows for the Classic list.
-     *
      * @param  StreamPage<DatabaseNotification>  $page
      * @return Collection<int, NotificationFeedRow>
      */

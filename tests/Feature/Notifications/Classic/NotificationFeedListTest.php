@@ -9,6 +9,7 @@ use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
+use App\Support\Stream\StreamCursor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +84,18 @@ class NotificationFeedListTest extends TestCase
         $this->assertSame(1, substr_count($older, '<dl>'));
         $this->assertStringContainsString('<p class="prev"><a href="'.e(route('notifications.index')).'">', $older);
         $this->assertStringNotContainsString('<p class="next">', $older);
+    }
+
+    public function test_an_older_page_whose_rows_are_gone_still_leads_back_to_the_head(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subHour());
+        $cursor = (string) StreamCursor::of($row);
+        $row->delete();
+
+        $this->actingAs($viewer)->get('/notifications?before='.urlencode($cursor))->assertOk()
+            ->assertSee(__('No notifications yet.'))
+            ->assertSee('<p class="prev"><a href="'.e(route('notifications.index')).'">', false);
     }
 
     public function test_a_single_page_draws_no_pager(): void

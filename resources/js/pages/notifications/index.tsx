@@ -80,7 +80,7 @@ export default function NotificationsIndex() {
                     <p className="text-sm text-muted-foreground">{t('No notifications yet.')}</p>
                 </Panel>
             ) : (
-                <LoadOlder data="feed" generation={streamGeneration}>
+                <LoadOlder data="feed" generation={streamGeneration} end={t('No older notifications.')}>
                     <Panel flush>
                         <List>
                         {feed.data.map((item) => (
