@@ -51,8 +51,24 @@ list by list in the feature documents.
 
 The keyset comparison is written out as `t < ? OR (t = ? AND id < ?)`: SQLite has no row-value
 comparison. A cursor is `{iso8601}|{id}`, opaque to the client, and names a position rather than a
-permission. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not
-hand out ([mcp.md](mcp.md)).
+permission; the id is the row's primary key, an integer or a UUID, and the time is normalized to the
+site timezone on parse. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one
+it did not hand out ([mcp.md](mcp.md)).
+
+Feeds share one implementation, `App\Support\Stream`: `StreamQuery::older` applies the predicate and
+the `(time, id)` order to any Eloquent query or relation, replacing an order the query carried, and
+reads one row past the page to learn whether older rows exist; `StreamPage` holds the rows newest
+first and names its last row as the older cursor; `StreamProps::scroll` hands Inertia's
+`InfiniteScroll` the cursor in the scroll metadata under `before`, with no previous page, so the
+payload is rows only; `StreamRequest` reads `?before=` and turns a bookmarked `?page=N` (N > 1) from
+the OFFSET days into a redirect to the head. Group talk and direct-message conversations keep their
+own cursors: they page in both directions and around an anchor, which a feed never does.
+
+Two client contracts follow from Inertia's data manager keeping the next cursor in its own state. A
+full reload of a page holding a stream passes the stream's prop names in `reset`, or the next "Older"
+would skip the rows the reload already replaced. A Classic tab from before a list became a stream
+still holds a `?page=2` load-more URL; its rows route answers 400 rather than serve the head twice,
+and the no-JS pager takes over.
 
 A time column from `timestamps()` is nullable, and a row with no time has no place in the order:
 the prev / next queries answer "no neighbours" for it rather than compare against NULL, and no
