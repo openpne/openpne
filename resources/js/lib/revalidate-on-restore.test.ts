@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createRestoreRevalidator } from './revalidate-on-restore.ts';
+import { createRestoreRevalidator, scrollPropNames } from './revalidate-on-restore.ts';
 
 function harness() {
     let reloads = 0;
@@ -92,4 +92,10 @@ test('a back/forward document arrival is completed by the boot navigate', () => 
 
     revalidator.handleNavigate();
     assert.equal(reloads(), 1);
+});
+
+test('a reload resets every scroll prop the current page holds, and nothing on a page without one', () => {
+    assert.deepEqual(scrollPropNames({ scrollProps: { posts: { pageName: 'before' }, feed: {} } }), ['posts', 'feed']);
+    assert.deepEqual(scrollPropNames({}), []);
+    assert.deepEqual(scrollPropNames(undefined), []);
 });
