@@ -64,7 +64,11 @@ tool does as well.
 An index follows a paging axis, not a WHERE clause: `(scope…, time column, id)`, one per axis a
 table is paged along; the feature documents list which axes are indexed today. Visibility ranges,
 block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an index
-of their own. The `id` suffix is implied on both
+of their own. That is a trade: a feed page falls from a sort over every visible row to a few index
+reads, while a keyword search whose hits are sparse and old walks the whole axis index looking for
+them and runs slower than the table scan it replaced (measured on MySQL 8.4 at 200k diaries: the feed
+134 ms → 1.5 ms, a six-hit search 0.23 s → 0.35 s). The feed is every member's page; the sparse search
+is the price. The `id` suffix is implied on both
 engines — InnoDB stores the primary key at the end of every secondary index and SQLite stores the
 rowid — but writing it keeps the axis legible in the schema. A site-wide index leads with the time
 column so that InnoDB does not adopt it to back a foreign key; a scoped `(parent_id, time column)`
@@ -73,10 +77,10 @@ index is adopted by design and is replaced by creating the new one before droppi
 
 | Table | Site-wide axis | Scoped axis |
 |---|---|---|
-| `diaries` | `(created_at, id)` — recent feed, search | `(member_id, created_at)` — archive, recent five, prev / next |
+| `diaries` | `(created_at, id)` — recent feed (search pays for it, above) | `(member_id, created_at)` — archive, recent five, prev / next |
 | `timeline_posts` | `(created_at, id)` — home, all-member and tag feeds | `(member_id, created_at)` — a member's timeline |
-| `members` | `(created_at, id)` — member search, newcomers | — |
-| `groups` | `(created_at, id)` — group search, a member's groups | — |
+| `members` | `(created_at, id)` — the member list without a name filter, newcomers | — |
+| `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |
