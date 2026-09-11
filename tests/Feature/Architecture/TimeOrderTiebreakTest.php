@@ -20,18 +20,19 @@ class TimeOrderTiebreakTest extends TestCase
     private const PRIMARY_KEY = '/->(?:orderBy|orderByDesc)\(\'(?:[a-z_]+\.)?id\'|->orderByRaw\(\'min\(id\)\'\)/';
 
     /**
-     * Tails that are unique only in one query, by file: a pivot's other key column, the union's
-     * `(role, row_id)`, the conversation heads' counterpart after a shared latest message.
+     * Tails that are unique only in one query, by file or file:line: a pivot's other key column, the
+     * union's `(role, row_id)`, the conversation heads' counterpart after a shared latest message.
      *
      * @var array<string, string>
      */
     private const COMPOSITE_TAILS = [
         'app/Features/Friend/Queries/ListFriends.php' => '/->orderByPivot\(\'friend_id\'/',
-        'app/Features/Friend/Queries/ListPendingRequests.php' => '/->orderByPivot\(\'(?:target_id|requester_id)\'/',
+        'app/Features/Friend/Queries/ListPendingRequests.php:19' => '/->orderByPivot\(\'target_id\'/',
+        'app/Features/Friend/Queries/ListPendingRequests.php:22' => '/->orderByPivot\(\'requester_id\'/',
         'app/Features/Block/Queries/ListBlocks.php' => '/->orderByPivot\(\'blocked_id\'/',
         'app/Features/Group/Queries/ListPendingMembers.php' => '/->orderByPivot\(\'member_id\'/',
         'app/Features/DirectMessage/Queries/ListDirectMessages.php' => '/->orderByDesc\(\'role\'\)->orderByDesc\(\'row_id\'\)/',
-        'app/Features/DirectMessage/Queries/ShowDirectMessage.php' => '/->orderBy\(\'role\', \$direction\)->orderBy\(\'row_id\', \$direction\)/',
+        'app/Features/DirectMessage/Queries/ShowDirectMessage.php' => '/->orderBy\(\'role\',[^)]*\)\s*->orderBy\(\'row_id\'/',
         'app/Features/DirectMessage/Queries/ConversationList.php' => '/->orderByDesc\(\'heads\.counterpart_id\'\)/',
     ];
 
@@ -50,6 +51,7 @@ class TimeOrderTiebreakTest extends TestCase
         $pattern = '/->(?:orderBy|orderByDesc|orderByPivot|reorder)\(\''.$time.'\'|->orderByRaw\(\'[^\']*\b'.$time.'\b[^\']*\'|->(?:latest|oldest)\((?:\)|\''.$time.'\'\))/';
         $matches = 0;
         $untied = [];
+        $unused = [...array_keys(self::COMPOSITE_TAILS), ...array_keys(self::UNIQUE_ON_ITS_OWN)];
 
         foreach ($this->phpFilesUnder($root.'/app') as $path) {
             $relative = substr($path, strlen($root) + 1);
@@ -57,7 +59,14 @@ class TimeOrderTiebreakTest extends TestCase
 
             foreach ($this->statementsMatching($pattern, $source) as [$line, $chain]) {
                 $matches++;
-                if (isset(self::UNIQUE_ON_ITS_OWN["{$relative}:{$line}"]) || $this->hasTiebreak($chain, $relative)) {
+                $key = $this->allowanceFor($relative, $line);
+                if ($key !== null) {
+                    $unused = array_values(array_diff($unused, [$key]));
+                }
+                if ($key !== null && isset(self::UNIQUE_ON_ITS_OWN[$key])) {
+                    continue;
+                }
+                if (preg_match(self::PRIMARY_KEY, $chain) === 1 || ($key !== null && preg_match(self::COMPOSITE_TAILS[$key], $chain) === 1)) {
                     continue;
                 }
                 $untied[] = "{$relative}:{$line}";
@@ -66,6 +75,20 @@ class TimeOrderTiebreakTest extends TestCase
 
         $this->assertGreaterThan(20, $matches, 'the pattern found too few orders to be looking at the right code');
         $this->assertSame([], $untied);
+        // An allowance nothing used any more is a licence waiting for the wrong query.
+        $this->assertSame([], $unused);
+    }
+
+    /** The allowance that applies to this order: its line first, then its file. */
+    private function allowanceFor(string $relative, int $line): ?string
+    {
+        foreach (["{$relative}:{$line}", $relative] as $key) {
+            if (isset(self::COMPOSITE_TAILS[$key]) || isset(self::UNIQUE_ON_ITS_OWN[$key])) {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -86,15 +109,6 @@ class TimeOrderTiebreakTest extends TestCase
         }
 
         return $out;
-    }
-
-    private function hasTiebreak(string $chain, string $relative): bool
-    {
-        if (preg_match(self::PRIMARY_KEY, $chain) === 1) {
-            return true;
-        }
-
-        return isset(self::COMPOSITE_TAILS[$relative]) && preg_match(self::COMPOSITE_TAILS[$relative], $chain) === 1;
     }
 
     /** @return list<string> */
