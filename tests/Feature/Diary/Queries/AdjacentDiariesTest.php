@@ -14,7 +14,7 @@ class AdjacentDiariesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_returns_the_neighbors_adjacent_by_id_in_the_authors_timeline(): void
+    public function test_returns_the_neighbors_adjacent_in_the_archives_created_at_then_id_order(): void
     {
         $owner = Member::factory()->create();
         $older = $this->diary($owner);
@@ -25,6 +25,43 @@ class AdjacentDiariesTest extends TestCase
 
         $this->assertSame($older->getKey(), $olderNeighbor?->getKey());
         $this->assertSame($newer->getKey(), $newerNeighbor?->getKey());
+    }
+
+    public function test_a_backdated_entry_neighbors_by_its_date_not_its_id(): void
+    {
+        $owner = Member::factory()->create();
+        $first = $this->diary($owner, createdAt: '2026-03-01 10:00:00');
+        $third = $this->diary($owner, createdAt: '2026-03-03 10:00:00');
+        $second = $this->diary($owner, createdAt: '2026-03-02 10:00:00');
+
+        ['older' => $older, 'newer' => $newer] = (new AdjacentDiaries)($owner, $second);
+
+        $this->assertSame($first->getKey(), $older?->getKey());
+        $this->assertSame($third->getKey(), $newer?->getKey());
+    }
+
+    public function test_a_shared_second_neighbors_by_id(): void
+    {
+        $owner = Member::factory()->create();
+        $a = $this->diary($owner, createdAt: '2026-03-01 10:00:00');
+        $b = $this->diary($owner, createdAt: '2026-03-01 10:00:00');
+        $c = $this->diary($owner, createdAt: '2026-03-01 10:00:00');
+
+        ['older' => $older, 'newer' => $newer] = (new AdjacentDiaries)($owner, $b);
+
+        $this->assertSame($a->getKey(), $older?->getKey());
+        $this->assertSame($c->getKey(), $newer?->getKey());
+    }
+
+    public function test_an_entry_with_no_time_has_no_neighbors(): void
+    {
+        $owner = Member::factory()->create();
+        $this->diary($owner);
+        $timeless = $this->diary($owner);
+        $this->diary($owner);
+        DB::table('diaries')->where('id', $timeless->getKey())->update(['created_at' => null]);
+
+        $this->assertSame(['older' => null, 'newer' => null], (new AdjacentDiaries)($owner, $timeless->fresh()));
     }
 
     public function test_endpoints_have_only_one_neighbor(): void
@@ -81,8 +118,13 @@ class AdjacentDiariesTest extends TestCase
         $this->assertNull($result['newer']);
     }
 
-    private function diary(Member $owner, Visibility $visibility = Visibility::Members): Diary
+    private function diary(Member $owner, Visibility $visibility = Visibility::Members, ?string $createdAt = null): Diary
     {
-        return Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => $visibility]);
+        $attrs = ['member_id' => $owner->getKey(), 'visibility' => $visibility];
+        if ($createdAt !== null) {
+            $attrs['created_at'] = $createdAt;
+        }
+
+        return Diary::factory()->create($attrs);
     }
 }

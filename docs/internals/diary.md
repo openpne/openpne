@@ -68,11 +68,12 @@ before it.
 ## Lists order by created_at, then id
 
 The lists that order by posting time — the recent feed, the friend feed, search, a member's
-archive and their recent five — order by the `(created_at, id)` tuple, as the timeline feeds do;
-[group-talk.md](group-talk.md#ordering-is-the-created_at-id-tuple) records why a second-precise
-timestamp alone is not a total order. OpenPNE 3 ordered these lists by `created_at` alone. The
-paged ones still page by OFFSET, so an entry posted between two page loads shifts the edge; only
-the tie inside one second is settled here.
+archive and their recent five — order by the `(created_at, id)` tuple
+([ordering.md](ordering.md#the-tuple)). OpenPNE 3 ordered these lists by `created_at` alone, and
+its previous / next links walked `id`; here they walk the archive's own tuple
+([`AdjacentDiaries`](../../app/Features/Diary/Queries/AdjacentDiaries.php)), so a backdated or
+migrated entry is neighboured by its date. The paged ones still page by OFFSET, so an entry posted
+between two page loads shifts the edge; only the tie inside one second is settled here.
 
 ## The archive
 

@@ -116,7 +116,7 @@ class DirectMessageRouteParity extends RouteParity
             // showSuccess.php → message/show.blade.php
             'show' => [
                 new ScreenElement('box nav sidemenu', L::Two, S::Ported, "include_partial('message/sidemenu')", 'x-message.sidemenu'),
-                new ScreenElement('previous / next links within box', L::Two, S::Ported, 'getPrevious/getNext($type, $myMemberId)', 'adjacent by id within the box'),
+                new ScreenElement('previous / next links within box', L::Two, S::Ported, 'getPrevious/getNext($type, $myMemberId)', 'adjacent in the box list order (its time column, then the row id)'),
                 new ScreenElement('From / To members', L::One, S::Ported, '$fromOrToMembers (getIsSender)'),
                 new ScreenElement('counterparty thumbnail', L::Two, S::Ported, 'image_tag_sf_image 76x76', 'x-classic.image 76 in the rowspan photo cell, linked to the profile'),
                 new ScreenElement('subject + created-at', L::One, S::Ported, '$message->getSubject() / format_datetime'),
@@ -128,12 +128,12 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('sent box: no reply button', L::Two, S::Ported, "if (\$messageType != 'dust' && !\$message->getIsSender())", 'Reply is the received box alone'),
                 new ScreenElement('sent box: To lists every recipient', L::Two, S::Ported, '$message->getMessageSendLists() into $fromOrToMembers', 'the receipts; a draft would use draft_recipient_id'),
                 new ScreenElement('sent box: delete moves the sender copy to the trash', L::One, S::Ported, "\$deleteButton = '@deleteSendMessage?id='", 'POST message.send.trash; the recipients keep their receipts'),
-                new ScreenElement('sent box: previous / next walk the sent box', L::Two, S::Ported, 'SendMessageDataTable::getPrevious/getNextSendMessageData (id <, id >)'),
+                new ScreenElement('sent box: previous / next walk the sent box', L::Two, S::Ported, 'SendMessageDataTable::getPrevious/getNextSendMessageData (id <, id >)', 'the sent list order (created_at, id) rather than id alone, which differs on migrated rows'),
                 // Trash-box show (@readDustMessage, /message/checkDelete/:id).
                 new ScreenElement('trash box: To or From by the side the viewer is on', L::Two, S::Ported, '$message->getIsSender()', 'a trash row can be either side'),
                 new ScreenElement('trash box: restore + delete buttons, no reply', L::One, S::Ported, "showSuccess.php dust branch: restore form + \$deleteButton = '@deleteConfirmDustMessage?id='"),
                 new ScreenElement('trash box: delete is a POST to the confirm page', L::Two, S::Partial, "\$form->renderFormTag(url_for('@deleteConfirmDustMessage?id='))", 'OpenPNE 4 uses a GET link labelled "Delete permanently" instead of the posted operation form'),
-                new ScreenElement('trash box: previous / next', L::Three, S::Partial, 'DeletedMessageTable::getPrevious/getNextSendMessageData (message_id only)', 'OpenPNE 3 walks only the sender-trashed rows; OpenPNE 4 walks the whole box, receipts included'),
+                new ScreenElement('trash box: previous / next', L::Three, S::Partial, 'DeletedMessageTable::getPrevious/getNextSendMessageData (message_id only)', 'OpenPNE 3 walks only the sender-trashed rows; OpenPNE 4 walks the whole box, receipts included, in the trash list order (trash time, side, row)'),
             ],
             // sendToFriendInput.php (PluginSendMessageDataForm) → message/compose.blade.php + edit.blade.php
             'sendToFriend' => [

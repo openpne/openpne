@@ -28,7 +28,7 @@ class NotificationFeedController extends Controller
     public function index(Request $request, CountUnreadNotifications $unread): View|Response
     {
         $viewer = $this->viewer();
-        $rows = VisibleNotifications::apply($viewer->notifications())->paginate(self::PAGE);
+        $rows = VisibleNotifications::newestFirst(VisibleNotifications::apply($viewer->notifications()))->paginate(self::PAGE);
 
         return $this->respondWith($request, 'notifications', [
             // Counted over the whole feed, not the header center's window: this page pages past it.

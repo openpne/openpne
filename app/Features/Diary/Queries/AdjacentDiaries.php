@@ -5,18 +5,24 @@ namespace App\Features\Diary\Queries;
 use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
- * The viewer-visible diaries immediately older and newer than $diary within its own author's
- * timeline, matching OpenPNE 3 Diary::getPrevious/getNext: same author, adjacent by id, and
- * filtered to the audiences the viewer may see. "older" has the smaller id, "newer" the larger —
- * id order, not created_at, so duplicate timestamps stay stable.
+ * The viewer-visible diaries either side of $diary in its author's archive, matching OpenPNE 3
+ * Diary::getPrevious/getNext: same author, filtered to the audiences the viewer may see. Unlike
+ * OpenPNE 3, adjacency follows the archive's own order (created_at, id), so the links walk the list
+ * the reader came from (docs/internals/ordering.md, "Prev / next derive from the list").
  */
 class AdjacentDiaries
 {
     /** @return array{older: ?Diary, newer: ?Diary} */
     public function __invoke(?Member $viewer, Diary $diary): array
     {
+        // A row with no time has no place in the archive's order, so it has no neighbours.
+        if ($diary->created_at === null) {
+            return ['older' => null, 'newer' => null];
+        }
+
         $owner = $diary->member;
 
         $visible = function () use ($viewer, $owner) {
@@ -26,9 +32,17 @@ class AdjacentDiaries
             return $query;
         };
 
+        $beside = fn (Builder $q, string $op) => $q
+            ->where('created_at', $op, $diary->created_at)
+            ->orWhere(fn (Builder $tie) => $tie
+                ->where('created_at', '=', $diary->created_at)
+                ->where('id', $op, $diary->getKey()));
+
         return [
-            'older' => $visible()->where('id', '<', $diary->getKey())->orderByDesc('id')->first(),
-            'newer' => $visible()->where('id', '>', $diary->getKey())->orderBy('id')->first(),
+            'older' => $visible()->where(fn (Builder $q) => $beside($q, '<'))
+                ->orderByDesc('created_at')->orderByDesc('id')->first(),
+            'newer' => $visible()->where(fn (Builder $q) => $beside($q, '>'))
+                ->orderBy('created_at')->orderBy('id')->first(),
         ];
     }
 }

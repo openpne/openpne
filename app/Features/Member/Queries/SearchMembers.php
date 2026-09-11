@@ -91,7 +91,7 @@ class SearchMembers
             ->whereColumn('member_blocks.blocker_id', 'members.id')
             ->where('member_blocks.blocked_id', $viewer->getKey()));
 
-        return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
+        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
     }
 
     private function applyFilter(Builder $query, Member $viewer, Profile $profile, mixed $value, mixed $range): void

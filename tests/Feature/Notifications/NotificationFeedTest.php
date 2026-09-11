@@ -21,10 +21,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Testing\AssertableInertia;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class NotificationFeedTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     public function test_feed_lists_own_notifications_newest_first_with_hydrated_actors(): void
@@ -45,6 +47,23 @@ class NotificationFeedTest extends TestCase
                 ->where('feed.data.1.id', $older->getKey())
                 ->where('feed.meta.total', 2),
             );
+    }
+
+    public function test_two_pages_of_one_second_split_at_the_uuid_with_no_row_repeated_or_lost(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $at = now()->setTime(12, 0, 0);
+        $ids = collect(range(1, 35))->map(fn () => $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: $at)->getKey());
+        $expected = $ids->sortDesc()->values()->all();
+
+        $first = $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['feed']['data'];
+        $second = $this->actingOnModern($viewer)->get('/notifications?page=2')->viewData('page')['props']['feed']['data'];
+
+        $this->assertSame(array_slice($expected, 0, 30), array_column($first, 'id'));
+        $this->assertSame(array_slice($expected, 30), array_column($second, 'id'));
+        // MySQL returns a same-second tie in id order even without the clause, so the SQL is pinned too.
+        $orders = $this->orderClausesOn('notifications', fn () => $this->actingOnModern($viewer)->get('/notifications'));
+        $this->assertContains('order by created_at desc, id desc', $orders);
     }
 
     public function test_feed_does_not_show_another_members_notifications(): void

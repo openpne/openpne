@@ -84,6 +84,21 @@ class AiAccountGroupsTest extends TestCase
         $this->assertFalse(GroupMembership::isPending($group, $this->aiAccount));
     }
 
+    public function test_pending_groups_list_by_creation_time_then_id(): void
+    {
+        $olderGroup = Group::factory()->create(['register_policy' => JoinPolicy::Approval, 'created_at' => '2026-03-01 12:00:00']);
+        $newerGroup = Group::factory()->create(['register_policy' => JoinPolicy::Approval, 'created_at' => '2026-03-02 12:00:00']);
+        $backdated = Group::factory()->create(['register_policy' => JoinPolicy::Approval, 'created_at' => '2026-02-01 12:00:00']);
+        foreach ([$olderGroup, $newerGroup, $backdated] as $group) {
+            $this->join($group);
+        }
+
+        $this->showPage()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('groups.pending.0.id', $newerGroup->getKey())
+            ->where('groups.pending.1.id', $olderGroup->getKey())
+            ->where('groups.pending.2.id', $backdated->getKey()));
+    }
+
     public function test_cancelling_nothing_says_so(): void
     {
         $group = Group::factory()->create(['register_policy' => JoinPolicy::Approval]);
