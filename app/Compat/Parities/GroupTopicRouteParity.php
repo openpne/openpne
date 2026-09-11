@@ -70,7 +70,7 @@ class GroupTopicRouteParity extends RouteParity
         return [
             // listCommunitySuccess.php → group-topic/index.blade.php
             'listCommunity' => [
-                new ScreenElement('topic list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-activity datetime in the dt, the name(count) link alone in the dd'),
+                new ScreenElement('topic list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-comment datetime (bumped_at; OpenPNE 3 drew updated_at, which its cascade-save moved on comments and edits) in the dt, the name(count) link alone in the dd'),
                 new ScreenElement('create-topic entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityTopicList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityTopic_list_community')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of topics</h3>', 'List of %topics%'),

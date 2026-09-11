@@ -62,11 +62,12 @@ final class UpgradeVerifier
             $this->verifyFileBin($report, $out);
         }
 
+        $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
         if ($this->readsSourceTable('activity_data')) {
-            $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
             (new ActivityTemplateCheck)->verify($options, $this->targetTables(), $record);
             (new TalkReadCursorCheck)->verify($options, $this->targetTables(), $record);
         }
+        (new BoardBumpCheck)->verify($this->targetTables(), $record);
 
         $this->verifyPasswords($report, $out);
 

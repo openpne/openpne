@@ -138,7 +138,7 @@
                         @unless ($recentEvents->isEmpty())
                             <ul class="articleList">
                                 @foreach ($recentEvents as $event)
-                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($event->updated_at, app()->getLocale()) }}</span> <a href="{{ route('group.events.show', $event) }}">{{ \App\Features\Group\GroupPostTitle::withCount($event) }}</a></li>
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($event->bumped_at, app()->getLocale()) }}</span> <a href="{{ route('group.events.show', $event) }}">{{ \App\Features\Group\GroupPostTitle::withCount($event) }}</a></li>
                                 @endforeach
                             </ul>
                         @endunless
@@ -162,7 +162,7 @@
                         @unless ($recentTopics->isEmpty())
                             <ul class="articleList">
                                 @foreach ($recentTopics as $topic)
-                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($topic->updated_at, app()->getLocale()) }}</span> <a href="{{ route('group.topics.show', $topic) }}">{{ \App\Features\Group\GroupPostTitle::withCount($topic) }}</a></li>
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($topic->bumped_at, app()->getLocale()) }}</span> <a href="{{ route('group.topics.show', $topic) }}">{{ \App\Features\Group\GroupPostTitle::withCount($topic) }}</a></li>
                                 @endforeach
                             </ul>
                         @endunless

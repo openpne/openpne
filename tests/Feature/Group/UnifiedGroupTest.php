@@ -75,7 +75,7 @@ class UnifiedGroupTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'created_at' => Carbon::parse($at),
-            'updated_at' => Carbon::parse($at),
+            'bumped_at' => Carbon::parse($at),
         ]);
     }
 
@@ -85,7 +85,7 @@ class UnifiedGroupTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'created_at' => Carbon::parse($at),
-            'updated_at' => Carbon::parse($at),
+            'bumped_at' => Carbon::parse($at),
         ]);
     }
 

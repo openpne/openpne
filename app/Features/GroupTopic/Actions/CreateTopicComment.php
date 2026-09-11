@@ -2,6 +2,7 @@
 
 namespace App\Features\GroupTopic\Actions;
 
+use App\Features\Group\BoardBumpedAt;
 use App\Features\GroupTopic\Events\TopicCommentPosted;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionFailure;
@@ -20,7 +21,7 @@ class CreateTopicComment
     /**
      * Lock the parent topic row first so concurrent commenters serialize on a row that always
      * exists: an empty thread has no comment rows, so max(number) alone would let two posts both
-     * claim 1. The same save bumps updated_at, lifting the topic as OpenPNE 3's cascade-save did.
+     * claim 1. The comment lifts the topic's bumped_at without a model save, so updated_at stays.
      *
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap
      */
@@ -44,8 +45,7 @@ class CreateTopicComment
                     'body' => $body,
                 ]);
 
-                $topic->topic_updated_at = now();
-                $topic->save();
+                BoardBumpedAt::lift($topic, $comment->created_at);
 
                 TopicCommentPosted::dispatch($topic, $comment, $author);
                 // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).

@@ -160,7 +160,7 @@ class GroupEventCommentRoutesTest extends TestCase
 
         $numbers = GroupEventComment::where('group_event_id', $event->getKey())->orderBy('id')->pluck('number');
         $this->assertSame([1, 2], $numbers->all());
-        $this->assertTrue($event->fresh()->event_updated_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($event->fresh()->bumped_at->greaterThan(now()->subMinute()));
     }
 
     public function test_deleting_a_comment_is_limited_to_its_author_and_event_editors(): void

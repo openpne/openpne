@@ -33,8 +33,7 @@ class UpdateTopic
             // unique) or push past the image cap.
             GroupTopic::whereKey($topic->getKey())->lockForUpdate()->first();
 
-            // OpenPNE 3 bumps topic_updated_at only when the name or body changes; the save bumps
-            // updated_at regardless, so any edit rises on the board.
+            // edited_at marks a name or body change; an edit never lifts the thread on the board.
             $contentChanged = $topic->name !== $data->name || $topic->body !== $data->body;
             $topic->name = $data->name;
             $topic->body = $data->body;
@@ -44,7 +43,7 @@ class UpdateTopic
                 $topic->format = $data->format;
             }
             if ($contentChanged) {
-                $topic->topic_updated_at = now();
+                $topic->edited_at = now();
             }
             // Detached in the same write as the body it was derived from, so a reader in between
             // never sees the new text under the old card.

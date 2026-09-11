@@ -108,6 +108,7 @@ side: its axis leads with the reply flag, a foreign-key column, and is treated a
 | `timeline_posts` | `(in_reply_to_id, created_at, id)` — the home, friend, all-member and tag feeds and the story candidates, all of them top-level posts; it backs the self-referencing foreign key | `(member_id, in_reply_to_id, created_at)` — a member's timeline and post count, also top-level only; it backs the member key |
 | `members` | `(created_at, id)` — the member list without a name filter, newcomers | — |
 | `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
+| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent boards | `(group_id, bumped_at)` — a group's board |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |

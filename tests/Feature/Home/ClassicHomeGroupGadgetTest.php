@@ -53,7 +53,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $topic = GroupTopic::factory()->create([
             'group_id' => $group->getKey(),
             'name' => 'JoinedTopic',
-            'updated_at' => '2026-03-04 12:00:00',
+            'bumped_at' => '2026-03-04 12:00:00',
         ]);
         GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey()]);
         $gadget = $this->makeGadget('recentGroupTopicComment');
@@ -65,7 +65,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertSee('Recently Posted Group Topics')        // h3 (en term rendering)
             ->assertSee('JoinedTopic(1)')                          // title + count, no separating space
             ->assertSee('(JoinedGroup)')                       // community name follows the link
-            ->assertSee('March 4')                                 // updated_at, not created_at
+            ->assertSee('March 4')                                 // bumped_at, not created_at
             ->assertSee('/topics/'.$topic->getKey(), false)
             ->assertDontSee('moreInfo', false);                    // no More link (parity gap)
     }
@@ -101,8 +101,8 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $viewer = Member::factory()->create();
         $group = Group::factory()->create();
         $this->join($viewer, $group);
-        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'OldTopic', 'updated_at' => '2026-01-01 00:00:00']);
-        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'NewTopic', 'updated_at' => '2026-03-01 00:00:00']);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'OldTopic', 'bumped_at' => '2026-01-01 00:00:00']);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'NewTopic', 'bumped_at' => '2026-03-01 00:00:00']);
         $this->makeGadget('recentGroupTopicComment', ['col' => 1]);
 
         // col=1 keeps only the newest; limit()->get() ignores the host page's ?page=.
@@ -120,7 +120,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $event = GroupEvent::factory()->create([
             'group_id' => $group->getKey(),
             'name' => 'JoinedEvent',
-            'updated_at' => '2026-03-04 12:00:00',
+            'bumped_at' => '2026-03-04 12:00:00',
         ]);
         GroupEventComment::factory()->count(2)->create(['group_event_id' => $event->getKey()]);
         GroupEventMember::factory()->count(3)->create(['group_event_id' => $event->getKey()]);

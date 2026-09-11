@@ -85,7 +85,7 @@ export interface TopicSummary {
     name: string;
     commentCount: number;
     author: TopicAuthor | null; // null → withdrawn author
-    updatedAt: string; // ISO 8601 (last activity; a new comment bumps it)
+    bumpedAt: string; // ISO 8601: the last comment's instant, or the post's when there is none
 }
 
 export interface TopicDetail {
@@ -98,6 +98,7 @@ export interface TopicDetail {
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string;
+    editedAt: string | null; // set by a name or body edit
 }
 
 export interface TopicComment {
@@ -140,7 +141,7 @@ export interface EventSummary {
     commentCount: number;
     participantCount: number;
     author: TopicAuthor | null;
-    updatedAt: string; // ISO 8601 datetime
+    bumpedAt: string; // ISO 8601: the last comment's instant, or the post's when there is none
     openDate: string; // Y-m-d civil date, no instant — format with civilDate, never as an instant
 }
 
@@ -154,6 +155,7 @@ export interface EventDetail {
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime
+    editedAt: string | null; // set by a name or body edit
     openDate: string; // Y-m-d (date only)
     openDateComment: string;
     area: string;

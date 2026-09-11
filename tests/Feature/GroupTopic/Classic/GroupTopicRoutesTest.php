@@ -45,7 +45,7 @@ class GroupTopicRoutesTest extends TestCase
         $group = Group::factory()->create();
         $stale = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'Stale thread']);
         $fresh = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'Fresh thread']);
-        DB::table('group_topics')->where('id', $stale->getKey())->update(['updated_at' => now()->subDays(3)]);
+        DB::table('group_topics')->where('id', $stale->getKey())->update(['bumped_at' => now()->subDays(3)]);
 
         $response = $this->actingAs($this->joined($group))->get(route('group.topics.index', $group));
 
@@ -75,7 +75,7 @@ class GroupTopicRoutesTest extends TestCase
         $topic = GroupTopic::factory()->create([
             'group_id' => $group->getKey(), 'name' => 'A thread', 'member_id' => $author->getKey(),
         ]);
-        DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => '2026-06-04 13:44:00']);
+        DB::table('group_topics')->where('id', $topic->getKey())->update(['bumped_at' => '2026-06-04 13:44:00']);
 
         $response = $this->actingAs($this->joined($group))
             ->withSession(['locale' => 'ja'])

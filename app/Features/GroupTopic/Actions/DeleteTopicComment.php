@@ -2,11 +2,13 @@
 
 namespace App\Features\GroupTopic\Actions;
 
+use App\Features\Group\BoardBumpedAt;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionFailure;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 
 class DeleteTopicComment
 {
@@ -26,8 +28,13 @@ class DeleteTopicComment
         // their bytes (irreversible on a disk backend) are purged after the row is gone.
         $files = $comment->images()->with('file')->get()->pluck('file')->filter()->all();
 
-        // OpenPNE 3 leaves the remaining numbers and the topic timestamps untouched on delete.
-        $comment->delete();
+        // Unlike OpenPNE 3, the topic settles back to its last surviving comment; the numbers stay.
+        DB::transaction(function () use ($comment): void {
+            // Parent before comment row: the reverse order deadlocks against a topic delete.
+            $thread = $comment->topic()->lockForUpdate()->firstOrFail();
+            $comment->delete();
+            BoardBumpedAt::settle($thread);
+        });
 
         foreach ($files as $file) {
             $file->delete();

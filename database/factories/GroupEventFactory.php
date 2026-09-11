@@ -20,7 +20,7 @@ class GroupEventFactory extends Factory
             'member_id' => Member::factory(),
             'name' => fake()->sentence(4),
             'body' => fake()->paragraphs(2, true),
-            'event_updated_at' => null,
+            'bumped_at' => fn (array $attributes) => $attributes['created_at'] ?? now(),
             // A week out so the event is open for RSVP by default; date-only.
             'open_date' => now()->addWeek()->startOfDay(),
             'open_date_comment' => '13:00-15:00',

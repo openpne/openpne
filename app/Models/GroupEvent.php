@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['group_id', 'member_id', 'name', 'body', 'event_updated_at', 'open_date', 'open_date_comment', 'area', 'application_deadline', 'capacity', 'format'])]
+#[Fillable(['group_id', 'member_id', 'name', 'body', 'bumped_at', 'edited_at', 'open_date', 'open_date_comment', 'area', 'application_deadline', 'capacity', 'format'])]
 class GroupEvent extends Model
 {
     /** @use HasFactory<GroupEventFactory> */
@@ -24,7 +24,8 @@ class GroupEvent extends Model
     {
         return [
             'link_card_synced_at' => 'datetime',
-            'event_updated_at' => 'datetime',
+            'bumped_at' => 'datetime',
+            'edited_at' => 'datetime',
             'open_date' => 'datetime',
             'application_deadline' => 'datetime',
             'capacity' => 'integer',

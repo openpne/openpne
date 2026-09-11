@@ -57,14 +57,16 @@ class GroupTopicUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        // id, content, the activity timestamp and the post dates come from the source row.
+        // id, content and the post dates come from the source row; bumped_at is the created_at
+        // placeholder until BoardBumpBackfill settles it from the comments.
         $this->assertDatabaseHas('group_topics', [
             'id' => 555,
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'name' => 'Weekend plans',
             'body' => 'Where are we running?',
-            'topic_updated_at' => '2020-05-06 07:08:09',
+            'bumped_at' => '2018-03-04 12:34:56',
+            'edited_at' => null,
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
         ]);
@@ -81,15 +83,15 @@ class GroupTopicUpgradeSqlTest extends TestCase
         $this->assertNull(GroupTopic::findOrFail(1)->member_id);
     }
 
-    public function test_carries_a_null_activity_timestamp(): void
+    public function test_a_null_openpne3_activity_timestamp_is_not_carried(): void
     {
-        // OpenPNE 3 leaves topic_updated_at NULL until the first content edit / comment.
+        // OpenPNE 3 leaves topic_updated_at NULL until the first content edit / comment; it maps nowhere.
         $group = Group::factory()->create();
         $this->seedSourceTopic(1, $group->getKey(), null, ['topic_updated_at' => null]);
 
         $this->runUpgrade();
 
-        $this->assertNull(GroupTopic::findOrFail(1)->topic_updated_at);
+        $this->assertTrue(GroupTopic::findOrFail(1)->bumped_at->equalTo('2018-03-04 12:34:56'));
     }
 
     public function test_preserves_long_text_name_and_body(): void

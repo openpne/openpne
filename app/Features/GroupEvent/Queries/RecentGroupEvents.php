@@ -16,7 +16,7 @@ class RecentGroupEvents
         return $group->events()
             ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();

@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Features\GroupTopic\Actions\CreateTopicComment;
+use App\Features\GroupTopic\Actions\UpdateTopic;
+use App\Features\GroupTopic\Data\GroupTopicFormData;
 use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
+use App\Files\ImageEdit;
 use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Group;
@@ -69,12 +72,11 @@ class DashboardWidgetsTest extends TestCase
         $since = now()->subDays(30);
 
         // A community whose only topic is old, but just received a comment — must count as active
-        // (the comment bumps the topic's updated_at).
+        // (the comment bumps the topic's bumped_at).
         $active = Group::factory()->create();
         $oldTopic = GroupTopic::factory()->create([
             'group_id' => $active->getKey(),
             'created_at' => now()->subYear(),
-            'updated_at' => now()->subYear(),
         ]);
         $commenter = Member::factory()->create();
         GroupMember::factory()->create([
@@ -88,8 +90,13 @@ class DashboardWidgetsTest extends TestCase
         GroupTopic::factory()->create([
             'group_id' => $stale->getKey(),
             'created_at' => now()->subYear(),
-            'updated_at' => now()->subYear(),
         ]);
+        // An old topic edited today is not activity either.
+        $edited = Group::factory()->create();
+        $editor = Member::factory()->create();
+        GroupMember::factory()->create(['group_id' => $edited->getKey(), 'member_id' => $editor->getKey()]);
+        $editedTopic = GroupTopic::factory()->create(['group_id' => $edited->getKey(), 'member_id' => $editor->getKey(), 'created_at' => now()->subYear()]);
+        app(UpdateTopic::class)($editor, $editedTopic, new GroupTopicFormData('Renamed', $editedTopic->body), ImageEdit::none());
 
         $this->assertSame(1, OverviewStatsWidget::activeGroupCount($since));
     }

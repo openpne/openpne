@@ -19,7 +19,7 @@ class RecentPublicGroupEvents
             ->whereHas('group', fn (Builder $q) => $q->where('topic_read_access', TopicReadAccess::Everyone))
             ->withCount('comments')
             ->with('group')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();
