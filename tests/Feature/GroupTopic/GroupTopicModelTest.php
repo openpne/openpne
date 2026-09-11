@@ -36,11 +36,12 @@ class GroupTopicModelTest extends TestCase
         $this->assertSame(TopicPostAuthority::Members, $group->topic_post_authority);
     }
 
-    public function test_topic_updated_at_casts_to_a_datetime(): void
+    public function test_bumped_at_and_edited_at_cast_to_datetimes(): void
     {
-        $topic = GroupTopic::factory()->create(['topic_updated_at' => '2026-06-07 09:00:00']);
+        $topic = GroupTopic::factory()->create(['bumped_at' => '2026-06-07 09:00:00', 'edited_at' => '2026-06-08 09:00:00']);
 
-        $this->assertTrue($topic->refresh()->topic_updated_at->equalTo('2026-06-07 09:00:00'));
+        $this->assertTrue($topic->refresh()->bumped_at->equalTo('2026-06-07 09:00:00'));
+        $this->assertTrue($topic->edited_at->equalTo('2026-06-08 09:00:00'));
     }
 
     public function test_relations_resolve(): void

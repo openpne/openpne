@@ -65,7 +65,7 @@ class HomeSerializer
      * One group activity row — a topic or an event — flattened for the digest, with `kind` driving
      * the client's byline note and its link target. Callers eager-load the owning group's image.
      *
-     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, group: array{id: int, name: string, imageUrl: string|null}, updatedAt: string}
+     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, group: array{id: int, name: string, imageUrl: string|null}, bumpedAt: string}
      */
     public static function activityEntry(GroupTopic|GroupEvent $row): array
     {
@@ -83,7 +83,7 @@ class HomeSerializer
                 // group tile GroupSerializer serves.
                 'imageUrl' => $row->group->image?->thumbnailUrl(120, 120, square: true),
             ],
-            'updatedAt' => $row->updated_at->toIso8601String(),
+            'bumpedAt' => $row->bumped_at->toIso8601String(),
         ];
     }
 }

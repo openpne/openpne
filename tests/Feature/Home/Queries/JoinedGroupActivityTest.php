@@ -32,8 +32,8 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
 
-        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()->subHour()]);
-        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => now()->subHour()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => now()]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
@@ -59,14 +59,15 @@ class JoinedGroupActivityTest extends TestCase
         $this->assertCount(2, $result);
     }
 
-    public function test_ties_on_updated_at_place_topics_before_events(): void
+    public function test_ties_on_bumped_at_place_topics_before_events(): void
     {
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
         $at = now();
 
-        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => $at]);
-        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => $at]);
+        // The event's id is the larger, so only the arm can put the topic first.
+        GroupTopic::factory()->create(['id' => 3, 'group_id' => $group->getKey(), 'bumped_at' => $at]);
+        GroupEvent::factory()->create(['id' => 7, 'group_id' => $group->getKey(), 'bumped_at' => $at]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
@@ -81,8 +82,8 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
 
-        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()->subHour()]);
-        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()]);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => now()->subHour()]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'bumped_at' => now()]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 

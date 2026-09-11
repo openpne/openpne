@@ -20,7 +20,7 @@ class RecentJoinedGroupEvents
                 ->select('group_id'))
             ->withCount(['comments', 'participants'])
             ->with('group.image')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();

@@ -9,11 +9,11 @@ export interface CommunityActivityEntry {
     commentCount: number;
     participantCount: number | null; // event roster size; null on topics (no roster)
     group: { id: number; name: string; imageUrl: string | null };
-    updatedAt: string;
+    bumpedAt: string;
 }
 
-/** The group, not a member, is the byline subject: updated_at bumps on any comment, so an author
- *  byline would misattribute the row. */
+/** The group, not a member, is the byline subject: bumped_at is the last commenter's instant, so an
+ *  author byline would misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (
@@ -22,7 +22,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
             group={entry.group}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            date={<Timestamp at={entry.updatedAt} preset="listStamp" />}
+            date={<Timestamp at={entry.bumpedAt} preset="listStamp" />}
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />

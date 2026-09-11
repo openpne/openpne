@@ -24,7 +24,7 @@ class RecentJoinedGroupTopics
                 ->select('group_id'))
             ->withCount('comments')
             ->with('group.image')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();

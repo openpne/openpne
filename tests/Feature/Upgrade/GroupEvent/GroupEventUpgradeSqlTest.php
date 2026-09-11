@@ -62,8 +62,8 @@ class GroupEventUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        // id, content, the scheduling fields, the activity timestamp and the post dates come from
-        // the source row, not the upgrade run's clock.
+        // id, content, the scheduling fields and the post dates come from the source row, not the
+        // upgrade run's clock; bumped_at is the created_at placeholder until BoardBumpBackfill runs.
         $this->assertDatabaseHas('group_events', [
             'id' => 555,
             'group_id' => $group->getKey(),
@@ -75,7 +75,8 @@ class GroupEventUpgradeSqlTest extends TestCase
             'area' => 'Yoyogi Park',
             'application_deadline' => '2020-05-05 00:00:00',
             'capacity' => 12,
-            'event_updated_at' => '2020-04-01 09:08:07',
+            'bumped_at' => '2018-03-04 12:34:56',
+            'edited_at' => null,
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
         ]);
@@ -94,8 +95,8 @@ class GroupEventUpgradeSqlTest extends TestCase
 
     public function test_carries_null_optional_scheduling_fields(): void
     {
-        // application_deadline, capacity and event_updated_at are nullable; an open event without a
-        // deadline / cap / prior edit must import with those columns NULL.
+        // application_deadline and capacity are nullable; an open event without a deadline / cap
+        // must import with those columns NULL, and a null event_updated_at maps nowhere.
         $group = Group::factory()->create();
         $this->seedSourceEvent(1, $group->getKey(), null, [
             'application_deadline' => null,
@@ -108,7 +109,7 @@ class GroupEventUpgradeSqlTest extends TestCase
         $event = GroupEvent::findOrFail(1);
         $this->assertNull($event->application_deadline);
         $this->assertNull($event->capacity);
-        $this->assertNull($event->event_updated_at);
+        $this->assertTrue($event->bumped_at->equalTo('2018-03-04 12:34:56'));
     }
 
     public function test_preserves_long_text_fields(): void

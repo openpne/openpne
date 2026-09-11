@@ -58,7 +58,8 @@ class TopicActionsTest extends TestCase
 
         $this->assertSame($group->getKey(), $topic->group_id);
         $this->assertSame($author->getKey(), $topic->member_id);
-        $this->assertNotNull($topic->topic_updated_at);
+        $this->assertTrue($topic->bumped_at->equalTo($topic->created_at));
+        $this->assertNull($topic->edited_at);
     }
 
     public function test_create_topic_is_blocked_when_posting_is_admin_only(): void
@@ -72,26 +73,28 @@ class TopicActionsTest extends TestCase
         );
     }
 
-    public function test_update_topic_bumps_timestamps_only_on_a_content_change(): void
+    public function test_update_topic_sets_edited_at_only_on_a_content_change_and_never_lifts_the_board(): void
     {
         $group = Group::factory()->create();
         $author = $this->joined($group, GroupRole::Member);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('group_topics')->where('id', $topic->getKey())->update([
             'updated_at' => now()->subDay(),
-            'topic_updated_at' => now()->subDay(),
+            'bumped_at' => now()->subDay(),
         ]);
 
         // No-op edit (same content) does not touch the timestamps.
         app(UpdateTopic::class)($author, $topic->fresh(), new GroupTopicFormData($topic->name, $topic->body), ImageEdit::none());
         $this->assertTrue($topic->fresh()->updated_at->lessThan(now()->subHour()));
+        $this->assertNull($topic->fresh()->edited_at);
 
-        // A real edit bumps both updated_at (board key) and topic_updated_at.
+        // A real edit sets edited_at (and Laravel's updated_at) but leaves the board key alone.
         app(UpdateTopic::class)($author, $topic->fresh(), new GroupTopicFormData('Edited', $topic->body), ImageEdit::none());
         $fresh = $topic->fresh();
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
-        $this->assertTrue($fresh->topic_updated_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->edited_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($fresh->bumped_at->lessThan(now()->subHour()));
     }
 
     public function test_update_topic_cannot_change_an_op3_rows_format(): void
@@ -140,16 +143,32 @@ class TopicActionsTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->joined($group, GroupRole::Member);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
-        DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay()]);
+        DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay(), 'bumped_at' => now()->subDay()]);
 
         $first = app(CreateTopicComment::class)($author, $topic, 'one');
         $second = app(CreateTopicComment::class)($author, $topic, 'two');
         $third = app(CreateTopicComment::class)($author, $topic, 'three');
 
         $this->assertSame([1, 2, 3], [$first->number, $second->number, $third->number]);
-        // A new comment lifts the topic on the board.
-        $this->assertTrue($topic->fresh()->updated_at->greaterThan(now()->subMinute()));
-        $this->assertTrue($topic->fresh()->topic_updated_at->greaterThan(now()->subMinute()));
+        // A new comment lifts the topic on the board without a model save.
+        $this->assertTrue($topic->fresh()->bumped_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($topic->fresh()->updated_at->lessThan(now()->subHour()));
+    }
+
+    public function test_deleting_a_comment_settles_the_topic_back_to_its_last_surviving_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Admin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'created_at' => '2026-03-01 09:00:00']);
+        $early = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'number' => 1, 'created_at' => '2026-03-01 10:00:00']);
+        $late = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'number' => 2, 'created_at' => '2026-03-01 11:00:00']);
+        DB::table('group_topics')->where('id', $topic->getKey())->update(['bumped_at' => '2026-03-01 11:00:00']);
+
+        app(DeleteTopicComment::class)($author, $late);
+        $this->assertTrue($topic->fresh()->bumped_at->equalTo('2026-03-01 10:00:00'));
+
+        app(DeleteTopicComment::class)($author, $early);
+        $this->assertTrue($topic->fresh()->bumped_at->equalTo('2026-03-01 09:00:00'));
     }
 
     public function test_commenting_is_blocked_for_a_non_member(): void

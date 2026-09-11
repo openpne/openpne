@@ -33,8 +33,7 @@ class UpdateEvent
             // unique) or push past the image cap.
             GroupEvent::whereKey($event->getKey())->lockForUpdate()->first();
 
-            // OpenPNE 3 bumps event_updated_at only when the name or body changes (preSave
-            // isEventModified); the save bumps updated_at whenever any field did.
+            // edited_at marks a name or body change; an edit never lifts the event on the board.
             $contentChanged = $event->name !== $data->name || $event->body !== $data->body;
             $event->fill([
                 'name' => $data->name,
@@ -51,7 +50,7 @@ class UpdateEvent
                 $event->format = $data->format;
             }
             if ($contentChanged) {
-                $event->event_updated_at = now();
+                $event->edited_at = now();
             }
             // Detached in the same write as the body it was derived from, so a reader in between
             // never sees the new text under the old card.

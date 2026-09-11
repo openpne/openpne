@@ -209,7 +209,7 @@ const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => (
     commentCount: 2,
     participantCount: kind === 'event' ? 4 : null,
     group,
-    updatedAt: '2026-08-27T11:00:00+09:00',
+    bumpedAt: '2026-08-27T11:00:00+09:00',
 });
 
 const said = (id: number, overrides: Partial<TalkExcerptMessage> = {}): TalkExcerptMessage => ({

@@ -69,7 +69,7 @@ class GroupEventRouteParity extends RouteParity
         return [
             // listCommunitySuccess.php → group-event/index.blade.php
             'listCommunity' => [
-                new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-activity datetime in the dt, the name(count) link alone in the dd'),
+                new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'listCommunitySuccess.php recentList dl > dt + dd', 'one dl per row: the last-comment datetime (bumped_at; OpenPNE 3 drew updated_at, which its cascade-save moved on comments and edits) in the dt, the name(count) link alone in the dd'),
                 new ScreenElement('create-event entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityEventList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityEvent_list_community')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of events</h3>', 'List of events'),

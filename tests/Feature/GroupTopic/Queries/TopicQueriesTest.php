@@ -16,13 +16,13 @@ class TopicQueriesTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @param array<int, int> $hoursAgo topic key => updated_at age in hours */
+    /** @param array<int, int> $hoursAgo topic key => bumped_at age in hours */
     private function topicsWithAges(Group $group, array $hoursAgo): array
     {
         $topics = [];
         foreach ($hoursAgo as $label => $hours) {
             $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-            DB::table('group_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subHours($hours)]);
+            DB::table('group_topics')->where('id', $topic->getKey())->update(['bumped_at' => now()->subHours($hours)]);
             $topics[$label] = $topic;
         }
 

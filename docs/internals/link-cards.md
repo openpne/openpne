@@ -52,8 +52,8 @@ title or a visibility leaves the card alone. That job re-reads the record, so
 its final write is conditional on the body still being the one it parsed: an edit landing in between
 clears the marker, and an unconditional write would attach the old body's card to the new text and
 mark it examined. It also writes through the query builder rather than saving the model — even
-`saveQuietly` bumps `updated_at`, and community topic and event lists are ordered by it, so a card
-synced from someone opening an old post would float it back to the top of the board. **On read**,
+`saveQuietly` bumps `updated_at`, and `updated_at` should keep meaning what Laravel says it means
+(the boards order by their own `bumped_at`, which no save touches). **On read**,
 [`LinkCardSync`](../../app/LinkCard/LinkCardSync.php) is called from the controller of a *detail*
 page — after authorization, never from a serializer, and never from a list, where one page view
 would queue a page's worth of jobs. Talk is the one exception, for the reason given below. Nothing

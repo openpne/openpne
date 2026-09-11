@@ -11,6 +11,7 @@ use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -141,11 +142,9 @@ class GroupHomeDetailsTest extends TestCase
         $member = Member::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->id, 'member_id' => $member->id]);
         $topic = GroupTopic::factory()->create(['group_id' => $group->id, 'name' => 'Walk plans', 'member_id' => $member->id]);
-        $topic->timestamps = false;
-        $topic->forceFill(['updated_at' => '2026-07-08 12:00:00'])->save();
+        DB::table('group_topics')->where('id', $topic->id)->update(['bumped_at' => '2026-07-08 12:00:00']);
         $event = GroupEvent::factory()->create(['group_id' => $group->id, 'name' => 'Summer stroll', 'member_id' => $member->id]);
-        $event->timestamps = false;
-        $event->forceFill(['updated_at' => '2026-06-11 12:00:00'])->save();
+        DB::table('group_events')->where('id', $event->id)->update(['bumped_at' => '2026-06-11 12:00:00']);
 
         $response = $this->actingAs($member)->get(route('group.show', $group))->assertOk();
 

@@ -6,10 +6,7 @@ use App\Models\Group;
 use App\Models\GroupTopic;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * updated_at is the activity key — a new comment touches it — so a thread with fresh replies sorts
- * above an untouched one. id breaks ties for a stable order.
- */
+/** Ordered by (bumped_at, id): the last comment lifts a thread (docs/internals/group-boards.md, "The board key is bumped_at"). */
 class ListGroupTopics
 {
     public const PER_PAGE = 20;
@@ -20,7 +17,7 @@ class ListGroupTopics
         return $group->topics()
             ->withCount('comments')
             ->with('member.avatar.file')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->paginate($perPage);
     }

@@ -39,7 +39,7 @@ type EntryCommunity = {
 /** The byline subject — exactly one of a member author (circular Avatar; null renders the
  *  withdrawn-member fallback) or the group itself (square CommunityImage) for rows where
  *  the group, not a member, is the subject (cross-community activity digests, where
- *  updated_at bumps on any comment and an author byline would misattribute). */
+ *  bumped_at is the last commenter's instant and an author byline would misattribute). */
 type EntrySubject =
     | { author: EntryAuthor | null; group?: never }
     | { group: EntryCommunity; author?: never };

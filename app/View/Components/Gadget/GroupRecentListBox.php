@@ -34,7 +34,7 @@ abstract class GroupRecentListBox extends Component
         $locale = app()->getLocale();
 
         return $posts->map(fn (GroupTopic|GroupEvent $post): array => [
-            'date' => LocalizedDate::monthDay($post->updated_at, $locale),
+            'date' => LocalizedDate::monthDay($post->bumped_at, $locale),
             'url' => route($routeName, $post),
             'title' => GroupPostTitle::withCount($post),
             'group' => $post->group->name,

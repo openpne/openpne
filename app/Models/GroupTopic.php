@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['group_id', 'member_id', 'name', 'body', 'topic_updated_at', 'format'])]
+#[Fillable(['group_id', 'member_id', 'name', 'body', 'bumped_at', 'edited_at', 'format'])]
 class GroupTopic extends Model
 {
     /** @use HasFactory<GroupTopicFactory> */
@@ -23,7 +23,8 @@ class GroupTopic extends Model
     {
         return [
             'link_card_synced_at' => 'datetime',
-            'topic_updated_at' => 'datetime',
+            'bumped_at' => 'datetime',
+            'edited_at' => 'datetime',
             'format' => BodyFormat::class,
         ];
     }

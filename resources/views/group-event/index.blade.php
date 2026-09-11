@@ -29,7 +29,7 @@
             <x-classic.pager :paginator="$events->withQueryString()" />
             @foreach ($events as $event)
                 <dl>
-                    <dt>{{ \App\Support\LocalizedDate::dateTime($event->updated_at) }}</dt>
+                    <dt>{{ \App\Support\LocalizedDate::dateTime($event->bumped_at) }}</dt>
                     <dd><a href="{{ route('group.events.show', $event) }}">{{ $event->name }}({{ $event->comments_count }})</a></dd>
                 </dl>
             @endforeach

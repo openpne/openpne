@@ -28,7 +28,7 @@ class GroupEventSerializer
      * Y-m-d, not an ISO datetime: an ISO midnight rendered in the browser's timezone would shift
      * the date a day west of UTC.
      *
-     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, updatedAt: string, openDate: string}
+     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, bumpedAt: string, openDate: string}
      */
     public static function summary(GroupEvent $event): array
     {
@@ -38,7 +38,7 @@ class GroupEventSerializer
             'commentCount' => $event->comments_count ?? $event->loadCount('comments')->comments_count,
             'participantCount' => $event->participants_count ?? $event->loadCount('participants')->participants_count,
             'author' => self::author($event->member),
-            'updatedAt' => $event->updated_at->toIso8601String(),
+            'bumpedAt' => $event->bumped_at->toIso8601String(),
             'openDate' => $event->open_date->format('Y-m-d'),
         ];
     }
@@ -46,7 +46,7 @@ class GroupEventSerializer
     /**
      * openDate and applicationDeadline are date-only Y-m-d strings; createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(GroupEvent $event, Member $viewer): array
     {
@@ -62,6 +62,7 @@ class GroupEventSerializer
             'author' => self::author($event->member),
             'linkCard' => LinkCardSerializer::card($event, $viewer),
             'createdAt' => $event->created_at->toIso8601String(),
+            'editedAt' => $event->edited_at?->toIso8601String(),
             'openDate' => $event->open_date->format('Y-m-d'),
             'openDateComment' => $event->open_date_comment ?? '',
             'area' => $event->area ?? '',

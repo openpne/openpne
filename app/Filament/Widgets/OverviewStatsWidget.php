@@ -69,14 +69,13 @@ class OverviewStatsWidget extends StatsOverviewWidget
     }
 
     /**
-     * Keyed on updated_at, which a new comment bumps on its parent topic or event, so a fresh comment
-     * on an old thread counts as activity. Public and static so it is assertable without rendering the
-     * widget.
+     * Keyed on bumped_at, so a fresh comment on an old thread counts as activity and an edit does not.
+     * Public and static so it is assertable without rendering the widget.
      */
     public static function activeGroupCount(CarbonInterface $since): int
     {
-        return GroupTopic::query()->where('updated_at', '>=', $since)->distinct()->pluck('group_id')
-            ->merge(GroupEvent::query()->where('updated_at', '>=', $since)->distinct()->pluck('group_id'))
+        return GroupTopic::query()->where('bumped_at', '>=', $since)->distinct()->pluck('group_id')
+            ->merge(GroupEvent::query()->where('bumped_at', '>=', $since)->distinct()->pluck('group_id'))
             ->unique()
             ->count();
     }

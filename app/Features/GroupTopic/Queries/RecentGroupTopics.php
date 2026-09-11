@@ -16,7 +16,7 @@ class RecentGroupTopics
         return $group->topics()
             ->withCount('comments')
             ->with('member.avatar.file')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();

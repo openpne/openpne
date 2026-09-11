@@ -102,8 +102,7 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
     /**
      * Conditional on the body still being the one this job read: an unconditional write would put
      * the old body's card under new text, and the edit's own job can be dropped while ShouldBeUnique
-     * holds the lock. It updates through the query builder because even saveQuietly bumps
-     * updated_at, which the boards are ordered by.
+     * holds the lock. It updates through the query builder so a sync never bumps updated_at.
      */
     private function attach(Model $record, string $body, BodyFormat $format, ?int $cardId): bool
     {

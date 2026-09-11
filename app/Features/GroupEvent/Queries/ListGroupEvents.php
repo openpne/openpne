@@ -6,10 +6,7 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/**
- * updated_at is the activity key — a new comment touches it — so an event with fresh replies sorts
- * above an untouched one. This is OpenPNE 3's order; it is not open_date order.
- */
+/** Ordered by (bumped_at, id), not open_date (docs/internals/group-boards.md, "The board key is bumped_at"). */
 class ListGroupEvents
 {
     public const PER_PAGE = 20;
@@ -20,7 +17,7 @@ class ListGroupEvents
         return $group->events()
             ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('bumped_at')
             ->orderByDesc('id')
             ->paginate($perPage);
     }
