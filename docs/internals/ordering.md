@@ -153,6 +153,8 @@ column included, and requires a tiebreak before the call that executes or caps t
 key, bare or table-qualified, or, for the few queries whose unique tail is composite, that tail
 named per file (a pivot's other key column, the mailbox union's `(role, row_id)`, the conversation
 list's counterpart after a shared latest message). An order on a column unique in its own query is
-listed per line with its reason. The guard sees the width of the code base and no deeper than one
-chain: an order built from a variable, or spread across statements, is invisible to it, and every
-stream and paged list also pins its SQL as above.
+listed per line with its reason, and an allowance no order uses any more fails the test, so the
+lists cannot outlive the queries they were written for. The guard sees the width of the code base
+and no deeper than one chain: an order built from a variable, spread across statements, or written
+inside a raw select's window clause, is invisible to it, and every stream and paged list also pins
+its SQL as above.
