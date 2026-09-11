@@ -32,11 +32,14 @@ class CreateEventComment
             throw new GroupEventActionException(GroupEventActionFailure::CannotComment);
         }
 
-        return $this->images->compensating(function (callable $store) use ($author, $event, $body, $images): GroupEventComment {
+        $comment = $this->images->compensating(function (callable $store) use ($author, $event, $body, $images): GroupEventComment {
             $locked = GroupEvent::whereKey($event->getKey())->lockForUpdate()->first();
 
             return $this->persist($store, $author, $locked, $body, $images);
         });
+        $event->bumped_at = $comment->created_at;
+
+        return $comment;
     }
 
     /**
@@ -56,7 +59,7 @@ class CreateEventComment
             'body' => $body,
         ]);
 
-        BoardBumpedAt::lift($event);
+        BoardBumpedAt::lift($event, $comment->created_at);
 
         foreach (array_values($images) as $index => $upload) {
             $file = $store($upload, 'groupEventComment', (int) $comment->getKey());

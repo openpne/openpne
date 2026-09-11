@@ -4,6 +4,7 @@ namespace App\Features\Group;
 
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -20,34 +21,39 @@ final class BoardBumpedAt
         GroupEvent::class => ['group_events', 'group_event_comments', 'group_event_id'],
     ];
 
-    public static function lift(GroupTopic|GroupEvent $thread): void
+    /** The comment's own created_at, so the column equals its definition to the second. */
+    public static function lift(GroupTopic|GroupEvent $thread, CarbonInterface $commentedAt): void
     {
-        $now = now();
-        $thread->bumped_at = $now;
-        $thread->newQuery()->whereKey($thread->getKey())->toBase()->update(['bumped_at' => $now]);
+        $thread->bumped_at = $commentedAt;
+        $thread->newQuery()->whereKey($thread->getKey())->toBase()->update(['bumped_at' => $commentedAt]);
     }
 
-    /** Recomputes from the surviving comments, for the row named or for every row of the table. */
-    public static function settle(GroupTopic|GroupEvent|string $threadOrModel, ?int $id = null): int
+    public static function settle(GroupTopic|GroupEvent $thread): void
     {
-        $model = is_string($threadOrModel) ? $threadOrModel : $threadOrModel::class;
+        [$table, $comments, $fk] = self::BOARDS[$thread::class];
+
+        DB::update("UPDATE {$table} SET bumped_at = ".self::definition($table, $comments, $fk).' WHERE id = ?', [$thread->getKey()]);
+    }
+
+    /** @param  class-string<GroupTopic|GroupEvent>  $model */
+    public static function settleAll(string $model): int
+    {
         [$table, $comments, $fk] = self::BOARDS[$model];
-        $where = $id === null && is_string($threadOrModel) ? '' : ' WHERE id = ?';
-        $bindings = $where === '' ? [] : [$id ?? $threadOrModel->getKey()];
 
-        return DB::update(
-            "UPDATE {$table} SET bumped_at = COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)".$where,
-            $bindings,
-        );
+        return DB::update("UPDATE {$table} SET bumped_at = ".self::definition($table, $comments, $fk));
     }
 
-    /** Rows whose bumped_at disagrees with the definition, for the verifier. */
+    /** The one SQL spelling of the definition; the migration that introduced the column carries the same text. */
+    public static function definition(string $table, string $comments, string $fk): string
+    {
+        return "COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)";
+    }
+
+    /** @param  class-string<GroupTopic|GroupEvent>  $model */
     public static function drift(string $model): int
     {
         [$table, $comments, $fk] = self::BOARDS[$model];
 
-        return (int) DB::scalar(
-            "SELECT COUNT(*) FROM {$table} WHERE bumped_at <> COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)"
-        );
+        return (int) DB::scalar("SELECT COUNT(*) FROM {$table} WHERE bumped_at <> ".self::definition($table, $comments, $fk));
     }
 }

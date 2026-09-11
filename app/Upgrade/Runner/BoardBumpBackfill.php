@@ -58,7 +58,7 @@ final class BoardBumpBackfill
             $updated = DB::transaction(function () use ($boards): int {
                 $updated = 0;
                 foreach ($boards as [$model]) {
-                    $updated += BoardBumpedAt::settle($model);
+                    $updated += BoardBumpedAt::settleAll($model);
                 }
 
                 UpgradeState::updateOrCreate(['step_key' => self::KEY], [

@@ -20,10 +20,14 @@ return new class extends Migration
     public function up(): void
     {
         foreach (self::BOARDS as $table => [$comments, $fk, $dead]) {
-            Schema::table($table, function (Blueprint $t) {
-                $t->dateTime('bumped_at')->nullable();
-                $t->dateTime('edited_at')->nullable();
-            });
+            // Every phase is guarded, so a run that failed on the second table resumes on the first.
+            if (! Schema::hasColumn($table, 'bumped_at')) {
+                // timestamp, like created_at from timestamps(): the two are compared and assigned in SQL.
+                Schema::table($table, function (Blueprint $t) {
+                    $t->timestamp('bumped_at')->nullable();
+                    $t->timestamp('edited_at')->nullable();
+                });
+            }
 
             $untimed = DB::table($table)->whereNull('created_at')->count();
             if ($untimed > 0) {
@@ -34,17 +38,25 @@ return new class extends Migration
 
             // change() rebuilds the table on SQLite, safe only because neither table has a composite primary key or a unique index.
             Schema::table($table, function (Blueprint $t) {
-                $t->dateTime('bumped_at')->nullable(false)->change();
+                $t->timestamp('bumped_at')->nullable(false)->change();
             });
 
             // Add before drop: InnoDB backs the group_id foreign key with whichever of these indexes exists (errno 1553).
-            Schema::table($table, function (Blueprint $t) {
-                $t->index(['group_id', 'bumped_at']);
-                $t->index(['bumped_at', 'id']);
+            Schema::table($table, function (Blueprint $t) use ($table) {
+                if (! Schema::hasIndex($table, ['group_id', 'bumped_at'])) {
+                    $t->index(['group_id', 'bumped_at']);
+                }
+                if (! Schema::hasIndex($table, ['bumped_at', 'id'])) {
+                    $t->index(['bumped_at', 'id']);
+                }
             });
-            Schema::table($table, function (Blueprint $t) use ($dead) {
-                $t->dropIndex(['group_id', 'updated_at']);
-                $t->dropColumn($dead);
+            Schema::table($table, function (Blueprint $t) use ($table, $dead) {
+                if (Schema::hasIndex($table, ['group_id', 'updated_at'])) {
+                    $t->dropIndex(['group_id', 'updated_at']);
+                }
+                if (Schema::hasColumn($table, $dead)) {
+                    $t->dropColumn($dead);
+                }
             });
         }
     }
@@ -53,7 +65,7 @@ return new class extends Migration
     {
         foreach (self::BOARDS as $table => [, , $dead]) {
             Schema::table($table, function (Blueprint $t) use ($dead) {
-                $t->dateTime($dead)->nullable();
+                $t->timestamp($dead)->nullable();
                 $t->index(['group_id', 'updated_at']);
             });
             Schema::table($table, function (Blueprint $t) {

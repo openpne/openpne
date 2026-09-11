@@ -194,7 +194,8 @@ the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
   routing's own predicate over the source, not an id match: a native message can reuse the id of an
   activity that landed elsewhere.
 - **`BoardBumpCheck`** recomputes every topic's and event's `bumped_at` from its comments and fails on
-  any row that differs, or when the backfill has no completed checkpoint.
+  any row that differs; it consults no checkpoint, so a site migrated before the pass existed verifies
+  on its rows alone.
 - **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and the FK is
   rewired.
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown

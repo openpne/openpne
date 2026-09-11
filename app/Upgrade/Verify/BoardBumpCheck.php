@@ -5,13 +5,12 @@ namespace App\Upgrade\Verify;
 use App\Features\Group\BoardBumpedAt;
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
-use App\Models\UpgradeState;
-use App\Upgrade\Runner\BoardBumpBackfill;
 use Closure;
 
 /**
- * Re-checks the backfill without trusting its checkpoint: every thread's `bumped_at` must equal the
- * definition `COALESCE(MAX(comments.created_at), created_at)` (docs/internals/upgrade.md, "Verify").
+ * Every thread's `bumped_at` must equal its definition (docs/internals/upgrade.md, "Verify"). The
+ * definition is the whole truth, so no checkpoint is consulted: a site migrated before the pass
+ * existed verifies on its rows alone.
  */
 final class BoardBumpCheck
 {
@@ -29,14 +28,6 @@ final class BoardBumpCheck
     {
         $boards = array_filter(self::BOARDS, fn (array $board, string $table) => in_array($table, $targetTables, true) && in_array($board[1], $targetTables, true), ARRAY_FILTER_USE_BOTH);
         if ($boards === []) {
-            return;
-        }
-
-        $completed = UpgradeState::query()->where('step_key', BoardBumpBackfill::KEY)
-            ->where('status', UpgradeState::STATUS_COMPLETED)->exists();
-        if (! $completed) {
-            $record('board_bump', false, 'not completed — no completed upgrade-state row for the board bump backfill');
-
             return;
         }
 

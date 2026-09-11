@@ -30,8 +30,9 @@ class DeleteEventComment
 
         // Unlike OpenPNE 3, the event settles back to its last surviving comment; the numbers stay.
         DB::transaction(function () use ($comment): void {
+            $thread = $comment->event()->lockForUpdate()->first();
             $comment->delete();
-            BoardBumpedAt::settle($comment->event);
+            BoardBumpedAt::settle($thread);
         });
 
         foreach ($files as $file) {

@@ -92,7 +92,7 @@ neither may serialize an unbounded thread in one response.
 A thread's `bumped_at` always equals `COALESCE(MAX(comments.created_at), created_at)`: it starts at
 creation, a comment lifts it, and deleting a comment settles it back to the last surviving one — a
 departure from OpenPNE 3, which left the stamp where the deleted comment put it. Nothing else moves
-it: not a name or body edit (that sets `edited_at`, which the detail page shows as an "edited" mark),
+it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as `editedAt`),
 not an RSVP, not a link-card sync, not an admin action. `updated_at` is Laravel's and means nothing to
 the board, which is why [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through
 the query builder: a model save, even a quiet one, bumps `updated_at`.

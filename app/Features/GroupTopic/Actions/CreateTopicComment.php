@@ -45,7 +45,7 @@ class CreateTopicComment
                     'body' => $body,
                 ]);
 
-                BoardBumpedAt::lift($topic);
+                BoardBumpedAt::lift($topic, $comment->created_at);
 
                 TopicCommentPosted::dispatch($topic, $comment, $author);
                 // Held until the commit: the job re-reads the row by id (SyncLinkCard::for).

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Features\Group\BoardBumpedAt;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -63,13 +64,13 @@ class BoardBumpBackfillTest extends TestCase
         $this->assertTrue($topic->fresh()->bumped_at->equalTo('2018-02-01 09:00:00'));
     }
 
-    public function test_the_verifier_recomputes_the_definition_and_needs_the_checkpoint(): void
+    public function test_the_verifier_recomputes_the_definition_without_trusting_the_checkpoint(): void
     {
         $group = Group::factory()->create();
         $topic = GroupTopic::factory()->create(['group_id' => $group->id, 'created_at' => '2018-01-01 09:00:00', 'bumped_at' => '2018-01-01 09:00:00']);
         GroupTopicComment::factory()->create(['group_topic_id' => $topic->id, 'number' => 1, 'created_at' => '2018-02-01 09:00:00']);
 
-        $this->assertSame([false, 'not completed — no completed upgrade-state row for the board bump backfill'], $this->check());
+        $this->assertSame([false, "1 thread(s) have a bumped_at that is not their last comment's time"], $this->check());
 
         $this->assertTrue($this->runPass());
         $this->assertSame([true, 'every topic and event sits at its last comment'], $this->check());
@@ -99,5 +100,18 @@ class BoardBumpBackfillTest extends TestCase
         return function (string $line): void {
             $this->out[] = $line;
         };
+    }
+
+    /** The migration cannot import app code, so the two spellings of the definition are pinned equal here. */
+    public function test_the_migration_backfills_with_the_same_definition_the_pass_uses(): void
+    {
+        $migration = file_get_contents(base_path('database/migrations/2026_09_11_000001_replace_board_activity_key_with_bumped_at.php'));
+        $template = 'UPDATE {$table} SET bumped_at = COALESCE((SELECT MAX(c.created_at) FROM {$comments} AS c WHERE c.{$fk} = {$table}.id), created_at)';
+
+        $this->assertStringContainsString($template, $migration);
+        foreach ([['group_topics', 'group_topic_comments', 'group_topic_id'], ['group_events', 'group_event_comments', 'group_event_id']] as [$table, $comments, $fk]) {
+            $expected = str_replace(['{$table}', '{$comments}', '{$fk}'], [$table, $comments, $fk], substr($template, strlen('UPDATE {$table} SET bumped_at = ')));
+            $this->assertSame($expected, BoardBumpedAt::definition($table, $comments, $fk));
+        }
     }
 }
