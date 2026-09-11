@@ -74,10 +74,10 @@ Modern component keeps the URL at the head (`preserveUrl`), so a reload or a sha
 there; a stream that wrote its cursor into the URL would also collide with a second one on the page,
 so a page holds one stream. The Classic pager of a stream offers "next" as the older page and
 "previous" as the head, never the page before: a stream is read from its head, and a position in it
-is the cursor, not a page number. A cursor page whose rows are gone since is not an empty stream:
-on both surfaces it says there is nothing older and keeps the way back to the head. Group talk and
-direct-message conversations keep their own cursors: they page in both directions and around an
-anchor, which a feed never does.
+is the cursor, not a page number. Every cursor page, rows or none, offers the way back to the
+head on both surfaces, and one whose rows are gone since says there is nothing older rather than
+calling the stream empty. Group talk and direct-message conversations keep their own cursors: they
+page in both directions and around an anchor, which a feed never does.
 
 Three client contracts follow from Inertia's data manager keeping the next cursor in its own state,
 which it drops only for a prop the request named in `reset`, a header only the client can send. The

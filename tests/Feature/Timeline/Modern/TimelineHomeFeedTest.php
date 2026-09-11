@@ -107,7 +107,7 @@ class TimelineHomeFeedTest extends TestCase
             ->where('headUrl', route('timeline.index')));
         $this->actingAs($member)->get(route('timeline.member', ['member' => $member, 'before' => $cursor]))->assertInertia(fn ($page) => $page
             ->where('headUrl', route('timeline.member', ['member' => $member])));
-        $this->actingAs($member)->get(route('timeline.tag', ['tag' => 'tag', 'before' => $cursor]))->assertInertia(fn ($page) => $page
+        $this->actingAs($member)->get(route('timeline.tag', ['tag' => 'ＴＡＧ', 'before' => $cursor]))->assertInertia(fn ($page) => $page
             ->where('headUrl', route('timeline.tag', ['tag' => 'tag'])));
     }
 }

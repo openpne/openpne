@@ -32,7 +32,7 @@ test('a cursor page with no rows left says so and leads back to the head', () =>
     expect(screen.getByRole('link', { name: 'Jump to latest' }).getAttribute('href')).toBe('/timeline');
 });
 
-test('the head link stands on its own above a cursor page that still has rows, and not at the head', () => {
+test('the head link on its own renders on a cursor page and nothing at the head', () => {
     const { container } = render(<StreamHead headUrl={null} />);
     expect(container.innerHTML).toBe('');
 

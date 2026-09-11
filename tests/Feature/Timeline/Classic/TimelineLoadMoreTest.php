@@ -302,7 +302,8 @@ class TimelineLoadMoreTest extends TestCase
             ->assertSee(__('No older posts.'))
             ->assertDontSee(__('No %activity% posts to show.'))
             ->assertSee('<p class="prev"><a href="'.e(route('timeline.member', ['member' => $author])).'">', false);
-        $this->actingAs($author)->get(route('timeline.tag', ['tag' => 'row', 'before' => $this->cursorOf('Row 01')]))->assertOk()
+        // The tag arrives unnormalized; the head link names the normalized form the page is on.
+        $this->actingAs($author)->get(route('timeline.tag', ['tag' => 'ＲＯＷ', 'before' => $this->cursorOf('Row 01')]))->assertOk()
             ->assertSee(__('No older posts.'))
             ->assertDontSee(__('No %activity% posts to show.'))
             ->assertSee('<p class="prev"><a href="'.e(route('timeline.tag', ['tag' => 'row'])).'">', false);

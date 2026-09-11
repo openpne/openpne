@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 interface StreamEmptyProps {
     /** The head of the stream when the page was reached by a cursor; null at the head itself. */
@@ -27,7 +28,7 @@ export function StreamHead({ headUrl, className }: { headUrl: string | null | un
     }
 
     return (
-        <p className={className ? `${className} text-sm` : 'text-sm'}>
+        <p className={cn('text-sm', className)}>
             <Link href={headUrl} className="text-link hover:underline">
                 {t('Jump to latest')}
             </Link>
