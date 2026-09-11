@@ -1,9 +1,10 @@
 # Group boards
 
 A group's **board** is `group_topics` and `group_events`: a titled thread with a body and a comment
-list, ordered by `bumped_at` — the last comment's time — rather than by post date. The two are a deliberate parallel hierarchy —
-OpenPNE 3's `communityTopic` and `communityEvent` modules of `opCommunityTopicPlugin`, ported as
-two feature modules whose shared shapes are pinned by tests rather than by a common base class.
+list, ordered by `bumped_at` — the last comment's time — rather than by post date. The two are a
+deliberate parallel hierarchy — OpenPNE 3's `communityTopic` and `communityEvent` modules of
+`opCommunityTopicPlugin`, ported as two feature modules whose shared shapes are pinned by tests
+rather than by a common base class.
 
 Talk is the third thing inside a group and has its own document
 ([group-talk.md](group-talk.md)); what all three share is the group's two access columns
@@ -92,10 +93,11 @@ neither may serialize an unbounded thread in one response.
 A thread's `bumped_at` always equals `COALESCE(MAX(comments.created_at), created_at)`: it starts at
 creation, a comment lifts it, and deleting a comment settles it back to the last surviving one — a
 departure from OpenPNE 3, which left the stamp where the deleted comment put it. Nothing else moves
-it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as `editedAt`),
-not an RSVP, not a link-card sync; an administrator deleting a comment settles it like anyone else. `updated_at` is Laravel's and means nothing to
-the board, which is why [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through
-the query builder: a model save, even a quiet one, bumps `updated_at`.
+it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as
+`editedAt`), not an RSVP, not a link-card sync; an administrator deleting a comment settles it like
+anyone else. `updated_at` is Laravel's and means nothing to the board, which is why
+[`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through the query builder: a
+model save, even a quiet one, bumps `updated_at`.
 
 The lists order by `(bumped_at, id)` ([ordering.md](ordering.md#axes)), on `(group_id, bumped_at)`
 within a group and `(bumped_at, id)` across the site. OpenPNE 3 ordered its board by `updated_at`,

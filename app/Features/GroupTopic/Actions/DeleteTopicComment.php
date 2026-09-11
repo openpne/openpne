@@ -30,11 +30,9 @@ class DeleteTopicComment
 
         // Unlike OpenPNE 3, the topic settles back to its last surviving comment; the numbers stay.
         DB::transaction(function () use ($comment): void {
-            $thread = $comment->topic()->lockForUpdate()->first();
+            $thread = $comment->topic()->lockForUpdate()->firstOrFail();
             $comment->delete();
-            if ($thread !== null) {
-                BoardBumpedAt::settle($thread);
-            }
+            BoardBumpedAt::settle($thread);
         });
 
         foreach ($files as $file) {

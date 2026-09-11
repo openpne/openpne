@@ -41,8 +41,9 @@ return new class extends Migration
 
             // change() rebuilds the table on SQLite, safe only because neither table has a composite primary key or a unique index.
             $sequence = $this->sqliteSequence($table);
+            // The explicit DEFAULT keeps MySQL (explicit_defaults_for_timestamp=OFF) from adding ON UPDATE CURRENT_TIMESTAMP.
             Schema::table($table, function (Blueprint $t) {
-                $t->timestamp('bumped_at')->nullable(false)->change();
+                $t->timestamp('bumped_at')->nullable(false)->useCurrent()->change();
             });
             $this->restoreSqliteSequence($table, $sequence);
 
@@ -90,7 +91,7 @@ return new class extends Migration
     {
         foreach (self::BOARDS as $table => [, , $dead]) {
             // The old code orders by updated_at, so a comment made since the upgrade is folded back into it.
-            DB::update("UPDATE {$table} SET updated_at = CASE WHEN bumped_at > updated_at THEN bumped_at ELSE updated_at END");
+            DB::update("UPDATE {$table} SET updated_at = CASE WHEN updated_at IS NULL OR bumped_at > updated_at THEN bumped_at ELSE updated_at END");
             Schema::table($table, function (Blueprint $t) use ($dead) {
                 $t->timestamp($dead)->nullable();
                 $t->index(['group_id', 'updated_at']);
