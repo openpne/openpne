@@ -90,7 +90,7 @@ class DiaryListTiebreakTest extends TestCase
         $this->assertSame($top, (new ListFriendDiaries)->take($this->viewer, 20)->map->getKey()->all());
     }
 
-    /** The two member-scoped lists read the (member_id, created_at) index, which already yields id order within a tie, so for them only this SQL pin goes red. */
+    /** With this fixture neither engine misorders the two member-scoped lists without the clause, so this SQL pin is their only guard. */
     public function test_every_list_orders_by_created_at_then_id(): void
     {
         DB::enableQueryLog();
