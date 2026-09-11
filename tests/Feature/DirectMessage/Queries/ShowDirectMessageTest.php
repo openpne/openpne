@@ -122,7 +122,6 @@ class ShowDirectMessageTest extends TestCase
         $this->assertSame($newer->getKey(), $view->nextId);
     }
 
-    /** Both sides trashed in the same second: the list puts the sent row before the received one, so do the links. */
     public function test_trash_previous_and_next_cross_the_two_sides_in_list_order(): void
     {
         [$me, $other] = Member::factory()->count(2)->create();
@@ -138,5 +137,20 @@ class ShowDirectMessageTest extends TestCase
         $this->assertNull($fromSent->nextId);
         $this->assertSame($earlier->getKey(), $fromReceived->previousId);
         $this->assertSame($sent->getKey(), $fromReceived->nextId);
+    }
+
+    /** OpenPNE 3 data may carry two receipts of one message for one member; neither is the other's neighbour. */
+    public function test_a_duplicate_receipt_does_not_make_a_message_its_own_neighbour(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $older = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 09:00:00']);
+        $twice = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 10:00:00']);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $twice->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => '2026-03-01 10:00:00']);
+        $newer = $this->deliver($sender, $recipient, receipt: ['created_at' => '2026-03-01 11:00:00']);
+
+        $view = app(ShowDirectMessage::class)($recipient, DirectMessageBox::Receive, $twice->getKey());
+
+        $this->assertSame($older->getKey(), $view->previousId);
+        $this->assertSame($newer->getKey(), $view->nextId);
     }
 }

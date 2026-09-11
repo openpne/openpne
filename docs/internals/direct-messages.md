@@ -299,8 +299,9 @@ published content, and a private message is not that.
    relationship between the two members may hide a row.
 3. A null counterpart means the withdrawn bucket, and every comparison against it is `IS NULL` — never
    a bound null.
-4. Every read orders by a time column and a unique key: `(created_at, id)` in the conversation reads
-   and cursors, and each mailbox box's own time column and row id in the list and its prev / next.
+4. Every read of messages orders by a time column and a unique key: `(created_at, id)` in the
+   conversation reads and cursors, and each mailbox box's own time column and row id in the list and
+   its prev / next.
 5. `read` is answered by the receipt of the conversation being read, never by whichever receipt the
    relation holds first.
 6. The chat screens add no column and no table: everything they show is the mailbox's own rows, and

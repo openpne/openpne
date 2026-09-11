@@ -47,7 +47,6 @@ class ListDirectMessagesTiebreakTest extends TestCase
         $this->assertPagesSplit(array_reverse($ids), fn (int $page) => $this->box($me, DirectMessageBox::Sent, $page));
     }
 
-    /** Both sides trashed in one second: sent rows precede received ones, each side by its own row id. */
     public function test_the_trash_splits_one_second_by_side_then_row(): void
     {
         [$me, $other] = Member::factory()->count(2)->create()->all();
@@ -66,7 +65,7 @@ class ListDirectMessagesTiebreakTest extends TestCase
         $this->assertPagesSplit($expected, fn (int $page) => $this->box($me, DirectMessageBox::Trash, $page));
     }
 
-    public function test_every_box_orders_by_its_time_then_a_unique_key(): void
+    public function test_each_box_orders_by_its_time_then_a_unique_key(): void
     {
         [$me, $other] = Member::factory()->count(2)->create()->all();
         $m = DirectMessage::factory()->create(['sender_id' => $other->getKey()]);

@@ -47,7 +47,8 @@ class ShowDirectMessage
 
     /**
      * The message's row in the box, or null when the viewer may not read it there. A message with two
-     * rows in one box (a duplicate receipt, or trashed on both sides) is placed at its later row.
+     * rows in one box (a duplicate receipt, or trashed on both sides) is placed at its later row, and
+     * its other row is not its own neighbour.
      */
     private function position(Member $viewer, DirectMessageBox $box, int $messageId): ?object
     {
@@ -96,6 +97,7 @@ class ShowDirectMessage
         // The box list orders by (sort_at, role, row_id); the neighbour is the next row in that order.
         $row = DB::query()
             ->fromSub($this->boxRows($viewer, $box), 'box')
+            ->where('id', '<>', $position->id)
             ->where(fn (QueryBuilder $q) => $q
                 ->where('sort_at', $op, $position->sort_at)
                 ->orWhere(fn (QueryBuilder $tie) => $tie

@@ -14,10 +14,12 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class GroupQueriesTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     public function test_show_community_loads_member_count(): void
@@ -97,13 +99,15 @@ class GroupQueriesTest extends TestCase
     public function test_search_and_the_member_list_order_groups_by_created_at_then_id(): void
     {
         $member = Member::factory()->create();
-        $ids = [];
+        $rows = [];
         foreach (range(1, 25) as $i) {
-            $group = Group::factory()->create(['created_at' => '2026-03-01 12:00:00']);
+            // Five distinct seconds cycled, so creation time and id disagree and ties still occur.
+            $group = Group::factory()->create(['created_at' => '2026-03-01 12:00:0'.($i % 5)]);
             GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
-            $ids[] = $group->getKey();
+            $rows[] = [$i % 5, $group->getKey()];
         }
-        $expected = array_reverse($ids);
+        usort($rows, fn ($a, $b) => [$b[0], $b[1]] <=> [$a[0], $a[1]]);
+        $expected = array_column($rows, 1);
 
         $search = fn (int $n) => $this->onPage($n, fn () => (new SearchGroups)(''))->getCollection()->modelKeys();
         $mine = fn (int $n) => $this->onPage($n, fn () => (new ListMemberGroups)($member))->getCollection()->modelKeys();
@@ -118,15 +122,19 @@ class GroupQueriesTest extends TestCase
     {
         $group = Group::factory()->create();
         $applicants = Member::factory()->count(25)->create();
-        DB::table('group_join_requests')->insert($applicants->map(fn (Member $m) => [
+        // Inserted newest member first, so the table's own order is the reverse of the list's.
+        DB::table('group_join_requests')->insert($applicants->reverse()->map(fn (Member $m) => [
             'group_id' => $group->getKey(), 'member_id' => $m->getKey(), 'created_at' => '2026-03-01 12:00:00',
-        ])->all());
+        ])->values()->all());
         $expected = $applicants->modelKeys();
 
         $page = fn (int $n) => $this->onPage($n, fn () => (new ListPendingMembers)($group))->getCollection()->modelKeys();
 
         $this->assertSame(array_slice($expected, 0, 20), $page(1));
         $this->assertSame(array_slice($expected, 20), $page(2));
+        // The pivot's primary key already yields member_id order on a scan, so only the clause bites.
+        $orders = $this->orderClausesOn('members', fn () => $page(1));
+        $this->assertSame(['order by group_join_requests.created_at asc, group_join_requests.member_id asc'], array_values(array_unique($orders)));
     }
 
     private function onPage(int $page, callable $run): mixed

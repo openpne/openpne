@@ -27,8 +27,9 @@ The key only has to be unique; it need not be monotonic (a notification's id is 
 pivot table it is the other half of the composite primary key. Across a UNION it is a pair no two
 arms share — the mailbox's trash orders by `(sort_at, role, row_id)`, where `role` names the arm.
 
-Filament appends the table's primary key to any sort it renders, so an admin table's
-`defaultSort('id', 'desc')` is a structural order and needs no time column.
+Filament appends the table's primary key to any sort it renders — in the sort's own direction under
+`defaultSort`, ascending otherwise — so an admin table's `defaultSort('id', 'desc')` is a structural
+order, and a query-level time order states its own key so the two directions agree.
 
 ## Prev / next derive from the list
 
@@ -49,13 +50,19 @@ list by list in the feature documents.
 
 The keyset comparison is written out as `t < ? OR (t = ? AND id < ?)`: SQLite has no row-value
 comparison. A cursor is `{iso8601}|{id}`, opaque to the client, and names a position rather than a
-permission — a malformed cursor reads as no cursor.
+permission. A web surface reads a malformed cursor as no cursor; the MCP realm refuses one it did not
+hand out ([mcp.md](mcp.md)).
+
+A time column from `timestamps()` is nullable, and a keyset comparison against NULL is unknown: a row
+with no time never has neighbours and is never reached from a cursor. The lists here rely on every
+write path filling the column, which the upgrade tool does as well.
 
 ## One index per axis
 
 An index follows a paging axis, not a WHERE clause: `(scope…, time column, id)`, one per axis a
-table is paged along. Visibility ranges, block anti-joins and LIKE filters are applied while the
-axis index is scanned and never earn an index of their own. The `id` suffix is implied on both
+table is paged along; the feature documents list which axes are indexed today. Visibility ranges,
+block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an index
+of their own. The `id` suffix is implied on both
 engines — InnoDB stores the primary key at the end of every secondary index and SQLite stores the
 rowid — but writing it keeps the axis legible in the schema. A time column leads so that InnoDB does
 not adopt the index to back a foreign key (errno 1553 on a later drop).
@@ -68,7 +75,7 @@ in the migration, or it is unindexed on the SQLite lane.
 
 ## Guards
 
-Each time-ordered query pins its `order by` clause in a test through the query log
-([`PinsOrderBy`](../../tests/Support/PinsOrderBy.php)): a same-second fixture alone rarely bites,
-because an index scan already returns a tie in key order on both engines, so the SQL text is the
-assertion with teeth.
+A same-second fixture alone rarely bites where a scoped index already returns a tie in key order,
+so a list scoped to one row's key (a member's search page, a mailbox) also pins its `order by` clause
+through the query log ([`PinsOrderBy`](../../tests/Support/PinsOrderBy.php)); a list the engine has
+to sort is caught by the fixture itself.
