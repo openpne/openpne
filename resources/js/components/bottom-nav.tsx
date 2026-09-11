@@ -83,9 +83,6 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                         <Link
                             href={href}
                             aria-current={active ? 'page' : undefined}
-                            // A dot prints nothing to name, so the phrase goes here — inside
-                            // WCAG 2.5.3 only because it spells the visible word out again.
-                            aria-label={dotted ? badgePhrase(t, NOTIFICATIONS_SECTION.badge, count) : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
                                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -97,8 +94,8 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
                             <span className="max-w-full truncate text-[11px] leading-none">{t(label.key, label.replacements)}</span>
-                            {/* After the word, so the name reads word first like the nav and the hub tabs. */}
-                            {mark === 'count' && badge && count > 0 && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
+                            {/* After the word: the name must read word first. */}
+                            {badge && count > 0 && (mark === 'count' || dotted) && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
                         </Link>
                     </li>
                 );
@@ -149,7 +146,6 @@ function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; coun
         <li className="flex w-24 shrink-0 items-stretch">
             <Link
                 href={section.href}
-                aria-label={badge && count > 0 ? badgePhrase(t, badge, count) : undefined}
                 className="flex size-full min-h-11 items-center justify-center gap-1.5 px-1 text-muted-foreground transition hover:text-foreground"
             >
                 <span className="relative inline-flex">
@@ -157,6 +153,7 @@ function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; coun
                     {count > 0 && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                 </span>
                 <span className="max-w-full truncate text-sm">{shortLabel ? t(shortLabel) : t(label.key, label.replacements)}</span>
+                {badge && count > 0 && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
             </Link>
         </li>
     );

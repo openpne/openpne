@@ -87,10 +87,8 @@ test('the shipped row prints every count it carries, each said in words as well'
 
     render(<BottomNav chrome={chrome} />);
 
-    // The phrase comes up through the pill rather than off the link itself, so the word under the
-    // icon stays the tab's name and the number joins it.
-    
-    const groups = screen.getByRole('link', { name: /3 %communities% with new messages/ });
+    // The word under the icon stays the tab's name and the phrase follows it.
+    const groups = screen.getByRole('link', { name: '%Communities% 3 %communities% with new messages' });
     expect(groups.getAttribute('href')).toBe('/groups/mine');
     expect(groups.textContent).toContain('3');
     expect(groups.textContent).toContain('%Communities%');
@@ -147,7 +145,7 @@ test('the unified bar says how many notifications are waiting, in words', () => 
 
     render(<BottomNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
+    expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
 });
 
 test('the tabbed row marks the notification tab alone, and with a dot rather than a number', () => {
@@ -158,8 +156,9 @@ test('the tabbed row marks the notification tab alone, and with a dot rather tha
 
     const { container } = render(<BottomNav chrome={chrome} />);
 
-    // A dot cannot print how many, so the count is said in words instead.
-    expect(screen.getByRole('link', { name: '2 unread notifications' }).getAttribute('href')).toBe('/notifications');
+    // A dot cannot print how many, so the count is said in words, after the word as everywhere.
+    expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
+    container.querySelectorAll('.sr-only').forEach((phrase) => phrase.remove());
     expect(container.textContent).not.toMatch(/\d/);
     // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
     expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();

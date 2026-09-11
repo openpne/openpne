@@ -69,7 +69,6 @@ test('the bar tab is named word first', () => {
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
 
     named('%Communities% 3 %communities% with new messages', 'Notifications 2 unread notifications');
-    expect(screen.queryByRole('link', { name: '3 %communities% with new messages %Communities%' })).toBeNull();
 });
 
 test('a nav entry is named word first, as it was', () => {
