@@ -49,7 +49,9 @@ The mailbox pages by OFFSET, each box on its own time column and a unique key: t
 receipt's `created_at` and the receipt id (OpenPNE 3 dated the inbox by the receipt), the sent and
 draft boxes on the message's `created_at` and id, the trash on the moved-to-trash time, then the arm
 (`sent` before `received`), then that arm's row id. The show page's previous / next links walk the
-same tuple ([ordering.md](ordering.md#prev--next-derive-from-the-list)).
+same tuple ([ordering.md](ordering.md#prev--next-derive-from-the-list)); a message the box holds
+twice — a duplicate receipt, or trashed on both sides — is listed twice but walked once, at its
+later row.
 
 The code is **not** shared, and that is deliberate — see [Separate from group talk](#separate-from-group-talk).
 [`ConversationMessages`](../../app/Features/DirectMessage/Queries/ConversationMessages.php) and

@@ -114,31 +114,21 @@ class ShowDirectMessage
 
     /**
      * A message with two rows in one box (a duplicate receipt, or trashed on both sides) keeps its
-     * later row only, so the walk visits each message once and never turns back on itself.
+     * later row only, so the walk visits each message once and never turns back on itself. The window
+     * ranks a row with a NULL time last on MySQL 8 and SQLite alike, so the timed row is the one kept.
      */
     private function onePlacePerMessage(Member $viewer, DirectMessageBox $box): QueryBuilder
     {
-        $later = fn (QueryBuilder $q) => $q
-            ->whereColumn('later.sort_at', '>', 'b.sort_at')
-            ->orWhere(fn (QueryBuilder $tie) => $tie
-                ->whereColumn('later.sort_at', '=', 'b.sort_at')
-                ->where(fn (QueryBuilder $r) => $r
-                    ->whereColumn('later.role', '>', 'b.role')
-                    ->orWhere(fn (QueryBuilder $rr) => $rr
-                        ->whereColumn('later.role', '=', 'b.role')
-                        ->whereColumn('later.row_id', '>', 'b.row_id'))));
-
-        return DB::query()
+        $ranked = DB::query()
             ->fromSub($this->boxRows($viewer, $box), 'b')
-            ->whereNotExists(fn (QueryBuilder $q) => $q
-                ->fromSub($this->boxRows($viewer, $box), 'later')
-                ->whereColumn('later.id', 'b.id')
-                ->where($later));
+            ->selectRaw('b.*, row_number() over (partition by b.id order by b.sort_at desc, b.role desc, b.row_id desc) as place');
+
+        return DB::query()->fromSub($ranked, 'ranked')->where('place', 1);
     }
 
     /**
      * Every arm yields (id = message id, sort_at, role, row_id): the box list's order columns, so the
-     * show page walks the list the reader came from (docs/internals/direct-messages.md, "Ordering and paging").
+     * show page walks the list's order (docs/internals/direct-messages.md, "Ordering and paging").
      */
     private function boxRows(Member $viewer, DirectMessageBox $box): QueryBuilder
     {
