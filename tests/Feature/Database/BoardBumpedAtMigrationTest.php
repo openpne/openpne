@@ -22,7 +22,9 @@ class BoardBumpedAtMigrationTest extends TestCase
         }
 
         Artisan::call('migrate:fresh', ['--force' => true]);
-        Artisan::call('migrate:rollback', ['--force' => true, '--step' => 1]);
+        while (Schema::hasColumn('group_topics', 'bumped_at')) {
+            Artisan::call('migrate:rollback', ['--force' => true, '--step' => 1]);
+        }
         DB::table('members')->insert(['id' => 1, 'name' => 'm', 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
         DB::table('groups')->insert(['id' => 1, 'name' => 'g', 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
     }
@@ -59,7 +61,9 @@ class BoardBumpedAtMigrationTest extends TestCase
         Artisan::call('migrate', ['--force' => true]);
         DB::table('group_topics')->where('id', 1)->update(['bumped_at' => '2026-09-11 09:00:00', 'updated_at' => null]);
 
-        Artisan::call('migrate:rollback', ['--force' => true, '--step' => 1]);
+        while (Schema::hasColumn('group_topics', 'bumped_at')) {
+            Artisan::call('migrate:rollback', ['--force' => true, '--step' => 1]);
+        }
 
         $this->assertSame('2026-09-11 09:00:00', DB::table('group_topics')->where('id', 1)->value('updated_at'));
         $this->assertTrue(Schema::hasColumn('group_topics', 'topic_updated_at'));
