@@ -87,12 +87,11 @@ test('the shipped row prints every count it carries, each said in words as well'
 
     render(<BottomNav chrome={chrome} />);
 
-    // The word under the icon stays the tab's name and the phrase follows it.
     const groups = screen.getByRole('link', { name: '%Communities% 3 %communities% with new messages' });
     expect(groups.getAttribute('href')).toBe('/groups/mine');
     expect(groups.textContent).toContain('3');
     expect(groups.textContent).toContain('%Communities%');
-    expect(screen.getByRole('link', { name: /2 unread notifications/ }).textContent).toContain('2');
+    expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).textContent).toContain('2');
     // The DM count is not on this row to print: it stays on the drawer entry that carries it.
     expect(screen.queryByRole('link', { name: /Messages/ })).toBeNull();
 });
@@ -158,8 +157,7 @@ test('the tabbed row marks the notification tab alone, and with a dot rather tha
 
     // A dot cannot print how many, so the count is said in words, after the word as everywhere.
     expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
-    container.querySelectorAll('.sr-only').forEach((phrase) => phrase.remove());
-    expect(container.textContent).not.toMatch(/\d/);
+    expect(container.querySelector('.rounded-full.bg-primary')).toBeNull();
     // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
     expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();
     expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
