@@ -76,11 +76,11 @@ class TermOverrideUpgradeSqlTest extends TestCase
         $this->assertSame('Tweet', $service->replace('%Post_activity%', 'en'));
     }
 
-    public function test_skips_mobile_rows_unknown_names_and_null_values(): void
+    public function test_skips_mobile_rows_and_unknown_names(): void
     {
         $this->seedTerm('friend', ['ja_JP' => 'ﾌﾚﾝﾄﾞ'], application: 'mobile_frontend');
         $this->seedTerm('some_plugin_term', ['ja_JP' => 'プラグイン']);
-        $this->seedTerm('nickname', ['ja_JP' => null, 'en' => 'handle']);
+        $this->seedTerm('nickname', ['en' => 'handle']);
 
         $this->runUpgrade();
 
@@ -103,14 +103,14 @@ class TermOverrideUpgradeSqlTest extends TestCase
         );
     }
 
-    public function test_an_empty_value_is_carried_as_empty(): void
+    public function test_an_empty_or_null_value_is_carried_as_empty(): void
     {
-        // OpenPNE 3 rendered '' and NULL alike as nothing; only NULL is read as "unset" and left to the default.
-        $this->seedTerm('my_friend', ['ja_JP' => '']);
+        $this->seedTerm('my_friend', ['ja_JP' => '', 'en' => null]);
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('term_overrides', ['name' => 'my_friend', 'locale' => 'ja', 'value' => '']);
+        $this->assertDatabaseHas('term_overrides', ['name' => 'my_friend', 'locale' => 'en', 'value' => '']);
     }
 
     private function runUpgrade(): void

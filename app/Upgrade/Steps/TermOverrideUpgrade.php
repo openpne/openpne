@@ -33,14 +33,15 @@ class TermOverrideUpgrade extends UpgradeStep
         return [
             'name' => Column::expr(self::nameSelect(), uses: ['id']),
             'locale' => Column::expr(SourceLocale::foldExpr(), uses: ['lang']),
-            'value' => Column::source('value'),
+            // NULL and '' both rendered as nothing in OpenPNE 3; the default would reverse that.
+            'value' => Column::expr("COALESCE(`value`, '')", uses: ['value']),
         ];
     }
 
     public function filter(): ?string
     {
         return sprintf(
-            '`value` IS NOT NULL AND `id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))',
+            '`id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))',
             SourceRef::table('sns_term'),
             self::APPLICATION,
             implode(', ', array_map(static fn (string $name): string => "'{$name}'", self::SOURCE_NAMES)),
@@ -49,7 +50,7 @@ class TermOverrideUpgrade extends UpgradeStep
 
     public function filterColumns(): array
     {
-        return ['value', 'id'];
+        return ['id'];
     }
 
     /** The OpenPNE 3 term name of the translation row, correlated on the FROM alias. */
