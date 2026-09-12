@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Services\TermService;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\TermOverridePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
@@ -49,13 +51,48 @@ class TermOverridePreflightTest extends TestCase
     {
         $this->seedTerm('community', ['ja_JP' => 'コミュニティ', 'en' => 'community']);
         $this->seedTerm('nickname', ['ja_JP' => str_repeat('あ', 255)]); // the widest value the column holds
-        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく']); // recognised, not carried, not a WARN
 
         [$ok, $output] = $this->preflight();
 
         $this->assertTrue($ok, $output);
         $this->assertStringNotContainsString('ERROR', $output);
         $this->assertStringNotContainsString('WARN', $output);
+    }
+
+    public function test_an_uncarried_name_is_reported_with_what_applies(): void
+    {
+        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertTrue($ok, $output);
+        $this->assertStringContainsString('WARN '.TermOverridePreflight::uncarriedMessage('post_activity', 'ja', 'つぶやく'), $output);
+        $this->assertStringContainsString('WARN '.TermOverridePreflight::uncarriedMessage('post_activity', 'en', 'Tweet'), $output);
+        $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    public function test_a_source_without_the_application_column_is_a_structural_error(): void
+    {
+        DB::statement('ALTER TABLE `sns_term` DROP COLUMN `application`');
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('ERROR '.SourcePreflight::missingColumnMessage('sns_term', 'application'), $output);
+    }
+
+    /** A cached term map from before the cutover would otherwise serve the defaults for up to an hour. */
+    public function test_a_run_clears_the_cached_term_map(): void
+    {
+        $service = app(TermService::class);
+        $service->clearCache();
+        $this->assertSame('グループ', $service->getTerms('ja')['community']);
+        $this->seedTerm('community', ['ja_JP' => 'サークル']);
+
+        [$ok, $output] = $this->preflight(dryRun: false);
+
+        $this->assertTrue($ok, $output);
+        $this->assertSame('サークル', $service->getTerms('ja')['community']);
     }
 
     public function test_two_pc_rows_with_one_name_abort(): void
@@ -112,11 +149,11 @@ class TermOverridePreflightTest extends TestCase
     }
 
     /** @return array{0: bool, 1: string} */
-    private function preflight(): array
+    private function preflight(bool $dryRun = true): array
     {
         $lines = [];
         $ok = (new UpgradeRunner(new InsertSelectCompiler, [new TermOverrideUpgrade]))->run(
-            new RunOptions(dryRun: true),
+            new RunOptions(dryRun: $dryRun),
             function (string $line) use (&$lines): void {
                 $lines[] = $line;
             },

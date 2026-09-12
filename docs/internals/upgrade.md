@@ -110,8 +110,9 @@ tell a seeded value from one an administrator chose, and members read the site's
 not an administrator ever touched it, so the row is the site's term, not dead weight; an operator
 who wants the new defaults clears the rows on `/admin/term-settings`. That holds only for a name
 that fills the same slot on both sides: `post_activity` was the posting button's verb in OpenPNE 3
-(つぶやく) and is a noun in OpenPNE 4 (このポストを見る), so it is recognised but not carried
-(`UNCARRIED_NAMES`). The mobile application's rows (half-width kana), a NULL value and unrecognised
+(つぶやく on a stock 3.6+ install) and is a noun in OpenPNE 4 (このポストを見る), so it is recognised
+but not carried (`UNCARRIED_NAMES`); the preflight reports each such source row with what applies
+instead. The mobile application's rows (half-width kana), a NULL value and unrecognised
 names are not migrated, the last reported by the unknown-name scan; an empty value is carried as
 empty (OpenPNE 3 rendered it as nothing). `lang` folds to the locale slug by
 `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to neither `ja`

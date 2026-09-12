@@ -72,7 +72,8 @@ class TermOverrideUpgradeSqlTest extends TestCase
         $this->assertSame(0, DB::table('term_overrides')->count());
         $service = app(TermService::class);
         $service->clearCache();
-        $this->assertSame('このポストを見る', $service->replace('この%post_activity%を見る', 'ja'));
+        app()->setLocale('ja');
+        $this->assertSame('このポストを見る', __('View this %post_activity%'));
     }
 
     public function test_skips_mobile_rows_unknown_names_and_null_values(): void

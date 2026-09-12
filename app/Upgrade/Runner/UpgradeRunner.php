@@ -79,21 +79,21 @@ final class UpgradeRunner
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;
-        $termErrors = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
+        $termReport = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
-            : [];
+            : new TermOverridePreflightReport([], []);
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termReport->errors) as $error) {
             $out("ERROR {$error}");
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $termReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termReport->hasErrors()) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
@@ -157,6 +157,10 @@ final class UpgradeRunner
             }
 
             $walked = $this->walk($options, $out);
+
+            // Each step commits its own rows, so the cached term map is stale from here even when a
+            // later pass fails.
+            app(TermService::class)->clearCache();
 
             // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
@@ -226,7 +230,6 @@ final class UpgradeRunner
         ]);
 
         app(SnsSettingService::class)->clearCache();
-        app(TermService::class)->clearCache();
 
         if ($inserted > 0) {
             $out('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');
