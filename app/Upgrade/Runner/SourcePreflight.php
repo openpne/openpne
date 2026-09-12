@@ -25,7 +25,7 @@ final class SourcePreflight
     private const SUBQUERY_READ_COLUMNS = [
         'member_config' => ['name'],
         'community_config' => ['name'],
-        'sns_term' => ['name', 'application'],
+        'sns_term' => ['id', 'name', 'application'],
     ];
 
     /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */

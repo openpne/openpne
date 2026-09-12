@@ -60,11 +60,14 @@ class TermOverridePreflightTest extends TestCase
         $this->assertStringNotContainsString('WARN', $output);
     }
 
+    #[TestWith(['id'])]
     #[TestWith(['name'])]
     #[TestWith(['application'])]
     public function test_a_source_without_a_subquery_read_column_is_a_structural_error(string $column): void
     {
-        DB::statement("ALTER TABLE `sns_term` DROP COLUMN `{$column}`");
+        DB::statement($column === 'id'
+            ? 'ALTER TABLE `sns_term` DROP PRIMARY KEY, DROP COLUMN `id`'
+            : "ALTER TABLE `sns_term` DROP COLUMN `{$column}`");
 
         [$ok, $output] = $this->preflight();
 
