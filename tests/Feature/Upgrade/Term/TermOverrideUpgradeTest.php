@@ -14,7 +14,7 @@ class TermOverrideUpgradeTest extends TestCase
     {
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             $keys = array_keys(TermService::defaults($locale));
-            foreach (TermOverrideUpgrade::SOURCE_NAMES as $name) {
+            foreach ([...TermOverrideUpgrade::SOURCE_NAMES, ...TermOverrideUpgrade::UNCARRIED_NAMES] as $name) {
                 $this->assertContains($name, $keys, "lang/{$locale}/terms.php must keep the OpenPNE 3 term name `{$name}`");
             }
         }

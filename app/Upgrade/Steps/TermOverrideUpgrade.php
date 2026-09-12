@@ -18,10 +18,16 @@ class TermOverrideUpgrade extends UpgradeStep
     public const APPLICATION = 'pc_frontend';
 
     /**
-     * The names stock OpenPNE 3 seeds; each is a `lang/{locale}/terms.php` key, so it carries as is.
-     * `diary` / `topic` are OpenPNE 4 additions with no source row.
+     * The stock OpenPNE 3 names that fill the same slot in OpenPNE 4, each a `lang/{locale}/terms.php`
+     * key; `diary` / `topic` are OpenPNE 4 additions with no source row.
      */
-    public const SOURCE_NAMES = ['friend', 'my_friend', 'community', 'nickname', 'activity', 'post_activity'];
+    public const SOURCE_NAMES = ['friend', 'my_friend', 'community', 'nickname', 'activity'];
+
+    /**
+     * Stock names recognised but not carried: OpenPNE 3 rendered `post_activity` only as the posting
+     * button's verb (つぶやく), OpenPNE 4 fills a noun slot with it.
+     */
+    public const UNCARRIED_NAMES = ['post_activity'];
 
     protected string $source = 'sns_term_translation';
 

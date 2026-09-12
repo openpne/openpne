@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Services\SnsSettingService;
+use App\Services\TermService;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use App\Upgrade\InsertSelectCompiler;
@@ -225,6 +226,7 @@ final class UpgradeRunner
         ]);
 
         app(SnsSettingService::class)->clearCache();
+        app(TermService::class)->clearCache();
 
         if ($inserted > 0) {
             $out('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');

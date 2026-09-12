@@ -48,11 +48,14 @@ class TermOverridePreflightTest extends TestCase
     public function test_a_clean_source_passes(): void
     {
         $this->seedTerm('community', ['ja_JP' => 'コミュニティ', 'en' => 'community']);
+        $this->seedTerm('nickname', ['ja_JP' => str_repeat('あ', 255)]); // the widest value the column holds
+        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく']); // recognised, not carried, not a WARN
 
         [$ok, $output] = $this->preflight();
 
         $this->assertTrue($ok, $output);
         $this->assertStringNotContainsString('ERROR', $output);
+        $this->assertStringNotContainsString('WARN', $output);
     }
 
     public function test_two_pc_rows_with_one_name_abort(): void

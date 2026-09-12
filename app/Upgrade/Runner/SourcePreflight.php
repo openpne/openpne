@@ -21,11 +21,12 @@ use Illuminate\Support\Facades\DB;
  */
 final class SourcePreflight
 {
-    /**
-     * The KV config tables whose recognised names are enumerable, so an unrecognised one can be
-     * counted. Both are read by correlated subquery, so their `name` is also required structurally.
-     */
-    private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
+    /** Columns a source table reached only by correlated subquery must have; the per-step check never sees them. */
+    private const SUBQUERY_READ_COLUMNS = [
+        'member_config' => ['name'],
+        'community_config' => ['name'],
+        'sns_term' => ['name', 'application'],
+    ];
 
     /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */
     private const PASS_READ_COLUMNS = ['activity_data' => ['template', 'template_param', 'uri']];
@@ -168,7 +169,7 @@ final class SourcePreflight
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
             'notification_mail' => StepRegistry::knownNotificationMailNames(),
-            'sns_term' => TermOverrideUpgrade::SOURCE_NAMES,
+            'sns_term' => [...TermOverrideUpgrade::SOURCE_NAMES, ...TermOverrideUpgrade::UNCARRIED_NAMES],
         };
     }
 
@@ -214,12 +215,13 @@ final class SourcePreflight
             }
         }
 
-        // A table reached only by correlated subquery gets no per-step column check, and both KV config
-        // tables can be, so their `name` (read by those subqueries and by the unknown-name scan) is
-        // required here.
-        foreach (self::CONFIG_NAME_TABLES as $table) {
+        // A table reached only by correlated subquery gets no per-step column check, so the columns
+        // those subqueries and the unknown-name scan read are required here.
+        foreach (self::SUBQUERY_READ_COLUMNS as $table => $columns) {
             if (isset($present[$table])) {
-                $required[$table]['name'] = true;
+                foreach ($columns as $column) {
+                    $required[$table][$column] = true;
+                }
             }
         }
 

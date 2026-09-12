@@ -43,26 +43,36 @@ class TermOverrideUpgradeSqlTest extends TestCase
         parent::tearDown();
     }
 
-    /** The stock OpenPNE 3 seed: `community` and `post_activity` differ from the OpenPNE 4 default, `friend` matches it. */
+    /** The stock OpenPNE 3 seed: `community` differs from the OpenPNE 4 default, `friend` matches it. */
     public function test_carries_every_pc_term_verbatim_including_seed_values(): void
     {
         $this->seedTerm('friend', ['ja_JP' => 'フレンド', 'en' => 'friend']);
         $this->seedTerm('community', ['ja_JP' => 'コミュニティ', 'en' => 'community']);
-        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('term_overrides', ['name' => 'friend', 'locale' => 'ja', 'value' => 'フレンド']);
         $this->assertDatabaseHas('term_overrides', ['name' => 'friend', 'locale' => 'en', 'value' => 'friend']);
         $this->assertDatabaseHas('term_overrides', ['name' => 'community', 'locale' => 'ja', 'value' => 'コミュニティ']);
-        $this->assertDatabaseHas('term_overrides', ['name' => 'post_activity', 'locale' => 'en', 'value' => 'Tweet']);
-        $this->assertSame(6, DB::table('term_overrides')->count());
+        $this->assertSame(4, DB::table('term_overrides')->count());
 
         $service = app(TermService::class);
         $service->clearCache();
         $this->assertSame('コミュニティ', $service->replace('%community%', 'ja'));
-        $this->assertSame('Tweet', $service->replace('%post_activity%', 'en'));
         $this->assertSame('グループ', TermService::defaults('ja')['community'], 'the default itself is untouched');
+    }
+
+    /** The seed value is a verb; OpenPNE 4 renders the key in "View this %post_activity%". */
+    public function test_post_activity_is_left_to_the_openpne4_default(): void
+    {
+        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
+
+        $this->runUpgrade();
+
+        $this->assertSame(0, DB::table('term_overrides')->count());
+        $service = app(TermService::class);
+        $service->clearCache();
+        $this->assertSame('このポストを見る', $service->replace('この%post_activity%を見る', 'ja'));
     }
 
     public function test_skips_mobile_rows_unknown_names_and_null_values(): void
@@ -94,7 +104,7 @@ class TermOverrideUpgradeSqlTest extends TestCase
 
     public function test_an_empty_value_is_carried_as_empty(): void
     {
-        // OpenPNE 3 rendered an empty term as nothing; the admin form would delete such a row, the upgrade keeps the site's rendering.
+        // OpenPNE 3 rendered '' and NULL alike as nothing; only NULL is read as "unset" and left to the default.
         $this->seedTerm('my_friend', ['ja_JP' => '']);
 
         $this->runUpgrade();

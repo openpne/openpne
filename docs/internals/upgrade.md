@@ -102,15 +102,20 @@ unknown-name scan subtracts from (a warning, not an abort).
 
 ## Terms
 
-`TermOverrideUpgrade` copies the PC application's `sns_term` rows whose name is a
-`lang/{locale}/terms.php` key into `term_overrides`, name for name and value verbatim — a value equal
-to the OpenPNE 3 seed included, even where OpenPNE 4 ships a different default (`community` stays
-コミュニティ on a migrated site where a new site gets グループ). OpenPNE 3 cannot tell a seeded value
-from one an administrator chose, and members read the site's wording whether or not an administrator
-ever touched it, so the row is the site's term, not dead weight; an operator who wants the new
-defaults clears the rows on `/admin/term-settings`. The mobile application's rows (half-width kana)
-and unrecognised names are not migrated, the latter reported by the unknown-name scan. `lang` folds
-to the locale slug by `SourceLocale::foldExpr()`, shared with the mail templates.
+`TermOverrideUpgrade` copies the PC application's `sns_term` rows named in
+`TermOverrideUpgrade::SOURCE_NAMES` into `term_overrides`, name for name and value verbatim — a
+value equal to the OpenPNE 3 seed included, even where OpenPNE 4 ships a different default
+(`community` stays コミュニティ on a migrated site where a new site gets グループ). OpenPNE 3 cannot
+tell a seeded value from one an administrator chose, and members read the site's wording whether or
+not an administrator ever touched it, so the row is the site's term, not dead weight; an operator
+who wants the new defaults clears the rows on `/admin/term-settings`. That holds only for a name
+that fills the same slot on both sides: `post_activity` was the posting button's verb in OpenPNE 3
+(つぶやく) and is a noun in OpenPNE 4 (このポストを見る), so it is recognised but not carried
+(`UNCARRIED_NAMES`). The mobile application's rows (half-width kana), a NULL value and unrecognised
+names are not migrated, the last reported by the unknown-name scan; an empty value is carried as
+empty (OpenPNE 3 rendered it as nothing). `lang` folds to the locale slug by
+`SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to neither `ja`
+nor `en` is inserted verbatim and never read, and the admin page does not list it.
 
 ## Source preflight
 
@@ -141,7 +146,7 @@ ERROR for the same reason.
 step copies bodies without parsing them. Two passes per row: a lenient render reports what
 production would throw, then a strict render (`strict_variables`) reports a referenced-but-absent
 variable. Names and locales are resolved through the steps' own SQL
-(`MailTemplateUpgrade::keyCase()`, `MailTemplateTranslationUpgrade::localeExpr()`): the source
+(`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the source
 collation is case-insensitive and PAD SPACE, so a PHP comparison would cover a different row set
 than the INSERT.
 
