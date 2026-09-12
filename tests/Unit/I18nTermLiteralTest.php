@@ -82,7 +82,7 @@ class I18nTermLiteralTest extends TestCase
 
         foreach ($strings as $string) {
             if (stripos($string, 'post_activity') !== false) {
-                $this->assertSame('%Post_activity%', $string);
+                $this->assertSame('%Post_activity%', $string, "`{$string}` spends post_activity in a noun slot; say \"%activity% post\" (a code reference without a ja entry is i18n:check's to catch)");
             }
         }
     }
