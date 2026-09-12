@@ -79,21 +79,21 @@ final class UpgradeRunner
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;
-        $termReport = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
+        $termErrors = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
-            : new TermOverridePreflightReport([], []);
+            : [];
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termReport->errors) as $error) {
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
             $out("ERROR {$error}");
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $termReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termReport->hasErrors()) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;

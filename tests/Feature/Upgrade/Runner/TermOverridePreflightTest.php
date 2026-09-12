@@ -59,18 +59,6 @@ class TermOverridePreflightTest extends TestCase
         $this->assertStringNotContainsString('WARN', $output);
     }
 
-    public function test_an_uncarried_name_is_reported_with_what_applies(): void
-    {
-        $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
-
-        [$ok, $output] = $this->preflight();
-
-        $this->assertTrue($ok, $output);
-        $this->assertStringContainsString('WARN '.TermOverridePreflight::uncarriedMessage('post_activity', 'ja', 'つぶやく'), $output);
-        $this->assertStringContainsString('WARN '.TermOverridePreflight::uncarriedMessage('post_activity', 'en', 'Tweet'), $output);
-        $this->assertStringNotContainsString('does not recognise', $output);
-    }
-
     public function test_a_source_without_the_application_column_is_a_structural_error(): void
     {
         DB::statement('ALTER TABLE `sns_term` DROP COLUMN `application`');

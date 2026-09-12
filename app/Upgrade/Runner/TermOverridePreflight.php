@@ -11,14 +11,15 @@ use Illuminate\Support\Facades\DB;
 /**
  * Counts the source term rows the TermOverrideUpgrade INSERT would fail on mid-run: two rows folding
  * onto one (name, locale) key, or a value wider than the column (docs/internals/upgrade.md, "Source
- * preflight"). The recognised rows the step leaves out are reported with what applies instead.
+ * preflight").
  */
 final class TermOverridePreflight
 {
     /** The `value` column term_overrides declares. */
     private const VALUE_COLUMN_LENGTH = 255;
 
-    public function inspect(string $sourcePrefix, ?string $sourceDatabase): TermOverridePreflightReport
+    /** @return list<string> errors; empty when the step can run */
+    public function inspect(string $sourcePrefix, ?string $sourceDatabase): array
     {
         $errors = [];
 
@@ -31,12 +32,7 @@ final class TermOverridePreflight
             }
         }
 
-        $warnings = [];
-        foreach ($this->uncarriedRows($sourcePrefix, $sourceDatabase) as $row) {
-            $warnings[] = self::uncarriedMessage((string) $row->name, (string) $row->locale, (string) $row->value);
-        }
-
-        return new TermOverridePreflightReport($errors, $warnings);
+        return $errors;
     }
 
     /** @return list<object{name: string, locale: string, rows: int|string, width: int|string}> */
@@ -52,29 +48,6 @@ final class TermOverridePreflight
         );
 
         return DB::select((new InsertSelectCompiler)->resolveSourceRefs($sql, $sourcePrefix, $sourceDatabase));
-    }
-
-    /** @return list<object{name: string, locale: string, value: string}> the PC rows of the recognised names the step leaves out */
-    private function uncarriedRows(string $sourcePrefix, ?string $sourceDatabase): array
-    {
-        $sql = sprintf(
-            'SELECT %s AS `name`, %s AS `locale`, `value` FROM %s AS `sns_term_translation`'
-            .' WHERE `value` IS NOT NULL AND `id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))'
-            .' ORDER BY `name`, `locale`',
-            TermOverrideUpgrade::nameSelect(),
-            SourceLocale::foldExpr(),
-            SourceRef::table('sns_term_translation'),
-            SourceRef::table('sns_term'),
-            TermOverrideUpgrade::APPLICATION,
-            implode(', ', array_map(static fn (string $name): string => "'{$name}'", TermOverrideUpgrade::UNCARRIED_NAMES)),
-        );
-
-        return DB::select((new InsertSelectCompiler)->resolveSourceRefs($sql, $sourcePrefix, $sourceDatabase));
-    }
-
-    public static function uncarriedMessage(string $name, string $locale, string $value): string
-    {
-        return "source `sns_term` `{$name}` (`{$locale}`: \"{$value}\") is not carried: OpenPNE 3 rendered it only as the posting button's verb, OpenPNE 4 renders it as a noun and its default applies. Set it on /admin/term-settings if the site needs its own wording.";
     }
 
     public static function collisionMessage(string $name, string $locale, int $rows): string

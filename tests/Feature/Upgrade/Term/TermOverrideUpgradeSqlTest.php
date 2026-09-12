@@ -62,18 +62,18 @@ class TermOverrideUpgradeSqlTest extends TestCase
         $this->assertSame('グループ', TermService::defaults('ja')['community'], 'the default itself is untouched');
     }
 
-    /** The seed value is a verb; OpenPNE 4 renders the key in "View this %post_activity%". */
-    public function test_post_activity_is_left_to_the_openpne4_default(): void
+    /** The seed value is a verb, the one slot OpenPNE 4 renders the key in. */
+    public function test_post_activity_is_carried_as_the_posting_label(): void
     {
         $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
 
         $this->runUpgrade();
 
-        $this->assertSame(0, DB::table('term_overrides')->count());
         $service = app(TermService::class);
         $service->clearCache();
         app()->setLocale('ja');
-        $this->assertSame('このポストを見る', __('View this %post_activity%'));
+        $this->assertSame('つぶやく', __('%Post_activity%'));
+        $this->assertSame('Tweet', $service->replace('%Post_activity%', 'en'));
     }
 
     public function test_skips_mobile_rows_unknown_names_and_null_values(): void

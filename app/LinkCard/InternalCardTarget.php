@@ -178,7 +178,7 @@ enum InternalCardTarget: string
             ],
             // No format column on a timeline post; its body is plain by construction.
             self::TimelinePost => [
-                'title' => __('%post_activity% by :name', ['name' => $record->member->name]),
+                'title' => __('%Activity% post by :name', ['name' => $record->member->name]),
                 'description' => BodyRenderer::excerpt($record->body, BodyFormat::Plain),
                 // A reply's picture belongs to the reply, and `FilePolicy` asks the replier's rule
                 // rather than the thread's that admitted this card, so a reader the replier has

@@ -169,7 +169,7 @@ final class SourcePreflight
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
             'notification_mail' => StepRegistry::knownNotificationMailNames(),
-            'sns_term' => [...TermOverrideUpgrade::SOURCE_NAMES, ...TermOverrideUpgrade::UNCARRIED_NAMES],
+            'sns_term' => TermOverrideUpgrade::SOURCE_NAMES,
         };
     }
 

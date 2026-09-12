@@ -108,11 +108,9 @@ value equal to the OpenPNE 3 seed included, even where OpenPNE 4 ships a differe
 (`community` stays コミュニティ on a migrated site where a new site gets グループ). OpenPNE 3 cannot
 tell a seeded value from one an administrator chose, and members read the site's wording whether or
 not an administrator ever touched it, so the row is the site's term, not dead weight; an operator
-who wants the new defaults clears the rows on `/admin/term-settings`. That holds only for a name
-that fills the same slot on both sides: `post_activity` was the posting button's verb in OpenPNE 3
-(つぶやく on a stock 3.6+ install) and is a noun in OpenPNE 4 (このポストを見る), so it is recognised
-but not carried (`UNCARRIED_NAMES`); the preflight reports each such source row with what applies
-instead. The mobile application's rows (half-width kana), a NULL value and unrecognised
+who wants the new defaults clears the rows on `/admin/term-settings`. That holds because each name fills
+the same slot on both sides; `post_activity` is the posting button's label (a verb on a fresh
+OpenPNE 3 install), so OpenPNE 4 must not spend it in a noun slot ("%activity% post" is the noun). The mobile application's rows (half-width kana), a NULL value and unrecognised
 names are not migrated, the last reported by the unknown-name scan; an empty value is carried as
 empty (OpenPNE 3 rendered it as nothing). `lang` folds to the locale slug by
 `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to neither `ja`

@@ -18,16 +18,11 @@ class TermOverrideUpgrade extends UpgradeStep
     public const APPLICATION = 'pc_frontend';
 
     /**
-     * The stock OpenPNE 3 names that fill the same slot in OpenPNE 4, each a `lang/{locale}/terms.php`
-     * key; `diary` / `topic` are OpenPNE 4 additions with no source row.
+     * The names stock OpenPNE 3 seeds, each a `lang/{locale}/terms.php` key filling the same slot on
+     * both sides (`post_activity` is the posting button's label, a verb); `diary` / `topic` are
+     * OpenPNE 4 additions with no source row.
      */
-    public const SOURCE_NAMES = ['friend', 'my_friend', 'community', 'nickname', 'activity'];
-
-    /**
-     * Stock names recognised but not carried: OpenPNE 3 rendered `post_activity` only as the posting
-     * button's verb (つぶやく), OpenPNE 4 fills a noun slot with it.
-     */
-    public const UNCARRIED_NAMES = ['post_activity'];
+    public const SOURCE_NAMES = ['friend', 'my_friend', 'community', 'nickname', 'activity', 'post_activity'];
 
     protected string $source = 'sns_term_translation';
 
@@ -44,7 +39,12 @@ class TermOverrideUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return '`value` IS NOT NULL AND `id` IN ('.self::termIdSelect().')';
+        return sprintf(
+            '`value` IS NOT NULL AND `id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))',
+            SourceRef::table('sns_term'),
+            self::APPLICATION,
+            implode(', ', array_map(static fn (string $name): string => "'{$name}'", self::SOURCE_NAMES)),
+        );
     }
 
     public function filterColumns(): array
@@ -56,16 +56,5 @@ class TermOverrideUpgrade extends UpgradeStep
     public static function nameSelect(): string
     {
         return '(SELECT `t`.`name` FROM '.SourceRef::table('sns_term').' `t` WHERE `t`.`id` = `sns_term_translation`.`id`)';
-    }
-
-    /** The `sns_term` ids the step carries: the PC application's rows with a recognised name. */
-    public static function termIdSelect(): string
-    {
-        return sprintf(
-            'SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s)',
-            SourceRef::table('sns_term'),
-            self::APPLICATION,
-            implode(', ', array_map(static fn (string $name): string => "'{$name}'", self::SOURCE_NAMES)),
-        );
     }
 }
