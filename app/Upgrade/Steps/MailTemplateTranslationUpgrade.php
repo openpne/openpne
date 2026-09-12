@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Mail\Template\MailTemplate;
 use App\Upgrade\Column;
+use App\Upgrade\SourceLocale;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
@@ -22,7 +23,7 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
     {
         return [
             'mail_template_id' => Column::source('id'),
-            'locale' => Column::expr(self::localeExpr(), uses: ['lang']),
+            'locale' => Column::expr(SourceLocale::foldExpr(), uses: ['lang']),
             'subject' => Column::source('title'),
             'body' => Column::source('template'),
         ];
@@ -47,17 +48,6 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
         // `id` is OpenPNE 4's own surrogate key and created_at / updated_at have no OpenPNE 3 source,
         // so all three rely on the schema default.
         return ['id', 'created_at', 'updated_at'];
-    }
-
-    /**
-     * OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the locale slug, an unrecognised value kept verbatim
-     * so it satisfies NOT NULL and stays inert rather than mislabelled. Public and static because
-     * MailTemplatePreflight must fold by the same expression: LIKE runs under the source collation,
-     * so a PHP fold would disagree on inputs like `JA_JP`.
-     */
-    public static function localeExpr(): string
-    {
-        return "CASE WHEN `lang` LIKE 'ja%' THEN 'ja' WHEN `lang` LIKE 'en%' THEN 'en' ELSE `lang` END";
     }
 
     private function sourceNameList(): string

@@ -100,6 +100,23 @@ subquery rather than as a step's FROM, so the per-step column audit cannot show 
 `knownCommunityConfigNames()` / `knownNotificationMailNames()` are the sets the preflight's
 unknown-name scan subtracts from (a warning, not an abort).
 
+## Terms
+
+`TermOverrideUpgrade` copies the PC application's `sns_term` rows named in
+`TermOverrideUpgrade::SOURCE_NAMES` into `term_overrides`, name for name and value verbatim — a
+value equal to the OpenPNE 3 seed included, even where OpenPNE 4 ships a different default
+(`community` stays コミュニティ on a migrated site where a new site gets グループ). OpenPNE 3 cannot
+tell a seeded value from one an administrator chose, and members read the site's wording whether or
+not an administrator ever touched it, so the row is the site's term, not dead weight; an operator
+who wants the new defaults clears the rows on `/admin/term-settings`. That holds because each name
+fills the same slot on both sides; `post_activity` is the posting button's label (a verb on a fresh
+OpenPNE 3 install), so OpenPNE 4 must not spend it in a noun slot ("%activity% post" is the noun;
+`I18nTermLiteralTest` pins `lang/ja.json` to that). The mobile application's rows (half-width kana)
+and unrecognised names are not migrated, the latter reported by the unknown-name scan; an empty or
+NULL value is carried as empty (OpenPNE 3 rendered both as nothing). `lang` folds to the locale
+slug by `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to
+neither `ja` nor `en` is inserted verbatim and never read, and the admin page does not list it.
+
 ## Source preflight
 
 Runs before any write, on the dry run too. Introspection goes through `information_schema`
@@ -121,13 +138,15 @@ images is an ERROR, because the step would fail on the row mid-run (a row no ste
 its WARN). `FileOwnerPreflight` counts files that
 more than one owning row points at, across every `FileUpgrade::ownedFileReferences()` arm: OpenPNE 3
 never made the file columns unique, and a file with two owners would be read under one owner's
-audience from the other's page, so it is an ERROR.
+audience from the other's page, so it is an ERROR. `TermOverridePreflight` counts the source term rows
+that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
+ERROR for the same reason.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. Two passes per row: a lenient render reports what
 production would throw, then a strict render (`strict_variables`) reports a referenced-but-absent
 variable. Names and locales are resolved through the steps' own SQL
-(`MailTemplateUpgrade::keyCase()`, `MailTemplateTranslationUpgrade::localeExpr()`): the source
+(`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the source
 collation is case-insensitive and PAD SPACE, so a PHP comparison would cover a different row set
 than the INSERT.
 
