@@ -54,6 +54,7 @@ use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
+use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\Steps\TimelinePostImageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
@@ -128,6 +129,8 @@ final class StepRegistry
             AdminUserUpgrade::class,
             // sns_settings is independent (no FK); migrates the sns_config keys SnsSettingKey opts in.
             SnsSettingUpgrade::class,
+            // term_overrides is independent too; the PC sns_term rows, name for name.
+            TermOverrideUpgrade::class,
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
             // enable_friend_link), each writing only the units OpenPNE 3 had switched off.
             PluginFeatureUpgrade::class,
@@ -182,6 +185,7 @@ final class StepRegistry
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
+            'sns_term' => 'OpenPNE 3 term registry (name, application). Read by TermOverrideUpgrade\'s subqueries for the PC rows of TermOverrideUpgrade::SOURCE_NAMES; the values live in sns_term_translation, the step\'s FROM.',
             // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];

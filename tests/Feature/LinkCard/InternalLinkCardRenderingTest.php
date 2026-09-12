@@ -194,7 +194,7 @@ class InternalLinkCardRenderingTest extends TestCase
         $post = TimelinePost::factory()->for($this->author)->create(['body' => 'A thought', 'visibility' => Visibility::Members]);
 
         $card = $this->draw($post, Member::factory()->create());
-        $this->assertSame(__('%post_activity% by :name', ['name' => $this->author->name]), $card['title']);
+        $this->assertSame(__('%Activity% post by :name', ['name' => $this->author->name]), $card['title']);
         $this->assertSame('A thought', $card['description']);
     }
 

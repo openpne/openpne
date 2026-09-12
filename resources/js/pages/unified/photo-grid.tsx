@@ -27,7 +27,7 @@ export function PhotoGrid({ photos }: { photos: HomePhoto[] }) {
     // The picture is decorative, so the link needs a name of its own: what it opens.
     const linkName: Record<HomePhoto['source'], string> = {
         diary: t('View this %diary%'),
-        timeline: t('View this %post_activity%'),
+        timeline: t('View this %activity% post'),
         talk: t('View this message'),
         topic: t('View this %topic%'),
         event: t('View this event'),
