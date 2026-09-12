@@ -12,6 +12,7 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\TermOverrideUpgrade;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 /**
@@ -59,14 +60,16 @@ class TermOverridePreflightTest extends TestCase
         $this->assertStringNotContainsString('WARN', $output);
     }
 
-    public function test_a_source_without_the_application_column_is_a_structural_error(): void
+    #[TestWith(['name'])]
+    #[TestWith(['application'])]
+    public function test_a_source_without_a_subquery_read_column_is_a_structural_error(string $column): void
     {
-        DB::statement('ALTER TABLE `sns_term` DROP COLUMN `application`');
+        DB::statement("ALTER TABLE `sns_term` DROP COLUMN `{$column}`");
 
         [$ok, $output] = $this->preflight();
 
         $this->assertFalse($ok);
-        $this->assertStringContainsString('ERROR '.SourcePreflight::missingColumnMessage('sns_term', 'application'), $output);
+        $this->assertStringContainsString('ERROR '.SourcePreflight::missingColumnMessage('sns_term', $column), $output);
     }
 
     /** A cached term map from before the cutover would otherwise serve the defaults for up to an hour. */

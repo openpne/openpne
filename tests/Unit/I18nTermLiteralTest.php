@@ -71,6 +71,23 @@ class I18nTermLiteralTest extends TestCase
     }
 
     /**
+     * `post_activity` is the posting button's label (a verb on a fresh OpenPNE 3 install), so it can
+     * only ever be the whole string; a noun slot says "%activity% post" (docs/internals/upgrade.md, "Terms").
+     */
+    public function test_post_activity_is_only_ever_the_whole_string(): void
+    {
+        /** @var array<string, string> $ja */
+        $ja = json_decode((string) file_get_contents(base_path('lang/ja.json')), true, flags: JSON_THROW_ON_ERROR);
+        $strings = [...array_keys($ja), ...array_values($ja), ...array_keys(Cmd::dynamicSourceStrings())];
+
+        foreach ($strings as $string) {
+            if (stripos($string, 'post_activity') !== false) {
+                $this->assertSame('%Post_activity%', $string);
+            }
+        }
+    }
+
+    /**
      * Dynamic-registry captions reach __() through a variable and never enter the code scanner, so an
      * unwired, ja-unregistered caption could stay literal while i18n:check reported green.
      */

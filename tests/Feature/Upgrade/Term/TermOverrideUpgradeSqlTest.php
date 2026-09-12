@@ -62,7 +62,7 @@ class TermOverrideUpgradeSqlTest extends TestCase
         $this->assertSame('グループ', TermService::defaults('ja')['community'], 'the default itself is untouched');
     }
 
-    /** The seed value is a verb, the one slot OpenPNE 4 renders the key in. */
+    /** The seed value is a verb; OpenPNE 4 renders the key only as the posting label. */
     public function test_post_activity_is_carried_as_the_posting_label(): void
     {
         $this->seedTerm('post_activity', ['ja_JP' => 'つぶやく', 'en' => 'Tweet']);
