@@ -78,8 +78,11 @@ final class UpgradeRunner
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;
+        $termErrors = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
+            ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
+            : [];
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : []) as $error) {
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
             $out("ERROR {$error}");
         }
 
@@ -89,7 +92,7 @@ final class UpgradeRunner
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;

@@ -7,6 +7,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,7 @@ final class SourcePreflight
         'member_config' => null,
         'community_config' => null,
         'notification_mail' => StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX,
+        'sns_term' => null,
     ];
 
     /** @param  list<UpgradeStep>  $steps */
@@ -166,6 +168,7 @@ final class SourcePreflight
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
             'notification_mail' => StepRegistry::knownNotificationMailNames(),
+            'sns_term' => TermOverrideUpgrade::SOURCE_NAMES,
         };
     }
 

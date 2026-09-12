@@ -54,6 +54,7 @@ use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
+use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\Steps\TimelinePostImageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
@@ -128,6 +129,8 @@ final class StepRegistry
             AdminUserUpgrade::class,
             // sns_settings is independent (no FK); migrates the sns_config keys SnsSettingKey opts in.
             SnsSettingUpgrade::class,
+            // term_overrides is independent too; the PC sns_term rows, name for name.
+            TermOverrideUpgrade::class,
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
             // enable_friend_link), each writing only the units OpenPNE 3 had switched off.
             PluginFeatureUpgrade::class,
