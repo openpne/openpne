@@ -58,7 +58,7 @@ class ImageCacheCommandTest extends TestCase
         $unshown = $this->stored('image/x-png', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 2 fact(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 2.')
             ->expectsOutputToContain('unshown:     1')
             ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/x-png")
             ->assertSuccessful();
@@ -75,7 +75,7 @@ class ImageCacheCommandTest extends TestCase
         config(['openpne.images.max_upload_dimension' => 16]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 0 picture(s), recorded 0 fact(s).')
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
             ->expectsOutputToContain('refused:     1')
             ->assertSuccessful();
         $this->assertNotNull(app(ImageCache::class)->refusal($file));
@@ -91,7 +91,7 @@ class ImageCacheCommandTest extends TestCase
         Storage::disk('image_cache')->put($icon, '');
 
         $this->artisan('openpne:image-cache', ['action' => 'warm', '--retry-failed' => true])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
         $this->assertTrue(app(ImageCache::class)->hasCanonical($file));
         $this->assertNull(app(ImageCache::class)->refusal($file));
@@ -105,7 +105,7 @@ class ImageCacheCommandTest extends TestCase
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         $this->assertSame([64, 32], [$file->refresh()->width, $file->height]);
@@ -135,7 +135,7 @@ class ImageCacheCommandTest extends TestCase
         Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($unjudged->name, 'gif'), substr($this->animatedGif(), 0, 40));
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 0 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         $this->assertFalse($known->refresh()->animated);
@@ -166,7 +166,7 @@ class ImageCacheCommandTest extends TestCase
         $this->app->forgetInstance(ImageCache::class);
 
         $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
-            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded 0 fact(s).')
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 0.')
             ->assertSuccessful();
 
         $this->assertTrue($file->refresh()->animated);
@@ -179,7 +179,7 @@ class ImageCacheCommandTest extends TestCase
         $file->update(['animated' => true]);
 
         $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
-            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         $this->assertFalse($file->refresh()->animated);
@@ -198,7 +198,7 @@ class ImageCacheCommandTest extends TestCase
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
-            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         Storage::disk('image_cache')->assertMissing($variant);
@@ -251,7 +251,7 @@ class ImageCacheCommandTest extends TestCase
         $good = $this->stored('image/png', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->expectsOutputToContain('unreadable:  1')
             ->expectsOutputToContain("#{$missing->id} {$missing->name}: ")
             ->assertFailed();

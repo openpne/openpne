@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * Serves thumbnail variants at the OpenPNE 3-compatible
- * `/cache/img/{format}/w{W}_h{H}[_sq]/{name}.{ext}` URL, so old image links keep
+ * `/cache/img/{format}/w{W}_h{H}[_sq|_a]/{name}.{ext}` URL, so old image links keep
  * working. Like FileController, every request is gated by FilePolicy — a member
  * avatar thumbnail is as private as the original.
  */

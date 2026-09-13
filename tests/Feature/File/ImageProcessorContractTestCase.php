@@ -74,7 +74,8 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $preserves = $this->processor()->preservesAnimation();
 
         $this->assertSame($preserves ? 3 : 1, $this->frameCount($variant->bytes));
-        $this->assertSame($preserves, $variant->animated);
+        // A variant's frames are nobody's fact: a processor that kept them need not say so.
+        $this->assertSame($preserves ? null : false, $variant->animated);
     }
 
     public function test_the_canonical_keeps_an_animation_only_where_the_processor_says_so(): void

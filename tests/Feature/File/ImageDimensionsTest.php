@@ -120,7 +120,7 @@ class ImageDimensionsTest extends TestCase
 
         // The row without bytes fails the run: a deploy script must not read "warm ran" as "every picture is made".
         $this->artisan('openpne:backfill-image-dimensions')
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 fact(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->expectsOutputToContain('refused:     1')
             ->expectsOutputToContain('unreadable:  1')
             ->assertFailed();

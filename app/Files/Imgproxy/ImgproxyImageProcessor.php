@@ -31,9 +31,6 @@ final class ImgproxyImageProcessor implements ImageProcessor
     /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
     public const MAX_FRAMES = 200;
 
-    /** A variant's answer has no limit of its own to be refused by, so it gets headroom over the source limit. */
-    private const VARIANT_CAP_FACTOR = 4;
-
     private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
     public function __construct(
@@ -78,7 +75,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 [$response, $body] = $this->send($this->url->signed($this->options($spec, $keepFrames), $name, $spec->format), $spec->isCanonical());
             }
 
-            return $this->read($response, $body, $spec->format, $keepFrames);
+            return $this->read($response, $body, $spec, $keepFrames);
         } finally {
             $this->spool->delete($name);
         }
@@ -102,9 +99,9 @@ final class ImgproxyImageProcessor implements ImageProcessor
     }
 
     /**
-     * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
-     * A canonical's cap is the source limit, which would refuse an answer that long anyway, so passing it
-     * is a verdict; a variant is held to nothing else, so its cap is headroom and passing it an outage.
+     * The body is collected into a sink capped at the source limit, so a transfer past it is aborted
+     * rather than held. That limit would refuse a canonical anyway, so passing it is a verdict; a
+     * variant is drawn from a canonical within it, so passing it is an outage.
      *
      * @return array{0: ResponseInterface, 1: string}
      *
@@ -113,7 +110,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
      */
     private function send(string $url, bool $canonical): array
     {
-        $cap = ImageSourceLimit::bytes() * ($canonical ? 1 : self::VARIANT_CAP_FACTOR);
+        $cap = ImageSourceLimit::bytes();
         $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $cap);
 
         try {
@@ -145,16 +142,17 @@ final class ImgproxyImageProcessor implements ImageProcessor
             throw new ImageProcessingException("imgproxy answered more than the {$cap} byte source limit.");
         }
 
-        $this->outage("imgproxy answered more than the {$cap} byte cap for a variant.");
+        $this->outage("imgproxy answered more than the {$cap} byte source limit for a variant.");
     }
 
     /**
      * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
-    private function read(ResponseInterface $response, string $body, string $format, bool $keepFrames): ProcessedImage
+    private function read(ResponseInterface $response, string $body, ImageSpec $spec, bool $keepFrames): ProcessedImage
     {
         $status = $response->getStatusCode();
+        $format = $spec->format;
 
         if ($status === 200) {
             $size = @getimagesizefromstring($body);
@@ -163,8 +161,15 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 return $this->outage("imgproxy answered 200 with bytes that are not a {$format}.");
             }
 
-            // A still was asked for, so no walk: the answer has one frame whatever the probe would say.
-            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], $keepFrames ? AnimationProbe::of($body, ImageSpec::mimeFor($format)) : false);
+            // Only a canonical's frames are a fact anyone records, so only it is walked; a still asked
+            // for has one frame, and an animated variant is left unjudged.
+            $animated = match (true) {
+                ! $keepFrames => false,
+                $spec->isCanonical() => AnimationProbe::of($body, ImageSpec::mimeFor($format)),
+                default => null,
+            };
+
+            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], $animated);
         }
 
         $reason = substr(trim($body), 0, 200);

@@ -13,19 +13,26 @@ use Throwable;
  */
 final class AnimationProbe
 {
+    /** The GIF walk builds every frame as an object at about three times the bytes, so past this it is not attempted. */
+    public const MAX_GIF_WALK_BYTES = 8 * 1024 * 1024;
+
     /** True or false when the container says so, null when it cannot be read that far. */
-    public static function of(string $bytes, string $mime): ?bool
+    public static function of(string $bytes, string $mime, int $maxGifWalkBytes = self::MAX_GIF_WALK_BYTES): ?bool
     {
         return match ($mime) {
-            'image/gif' => self::gif($bytes),
+            'image/gif' => self::gif($bytes, $maxGifWalkBytes),
             'image/webp' => self::webp($bytes),
             // JPEG has no frames, and neither processor keeps an APNG's (pinned by the contract test).
             default => false,
         };
     }
 
-    private static function gif(string $bytes): ?bool
+    private static function gif(string $bytes, int $maxWalkBytes): ?bool
     {
+        if (strlen($bytes) > $maxWalkBytes) {
+            return null;
+        }
+
         try {
             return count(GifDecoder::decode($bytes)->frames()) > 1;
         } catch (Throwable) {

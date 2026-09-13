@@ -3,10 +3,9 @@
 namespace App\Files;
 
 /**
- * `_sq` center-crops to fill the box exactly, which need not be square despite the OpenPNE 3 token;
- * `_a` asks for every frame of a fit box, and a crop has no animated form (docs/internals/images.md,
- * "Processing"). null from fromGeometry() means malformed or outside the size whitelist, and the
- * caller turns that into a 404 so a request cannot drive arbitrary-size generation.
+ * `_sq` center-crops to fill the box exactly (not necessarily square), `_a` asks a fit box in
+ * `animated_sizes` for every frame (docs/internals/images.md, "Processing"). null from fromGeometry()
+ * means malformed or outside the whitelists, which the caller turns into a 404.
  */
 final class ImageTransform
 {
@@ -49,6 +48,10 @@ final class ImageTransform
         }
 
         if (! in_array("{$width}x{$height}", config('openpne.images.allowed_sizes'), true)) {
+            return null;
+        }
+
+        if ($suffix === '_a' && ! in_array("{$width}x{$height}", config('openpne.images.animated_sizes'), true)) {
             return null;
         }
 

@@ -72,8 +72,9 @@ class ImageTransformTest extends TestCase
 
     public function test_rejects_an_animated_crop_an_animated_original_and_an_unlisted_animated_size(): void
     {
-        // A crop has no animated form, and the canonical's frames are the processor's call.
-        foreach (['w300_h400_sq_a', 'w640_h640_a_sq', 'w_h_a', 'w641_h641_a'] as $geometry) {
+        // A crop has no animated form, the canonical's frames are the processor's call, and only the
+        // sizes in `animated_sizes` (a subset of `allowed_sizes`) may ask.
+        foreach (['w300_h400_sq_a', 'w640_h640_a_sq', 'w_h_a', 'w641_h641_a', 'w120_h120_a'] as $geometry) {
             $this->assertNull(ImageTransform::fromGeometry($geometry), $geometry);
         }
     }

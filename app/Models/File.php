@@ -61,7 +61,6 @@ class File extends Model
      * The size must be whitelisted in `openpne.images.allowed_sizes` to resolve. On Classic the
      * requested size is the rendered size (docs/internals/images.md, "Classic is not part of this").
      */
-    /** $animated asks for every frame, which only a fit box offers (docs/internals/images.md, "Processing"). */
     public function thumbnailUrl(int $width, int $height, bool $square = false, bool $animated = false): string
     {
         if ($square && $animated) {

@@ -54,9 +54,13 @@ final class ImageSpec
         return new self($this->width, $this->height, $this->cover, $this->format, $hex, $this->animated);
     }
 
-    /** Asks for every frame; a processor that keeps none answers a still, and a canonical asks without this. */
+    /** Asks for every frame of a fit; a processor that keeps none answers a still, and a canonical asks without this. */
     public function animated(): self
     {
+        if ($this->cover) {
+            throw new InvalidArgumentException('An animated variant is a fit, never a cover: a cover upscales every frame.');
+        }
+
         return new self($this->width, $this->height, $this->cover, $this->format, $this->background, true);
     }
 

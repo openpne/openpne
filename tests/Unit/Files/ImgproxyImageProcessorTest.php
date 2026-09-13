@@ -88,7 +88,8 @@ class ImgproxyImageProcessorTest extends TestCase
         $processed = $processor->process($gif, 'image/gif', ImageSpec::fit(120, 120, 'gif')->animated());
 
         $this->assertStringContainsString('/maf:200/rt:fit/w:120/h:120/el:0/', $this->history[0]['request']->getUri()->getPath());
-        $this->assertTrue($processed->animated);
+        // Left unjudged: nobody records a variant's frames, and the walk would cost the answer's size again.
+        $this->assertNull($processed->animated);
 
         // Over the sidecar's budget: asked again as a still, and reported as one.
         $processor = $this->processor(new Response(422, [], 'Invalid source image'), new Response(200, ['Content-Type' => 'image/gif'], $this->animatedGif(1)));
@@ -200,11 +201,11 @@ class ImgproxyImageProcessorTest extends TestCase
         }
     }
 
-    public function test_a_variant_answer_over_four_times_the_limit_is_an_outage(): void
+    public function test_a_variant_answer_over_the_limit_is_an_outage(): void
     {
-        // A variant is held to no limit of its own, so past its headroom nothing can be concluded.
+        // Drawn from a canonical within the limit, a variant past it says something about the sidecar, not the picture.
         config(['openpne.images.max_source_kilobytes' => 1]);
-        $this->assertGreaterThan(4096, strlen($this->noisyPng(80, 80)));
+        $this->assertGreaterThan(1024, strlen($this->noisyPng(80, 80)));
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
 
         $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png')), ImageProcessorUnavailableException::class);

@@ -16,9 +16,10 @@ class AnimationProbeTest extends TestCase
         $this->assertTrue(AnimationProbe::of($this->gif(3), 'image/gif'));
     }
 
-    public function test_a_gif_cut_short_is_not_known_either_way(): void
+    public function test_a_gif_cut_short_or_too_large_to_walk_is_not_known_either_way(): void
     {
         $this->assertNull(AnimationProbe::of(substr($this->gif(3), 0, 40), 'image/gif'));
+        $this->assertNull(AnimationProbe::of($this->gif(3), 'image/gif', maxGifWalkBytes: 10));
     }
 
     public function test_a_webp_is_animated_when_its_extended_header_says_so(): void

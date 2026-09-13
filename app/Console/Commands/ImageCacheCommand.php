@@ -80,7 +80,7 @@ class ImageCacheCommand extends Command
         $this->listRows($refusedRows, $refused);
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
-        $this->line("  animated:  {$animated}  (recorded as animating; the fit sizes offer an animated variant)");
+        $this->line("  animated:  {$animated}  (recorded as animating)");
         $this->line("  unknown:   {$unknown}  (whether it animates is not recorded yet; `openpne:image-cache warm` records it)");
 
         return self::SUCCESS;
@@ -151,7 +151,7 @@ class ImageCacheCommand extends Command
             return true;
         });
 
-        $this->info(sprintf('%s %d picture(s), recorded %d fact(s).', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['facts']));
+        $this->info(sprintf('%s %d picture(s), recorded facts for %d.', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['facts']));
         $this->line("  refused:     {$n['refused']}  (remembered; `warm --retry-failed` asks again)");
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
@@ -187,10 +187,12 @@ class ImageCacheCommand extends Command
     private function recordMissingFacts(File $file, callable $canonical): bool
     {
         $missingSize = $file->width === null || $file->height === null;
-        $missingAnimated = $file->animated === null;
+        // A format that never animates needs no bytes read to say so.
+        $missingAnimated = $file->animated === null && in_array($file->type, ['image/gif', 'image/webp'], true);
+        $facts = $file->animated === null && ! $missingAnimated ? ['animated' => false] : [];
 
         if (! $missingSize && ! $missingAnimated) {
-            return false;
+            return $this->write($file, $facts);
         }
 
         try {
@@ -198,8 +200,6 @@ class ImageCacheCommand extends Command
         } catch (Throwable) {
             return false;
         }
-
-        $facts = [];
 
         if ($missingSize && ($size = @getimagesizefromstring($bytes)) !== false && $size[0] >= 1 && $size[1] >= 1) {
             $facts += ['width' => (int) $size[0], 'height' => (int) $size[1]];

@@ -177,6 +177,9 @@ class ImageDeliveryTest extends TestCase
 
         $response->assertOk();
         $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? 3 : 1, $this->frameCount($response->getContent()));
+        // The `_a` in the URL reached the processor as the ask for frames.
+        $this->assertSame([true], array_values(array_map(fn (ImageSpec $spec): bool => $spec->animated, array_filter($this->specsSeen, fn (ImageSpec $spec): bool => $spec->width === 640))));
+        $this->assertThrows(fn () => $file->thumbnailUrl(640, 640, square: true, animated: true), \InvalidArgumentException::class);
         $this->assertNotSame($this->actingAs($owner)->get($file->thumbnailUrl(640, 640))->headers->get('ETag'), $response->headers->get('ETag'));
         $this->actingAs($owner)->get($this->url($file, 'w640_h640_sq_a', 'gif'))->assertNotFound();
         $this->actingAs($owner)->get($this->url($file, 'w_h_a', 'gif'))->assertNotFound();
@@ -294,16 +297,21 @@ class ImageDeliveryTest extends TestCase
         );
     }
 
+    /** @var list<ImageSpec> */
+    public array $specsSeen = [];
+
     /** GD's answer with the flag flipped: enough to record `animated` true without a sidecar. */
     private function processorReportsAnimation(): void
     {
         $inner = $this->app->make(ImageProcessor::class);
-        $this->app->instance(ImageProcessor::class, new class($inner) implements ImageProcessor
+        $test = $this;
+        $this->app->instance(ImageProcessor::class, new class($inner, $test) implements ImageProcessor
         {
-            public function __construct(private readonly ImageProcessor $inner) {}
+            public function __construct(private readonly ImageProcessor $inner, private readonly ImageDeliveryTest $test) {}
 
             public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
             {
+                $this->test->specsSeen[] = $spec;
                 $processed = $this->inner->process($bytes, $mime, $spec);
 
                 return new ProcessedImage($processed->bytes, $processed->mime, $processed->width, $processed->height, $spec->isCanonical() ? $mime === 'image/gif' : $processed->animated);
