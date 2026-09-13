@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -18,6 +19,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        // Every raster upload publishes a canonical, so the cache disk is faked for the whole suite.
+        Storage::fake('image_cache');
 
         // Seeded only for RefreshDatabase tests, which own an isolated per-process database; the others
         // share the base database across parallel processes and none depend on the seed.
@@ -42,6 +46,14 @@ abstract class TestCase extends BaseTestCase
      * and the scoped bindings must be forgotten by hand. Required when a test crosses the member/admin
      * realm boundary or changes what a scoped service already counted.
      */
+    /** A read-only directory is only read-only for a non-root user. */
+    protected function skipUnlessModeBitsBind(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('mode bits do not bind root');
+        }
+    }
+
     protected function freshRequestState(): void
     {
         $this->app['auth']->forgetGuards();

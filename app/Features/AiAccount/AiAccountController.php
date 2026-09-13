@@ -25,7 +25,8 @@ use App\Features\Member\Actions\RemoveAvatar;
 use App\Features\Member\Actions\SetAvatar;
 use App\Features\Member\MemberConfigCategory;
 use App\Features\Member\Serializers\MemberRefSerializer;
-use App\Files\ImageMetadataStripException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AiAccount\AiTokenRequest;
@@ -166,10 +167,10 @@ class AiAccountController extends Controller
 
         try {
             $action($member, $request->file('image'));
-        } catch (ImageMetadataStripException) {
-            // SetAvatar uses FileUploader directly, so the fail-closed strip arrives raw and is
+        } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+            // SetAvatar uses FileUploader directly, so the refused picture arrives raw and is
             // turned into a field error here.
-            throw ValidationException::withMessages(['image' => [ImageMetadataStripException::userMessage()]]);
+            throw ValidationException::withMessages(['image' => [$e::userMessage()]]);
         }
 
         return $this->accountRedirect($member)->with('status', __('Profile image updated.'));

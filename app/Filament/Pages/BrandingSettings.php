@@ -6,7 +6,8 @@ namespace App\Filament\Pages;
 
 use App\Features\Branding\Actions\SaveBrandingSettings;
 use App\Files\FormUpload;
-use App\Files\ImageMetadataStripException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\UploadLimit;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
@@ -168,9 +169,9 @@ class BrandingSettings extends Page
                 is_string($brandColor) ? trim($brandColor) : '',
                 $this->fileIntents($data),
             );
-        } catch (ImageMetadataStripException) {
-            // Don't 500 the panel on a fail-closed strip: notify and halt the save.
-            Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+        } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+            // Don't 500 the panel on a refused picture: notify and halt the save.
+            Notification::make()->danger()->title($e::userMessage())->send();
 
             throw new Halt;
         }

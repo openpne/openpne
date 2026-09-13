@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Files\ImageCache;
-use App\Files\ImageProcessingException;
 use App\Files\ImageTransform;
 use App\LinkCard\CardContext;
 use App\LinkCard\LinkCardImage;
@@ -56,13 +55,7 @@ class LinkCardImageController extends Controller
         $transform = ImageTransform::fromGeometry($geometry);
         abort_unless($transform !== null, 404);
 
-        try {
-            $bytes = $cache->bytes($file, $transform, $imageFormat);
-        } catch (ImageProcessingException) {
-            abort(404);
-        }
-
-        return response($bytes, 200, [
+        return response($cache->bytes($file, $transform, $imageFormat), 200, [
             'Content-Type' => $file->type,
             'X-Content-Type-Options' => 'nosniff',
             // `no-store` rather than a short private max-age: a cached copy outliving a post going

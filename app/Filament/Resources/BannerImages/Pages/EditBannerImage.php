@@ -6,7 +6,8 @@ use App\Features\Banner\Actions\DeleteBannerImage;
 use App\Features\Banner\Actions\UpdateBannerImage;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Files\FormUpload;
-use App\Files\ImageMetadataStripException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Models\BannerImage;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -65,10 +66,10 @@ class EditBannerImage extends EditRecord
                 null,
                 $upload,
             );
-        } catch (ImageMetadataStripException) {
-            // Surface a fail-closed strip as a danger notification + halt (Filament rolls the edit
+        } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+            // Surface a refused picture as a danger notification + halt (Filament rolls the edit
             // back) rather than a 500; the current image is untouched.
-            Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+            Notification::make()->danger()->title($e::userMessage())->send();
 
             throw new Halt;
         }

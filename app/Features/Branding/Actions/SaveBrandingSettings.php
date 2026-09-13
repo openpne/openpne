@@ -15,8 +15,8 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Every File stored during this save is deleted again if anything later throws, the fail-closed
- * ImageMetadataStripException included — that one still propagates for the caller to report. The
+ * Every File stored during this save is deleted again if anything later throws, a refused or
+ * unavailable picture included — those still propagate for the caller to report. The
  * superseded token is re-read under a row lock inside the transaction rather than taken from the form
  * the admin rendered, so a concurrent save cannot leave its file orphaned.
  */

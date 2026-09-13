@@ -1,5 +1,8 @@
 <?php
 
+use App\Files\CanonicalUnavailableException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -21,6 +24,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -101,6 +105,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 ]);
             }
         })->stop();
+
+        // A picture the processor refuses is not there (404); a processor outage is retryable (503).
+        $exceptions->map(ImageProcessingException::class, fn (ImageProcessingException $e) => new NotFoundHttpException('', $e));
+        $exceptions->map(CanonicalUnavailableException::class, fn (CanonicalUnavailableException $e) => new NotFoundHttpException('', $e));
+        $exceptions->map(ImageProcessorUnavailableException::class, fn (ImageProcessorUnavailableException $e) => new HttpException(503, '', $e, ['Retry-After' => '30']));
 
         // A render callback rather than errors/4xx.blade.php overrides, which would apply to every
         // realm and surface.
