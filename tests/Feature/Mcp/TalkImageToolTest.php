@@ -66,13 +66,10 @@ class TalkImageToolTest extends McpTestCase
         return $file;
     }
 
-    private function stored(File $file): string
+    /** The canonical off the same cache the tool reads: what `size=original` answers, never the stored bytes. */
+    private function original(File $file): string
     {
-        $stream = app(FileStorage::class)->readStream($file);
-        $bytes = (string) stream_get_contents($stream);
-        fclose($stream);
-
-        return $bytes;
+        return app(ImageCache::class)->canonical($file);
     }
 
     /** The 640px variant off the same cache the tool reads. */
@@ -118,13 +115,13 @@ class TalkImageToolTest extends McpTestCase
             ]]]);
     }
 
-    public function test_the_original_size_answers_with_the_stored_bytes_untouched(): void
+    public function test_the_original_size_answers_with_the_canonical(): void
     {
         $group = $this->group();
         $member = $this->memberOf($group);
         $message = $this->say($group, $member, 'full size please');
         $file = $this->attach($message, 1, 800, 400);
-        $stored = $this->stored($file);
+        $stored = $this->original($file);
 
         $this->acting($member);
 
@@ -139,7 +136,6 @@ class TalkImageToolTest extends McpTestCase
                 'byteSize' => strlen($stored),
             ]]]);
 
-        $this->assertSame($file->byte_size, strlen($stored));
     }
 
     public function test_naming_a_slot_answers_with_that_picture_alone(): void
@@ -159,8 +155,8 @@ class TalkImageToolTest extends McpTestCase
             'number' => 2,
         ])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($second)))
-            ->assertDontSee($this->wire($this->stored($first)))
+            ->assertSee($this->wire($this->original($second)))
+            ->assertDontSee($this->wire($this->original($first)))
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 1)
                 ->where('images.0.number', 2)
@@ -240,7 +236,7 @@ class TalkImageToolTest extends McpTestCase
         foreach ($refusals as $arguments) {
             $this->read($arguments)
                 ->assertHasErrors(['No such talk room'])
-                ->assertDontSee([$this->wire($this->stored($secret)), $this->wire($this->stored($strayed))]);
+                ->assertDontSee([$this->wire($this->original($secret)), $this->wire($this->original($strayed))]);
         }
     }
 
@@ -307,7 +303,7 @@ class TalkImageToolTest extends McpTestCase
 
         $this->read(['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => 'original'])
             ->assertHasErrors(['8 MB'])
-            ->assertDontSee($this->wire($this->stored($first)));
+            ->assertDontSee($this->wire($this->original($first)));
 
         // One at a time fits, which is what the refusal tells the caller to do.
         $this->read([
@@ -317,7 +313,7 @@ class TalkImageToolTest extends McpTestCase
             'number' => 1,
         ])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($first)));
+            ->assertSee($this->wire($this->original($first)));
     }
 
     public function test_bytes_that_outgrow_their_recorded_size_are_refused_before_they_are_all_read(): void
@@ -348,7 +344,7 @@ class TalkImageToolTest extends McpTestCase
             $this->read(['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => $size])
                 ->assertHasErrors(['8 MB'])
                 // Nothing partial: the picture read before the liar was reached does not go back either.
-                ->assertDontSee($this->wire($this->stored($honest)));
+                ->assertDontSee($this->wire($this->original($honest)));
 
             // And the bytes it could not have answered with were never taken off the storage.
             $this->assertLessThanOrEqual(

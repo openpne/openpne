@@ -145,7 +145,7 @@ class ReadDiaryImagesTool extends DiaryTool
             'comment_id' => $schema->integer()->min(1)
                 ->description('A comment of that entry, as read-diary reports it in comments[].id: its pictures rather than the entry\'s own. Omit it for the entry\'s.'),
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
-                ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the bytes as they were uploaded — ask for it only when the detail decides something.'),
+                ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
                 ->description('One picture rather than all of them. On the entry it is the slot the picture was attached in; on a comment, whose pictures have no slots, it is their position in the comment, counting from 1. Omit it for every picture, which is also the way to learn the numbers.'),
         ];

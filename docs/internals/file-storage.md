@@ -9,9 +9,11 @@ already carries both the id and the `name` token. Each backend then uses its nat
 [`DiskFileStorage`](../../app/Files/DiskFileStorage.php) by `name`.
 
 The contract is the four byte-level operations only. Delivery is not here: every fetch goes through
-an app route that streams the bytes whatever the backend is (`File::url()`, `File::publicUrl()`, the
-`/cache/img` variants), so it stays backend-independent and policy-gated and no caller holds a disk
-URL. `delete()` is idempotent on every backend — a missing object is not an error.
+an app route whatever the backend is (`File::url()`, `File::publicUrl()`, the `/cache/img` variants),
+so it stays backend-independent and policy-gated and no caller holds a disk URL — and a raster is
+answered from its canonical ([security](security.md), "Inline delivery is re-encoded"), the stored
+bytes being read only to produce it. `delete()` is idempotent on every backend — a missing object is
+not an error.
 
 ## The two backends
 
@@ -27,7 +29,8 @@ There is no constant-memory streaming out of a database row, so the DB-blob back
 BLOB in PHP memory on read and on write, and `readStream()` materialises the row into `php://temp`. A
 single file is bounded by the upload validation layer and ultimately by `memory_limit` /
 `max_allowed_packet`; an oversized write surfaces as a DB error rather than silently truncating.
-Readers that work to a budget bound the read themselves ([mcp.md](mcp.md)).
+Readers that work to a budget bound the read themselves ([mcp.md](mcp.md)). An inline raster answer
+buffers its whole canonical in memory too, bounded by `ImageSourceLimit` ([images.md](images.md)).
 
 ## Writing an upload
 
@@ -41,7 +44,7 @@ join the transaction, so a failure after either was written is compensated in `F
 was saved, since a `files.name` collision means the key belongs to a pre-existing file whose bytes and
 cache must survive. A cache disk that refuses the canonical does not fail the upload: the refusal is
 reported and the first view regenerates the canonical, so a full or read-only cache disk degrades
-delivery, never posting.
+delivery — every inline view decodes again until the disk takes writes — but never posting.
 
 The residual race is accepted: if the commit fails after a successful disk write and the compensating
 delete does not run, the bytes are unreachable with no metadata row pointing at them and only waste

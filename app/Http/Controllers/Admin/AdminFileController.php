@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Files\FileResponse;
 use App\Files\FileStorage;
 use App\Http\Controllers\Controller;
 use App\Models\File;
@@ -17,19 +18,14 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AdminFileController extends Controller
 {
-    /**
-     * Anything else, SVG included, is sent as an attachment so a stored file is never interpreted as a
-     * same-origin document; OpenPNE 3 rows are upgraded verbatim, so a non-raster type can be present.
-     */
-    private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
     public function show(Request $request, File $file, FileStorage $storage): Response
     {
         // 404 (not 403) for non-admins so the endpoint does not confirm a file exists.
         abort_unless(Auth::guard('admin')->check(), 404);
         abort_unless($storage->exists($file), 404);
 
-        $raster = in_array($file->type, self::INLINE_IMAGE_TYPES, true);
+        // Anything but a raster, SVG included, is an attachment so a stored file is never a same-origin document.
+        $raster = FileResponse::isRaster($file);
         $inline = $raster && ! $request->boolean('download');
 
         $headers = [

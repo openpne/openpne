@@ -24,9 +24,9 @@ class ImageCache
     ) {}
 
     /**
-     * $maxBytes bounds the read of the stored bytes: a file that outgrows it is refused with
-     * ImageBytesOverLimitException rather than read. A cache hit is served unbounded, its bytes
-     * having been produced here to a whitelisted size.
+     * $maxBytes bounds the read of the stored bytes and of a canonical hit: a file that outgrows it is
+     * refused with ImageBytesOverLimitException rather than read. A variant hit is served unbounded,
+     * its bytes having been produced here to a whitelisted size.
      *
      * @throws CanonicalUnavailableException
      * @throws ImageProcessorUnavailableException
@@ -34,7 +34,7 @@ class ImageCache
     public function bytes(File $file, ImageTransform $transform, string $format, ?int $maxBytes = null): string
     {
         if ($transform->isRaw()) {
-            return $this->original($file, $maxBytes);
+            return $this->canonical($file, $maxBytes);
         }
 
         $disk = $this->disk();

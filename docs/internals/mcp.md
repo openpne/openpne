@@ -144,7 +144,11 @@ too.
 
 **Thumbnails are the default**, fitted into a 640px box. A picture costs a client far more context
 than the message it hangs on and 640px is enough to see what one is, so `size=original` is for when
-the detail decides something.
+the detail decides something. Both are drawn from the canonical, never the stored bytes
+([security](security.md), "Inline delivery is re-encoded"); a picture the processor refused is
+reported as `unavailable` in its slot while the others still answer, so a client pairs the returned
+pictures with `structuredContent.images[*]` in order **after skipping the `unavailable` entries**. A
+call in which nothing could be drawn is an error, as is a processor outage.
 
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
 byte is read — the only number there is while nothing is in memory yet — and again by the read
@@ -154,7 +158,8 @@ drawn from — one byte past it and refuses the file (`ImageBytesOverLimitExcept
 reading it whole and measuring afterwards, so a row understating its file cannot put an unbounded
 object in memory. Either way the call is refused whole
 rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
-preflight measures originals even when thumbnails were asked for: conservative, not exact. The read
+preflight measures the stored sizes, which a thumbnail is under and which a canonical, being a
+re-encode, can exceed: a first cut, not the measure. The read
 itself counts what is actually read, which for a thumbnail is the canonical the variant is drawn from,
 a re-encode that can be larger than the stored bytes.
 
@@ -228,8 +233,8 @@ else; padding is optional and line breaks are skipped, which is the decoder's ow
 picture *is* is decided afterwards by reading it: the bytes go through
 [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php) — the forms' own rules,
 sniffing the content, bounding the pixel dimensions and measuring the decoded file — and then to the
-same Actions, so slot numbering, the compensating delete and the fail-closed metadata strip (an error
-on `images.N`) are the web surface's, unchanged. The temporary file a picture is decoded into is
+same Actions, so slot numbering, the compensating delete and the fail-closed canonical re-encode (an
+error on `images.N`) are the web surface's, unchanged. The temporary file a picture is decoded into is
 removed on every path out, a refused picture and a rolled-back write included.
 
 ## Prompt injection

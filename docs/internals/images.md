@@ -148,10 +148,10 @@ changing it moves the layout. Classic keeps its 120px square.
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself
   such a change: every variant regenerates on its next request, and the superseded files stay on
   the cache disk until their File is deleted (nothing prunes them).
-- **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry the key
-  hashed as their `ETag` (`ImageTransform::etag`), except the `w_h` original, which still answers the
-  stored bytes and carries the file token until the canonical becomes its body. `/file/{name}` and the admin raw
-  route carry the file token, whose bytes never change. Each is checked after the route's own gate
+- **Clearing the cache disk no longer reaches browsers**: every inline raster answer — `/cache/img/…`
+  variants, the `w_h` original, `/file/{name}`, the banner and public routes — carries the canonical's
+  or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
+  admin raw route carry the file token, whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
-  is not shortened for it — revalidating every image would cost a PHP request each. The public
-  asset, banner and link-card image routes carry no validator (the last is `no-store` by design).
+  is not shortened for it — revalidating every image would cost a PHP request each. Only the
+  link-card image route carries no validator (it is `no-store` by design).

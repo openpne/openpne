@@ -17,12 +17,8 @@ use Throwable;
  */
 class FileUploader
 {
-    /** MIME types the metadata stripper rewrites in memory before storing (gif and non-images bypass). */
-    private const STRIPPABLE = ['image/jpeg', 'image/png', 'image/webp'];
-
     public function __construct(
         private readonly FileStorage $storage,
-        private readonly ImageMetadataStripper $stripper,
         private readonly ImageProcessor $processor,
         private readonly ImageCache $cache,
     ) {}
@@ -36,12 +32,8 @@ class FileUploader
         $type = $upload->getMimeType() ?? 'application/octet-stream';
         $format = ImageSpec::formatFor($type);
 
-        // Only a raster is held in memory (the stripper's types are rasters); anything else streams from the temp file.
+        // Only a raster is held in memory; anything else streams from the temp file.
         $bytes = $format !== null ? (string) file_get_contents($upload->getRealPath()) : null;
-
-        if ($bytes !== null && $this->shouldStrip($type)) {
-            $bytes = $this->stripper->strip($bytes, $type);
-        }
 
         // Produced before anything is saved, so a refusal costs no compensation.
         $canonical = $format !== null ? $this->processor->process((string) $bytes, $type, ImageSpec::canonical($format)) : null;
@@ -61,7 +53,7 @@ class FileUploader
             // null = inherit visibility from the owner; an ownerless admin asset passes 'public' so
             // FilePolicy serves it (an ownerless file is otherwise fail-closed denied).
             'explicit_visibility' => $explicitVisibility,
-            // The stored length, which the canonical's is not.
+            // The stored bytes are the upload as received; the canonical's length is not this.
             'byte_size' => $bytes !== null ? strlen($bytes) : (int) $upload->getSize(),
             'width' => $canonical?->width,
             'height' => $canonical?->height,
@@ -105,11 +97,6 @@ class FileUploader
         }
 
         return $file;
-    }
-
-    private function shouldStrip(string $mime): bool
-    {
-        return (bool) config('openpne.images.strip_metadata') && in_array($mime, self::STRIPPABLE, true);
     }
 
     /**
