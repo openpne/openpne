@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Files\ImageProcessorUnavailableException;
 use App\LinkCard\InternalCardRow;
 use App\LinkCard\InternalUrl;
 use App\LinkCard\LinkCardImage;
@@ -142,23 +143,56 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             return $this->failed($card);
         }
 
-        $image = $metadata->imageUrl === null ? null : $images->import($metadata->imageUrl, $card->id, $deadline);
+        $pictureLater = false;
+
+        try {
+            $image = $metadata->imageUrl === null ? null : $images->import($metadata->imageUrl, $card->id, $deadline);
+        } catch (ImageProcessorUnavailableException) {
+            // The text renders now and the picture is asked for again after the backoff; bytes the
+            // sidecar cannot load are an outage too, so a broken og:image cannot fail the job at will.
+            $image = null;
+            $pictureLater = true;
+        }
         $imported = $image['file'] ?? null;
 
-        return [
+        $text = [
             'status' => LinkCardStatus::Ok,
             'title' => $metadata->title,
             'description' => $metadata->description,
             'site_name' => $metadata->siteName,
             'author_name' => $metadata->authorName,
+            'fetched_at' => CarbonImmutable::now(),
+        ];
+
+        if ($pictureLater) {
+            // The picture the card already has stays with it, as a failure leaves it.
+            return $text + $this->staleUntil($card);
+        }
+
+        return $text + [
             'image_file_id' => $image['file']->id ?? null,
             'image_width' => $image['width'] ?? null,
             'image_height' => $image['height'] ?? null,
             'failure_count' => 0,
-            'fetched_at' => CarbonImmutable::now(),
             'expires_at' => CarbonImmutable::now()->addDays(7),
             // Released, so a refresh after expiry can claim it.
             'next_attempt_at' => null,
+        ];
+    }
+
+    /**
+     * Stale at once, so the card is due again the moment its backoff elapses.
+     *
+     * @return array<string, mixed>
+     */
+    private function staleUntil(LinkCard $card): array
+    {
+        $failures = $card->failure_count + 1;
+
+        return [
+            'failure_count' => min($failures, 255),
+            'expires_at' => CarbonImmutable::now(),
+            'next_attempt_at' => LinkCard::backoffAfter($failures),
         ];
     }
 

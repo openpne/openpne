@@ -17,3 +17,4 @@ a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP
 | `apng-2frames.png` | a 4x4 APNG of two frames (`acTL` + `fcTL`/`fdAT`), red then blue; both processors read the first frame only |
 | `tiny.gif` | plain GIF, no metadata |
 | `jpeg-truncated.jpg` | a JPEG cut short. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |
+| `webp-animated-3frames.webp` | a 64x64 animated WebP of three frames, made by imgproxy v4.0.14 from a three-frame GIF (`rt:fit/w:64/h:64/maf:10`, `@webp`); libgd reads no animated WebP, which pins the link-card refusal under GD |
