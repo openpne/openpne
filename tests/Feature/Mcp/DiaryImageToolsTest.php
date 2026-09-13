@@ -8,7 +8,11 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Mcp\McpAbilities;
 use App\Mcp\Servers\OpenPneServer;
 use App\Mcp\Tools\PostDiaryCommentTool;
@@ -101,6 +105,25 @@ class DiaryImageToolsTest extends McpTestCase
             $relatedType,
             $relatedId,
         );
+    }
+
+    /** A slot whose bytes were written straight to storage, as an upgraded OpenPNE 3 row is. */
+    private function attachStoredBytes(Diary $diary, int $number, string $bytes): File
+    {
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'diary',
+            'related_entity_id' => $diary->getKey(),
+            'byte_size' => strlen($bytes),
+        ]);
+        $stream = fopen('php://temp', 'r+b');
+        fwrite($stream, $bytes);
+        rewind($stream);
+        app(FileStorage::class)->writeStream($file, $stream);
+        fclose($stream);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => $number]);
+
+        return $file;
     }
 
     private function notAPicture(string $type, int $id): File
@@ -235,6 +258,63 @@ class DiaryImageToolsTest extends McpTestCase
         $this->read(['diary_id' => $diary->getKey()])
             ->assertOk()
             ->assertStructuredContent(['images' => []]);
+    }
+
+    public function test_a_picture_the_processor_refuses_is_reported_in_its_slot_and_the_others_still_answer(): void
+    {
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $first = $this->attach($diary, 1);
+        $this->attachStoredBytes($diary, 2, 'not an image at all');
+        $third = $this->attach($diary, 3);
+
+        $this->acting($author);
+
+        $this->read(['diary_id' => $diary->getKey()])
+            ->assertOk()
+            ->assertSee($this->wire($this->thumbnail($first)))
+            ->assertSee($this->wire($this->thumbnail($third)))
+            ->assertStructuredContent(fn ($json) => $json
+                ->count('images', 3)
+                ->where('images.0.number', 1)
+                ->where('images.1', ['number' => 2, 'unavailable' => true])
+                ->where('images.2.number', 3)
+                ->etc());
+    }
+
+    public function test_naming_a_refused_picture_is_an_error_not_an_empty_answer(): void
+    {
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $this->attachStoredBytes($diary, 1, 'not an image at all');
+
+        $this->acting($author);
+
+        $this->read(['diary_id' => $diary->getKey(), 'number' => 1])->assertHasErrors(['None of these pictures']);
+    }
+
+    public function test_a_processor_outage_refuses_the_call_whole(): void
+    {
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $this->attach($diary, 1);
+        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('imgproxy did not answer');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        });
+        Storage::disk('image_cache')->deleteDirectory($diary->images()->sole()->file->name);
+
+        $this->acting($author);
+
+        $this->read(['diary_id' => $diary->getKey()])->assertHasErrors(['temporarily unavailable']);
     }
 
     /** The rows here start well past 1, so a tool reading `number` as a row id answers the wrong picture. */

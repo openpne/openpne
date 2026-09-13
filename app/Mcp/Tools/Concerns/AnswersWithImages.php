@@ -33,6 +33,8 @@ trait AnswersWithImages
     /** English like every other message on this wire; the translated userMessage() is for the web forms. */
     private const PROCESSOR_DOWN = 'Image processing is temporarily unavailable. Try again in a moment.';
 
+    private const ALL_REFUSED = 'None of these pictures can be drawn: the site could not process the stored bytes.';
+
     /** Never a geometry built by hand: fromGeometry() is where the size whitelist is applied. */
     protected function transformFor(?string $size): ?ImageTransform
     {
@@ -95,6 +97,11 @@ trait AnswersWithImages
                 'mimeType' => (string) $file->type,
                 'byteSize' => strlen($bytes),
             ];
+        }
+
+        // Nothing drawable is an error, not an empty success a caller could read as "no such picture".
+        if ($images === [] && $described !== []) {
+            return Response::error(self::ALL_REFUSED);
         }
 
         return Response::make($images)->withStructuredContent(['images' => $described]);

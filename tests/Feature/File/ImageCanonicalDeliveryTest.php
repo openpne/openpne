@@ -6,7 +6,11 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
 use App\Models\File;
@@ -104,6 +108,28 @@ class ImageCanonicalDeliveryTest extends TestCase
         $file = $this->stored('image/png', 'not an image at all', ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
 
         $this->actingAs($owner)->get($file->url())->assertNotFound();
+    }
+
+    public function test_a_processor_outage_is_503_with_a_retry_hint_on_every_inline_route(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+        $banner = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'bannerImage', 'related_entity_id' => BannerImage::factory()->create()->getKey()]);
+        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('imgproxy did not answer');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        });
+
+        $this->actingAs($owner)->get($file->url())->assertStatus(503)->assertHeader('Retry-After', '30');
+        $this->get(route('banner.image', $banner->name))->assertStatus(503)->assertHeader('Retry-After', '30');
     }
 
     public function test_a_matching_canonical_tag_is_answered_304_without_reading_anything(): void

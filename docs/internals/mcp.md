@@ -147,8 +147,8 @@ than the message it hangs on and 640px is enough to see what one is, so `size=or
 the detail decides something. Both are drawn from the canonical, never the stored bytes
 ([security](security.md), "Inline delivery is re-encoded"); a picture the processor refused is
 reported as `unavailable` in its slot while the others still answer, so a client pairs the returned
-pictures with `structuredContent.images[*]` in order **after skipping the `unavailable` entries**; a
-processor outage refuses the call whole.
+pictures with `structuredContent.images[*]` in order **after skipping the `unavailable` entries**. A
+call in which nothing could be drawn is an error, as is a processor outage.
 
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
 byte is read — the only number there is while nothing is in memory yet — and again by the read

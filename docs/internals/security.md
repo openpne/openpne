@@ -340,8 +340,8 @@ Deliberately not set:
 ## Inline delivery is re-encoded
 
 An uploaded picture's stored bytes are authoritative and are never what a viewer receives inline.
-Every raster route — `/file/{name}`, the `w_h` original under `/cache/img`, the banner and public
-asset routes, and the MCP image tools — answers the **canonical**: a full-size re-encode the image
+Every raster route — `/file/{name}`, the `w_h` original under `/cache/img`, the banner, public
+asset, link-card image and app icon routes, and the MCP image tools — answers the **canonical**: a full-size re-encode the image
 processor produced at upload, before the row was saved ([file-storage](file-storage.md), "Writing an
 upload"; [images](images.md), "files.width / files.height"). A re-encode carries no source metadata
 — EXIF with its GPS coordinates, XMP, IPTC, comments — and, since the processor applies EXIF
