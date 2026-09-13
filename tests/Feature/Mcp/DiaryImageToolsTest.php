@@ -107,6 +107,14 @@ class DiaryImageToolsTest extends McpTestCase
         );
     }
 
+    /** How many picture blocks the call returned; the harness exposes only text search, so this reads the RPC result. */
+    private function imageBlocks(TestResponse $response): int
+    {
+        $content = (fn (): array => $this->response->toArray()['result']['content'] ?? [])->call($response);
+
+        return count(array_filter($content, fn (array $block): bool => ($block['type'] ?? null) === 'image'));
+    }
+
     /** A slot whose bytes were written straight to storage, as an upgraded OpenPNE 3 row is. */
     private function attachStoredBytes(Diary $diary, int $number, string $bytes): File
     {
@@ -280,6 +288,9 @@ class DiaryImageToolsTest extends McpTestCase
                 ->where('images.1', ['number' => 2, 'unavailable' => true])
                 ->where('images.2.number', 3)
                 ->etc());
+
+        // Exactly the drawable two come back as pictures, so skipping the unavailable entry pairs them up.
+        $this->assertSame(2, $this->imageBlocks($this->read(['diary_id' => $diary->getKey()])));
     }
 
     public function test_naming_a_refused_picture_is_an_error_not_an_empty_answer(): void
@@ -290,7 +301,7 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->acting($author);
 
-        $this->read(['diary_id' => $diary->getKey(), 'number' => 1])->assertHasErrors(['None of these pictures']);
+        $this->read(['diary_id' => $diary->getKey(), 'number' => 1])->assertHasErrors(['cannot be drawn']);
     }
 
     public function test_a_processor_outage_refuses_the_call_whole(): void

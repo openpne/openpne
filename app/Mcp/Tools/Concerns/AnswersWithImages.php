@@ -33,7 +33,7 @@ trait AnswersWithImages
     /** English like every other message on this wire; the translated userMessage() is for the web forms. */
     private const PROCESSOR_DOWN = 'Image processing is temporarily unavailable. Try again in a moment.';
 
-    private const ALL_REFUSED = 'None of these pictures can be drawn: the site could not process the stored bytes.';
+    private const ALL_REFUSED = 'The picture(s) asked for cannot be drawn: the site could not process the stored bytes.';
 
     /** Never a geometry built by hand: fromGeometry() is where the size whitelist is applied. */
     protected function transformFor(?string $size): ?ImageTransform
