@@ -11,6 +11,7 @@ use App\Models\Member;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 /** The guest-reachable half, as OpenPNE 3's diary `security.yml` (`is_secure: false`) defined it. */
@@ -208,12 +209,12 @@ class DiaryGuestAccessTest extends TestCase
             'type' => 'image/png',
             'related_entity_type' => 'diary',
             'related_entity_id' => $diary->getKey(),
-            'byte_size' => strlen('PNGDATA'),
+            'byte_size' => strlen(ImageBytes::png()),
         ]);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $file->getKey(), 'number' => 1]);
 
         $stream = fopen('php://temp', 'r+b');
-        fwrite($stream, 'PNGDATA');
+        fwrite($stream, ImageBytes::png());
         rewind($stream);
         app(FileStorage::class)->writeStream($file, $stream);
         fclose($stream);

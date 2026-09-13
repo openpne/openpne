@@ -7,7 +7,6 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
-use App\Files\ImageMetadataStripper;
 use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
@@ -189,29 +188,16 @@ class LinkCardImageTest extends TestCase
         $this->assertSame(0, File::count());
     }
 
-    public function test_metadata_is_stripped_exactly_once(): void
+    public function test_the_canonical_re_encode_happens_exactly_once(): void
     {
-        // One strip in the pipeline, inside FileUploader: stripping here as well would re-encode
-        // twice and put a second copy of the rule in this class.
-        $stripper = new class extends ImageMetadataStripper
-        {
-            public int $calls = 0;
-
-            public function strip(string $bytes, string $mime): string
-            {
-                $this->calls++;
-
-                return parent::strip($bytes, $mime);
-            }
-        };
-        $this->app->instance(ImageMetadataStripper::class, $stripper);
-
+        // One decode in the pipeline, inside FileUploader: probing here as well would decode twice.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->jpeg(20, 20), 'image/jpeg');
+        $decoder = $this->spyDecoder();
 
-        $this->assertNotNull($this->importer()->import('https://cdn.example.com/p.jpg', $card->id));
-        $this->assertSame(1, $stripper->calls);
+        $this->assertNotNull($this->importer($decoder)->import('https://cdn.example.com/p.jpg', $card->id));
+        $this->assertSame(1, $decoder->calls);
     }
 
     public function test_the_declared_content_type_is_not_believed(): void
@@ -309,18 +295,17 @@ class LinkCardImageTest extends TestCase
      */
     private function watchingUploader(array &$staged, bool $thenThrow = false): FileUploader
     {
-        return new class($this->app->make(FileStorage::class), $this->app->make(ImageMetadataStripper::class), $this->app->make(ImageProcessor::class), $this->app->make(ImageCache::class), $staged, $thenThrow) extends FileUploader
+        return new class($this->app->make(FileStorage::class), $this->app->make(ImageProcessor::class), $this->app->make(ImageCache::class), $staged, $thenThrow) extends FileUploader
         {
             /** @param  list<string>  $staged */
             public function __construct(
                 FileStorage $storage,
-                ImageMetadataStripper $stripper,
                 ImageProcessor $processor,
                 ImageCache $cache,
                 private array &$staged,
                 private readonly bool $thenThrow,
             ) {
-                parent::__construct($storage, $stripper, $processor, $cache);
+                parent::__construct($storage, $processor, $cache);
             }
 
             public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File

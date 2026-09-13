@@ -393,8 +393,9 @@ picture.
 Content-Type is the far end's claim, so the real type comes from `finfo`. SVG is refused: it is a
 scriptable document, and this one would be served from our own origin.
 
-Metadata stripping happens exactly once, inside `FileUploader`; the bytes are handed over as an
-`UploadedFile` so there is a single strip in the pipeline rather than one here and another there.
+The bytes are handed over as an `UploadedFile` so the canonical re-encode happens exactly once,
+inside `FileUploader`, and a card image is served like any other picture: from its canonical, never
+the fetched bytes ([security](security.md), "Inline delivery is re-encoded").
 
 ## Serving the picture: the URL names the post
 

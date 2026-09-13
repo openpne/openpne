@@ -144,7 +144,9 @@ too.
 
 **Thumbnails are the default**, fitted into a 640px box. A picture costs a client far more context
 than the message it hangs on and 640px is enough to see what one is, so `size=original` is for when
-the detail decides something.
+the detail decides something. Both are drawn from the canonical, never the stored bytes
+([security](security.md), "Inline delivery is re-encoded"); a picture the processor refused is
+reported as `unavailable` in its slot while the others still answer.
 
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
 byte is read — the only number there is while nothing is in memory yet — and again by the read
@@ -228,8 +230,8 @@ else; padding is optional and line breaks are skipped, which is the decoder's ow
 picture *is* is decided afterwards by reading it: the bytes go through
 [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php) — the forms' own rules,
 sniffing the content, bounding the pixel dimensions and measuring the decoded file — and then to the
-same Actions, so slot numbering, the compensating delete and the fail-closed metadata strip (an error
-on `images.N`) are the web surface's, unchanged. The temporary file a picture is decoded into is
+same Actions, so slot numbering, the compensating delete and the fail-closed canonical re-encode (an
+error on `images.N`) are the web surface's, unchanged. The temporary file a picture is decoded into is
 removed on every path out, a refused picture and a rolled-back write included.
 
 ## Prompt injection

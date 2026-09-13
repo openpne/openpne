@@ -112,13 +112,10 @@ class DiaryImageToolsTest extends McpTestCase
         ]);
     }
 
-    private function stored(File $file): string
+    /** The canonical off the same cache the tool reads: what `size=original` answers, never the stored bytes. */
+    private function original(File $file): string
     {
-        $stream = app(FileStorage::class)->readStream($file);
-        $bytes = (string) stream_get_contents($stream);
-        fclose($stream);
-
-        return $bytes;
+        return app(ImageCache::class)->canonical($file);
     }
 
     /** The 640px variant off the same cache the tool reads. */
@@ -187,12 +184,12 @@ class DiaryImageToolsTest extends McpTestCase
             ]]);
     }
 
-    public function test_the_original_size_answers_with_the_stored_bytes_untouched(): void
+    public function test_the_original_size_answers_with_the_canonical(): void
     {
         $author = Member::factory()->create();
         $diary = $this->diary($author);
         $file = $this->attach($diary, 1, 800, 400);
-        $stored = $this->stored($file);
+        $stored = $this->original($file);
 
         $this->acting($author);
 
@@ -207,7 +204,6 @@ class DiaryImageToolsTest extends McpTestCase
                 'byteSize' => strlen($stored),
             ]]]);
 
-        $this->assertSame($file->byte_size, strlen($stored));
     }
 
     public function test_naming_a_slot_answers_with_that_picture_alone(): void
@@ -221,8 +217,8 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'size' => 'original', 'number' => 2])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($second)))
-            ->assertDontSee($this->wire($this->stored($first)))
+            ->assertSee($this->wire($this->original($second)))
+            ->assertDontSee($this->wire($this->original($first)))
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 1)
                 ->where('images.0.number', 2)
@@ -263,8 +259,8 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'comment_id' => $comment->getKey(), 'size' => 'original'])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($first)))
-            ->assertSee($this->wire($this->stored($second)))
+            ->assertSee($this->wire($this->original($first)))
+            ->assertSee($this->wire($this->original($second)))
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 2)
                 ->where('images.0.number', 1)
@@ -275,8 +271,8 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'comment_id' => $comment->getKey(), 'size' => 'original', 'number' => 1])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($first)))
-            ->assertDontSee($this->wire($this->stored($second)));
+            ->assertSee($this->wire($this->original($first)))
+            ->assertDontSee($this->wire($this->original($second)));
 
         // The row ids of those same two pictures, which are positions this comment does not have.
         foreach ([3, 4] as $rowId) {
@@ -287,8 +283,8 @@ class DiaryImageToolsTest extends McpTestCase
                 'number' => $rowId,
             ])
                 ->assertHasErrors(['No such diary'])
-                ->assertDontSee($this->wire($this->stored($first)))
-                ->assertDontSee($this->wire($this->stored($second)));
+                ->assertDontSee($this->wire($this->original($first)))
+                ->assertDontSee($this->wire($this->original($second)));
         }
     }
 
@@ -306,12 +302,12 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $elsewhere->getKey(), 'comment_id' => $strayed->getKey(), 'size' => 'original'])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($secret)));
+            ->assertSee($this->wire($this->original($secret)));
 
         foreach ([$strayed->getKey(), $strayed->getKey() + 9999] as $commentId) {
             $this->read(['diary_id' => $mine->getKey(), 'comment_id' => $commentId, 'size' => 'original'])
                 ->assertHasErrors(['No such diary'])
-                ->assertDontSee($this->wire($this->stored($secret)));
+                ->assertDontSee($this->wire($this->original($secret)));
         }
     }
 
@@ -334,7 +330,7 @@ class DiaryImageToolsTest extends McpTestCase
         foreach ($refusals as $arguments) {
             $this->read([...$arguments, 'size' => 'original'])
                 ->assertHasErrors(['No such diary'])
-                ->assertDontSee([$this->wire($this->stored($secret)), $this->wire($this->stored($alsoSecret))]);
+                ->assertDontSee([$this->wire($this->original($secret)), $this->wire($this->original($alsoSecret))]);
         }
     }
 
@@ -390,12 +386,12 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'size' => 'original'])
             ->assertHasErrors(['8 MB'])
-            ->assertDontSee($this->wire($this->stored($first)));
+            ->assertDontSee($this->wire($this->original($first)));
 
         // One at a time fits, which is what the refusal tells the caller to do.
         $this->read(['diary_id' => $diary->getKey(), 'size' => 'original', 'number' => 1])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($first)));
+            ->assertSee($this->wire($this->original($first)));
     }
 
     public function test_bytes_that_outgrow_their_recorded_size_are_refused_before_they_are_all_read(): void
@@ -426,7 +422,7 @@ class DiaryImageToolsTest extends McpTestCase
             $this->read(['diary_id' => $diary->getKey(), 'comment_id' => $comment->getKey(), 'size' => $size])
                 ->assertHasErrors(['8 MB'])
                 // Nothing partial: the picture read before the liar was reached does not go back either.
-                ->assertDontSee($this->wire($this->stored($honest)));
+                ->assertDontSee($this->wire($this->original($honest)));
 
             $this->assertLessThanOrEqual(
                 self::CAP + CountedByteStream::SLACK,
@@ -472,7 +468,7 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'size' => 'original'])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($file)))
+            ->assertSee($this->wire($this->original($file)))
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 2)
                 ->where('images.0.width', 40)
@@ -512,11 +508,11 @@ class DiaryImageToolsTest extends McpTestCase
 
         $this->read(['diary_id' => $diary->getKey(), 'comment_id' => $comment->getKey(), 'size' => 'original'])
             ->assertOk()
-            ->assertSee($this->wire($this->stored($file)))
+            ->assertSee($this->wire($this->original($file)))
             ->assertStructuredContent(fn ($json) => $json->where('images.0.number', 1)->etc());
     }
 
-    public function test_a_posted_picture_is_stripped_of_its_metadata_like_any_other(): void
+    public function test_a_posted_picture_is_answered_without_its_metadata_like_any_other(): void
     {
         $original = $this->fixture('jpeg-gps-orientation.jpg');
 
@@ -525,11 +521,9 @@ class DiaryImageToolsTest extends McpTestCase
         $this->postDiary(['images' => [base64_encode($original)]])->assertOk();
 
         $file = Diary::query()->sole()->images()->with('file')->sole()->file;
-        $stored = $this->stored($file);
 
-        $this->assertStringNotContainsString('2021:07:04', $stored, 'the stored bytes carry no GPS');
-        $this->assertLessThan(strlen($original), strlen($stored));
-        $this->assertSame($file->byte_size, strlen($stored));
+        $this->assertStringNotContainsString('2021:07:04', $this->original($file), 'the canonical carries no GPS');
+        $this->assertSame([6, 12], [$file->width, $file->height]);
     }
 
     public function test_a_fourth_picture_is_refused(): void
@@ -662,14 +656,17 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, DiaryImage::query()->count());
     }
 
-    public function test_a_picture_that_cannot_be_stripped_is_refused_as_an_error_on_that_picture(): void
+    public function test_a_picture_that_cannot_be_decoded_is_refused_as_an_error_on_that_picture(): void
     {
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
 
-        // A JPEG truncated mid-scan: getimagesize still reads its header, so it passes the rules,
-        // and the segment walk the stripper does fails closed.
-        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($this->fixture('jpeg-truncated.jpg'))]])
+        // A PNG header over no pixels: getimagesize reads it, so it passes the rules, and the
+        // canonical re-encode fails closed.
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+        $hollow = "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', 10, 10)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
+
+        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($hollow)]])
             ->assertHasErrors(['image']);
 
         $this->assertSame(0, Diary::query()->count());

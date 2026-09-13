@@ -12,6 +12,7 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 /**
@@ -93,10 +94,10 @@ class PublicRouteBoundaryTest extends TestCase
             'type' => 'image/png',
             'related_entity_type' => 'diary',
             'related_entity_id' => $diary->getKey(),
-            'byte_size' => strlen('PNGDATA'),
+            'byte_size' => strlen(ImageBytes::png()),
         ]);
         $stream = fopen('php://temp', 'r+b');
-        fwrite($stream, 'PNGDATA');
+        fwrite($stream, ImageBytes::png());
         rewind($stream);
         app(FileStorage::class)->writeStream($file, $stream);
         fclose($stream);

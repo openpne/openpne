@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 class ConditionalDeliveryTest extends TestCase
@@ -66,14 +67,15 @@ class ConditionalDeliveryTest extends TestCase
     public function test_an_original_answers_a_matching_tag_with_304_and_no_bytes(): void
     {
         $owner = Member::factory()->create();
-        $file = $this->memberImage($owner, 'PNGDATA');
+        $file = $this->memberImage($owner, ImageBytes::png());
         $url = route('file.show', $file->name);
 
         $first = $this->actingAs($owner)->get($url);
         $first->assertOk();
-        $this->assertSame('PNGDATA', $first->streamedContent());
+        $this->assertNotFalse(getimagesizefromstring($first->getContent()));
         $etag = (string) $first->headers->get('ETag');
-        $this->assertSame('"'.$file->name.'"', $etag);
+        // The canonical's key, not the token: a new encoder makes every browser's copy stale with it.
+        $this->assertSame(ImageTransform::raw()->etag($file->name, 'png'), $etag);
         $this->assertCacheControl($first, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
 
         // The store is not opened for a match.
@@ -87,7 +89,7 @@ class ConditionalDeliveryTest extends TestCase
 
         $stale = $this->withHeader('If-None-Match', '"stale"')->get($url);
         $stale->assertOk();
-        $this->assertSame('PNGDATA', $stale->streamedContent());
+        $this->assertNotFalse(getimagesizefromstring($stale->getContent()));
     }
 
     public function test_a_denied_viewer_holding_the_tag_is_answered_404_not_304(): void

@@ -337,50 +337,26 @@ Deliberately not set:
   the images of a web-public diary or timeline post) are served for cross-origin
   embedding, which `same-origin` would break.
 
-## Uploaded image metadata
+## Inline delivery is re-encoded
 
-Files are delivered as original bytes (above), so an uploaded photo's EXIF —
-GPS coordinates included — would reach every viewer. Every upload funnels
-through [`FileUploader`](../../app/Files/FileUploader.php), which strips
-metadata from `image/jpeg`, `image/png` and `image/webp` before `byte_size` is
-captured, via [`ImageMetadataStripper`](../../app/Files/ImageMetadataStripper.php).
-The strip is lossless — it rewrites the container, never re-encoding the image
-data — so there is no quality loss.
+An uploaded picture's stored bytes are authoritative and are never what a viewer receives inline.
+Every raster route — `/file/{name}`, the `w_h` original under `/cache/img`, the banner and public
+asset routes, and the MCP image tools — answers the **canonical**: a full-size re-encode the image
+processor produced at upload, before the row was saved ([file-storage](file-storage.md), "Writing an
+upload"; [images](images.md), "files.width / files.height"). A re-encode carries no source metadata
+— EXIF with its GPS coordinates, XMP, IPTC, comments — and, since the processor applies EXIF
+Orientation as it draws, none is needed for the picture to stand upright. The inline
+`Content-Disposition` names the file token, never the uploader's file name.
 
-Per format:
+This holds for rows imported from OpenPNE 3 too: their canonical is produced on first view, or ahead
+of time by `openpne:backfill-image-dimensions`, from the same bytes and by the same processor. Only
+the admin monitoring route (`/admin/file/{name}/raw`) and a non-raster attachment stream the stored
+bytes as they are.
 
-- **JPEG** — an allow-list segment walk (SOI→EOI). Structural markers are kept;
-  among the APP segments only JFIF/JFXX (APP0), ICC (APP2) and Adobe (APP14,
-  the CMYK/YCCK transform flag) survive. EXIF (APP1), XMP and every other APPn,
-  plus comments (COM), are dropped — including markers placed between scans of a
-  progressive JPEG.
-- **PNG** — a chunk walk dropping `eXIf`/`tEXt`/`zTXt`/`iTXt` (XMP rides
-  `iTXt`); `iCCP`/`gAMA` and all image chunks are kept. Each chunk's CRC is
-  verified while walking.
-- **WebP** — a RIFF walk dropping the `EXIF` and `XMP ` chunks and clearing only
-  the EXIF/XMP flag bits of a `VP8X` chunk (ICC/alpha/animation left intact).
-
-Color-critical segments (ICC/Adobe) are deliberately kept so stripping never
-shifts colors. **EXIF Orientation** is preserved: it is read before stripping
-and re-emitted as a minimal one-tag APP1 after SOI, because both original
-display and thumbnail generation ([`ImageCache`](../../app/Files/ImageCache.php),
-intervention/image auto-orient) rotate from it. Thumbnail rotation needs
-`ext-exif` at runtime — intervention reads Orientation only when
-`exif_read_data` exists and silently skips rotation otherwise (the stripper
-itself parses TIFF by hand and does not need the extension).
-
-Accepted residuals: GIF passes through untouched (no standard geo metadata), and
-WebP loses Orientation (EXIF-bearing camera WebP is effectively nonexistent).
-
-The strip **fails closed** — a structurally unparseable image throws rather than
-storing the original bytes (upstream validation already cleared magic bytes and
-dimensions, so an unparseable container is corrupt or adversarial, and a privacy
-control must not silently pass it through). The upload paths convert this to an
-inline form-validation error, never a 500.
-
-Toggle with `OPENPNE_STRIP_IMAGE_METADATA` (default on); turn it off to retain
-EXIF (e.g. a photography community). OpenPNE 3-imported files bypass this
-pipeline (a table-level move, not a re-upload) and are not stripped.
+What a re-encode does not do is validate the container: a PNG with a wrong CRC or bytes trailing the
+end marker, which the metadata stripper this replaced used to refuse, is stored as uploaded if the
+decoder accepts it. Those bytes reach nobody but an administrator, and the GD processor's own
+residuals are listed under "Decoding an upload".
 
 ## Decoding an upload
 

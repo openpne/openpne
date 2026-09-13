@@ -9,9 +9,11 @@ already carries both the id and the `name` token. Each backend then uses its nat
 [`DiskFileStorage`](../../app/Files/DiskFileStorage.php) by `name`.
 
 The contract is the four byte-level operations only. Delivery is not here: every fetch goes through
-an app route that streams the bytes whatever the backend is (`File::url()`, `File::publicUrl()`, the
-`/cache/img` variants), so it stays backend-independent and policy-gated and no caller holds a disk
-URL. `delete()` is idempotent on every backend — a missing object is not an error.
+an app route whatever the backend is (`File::url()`, `File::publicUrl()`, the `/cache/img` variants),
+so it stays backend-independent and policy-gated and no caller holds a disk URL — and a raster is
+answered from its canonical ([security](security.md), "Inline delivery is re-encoded"), the stored
+bytes being read only to produce it. `delete()` is idempotent on every backend — a missing object is
+not an error.
 
 ## The two backends
 

@@ -8,6 +8,7 @@ use App\Files\FileStorage;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 /**
@@ -17,7 +18,12 @@ class PublicFileDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function publicImage(string $content = 'PNGDATA'): File
+    private function publicImage(?string $content = null): File
+    {
+        return $this->publicFile($content ?? ImageBytes::png());
+    }
+
+    private function publicFile(string $content): File
     {
         return $this->fileWithBytes($content, [
             'type' => 'image/png',
@@ -49,7 +55,7 @@ class PublicFileDeliveryTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'image/png');
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $this->assertSame('PNGDATA', $response->streamedContent());
+        $this->assertNotFalse(getimagesizefromstring($response->getContent()));
     }
 
     public function test_a_non_public_file_is_not_served_here(): void
