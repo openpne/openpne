@@ -150,6 +150,19 @@ class LinkCardImageTest extends TestCase
         }
     }
 
+    public function test_an_animated_webp_is_refused_by_the_gd_decoder(): void
+    {
+        // libgd reads no animated WebP (tests/Fixtures/images/README.md), so under GD the decode is what
+        // refuses it; the sidecar would import it like any other animation.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary((string) file_get_contents(base_path('tests/Fixtures/images/webp-animated-3frames.webp')), 'image/webp');
+        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
+
+        $this->assertNull($this->importer($gd)->import('https://cdn.example.com/anim.webp', $card->id));
+        $this->assertSame(0, File::count());
+    }
+
     public function test_a_still_gif_is_still_accepted(): void
     {
         $card = $this->card();

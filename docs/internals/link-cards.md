@@ -376,11 +376,13 @@ nor an `_a` form.
 an over-budget pixel count — and that it *is* called for an acceptable one, so neither can be
 satisfied by never decoding at all. The decode itself is `FileUploader`'s canonical re-encode
 ([file-storage](file-storage.md), "Writing an upload"). A processor outage during the import is the
-one failure `import()` lets through, and the job answers it by storing the card with its text and no
-picture, stale at once and scheduled under the usual backoff, so the picture is asked for again while
-the text already renders. Bytes the sidecar cannot load answer as an outage too ([images](images.md),
-"Processing"), so a broken `og:image` backs the card off like any other failure instead of failing
-the job.
+one failure `import()` lets through, and the job answers it by storing the card's text and leaving
+its picture columns untouched (a first fetch has none), stale at once and scheduled under the usual
+backoff, so the picture is asked for again while the text already renders. Bytes the sidecar cannot
+load answer as an outage too ([images](images.md), "Processing"), so a broken `og:image` backs the
+card off like any other failure instead of failing the job — and, unlike under GD where the decode
+refuses it once, never settles: the card keeps being refetched at the backoff's ceiling of about
+five days.
 
 Content-Type is the far end's claim, so the real type comes from `finfo`. SVG is refused: it is a
 scriptable document, and this one would be served from our own origin.
@@ -659,4 +661,5 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - Syncing a card never changes a record's `updated_at`, and never writes to a body it did not read.
 - One predicate decides whether a fetch is due, shared by the queueing side, the read path and the
   claim.
-- A failed refresh never removes a card that was already rendering.
+- A failed refresh never removes a card that was already rendering, and a processor outage during a
+  refresh never removes its picture.
