@@ -200,7 +200,7 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 | | `gd` | `imgproxy` |
 |---|---|---|
 | Formats read | JPEG, PNG, GIF, WebP | those, and HEIC / HEIF (answered as JPEG) and AVIF (answered as WebP, the format a browser and the MCP tools can take everywhere); an upload of either is refused under `gd` |
-| Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (25 MP unconfigured) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set, and a header PHP cannot read (a HEIC before PHP 8.5) is left to the sidecar's own budget |
+| Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (25 MP unconfigured) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set; a header PHP cannot read is refused too, unless the bytes are a container only the sidecar reads (a HEIC before PHP 8.5), which is left to the sidecar's own budget |
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
 | Animation | the canonical and every variant are stills | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |

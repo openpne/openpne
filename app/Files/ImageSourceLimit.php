@@ -14,6 +14,9 @@ final class ImageSourceLimit
 {
     public const DEFAULT_KILOBYTES = 20480;
 
+    /** Enough of a file for libmagic to name any raster container, the same window the admin raw route reads. */
+    public const SNIFF_BYTES = 4096;
+
     public static function bytes(): int
     {
         $configured = (int) config('openpne.images.max_source_kilobytes');
@@ -48,7 +51,7 @@ final class ImageSourceLimit
         if ($info === false || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
             // Only a container this PHP is known not to read (a HEIC before PHP 8.5) is left to the
             // sidecar's own budget; anything else unmeasured is a refusal, as a 500 there would loop.
-            $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+            $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer(substr($bytes, 0, self::SNIFF_BYTES));
 
             if (! is_string($sniffed) || ! $intake->readsOnlyOutOfProcess($sniffed)) {
                 throw new ImageProcessingException('The image header does not declare a size.');

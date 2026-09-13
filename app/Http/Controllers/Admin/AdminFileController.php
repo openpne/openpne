@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Files\FileResponse;
 use App\Files\FileStorage;
 use App\Files\ImageIntake;
+use App\Files\ImageSourceLimit;
 use App\Http\Controllers\Controller;
 use App\Models\File;
 use Illuminate\Http\Request;
@@ -19,9 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AdminFileController extends Controller
 {
-    /** Enough of the file for libmagic to name any raster container. */
-    private const SNIFF_BYTES = 4096;
-
     public function show(Request $request, File $file, FileStorage $storage): Response
     {
         // 404 (not 403) for non-admins so the endpoint does not confirm a file exists.
@@ -41,7 +39,7 @@ class AdminFileController extends Controller
         }
 
         $stream = $storage->readStream($file);
-        $head = (string) fread($stream, self::SNIFF_BYTES);
+        $head = (string) fread($stream, ImageSourceLimit::SNIFF_BYTES);
 
         // Labelled by what the bytes are, not by `type` (the canonical's): a raster container the app
         // reads is inline, anything else an attachment, so a stored file is never a same-origin document.
