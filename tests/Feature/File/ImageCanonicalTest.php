@@ -318,14 +318,6 @@ class ImageCanonicalTest extends TestCase
         $this->assertThrows(fn () => app(ImageCache::class)->canonical($file), ImageProcessingException::class);
     }
 
-    /** A read-only directory is only read-only for a non-root user. */
-    private function skipUnlessModeBitsBind(): void
-    {
-        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
-            $this->markTestSkipped('mode bits do not bind root');
-        }
-    }
-
     private function upload(UploadedFile $upload): File
     {
         return app(FileUploader::class)->store($upload);

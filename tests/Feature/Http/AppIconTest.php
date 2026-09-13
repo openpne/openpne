@@ -232,6 +232,7 @@ class AppIconTest extends TestCase
         }
 
         $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
+        $this->assertNotSame(file_get_contents(public_path('icon-192x192.png')), $response->getContent(), 'The shipped icon was served instead of the generated one.');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-192.png');
     }
 
@@ -260,14 +261,6 @@ class AppIconTest extends TestCase
                 return false;
             }
         };
-    }
-
-    /** A read-only directory is only read-only for a non-root user. */
-    private function skipUnlessModeBitsBind(): void
-    {
-        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
-            $this->markTestSkipped('mode bits do not bind root');
-        }
     }
 
     /** @return array{int, int} */
