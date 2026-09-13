@@ -48,6 +48,12 @@ final class ImageIntake
         return $this->inProcess;
     }
 
+    /** Whether $mime is read here and only ever out of process, where a header this PHP cannot read is the sidecar's to measure. */
+    public function readsOnlyOutOfProcess(string $mime): bool
+    {
+        return isset($this->formats[$mime]) && isset(self::SIDECAR_ONLY[$mime]);
+    }
+
     /** The canonical's format for a source of $mime, or null where this processor cannot read it. */
     public function canonicalFormat(string $mime): ?string
     {

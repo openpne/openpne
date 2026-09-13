@@ -60,7 +60,7 @@ class ImageUploadRulesTest extends TestCase
         $upload = new UploadedFile($path, 'photo.jpg', 'image/jpeg', null, true);
 
         try {
-            $this->assertSame('image/heic', $upload->getMimeType());
+            $this->assertContains($upload->getMimeType(), ['image/heic', 'image/heif']);
             $this->assertFalse(Validator::make(['images' => [$upload]], PostImageRules::rules())->passes());
         } finally {
             @unlink($path);

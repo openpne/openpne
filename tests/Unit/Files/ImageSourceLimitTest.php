@@ -45,13 +45,23 @@ class ImageSourceLimitTest extends TestCase
         $this->assertSame(25_000_000, ImageSourceLimit::pixels());
     }
 
-    public function test_an_unreadable_header_is_refused_only_where_the_decode_is_in_process(): void
+    public function test_an_unreadable_header_passes_only_for_a_container_only_the_sidecar_reads(): void
     {
-        // Out of process the sidecar measures the file itself; in process nothing unmeasured is decoded.
-        ImageSourceLimit::preflight('not a picture', ImageIntake::imgproxy());
+        // A HEIC whose header this PHP cannot read (none before 8.5) is the sidecar's to measure; a
+        // container PHP does read, or none at all, is refused under both, so a 500 never loops.
+        $heicWithoutADeclaredSize = "\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic".str_repeat("\x00", 64);
+        $headerOnlyWebp = 'RIFF'.pack('V', 4).'WEBP';
 
-        $this->expectException(ImageProcessingException::class);
-        ImageSourceLimit::preflight('not a picture', ImageIntake::gd());
+        ImageSourceLimit::preflight($heicWithoutADeclaredSize, ImageIntake::imgproxy());
+
+        foreach ([[$heicWithoutADeclaredSize, ImageIntake::gd()], [$headerOnlyWebp, ImageIntake::imgproxy()], ['not a picture', ImageIntake::imgproxy()]] as [$bytes, $intake]) {
+            try {
+                ImageSourceLimit::preflight($bytes, $intake);
+                $this->fail('An unmeasured source was let through.');
+            } catch (ImageProcessingException $e) {
+                $this->assertStringContainsString('does not declare a size', $e->getMessage());
+            }
+        }
     }
 
     public function test_a_readable_header_over_the_cap_is_refused_under_both(): void

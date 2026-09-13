@@ -389,8 +389,10 @@ an upload over it is refused as an upload, since its canonical is produced befor
 the row is saved. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
 concurrent misses of the same picture. Under `imgproxy` the same header check
-applies the sidecar's budget instead (50 MP, no per-side limit), and HEIC and
-AVIF — which only the sidecar reads — are decoded nowhere but there.
+applies the sidecar's budget instead (50 MP, no per-side limit); HEIC and AVIF,
+which only the sidecar reads, are decoded nowhere but there, and a HEIC whose
+header this PHP cannot read (none before 8.5) is the one unmeasured source the
+check lets through, to the sidecar's own budget.
 
 Two GD facts are accepted rather than worked around. GD cannot read an embedded
 ICC profile, so every re-encode drops it and a wide-gamut photo is then read as

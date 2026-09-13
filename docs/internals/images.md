@@ -161,9 +161,9 @@ the `dimensions` rule that enforces it at upload apply where the decode is in-pr
 takes a 48 MP photo whole, whose JPEG canonical can then outgrow the 20 MB source cap and be refused
 until `OPENPNE_IMAGE_MAX_SOURCE_KB` is raised. What the app reads from a HEIC header (PHP 8.5 and
 later; an older PHP reads none and leaves the file to the sidecar) may be a tile's size rather than
-the picture's, so for a HEIC the sidecar's budget, not this check, is the bound that holds — and a
-HEIC the sidecar then refuses is reported as an outage (a 500, "temporarily unavailable"), not as a
-refusal, since the two cannot be told apart. A favicon the processor refuses is remembered as such
+the picture's, so for a HEIC the sidecar's budget, not this check, is the bound that holds; a HEIC
+over it is refused by the sidecar (a 422) like any other picture, and only bytes it cannot load at
+all answer as an outage. A favicon the processor refuses is remembered as such
 until `openpne:image-cache rebuild` asks again (`warm --retry-failed` does too, when the picture itself
 was refused), or the favicon is uploaded again, whatever the caps are set to in between.
 

@@ -4,15 +4,12 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
-use App\Files\GdImageProcessor;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Intervention\Gif\Builder;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
 class ImageDimensionsTest extends TestCase
@@ -86,9 +83,8 @@ class ImageDimensionsTest extends TestCase
 
     public function test_an_image_whose_size_cannot_be_read_is_refused(): void
     {
-        // A header-only webp reads as an image but decodes to nothing, so the canonical re-encode
-        // never lets it become a File; GD by name, since the sidecar would judge the bytes itself.
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        // A header-only webp reads as an image but decodes to nothing; the canonical re-encode is the
+        // gate, so it never becomes a File.
         $this->expectException(ImageProcessingException::class);
 
         $this->upload(UploadedFile::fake()->createWithContent('broken.webp', $this->headerOnlyWebp()));

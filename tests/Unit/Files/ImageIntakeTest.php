@@ -34,6 +34,9 @@ class ImageIntakeTest extends TestCase
         $this->assertSame('webp', $intake->canonicalFormat('image/avif'));
         $this->assertNull($intake->canonicalFormat('image/heic-sequence'));
         $this->assertFalse($intake->decodesInProcess());
+        $this->assertTrue($intake->readsOnlyOutOfProcess('image/heic'));
+        $this->assertFalse($intake->readsOnlyOutOfProcess('image/webp'));
+        $this->assertFalse(ImageIntake::gd()->readsOnlyOutOfProcess('image/heic'));
         $this->assertNull($intake->sideLimit());
         $this->assertSame(ImageIntake::SIDECAR_MEGAPIXELS * 1_000_000, $intake->pixelLimit());
         $this->assertSame('image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/avif,.heic,.heif,.avif', $intake->accept());
