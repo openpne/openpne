@@ -64,7 +64,8 @@ jobs:
       # The optional processor is wired even when .env leaves GD in charge, so a
       # one-line switch works; the app container is where the sidecar's name resolves.
       - name: Assert the imgproxy sidecar answers the app
-        run: docker compose exec -T app php -r 'exit(str_contains((string) file_get_contents("http://imgproxy:8080/health"), "imgproxy") ? 0 : 1);'
+        run: |
+          docker compose exec -T app php -r 'exit(str_contains((string) file_get_contents("http://imgproxy:8080/health"), "imgproxy") ? 0 : 1);'
 
       # The uid-mapping invariant from the compose design: nothing in the worktree
       # may end up owned by another user (root/www-data regressions).
