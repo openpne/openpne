@@ -373,8 +373,8 @@ GD allocates those buffers outside PHP's `memory_limit`; a 31 KB 1000×1000 GIF 
 and a variant is a still whatever its URL asks for, as in OpenPNE 3.
 
 The processor also refuses before it decodes. The upload rules bound a member's
-upload (`dimensions`, `openpne.images.max_upload_dimension`, and
-`OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)), but a row imported from
+upload (`OPENPNE_IMAGE_MAX_UPLOAD_KB`, and where the decode is in-process the
+`dimensions` rule at `openpne.images.max_upload_dimension`, [images](images.md)), but a row imported from
 OpenPNE 3 never met them, so the GD processor reads the header first and rejects
 a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
@@ -407,8 +407,9 @@ frames is pinned by its contract test. Remote images are held to a stricter rule
 
 Under `imgproxy` the decode leaves the PHP process: the sidecar holds its own
 resolution and frame budgets and is what an out-of-memory kill would take down,
-and the app's header check still runs first so both refuse the same sources
-([images](images.md), "Processing"). The sidecar sees only bytes the app spooled
+and the app's header check still runs first, applying the sidecar's budget rather
+than GD's limits, so what each refuses differs only by those limits — and by the
+types only the sidecar reads ([images](images.md), "Processing"). The sidecar sees only bytes the app spooled
 for it, over a signed URL to one operator-configured address; no URL a member
 typed reaches it. The spool is world-readable so that the sidecar's user can read
 it, which on a host shared with other unix users leaves each upload readable to

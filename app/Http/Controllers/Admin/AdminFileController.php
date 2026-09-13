@@ -29,6 +29,7 @@ class AdminFileController extends Controller
         abort_unless($storage->exists($file), 404);
 
         $cache = [
+            'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
             // The token names one immutable byte string, as on FileController.
             'ETag' => '"'.$file->name.'"',
@@ -45,6 +46,7 @@ class AdminFileController extends Controller
         // Labelled by what the bytes are, not by `type` (the canonical's): a raster container the app
         // reads is inline, anything else an attachment, so a stored file is never a same-origin document.
         $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer($head);
+        // The sidecar's list whatever the processor is, so a HEIC stored under it stays inline after a switch to GD.
         $raster = FileResponse::isRaster($file) && is_string($sniffed) && in_array($sniffed, ImageIntake::imgproxy()->mimes(), true);
         $inline = $raster && ! $request->boolean('download');
 
@@ -56,7 +58,6 @@ class AdminFileController extends Controller
                 $file->original_filename ?? $file->name,
                 $file->name, // ASCII fallback for the opaque token
             ),
-            'X-Content-Type-Options' => 'nosniff',
         ];
 
         return response()->stream(function () use ($head, $stream): void {

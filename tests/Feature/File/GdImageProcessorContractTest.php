@@ -23,6 +23,19 @@ class GdImageProcessorContractTest extends ImageProcessorContractTestCase
         return extension_loaded('exif');
     }
 
+    public function test_a_declared_side_over_the_limit_is_refused_as_such(): void
+    {
+        // The per-side limit is GD's alone: the shared header test also passes through the pixel cap.
+        config(['openpne.images.max_upload_dimension' => 100, 'openpne.images.max_source_pixels' => 1_000_000_000]);
+
+        try {
+            $this->processor()->process($this->pngHeaderClaiming(200, 10), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('A 200 px side passed a 100 px limit.');
+        } catch (ImageProcessingException $e) {
+            $this->assertStringContainsString('side limit', $e->getMessage());
+        }
+    }
+
     public function test_a_heic_is_not_read_however_it_is_labelled(): void
     {
         // GD has no HEIF decoder: the intake says so, and a row typed by its canonical whose bytes

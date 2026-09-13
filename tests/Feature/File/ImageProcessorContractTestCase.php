@@ -234,7 +234,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
     }
 
     /** A complete PNG container whose IHDR declares $width x $height and which carries no pixels. */
-    private function pngHeaderClaiming(int $width, int $height): string
+    protected function pngHeaderClaiming(int $width, int $height): string
     {
         return "\x89PNG\r\n\x1a\n".$this->pngChunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00").$this->pngChunk('IEND', '');
     }

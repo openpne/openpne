@@ -7,7 +7,8 @@ namespace App\Files;
 /**
  * What a processor will read and decode of a stored image, which an OpenPNE 3 row never had checked
  * at upload. Blank or non-positive follows the upload rules (the upload cap in bytes, the per-side
- * limit squared in pixels) so a stored upload never fails it; a set value is taken as given.
+ * limit squared in pixels under GD, the sidecar's budget otherwise) so a stored upload never fails it;
+ * a set value is taken as given.
  */
 final class ImageSourceLimit
 {

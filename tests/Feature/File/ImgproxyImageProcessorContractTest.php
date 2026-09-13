@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\File;
 
+use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -43,6 +44,29 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
 
         $this->assertStringNotContainsString('ICC_PROFILE', $canonical->bytes);
         $this->assertStringNotContainsString('ICCKEEPME', $canonical->bytes);
+    }
+
+    public function test_a_hollow_header_over_the_budget_is_refused_by_the_app_not_the_sidecar(): void
+    {
+        // The sidecar answers a hollow PNG with a 500 (an outage), so the app's own read of the header
+        // is what keeps this a refusal; there is no side limit here, only the pixel budget.
+        config(['openpne.images.max_upload_dimension' => 100]);
+
+        try {
+            $this->processor()->process($this->pngHeaderClaiming(200, 10), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('200x10 passed with no side limit only if the budget was not applied either.');
+        } catch (ImageProcessingException $e) {
+            $this->fail('A 200 px side is within the sidecar budget and must not be refused: '.$e->getMessage());
+        } catch (ImageProcessorUnavailableException) {
+            // A hollow PNG within the budget reaches the sidecar, which cannot load it: an outage, as documented.
+        }
+
+        try {
+            $this->processor()->process($this->pngHeaderClaiming(40000, 40000), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('1.6 GP passed the sidecar budget.');
+        } catch (ImageProcessingException $e) {
+            $this->assertStringContainsString('pixel limit', $e->getMessage());
+        }
     }
 
     public function test_a_heic_is_answered_as_a_clean_upright_jpeg(): void
