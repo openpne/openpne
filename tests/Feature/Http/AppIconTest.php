@@ -190,8 +190,9 @@ class AppIconTest extends TestCase
 
     public function test_a_processor_outage_serves_the_shipped_icon_without_remembering_a_verdict(): void
     {
-        // An outage is not "refused": the branded icon must come back when the processor does.
+        // The cache is emptied first so the canonical itself, not only the icon, has to go to the processor.
         $file = $this->setFavicon(512);
+        Storage::disk('image_cache')->deleteDirectory($file->name);
         $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
         {
             public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
@@ -215,17 +216,19 @@ class AppIconTest extends TestCase
 
     public function test_a_cache_disk_that_cannot_be_written_still_serves_the_generated_icon(): void
     {
-        $this->setFavicon(512);
-        $root = Storage::disk('image_cache')->path('');
-        chmod($root, 0o500);
+        // The encoder directory already exists after the upload, so that is what has to refuse the write.
+        $file = $this->setFavicon(512);
+        $directory = Storage::disk('image_cache')->path(ImageTransform::encoderPrefix($file->name));
+        chmod($directory, 0o500);
 
         try {
             $response = $this->get($this->url(192))->assertOk();
         } finally {
-            chmod($root, 0o755);
+            chmod($directory, 0o755);
         }
 
         $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-192.png');
     }
 
     public function test_the_too_small_verdict_is_remembered_but_the_shipped_bytes_are_not(): void
