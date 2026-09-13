@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
@@ -181,6 +185,31 @@ class AppIconTest extends TestCase
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
+    }
+
+    public function test_a_processor_outage_serves_the_shipped_icon_without_remembering_a_verdict(): void
+    {
+        // An outage is not "refused": the branded icon must come back when the processor does.
+        $file = $this->setFavicon(512);
+        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('imgproxy did not answer');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        });
+
+        $this->assertSame(
+            file_get_contents(public_path('icon-512x512.png')),
+            $this->get($this->url(512))->assertOk()->getContent(),
+        );
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 

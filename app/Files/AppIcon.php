@@ -70,8 +70,8 @@ class AppIcon
         $tooSmall = "{$prefix}/app-icon-{$size}.unfit";
         $refused = "{$prefix}/app-icon-{$size}.refused";
 
-        if ($disk->exists($key)) {
-            return (string) $disk->get($key);
+        if ($disk->exists($key) && ($hit = $disk->get($key)) !== null) {
+            return $hit;
         }
 
         // Only the verdict (too small, or refused by the processor) is cached, never the shipped
