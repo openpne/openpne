@@ -6,6 +6,7 @@ namespace Tests\Feature\LinkCard;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\GdImageProcessor;
 use App\Files\ImageCache;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -18,6 +19,9 @@ use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Intervention\Gif\Builder;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use RuntimeException;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
@@ -155,15 +159,16 @@ class LinkCardImageTest extends TestCase
         $this->assertNotNull($this->importer()->import('https://cdn.example.com/still.gif', $card->id));
     }
 
-    public function test_a_header_only_forgery_is_refused(): void
+    public function test_a_header_only_forgery_is_refused_by_the_gd_decoder(): void
     {
-        // Passes finfo and getimagesizefromstring with nothing behind the header, so storing it would
-        // give the card a picture that never renders.
+        // Passes finfo and getimagesizefromstring with nothing behind the header; GD refuses the pixel
+        // data, where libvips decodes garbage to something (docs/internals/images.md), so GD is bound by name.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->pngHeaderClaiming(10, 10), 'image/png');
+        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
 
-        $this->assertNull($this->importer()->import('https://cdn.example.com/hollow.png', $card->id));
+        $this->assertNull($this->importer($gd)->import('https://cdn.example.com/hollow.png', $card->id));
         $this->assertSame(0, File::count());
     }
 
@@ -372,19 +377,22 @@ class LinkCardImageTest extends TestCase
         return (string) ob_get_clean();
     }
 
-    /** A structurally valid two-frame GIF, optionally without the (purely decorative) loop extension. */
-    private function animatedGif(bool $loopExtension = true): string
+    /** Three frames of different shades, encoded by intervention/gif so any decoder reads them all. */
+    private function animatedGif(): string
     {
-        // Non-zero final colour-table byte, which shifts the byte pattern a naive scan keys on.
-        $gif = "GIF89a\x08\x00\x08\x00\x80\x00\x00".pack('C*', 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x01);
+        $builder = Builder::canvas(8, 8);
 
-        if ($loopExtension) {
-            $gif .= "\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00";
+        for ($i = 0; $i < 3; $i++) {
+            $gd = imagecreate(8, 8);
+            imagecolorallocate($gd, ($i * 80) % 256, 40, 200);
+            ob_start();
+            imagegif($gd);
+            $builder->addFrame(source: (string) ob_get_clean(), delay: 0.1);
         }
 
-        $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00\x02\x02\x44\x01\x00";
+        $builder->setLoops(0);
 
-        return $gif.$frame.$frame."\x3B";
+        return $builder->encode();
     }
 
     /**
