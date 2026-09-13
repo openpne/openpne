@@ -193,18 +193,7 @@ class AppIconTest extends TestCase
         // The cache is emptied first so the canonical itself, not only the icon, has to go to the processor.
         $file = $this->setFavicon(512);
         Storage::disk('image_cache')->deleteDirectory($file->name);
-        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
-        {
-            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
-            {
-                throw new ImageProcessorUnavailableException('imgproxy did not answer');
-            }
-
-            public function preservesAnimation(): bool
-            {
-                return false;
-            }
-        });
+        $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
 
         $this->assertSame(
             file_get_contents(public_path('icon-512x512.png')),
@@ -214,8 +203,23 @@ class AppIconTest extends TestCase
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
+    public function test_a_processor_outage_after_the_canonical_was_warmed_serves_the_shipped_icon_too(): void
+    {
+        // The canonical is a hit, so the icon's own cover is the only call that reaches the processor.
+        $file = $this->setFavicon(512);
+        $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
+
+        $this->assertSame(
+            file_get_contents(public_path('icon-512x512.png')),
+            $this->get($this->url(512))->assertOk()->getContent(),
+        );
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+    }
+
     public function test_a_cache_disk_that_cannot_be_written_still_serves_the_generated_icon(): void
     {
+        $this->skipUnlessModeBitsBind();
+
         // The encoder directory already exists after the upload, so that is what has to refuse the write.
         $file = $this->setFavicon(512);
         $directory = Storage::disk('image_cache')->path(ImageTransform::encoderPrefix($file->name));
@@ -240,6 +244,30 @@ class AppIconTest extends TestCase
         // while an upgrade that replaces the shipped icon still takes effect.
         Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.unfit');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
+    }
+
+    private function processorThatIsDown(): ImageProcessor
+    {
+        return new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('imgproxy did not answer');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        };
+    }
+
+    /** A read-only directory is only read-only for a non-root user. */
+    private function skipUnlessModeBitsBind(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('mode bits do not bind root');
+        }
     }
 
     /** @return array{int, int} */

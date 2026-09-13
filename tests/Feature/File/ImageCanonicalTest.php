@@ -111,6 +111,8 @@ class ImageCanonicalTest extends TestCase
 
     public function test_an_upload_whose_canonical_cannot_be_published_still_lands(): void
     {
+        $this->skipUnlessModeBitsBind();
+
         // A full or read-only cache disk must not stop members posting; the first view regenerates.
         $root = Storage::disk('image_cache')->path('');
         chmod($root, 0o500);
@@ -168,6 +170,8 @@ class ImageCanonicalTest extends TestCase
 
     public function test_a_read_whose_cache_write_fails_still_answers_with_the_bytes(): void
     {
+        $this->skipUnlessModeBitsBind();
+
         $file = $this->stored('image/png', $this->png(64, 32));
         $root = Storage::disk('image_cache')->path('');
         chmod($root, 0o500);
@@ -312,6 +316,14 @@ class ImageCanonicalTest extends TestCase
         $file = $this->stored('application/pdf', '%PDF-1.4');
 
         $this->assertThrows(fn () => app(ImageCache::class)->canonical($file), ImageProcessingException::class);
+    }
+
+    /** A read-only directory is only read-only for a non-root user. */
+    private function skipUnlessModeBitsBind(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('mode bits do not bind root');
+        }
     }
 
     private function upload(UploadedFile $upload): File
