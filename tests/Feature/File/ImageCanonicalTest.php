@@ -25,6 +25,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -134,20 +135,21 @@ class ImageCanonicalTest extends TestCase
         $disk->shouldReceive('move')->once()->withArgs(fn (string $from, string $to): bool => str_starts_with($from, 'abc/g3/gd-q85/.tmp-') && $to === 'abc/g3/gd-q85/w_h.png')->andReturn(true);
         Storage::shouldReceive('disk')->with(config('openpne.images.cache_disk'))->andReturn($disk);
 
-        app(ImageCache::class)->publish('abc/g3/gd-q85/w_h.png', 'PNG');
+        app(ImageCache::class)->publishOrReport('abc/g3/gd-q85/w_h.png', 'PNG');
     }
 
-    public function test_a_move_that_fails_removes_the_temp_key_and_throws(): void
+    public function test_a_move_that_fails_removes_the_temp_key_and_is_reported(): void
     {
+        Exceptions::fake();
         $disk = \Mockery::mock(Filesystem::class);
         $disk->shouldReceive('put')->once()->andReturn(true);
         $disk->shouldReceive('move')->once()->andReturn(false);
         $disk->shouldReceive('delete')->once()->withArgs(fn (string $path): bool => str_starts_with($path, 'abc/g3/gd-q85/.tmp-'))->andReturn(true);
         Storage::shouldReceive('disk')->with(config('openpne.images.cache_disk'))->andReturn($disk);
 
-        $this->expectException(ImageCachePublishException::class);
+        app(ImageCache::class)->publishOrReport('abc/g3/gd-q85/w_h.png', 'PNG');
 
-        app(ImageCache::class)->publish('abc/g3/gd-q85/w_h.png', 'PNG');
+        Exceptions::assertReported(ImageCachePublishException::class);
     }
 
     public function test_a_storage_failure_after_the_canonical_was_published_purges_it(): void

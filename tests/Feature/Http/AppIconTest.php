@@ -213,6 +213,21 @@ class AppIconTest extends TestCase
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
+    public function test_a_cache_disk_that_cannot_be_written_still_serves_the_generated_icon(): void
+    {
+        $this->setFavicon(512);
+        $root = Storage::disk('image_cache')->path('');
+        chmod($root, 0o500);
+
+        try {
+            $response = $this->get($this->url(192))->assertOk();
+        } finally {
+            chmod($root, 0o755);
+        }
+
+        $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
+    }
+
     public function test_the_too_small_verdict_is_remembered_but_the_shipped_bytes_are_not(): void
     {
         $file = $this->setFavicon(32);
