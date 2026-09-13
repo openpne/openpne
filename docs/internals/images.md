@@ -25,6 +25,7 @@ instead of being asserted by the server.
 |---|---|---|---|
 | `fitSources` | scales inside a square box, keeps the aspect ratio, never upscales | 320 / 640 / 1200 box | a picture shown at its own shape |
 | `cropSources` | centre-crops to fill the cell ratio exactly, upscaling a smaller source | 300 / 600 wide, per ratio | a fixed-shape grid cell |
+| `animatedSources` | the fit rungs of `animated_sizes` with their frames kept (`_a`); empty for a still | 320 / 640 / 1200 box | the hero, for a viewer who takes motion ([below](#which-placements-animate)) |
 
 `cropSources` is keyed by cell ratio — `tall` is 3:4 (the two-image cells and the three-image left
 cell), `wide` is 3:2 (the three-image right cells, and every cell of a set past three, which only a
@@ -48,6 +49,31 @@ bounded overshoot of tens of kilobytes, taken deliberately: closing it means per
 candidates, and every added size multiplies cached variants across the whole file corpus.
 
 `thumbnailUrl` — the 120px square — stays on those entries for the surfaces that read it.
+
+## Which placements animate
+
+[`ImageLadder`](../../app/Files/ImageLadder.php) builds every Modern picture payload and is the one
+producer of an `_a` URL. Its `animatedSources` is empty unless the file's recorded `animated` is true
+**and** the processor keeps frames (`ImageProcessor::preservesAnimation()`, false under `gd`): a site
+that switched back to GD keeps its recorded trues, and without the second half of the gate would offer
+a still at an `_a` URL. Every payload carries the key, so the client reads it unguarded.
+
+Only the **hero** takes it — the lone picture of a post, comment or chat row, which `ImageGrid` paints
+by itself. Grid cells are crops, which have no animated form; the photo tiles, the digests and the
+reply chips stay stills. Several single-picture posts in one feed therefore play at once, as feeds
+elsewhere do, and there is no page-wide gate. What stops it, for WCAG 2.2.2 (a moving thing that
+starts on its own and runs past five seconds needs a way to stop it):
+
+- the member's **Autoplay animated pictures** switch on the config page (`PreferenceKey::AutoplayAnimations`,
+  default on, offered only while the processor keeps frames), shipped to the shell as the
+  `autoplayAnimations` prop;
+- the OS `prefers-reduced-motion` preference, read on the client, which wins over the switch;
+- a guest is never started on motion: the prop is false for anyone who cannot reach the switch.
+
+Whichever applies, the hero falls back to `fitSources`, so a viewer who takes no motion never requests
+an `_a` URL and no `_a` variant is made on their account. The lightbox is not autoplay: opening a picture
+is the viewer's own act, and the viewer shows the canonical, which under `imgproxy` keeps its frames
+whatever the switch says — as Classic's link to the full picture always has.
 
 ## Adding a size
 
@@ -227,6 +253,9 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
+- `animatedSources` has one producer, `ImageLadder`, and one consumer, the hero; it is empty under a
+  processor that drops frames whatever `files.animated` says, and a viewer with autoplay off, a
+  reduced-motion preference or no login never requests an `_a` URL.
 - `_a` is the animated form of a fit box in `animated_sizes` (`w640_h640_a`), answered only for a
   file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
   has `w_h` (the canonical keeps its frames where the processor does). An animated variant the

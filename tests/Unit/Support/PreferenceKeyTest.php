@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Support\Autoplay;
 use App\Support\ComposeEditor;
 use App\Support\Look;
 use App\Support\PreferenceKey;
@@ -36,6 +37,9 @@ class PreferenceKeyTest extends TestCase
 
         $this->assertNull(PreferenceKey::PushDelivery->op3SourceName());
         $this->assertNotContains(PreferenceKey::PushDelivery, PreferenceKey::upgradableCases());
+
+        $this->assertNull(PreferenceKey::AutoplayAnimations->op3SourceName());
+        $this->assertNotContains(PreferenceKey::AutoplayAnimations, PreferenceKey::upgradableCases());
 
         // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over either.
         $this->assertNull(PreferenceKey::PreferredLook->op3SourceName());
@@ -94,6 +98,20 @@ class PreferenceKeyTest extends TestCase
         $this->assertSame(PushDelivery::Enabled, PreferenceKey::PushDelivery->decode('nonsense'));
 
         $this->assertSame(PushDelivery::Disabled, PreferenceKey::PushDelivery->decode('disabled'));
+    }
+
+    public function test_autoplay_animations_defaults_on_and_a_corrupt_row_reads_off(): void
+    {
+        // Absent means the product default; a value that is neither choice fails towards no motion,
+        // the opposite direction from the push key, whose failure mode is "keep delivering".
+        $this->assertSame(Autoplay::On, PreferenceKey::AutoplayAnimations->default());
+        $this->assertSame(Autoplay::On, PreferenceKey::AutoplayAnimations->decode(null));
+        $this->assertSame(Autoplay::Off, PreferenceKey::AutoplayAnimations->decode('nonsense'));
+        $this->assertSame(Autoplay::Off, PreferenceKey::AutoplayAnimations->decode(''));
+
+        foreach (Autoplay::cases() as $choice) {
+            $this->assertSame($choice, PreferenceKey::AutoplayAnimations->decode(PreferenceKey::AutoplayAnimations->encode($choice)));
+        }
     }
 
     public function test_encode_decode_round_trips_every_push_delivery(): void

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Member;
 
 use App\Models\Member;
+use App\Support\Autoplay;
 use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
@@ -112,6 +113,20 @@ class MemberPreferenceTest extends TestCase
         $this->assertSame(ComposeEditor::Markdown, $member->composeEditor());
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'compose_editor', 'value' => 'markdown',
+        ]);
+    }
+
+    public function test_autoplay_animations_reads_on_until_set_then_persists(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->assertSame(Autoplay::On, $member->autoplayAnimations());
+
+        $member->setAutoplayAnimations(Autoplay::Off);
+
+        $this->assertSame(Autoplay::Off, $member->autoplayAnimations());
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'autoplay_animations', 'value' => 'off',
         ]);
     }
 

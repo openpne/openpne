@@ -6,6 +6,7 @@ use App\Models\Concerns\ClearsPasswordScheme;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Autoplay;
 use App\Support\AvatarColor;
 use App\Support\ComposeEditor;
 use App\Support\Look;
@@ -240,12 +241,25 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::PushDelivery, $delivery);
     }
 
+    public function autoplayAnimations(): Autoplay
+    {
+        $value = PreferenceKey::AutoplayAnimations->decode($this->storedPreference(PreferenceKey::AutoplayAnimations));
+        assert($value instanceof Autoplay);
+
+        return $value;
+    }
+
+    public function setAutoplayAnimations(Autoplay $autoplay): void
+    {
+        $this->writePreference(PreferenceKey::AutoplayAnimations, $autoplay);
+    }
+
     private function storedPreference(PreferenceKey $key): ?string
     {
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],

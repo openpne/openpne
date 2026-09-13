@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cropSrcSet, fitFallbackUrl, fitSrcSet } from './image-sources.ts';
+import { cropSrcSet, fitFallbackUrl, fitSrcSet, heroSources } from './image-sources.ts';
 
 const ladder = [
     { url: '/a320', box: 320 },
@@ -56,4 +56,16 @@ test('a crop descriptor is the width in the url', () => {
 test('a ratio the server did not ship has no srcset', () => {
     assert.equal(cropSrcSet(undefined), null);
     assert.equal(cropSrcSet([]), null);
+});
+
+const animated = [
+    { url: '/a320_a', box: 320 },
+    { url: '/a640_a', box: 640 },
+];
+
+test('the hero takes the animated ladder only when the viewer takes motion and the file has one', () => {
+    assert.equal(heroSources({ fitSources: ladder, animatedSources: animated }, true), animated);
+    assert.equal(heroSources({ fitSources: ladder, animatedSources: animated }, false), ladder);
+    assert.equal(heroSources({ fitSources: ladder, animatedSources: [] }, true), ladder);
+    assert.equal(heroSources({ fitSources: ladder, animatedSources: [] }, false), ladder);
 });

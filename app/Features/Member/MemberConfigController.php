@@ -20,6 +20,7 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\RequestEmailChangeRequest;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
+use App\Http\Requests\Member\UpdateAutoplayAnimationsRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
 use App\Http\Requests\Member\UpdateLookRequest;
 use App\Http\Requests\Member\UpdatePasswordRequest;
@@ -155,6 +156,13 @@ class MemberConfigController extends Controller
         $this->viewer()->setPreference(PreferenceKey::DiaryDefaultVisibility, $value);
 
         return $this->savedRedirect($request, MemberConfigCategory::Diary, flashOnModern: false);
+    }
+
+    public function updateAutoplayAnimations(UpdateAutoplayAnimationsRequest $request): RedirectResponse
+    {
+        $this->viewer()->setAutoplayAnimations($request->autoplay());
+
+        return $this->savedRedirect($request, MemberConfigCategory::General, flashOnModern: false);
     }
 
     public function updateProfileVisibility(UpdateProfileVisibilityRequest $request): RedirectResponse

@@ -8,6 +8,7 @@ use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\ImageProcessor;
 use App\Files\ImageTransform;
 use App\Models\DiaryImage;
 use App\Models\DirectMessageFile;
@@ -18,6 +19,7 @@ use App\Models\GroupTopicImage;
 use App\Models\TimelinePostImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
 
 class AttachmentImageSerializationTest extends TestCase
@@ -108,12 +110,52 @@ class AttachmentImageSerializationTest extends TestCase
 
     /** @param  callable(File): array<string, mixed>  $serialize */
     #[DataProvider('serializers')]
+    public function test_every_payload_carries_the_animated_ladder_and_a_still_ships_it_empty(callable $serialize): void
+    {
+        // The client reads `animatedSources.length` unguarded, so the key has to be there for a
+        // still too — and empty, since only `animatedSources` may carry an `_a` URL.
+        $entry = $serialize(File::factory()->create(['type' => 'image/gif', 'animated' => false]));
+
+        $this->assertArrayHasKey('animatedSources', $entry);
+        $this->assertSame([], $entry['animatedSources']);
+    }
+
+    /** @param  callable(File): array<string, mixed>  $serialize */
+    #[DataProvider('serializers')]
+    public function test_an_animating_file_ships_the_animated_rungs_apart_from_the_stills(callable $serialize): void
+    {
+        // Both halves of the gate: the recorded fact and a processor that keeps frames (the default
+        // lane's GD does not, so without the stub every serializer would ship [] and pass for nothing).
+        $this->app->instance(ImageProcessor::class, new FrameKeepingProcessor);
+        $file = File::factory()->create(['type' => 'image/gif', 'animated' => true]);
+
+        $entry = $serialize($file);
+
+        $this->assertSame([
+            ['url' => $file->thumbnailUrl(320, 320, animated: true), 'box' => 320],
+            ['url' => $file->thumbnailUrl(640, 640, animated: true), 'box' => 640],
+            ['url' => $file->thumbnailUrl(1200, 1200, animated: true), 'box' => 1200],
+        ], $entry['animatedSources']);
+
+        foreach (array_column($entry['animatedSources'], 'url') as $url) {
+            $this->assertStringContainsString('_a/', $url);
+        }
+        $stills = [$entry['thumbnailUrl'], ...array_column($entry['fitSources'], 'url'), ...array_column(array_merge(...array_values($entry['cropSources'])), 'url')];
+        foreach ($stills as $url) {
+            $this->assertStringNotContainsString('_a/', $url);
+        }
+    }
+
+    /** @param  callable(File): array<string, mixed>  $serialize */
+    #[DataProvider('serializers')]
     public function test_every_ladder_size_is_whitelisted(callable $serialize): void
     {
         // An unlisted size is a 404, so a candidate the whitelist does not cover is a broken image
-        // rather than a slow one.
-        $entry = $serialize(File::factory()->create(['type' => 'image/png']));
-        $rungs = array_merge($entry['fitSources'], ...array_values($entry['cropSources']));
+        // rather than a slow one; the animated rungs exist only under a frame-keeping processor.
+        $this->app->instance(ImageProcessor::class, new FrameKeepingProcessor);
+        $entry = $serialize(File::factory()->create(['type' => 'image/gif', 'animated' => true]));
+        $rungs = array_merge($entry['fitSources'], $entry['animatedSources'], ...array_values($entry['cropSources']));
+        $this->assertCount(10, $rungs);
 
         foreach (array_column($rungs, 'url') as $url) {
             $this->assertSame(1, preg_match('#/cache/img/[^/]+/([^/]+)/#', $url, $m), $url);
@@ -154,5 +196,6 @@ class AttachmentImageSerializationTest extends TestCase
 
         $this->assertSame([], $entry['fitSources']);
         $this->assertSame([], $entry['cropSources']);
+        $this->assertSame([], $entry['animatedSources']);
     }
 }

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { Lightbox } from '@/components/lightbox';
+import { useAnimatedPictures } from '@/lib/animated-pictures';
 import { useT } from '@/lib/i18n';
-import { type CropSources, cropSrcSet, type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
+import { type CropSources, cropSrcSet, type FitSource, fitFallbackUrl, fitSrcSet, heroSources } from '@/lib/image-sources';
 import { cn } from '@/lib/utils';
 
 export interface GridImage {
@@ -12,6 +13,7 @@ export interface GridImage {
     cropSources: CropSources;
     width: number | null; // rendered size, EXIF applied; null → unknown (docs/internals/images.md)
     height: number | null;
+    animatedSources: FitSource[]; // the `_a` fit rungs; empty unless the file animates and the processor keeps frames
 }
 
 export type ImageGridVariant = 'post' | 'boxed';
@@ -47,6 +49,7 @@ const CELL_SIZES: Record<ImageGridVariant, string> = {
  */
 export function ImageGrid({ images, variant, className }: { images: GridImage[]; variant: ImageGridVariant; className?: string }) {
     const t = useT();
+    const animate = useAnimatedPictures();
     const [openIndex, setOpenIndex] = useState<number | null>(null);
     const opener = useRef<HTMLButtonElement | null>(null);
     // The page is scroll-locked while the viewer is up, so a rect measured on the way out is still
@@ -77,6 +80,8 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
 
     if (hero) {
         const sized = hero.width !== null && hero.height !== null && hero.width > 0 && hero.height > 0;
+        // Only the hero ever takes the animated ladder.
+        const sources = heroSources(hero, animate);
 
         return (
             <>
@@ -111,8 +116,8 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                         ref={(el) => {
                             thumbs.current[0] = el;
                         }}
-                        src={fitFallbackUrl(hero.fitSources) ?? ''}
-                        srcSet={fitSrcSet(hero.fitSources, hero.width, hero.height) ?? undefined}
+                        src={fitFallbackUrl(sources) ?? ''}
+                        srcSet={fitSrcSet(sources, hero.width, hero.height) ?? undefined}
                         sizes={HERO_SIZES[variant]}
                         width={hero.width ?? undefined}
                         height={hero.height ?? undefined}

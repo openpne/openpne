@@ -35,7 +35,7 @@ class TalkAbsenceDigest
     /**
      * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot  the boundary the page rendered with
      *                                                                          ({@see TalkUnreadSnapshot}); null for a reader who holds no cursor
-     * @return array{count: int, since: string, participants: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>, thumbnails: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}|null
+     * @return array{count: int, since: string, participants: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>, thumbnails: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>}|null
      */
     public function __invoke(Group $group, Member $viewer, ?array $snapshot): ?array
     {

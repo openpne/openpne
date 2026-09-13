@@ -4,6 +4,7 @@ namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\DirectMessageListItem;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\ImageLadder;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageFile;
 use App\Models\Member;
@@ -31,7 +32,7 @@ class DirectMessageSerializer
     /**
      * Callers eager-load `files.file` and `draftRecipient`.
      *
-     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}
+     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>}
      */
     public static function draftForm(DirectMessage $draft): array
     {
@@ -48,7 +49,7 @@ class DirectMessageSerializer
      * The thumbnail sources a surface picks from (`docs/internals/images.md`, "The two ladders"). A
      * row whose File is gone yields empty urls rather than throwing.
      *
-     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}
      */
     public static function image(DirectMessageFile $image): array
     {
@@ -57,24 +58,7 @@ class DirectMessageSerializer
         return [
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
-            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
-            'fitSources' => $file ? [
-                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
-            ] : [],
-            'cropSources' => $file ? [
-                'tall' => [
-                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
-                ],
-                'wide' => [
-                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
-                ],
-            ] : [],
-            'width' => $file?->width,
-            'height' => $file?->height,
+            ...ImageLadder::of($file),
         ];
     }
 

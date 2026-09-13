@@ -237,8 +237,8 @@ class DashboardTest extends TestCase
         DB::disableQueryLog();
 
         // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
-        // state 34 with this fixture's single look) so dropping any one of them trips it.
-        $this->assertLessThan(35, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // state 35 with this fixture's single look, the shell's preference read included).
+        $this->assertLessThan(36, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

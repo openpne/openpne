@@ -5,6 +5,7 @@ namespace App\Features\GroupEvent\Serializers;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\GroupEventCommentThread;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\ImageLadder;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -46,7 +47,7 @@ class GroupEventSerializer
     /**
      * openDate and applicationDeadline are date-only Y-m-d strings; createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(GroupEvent $event, Member $viewer): array
     {
@@ -73,7 +74,7 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupEventComment $comment, Member $viewer): array
     {
@@ -120,7 +121,7 @@ class GroupEventSerializer
      * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
      * "The two ladders". A row whose File is gone is tolerated defensively.
      *
-     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}
      */
     public static function image(GroupEventImage|GroupEventCommentImage $image): array
     {
@@ -129,24 +130,7 @@ class GroupEventSerializer
         return [
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
-            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
-            'fitSources' => $file ? [
-                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
-            ] : [],
-            'cropSources' => $file ? [
-                'tall' => [
-                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
-                ],
-                'wide' => [
-                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
-                ],
-            ] : [],
-            'width' => $file?->width,
-            'height' => $file?->height,
+            ...ImageLadder::of($file),
         ];
     }
 

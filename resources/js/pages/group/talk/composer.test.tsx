@@ -19,6 +19,7 @@ const image: GridImage = {
     cropSources: {},
     width: null,
     height: null,
+    animatedSources: [],
 };
 
 const parent = (over: Partial<TalkMessage> = {}): TalkMessage => ({

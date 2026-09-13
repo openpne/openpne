@@ -44,6 +44,7 @@ const picture = (id: number): GridImage => ({
     cropSources: { tall: [{ url: `/f/${id}/tall`, width: 300 }], wide: [{ url: `/f/${id}/wide`, width: 300 }] },
     width: 800,
     height: 600,
+    animatedSources: [],
 });
 
 const story = (overrides: Partial<IssueStory> = {}): IssueStory => ({

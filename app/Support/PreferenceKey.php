@@ -28,6 +28,9 @@ enum PreferenceKey: string
     /** Whether the member's subscribed devices are nudged by web push (App\Support\PushDelivery). */
     case PushDelivery = 'push_delivery';
 
+    /** Whether pictures that animate play on their own in Modern feeds (App\Support\Autoplay); default On. */
+    case AutoplayAnimations = 'autoplay_animations';
+
     /** The OpenPNE 3 `member_config.name` this preference upgrades from, or null if it is OpenPNE 4-native. */
     public function op3SourceName(): ?string
     {
@@ -38,6 +41,7 @@ enum PreferenceKey: string
             self::PreferredLook => null,
             self::ComposeEditor => null,
             self::PushDelivery => null,
+            self::AutoplayAnimations => null,
         };
     }
 
@@ -58,7 +62,7 @@ enum PreferenceKey: string
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
      * null — "no member choice, defer to SurfaceResolver's mode default".
      */
-    public function default(): Visibility|Surface|Look|ComposeEditor|PushDelivery|null
+    public function default(): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility => Visibility::Members,
@@ -69,11 +73,12 @@ enum PreferenceKey: string
             self::ComposeEditor => ComposeEditor::Rich,
             // Subscribing a device is the consent; this key only pauses it afterwards.
             self::PushDelivery => PushDelivery::Enabled,
+            self::AutoplayAnimations => Autoplay::On,
         };
     }
 
     /** Decode the stored string `value` to the typed value; an absent/invalid value is the default. */
-    public function decode(?string $value): Visibility|Surface|Look|ComposeEditor|PushDelivery|null
+    public function decode(?string $value): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility, self::AgeVisibility => $this->decodeVisibility($value),
@@ -84,11 +89,13 @@ enum PreferenceKey: string
             // Fail-closed to the default: a corrupt row reads as Rich, never null (this key is not tri-state).
             self::ComposeEditor => $value === null ? ComposeEditor::Rich : (ComposeEditor::tryFrom($value) ?? ComposeEditor::Rich),
             self::PushDelivery => $value === null ? PushDelivery::Enabled : (PushDelivery::tryFrom($value) ?? PushDelivery::Enabled),
+            // A corrupt row reads Off, not the default: motion nobody chose is the side to fail to.
+            self::AutoplayAnimations => $value === null ? Autoplay::On : (Autoplay::tryFrom($value) ?? Autoplay::Off),
         };
     }
 
     /** Encode a typed value to the stored string `value`. */
-    public function encode(Visibility|Surface|Look|ComposeEditor|PushDelivery $value): string
+    public function encode(Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay $value): string
     {
         return (string) $value->value;
     }

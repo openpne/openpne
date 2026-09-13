@@ -79,7 +79,7 @@ final class TalkSampleDigest
      * permissions — so nothing here is a claim about what the reader may do.
      *
      * @param  Collection<int, GroupMessage>  $messages
-     * @return list<array{id: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>}>
+     * @return list<array{id: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>}>
      */
     public function excerpt(Member $viewer, Collection $messages): array
     {
@@ -100,7 +100,7 @@ final class TalkSampleDigest
      * The cap is on the slots looked at, not on the pictures shown: a message whose first three are
      * refused shows none rather than reaching further down for replacements.
      *
-     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>
+     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>
      */
     public function imagesOf(Member $viewer, GroupMessage $message): array
     {
@@ -162,7 +162,7 @@ final class TalkSampleDigest
      * calls grow with how many pictures a message carries.
      *
      * @param  Collection<int, GroupMessage>  $sample
-     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>
+     * @return list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>
      */
     public function thumbnails(Member $viewer, Collection $sample): array
     {
