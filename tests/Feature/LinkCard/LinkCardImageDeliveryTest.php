@@ -331,8 +331,8 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_the_canonical_and_the_animated_forms_are_not_served_for_a_card(): void
     {
-        // A card shows a still: the bare `w_h` is the one form whose frames a processor may keep, and
-        // `_a` asks for them outright, so neither geometry resolves on this route.
+        // A card shows a still: the bare `w_h` is the one form whose frames a processor may keep, so
+        // the route now requires a box; `_a` never matched here and is pinned alongside.
         $diary = $this->diary(Visibility::Open);
 
         foreach (['w_h', 'w320_h320_a'] as $geometry) {

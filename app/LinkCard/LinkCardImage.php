@@ -11,14 +11,13 @@ use App\Models\File;
 use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Copies a card's image into a local File rather than hot-linking it. The byte cap, the sniffed type
- * and the header dimensions are checked before the decode, which allocates width × height × 4 bytes
- * for one frame whatever the source holds (docs/internals/link-cards.md, "The image is copied, and
- * the order of checks is the safety").
+ * and the header dimensions are checked before the decode, so an in-process decoder allocates at most
+ * one bounded frame (docs/internals/link-cards.md, "The image is copied, and the order of checks is
+ * the safety").
  */
 final class LinkCardImage
 {
@@ -50,8 +49,8 @@ final class LinkCardImage
     ) {}
 
     /**
-     * Null whenever the image cannot be had, a processor outage included: a card without a picture
-     * is still a useful card, and a card is fetched once.
+     * Null whenever the image cannot be had; a card without a picture is still a useful card, so
+     * only a processor outage (ImageProcessorUnavailableException) is let through.
      *
      * @param  float|null  $deadline  The job's remaining budget.
      * @return array{file: File, width: int, height: int}|null
@@ -161,11 +160,8 @@ final class LinkCardImage
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
         } catch (ImageProcessorUnavailableException $e) {
-            // Logged rather than rethrown: bytes the sidecar cannot load answer as an outage too, and a
-            // member must not be able to fail the fetch job at will with a broken og:image.
-            Log::error('Link card image not stored: the image processor is unavailable.', ['card' => $linkCardId, 'reason' => $e->getMessage()]);
-
-            return null;
+            // An outage is not "no picture": left to the job, which asks for the picture again later.
+            throw $e;
         } catch (Throwable) {
             return null;
         } finally {

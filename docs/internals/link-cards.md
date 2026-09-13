@@ -374,10 +374,12 @@ nor an `_a` form.
 `LinkCardImageTest` asserts the image processor is called zero times for an oversized header and for
 an over-budget pixel count — and that it *is* called for an acceptable one, so neither can be
 satisfied by never decoding at all. The decode itself is `FileUploader`'s canonical re-encode
-([file-storage](file-storage.md), "Writing an upload"). A card is fetched once, so a processor outage
-during the import costs the card its picture, logged as an error, rather than failing the job: bytes
-the sidecar cannot load answer as an outage too ([images](images.md), "Processing"), and a member must
-not be able to fail the fetch at will with a broken `og:image`.
+([file-storage](file-storage.md), "Writing an upload"). A processor outage during the import is the
+one failure `import()` lets through, and the job answers it by storing the card with its text and no
+picture, stale at once and scheduled under the usual backoff, so the picture is asked for again while
+the text already renders. Bytes the sidecar cannot load answer as an outage too ([images](images.md),
+"Processing"), so a broken `og:image` backs the card off like any other failure instead of failing
+the job.
 
 Content-Type is the far end's claim, so the real type comes from `finfo`. SVG is refused: it is a
 scriptable document, and this one would be served from our own origin.
@@ -623,7 +625,6 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - Open Graph image groups are read in document order: `og:image` and `og:image:url` each open an
   object, a structured property belongs to the root preceding it, and the first object listed is the
   page's preferred one.
-
 - Card images have no explicit visibility. What may be seen is decided by the post named in the URL,
   on current data, on every request — never by the file, and never by the most permissive post that
   happens to share it.

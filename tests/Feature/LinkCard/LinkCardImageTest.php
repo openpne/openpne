@@ -18,7 +18,6 @@ use App\Models\LinkCard;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
 use Intervention\Gif\Builder;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
@@ -134,20 +133,21 @@ class LinkCardImageTest extends TestCase
         $this->assertSame($decoder->preservesAnimation(), $result['file']->animated);
     }
 
-    public function test_a_processor_outage_costs_the_picture_and_is_logged(): void
+    public function test_a_processor_outage_is_let_through_with_nothing_stored(): void
     {
-        // Not rethrown: the job fetches a card once, and bytes the sidecar cannot load answer as an
-        // outage too, so a member could otherwise fail the job at will with a broken og:image.
+        // The one failure that is not "no picture": the job decides when to ask again.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->png(10, 10), 'image/png');
-        Log::spy();
+        $staging = $this->stagingDirectory();
 
-        $result = $this->importer($this->outageProcessor())->import('https://cdn.example.com/hero.png', $card->id);
-
-        $this->assertNull($result);
-        $this->assertSame(0, File::count());
-        Log::shouldHaveReceived('error')->once();
+        try {
+            $this->importer($this->outageProcessor(), $staging)->import('https://cdn.example.com/hero.png', $card->id);
+            $this->fail('The outage was swallowed.');
+        } catch (ImageProcessorUnavailableException) {
+            $this->assertSame(0, File::count());
+            $this->assertSame([], $this->stagedFiles($staging));
+        }
     }
 
     public function test_a_still_gif_is_still_accepted(): void

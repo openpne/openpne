@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Files\FileUploader;
+use App\Files\GdImageProcessor;
+use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
+use App\Files\ImageSpec;
+use App\Files\ProcessedImage;
 use App\Jobs\FetchLinkCard;
 use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
@@ -19,6 +24,8 @@ use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
@@ -273,6 +280,45 @@ class FetchLinkCardTest extends TestCase
         $this->assertTrue($card->fresh()?->isDueForFetch(), 'Once the backoff elapses it is due again.');
     }
 
+    public function test_a_processor_outage_stores_the_text_now_and_asks_for_the_picture_after_a_backoff(): void
+    {
+        // Bytes the sidecar cannot load answer as an outage too, so this path must neither fail the
+        // job nor cost the card its text; the picture alone is retried, backing off as failures do.
+        $card = $this->card('https://example.com/article');
+        $page = <<<'HTML'
+            <html><head>
+            <meta property="og:title" content="An article">
+            <meta property="og:image" content="https://example.com/hero.png">
+            </head></html>
+            HTML;
+        $this->queueHtml($page);
+        $this->queueBinary($this->png(), 'image/png');
+        $this->app->instance(ImageProcessor::class, $this->outageProcessor());
+
+        $this->runJob($card);
+
+        $card->refresh();
+        $this->assertSame(LinkCardStatus::Ok, $card->status);
+        $this->assertSame('An article', $card->title);
+        $this->assertNull($card->image_file_id);
+        $this->assertSame(1, $card->failure_count);
+        $this->assertTrue($card->isStale());
+        $this->assertFalse($card->isDueForFetch(), 'Still inside the backoff.');
+
+        $this->travelTo(CarbonImmutable::now()->addHours(2));
+        $this->assertTrue($card->fresh()?->isDueForFetch());
+
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->queueHtml($page);
+        $this->queueBinary($this->png(), 'image/png');
+        $this->runJob($card->fresh());
+
+        $card->refresh();
+        $this->assertNotNull($card->image_file_id);
+        $this->assertSame(0, $card->failure_count);
+        $this->assertFalse($card->isStale());
+    }
+
     public function test_a_card_that_never_rendered_is_still_marked_failed(): void
     {
         $card = $this->card('https://example.com/never');
@@ -324,6 +370,22 @@ class FetchLinkCardTest extends TestCase
             new LinkCardImage($fetcher, $this->app->make(FileUploader::class)),
             $this->app->make(LinkCardSettings::class),
         );
+    }
+
+    private function outageProcessor(): ImageProcessor
+    {
+        return new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('the sidecar is down');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+        };
     }
 
     private function png(): string
