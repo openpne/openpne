@@ -32,6 +32,9 @@ final class ImgproxyImageProcessor implements ImageProcessor
     /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
     public const MAX_FRAMES = 200;
 
+    /** A variant's answer has no limit of its own to be refused by, so it gets headroom over the source limit. */
+    private const VARIANT_CAP_FACTOR = 4;
+
     private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
     public function __construct(
@@ -68,12 +71,12 @@ final class ImgproxyImageProcessor implements ImageProcessor
         $still = ! $spec->isCanonical();
 
         try {
-            [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format));
+            [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
 
             // An animation over the sidecar's resolution budget is kept as a still rather than refused.
             if ($response->getStatusCode() === 422 && ! $still && in_array($spec->format, ['gif', 'webp'], true)) {
                 $still = true;
-                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format));
+                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), true);
             }
 
             return $this->read($response, $body, $spec->format, $still);
@@ -100,17 +103,18 @@ final class ImgproxyImageProcessor implements ImageProcessor
     }
 
     /**
-     * The body is collected into a sink capped at the source limit, so a transfer past it is aborted
-     * rather than held; an answer that long would be refused by that limit anyway, so it is a verdict.
+     * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
+     * A canonical's cap is the source limit, which would refuse an answer that long anyway, so passing it
+     * is a verdict; a variant is held to nothing else, so its cap is headroom and passing it an outage.
      *
      * @return array{0: ResponseInterface, 1: string}
      *
      * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
-    private function send(string $url): array
+    private function send(string $url, bool $canonical): array
     {
-        $cap = ImageSourceLimit::bytes();
+        $cap = ImageSourceLimit::bytes() * ($canonical ? 1 : self::VARIANT_CAP_FACTOR);
         $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $cap);
 
         try {
@@ -120,18 +124,29 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 RequestOptions::ALLOW_REDIRECTS => false,
             ]);
         } catch (GuzzleException $e) {
-            if (! $sink->wasCapped()) {
-                return $this->outage('imgproxy could not be reached: '.$e->getMessage());
+            if ($sink->wasCapped()) {
+                return $this->overCap($cap, $canonical);
             }
+
+            return $this->outage('imgproxy could not be reached: '.$e->getMessage());
         }
 
         if ($sink->wasCapped()) {
-            throw new ImageProcessingException("imgproxy answered more than the {$cap} byte source limit.");
+            return $this->overCap($cap, $canonical);
         }
 
         $sink->rewind();
 
         return [$response, $sink->getContents()];
+    }
+
+    private function overCap(int $cap, bool $canonical): never
+    {
+        if ($canonical) {
+            throw new ImageProcessingException("imgproxy answered more than the {$cap} byte source limit.");
+        }
+
+        $this->outage("imgproxy answered more than the {$cap} byte cap for a variant.");
     }
 
     /**

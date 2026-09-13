@@ -156,9 +156,8 @@ view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories.
 **Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
 world-readable because the sidecar runs as another user), asks the sidecar for
 `local:///<prefix><name>` over a URL signed with `OPENPNE_IMGPROXY_KEY` / `OPENPNE_IMGPROXY_SALT`
-(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer up to the source cap — past it
-the transfer is cut and the picture refused, as the cap would refuse the canonical anyway — and deletes
-the spooled file; leftovers of a request that died are swept an hour later on the next
+(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a capped sink (the source cap for a canonical, four times it for a variant), and
+deletes the spooled file; leftovers of a request that died are swept an hour later on the next
 write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
 `OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
@@ -178,6 +177,7 @@ sidecar's defaults for those do not matter either, and the app dials nothing but
 | 200 | processed | keeps the result |
 | 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION` (50 MP unconfigured), counted over every frame kept of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` where an operator set one (the shipped stack leaves it off, the app's own cap having applied first) | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
 | 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data), or could not this once | an outage: `/health` cannot tell the two apart, so nothing is remembered and the next view asks again |
+| 200 running past the source limit | a canonical whose re-encode outgrows the cap | the transfer is cut and the picture refused, as the limit would refuse the canonical anyway; a variant is given four times the limit, and past that it is an outage |
 | 429, 503, other 5xx; no connection; timeout; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
 | 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
 

@@ -8,6 +8,7 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -302,6 +303,47 @@ class DiaryImageToolsTest extends McpTestCase
         $this->acting($author);
 
         $this->read(['diary_id' => $diary->getKey(), 'number' => 1])->assertHasErrors(['cannot be drawn']);
+    }
+
+    public function test_a_variant_the_processor_refuses_is_reported_in_its_slot_too(): void
+    {
+        // The first thumbnail is drawn before the swap and served from the cache after it; the second
+        // is drawn under a processor that keeps the canonical but refuses every variant.
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $this->attach($diary, 1);
+        $this->acting($author);
+        $this->read(['diary_id' => $diary->getKey()])->assertOk();
+        $this->attach($diary, 2);
+        $inner = $this->app->make(ImageProcessor::class);
+        $this->app->instance(ImageProcessor::class, new class($inner) implements ImageProcessor
+        {
+            public function __construct(private readonly ImageProcessor $inner) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                if (! $spec->isCanonical()) {
+                    throw new ImageProcessingException('the sidecar answered more than the cap');
+                }
+
+                return $this->inner->process($bytes, $mime, $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        });
+        $this->app->forgetInstance(ImageCache::class);
+
+        $this->read(['diary_id' => $diary->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->count('images', 2)
+                ->where('images.0.number', 1)
+                ->where('images.1', ['number' => 2, 'unavailable' => true])
+                ->etc());
+        $this->read(['diary_id' => $diary->getKey(), 'number' => 2])->assertHasErrors(['cannot be drawn']);
     }
 
     public function test_a_processor_outage_refuses_the_call_whole(): void

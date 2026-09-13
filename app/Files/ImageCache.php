@@ -29,6 +29,7 @@ class ImageCache
      * its bytes having been produced here to a whitelisted size.
      *
      * @throws CanonicalUnavailableException
+     * @throws ImageProcessingException  when the processor refuses to draw the variant from the canonical
      * @throws ImageProcessorUnavailableException
      */
     public function bytes(File $file, ImageTransform $transform, string $format, ?int $maxBytes = null): string

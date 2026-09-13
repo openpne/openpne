@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\File;
 
-use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
 use App\Files\Imgproxy\ImgproxyImageProcessor;
 use Illuminate\Support\Facades\File;
@@ -55,17 +55,17 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
         $this->assertSame([600, 600], [$canonical->width, $canonical->height]);
     }
 
-    public function test_an_answer_over_the_source_limit_is_cut_short_and_refused(): void
+    public function test_an_answer_over_the_cap_is_cut_short_by_the_sink(): void
     {
-        // A 4x4 source under a 1 KB limit blown up to 2000x2000: the answer runs past the limit, so the
+        // A 4x4 source under a 1 KB limit blown up to 2000x2000 runs past a variant's 4 KB cap, so the
         // sink cuts the transfer — libcurl's write error here, not the mock's short write.
         config(['openpne.images.max_source_kilobytes' => 1]);
 
         try {
             $this->processor()->process($this->png(4, 4), 'image/png', ImageSpec::cover(2000, 2000, 'png'));
-            $this->fail('An answer over the source limit was kept.');
-        } catch (ImageProcessingException $e) {
-            $this->assertStringContainsString('source limit', $e->getMessage());
+            $this->fail('An answer over the cap was kept.');
+        } catch (ImageProcessorUnavailableException $e) {
+            $this->assertStringContainsString('4096 byte cap', $e->getMessage());
         }
     }
 

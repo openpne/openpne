@@ -181,6 +181,17 @@ class ImgproxyImageProcessorTest extends TestCase
         }
     }
 
+    public function test_a_variant_answer_over_four_times_the_limit_is_an_outage(): void
+    {
+        // A variant is held to no limit of its own, so past its headroom nothing can be concluded.
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->assertGreaterThan(4096, strlen($this->noisyPng(80, 80)));
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
+
+        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png')), ImageProcessorUnavailableException::class);
+        Log::shouldHaveReceived('error')->once();
+    }
+
     public function test_bytes_over_the_source_limit_never_reach_the_sidecar(): void
     {
         config(['openpne.images.max_source_kilobytes' => 1]);
