@@ -90,8 +90,8 @@ not be made — the processor unavailable, the stored bytes unreadable, the cach
 write — so a deploy script notices. Three refused writes in a row end the run, since `rebuild` has
 discarded before it writes and a full disk would otherwise empty the cache; a row whose bytes are
 gone keeps the exit non-zero until the row is deleted, there being nothing to show for it anyway. A
-row stored under an image type this version does not show as a picture (`image/pjpeg`, say, which
-OpenPNE 3 accepted) is counted as unshown and listed.
+row stored under an image type this version does not show as a picture (`image/bmp`, say, which
+OpenPNE 3's unvalidated API upload could write) is counted as unshown and listed.
 
 ## Upload size
 

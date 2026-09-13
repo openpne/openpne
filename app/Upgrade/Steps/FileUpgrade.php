@@ -94,8 +94,8 @@ class FileUpgrade extends UpgradeStep
     }
 
     /**
-     * OpenPNE 3 kept the browser's declared type when its guesser failed, so `image/pjpeg` and
-     * `image/x-png` (and upper case) reach `file.type`; here they become the types this version shows.
+     * OpenPNE 3's validator admitted `image/pjpeg` and `image/x-png` (lower-cased), and its API upload
+     * wrote the browser's type unvalidated; both are folded into the types this version shows.
      */
     private function typeExpr(): string
     {
