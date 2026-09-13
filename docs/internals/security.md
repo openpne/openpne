@@ -397,9 +397,10 @@ management is what an out-of-process backend is for. And libjpeg recovers from a
 truncated JPEG, so cut-short bytes decode to a partial picture instead of being
 refused.
 
-Original-size delivery streams the stored bytes without decoding, so an uploaded
-animation still plays there. Remote images are held to a stricter rule, 4 MP and
-provably a single frame, because the bytes are not a member's upload
+Original-size delivery is the canonical, so under GD an uploaded animation is a
+still there too, as OpenPNE 3's own GD path left it; a processor that keeps the
+frames is pinned by its contract test. Remote images are held to a stricter rule,
+4 MP and provably a single frame, because the bytes are not a member's upload
 ([link-cards](link-cards.md)).
 
 ## Cookies

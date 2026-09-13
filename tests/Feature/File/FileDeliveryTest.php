@@ -31,7 +31,7 @@ class FileDeliveryTest extends TestCase
         // 404, the same answer a member who may not read it gets: the response never distinguishes
         // "not yours" from "no such file", and never invites a login for bytes.
         $file = File::factory()->create(['related_entity_type' => null, 'related_entity_id' => null, 'type' => 'image/png']);
-        $this->writeBytes($file, 'orphan');
+        $this->writeBytes($file, ImageBytes::png());
 
         $this->get(route('file.show', $file->name))->assertNotFound();
     }
@@ -65,7 +65,7 @@ class FileDeliveryTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $owner->blocksMade()->attach($viewer, ['created_at' => now()]);
-        $file = $this->memberImage($owner, 'image/png', 'secret');
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png());
 
         $this->actingAs($viewer)->get(route('file.show', $file->name))->assertNotFound();
     }
@@ -73,7 +73,7 @@ class FileDeliveryTest extends TestCase
     public function test_unlinked_file_is_not_served(): void
     {
         $file = File::factory()->create(['related_entity_type' => null, 'related_entity_id' => null, 'type' => 'image/png']);
-        $this->writeBytes($file, 'orphan');
+        $this->writeBytes($file, ImageBytes::png());
 
         $this->actingAs(Member::factory()->create())->get(route('file.show', $file->name))->assertNotFound();
     }

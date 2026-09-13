@@ -112,8 +112,11 @@ class ImageCanonicalDeliveryTest extends TestCase
         $file = $this->uploaded($owner, 'jpeg-gps-orientation.jpg');
         $etag = (string) $this->actingAs($owner)->get($file->url())->assertOk()->headers->get('ETag');
 
+        // With the canonical gone too, a 200 would have to regenerate it: nothing is read, nothing is made.
+        Storage::disk('image_cache')->deleteDirectory($file->name);
         $this->mock(FileStorage::class)->shouldNotReceive('readStream');
         $this->withHeader('If-None-Match', $etag)->get($file->url())->assertStatus(304);
+        Storage::disk('image_cache')->assertMissing(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
     }
 
     private function assertCleanAndUpright(TestResponse $response, File $file, string $format): void

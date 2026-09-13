@@ -146,7 +146,9 @@ too.
 than the message it hangs on and 640px is enough to see what one is, so `size=original` is for when
 the detail decides something. Both are drawn from the canonical, never the stored bytes
 ([security](security.md), "Inline delivery is re-encoded"); a picture the processor refused is
-reported as `unavailable` in its slot while the others still answer.
+reported as `unavailable` in its slot while the others still answer, so a client pairs
+`structuredContent.images[*]` with the returned pictures by `number`, never by position; a processor
+outage refuses the call whole.
 
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
 byte is read — the only number there is while nothing is in memory yet — and again by the read
@@ -156,7 +158,8 @@ drawn from — one byte past it and refuses the file (`ImageBytesOverLimitExcept
 reading it whole and measuring afterwards, so a row understating its file cannot put an unbounded
 object in memory. Either way the call is refused whole
 rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
-preflight measures originals even when thumbnails were asked for: conservative, not exact. The read
+preflight measures the stored sizes, which a thumbnail is under and which a canonical, being a
+re-encode, can exceed: a first cut, not the measure. The read
 itself counts what is actually read, which for a thumbnail is the canonical the variant is drawn from,
 a re-encode that can be larger than the stored bytes.
 

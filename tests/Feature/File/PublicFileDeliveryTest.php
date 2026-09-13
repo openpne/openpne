@@ -63,7 +63,7 @@ class PublicFileDeliveryTest extends TestCase
         // A member's avatar (owner-gated, not explicit-public) must 404 on the public route even for a
         // member who could otherwise view it — the public route only serves explicit_visibility='public'.
         $owner = Member::factory()->create();
-        $file = $this->fileWithBytes('x', [
+        $file = $this->fileWithBytes(ImageBytes::png(), [
             'type' => 'image/png',
             'related_entity_type' => 'member',
             'related_entity_id' => $owner->getKey(),

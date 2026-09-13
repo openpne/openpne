@@ -98,7 +98,7 @@ class ConditionalDeliveryTest extends TestCase
         $viewer = Member::factory()->create();
         $owner->blocksMade()->attach($viewer, ['created_at' => now()]);
         $thumbnail = $this->avatar($owner);
-        $original = $this->memberImage($owner, 'secret');
+        $original = $this->memberImage($owner, ImageBytes::png());
 
         $this->actingAs($viewer)
             ->withHeader('If-None-Match', ImageTransform::fromGeometry('w120_h120_sq')->etag($thumbnail->name, 'png'))
@@ -106,7 +106,7 @@ class ConditionalDeliveryTest extends TestCase
             ->assertNotFound();
 
         $this->actingAs($viewer)
-            ->withHeader('If-None-Match', '"'.$original->name.'"')
+            ->withHeader('If-None-Match', ImageTransform::raw()->etag($original->name, 'png'))
             ->get(route('file.show', $original->name))
             ->assertNotFound();
     }

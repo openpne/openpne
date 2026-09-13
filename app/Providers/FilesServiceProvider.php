@@ -57,7 +57,7 @@ class FilesServiceProvider extends ServiceProvider
         File::observe(FileObserver::class);
     }
 
-    /** OPENPNE_IMAGE_DRIVER chose gd or imagick until imagick was dropped; a value still set fails the boot rather than look honoured. */
+    /** Settings that were removed fail the boot while still set, rather than look honoured. */
     public static function refuseRemovedDriverSetting(): void
     {
         $legacy = config('openpne.images.legacy_driver');
@@ -65,6 +65,14 @@ class FilesServiceProvider extends ServiceProvider
         if ($legacy !== null && $legacy !== '') {
             throw new InvalidArgumentException(
                 "OPENPNE_IMAGE_DRIVER [{$legacy}] is no longer read: unset it and use OPENPNE_IMAGE_PROCESSOR=gd (imagick support was removed). With a cached config, delete bootstrap/cache/config.php as well.",
+            );
+        }
+
+        $strip = config('openpne.images.legacy_strip_metadata');
+
+        if ($strip !== null && $strip !== '') {
+            throw new InvalidArgumentException(
+                'OPENPNE_STRIP_IMAGE_METADATA is no longer read: every inline picture is a re-encode without metadata, so unset it (docs/internals/security.md). With a cached config, delete bootstrap/cache/config.php as well.',
             );
         }
     }

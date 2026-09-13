@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\Concerns;
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageBytesOverLimitException;
 use App\Files\ImageCache;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageTransform;
 use App\Models\File;
 use Laravel\Mcp\Response;
@@ -40,7 +41,7 @@ trait AnswersWithImages
      */
     protected function answerWithImages(ImageCache $cache, ImageTransform $transform, array $targets): Response|ResponseFactory
     {
-        // The originals' sizes even when thumbnails were asked for: conservative rather than exact.
+        // The stored sizes, which a thumbnail is under and a canonical can exceed: a first cut, not the measure.
         $declared = array_sum(array_map(fn (array $target): int => (int) $target[1]->byte_size, $targets));
 
         if ($declared > self::MAX_BYTES) {
@@ -68,6 +69,8 @@ trait AnswersWithImages
                 $described[] = ['number' => $number, 'unavailable' => true];
 
                 continue;
+            } catch (ImageProcessorUnavailableException) {
+                return Response::error(ImageProcessorUnavailableException::userMessage());
             }
 
             $read += strlen($bytes);
