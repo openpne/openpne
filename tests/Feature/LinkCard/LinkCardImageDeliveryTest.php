@@ -69,7 +69,7 @@ class LinkCardImageDeliveryTest extends TestCase
         $this->actingAs($this->author)->get($this->urlFor($diary))->assertOk();
 
         Storage::fake('image_cache');
-        config(['openpne.images.max_upload_dimension' => 10]);
+        config(['openpne.images.max_source_pixels' => 10 * 10]);
 
         $this->actingAs($this->author)->get($this->urlFor($diary))->assertNotFound();
     }

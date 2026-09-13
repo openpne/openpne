@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Compat\PluginStylesheets;
 use App\Compat\RouteParityRegistry;
 use App\Files\AppIcon;
+use App\Files\ImageProcessor;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
@@ -207,5 +208,13 @@ if (! function_exists('classic_top_banner')) {
     function classic_top_banner(): string
     {
         return classic_banner(auth()->check() ? 'top_after' : 'top_before');
+    }
+}
+
+if (! function_exists('image_upload_accept')) {
+    /** The `<input accept>` list for a picture upload: what the configured image processor reads. */
+    function image_upload_accept(): string
+    {
+        return app(ImageProcessor::class)->intake()->accept();
     }
 }

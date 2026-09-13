@@ -56,7 +56,7 @@
                     <th><label for="ai_avatar">{{ __('Profile image') }}</label></th>
                     <td>
                         <input type="file" id="ai_avatar" class="input_file" name="image"
-                               accept="image/jpeg,image/png,image/gif,image/webp" required>
+                               accept="{{ image_upload_accept() }}" required>
                         @error('image')<p class="error" role="alert">{{ $message }}</p>@enderror
                     </td>
                 </tr>

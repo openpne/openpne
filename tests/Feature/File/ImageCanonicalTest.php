@@ -10,6 +10,7 @@ use App\Files\FileUploader;
 use App\Files\ImageBytesOverLimitException;
 use App\Files\ImageCache;
 use App\Files\ImageCachePublishException;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -459,6 +460,11 @@ class ImageCanonicalTest extends TestCase
             {
                 return $this->inner->preservesAnimation();
             }
+
+            public function intake(): ImageIntake
+            {
+                return $this->inner->intake();
+            }
         };
         $this->app->instance(ImageProcessor::class, $spy);
 
@@ -481,6 +487,11 @@ class ImageCanonicalTest extends TestCase
             {
                 return false;
             }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
+            }
         };
     }
 
@@ -496,6 +507,11 @@ class ImageCanonicalTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         };
     }

@@ -7,11 +7,15 @@ namespace App\Files;
 /**
  * What a processor will read and decode of a stored image, which an OpenPNE 3 row never had checked
  * at upload. Blank or non-positive follows the upload rules (the upload cap in bytes, the per-side
- * limit squared in pixels) so a stored upload never fails it; a set value is taken as given.
+ * limit squared in pixels under GD, the sidecar's budget otherwise) so a stored upload never fails it;
+ * a set value is taken as given.
  */
 final class ImageSourceLimit
 {
     public const DEFAULT_KILOBYTES = 20480;
+
+    /** Enough of a file for libmagic to name any raster container, the same window the admin raw route reads. */
+    public const SNIFF_BYTES = 4096;
 
     public static function bytes(): int
     {
@@ -30,11 +34,11 @@ final class ImageSourceLimit
 
     /**
      * Refuses from the header alone, before any processor allocates: bytes over bytes(), a declared
-     * side over UploadLimit::dimension(), or more declared pixels than pixels().
+     * side over the intake's side limit where it has one, or more declared pixels than its pixel limit.
      *
      * @throws ImageProcessingException
      */
-    public static function preflight(string $bytes): void
+    public static function preflight(string $bytes, ImageIntake $intake): void
     {
         $maxBytes = self::bytes();
 
@@ -45,16 +49,24 @@ final class ImageSourceLimit
         $info = @getimagesizefromstring($bytes);
 
         if ($info === false || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
-            throw new ImageProcessingException('The image header does not declare a size.');
+            // Only a container this PHP is known not to read (a HEIC before PHP 8.5) is left to the
+            // sidecar's own budget; anything else unmeasured is a refusal, as a 500 there would loop.
+            $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer(substr($bytes, 0, self::SNIFF_BYTES));
+
+            if (! is_string($sniffed) || ! $intake->readsOnlyOutOfProcess($sniffed)) {
+                throw new ImageProcessingException('The image header does not declare a size.');
+            }
+
+            return;
         }
 
-        $side = UploadLimit::dimension();
+        $side = $intake->sideLimit();
 
-        if ($info[0] > $side || $info[1] > $side) {
+        if ($side !== null && ($info[0] > $side || $info[1] > $side)) {
             throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
         }
 
-        $pixels = self::pixels();
+        $pixels = $intake->pixelLimit();
 
         if ($pixels < $info[0] * $info[1]) {
             throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $pixels));

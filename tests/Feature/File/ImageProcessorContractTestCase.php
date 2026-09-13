@@ -131,7 +131,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $this->processor()->process('definitely not a picture', 'image/png', ImageSpec::canonical('png'));
     }
 
-    public function test_a_header_over_the_dimension_limit_is_refused_before_any_decode(): void
+    public function test_a_header_over_the_declared_size_limits_is_refused_before_any_decode(): void
     {
         config(['openpne.images.max_upload_dimension' => 100]);
 
@@ -172,7 +172,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
     protected function canonical(string $bytes, string $mime): ProcessedImage
     {
-        return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) ImageSpec::formatFor($mime)));
+        return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) $this->processor()->intake()->canonicalFormat($mime)));
     }
 
     protected function fixture(string $name): string
@@ -234,7 +234,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
     }
 
     /** A complete PNG container whose IHDR declares $width x $height and which carries no pixels. */
-    private function pngHeaderClaiming(int $width, int $height): string
+    protected function pngHeaderClaiming(int $width, int $height): string
     {
         return "\x89PNG\r\n\x1a\n".$this->pngChunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00").$this->pngChunk('IEND', '');
     }

@@ -232,7 +232,8 @@ most three bytes, so a longer string cannot decode to something the per-file cap
 else; padding is optional and line breaks are skipped, which is the decoder's own latitude. What a
 picture *is* is decided afterwards by reading it: the bytes go through
 [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php) — the forms' own rules,
-sniffing the content, bounding the pixel dimensions and measuring the decoded file — and then to the
+sniffing the content for a type the image processor reads, bounding the pixel dimensions where the
+decode is in-process and measuring the decoded file — and then to the
 same Actions, so slot numbering, the compensating delete and the fail-closed canonical re-encode (an
 error on `images.N`) are the web surface's, unchanged. The temporary file a picture is decoded into is
 removed on every path out, a refused picture and a rolled-back write included.

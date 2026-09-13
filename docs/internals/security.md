@@ -373,8 +373,8 @@ GD allocates those buffers outside PHP's `memory_limit`; a 31 KB 1000×1000 GIF 
 and a variant is a still whatever its URL asks for, as in OpenPNE 3.
 
 The processor also refuses before it decodes. The upload rules bound a member's
-upload (`dimensions`, `openpne.images.max_upload_dimension`, and
-`OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)), but a row imported from
+upload (`OPENPNE_IMAGE_MAX_UPLOAD_KB`, and where the decode is in-process the
+`dimensions` rule at `openpne.images.max_upload_dimension`, [images](images.md)), but a row imported from
 OpenPNE 3 never met them, so the GD processor reads the header first and rejects
 a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
@@ -388,7 +388,11 @@ a verdict the cache disk keeps until the file is replaced, whatever the caps are
 an upload over it is refused as an upload, since its canonical is produced before
 the row is saved. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
-concurrent misses of the same picture.
+concurrent misses of the same picture. Under `imgproxy` the same header check
+applies the sidecar's budget instead (50 MP, no per-side limit); HEIC and AVIF,
+which only the sidecar reads, are decoded nowhere but there, and a container only
+the sidecar reads whose header this PHP cannot read (a HEIC before 8.5) is the one
+unmeasured source the check lets through, to the sidecar's own budget.
 
 Two GD facts are accepted rather than worked around. GD cannot read an embedded
 ICC profile, so every re-encode drops it and a wide-gamut photo is then read as
@@ -405,13 +409,14 @@ frames is pinned by its contract test. Remote images are held to a stricter rule
 
 Under `imgproxy` the decode leaves the PHP process: the sidecar holds its own
 resolution and frame budgets and is what an out-of-memory kill would take down,
-and the app's header check still runs first so both refuse the same sources
-([images](images.md), "Processing"). The sidecar sees only bytes the app spooled
+and the app's header check still runs first, applying the sidecar's budget rather
+than GD's limits, so what each refuses differs only by those limits — and by the
+types only the sidecar reads ([images](images.md), "Processing"). The sidecar sees only bytes the app spooled
 for it, over a signed URL to one operator-configured address; no URL a member
 typed reaches it. The spool is world-readable so that the sidecar's user can read
 it, which on a host shared with other unix users leaves each upload readable to
-them for the length of one request; a host that shares users puts the spool on a
-volume they do not see.
+them for the length of one request — bytes whose header PHP could not read included, since those
+are the sidecar's to judge; a host that shares users puts the spool on a volume they do not see.
 
 ## Cookies
 

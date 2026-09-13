@@ -4,7 +4,7 @@
     <th>{{ __('Images') }}</th>
     <td>
         @for ($i = 0; $i < \App\Files\PostImages::MAX_IMAGES; $i++)
-            <p><input type="file" name="images[]" accept="image/jpeg,image/png,image/gif,image/webp"></p>
+            <p><input type="file" name="images[]" accept="{{ image_upload_accept() }}"></p>
         @endfor
         @php($imageError = collect($errors->messages())->keys()->first(fn ($key) => str_starts_with($key, 'images')))
         @if ($imageError)<p class="error">{{ $errors->first($imageError) }}</p>@endif

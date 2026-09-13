@@ -34,6 +34,7 @@ buffers its whole canonical in memory too, bounded by `ImageSourceLimit` ([image
 
 ## Writing an upload
 
+A raster row's `type` is its canonical's type, not necessarily its stored container ([images.md](images.md), "Processing").
 [`FileUploader`](../../app/Files/FileUploader.php) produces a raster upload's canonical — the
 full-size re-encode every variant is drawn from ([images.md](images.md)) — before anything is saved,
 so a picture the processor refuses costs nothing to undo. It then writes the `files` row, the bytes

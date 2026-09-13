@@ -6,6 +6,7 @@ namespace Tests\Feature\LinkCard;
 
 use App\Files\FileUploader;
 use App\Files\GdImageProcessor;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -418,6 +419,11 @@ class FetchLinkCardTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return true;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         };
     }

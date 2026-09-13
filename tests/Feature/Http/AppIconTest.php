@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -178,7 +179,8 @@ class AppIconTest extends TestCase
         $this->assertSame([512, 512], $this->dimensionsOf($this->get($this->url(512))->assertOk()->getContent()));
 
         Storage::fake('image_cache');
-        config(['openpne.images.max_upload_dimension' => 64]);
+        // The pixel cap, which both processors apply from the header; a side limit is GD's alone.
+        config(['openpne.images.max_source_pixels' => 64 * 64]);
 
         $this->assertSame(
             file_get_contents(public_path('icon-512x512.png')),
@@ -259,6 +261,11 @@ class AppIconTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         };
     }

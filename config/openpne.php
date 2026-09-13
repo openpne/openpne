@@ -65,12 +65,12 @@ return [
         // Largest GIF whose frames are counted to record `files.animated` (App\Files\AnimationProbe);
         // the count costs about three times the bytes in memory. Blank or non-positive is the default.
         'max_gif_walk_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_GIF_WALK_KB', 0),
-        // Reject uploads larger than this on a side. The decoder allocates
-        // width*height*4 bytes, so an unbounded dimension is a decompression-bomb
-        // (memory exhaustion) vector even within the file-size limit.
+        // The per-side limit where the decode is in-process (GD allocates width*height*4 bytes of
+        // whatever a file declares) and for a link card's remote picture; the sidecar has no side limit.
         'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', UploadLimit::DEFAULT_DIMENSION),
         // Largest stored image a processor will read and decode (App\Files\ImageSourceLimit); an
-        // OpenPNE 3 row never met the upload rules, and a blank or 0 follows those rules, never no cap.
+        // OpenPNE 3 row never met the upload rules, and a blank or 0 follows those rules (GD) or the
+        // sidecar's 50 MP budget (imgproxy), never no cap.
         'max_source_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_KB', 0),
         'max_source_pixels' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_PIXELS', 0),
         // Per-file cap for every image upload, in kilobytes; keep PHP's upload_max_filesize at or

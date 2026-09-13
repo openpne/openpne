@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Concerns;
 
+use App\Files\ImageProcessor;
 use App\Files\PostImages;
 use App\Files\UploadLimit;
 
@@ -40,16 +41,23 @@ final class PostImageRules
     }
 
     /**
-     * Pixel dimensions are bounded as well as the file size: the thumbnail decoder allocates
-     * width*height*4 bytes, so a small file declaring huge dimensions is a decompression bomb. `mimes`
-     * drops SVG, which can carry script.
+     * The types are the processor's (SVG, which can carry script, is never among them), and the pixel
+     * dimensions are bounded here only where the decode is in-process, since GD allocates
+     * width*height*4 bytes of whatever a small file declares.
      *
      * @return array<int, mixed>
      */
-    private static function imageRule(): array
+    public static function imageRule(): array
     {
-        $max = UploadLimit::dimension();
+        $intake = app(ImageProcessor::class)->intake();
+        $side = $intake->sideLimit();
 
-        return ['file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:'.UploadLimit::kilobytes()];
+        return [
+            'file',
+            'image',
+            'mimetypes:'.implode(',', $intake->mimes()),
+            ...($side === null ? [] : ["dimensions:max_width={$side},max_height={$side}"]),
+            'max:'.UploadLimit::kilobytes(),
+        ];
     }
 }

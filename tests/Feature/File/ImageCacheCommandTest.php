@@ -7,6 +7,7 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -71,9 +72,9 @@ class ImageCacheCommandTest extends TestCase
 
     public function test_warm_remembers_a_refusal_and_skips_it_until_asked_to_retry(): void
     {
-        // Refused under a tight side limit, then accepted once the limit is raised and retried.
+        // Refused under a tight pixel cap (both processors apply it), then accepted once it is raised and retried.
         $file = $this->stored('image/png', ImageBytes::png(64, 32));
-        config(['openpne.images.max_upload_dimension' => 16]);
+        config(['openpne.images.max_source_pixels' => 16 * 16]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
@@ -81,7 +82,7 @@ class ImageCacheCommandTest extends TestCase
             ->assertSuccessful();
         $this->assertNotNull(app(ImageCache::class)->refusal($file));
 
-        config(['openpne.images.max_upload_dimension' => 5000]);
+        config(['openpne.images.max_source_pixels' => 0]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('skipped:     1')
@@ -202,6 +203,11 @@ class ImageCacheCommandTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return true;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         });
         $this->app->forgetInstance(ImageCache::class);
@@ -374,6 +380,11 @@ class ImageCacheCommandTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         });
         $this->app->forgetInstance(ImageCache::class);

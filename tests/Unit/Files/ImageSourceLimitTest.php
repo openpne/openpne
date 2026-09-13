@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Files;
 
+use App\Files\ImageIntake;
+use App\Files\ImageProcessingException;
 use App\Files\ImageSourceLimit;
 use Tests\TestCase;
 
@@ -41,6 +43,57 @@ class ImageSourceLimitTest extends TestCase
         config(['openpne.images.max_source_pixels' => 0, 'openpne.images.max_upload_dimension' => '']);
 
         $this->assertSame(25_000_000, ImageSourceLimit::pixels());
+    }
+
+    public function test_an_unreadable_header_passes_only_for_a_container_only_the_sidecar_reads(): void
+    {
+        // A HEIC whose header this PHP cannot read (none before 8.5) is the sidecar's to measure; a
+        // container PHP does read, or none at all, is refused under both, so a 500 never loops.
+        $heicWithoutADeclaredSize = "\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic".str_repeat("\x00", 64);
+        $headerOnlyWebp = 'RIFF'.pack('V', 4).'WEBP';
+
+        ImageSourceLimit::preflight($heicWithoutADeclaredSize, ImageIntake::imgproxy());
+
+        foreach ([[$heicWithoutADeclaredSize, ImageIntake::gd()], [$headerOnlyWebp, ImageIntake::imgproxy()], ['not a picture', ImageIntake::imgproxy()]] as [$bytes, $intake]) {
+            try {
+                ImageSourceLimit::preflight($bytes, $intake);
+                $this->fail('An unmeasured source was let through.');
+            } catch (ImageProcessingException $e) {
+                $this->assertStringContainsString('does not declare a size', $e->getMessage());
+            }
+        }
+    }
+
+    public function test_a_side_over_the_limit_is_refused_only_where_the_intake_has_one(): void
+    {
+        // Lane-independent teeth for the sidecar's missing per-side limit: the imgproxy contract test
+        // pins it too, but only where a sidecar answers.
+        config(['openpne.images.max_upload_dimension' => 100, 'openpne.images.max_source_pixels' => 1_000_000_000]);
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+        $wide = "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', 200, 10)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
+
+        ImageSourceLimit::preflight($wide, ImageIntake::imgproxy());
+
+        $this->expectException(ImageProcessingException::class);
+        ImageSourceLimit::preflight($wide, ImageIntake::gd());
+    }
+
+    public function test_a_readable_header_over_the_cap_is_refused_under_both(): void
+    {
+        config(['openpne.images.max_source_pixels' => 100]);
+        $png = imagecreatetruecolor(20, 20);
+        ob_start();
+        imagepng($png);
+        $bytes = (string) ob_get_clean();
+
+        foreach ([ImageIntake::gd(), ImageIntake::imgproxy()] as $intake) {
+            try {
+                ImageSourceLimit::preflight($bytes, $intake);
+                $this->fail('400 pixels passed a 100 pixel cap.');
+            } catch (ImageProcessingException $e) {
+                $this->assertStringContainsString('20x20', $e->getMessage());
+            }
+        }
     }
 
     public function test_a_set_value_is_taken_as_given(): void
