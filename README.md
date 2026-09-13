@@ -38,6 +38,9 @@ Notes:
   host-side install after that needs a manual `npm ci` too.
 - To rebuild frontend assets through Docker, run
   `docker compose run --rm vite npm run build`.
+- The stack runs an [imgproxy](https://imgproxy.net) sidecar; set
+  `OPENPNE_IMAGE_PROCESSOR=imgproxy` in `.env` to process pictures through it
+  instead of GD (`docs/internals/images.md`, "Processing").
 - If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
   `bin/dev-up`. Port `5173` is fixed (Vite always binds it
   inside the container and `public/hot` references that port, so a

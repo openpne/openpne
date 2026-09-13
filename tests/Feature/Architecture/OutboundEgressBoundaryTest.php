@@ -11,20 +11,22 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins the single-seam rule from docs/internals/outbound-http.md: App\Outbound alone may open an
- * outbound connection, since SSRF defence is only the property that every fetch of a member-supplied
- * URL went through the guard. Stream wrappers and raw sockets are forbidden too, as they dereference
- * a URL just as well.
+ * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
+ * member supplied, since SSRF defence is only the property that every such fetch went through the
+ * guard; App\Files\Imgproxy dials one operator-configured address and nothing else. Stream wrappers
+ * and raw sockets are forbidden too, as they dereference a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
     /**
-     * Directories allowed to speak to the network. Everything else in app/ must go through them.
+     * Directories, or single files, allowed to speak to the network. Everything else in app/ must go
+     * through them.
      *
      * @var list<string>
      */
     private const EGRESS_ALLOWLIST = [
         'Outbound',
+        'Files/Imgproxy/ImgproxyImageProcessor.php',
     ];
 
     /**
@@ -210,11 +212,11 @@ class OutboundEgressBoundaryTest extends TestCase
         return ! in_array($previousType, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW], true);
     }
 
-    public function test_the_allowlisted_directories_exist(): void
+    public function test_the_allowlisted_entries_exist(): void
     {
-        // A renamed directory would silently turn the allowlist into a no-op that still passes.
-        foreach (self::EGRESS_ALLOWLIST as $directory) {
-            $this->assertDirectoryExists(app_path($directory));
+        // A renamed directory or file would silently turn the allowlist into a no-op that still passes.
+        foreach (self::EGRESS_ALLOWLIST as $entry) {
+            $this->assertFileExists(app_path($entry));
         }
     }
 
@@ -357,8 +359,8 @@ class OutboundEgressBoundaryTest extends TestCase
 
     private function isAllowlisted(string $file): bool
     {
-        foreach (self::EGRESS_ALLOWLIST as $directory) {
-            if (str_starts_with($file, app_path($directory).'/')) {
+        foreach (self::EGRESS_ALLOWLIST as $entry) {
+            if ($file === app_path($entry) || str_starts_with($file, app_path($entry).'/')) {
                 return true;
             }
         }

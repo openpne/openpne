@@ -7,6 +7,8 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\GdImageProcessor;
 use App\Files\ImageProcessor;
+use App\Files\Imgproxy\ImgproxyImageProcessor;
+use App\Files\Imgproxy\ImgproxyUrl;
 use App\Files\UploadLimit;
 use App\Models\File;
 use App\Observers\FileObserver;
@@ -24,6 +26,11 @@ class FilesServiceProvider extends ServiceProvider
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
         self::refuseRemovedSettings();
+
+        // Refused at boot rather than on the first picture, whose callers expect the seam's two exceptions.
+        if (config('openpne.images.processor') === 'imgproxy') {
+            ImgproxyUrl::fromConfig((array) config('openpne.images.imgproxy'));
+        }
 
         // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
         // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
@@ -45,8 +52,9 @@ class FilesServiceProvider extends ServiceProvider
             // it took effect.
             return match ($configured = config('openpne.images.processor')) {
                 'gd' => new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)),
+                'imgproxy' => ImgproxyImageProcessor::fromConfig(),
                 default => throw new InvalidArgumentException(
-                    "Unsupported openpne.images.processor [{$configured}]; expected 'gd'.",
+                    "Unsupported openpne.images.processor [{$configured}]; expected 'gd' or 'imgproxy'.",
                 ),
             };
         });

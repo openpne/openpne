@@ -2,9 +2,11 @@
 
 Some features need to dereference a URL a member typed. Doing that turns the server into a
 request forwarder for anyone who can post, so every such fetch goes through one seam:
-[`App\Outbound`](../../app/Outbound). Nothing else in `app/` may open an outbound connection, and
+[`App\Outbound`](../../app/Outbound). Nothing else in `app/` may open an outbound connection —
+the one exception being [`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php), which dials a single
+operator-configured address ([images](images.md), "Processing") — and
 [`OutboundEgressBoundaryTest`](../../tests/Feature/Architecture/OutboundEgressBoundaryTest.php)
-fails the build if something does.
+fails the build if something else does.
 
 The boundary is the point. SSRF defence is not a property of any one call site — it is the property
 that *every* fetch went through the guard, so a single unremarkable `Http::get($url)` added later
@@ -161,7 +163,10 @@ bounded here beyond libcurl's own limits).
   the only outbound path allowed to be. The client is reachable only from the push seam, by test —
   the directory allowlist below would not otherwise stop anything in `App\Outbound` from fetching
   on it.
-- `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
+- `App\Outbound` is the only directory in `app/` that fetches a URL anyone but the operator chose,
+  enforced by test. `App\Files\Imgproxy\ImgproxyImageProcessor` is the other name on the allowlist, as
+  a single file: it dials `OPENPNE_IMGPROXY_URL` and nothing else, on a path that carries no member
+  input beyond a random spool name, and its neighbours in that directory stay under every check. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact
   allowlist. The check tokenises rather than greps: requiring a literal `'https://…'` argument would

@@ -69,6 +69,16 @@ return [
             'report' => false,
         ],
 
+        // Bytes on their way to the imgproxy sidecar (App\Files\Imgproxy\Spool), which reads this
+        // directory as local:// under another user, hence world-readable.
+        'image_spool' => [
+            'driver' => 'local',
+            'root' => storage_path('app/image-spool'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

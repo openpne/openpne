@@ -27,6 +27,11 @@ final class ImageSpec
         return self::FORMATS[$mime] ?? null;
     }
 
+    public static function mimeFor(string $format): string
+    {
+        return (string) array_search(self::validFormat($format), self::FORMATS, true);
+    }
+
     public static function canonical(string $format): self
     {
         return new self(null, null, false, self::validFormat($format), null);

@@ -22,6 +22,12 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
     abstract protected function processor(): ImageProcessor;
 
+    /** Whether the processor under test can read EXIF Orientation on this host. */
+    protected function appliesOrientation(): bool
+    {
+        return true;
+    }
+
     public function test_the_canonical_carries_no_source_metadata(): void
     {
         foreach (['jpeg-gps-orientation.jpg' => 'image/jpeg', 'png-meta.png' => 'image/png', 'webp-vp8x-meta.webp' => 'image/webp'] as $fixture => $mime) {
@@ -46,9 +52,9 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
     public function test_the_canonical_is_drawn_upright_and_records_the_rendered_size(): void
     {
-        // The fixture is 12x6 declaring Orientation 6, which only ext-exif lets a decoder read.
+        // The fixture is 12x6 declaring Orientation 6.
         $canonical = $this->canonical($this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg');
-        $expected = extension_loaded('exif') ? [6, 12] : [12, 6];
+        $expected = $this->appliesOrientation() ? [6, 12] : [12, 6];
 
         $this->assertSame($expected, [$canonical->width, $canonical->height]);
         $this->assertSame($expected, $this->dimensions($canonical->bytes));
@@ -69,6 +75,17 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
         $this->assertSame($preserves ? 3 : 1, $this->frameCount($canonical->bytes));
         $this->assertSame($preserves, $canonical->animated);
+    }
+
+    public function test_an_apng_is_a_still(): void
+    {
+        // libpng ignores the animation chunks and libvips reads the first frame, so no processor keeps them.
+        $canonical = $this->canonical($this->fixture('apng-2frames.png'), 'image/png');
+
+        $this->assertStringNotContainsString('acTL', $canonical->bytes);
+        $this->assertStringNotContainsString('fcTL', $canonical->bytes);
+        $this->assertFalse($canonical->animated);
+        $this->assertSame([4, 4], $this->dimensions($canonical->bytes));
     }
 
     public function test_fit_scales_down_inside_the_box_and_never_up(): void
@@ -118,15 +135,6 @@ abstract class ImageProcessorContractTestCase extends TestCase
         }
     }
 
-    public function test_a_body_that_does_not_decode_fails_deterministically(): void
-    {
-        // A sound header over pixels that are not PNG data: past the preflight, refused by the decoder.
-        $this->expectException(ImageProcessingException::class);
-        $this->expectExceptionMessage('decoded');
-
-        $this->processor()->process($this->pngWithGarbagePixels(10, 10, 64), 'image/png', ImageSpec::canonical('png'));
-    }
-
     public function test_source_bytes_over_the_cap_are_refused_before_any_decode(): void
     {
         config(['openpne.images.max_source_kilobytes' => 1]);
@@ -152,7 +160,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         }
     }
 
-    private function canonical(string $bytes, string $mime): ProcessedImage
+    protected function canonical(string $bytes, string $mime): ProcessedImage
     {
         return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) ImageSpec::formatFor($mime)));
     }
@@ -170,12 +178,12 @@ abstract class ImageProcessorContractTestCase extends TestCase
         return [$size[0], $size[1]];
     }
 
-    private function frameCount(string $bytes): int
+    protected function frameCount(string $bytes): int
     {
         return count(Decoder::decode($bytes)->frames());
     }
 
-    private function png(int $width, int $height): string
+    protected function png(int $width, int $height): string
     {
         $gd = imagecreatetruecolor($width, $height);
         imagefill($gd, 0, 0, (int) imagecolorallocate($gd, 200, 30, 30));
@@ -197,14 +205,14 @@ abstract class ImageProcessorContractTestCase extends TestCase
         return (string) ob_get_clean();
     }
 
-    /** Three frames of different shades on a 60x60 logical screen. */
-    private function animatedGif(): string
+    /** $frames frames of different shades on a square logical screen of $side. */
+    protected function animatedGif(int $frames = 3, int $side = 60): string
     {
-        $builder = Builder::canvas(60, 60);
+        $builder = Builder::canvas($side, $side);
 
-        foreach ([40, 140, 240] as $shade) {
-            $gd = imagecreate(60, 60);
-            imagecolorallocate($gd, $shade, 40, 200);
+        for ($i = 0; $i < $frames; $i++) {
+            $gd = imagecreate($side, $side);
+            imagecolorallocate($gd, ($i * 37) % 256, 40, 200);
             ob_start();
             imagegif($gd);
             $builder->addFrame(source: (string) ob_get_clean(), delay: 0.1);
@@ -222,7 +230,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
     }
 
     /** As above, with an IDAT of $garbage bytes that is not a zlib stream. */
-    private function pngWithGarbagePixels(int $width, int $height, int $garbage): string
+    protected function pngWithGarbagePixels(int $width, int $height, int $garbage): string
     {
         return "\x89PNG\r\n\x1a\n"
             .$this->pngChunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00")

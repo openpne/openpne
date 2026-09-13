@@ -22,7 +22,7 @@ final class GdImageProcessor implements ImageProcessor
 
     public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
     {
-        $this->preflight($bytes);
+        ImageSourceLimit::preflight($bytes);
 
         try {
             $image = $this->manager->decode($bytes);
@@ -51,32 +51,5 @@ final class GdImageProcessor implements ImageProcessor
         }
 
         return new ProcessedImage($encoded->toString(), $encoded->mediaType(), $image->width(), $image->height(), false);
-    }
-
-    private function preflight(string $bytes): void
-    {
-        $maxBytes = ImageSourceLimit::bytes();
-
-        if (strlen($bytes) > $maxBytes) {
-            throw new ImageProcessingException(sprintf('The image is %d bytes, over the %d byte source limit.', strlen($bytes), $maxBytes));
-        }
-
-        $info = @getimagesizefromstring($bytes);
-
-        if ($info === false || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
-            throw new ImageProcessingException('The image header does not declare a size.');
-        }
-
-        $side = UploadLimit::dimension();
-
-        if ($info[0] > $side || $info[1] > $side) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
-        }
-
-        $pixels = ImageSourceLimit::pixels();
-
-        if ($pixels < $info[0] * $info[1]) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $pixels));
-        }
     }
 }

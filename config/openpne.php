@@ -38,6 +38,16 @@ return [
     'images' => [
         // `exif` (whether ext-exif is loaded) is set at runtime by FilesServiceProvider, not here.
         'processor' => env('OPENPNE_IMAGE_PROCESSOR', 'gd'),
+        // Read only when processor is imgproxy (docs/internals/images.md, "Processing").
+        'imgproxy' => [
+            'url' => env('OPENPNE_IMGPROXY_URL', ''),
+            'key' => env('OPENPNE_IMGPROXY_KEY', ''),
+            'salt' => env('OPENPNE_IMGPROXY_SALT', ''),
+            // The spool disk's path under the sidecar's IMGPROXY_LOCAL_FILESYSTEM_ROOT, trailing slash included.
+            'source_prefix' => env('OPENPNE_IMGPROXY_SOURCE_PREFIX', ''),
+            'timeout' => (float) env('OPENPNE_IMGPROXY_TIMEOUT', 20),
+            'spool_disk' => 'image_spool',
+        ],
         // Removed setting, read only so FilesServiceProvider can refuse a value that would otherwise be silently ignored.
         'legacy_driver' => env('OPENPNE_IMAGE_DRIVER'),
         'legacy_strip_metadata' => env('OPENPNE_STRIP_IMAGE_METADATA'),

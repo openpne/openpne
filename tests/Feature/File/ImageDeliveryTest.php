@@ -4,6 +4,7 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageProcessor;
 use App\Files\ImageTransform;
 use App\Models\File;
 use App\Models\Member;
@@ -149,17 +150,16 @@ class ImageDeliveryTest extends TestCase
         $this->assertLessThanOrEqual([120, 120], $this->dimensions($response->getContent()));
     }
 
-    public function test_the_original_size_is_a_still_under_gd_like_every_variant(): void
+    public function test_the_original_size_keeps_its_frames_only_where_the_processor_does(): void
     {
-        // The original is the canonical, a GD re-encode of one frame; a processor that keeps animation
-        // is pinned by its own contract test.
+        // The original is the canonical: one frame under GD, every frame under a processor that keeps them.
         $owner = Member::factory()->create();
         $file = $this->animatedGif($owner);
 
         $response = $this->actingAs($owner)->get($this->url($file, 'w_h', 'gif'));
 
         $response->assertOk();
-        $this->assertSame(1, $this->frameCount($response->getContent()));
+        $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? 3 : 1, $this->frameCount($response->getContent()));
     }
 
     public function test_a_source_the_processor_refuses_is_not_found(): void
