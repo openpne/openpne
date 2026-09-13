@@ -170,6 +170,9 @@ class AppIconTest extends TestCase
     {
         // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it.
         $file = $this->setFavicon(512);
+        $this->assertSame([512, 512], $this->dimensionsOf($this->get($this->url(512))->assertOk()->getContent()));
+
+        Storage::fake('image_cache');
         config(['openpne.images.max_upload_dimension' => 64]);
 
         $this->assertSame(

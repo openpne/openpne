@@ -13,6 +13,9 @@ final class ImageSourceLimit
 {
     public const DEFAULT_KILOBYTES = 20480;
 
+    /** The shipped per-side upload limit, standing in when that setting is itself blank. */
+    private const DEFAULT_SIDE = 5000;
+
     public static function bytes(): int
     {
         $configured = (int) config('openpne.images.max_source_kilobytes');
@@ -24,6 +27,7 @@ final class ImageSourceLimit
     {
         $configured = (int) config('openpne.images.max_source_pixels');
         $side = (int) config('openpne.images.max_upload_dimension');
+        $side = $side > 0 ? $side : self::DEFAULT_SIDE;
 
         return $configured > 0 ? $configured : $side * $side;
     }

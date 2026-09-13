@@ -166,6 +166,9 @@ class ImageDeliveryTest extends TestCase
         // deterministic refusal is the picture not being there, not a server error.
         $owner = Member::factory()->create();
         $file = $this->avatar($owner, 240, 120);
+        $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertOk();
+
+        Storage::fake('image_cache');
         config(['openpne.images.max_upload_dimension' => 100]);
 
         $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertNotFound();

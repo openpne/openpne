@@ -36,6 +36,13 @@ class ImageSourceLimitTest extends TestCase
         $this->assertSame(36_000_000, ImageSourceLimit::pixels());
     }
 
+    public function test_a_blank_side_limit_does_not_collapse_the_pixel_cap_to_nothing(): void
+    {
+        config(['openpne.images.max_source_pixels' => 0, 'openpne.images.max_upload_dimension' => '']);
+
+        $this->assertSame(25_000_000, ImageSourceLimit::pixels());
+    }
+
     public function test_a_set_value_is_taken_as_given(): void
     {
         config([

@@ -102,9 +102,10 @@ A stored image has a second pair of caps, [`ImageSourceLimit`](../../app/Files/I
 will read and decode, whatever the upload rules were when the bytes arrived — a row imported from
 OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
 each follows the upload rules (at least 20480 KB or the upload cap, and the per-side limit squared),
-never no cap; a set value is taken as given.
+never no cap; a set value is taken as given. A favicon the processor refuses is remembered as such
+until the favicon is uploaded again, whatever the caps are set to afterwards.
 
-The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
+The upload cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool
 that serves uploads and the CLI that runs tests and commands. Those limits, and the reverse proxy's,
 are prerequisites the operator sets alongside the cap, and the shipped `docker/` stack sizes them

@@ -406,7 +406,8 @@ allocating anything. Left blank, both follow the upload rules (the upload cap, a
 the per-side limit squared: 25 MP at the shipped 5000), so raising an upload limit
 raises them too. What this bounds is one decode at `max_source_pixels × 4` bytes,
 100 MB at the shipped default; a host sized below that sets the pixel cap lower,
-and uploads over it are then refused. An out-of-memory kill is not catchable, so
+and a stored image over it then yields no variant (a 404, or the shipped app icon)
+while the upload itself is not yet held to these caps. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
 concurrent misses of the same picture.
 

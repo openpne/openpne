@@ -25,6 +25,7 @@ use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -64,6 +65,9 @@ class LinkCardImageDeliveryTest extends TestCase
     public function test_a_picture_the_processor_refuses_is_not_found(): void
     {
         $diary = $this->diary(Visibility::Open);
+        $this->actingAs($this->author)->get($this->urlFor($diary))->assertOk();
+
+        Storage::fake('image_cache');
         config(['openpne.images.max_upload_dimension' => 10]);
 
         $this->actingAs($this->author)->get($this->urlFor($diary))->assertNotFound();
