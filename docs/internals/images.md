@@ -72,6 +72,16 @@ without it neither the canonical nor the size is turned upright, consistently.
 Consumers must handle null rather than substituting a guess: a reserved box of the wrong shape moves
 the layout twice, once when it is reserved and again when the picture disagrees with it.
 
+`files.animated` is recorded beside the size, from the same canonical: true when the processor kept
+more than one frame, false when it kept one, null when nothing has recorded it yet or the processor
+could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php) reads the answer's container;
+a walk it cannot finish is null, never a guess). Under GD it is always false. It is what lets a fit
+variant be asked for animated: `w640_h640_a` is answered only for a file whose `animated` is true,
+and 404 otherwise, unknown included — a still served under the `_a` key would keep its ETag after
+the fact was recorded and stay a still in every browser that saw it. `warm` fills a null from the
+canonical on the disk, and `rebuild` rewrites the fact from the new canonical, since another processor
+may keep frames this one did not.
+
 A raster upload the processor refuses is refused as an upload — the canonical is produced before the
 row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
 without one.
@@ -140,18 +150,19 @@ Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php)
 `ext-gd`; `imgproxy` hands the bytes to an [imgproxy](https://imgproxy.net) sidecar the operator runs
 ([`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php)). Both are held
 to one contract test: no source metadata survives a re-encode, EXIF Orientation is applied, a variant
-is a still, and the same header check refuses the same sources before anything is decoded. What
-differs:
+is a still unless its URL asks for the frames with `_a`, and the same header check refuses the same
+sources before anything is decoded. What differs:
 
 | | `gd` | `imgproxy` |
 |---|---|---|
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
-| Animation | the canonical is a still | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still; an APNG is a still under both, libvips reading its first frame like libpng |
+| Animation | the canonical and every variant are stills | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |
 | To install | nothing | the container (the compose file runs one) and three env values |
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
-view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories.
+view or by `openpne:image-cache warm`, which also records anew whether it animates; `rebuild` reclaims
+the old directories.
 
 **Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
 world-readable because the sidecar runs as another user), asks the sidecar for
@@ -206,9 +217,13 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
-- A variant's cache key carries token, geometry, format, generation, and the encoder — the
-  `processor`, `quality`, and whether `ext-exif` is present — so any of those changing is a new
-  variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
+- `_a` is a fit box's animated form (`w640_h640_a`), answered only for a file whose recorded
+  `animated` is true and 404 otherwise; a crop has no animated form, and neither has `w_h` (the
+  canonical keeps its frames where the processor does). An animated variant the sidecar refused over
+  budget is cached as a still until `rebuild`.
+- A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
+  encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing
+  is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
   refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
   never from the stored bytes. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself

@@ -3,9 +3,10 @@
 namespace App\Files;
 
 /**
- * `_sq` center-crops to fill the box exactly, which need not be square despite the OpenPNE 3 token.
- * null from fromGeometry() means malformed or outside the size whitelist, and the caller turns that
- * into a 404 so a request cannot drive arbitrary-size generation.
+ * `_sq` center-crops to fill the box exactly, which need not be square despite the OpenPNE 3 token;
+ * `_a` asks for every frame of a fit box, and a crop has no animated form (docs/internals/images.md,
+ * "Processing"). null from fromGeometry() means malformed or outside the size whitelist, and the
+ * caller turns that into a 404 so a request cannot drive arbitrary-size generation.
  */
 final class ImageTransform
 {
@@ -13,12 +14,13 @@ final class ImageTransform
         public readonly ?int $width,
         public readonly ?int $height,
         public readonly bool $square,
+        public readonly bool $animated = false,
     ) {}
 
     /** The full-size canonical (`w_h`): re-encoded, never resized. */
     public static function raw(): self
     {
-        return new self(null, null, false);
+        return new self(null, null, false, false);
     }
 
     public function isRaw(): bool
@@ -28,17 +30,17 @@ final class ImageTransform
 
     public static function fromGeometry(string $geometry): ?self
     {
-        if (! preg_match('/^w(\d*)_h(\d*)(_sq)?$/', $geometry, $m)) {
+        if (! preg_match('/^w(\d*)_h(\d*)(_sq|_a)?$/', $geometry, $m)) {
             return null;
         }
 
-        $square = ($m[3] ?? '') === '_sq';
+        $suffix = $m[3] ?? '';
         $width = $m[1] === '' ? null : (int) $m[1];
         $height = $m[2] === '' ? null : (int) $m[2];
 
-        // Original size (`w_h`): allowed, but a square crop needs concrete dimensions.
+        // Original size (`w_h`): allowed bare, since a crop needs a box and its frames are the processor's call.
         if ($width === null && $height === null) {
-            return $square ? null : self::raw();
+            return $suffix === '' ? self::raw() : null;
         }
 
         // A partial size (`w120_h`) is malformed; a full size must be whitelisted.
@@ -50,7 +52,7 @@ final class ImageTransform
             return null;
         }
 
-        return new self($width, $height, $square);
+        return new self($width, $height, $suffix === '_sq', $suffix === '_a');
     }
 
     /**
@@ -74,7 +76,7 @@ final class ImageTransform
 
     public function cacheKey(string $name, string $format): string
     {
-        $suffix = $this->square ? '_sq' : '';
+        $suffix = ($this->square ? '_sq' : '').($this->animated ? '_a' : '');
 
         return self::encoderPrefix($name)."/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }

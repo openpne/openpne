@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Files\AnimationProbe;
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageCache;
 use App\Files\ImageCachePublishException;
 use App\Files\ImageProcessorUnavailableException;
+use App\Files\ProcessedImage;
 use App\Models\File;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,17 +45,24 @@ class ImageCacheCommand extends Command
 
     private function status(ImageCache $cache): int
     {
-        $total = $warm = $refused = $cold = $unshown = 0;
+        $total = $warm = $refused = $cold = $unshown = $animated = $unknown = 0;
         $refusedRows = $unshownRows = [];
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$refusedRows, &$unshownRows): void {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$animated, &$unknown, &$refusedRows, &$unshownRows): void {
             foreach ($chunk as $file) {
                 $total++;
 
                 if ($file->imageFormat() === null) {
                     $unshown++;
                     $this->remember($unshownRows, $file, (string) $file->type);
-                } elseif ($cache->hasCanonical($file)) {
+
+                    continue;
+                }
+
+                $animated += $file->animated === true ? 1 : 0;
+                $unknown += $file->animated === null ? 1 : 0;
+
+                if ($cache->hasCanonical($file)) {
                     $warm++;
                 } elseif (($reason = $cache->refusal($file)) !== null) {
                     $refused++;
@@ -71,13 +80,15 @@ class ImageCacheCommand extends Command
         $this->listRows($refusedRows, $refused);
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
+        $this->line("  animated:  {$animated}  (recorded as animating; the fit sizes offer an animated variant)");
+        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded yet; `openpne:image-cache warm` records it)");
 
         return self::SUCCESS;
     }
 
     private function warm(ImageCache $cache, bool $retryFailed, bool $rebuild): int
     {
-        $n = ['done' => 0, 'sized' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
+        $n = ['done' => 0, 'facts' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
         $failedRows = $unshownRows = [];
         $streak = 0;
         $stopped = false;
@@ -92,7 +103,7 @@ class ImageCacheCommand extends Command
                 }
 
                 if (! $rebuild && $cache->hasCanonical($file)) {
-                    $n['sized'] += $this->recordSize($file, fn (): string => $cache->canonical($file), force: false) ? 1 : 0;
+                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file)) ? 1 : 0;
 
                     continue;
                 }
@@ -134,13 +145,13 @@ class ImageCacheCommand extends Command
 
                 $streak = 0;
                 $n['done']++;
-                $n['sized'] += $this->recordSize($file, fn (): string => $canonical, force: true) ? 1 : 0;
+                $n['facts'] += $this->recordFacts($file, $canonical) ? 1 : 0;
             }
 
             return true;
         });
 
-        $this->info(sprintf('%s %d picture(s), recorded %d size(s).', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['sized']));
+        $this->info(sprintf('%s %d picture(s), recorded %d fact(s).', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['facts']));
         $this->line("  refused:     {$n['refused']}  (remembered; `warm --retry-failed` asks again)");
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
@@ -153,28 +164,66 @@ class ImageCacheCommand extends Command
         return $n['unavailable'] + $n['unreadable'] + $n['unwritten'] > 0 ? self::FAILURE : self::SUCCESS;
     }
 
-    /** @param  callable(): string  $canonical */
-    private function recordSize(File $file, callable $canonical, bool $force): bool
+    /**
+     * From a canonical just made: the size and, when the processor could tell, whether it animates,
+     * each written whenever it differs (a canonical under another encoder is a different picture).
+     */
+    private function recordFacts(File $file, ProcessedImage $canonical): bool
     {
-        if (! $force && $file->width !== null && $file->height !== null) {
+        $facts = ['width' => $canonical->width, 'height' => $canonical->height];
+
+        if ($canonical->animated !== null) {
+            $facts['animated'] = $canonical->animated;
+        }
+
+        return $this->write($file, $facts);
+    }
+
+    /**
+     * From a canonical already on the disk: only what the row lacks, read from the bytes.
+     *
+     * @param  callable(): string  $canonical
+     */
+    private function recordMissingFacts(File $file, callable $canonical): bool
+    {
+        $missingSize = $file->width === null || $file->height === null;
+        $missingAnimated = $file->animated === null;
+
+        if (! $missingSize && ! $missingAnimated) {
             return false;
         }
 
         try {
-            $size = @getimagesizefromstring($canonical());
+            $bytes = $canonical();
         } catch (Throwable) {
             return false;
         }
 
-        if ($size === false || $size[0] < 1 || $size[1] < 1) {
+        $facts = [];
+
+        if ($missingSize && ($size = @getimagesizefromstring($bytes)) !== false && $size[0] >= 1 && $size[1] >= 1) {
+            $facts += ['width' => (int) $size[0], 'height' => (int) $size[1]];
+        }
+
+        if ($missingAnimated && ($animated = AnimationProbe::of($bytes, (string) $file->type)) !== null) {
+            $facts['animated'] = $animated;
+        }
+
+        return $this->write($file, $facts);
+    }
+
+    /**
+     * @param  array<string, int|bool>  $facts
+     */
+    private function write(File $file, array $facts): bool
+    {
+        $changed = array_filter($facts, fn (int|bool $value, string $key): bool => $file->{$key} !== $value, ARRAY_FILTER_USE_BOTH);
+
+        if ($changed === []) {
             return false;
         }
 
-        if ($file->width === (int) $size[0] && $file->height === (int) $size[1]) {
-            return false;
-        }
-
-        $file->update(['width' => (int) $size[0], 'height' => (int) $size[1]]);
+        $file->update($changed);
 
         return true;
     }

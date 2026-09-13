@@ -11,6 +11,6 @@ interface ImageProcessor
      */
     public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage;
 
-    /** Whether a canonical() spec keeps an animated source animated. */
+    /** Whether a spec that asks for frames (a canonical, or an animated fit) keeps an animated source animated. */
     public function preservesAnimation(): bool;
 }

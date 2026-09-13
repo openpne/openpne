@@ -49,6 +49,11 @@ class ImageCache
             ? ImageSpec::cover((int) $transform->width, (int) $transform->height, $format)
             : ImageSpec::fit((int) $transform->width, (int) $transform->height, $format);
 
+        // Not gated on files.animated here: the controller answers 404 for a file not known to animate.
+        if ($transform->animated) {
+            $spec = $spec->animated();
+        }
+
         $bytes = $this->processor->process($this->canonical($file, $maxBytes), $file->type, $spec)->bytes;
         $this->publishOrReport($key, $bytes);
 
@@ -79,7 +84,7 @@ class ImageCache
             throw new CanonicalUnavailableException("File [{$file->id}] was refused: ".(string) $disk->get($marker));
         }
 
-        return $this->generate($file, $maxBytes, strict: false, discard: false);
+        return $this->generate($file, $maxBytes, strict: false, discard: false)->bytes;
     }
 
     /**
@@ -90,7 +95,7 @@ class ImageCache
      * @throws ImageCachePublishException
      * @throws ImageProcessorUnavailableException
      */
-    public function warm(File $file): string
+    public function warm(File $file): ProcessedImage
     {
         return $this->generate($file, null, strict: true, discard: false);
     }
@@ -103,7 +108,7 @@ class ImageCache
      * @throws ImageCachePublishException
      * @throws ImageProcessorUnavailableException
      */
-    public function rebuild(File $file): string
+    public function rebuild(File $file): ProcessedImage
     {
         return $this->generate($file, null, strict: true, discard: true);
     }
@@ -114,7 +119,7 @@ class ImageCache
      * @throws ImageCachePublishException
      * @throws ImageProcessorUnavailableException
      */
-    private function generate(File $file, ?int $maxBytes, bool $strict, bool $discard): string
+    private function generate(File $file, ?int $maxBytes, bool $strict, bool $discard): ProcessedImage
     {
         $limit = ImageSourceLimit::bytes();
         $budget = $maxBytes === null ? $limit : min($maxBytes, $limit);
@@ -150,7 +155,7 @@ class ImageCache
             $this->forgetRefusal($file);
         }
 
-        return $processed->bytes;
+        return $processed;
     }
 
     /**

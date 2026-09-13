@@ -58,6 +58,26 @@ class ImageTransformTest extends TestCase
         }
     }
 
+    public function test_parses_an_animated_fit_box_and_keys_it_apart(): void
+    {
+        $t = ImageTransform::fromGeometry('w640_h640_a');
+
+        $this->assertNotNull($t);
+        $this->assertTrue($t->animated);
+        $this->assertFalse($t->square);
+        $this->assertFalse(ImageTransform::raw()->animated);
+        $this->assertStringEndsWith('/w640_h640_a.gif', $t->cacheKey('tok', 'gif'));
+        $this->assertNotSame(ImageTransform::fromGeometry('w640_h640')?->etag('tok', 'gif'), $t->etag('tok', 'gif'));
+    }
+
+    public function test_rejects_an_animated_crop_an_animated_original_and_an_unlisted_animated_size(): void
+    {
+        // A crop has no animated form, and the canonical's frames are the processor's call.
+        foreach (['w300_h400_sq_a', 'w640_h640_a_sq', 'w_h_a', 'w641_h641_a'] as $geometry) {
+            $this->assertNull(ImageTransform::fromGeometry($geometry), $geometry);
+        }
+    }
+
     public function test_parses_the_original_size(): void
     {
         $t = ImageTransform::fromGeometry('w_h');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Files\Imgproxy;
 
+use App\Files\AnimationProbe;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -18,9 +19,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Utils;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Log;
-use Intervention\Gif\Decoder as GifDecoder;
 use Psr\Http\Message\ResponseInterface;
-use Throwable;
 
 /**
  * The bytes reach the sidecar through the spool directory it reads as `local://`, never over a route
@@ -68,26 +67,26 @@ final class ImgproxyImageProcessor implements ImageProcessor
         ImageSourceLimit::preflight($bytes);
 
         $name = $this->spool->put($bytes, ImageSpec::formatFor($mime) ?? 'bin');
-        $still = ! $spec->isCanonical();
+        $keepFrames = $spec->isCanonical() || $spec->animated;
 
         try {
-            [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
+            [$response, $body] = $this->send($this->url->signed($this->options($spec, $keepFrames), $name, $spec->format), $spec->isCanonical());
 
             // An animation over the sidecar's resolution budget is kept as a still rather than refused.
-            if ($response->getStatusCode() === 422 && ! $still && in_array($spec->format, ['gif', 'webp'], true)) {
-                $still = true;
-                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
+            if ($response->getStatusCode() === 422 && $keepFrames && in_array($spec->format, ['gif', 'webp'], true)) {
+                $keepFrames = false;
+                [$response, $body] = $this->send($this->url->signed($this->options($spec, $keepFrames), $name, $spec->format), $spec->isCanonical());
             }
 
-            return $this->read($response, $body, $spec->format, $still);
+            return $this->read($response, $body, $spec->format, $keepFrames);
         } finally {
             $this->spool->delete($name);
         }
     }
 
-    private function options(ImageSpec $spec, bool $still): string
+    private function options(ImageSpec $spec, bool $keepFrames): string
     {
-        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality'), 'maf:'.($still ? 1 : self::MAX_FRAMES)];
+        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality'), 'maf:'.($keepFrames ? self::MAX_FRAMES : 1)];
 
         if ($spec->cover) {
             $options[] = "rt:fill/w:{$spec->width}/h:{$spec->height}/el:1/g:ce";
@@ -153,7 +152,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
      * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
-    private function read(ResponseInterface $response, string $body, string $format, bool $still): ProcessedImage
+    private function read(ResponseInterface $response, string $body, string $format, bool $keepFrames): ProcessedImage
     {
         $status = $response->getStatusCode();
 
@@ -164,7 +163,8 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 return $this->outage("imgproxy answered 200 with bytes that are not a {$format}.");
             }
 
-            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], ! $still && $this->animated($body, $format));
+            // A still was asked for, so no walk: the answer has one frame whatever the probe would say.
+            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], $keepFrames ? AnimationProbe::of($body, ImageSpec::mimeFor($format)) : false);
         }
 
         $reason = substr(trim($body), 0, 200);
@@ -174,20 +174,6 @@ final class ImgproxyImageProcessor implements ImageProcessor
         }
 
         return $this->outage("imgproxy answered {$status}: {$reason}");
-    }
-
-    /** Whether the answer holds more than one frame; the GIF walk is the library's and a walk it cannot finish counts as a still. */
-    private function animated(string $bytes, string $format): bool
-    {
-        try {
-            return match ($format) {
-                'gif' => count(GifDecoder::decode($bytes)->frames()) > 1,
-                'webp' => str_contains(substr($bytes, 0, 64), 'ANIM'),
-                default => false,
-            };
-        } catch (Throwable) {
-            return false;
-        }
     }
 
     private function outage(string $message): never

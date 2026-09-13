@@ -7,10 +7,11 @@ use Database\Factories\FileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 
 // The bytes are deliberately not a relation on this model: they are reached only through the
 // App\Files\FileStorage contract, whatever the backend.
-#[Fillable(['name', 'type', 'original_filename', 'related_entity_type', 'related_entity_id', 'explicit_visibility', 'byte_size', 'width', 'height'])]
+#[Fillable(['name', 'type', 'original_filename', 'related_entity_type', 'related_entity_id', 'explicit_visibility', 'byte_size', 'width', 'height', 'animated'])]
 class File extends Model
 {
     /** @use HasFactory<FileFactory> */
@@ -31,6 +32,7 @@ class File extends Model
             'byte_size' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
+            'animated' => 'boolean',
         ];
     }
 
@@ -59,10 +61,15 @@ class File extends Model
      * The size must be whitelisted in `openpne.images.allowed_sizes` to resolve. On Classic the
      * requested size is the rendered size (docs/internals/images.md, "Classic is not part of this").
      */
-    public function thumbnailUrl(int $width, int $height, bool $square = false): string
+    /** $animated asks for every frame, which only a fit box offers (docs/internals/images.md, "Processing"). */
+    public function thumbnailUrl(int $width, int $height, bool $square = false, bool $animated = false): string
     {
+        if ($square && $animated) {
+            throw new InvalidArgumentException('An animated variant is a fit box, never a crop.');
+        }
+
         $format = $this->imageFormat() ?? 'jpg';
-        $geometry = "w{$width}_h{$height}".($square ? '_sq' : '');
+        $geometry = "w{$width}_h{$height}".($square ? '_sq' : '').($animated ? '_a' : '');
 
         return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format]);
     }

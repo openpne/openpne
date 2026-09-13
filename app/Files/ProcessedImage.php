@@ -9,6 +9,7 @@ final class ProcessedImage
         public readonly string $mime,
         public readonly int $width,
         public readonly int $height,
-        public readonly bool $animated,
+        /** null when the processor could not tell. */
+        public readonly ?bool $animated,
     ) {}
 }
