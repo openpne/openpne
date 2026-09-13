@@ -28,6 +28,9 @@ class ImageCacheCommand extends Command
 
     private const ROWS_TO_LIST = 20;
 
+    /** Refusals in a row that end the run: a full or read-only cache disk, not one row's directory. */
+    private const UNWRITTEN_STREAK_TO_STOP = 3;
+
     public function handle(ImageCache $cache): int
     {
         return match ($this->argument('action')) {
@@ -76,8 +79,10 @@ class ImageCacheCommand extends Command
     {
         $n = ['done' => 0, 'sized' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
         $failedRows = $unshownRows = [];
+        $streak = 0;
+        $stopped = false;
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows): bool {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped): bool {
             foreach ($chunk as $file) {
                 if ($file->imageFormat() === null) {
                     $n['unshown']++;
@@ -109,11 +114,17 @@ class ImageCacheCommand extends Command
 
                     continue;
                 } catch (ImageCachePublishException $e) {
-                    // A disk that refused one write refuses the next, and rebuild has discarded before it writes.
+                    // Rebuild has discarded before it writes, so a disk refusing everything must not be walked to the end.
                     $n['unwritten']++;
                     $this->remember($failedRows, $file, $e->getMessage());
 
-                    return false;
+                    if (++$streak >= self::UNWRITTEN_STREAK_TO_STOP) {
+                        $stopped = true;
+
+                        return false;
+                    }
+
+                    continue;
                 } catch (Throwable $e) {
                     $n['unreadable']++;
                     $this->remember($failedRows, $file, $e->getMessage());
@@ -121,6 +132,7 @@ class ImageCacheCommand extends Command
                     continue;
                 }
 
+                $streak = 0;
                 $n['done']++;
                 $n['sized'] += $this->recordSize($file, fn (): string => $canonical, force: true) ? 1 : 0;
             }
@@ -133,7 +145,7 @@ class ImageCacheCommand extends Command
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
         $this->line("  unreadable:  {$n['unreadable']}  (the stored bytes could not be read)");
-        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write".($n['unwritten'] > 0 ? '; the run stopped there' : '').')');
+        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write".($stopped ? '; the run stopped after '.self::UNWRITTEN_STREAK_TO_STOP.' in a row' : '').')');
         $this->listRows($failedRows, $n['unreadable'] + $n['unwritten']);
         $this->line("  unshown:     {$n['unshown']}  (stored under an image type this version does not show as a picture)");
         $this->listRows($unshownRows, $n['unshown']);

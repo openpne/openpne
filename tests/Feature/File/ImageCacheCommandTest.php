@@ -200,16 +200,18 @@ class ImageCacheCommandTest extends TestCase
     {
         $this->skipUnlessModeBitsBind();
 
-        // Two cold pictures but one refusal counted: the run stops rather than discard any more.
+        // Four cold pictures but three refusals counted: the run stops rather than discard any more.
         $file = $this->stored('image/png', ImageBytes::png());
-        $this->stored('image/png', ImageBytes::png());
+        foreach (range(1, 3) as $more) {
+            $this->stored('image/png', ImageBytes::png());
+        }
         $root = Storage::disk('image_cache')->path('');
         chmod($root, 0o500);
 
         try {
             $this->artisan('openpne:image-cache', ['action' => 'warm'])
                 ->expectsOutputToContain('Warmed 0 picture(s)')
-                ->expectsOutputToContain('unwritten:   1  (the cache disk refused the write; the run stopped there)')
+                ->expectsOutputToContain('unwritten:   3  (the cache disk refused the write; the run stopped after 3 in a row)')
                 ->assertFailed();
         } finally {
             chmod($root, 0o755);

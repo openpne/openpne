@@ -87,8 +87,11 @@ size again; it is for bytes that changed under an unchanged key (a GD or libvips
 cache disk), a quality or processor change already being a new key. `rebuild` discards a picture's
 files only once its new canonical is in hand, and either run exits non-zero when any picture could
 not be made — the processor unavailable, the stored bytes unreadable, the cache disk refusing the
-write — so a deploy script notices. A row stored under an image type this version does not show as a
-picture (`image/pjpeg`, say, which OpenPNE 3 accepted) is counted as unshown and listed.
+write — so a deploy script notices. Three refused writes in a row end the run, since `rebuild` has
+discarded before it writes and a full disk would otherwise empty the cache; a row whose bytes are
+gone keeps the exit non-zero until the row is deleted, there being nothing to show for it anyway. A
+row stored under an image type this version does not show as a picture (`image/pjpeg`, say, which
+OpenPNE 3 accepted) is counted as unshown and listed.
 
 ## Upload size
 
