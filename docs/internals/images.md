@@ -135,9 +135,9 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
-- A variant's cache key carries token, geometry, format, generation, and the encoder — `driver`,
-  `quality`, and whether `ext-exif` is present — so any of those changing is a new variant, not a
-  stale one. It does **not** carry library or host versions (intervention/image, GD, Imagick,
+- A variant's cache key carries token, geometry, format, generation, and the encoder — the
+  `processor`, `quality`, and whether `ext-exif` is present — so any of those changing is a new
+  variant, not a stale one. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself
   such a change: every variant regenerates on its next request, and the superseded files stay on
   the cache disk until their File is deleted (nothing prunes them).

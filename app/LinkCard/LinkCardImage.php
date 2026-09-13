@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 use App\Files\FileUploader;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
 use App\Models\File;
 use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
 use Illuminate\Http\UploadedFile;
-use Intervention\Image\ImageManager;
 use Throwable;
 
 /**
@@ -38,7 +40,7 @@ final class LinkCardImage
     public function __construct(
         private readonly SafeHttpFetcher $fetcher,
         private readonly FileUploader $uploader,
-        private readonly ImageManager $images,
+        private readonly ImageProcessor $images,
         /**
          * Where fetched bytes are staged before the uploader takes them; the system temp directory
          * unless told otherwise. Injectable so a test can watch a directory it owns: the staged names
@@ -86,7 +88,7 @@ final class LinkCardImage
         // Only now, with the size known bounded, is decoding safe; it also confirms the bytes are the
         // image their header advertises, since a header-only forgery passes finfo and
         // getimagesizefromstring.
-        if (! $this->isDecodable($response->body)) {
+        if (! $this->isDecodable($response->body, $mime)) {
             return null;
         }
 
@@ -100,13 +102,13 @@ final class LinkCardImage
      * width × height × 4 bytes up front, so decoding to find out how big something is hands a
      * few-kilobyte file the ability to exhaust memory.
      */
-    private function isDecodable(string $bytes): bool
+    private function isDecodable(string $bytes, string $mime): bool
     {
         try {
-            $this->images->decode($bytes);
+            $this->images->process($bytes, $mime, ImageSpec::canonical(self::ACCEPTED[$mime]));
 
             return true;
-        } catch (Throwable) {
+        } catch (ImageProcessingException) {
             return false;
         }
     }

@@ -384,25 +384,27 @@ pipeline (a table-level move, not a re-upload) and are not stripped.
 
 ## Decoding an upload
 
-Everything that decodes a stored image goes through
-[`StillImageDecoder`](../../app/Files/StillImageDecoder.php), which yields the
-first frame of an animated source. Each frame is held as a full-canvas buffer, so
-decoding an animation costs frames × width × height however small the encoded file
-is, and GD allocates those buffers outside PHP's `memory_limit`. The upload rules
-bound one frame (`dimensions`, `openpne.images.max_upload_dimension`) and the wire
-size (`OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)); neither bounds the frame count, so a 31 KB 1000×1000 GIF of 150 frames costs
-~650 MB decoded (~1 GB under Imagick).
+Everything that decodes a stored image goes through the
+[`ImageProcessor`](../../app/Files/ImageProcessor.php) seam, selected by
+`OPENPNE_IMAGE_PROCESSOR`. The default, and the only one without a further
+dependency, is [`GdImageProcessor`](../../app/Files/GdImageProcessor.php): GD in
+the PHP process. Each decoded frame is held as a full-canvas buffer, so decoding
+an animation costs frames × width × height however small the encoded file is, and
+GD allocates those buffers outside PHP's `memory_limit`; a 31 KB 1000×1000 GIF of
+150 frames would cost ~650 MB. GD is therefore built with intervention/image's
+`decodeAnimation` off, so **a decode allocates one frame, never the frame count**,
+and a variant is always a still, as in OpenPNE 3.
 
-Under the default GD driver the frames are skipped before allocation, via
-intervention/image's `decodeAnimation`, so **a decode allocates one frame, never
-the frame count**. Imagick cannot: in 4.2.0 that option empties the Imagick object
-the decoder then reads the media type from, failing every GIF decode. Under
-`OPENPNE_IMAGE_DRIVER=imagick` the decoder therefore pays the full decode and
-collapses the frames after it — the thumbnail is still still, but the allocation
-above is reachable. That is an accepted limitation of a non-default driver, not a
-property of the pipeline.
+The processor also refuses before it decodes. The upload rules bound a member's
+upload (`dimensions`, `openpne.images.max_upload_dimension`, and
+`OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)), but a row imported from
+OpenPNE 3 never met them, so the GD processor reads the header first and rejects
+a declared side over `max_upload_dimension` or a source over
+`OPENPNE_IMAGE_MAX_SOURCE_KB` without allocating a pixel. An out-of-memory kill is
+not catchable, so this header check is the whole defence in the GD process.
 
-Thumbnails are therefore always still, as in OpenPNE 3. Original-size delivery
+Imagick is no longer offered: it could not skip frames before allocating them, and
+colour management is what an out-of-process backend is for. Original-size delivery
 streams the stored bytes without decoding, so an uploaded animation still plays
 there. Remote images are held to a stricter rule — a link card refuses anything
 it cannot prove is a single frame, because the bytes are not a member's upload

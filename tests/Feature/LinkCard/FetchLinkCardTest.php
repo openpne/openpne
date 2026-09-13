@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Files\FileUploader;
+use App\Files\ImageProcessor;
 use App\Jobs\FetchLinkCard;
 use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
@@ -19,7 +20,6 @@ use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Intervention\Image\ImageManager;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
@@ -322,7 +322,7 @@ class FetchLinkCardTest extends TestCase
             $fetcher,
             new MetadataExtractor,
             new OembedClient($fetcher),
-            new LinkCardImage($fetcher, $this->app->make(FileUploader::class), $this->app->make(ImageManager::class)),
+            new LinkCardImage($fetcher, $this->app->make(FileUploader::class), $this->app->make(ImageProcessor::class)),
             $this->app->make(LinkCardSettings::class),
         );
     }

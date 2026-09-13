@@ -1,0 +1,202 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\File;
+
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
+use App\Files\ProcessedImage;
+use Intervention\Gif\Builder;
+use Intervention\Gif\Decoder;
+use Tests\TestCase;
+
+/**
+ * Every implementation is held to the same fixtures (tests/Fixtures/images/README.md): what the
+ * seam promises is decided here, and a concrete test only names the processor.
+ */
+abstract class ImageProcessorContractTest extends TestCase
+{
+    private const GPS_SENTINEL = '2021:07:04';
+
+    abstract protected function processor(): ImageProcessor;
+
+    public function test_the_canonical_carries_no_source_metadata(): void
+    {
+        foreach (['jpeg-gps-orientation.jpg' => 'image/jpeg', 'png-meta.png' => 'image/png', 'webp-vp8x-meta.webp' => 'image/webp'] as $fixture => $mime) {
+            $canonical = $this->canonical($this->fixture($fixture), $mime);
+
+            $this->assertStringNotContainsString(self::GPS_SENTINEL, $canonical->bytes, $fixture);
+            $this->assertStringNotContainsString('LEAK', $canonical->bytes, $fixture);
+            $this->assertSame($mime, $canonical->mime, $fixture);
+            $this->assertNotFalse(getimagesizefromstring($canonical->bytes), "{$fixture}: the canonical must itself decode.");
+        }
+    }
+
+    public function test_copyright_and_comment_segments_do_not_survive_either(): void
+    {
+        // Backends that strip "metadata" tend to keep copyright by default; the contract is no
+        // source text at all.
+        $canonical = $this->canonical($this->fixture('jpeg-copyright.jpg'), 'image/jpeg');
+
+        $this->assertStringNotContainsString('COPYRIGHT-LEAK', $canonical->bytes);
+        $this->assertStringNotContainsString('COMMENT-LEAK', $canonical->bytes);
+    }
+
+    public function test_the_canonical_is_drawn_upright_and_records_the_rendered_size(): void
+    {
+        // The fixture is 12x6 declaring Orientation 6, which only ext-exif lets a decoder read.
+        $canonical = $this->canonical($this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg');
+        $expected = extension_loaded('exif') ? [6, 12] : [12, 6];
+
+        $this->assertSame($expected, [$canonical->width, $canonical->height]);
+        $this->assertSame($expected, $this->dimensions($canonical->bytes));
+    }
+
+    public function test_a_variant_of_an_animation_is_a_single_frame(): void
+    {
+        $variant = $this->processor()->process($this->animatedGif(), 'image/gif', ImageSpec::fit(120, 120, 'gif'));
+
+        $this->assertSame(1, $this->frameCount($variant->bytes));
+        $this->assertFalse($variant->animated);
+    }
+
+    public function test_the_canonical_keeps_an_animation_only_where_the_processor_says_so(): void
+    {
+        $canonical = $this->canonical($this->animatedGif(), 'image/gif');
+        $preserves = $this->processor()->preservesAnimation();
+
+        $this->assertSame($preserves ? 3 : 1, $this->frameCount($canonical->bytes));
+        $this->assertSame($preserves, $canonical->animated);
+    }
+
+    public function test_fit_scales_down_inside_the_box_and_never_up(): void
+    {
+        $source = $this->png(240, 120);
+
+        $this->assertSame([120, 60], $this->dimensions($this->processor()->process($source, 'image/png', ImageSpec::fit(120, 120, 'png'))->bytes));
+        $this->assertSame([240, 120], $this->dimensions($this->processor()->process($source, 'image/png', ImageSpec::fit(1200, 1200, 'png'))->bytes));
+    }
+
+    public function test_cover_fills_the_box_exactly_whatever_its_ratio(): void
+    {
+        $source = $this->png(240, 120);
+
+        $this->assertSame([300, 400], $this->dimensions($this->processor()->process($source, 'image/png', ImageSpec::cover(300, 400, 'png'))->bytes));
+        $this->assertSame([120, 120], $this->dimensions($this->processor()->process($source, 'image/png', ImageSpec::cover(120, 120, 'png'))->bytes));
+    }
+
+    public function test_a_background_flattens_transparency(): void
+    {
+        $processed = $this->processor()->process($this->transparentPng(32), 'image/png', ImageSpec::cover(16, 16, 'png')->withBackground('ffffff'));
+
+        $gd = imagecreatefromstring($processed->bytes);
+        $this->assertNotFalse($gd);
+        $rgba = imagecolorsforindex($gd, imagecolorat($gd, 8, 8));
+        $this->assertSame([255, 255, 255, 0], [$rgba['red'], $rgba['green'], $rgba['blue'], $rgba['alpha']]);
+    }
+
+    public function test_bytes_that_are_not_an_image_fail_deterministically(): void
+    {
+        $this->expectException(ImageProcessingException::class);
+
+        $this->processor()->process('definitely not a picture', 'image/png', ImageSpec::canonical('png'));
+    }
+
+    public function test_a_header_over_the_dimension_limit_is_refused_before_any_decode(): void
+    {
+        config(['openpne.images.max_upload_dimension' => 100]);
+
+        try {
+            $this->processor()->process($this->pngHeaderClaiming(40000, 40000), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('A 40000x40000 header was accepted.');
+        } catch (ImageProcessingException $e) {
+            // The message names the declared size: the bytes carry no pixels, so a decode would have
+            // failed with a different complaint.
+            $this->assertStringContainsString('40000x40000', $e->getMessage());
+        }
+    }
+
+    public function test_source_bytes_over_the_cap_are_refused(): void
+    {
+        config(['openpne.images.max_source_kilobytes' => 1]);
+
+        $this->expectException(ImageProcessingException::class);
+        $this->expectExceptionMessage('source limit');
+
+        $this->processor()->process($this->png(400, 400), 'image/png', ImageSpec::canonical('png'));
+    }
+
+    private function canonical(string $bytes, string $mime): ProcessedImage
+    {
+        return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) ImageSpec::formatFor($mime)));
+    }
+
+    protected function fixture(string $name): string
+    {
+        return (string) file_get_contents(base_path('tests/Fixtures/images/'.$name));
+    }
+
+    /** @return array{0: int, 1: int} */
+    private function dimensions(string $bytes): array
+    {
+        $size = getimagesizefromstring($bytes);
+
+        return [$size[0], $size[1]];
+    }
+
+    private function frameCount(string $bytes): int
+    {
+        return count(Decoder::decode($bytes)->frames());
+    }
+
+    private function png(int $width, int $height): string
+    {
+        $gd = imagecreatetruecolor($width, $height);
+        imagefill($gd, 0, 0, (int) imagecolorallocate($gd, 200, 30, 30));
+        ob_start();
+        imagepng($gd);
+
+        return (string) ob_get_clean();
+    }
+
+    private function transparentPng(int $side): string
+    {
+        $gd = imagecreatetruecolor($side, $side);
+        imagealphablending($gd, false);
+        imagesavealpha($gd, true);
+        imagefill($gd, 0, 0, (int) imagecolorallocatealpha($gd, 0, 0, 0, 127));
+        ob_start();
+        imagepng($gd);
+
+        return (string) ob_get_clean();
+    }
+
+    /** Three frames of different shades on a 60x60 logical screen. */
+    private function animatedGif(): string
+    {
+        $builder = Builder::canvas(60, 60);
+
+        foreach ([40, 140, 240] as $shade) {
+            $gd = imagecreate(60, 60);
+            imagecolorallocate($gd, $shade, 40, 200);
+            ob_start();
+            imagegif($gd);
+            $builder->addFrame(source: (string) ob_get_clean(), delay: 0.1);
+        }
+
+        $builder->setLoops(0);
+
+        return $builder->encode();
+    }
+
+    /** A complete PNG container whose IHDR declares $width x $height and which carries no pixels. */
+    private function pngHeaderClaiming(int $width, int $height): string
+    {
+        $ihdr = pack('NN', $width, $height)."\x08\x06\x00\x00\x00";
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+
+        return "\x89PNG\r\n\x1a\n".$chunk('IHDR', $ihdr).$chunk('IEND', '');
+    }
+}
