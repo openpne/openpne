@@ -413,8 +413,8 @@ types only the sidecar reads ([images](images.md), "Processing"). The sidecar se
 for it, over a signed URL to one operator-configured address; no URL a member
 typed reaches it. The spool is world-readable so that the sidecar's user can read
 it, which on a host shared with other unix users leaves each upload readable to
-them for the length of one request; a host that shares users puts the spool on a
-volume they do not see.
+them for the length of one request — bytes whose header PHP could not read included, since those
+are the sidecar's to judge; a host that shares users puts the spool on a volume they do not see.
 
 ## Cookies
 

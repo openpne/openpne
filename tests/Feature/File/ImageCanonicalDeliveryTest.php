@@ -126,6 +126,18 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->assertSame('<html><script>alert(1)</script></html>', $response->streamedContent());
     }
 
+    public function test_the_admin_raw_route_streams_bytes_past_the_sniff_window_intact(): void
+    {
+        // The first 4 KB are read for the sniff and echoed ahead of the rest; the join must be seamless.
+        $bytes = '%PDF-1.4 '.random_bytes(20_000);
+        $file = $this->stored('application/pdf', $bytes, ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
+
+        $response = $this->actingAs(AdminUser::factory()->create(), 'admin')->get(route('admin.file.raw', ['file' => $file->name]))->assertOk();
+
+        $this->assertSame($bytes, $response->streamedContent());
+        $this->assertSame((string) strlen($bytes), $response->headers->get('Content-Length'));
+    }
+
     public function test_a_non_raster_attachment_keeps_the_stored_bytes_and_its_name(): void
     {
         $owner = Member::factory()->create();

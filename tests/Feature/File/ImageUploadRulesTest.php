@@ -49,6 +49,24 @@ class ImageUploadRulesTest extends TestCase
         $this->assertSame(strlen($this->fixture('heic-gps-orientation.heic')), $file->byte_size);
     }
 
+    public function test_the_type_is_read_from_the_bytes_not_the_name(): void
+    {
+        // A fake upload names its type after its extension, so the real uploader's sniff is what a
+        // wrongly named file exercises: HEIC bytes called photo.jpg are still HEIC.
+        Storage::fake('image_cache');
+        $this->processorWith(ImageIntake::gd());
+        $path = tempnam(sys_get_temp_dir(), 'heic');
+        file_put_contents($path, $this->fixture('heic-gps-orientation.heic'));
+        $upload = new UploadedFile($path, 'photo.jpg', 'image/jpeg', null, true);
+
+        try {
+            $this->assertSame('image/heic', $upload->getMimeType());
+            $this->assertFalse(Validator::make(['images' => [$upload]], PostImageRules::rules())->passes());
+        } finally {
+            @unlink($path);
+        }
+    }
+
     public function test_the_avatar_rule_keeps_required_outside_the_shared_rule(): void
     {
         $this->processorWith(ImageIntake::gd());

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Files\ImageIntake;
+use Symfony\Component\Yaml\Yaml;
 use Tests\TestCase;
 
 /**
@@ -17,7 +18,10 @@ class ImgproxyBudgetTest extends TestCase
     {
         $budget = (string) ImageIntake::SIDECAR_MEGAPIXELS;
 
-        $this->assertStringContainsString('IMGPROXY_MAX_SRC_RESOLUTION: "'.$budget.'"', (string) file_get_contents(base_path('docker-compose.yml')));
-        $this->assertStringContainsString("IMGPROXY_MAX_SRC_RESOLUTION: '".$budget."'", (string) file_get_contents(base_path('.github/workflows/ci.yml')));
+        $compose = Yaml::parseFile(base_path('docker-compose.yml'));
+        $this->assertSame($budget, (string) $compose['services']['imgproxy']['environment']['IMGPROXY_MAX_SRC_RESOLUTION']);
+
+        $ci = Yaml::parseFile(base_path('.github/workflows/ci.yml'));
+        $this->assertSame($budget, (string) $ci['jobs']['test-imgproxy']['services']['imgproxy']['env']['IMGPROXY_MAX_SRC_RESOLUTION']);
     }
 }
