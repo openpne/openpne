@@ -8,6 +8,7 @@ use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
 use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
 use App\LinkCard\LinkCardImage;
@@ -16,6 +17,7 @@ use App\Models\LinkCard;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
@@ -110,65 +112,42 @@ class LinkCardImageTest extends TestCase
         $this->assertSame(0, $decoder->calls, '16 MP was decoded despite the pixel budget.');
     }
 
-    public function test_an_animated_image_never_reaches_the_decoder(): void
+    public function test_an_animated_image_is_imported_like_any_other(): void
     {
+        // The frame count is nobody's concern before the decode: GD reads one frame and the sidecar
+        // decodes out of process, so the two-frame GIF is decoded once and stored.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->animatedGif(), 'image/gif');
 
         $decoder = $this->spyDecoder();
 
-        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.gif', $card->id));
-        $this->assertSame(0, $decoder->calls, 'An animated image reached the decoder.');
+        $result = $this->importer($decoder)->import('https://cdn.example.com/anim.gif', $card->id);
+
+        $this->assertNotNull($result);
+        $this->assertSame(1, $decoder->calls);
+        $this->assertSame(1, File::count());
+        $this->assertSame($decoder->preservesAnimation(), $result['file']->animated);
+    }
+
+    public function test_a_processor_outage_costs_the_picture_and_is_logged(): void
+    {
+        // Not rethrown: the job fetches a card once, and bytes the sidecar cannot load answer as an
+        // outage too, so a member could otherwise fail the job at will with a broken og:image.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->png(10, 10), 'image/png');
+        Log::spy();
+
+        $result = $this->importer($this->outageProcessor())->import('https://cdn.example.com/hero.png', $card->id);
+
+        $this->assertNull($result);
         $this->assertSame(0, File::count());
-    }
-
-    public function test_an_animation_without_a_loop_extension_never_reaches_the_decoder(): void
-    {
-        // The shape a marker search misses: two frames, no NETSCAPE extension, and a colour-table
-        // byte that shifts the pattern a naive scan keys on.
-        $card = $this->card();
-        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
-        $this->queueBinary($this->animatedGif(loopExtension: false), 'image/gif');
-
-        $decoder = $this->spyDecoder();
-
-        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.gif', $card->id));
-        $this->assertSame(0, $decoder->calls, 'A loop-extension-free animation reached the decoder.');
-    }
-
-    public function test_an_animated_webp_behind_padding_never_reaches_the_decoder(): void
-    {
-        // A RIFF file may legally carry a JUNK chunk before ANIM, pushing it past any fixed window.
-        $card = $this->card();
-        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
-        $this->queueBinary($this->paddedAnimatedWebp(), 'image/webp');
-
-        $decoder = $this->spyDecoder();
-
-        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.webp', $card->id));
-        $this->assertSame(0, $decoder->calls, 'An animated WebP behind padding reached the decoder.');
-    }
-
-    public function test_an_animation_hidden_behind_the_parser_budget_never_reaches_the_decoder(): void
-    {
-        // About 20 KB, well inside the read cap, and structurally valid: two frames separated by
-        // enough legal comment blocks to exhaust the container walk's budget, which must not be
-        // treated as still.
-        $card = $this->card();
-        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
-        $this->queueBinary($this->paddedAnimatedGif(), 'image/gif');
-
-        $decoder = $this->spyDecoder();
-
-        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/padded.gif', $card->id));
-        $this->assertSame(0, $decoder->calls, 'An animation padded past the parser budget reached the decoder.');
-        $this->assertSame(0, File::count());
+        Log::shouldHaveReceived('error')->once();
     }
 
     public function test_a_still_gif_is_still_accepted(): void
     {
-        // The animation check must not cost the format entirely.
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->stillGif(), 'image/gif');
@@ -408,29 +387,9 @@ class LinkCardImageTest extends TestCase
         return $gif.$frame.$frame."\x3B";
     }
 
-    /** Two frames separated by enough legal comment blocks to exhaust the container walk's budget. */
-    private function paddedAnimatedGif(): string
-    {
-        $gif = "GIF89a\x08\x00\x08\x00\x80\x00\x00".pack('C*', 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x01);
-        $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00\x02\x02\x44\x01\x00";
-
-        return $gif.$frame.str_repeat("\x21\xFE\x01\x41\x00", 4095).$frame."\x3B";
-    }
-
-    /** An animated WebP whose ANIM chunk sits past any fixed-size prefix scan. */
-    private function paddedAnimatedWebp(): string
-    {
-        $chunk = fn (string $fourcc, string $data): string => $fourcc.pack('V', strlen($data)).$data
-            .(strlen($data) % 2 === 1 ? "\x00" : '');
-
-        $chunks = $chunk('JUNK', str_repeat("\x00", 5000)).$chunk('ANIM', str_repeat("\x00", 6));
-
-        return 'RIFF'.pack('V', 4 + strlen($chunks)).'WEBP'.$chunks;
-    }
-
     /**
      * A PNG whose IHDR claims a huge size while the file stays tiny — the decompression-bomb shape.
-     * Well-formed (CRCs, an IDAT, IEND) so the container walk accepts it and the size gate is what refuses it.
+     * Well-formed (CRCs, an IDAT, IEND) so finfo and the header read accept it and the size gate is what refuses it.
      */
     private function pngHeaderClaiming(int $width, int $height): string
     {
@@ -440,6 +399,22 @@ class LinkCardImageTest extends TestCase
             .$chunk('IHDR', pack('NN', $width, $height)."\x08\x02\x00\x00\x00")
             .$chunk('IDAT', str_repeat("\xAB", 32))
             .$chunk('IEND', '');
+    }
+
+    private function outageProcessor(): ImageProcessor
+    {
+        return new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('the sidecar is down');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+        };
     }
 
     /**

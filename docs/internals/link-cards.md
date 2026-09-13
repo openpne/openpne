@@ -355,40 +355,29 @@ outlives both that expiry and the body's own visibility rule. They are served in
 route below, which asks the referencing body.
 
 ```
-byte cap → finfo (real media type) → animation check → header dimensions
-         → side and pixel limits → store (whose canonical re-encode is the decode)
+byte cap → finfo (real media type) → header dimensions → side and pixel limits
+         → store (whose canonical re-encode is the decode)
 ```
 
 Everything before the decode exists because a decoder allocates roughly width × height × 4 bytes
-**per frame** before anything can inspect the result, and an out-of-memory kill is not catchable. So
-the size must be known bounded from data that is cheap to read:
+before anything can inspect the result, and an out-of-memory kill is not catchable. So the size must
+be known bounded from data that is cheap to read — **total pixels, not just each side**: the per-side
+limit alone permits 5000 × 5000 = 100 MB decoded, enough to end a 128 MB worker by itself.
 
-- **Total pixels, not just each side.** The per-side limit alone permits 5000 × 5000 = 100 MB
-  decoded, enough to end a 128 MB worker by itself.
-- **No animation.** Frame count is bounded by neither the wire size nor the dimensions, and
-  Intervention decodes animations by default, so a few-kilobyte GIF can hold hundreds of full-size
-  allocations. A card shows one still picture, so these are refused outright.
+The frame count is no part of that bound. The GD processor decodes one frame whatever the source
+holds, and the `imgproxy` sidecar decodes out of process under its own frame and pixel budgets
+([images](images.md), "Processing"), so an animated image is imported like a still one. What the card
+shows is a still either way: it asks only for the 120px crop and the fit rungs, and the
+`linkCard.image` route accepts neither the bare `w_h` canonical, the one form that may keep frames,
+nor an `_a` form.
 
-  [`ImageContainer`](../../app/LinkCard/ImageContainer.php) answers that by **walking the container's
-  own block lengths**, not by searching for a marker. A marker search is wrong in both directions: it
-  misses real animations — a two-frame GIF needs no NETSCAPE loop extension, and an animated WebP can
-  carry a padding chunk that pushes its `ANIM` header past any fixed window — and it invents them,
-  since a still image's compressed data or metadata may contain the same bytes by chance.
-
-  The question it answers is **"is this provably one still frame?"**, not "does this look animated?".
-  Those are not complements: the second answers "no" both for a still image and for a parse that gave
-  up, and the second case is the one an attacker constructs — pad a two-frame GIF with legal comment
-  blocks until the walk runs out of budget and it reports a still image. So the block limit is a CPU
-  bound only; reaching it, meeting an unknown block, or reading past the end all refuse the image.
-  The cost is that an unusual but honest file is refused too, which loses a card its picture where
-  the other direction loses the worker.
-
-`LinkCardImageTest` asserts the image processor is called zero times for an oversized header, for
-an over-budget pixel count and for an animated image — and that it *is* called for an acceptable one,
-so none of these can be satisfied by never decoding at all. The decode itself is `FileUploader`'s
-canonical re-encode ([file-storage](file-storage.md), "Writing an upload"); a processor outage is
-the one failure `import()` lets through, so the job retries the card instead of storing it without a
-picture.
+`LinkCardImageTest` asserts the image processor is called zero times for an oversized header and for
+an over-budget pixel count — and that it *is* called for an acceptable one, so neither can be
+satisfied by never decoding at all. The decode itself is `FileUploader`'s canonical re-encode
+([file-storage](file-storage.md), "Writing an upload"). A card is fetched once, so a processor outage
+during the import costs the card its picture, logged as an error, rather than failing the job: bytes
+the sidecar cannot load answer as an outage too ([images](images.md), "Processing"), and a member must
+not be able to fail the fetch at will with a broken `og:image`.
 
 Content-Type is the far end's claim, so the real type comes from `finfo`. SVG is refused: it is a
 scriptable document, and this one would be served from our own origin.
@@ -634,7 +623,7 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - Open Graph image groups are read in document order: `og:image` and `og:image:url` each open an
   object, a structured property belongs to the root preceding it, and the first object listed is the
   page's preferred one.
-- Animation is determined by parsing the container, never by searching for a marker or by decoding.
+
 - Card images have no explicit visibility. What may be seen is decided by the post named in the URL,
   on current data, on every request — never by the file, and never by the most permissive post that
   happens to share it.
@@ -648,7 +637,7 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.
-- The size and animation checks run before the decode, enforced by test.
+- The size checks run before the decode, enforced by test.
 - What gets a card is exactly what the reader sees linked: extraction is dispatched per format
   (`BodyRenderer::urls`) alongside rendering, so a Markdown code span yields no card and a bare
   `www.` host gets the same scheme the renderer gives it.

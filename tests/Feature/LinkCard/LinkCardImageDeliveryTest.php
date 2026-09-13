@@ -329,6 +329,19 @@ class LinkCardImageDeliveryTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_the_canonical_and_the_animated_forms_are_not_served_for_a_card(): void
+    {
+        // A card shows a still: the bare `w_h` is the one form whose frames a processor may keep, and
+        // `_a` asks for them outright, so neither geometry resolves on this route.
+        $diary = $this->diary(Visibility::Open);
+
+        foreach (['w_h', 'w320_h320_a'] as $geometry) {
+            $this->actingAs($this->author)
+                ->get(route('linkCard.image', array_merge($this->urlParts($diary), ['geometry' => $geometry])))
+                ->assertNotFound();
+        }
+    }
+
     public function test_a_card_pointing_at_a_file_that_is_not_a_card_image_refuses(): void
     {
         // Everything else here trusts `link_cards.image_file_id`; this is the one check that does

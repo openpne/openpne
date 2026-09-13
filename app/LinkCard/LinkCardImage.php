@@ -11,14 +11,14 @@ use App\Models\File;
 use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Copies a card's image into a local File rather than hot-linking it. The order of checks in
- * `import()` (byte cap, real media type, animation, header dimensions by side and total pixels,
- * then the upload's own decode) is the security property, because a decoder allocates
- * width × height × 4 bytes per frame and an out-of-memory kill is not catchable; see
- * docs/internals/link-cards.md.
+ * Copies a card's image into a local File rather than hot-linking it. The byte cap, the sniffed type
+ * and the header dimensions are checked before the decode, which allocates width × height × 4 bytes
+ * for one frame whatever the source holds (docs/internals/link-cards.md, "The image is copied, and
+ * the order of checks is the safety").
  */
 final class LinkCardImage
 {
@@ -50,8 +50,8 @@ final class LinkCardImage
     ) {}
 
     /**
-     * Null whenever the image cannot be had; a card without a picture is still a useful card, so
-     * only a processor outage (ImageProcessorUnavailableException) is let through.
+     * Null whenever the image cannot be had, a processor outage included: a card without a picture
+     * is still a useful card, and a card is fetched once.
      *
      * @param  float|null  $deadline  The job's remaining budget.
      * @return array{file: File, width: int, height: int}|null
@@ -72,9 +72,7 @@ final class LinkCardImage
 
         $mime = $this->mediaTypeOf($response->body);
 
-        // Asked as "prove this is one still frame", not "does this look animated", so a parser that
-        // gave up is not an all-clear.
-        if ($mime === null || ! ImageContainer::isSafeStill($response->body, $mime)) {
+        if ($mime === null) {
             return null;
         }
 
@@ -163,8 +161,11 @@ final class LinkCardImage
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
         } catch (ImageProcessorUnavailableException $e) {
-            // An outage is not "no picture": left to the job, so the card is fetched again later.
-            throw $e;
+            // Logged rather than rethrown: bytes the sidecar cannot load answer as an outage too, and a
+            // member must not be able to fail the fetch job at will with a broken og:image.
+            Log::error('Link card image not stored: the image processor is unavailable.', ['card' => $linkCardId, 'reason' => $e->getMessage()]);
+
+            return null;
         } catch (Throwable) {
             return null;
         } finally {
