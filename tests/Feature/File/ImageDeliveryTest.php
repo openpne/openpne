@@ -4,8 +4,11 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageCache;
 use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -162,6 +165,44 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? 3 : 1, $this->frameCount($response->getContent()));
     }
 
+    public function test_an_animated_variant_is_served_only_for_a_picture_recorded_as_animating(): void
+    {
+        // Recorded true under a processor that says so; under GD the variant is still one frame.
+        $owner = Member::factory()->create();
+        $this->processorReportsAnimation();
+        $file = $this->animatedGif($owner);
+        $this->assertTrue($file->animated);
+
+        $response = $this->actingAs($owner)->get($file->thumbnailUrl(640, 640, animated: true));
+
+        $response->assertOk();
+        $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? 3 : 1, $this->frameCount($response->getContent()));
+        // The `_a` in the URL reached the processor as the ask for frames.
+        $this->assertSame([true], array_values(array_map(fn (ImageSpec $spec): bool => $spec->animated, array_filter($this->specsSeen, fn (ImageSpec $spec): bool => $spec->width === 640))));
+        $this->assertThrows(fn () => $file->thumbnailUrl(640, 640, square: true, animated: true), \InvalidArgumentException::class);
+        // Allowed as a still, not listed in animated_sizes: refused when built rather than a 404 URL.
+        $this->assertThrows(fn () => $file->thumbnailUrl(120, 120, animated: true), \InvalidArgumentException::class);
+        $this->assertNotSame($this->actingAs($owner)->get($file->thumbnailUrl(640, 640))->headers->get('ETag'), $response->headers->get('ETag'));
+        $this->actingAs($owner)->get($this->url($file, 'w640_h640_sq_a', 'gif'))->assertNotFound();
+        $this->actingAs($owner)->get($this->url($file, 'w_h_a', 'gif'))->assertNotFound();
+    }
+
+    public function test_an_animated_variant_is_not_found_for_a_picture_not_known_to_animate(): void
+    {
+        // A still under either processor, and a picture nothing has recorded yet.
+        $owner = Member::factory()->create();
+        $still = app(FileUploader::class)->store(UploadedFile::fake()->image('s.png', 16, 16), 'member', (int) $owner->getKey());
+        $this->assertFalse($still->animated);
+        $unknown = $this->animatedGif($owner);
+        $unknown->update(['animated' => null]);
+
+        $this->actingAs($owner)->get($still->thumbnailUrl(640, 640, animated: true))->assertNotFound();
+        $this->actingAs($owner)->get($unknown->thumbnailUrl(640, 640, animated: true))->assertNotFound();
+        // Not a 304 either: the gate sits before the validator.
+        $this->actingAs($owner)->get($still->thumbnailUrl(640, 640, animated: true), ['If-None-Match' => ImageTransform::fromGeometry('w640_h640_a')?->etag($still->name, 'png')])->assertNotFound();
+        $this->actingAs($owner)->get($still->thumbnailUrl(640, 640))->assertOk();
+    }
+
     public function test_a_source_the_processor_refuses_is_not_found(): void
     {
         // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it: a
@@ -256,6 +297,35 @@ class ImageDeliveryTest extends TestCase
             'member',
             (int) $owner->getKey(),
         );
+    }
+
+    /** @var list<ImageSpec> */
+    public array $specsSeen = [];
+
+    /** GD's answer with the flag flipped: enough to record `animated` true without a sidecar. */
+    private function processorReportsAnimation(): void
+    {
+        $inner = $this->app->make(ImageProcessor::class);
+        $test = $this;
+        $this->app->instance(ImageProcessor::class, new class($inner, $test) implements ImageProcessor
+        {
+            public function __construct(private readonly ImageProcessor $inner, private readonly ImageDeliveryTest $test) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                $this->test->specsSeen[] = $spec;
+                $processed = $this->inner->process($bytes, $mime, $spec);
+
+                return new ProcessedImage($processed->bytes, $processed->mime, $processed->width, $processed->height, $spec->isCanonical() ? $mime === 'image/gif' : $processed->animated);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return $this->inner->preservesAnimation();
+            }
+        });
+        $this->app->forgetInstance(ImageCache::class);
+        $this->app->forgetInstance(FileUploader::class);
     }
 
     /** One frame as a standalone GIF, the form Builder::addFrame() takes. */

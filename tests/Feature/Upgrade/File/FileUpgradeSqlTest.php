@@ -86,6 +86,7 @@ class FileUpgradeSqlTest extends TestCase
             'type' => 'image/jpeg',
             'original_filename' => 'photo.jpg',
             'byte_size' => 4096,
+            'animated' => null,
             'explicit_visibility' => null,
             'related_entity_type' => null,
             'related_entity_id' => null,

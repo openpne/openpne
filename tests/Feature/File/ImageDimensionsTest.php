@@ -5,9 +5,11 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageProcessingException;
+use App\Files\ImageProcessor;
 use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Intervention\Gif\Builder;
 use Tests\TestCase;
 
 class ImageDimensionsTest extends TestCase
@@ -22,13 +24,30 @@ class ImageDimensionsTest extends TestCase
         $this->assertSame(120, $file->height);
     }
 
-    public function test_a_gif_upload_records_the_pixel_size(): void
+    public function test_a_gif_upload_records_the_pixel_size_and_that_it_does_not_animate(): void
     {
         $file = $this->upload(UploadedFile::fake()->createWithContent('a.gif', $this->fixture('tiny.gif')));
 
         $this->assertSame('image/gif', $file->type);
         $this->assertSame(6, $file->width);
         $this->assertSame(6, $file->height);
+        $this->assertFalse($file->animated);
+    }
+
+    public function test_an_animated_gif_upload_records_the_frames_the_processor_kept(): void
+    {
+        $builder = Builder::canvas(12, 12);
+        foreach ([40, 140, 240] as $shade) {
+            $gd = imagecreate(12, 12);
+            imagecolorallocate($gd, $shade, 40, 200);
+            ob_start();
+            imagegif($gd);
+            $builder->addFrame(source: (string) ob_get_clean(), delay: 0.1);
+        }
+
+        $file = $this->upload(UploadedFile::fake()->createWithContent('a.gif', $builder->encode()));
+
+        $this->assertSame(app(ImageProcessor::class)->preservesAnimation(), $file->animated);
     }
 
     public function test_an_upload_records_the_size_a_rotated_photo_renders_at(): void
@@ -101,7 +120,7 @@ class ImageDimensionsTest extends TestCase
 
         // The row without bytes fails the run: a deploy script must not read "warm ran" as "every picture is made".
         $this->artisan('openpne:backfill-image-dimensions')
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->expectsOutputToContain('refused:     1')
             ->expectsOutputToContain('unreadable:  1')
             ->assertFailed();

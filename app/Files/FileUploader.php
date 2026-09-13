@@ -57,6 +57,7 @@ class FileUploader
             'byte_size' => $bytes !== null ? strlen($bytes) : (int) $upload->getSize(),
             'width' => $canonical?->width,
             'height' => $canonical?->height,
+            'animated' => $canonical?->animated,
         ]);
 
         $stream = $bytes !== null ? $this->memoryStream($bytes) : fopen($upload->getRealPath(), 'rb');

@@ -80,6 +80,26 @@ class ImgproxyImageProcessorTest extends TestCase
         $this->assertMatchesRegularExpression('#/kcr:0/q:85/maf:200/plain/local:///spool/[A-Za-z0-9]{32}\.png@png$#', $this->history[1]['request']->getUri()->getPath());
     }
 
+    public function test_an_animated_fit_asks_for_every_frame_and_falls_back_to_a_still_when_refused(): void
+    {
+        $gif = $this->animatedGif(3);
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/gif'], $gif));
+
+        $processed = $processor->process($gif, 'image/gif', ImageSpec::fit(120, 120, 'gif')->animated());
+
+        $this->assertStringContainsString('/maf:200/rt:fit/w:120/h:120/el:0/', $this->history[0]['request']->getUri()->getPath());
+        // Left unjudged: nobody records a variant's frames, and the walk would cost the answer's size again.
+        $this->assertNull($processed->animated);
+
+        // Over the sidecar's budget: asked again as a still, and reported as one.
+        $processor = $this->processor(new Response(422, [], 'Invalid source image'), new Response(200, ['Content-Type' => 'image/gif'], $this->animatedGif(1)));
+
+        $processed = $processor->process($gif, 'image/gif', ImageSpec::fit(120, 120, 'gif')->animated());
+
+        $this->assertStringContainsString('/maf:1/rt:fit/', $this->history[1]['request']->getUri()->getPath());
+        $this->assertFalse($processed->animated);
+    }
+
     public function test_a_cover_asks_for_the_exact_box_and_a_background_flattens(): void
     {
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
@@ -181,14 +201,20 @@ class ImgproxyImageProcessorTest extends TestCase
         }
     }
 
-    public function test_a_variant_answer_over_four_times_the_limit_is_an_outage(): void
+    public function test_a_variant_answer_over_twice_the_limit_is_an_outage(): void
     {
-        // A variant is held to no limit of its own, so past its headroom nothing can be concluded.
+        // Drawn from a canonical within the limit, a variant past its headroom says something about the sidecar, not the picture.
         config(['openpne.images.max_source_kilobytes' => 1]);
-        $this->assertGreaterThan(4096, strlen($this->noisyPng(80, 80)));
+        $this->assertGreaterThan(2048, strlen($this->noisyPng(80, 80)));
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
 
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png')), ImageProcessorUnavailableException::class);
+        try {
+            $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png'));
+            $this->fail('A variant answer over its cap was kept.');
+        } catch (ImageProcessorUnavailableException $e) {
+            // The number pins the headroom: twice the 1 KB limit.
+            $this->assertStringContainsString('2048 byte cap', $e->getMessage());
+        }
         Log::shouldHaveReceived('error')->once();
     }
 
