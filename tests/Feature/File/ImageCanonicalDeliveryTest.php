@@ -128,8 +128,12 @@ class ImageCanonicalDeliveryTest extends TestCase
             }
         });
 
+        $public = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['explicit_visibility' => File::VISIBILITY_PUBLIC]);
+
         $this->actingAs($owner)->get($file->url())->assertStatus(503)->assertHeader('Retry-After', '30');
+        $this->actingAs($owner)->get(route('image.show', ['format' => 'jpg', 'geometry' => 'w_h', 'name' => $file->name, 'ext' => 'jpg']))->assertStatus(503)->assertHeader('Retry-After', '30');
         $this->get(route('banner.image', $banner->name))->assertStatus(503)->assertHeader('Retry-After', '30');
+        $this->get(route('file.public', $public->name))->assertStatus(503)->assertHeader('Retry-After', '30');
     }
 
     public function test_a_matching_canonical_tag_is_answered_304_without_reading_anything(): void

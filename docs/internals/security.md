@@ -341,8 +341,9 @@ Deliberately not set:
 
 An uploaded picture's stored bytes are authoritative and are never what a viewer receives inline.
 Every raster route — `/file/{name}`, the `w_h` original under `/cache/img`, the banner, public
-asset, link-card image and app icon routes, and the MCP image tools — answers the **canonical**: a full-size re-encode the image
-processor produced at upload, before the row was saved ([file-storage](file-storage.md), "Writing an
+asset, link-card image and app icon routes, and the MCP image tools — answers the **canonical**, or
+a variant drawn from it: the canonical is a full-size re-encode the image processor produced at
+upload, before the row was saved ([file-storage](file-storage.md), "Writing an
 upload"; [images](images.md), "files.width / files.height"). A re-encode carries no source metadata
 — EXIF with its GPS coordinates, XMP, IPTC, comments — and, since the processor applies EXIF
 Orientation as it draws, none is needed for the picture to stand upright. The inline
