@@ -94,7 +94,7 @@ class ImageTransformTest extends TestCase
         $transform = ImageTransform::fromGeometry('w120_h120_sq');
 
         // Derived from the key so that whatever makes a new disk variant moves the tag with it.
-        $this->assertSame('"'.sha1('abc/g2/gd-q85/w120_h120_sq.png').'"', $transform->etag('abc', 'png'));
+        $this->assertSame('"'.sha1('abc/g3/gd-q85/w120_h120_sq.png').'"', $transform->etag('abc', 'png'));
         $this->assertNotSame($transform->etag('abc', 'png'), ImageTransform::fromGeometry('w_h')->etag('abc', 'png'));
         $this->assertNotSame($transform->etag('abc', 'png'), $transform->etag('abc', 'jpg'));
     }
@@ -112,19 +112,21 @@ class ImageTransformTest extends TestCase
         $this->assertNotSame($before, $transform->cacheKey('abc', 'png'));
 
         config(['openpne.images.processor' => 'gd', 'openpne.images.exif' => false]);
-        $this->assertSame('abc/g2/gd-q85-noexif/w120_h120_sq.png', $transform->cacheKey('abc', 'png'));
+        $this->assertSame('abc/g3/gd-q85-noexif/w120_h120_sq.png', $transform->cacheKey('abc', 'png'));
     }
 
-    public function test_the_original_is_keyed_without_an_encoder(): void
+    public function test_the_original_is_keyed_with_the_encoder_like_any_variant(): void
     {
-        // w_h is passed through unencoded, so quality must not move its key — or refetch its bytes.
+        // w_h is the canonical, a re-encode, so the encoder that produced it is part of its key.
         config(['openpne.images.processor' => 'gd', 'openpne.images.quality' => 85, 'openpne.images.exif' => true]);
         $raw = ImageTransform::fromGeometry('w_h');
         $before = $raw->cacheKey('abc', 'png');
 
-        config(['openpne.images.quality' => 95, 'openpne.images.processor' => 'imgproxy', 'openpne.images.exif' => false]);
-        $this->assertSame($before, $raw->cacheKey('abc', 'png'));
-        $this->assertSame('abc/g2/w_h.png', $before);
+        $this->assertSame('abc/g3/gd-q85/w_h.png', $before);
+        $this->assertSame(ImageTransform::encoderPrefix('abc').'/w_h.png', $before);
+
+        config(['openpne.images.quality' => 95]);
+        $this->assertNotSame($before, $raw->cacheKey('abc', 'png'));
     }
 
     public function test_cache_key_layout(): void
@@ -132,6 +134,6 @@ class ImageTransformTest extends TestCase
         config(['openpne.images.processor' => 'gd', 'openpne.images.quality' => 85, 'openpne.images.exif' => true]);
         // The generation segment sits under the file's own directory so that purging the
         // file still takes every variant it ever had with it.
-        $this->assertSame('abc/g2/gd-q85/w120_h120_sq.png', ImageTransform::fromGeometry('w120_h120_sq')->cacheKey('abc', 'png'));
+        $this->assertSame('abc/g3/gd-q85/w120_h120_sq.png', ImageTransform::fromGeometry('w120_h120_sq')->cacheKey('abc', 'png'));
     }
 }

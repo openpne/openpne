@@ -356,7 +356,7 @@ route below, which asks the referencing body.
 
 ```
 byte cap → finfo (real media type) → animation check → header dimensions
-         → side and pixel limits → decode → store
+         → side and pixel limits → store (whose canonical re-encode is the decode)
 ```
 
 Everything before the decode exists because a decoder allocates roughly width × height × 4 bytes
@@ -383,9 +383,12 @@ the size must be known bounded from data that is cheap to read:
   The cost is that an unusual but honest file is refused too, which loses a card its picture where
   the other direction loses the worker.
 
-`LinkCardImageTest` asserts the decoder is called zero times for an oversized header, for an
-over-budget pixel count and for an animated image — and that it *is* called for an acceptable one, so
-none of these can be satisfied by never decoding at all.
+`LinkCardImageTest` asserts the image processor is called zero times for an oversized header, for
+an over-budget pixel count and for an animated image — and that it *is* called for an acceptable one,
+so none of these can be satisfied by never decoding at all. The decode itself is `FileUploader`'s
+canonical re-encode ([file-storage](file-storage.md), "Writing an upload"); a processor outage is
+the one failure `import()` lets through, so the job retries the card instead of storing it without a
+picture.
 
 Content-Type is the far end's claim, so the real type comes from `finfo`. SVG is refused: it is a
 scriptable document, and this one would be served from our own origin.

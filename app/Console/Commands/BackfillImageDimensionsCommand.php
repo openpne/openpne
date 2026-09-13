@@ -1,18 +1,16 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Console\Commands;
 
-use App\Files\FileStorage;
-use App\Files\ImageDimensions;
+use App\Files\ImageCache;
 use App\Models\File;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Throwable;
 
 /**
- * See docs/internals/images.md, "files.width / files.height".
+ * Reads each size off the canonical, so a run also warms the canonical of every row it visits
+ * (docs/internals/images.md, "files.width / files.height").
  */
 class BackfillImageDimensionsCommand extends Command
 {
@@ -20,7 +18,7 @@ class BackfillImageDimensionsCommand extends Command
 
     protected $description = 'Record the pixel dimensions of stored images that have none';
 
-    public function handle(FileStorage $storage): int
+    public function handle(ImageCache $cache): int
     {
         $updated = 0;
         $skipped = 0;
@@ -28,9 +26,9 @@ class BackfillImageDimensionsCommand extends Command
         File::query()
             ->whereNull('width')
             ->where('type', 'like', 'image/%')
-            ->chunkById(200, function (Collection $chunk) use ($storage, &$updated, &$skipped): void {
+            ->chunkById(200, function (Collection $chunk) use ($cache, &$updated, &$skipped): void {
                 foreach ($chunk as $file) {
-                    $size = $this->dimensions($storage, $file);
+                    $size = $this->dimensions($cache, $file);
 
                     if ($size === null) {
                         $skipped++;
@@ -49,16 +47,14 @@ class BackfillImageDimensionsCommand extends Command
     }
 
     /** @return array{0: int, 1: int}|null */
-    private function dimensions(FileStorage $storage, File $file): ?array
+    private function dimensions(ImageCache $cache, File $file): ?array
     {
         try {
-            $stream = $storage->readStream($file);
-            $bytes = (string) stream_get_contents($stream);
-            fclose($stream);
+            $size = @getimagesizefromstring($cache->canonical($file));
         } catch (Throwable) {
             return null;
         }
 
-        return ImageDimensions::fromBytes($bytes);
+        return $size !== false && $size[0] > 0 && $size[1] > 0 ? [(int) $size[0], (int) $size[1]] : null;
     }
 }

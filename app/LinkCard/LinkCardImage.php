@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\LinkCard;
 
 use App\Files\FileUploader;
-use App\Files\ImageProcessingException;
-use App\Files\ImageProcessor;
-use App\Files\ImageSpec;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\UploadLimit;
 use App\Models\File;
 use App\Outbound\OutboundException;
@@ -18,8 +16,9 @@ use Throwable;
 /**
  * Copies a card's image into a local File rather than hot-linking it. The order of checks in
  * `import()` (byte cap, real media type, animation, header dimensions by side and total pixels,
- * then decode) is the security property, because a decoder allocates width × height × 4 bytes per
- * frame and an out-of-memory kill is not catchable; see docs/internals/link-cards.md.
+ * then the upload's own decode) is the security property, because a decoder allocates
+ * width × height × 4 bytes per frame and an out-of-memory kill is not catchable; see
+ * docs/internals/link-cards.md.
  */
 final class LinkCardImage
 {
@@ -41,7 +40,6 @@ final class LinkCardImage
     public function __construct(
         private readonly SafeHttpFetcher $fetcher,
         private readonly FileUploader $uploader,
-        private readonly ImageProcessor $images,
         /**
          * Where fetched bytes are staged before the uploader takes them; the system temp directory
          * unless told otherwise. Injectable so a test can watch a directory it owns: the staged names
@@ -86,33 +84,8 @@ final class LinkCardImage
             return null;
         }
 
-        // Only now, with the size known bounded, is decoding safe; it also confirms the bytes are the
-        // image their header advertises, since a header-only forgery passes finfo and
-        // getimagesizefromstring.
-        if (! $this->isDecodable($response->body, $mime)) {
-            return null;
-        }
-
+        // Only now, with the size known bounded, is the upload's canonical re-encode (the decode) safe.
         return $this->store($response->body, $mime, $dimensions, $linkCardId);
-    }
-
-    /**
-     * Whether the bytes actually decode.
-     *
-     * Called strictly after the dimension check, never before: a decoder allocates
-     * width × height × 4 bytes up front, so decoding to find out how big something is hands a
-     * few-kilobyte file the ability to exhaust memory.
-     */
-    private function isDecodable(string $bytes, string $mime): bool
-    {
-        try {
-            // The smallest fit: the decode is the check, and the encode of one pixel costs nothing.
-            $this->images->process($bytes, $mime, ImageSpec::fit(1, 1, self::ACCEPTED[$mime]));
-
-            return true;
-        } catch (ImageProcessingException) {
-            return false;
-        }
     }
 
     /**
@@ -189,6 +162,9 @@ final class LinkCardImage
             $file = $this->uploader->store($upload, relatedType: self::RELATED_TYPE, relatedId: $linkCardId);
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
+        } catch (ImageProcessorUnavailableException $e) {
+            // An outage is not "no picture": left to the job, so the card is fetched again later.
+            throw $e;
         } catch (Throwable) {
             return null;
         } finally {

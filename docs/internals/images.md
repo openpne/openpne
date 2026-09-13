@@ -58,33 +58,29 @@ wanted.
 
 ## files.width / files.height
 
-`FileUploader` records the pixel size of an upload whose type is `image/*`, from the bytes it is
-already holding. Both columns are nullable, and **null means unknown** — a non-image, a row written
-before the columns existed, OpenPNE 3 data (which records no dimensions), or bytes that do not
-decode. A zero side counts as unknown too: a header-only decode reports one, and consumers divide by
-it.
+`FileUploader` records the pixel size of a raster upload from its **canonical**, the full-size
+re-encode [`ImageCache`](../../app/Files/ImageCache.php) keeps at the `w_h` key and draws every
+variant from. Both columns are nullable, and **null means unknown** — a non-raster file, a row written
+before the columns existed, or OpenPNE 3 data (which records no dimensions). A zero side counts as
+unknown too, since consumers divide by it.
 
-The recorded size is the **rendered** size, not the container's declared one.
-[`ImageDimensions`](../../app/Files/ImageDimensions.php) reads EXIF Orientation and swaps the sides
-for the quarter-turn values (5-8), because delivery decodes through intervention/image, which
-auto-orients before it scales: a photo shot sideways declares 4032x3024 and draws 3024x4032. This
-holds on both ingestion paths — the metadata stripper drops EXIF but re-emits Orientation in a
-minimal APP1 precisely so rotation survives, so stripped bytes still declare the unrotated size.
-
-Reading Orientation needs `ext-exif` (a Composer `suggest`, and already required for thumbnails of
-rotated photos to render upright at all). Without it the swap does not happen and the declared size
-is recorded — the same reading intervention/image makes when it cannot auto-orient either.
+The recorded size is therefore the **rendered** size, not the container's declared one: the processor
+applies EXIF Orientation as it re-encodes, so a photo shot sideways declares 4032x3024 and is recorded,
+like it is drawn, as 3024x4032. Under the GD processor that needs `ext-exif` (a Composer `suggest`);
+without it neither the canonical nor the size is turned upright, consistently.
 
 Consumers must handle null rather than substituting a guess: a reserved box of the wrong shape moves
 the layout twice, once when it is reserved and again when the picture disagrees with it.
 
-Reading a size never fails an upload. It is metadata for layout, not a validation gate — the upload
-rules (type, byte size, `max_upload_dimension`) are elsewhere and unaffected.
+A raster upload the processor refuses is refused as an upload — the canonical is produced before the
+row is saved — so a stored raster File always has a size. Non-raster files are stored without one.
 
-`openpne:backfill-image-dimensions` fills the rows that have none, reading each file's bytes through
-the `FileStorage` seam. Run it after an OpenPNE 3 upgrade. It selects only null rows, so it is
-idempotent and an interrupted run resumes by being re-run; a file whose bytes are gone or undecodable
-is left null and reported as skipped rather than stopping the run.
+`openpne:backfill-image-dimensions` fills the rows that have none by reading each file's canonical,
+generating it where a row imported from OpenPNE 3 has none yet, so a run also warms those. Run it
+after an OpenPNE 3 upgrade. It selects only null rows, so it is idempotent and an interrupted run
+resumes by being re-run; a file whose bytes are gone or refused by the processor is left null and
+reported as skipped rather than stopping the run, and a refused one is remembered as such
+([security](security.md), "Decoding an upload").
 
 ## Upload size
 
@@ -145,13 +141,14 @@ changing it moves the layout. Classic keeps its 120px square.
   permitting or not.
 - A variant's cache key carries token, geometry, format, generation, and the encoder — the
   `processor`, `quality`, and whether `ext-exif` is present — so any of those changing is a new
-  variant, not a stale one. It does **not** carry library or host versions (intervention/image, GD,
+  variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
+  refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
+  never from the stored bytes. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself
   such a change: every variant regenerates on its next request, and the superseded files stay on
   the cache disk until their File is deleted (nothing prunes them).
 - **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry the key
-  hashed as their `ETag` (`ImageTransform::etag`; the unencoded `w_h` original's key has no
-  encoder segment, so an encoder change does not refetch it). `/file/{name}` and the admin raw
+  hashed as their `ETag` (`ImageTransform::etag`). `/file/{name}` and the admin raw
   route carry the file token, whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. The public

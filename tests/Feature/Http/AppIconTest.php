@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\ImageTransform;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
@@ -179,8 +180,8 @@ class AppIconTest extends TestCase
             file_get_contents(public_path('icon-512x512.png')),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
-        Storage::disk('image_cache')->assertExists("{$file->name}/app-icon-512.refused");
-        Storage::disk('image_cache')->assertMissing("{$file->name}/app-icon-512.png");
+        Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
     public function test_the_too_small_verdict_is_remembered_but_the_shipped_bytes_are_not(): void
@@ -190,8 +191,8 @@ class AppIconTest extends TestCase
 
         // Remembering only the verdict keeps a public request from re-reading the stored original,
         // while an upgrade that replaces the shipped icon still takes effect.
-        Storage::disk('image_cache')->assertExists("{$file->name}/app-icon-512.unfit");
-        Storage::disk('image_cache')->assertMissing("{$file->name}/app-icon-512.png");
+        Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.unfit');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
     /** @return array{int, int} */

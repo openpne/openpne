@@ -7,7 +7,6 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
-use App\Files\ImageProcessor;
 use App\Files\ImageTransform;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
@@ -361,7 +360,7 @@ class InternalLinkCardTest extends TestCase
             $fetcher,
             new MetadataExtractor,
             new OembedClient($fetcher),
-            new LinkCardImage($fetcher, $this->app->make(FileUploader::class), $this->app->make(ImageProcessor::class)),
+            new LinkCardImage($fetcher, $this->app->make(FileUploader::class)),
             $this->app->make(LinkCardSettings::class),
         );
     }
