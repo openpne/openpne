@@ -6,7 +6,8 @@ use App\Filament\Resources\Files\FileResource;
 use App\Filament\Resources\Pages\ListPage;
 use App\Files\FileUploader;
 use App\Files\FormUpload;
-use App\Files\ImageMetadataStripException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\UploadLimit;
 use App\Models\File;
 use Filament\Actions\Action;
@@ -49,9 +50,9 @@ class ListFiles extends ListPage
 
                     try {
                         $file = app(FileUploader::class)->store($upload, explicitVisibility: File::VISIBILITY_PUBLIC);
-                    } catch (ImageMetadataStripException) {
-                        // Don't 500 the panel on a fail-closed strip: notify and halt the action.
-                        Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+                    } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+                        // Don't 500 the panel on a refused picture: notify and halt the action.
+                        Notification::make()->danger()->title($e::userMessage())->send();
 
                         throw new Halt;
                     }

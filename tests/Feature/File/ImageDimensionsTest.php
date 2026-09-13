@@ -4,6 +4,7 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageProcessingException;
 use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -76,17 +77,15 @@ class ImageDimensionsTest extends TestCase
         $this->assertNull($file->height);
     }
 
-    public function test_an_image_whose_size_cannot_be_read_still_uploads(): void
+    public function test_an_image_whose_size_cannot_be_read_is_refused(): void
     {
-        // A header-only webp reads as an image but decodes to 0x0; stripping is off because it is
-        // fail-closed on bytes like these.
+        // A header-only webp reads as an image but decodes to nothing; the canonical re-encode is the
+        // gate, so it never becomes a File.
         config(['openpne.images.strip_metadata' => false]);
 
-        $file = $this->upload(UploadedFile::fake()->createWithContent('broken.webp', $this->headerOnlyWebp()));
+        $this->expectException(ImageProcessingException::class);
 
-        $this->assertSame('image/webp', $file->type);
-        $this->assertNull($file->width);
-        $this->assertNull($file->height);
+        $this->upload(UploadedFile::fake()->createWithContent('broken.webp', $this->headerOnlyWebp()));
     }
 
     public function test_the_backfill_fills_a_row_that_has_no_size(): void

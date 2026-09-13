@@ -11,9 +11,10 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * A disk backend's byte write is not part of the surrounding transaction, so compensating() tracks
- * every File it stores and deletes their bytes best-effort when that transaction fails. FileUploader
- * only undoes a failure inside its own call, never a later one in the outer transaction.
+ * A disk backend's byte write and the cache disk are not part of the surrounding transaction, so
+ * compensating() tracks every File it stores and deletes their bytes and canonical best-effort when
+ * that transaction fails. FileUploader only undoes a failure inside its own call, never a later one
+ * in the outer transaction.
  */
 class PostImages
 {
@@ -23,6 +24,7 @@ class PostImages
     public function __construct(
         private readonly FileUploader $uploader,
         private readonly FileStorage $storage,
+        private readonly ImageCache $cache,
     ) {}
 
     /**
@@ -38,8 +40,8 @@ class PostImages
             try {
                 // count($stored) is this upload's 0-based slot (nothing tracked yet for it).
                 $file = $this->uploader->store($upload, $relatedType, $relatedId);
-            } catch (ImageMetadataStripException $e) {
-                throw $this->stripFailed($relatedType, count($stored), $e);
+            } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+                throw $this->processingFailed($relatedType, count($stored), $e);
             }
             $stored[] = $file;
 
@@ -51,6 +53,7 @@ class PostImages
         } catch (Throwable $e) {
             foreach ($stored as $file) {
                 $this->storage->delete($file);
+                $this->cache->purge($file);
             }
 
             throw $e;
@@ -87,7 +90,7 @@ class PostImages
      * `images.{slot}` where a single-image form keys `image`. A related type with no member-facing
      * field keeps the raw exception, which its own Filament caller converts.
      */
-    private function stripFailed(string $relatedType, int $slot, ImageMetadataStripException $e): Throwable
+    private function processingFailed(string $relatedType, int $slot, ImageProcessingException|ImageProcessorUnavailableException $e): Throwable
     {
         $field = match ($relatedType) {
             'timelinePost', 'group' => 'image',
@@ -98,6 +101,6 @@ class PostImages
 
         return $field === null
             ? $e
-            : ValidationException::withMessages([$field => [ImageMetadataStripException::userMessage()]]);
+            : ValidationException::withMessages([$field => [$e::userMessage()]]);
     }
 }

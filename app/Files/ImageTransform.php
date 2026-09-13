@@ -15,6 +15,12 @@ final class ImageTransform
         public readonly bool $square,
     ) {}
 
+    /** The full-size canonical (`w_h`): re-encoded, never resized. */
+    public static function raw(): self
+    {
+        return new self(null, null, false);
+    }
+
     public function isRaw(): bool
     {
         return $this->width === null && $this->height === null;
@@ -32,7 +38,7 @@ final class ImageTransform
 
         // Original size (`w_h`): allowed, but a square crop needs concrete dimensions.
         if ($width === null && $height === null) {
-            return $square ? null : new self(null, null, false);
+            return $square ? null : self::raw();
         }
 
         // A partial size (`w120_h`) is malformed; a full size must be whitelisted.
@@ -52,18 +58,25 @@ final class ImageTransform
      * the bytes a transform produces, since a variant is otherwise only regenerated on a miss and
      * the cache disk outlives a release.
      */
-    private const GENERATION = 2;
+    private const GENERATION = 3;
 
     /**
-     * `openpne.images.exif` is in the key because without ext-exif a rotated photo is not turned
-     * upright, which is a different picture rather than a stale one.
+     * The directory every derived file of $name lives under, so the encoder — `openpne.images.exif`
+     * included, because without ext-exif a rotated photo is not turned upright, which is a different
+     * picture rather than a stale one — is part of every key at once.
      */
+    public static function encoderPrefix(string $name): string
+    {
+        $encoder = config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
+
+        return "{$name}/g".self::GENERATION."/{$encoder}";
+    }
+
     public function cacheKey(string $name, string $format): string
     {
         $suffix = $this->square ? '_sq' : '';
-        $encoder = $this->isRaw() ? '' : '/'.config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 
-        return "{$name}/g".self::GENERATION."{$encoder}/w{$this->width}_h{$this->height}{$suffix}.{$format}";
+        return self::encoderPrefix($name)."/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }
 
     /**

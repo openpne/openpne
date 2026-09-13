@@ -6,6 +6,7 @@ namespace Tests\Feature\LinkCard;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\ImageCache;
 use App\Files\ImageMetadataStripper;
 use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
@@ -308,16 +309,18 @@ class LinkCardImageTest extends TestCase
      */
     private function watchingUploader(array &$staged, bool $thenThrow = false): FileUploader
     {
-        return new class($this->app->make(FileStorage::class), $this->app->make(ImageMetadataStripper::class), $staged, $thenThrow) extends FileUploader
+        return new class($this->app->make(FileStorage::class), $this->app->make(ImageMetadataStripper::class), $this->app->make(ImageProcessor::class), $this->app->make(ImageCache::class), $staged, $thenThrow) extends FileUploader
         {
             /** @param  list<string>  $staged */
             public function __construct(
                 FileStorage $storage,
                 ImageMetadataStripper $stripper,
+                ImageProcessor $processor,
+                ImageCache $cache,
                 private array &$staged,
                 private readonly bool $thenThrow,
             ) {
-                parent::__construct($storage, $stripper);
+                parent::__construct($storage, $stripper, $processor, $cache);
             }
 
             public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
@@ -361,10 +364,14 @@ class LinkCardImageTest extends TestCase
 
     private function importer(?ImageProcessor $images = null, ?string $staging = null, ?FileUploader $uploader = null): LinkCardImage
     {
+        // The decode now happens inside FileUploader, so a spy is bound where the uploader resolves it.
+        if ($images !== null) {
+            $this->app->instance(ImageProcessor::class, $images);
+        }
+
         return new LinkCardImage(
             $this->fakeFetcher(),
             $uploader ?? $this->app->make(FileUploader::class),
-            $images ?? $this->app->make(ImageProcessor::class),
             $staging,
         );
     }
@@ -438,12 +445,16 @@ class LinkCardImageTest extends TestCase
 
     /**
      * A PNG whose IHDR claims a huge size while the file stays tiny — the decompression-bomb shape.
-     * The CRC is left wrong on purpose: a decoder would reject it, which is the point, since nothing
-     * should get far enough to try.
+     * Well-formed (CRCs, an IDAT, IEND) so the container walk accepts it and the size gate is what refuses it.
      */
     private function pngHeaderClaiming(int $width, int $height): string
     {
-        return "\x89PNG\r\n\x1a\n".pack('N', 13).'IHDR'.pack('NN', $width, $height)."\x08\x02\x00\x00\x00".pack('N', 0);
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+
+        return "\x89PNG\r\n\x1a\n"
+            .$chunk('IHDR', pack('NN', $width, $height)."\x08\x02\x00\x00\x00")
+            .$chunk('IDAT', str_repeat("\xAB", 32))
+            .$chunk('IEND', '');
     }
 
     /**

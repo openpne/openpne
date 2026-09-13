@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\ImageProcessor;
+use App\Files\ImageProcessorUnavailableException;
+use App\Files\ImageSpec;
+use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
@@ -179,8 +184,56 @@ class AppIconTest extends TestCase
             file_get_contents(public_path('icon-512x512.png')),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
-        Storage::disk('image_cache')->assertExists("{$file->name}/app-icon-512.refused");
-        Storage::disk('image_cache')->assertMissing("{$file->name}/app-icon-512.png");
+        Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
+    }
+
+    public function test_a_processor_outage_serves_the_shipped_icon_without_remembering_a_verdict(): void
+    {
+        // The cache is emptied first so the canonical itself, not only the icon, has to go to the processor.
+        $file = $this->setFavicon(512);
+        Storage::disk('image_cache')->deleteDirectory($file->name);
+        $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
+
+        $this->assertSame(
+            file_get_contents(public_path('icon-512x512.png')),
+            $this->get($this->url(512))->assertOk()->getContent(),
+        );
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
+    }
+
+    public function test_a_processor_outage_after_the_canonical_was_warmed_serves_the_shipped_icon_too(): void
+    {
+        // The canonical is a hit, so the icon's own cover is the only call that reaches the processor.
+        $file = $this->setFavicon(512);
+        $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
+
+        $this->assertSame(
+            file_get_contents(public_path('icon-512x512.png')),
+            $this->get($this->url(512))->assertOk()->getContent(),
+        );
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
+    }
+
+    public function test_a_cache_disk_that_cannot_be_written_still_serves_the_generated_icon(): void
+    {
+        $this->skipUnlessModeBitsBind();
+
+        // The encoder directory already exists after the upload, so that is what has to refuse the write.
+        $file = $this->setFavicon(512);
+        $directory = Storage::disk('image_cache')->path(ImageTransform::encoderPrefix($file->name));
+        chmod($directory, 0o500);
+
+        try {
+            $response = $this->get($this->url(192))->assertOk();
+        } finally {
+            chmod($directory, 0o755);
+        }
+
+        $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
+        $this->assertNotSame(file_get_contents(public_path('icon-192x192.png')), $response->getContent(), 'The shipped icon was served instead of the generated one.');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-192.png');
     }
 
     public function test_the_too_small_verdict_is_remembered_but_the_shipped_bytes_are_not(): void
@@ -190,8 +243,24 @@ class AppIconTest extends TestCase
 
         // Remembering only the verdict keeps a public request from re-reading the stored original,
         // while an upgrade that replaces the shipped icon still takes effect.
-        Storage::disk('image_cache')->assertExists("{$file->name}/app-icon-512.unfit");
-        Storage::disk('image_cache')->assertMissing("{$file->name}/app-icon-512.png");
+        Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.unfit');
+        Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
+    }
+
+    private function processorThatIsDown(): ImageProcessor
+    {
+        return new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new ImageProcessorUnavailableException('imgproxy did not answer');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        };
     }
 
     /** @return array{int, int} */

@@ -26,7 +26,7 @@ class AppIcon
     ];
 
     public function __construct(
-        private readonly FileStorage $storage,
+        private readonly ImageCache $cache,
         private readonly ImageProcessor $processor,
         private readonly SnsSettingService $settings,
     ) {}
@@ -59,18 +59,19 @@ class AppIcon
 
     /**
      * PNG bytes of the app icon at $size, generating and caching on a miss. Cached under the
-     * source's name token so FileObserver's purge takes these with it, and a replaced favicon —
-     * a new token — can never read the old icon back.
+     * source's encoder directory so FileObserver's purge and a processor change both take these with
+     * it, and a replaced favicon — a new token — can never read the old icon back.
      */
     public function bytes(File $source, int $size): string
     {
         $disk = $this->disk();
-        $key = "{$source->name}/app-icon-{$size}.png";
-        $tooSmall = "{$source->name}/app-icon-{$size}.unfit";
-        $refused = "{$source->name}/app-icon-{$size}.refused";
+        $prefix = ImageTransform::encoderPrefix($source->name);
+        $key = "{$prefix}/app-icon-{$size}.png";
+        $tooSmall = "{$prefix}/app-icon-{$size}.unfit";
+        $refused = "{$prefix}/app-icon-{$size}.refused";
 
-        if ($disk->exists($key)) {
-            return (string) $disk->get($key);
+        if ($disk->exists($key) && ($hit = $disk->get($key)) !== null) {
+            return $hit;
         }
 
         // Only the verdict (too small, or refused by the processor) is cached, never the shipped
@@ -79,10 +80,19 @@ class AppIcon
             return self::shippedBytes($size);
         }
 
-        $original = $this->original($source);
+        try {
+            $canonical = $this->cache->canonical($source);
+        } catch (CanonicalUnavailableException) {
+            $disk->put($refused, '');
 
-        // The image header is enough to rule the source out.
-        $dimensions = @getimagesizefromstring($original);
+            return self::shippedBytes($size);
+        } catch (ImageProcessorUnavailableException) {
+            // An outage is not a verdict: the shipped icon now, the branded one when the processor is back.
+            return self::shippedBytes($size);
+        }
+
+        // The canonical's header is enough to rule the source out.
+        $dimensions = @getimagesizefromstring($canonical);
         if ($dimensions === false || min($dimensions[0], $dimensions[1]) < $size) {
             $disk->put($tooSmall, '');
 
@@ -90,37 +100,30 @@ class AppIcon
         }
 
         try {
-            $bytes = $this->generate($original, $source->type, $size);
+            $bytes = $this->generate($canonical, $source->type, $size);
         } catch (ImageProcessingException) {
             $disk->put($refused, '');
 
             return self::shippedBytes($size);
+        } catch (ImageProcessorUnavailableException) {
+            return self::shippedBytes($size);
         }
 
-        $disk->put($key, $bytes);
+        $this->cache->publishOrReport($key, $bytes);
 
         return $bytes;
     }
 
-    private function generate(string $original, string $mime, int $size): string
+    private function generate(string $canonical, string $mime, int $size): string
     {
         return $this->processor
-            ->process($original, $mime, ImageSpec::cover($size, $size, 'png')->withBackground('ffffff'))
+            ->process($canonical, $mime, ImageSpec::cover($size, $size, 'png')->withBackground('ffffff'))
             ->bytes;
     }
 
     private static function shippedBytes(int $size): string
     {
         return (string) file_get_contents(public_path(self::shippedAsset($size)));
-    }
-
-    private function original(File $file): string
-    {
-        $stream = $this->storage->readStream($file);
-        $bytes = stream_get_contents($stream);
-        fclose($stream);
-
-        return (string) $bytes;
     }
 
     private function disk(): Filesystem

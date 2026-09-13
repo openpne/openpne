@@ -4,7 +4,8 @@ namespace App\Features\Member;
 
 use App\Features\Member\Actions\RemoveAvatar;
 use App\Features\Member\Actions\SetAvatar;
-use App\Files\ImageMetadataStripException;
+use App\Files\ImageProcessingException;
+use App\Files\ImageProcessorUnavailableException;
 use App\Files\UploadLimit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -41,10 +42,10 @@ class MemberAvatarController extends Controller
     {
         try {
             $action($this->viewer(), $request->file('image'));
-        } catch (ImageMetadataStripException) {
-            // SetAvatar uses FileUploader directly (no PostImages), so convert the fail-closed strip
+        } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
+            // SetAvatar uses FileUploader directly (no PostImages), so convert the refused picture
             // to a validation error on the submitted field ('image', the avatar picker) here.
-            throw ValidationException::withMessages(['image' => [ImageMetadataStripException::userMessage()]]);
+            throw ValidationException::withMessages(['image' => [$e::userMessage()]]);
         }
 
         return redirect()->route('member.avatar.edit')

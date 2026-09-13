@@ -31,15 +31,21 @@ Readers that work to a budget bound the read themselves ([mcp.md](mcp.md)).
 
 ## Writing an upload
 
-[`FileUploader`](../../app/Files/FileUploader.php) writes the `files` row and the bytes inside one DB
-transaction. For the DB-blob backend that is fully atomic, both rows being in the same database. A
-disk backend's physical write cannot join the transaction, so a failure after the bytes were written
-is compensated in `FileUploader` itself — not in `FileObserver`, because a rollback never fires the
-`deleting` event — and only when the row was saved, since a `files.name` collision means the key
-belongs to a pre-existing file whose bytes must survive.
+[`FileUploader`](../../app/Files/FileUploader.php) produces a raster upload's canonical — the
+full-size re-encode every variant is drawn from ([images.md](images.md)) — before anything is saved,
+so a picture the processor refuses costs nothing to undo. It then writes the `files` row, the bytes
+and the canonical inside one DB transaction. For the DB-blob backend the row and the bytes are fully
+atomic, both being in the same database. A disk backend's physical write and the cache disk cannot
+join the transaction, so a failure after either was written is compensated in `FileUploader` itself
+— not in `FileObserver`, because a rollback never fires the `deleting` event — and only when the row
+was saved, since a `files.name` collision means the key belongs to a pre-existing file whose bytes and
+cache must survive. A cache disk that refuses the canonical does not fail the upload: the refusal is
+reported and the first view regenerates the canonical, so a full or read-only cache disk degrades
+delivery, never posting.
 
 The residual race is accepted: if the commit fails after a successful disk write and the compensating
 delete does not run, the bytes are unreachable with no metadata row pointing at them and only waste
 space. A write that spans several files inside a wider transaction needs
 [`PostImages`](../../app/Files/PostImages.php), whose `compensating()` owns that transaction and
-tracks every file it stored ([group-talk.md](group-talk.md)).
+tracks every file it stored, deleting their bytes and purging their cache when it fails
+([group-talk.md](group-talk.md)).
