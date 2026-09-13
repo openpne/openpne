@@ -97,7 +97,7 @@
                                 <label><input type="checkbox" name="remove_image" value="1"> {{ __('Delete') }}</label>
                             </p>
                         @endif
-                        <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <input type="file" name="image" accept="{{ image_upload_accept() }}">
                         @error('image')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

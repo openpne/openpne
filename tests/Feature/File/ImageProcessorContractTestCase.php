@@ -172,7 +172,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
     protected function canonical(string $bytes, string $mime): ProcessedImage
     {
-        return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) ImageSpec::formatFor($mime)));
+        return $this->processor()->process($bytes, $mime, ImageSpec::canonical((string) $this->processor()->intake()->canonicalFormat($mime)));
     }
 
     protected function fixture(string $name): string

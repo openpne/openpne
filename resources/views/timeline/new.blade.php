@@ -32,7 +32,7 @@
                 <tr>
                     <th><label for="timeline_image">{{ __('Image') }}</label></th>
                     <td>
-                        <input type="file" id="timeline_image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <input type="file" id="timeline_image" name="image" accept="{{ image_upload_accept() }}">
                         @error('image')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

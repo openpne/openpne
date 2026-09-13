@@ -19,7 +19,7 @@
                         @endif
                         <label><input type="checkbox" name="remove_images[]" value="{{ $image->id }}" id="community_{{ $kind }}_photo_{{ $n }}_photo"> {{ __('remove the current photo') }}</label>
                     @else
-                        <input type="file" name="images[]" id="community_{{ $kind }}_photo_{{ $n }}_photo" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <input type="file" name="images[]" id="community_{{ $kind }}_photo_{{ $n }}_photo" accept="{{ image_upload_accept() }}">
                     @endif
                 </li>
             </ul>

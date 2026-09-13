@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools\Concerns;
 
+use App\Files\ImageProcessor;
 use App\Files\PostImages;
 use App\Files\UploadLimit;
 use App\Http\Requests\Concerns\PostImageRules;
@@ -57,11 +58,13 @@ trait DecodesImageUploads
 
     protected function imagesSchema(JsonSchema $schema): ArrayType
     {
+        $types = array_map(fn (string $mime): string => substr($mime, strlen('image/')), app(ImageProcessor::class)->intake()->mimes());
+
         return $schema->array()->items($schema->string())->max(PostImages::MAX_IMAGES)
             ->description(
                 'Pictures to attach, at most '.PostImages::MAX_IMAGES.'. Each is the file\'s own bytes as standard '
                 .'base64 — no data: prefix, no url-safe substitutions — and at most '
-                .UploadLimit::kilobytes().' KB once decoded. jpeg, png, gif or webp: what a '
+                .UploadLimit::kilobytes().' KB once decoded. '.implode(', ', $types).': what a '
                 .'picture is is decided by reading it, whatever it is called.',
             );
     }

@@ -6,6 +6,8 @@ namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\GdImageProcessor;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -19,6 +21,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
 /**
@@ -89,6 +93,39 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->assertStringContainsString(self::GPS_SENTINEL, $response->streamedContent());
     }
 
+    public function test_a_row_typed_by_its_canonical_is_served_from_the_cache_and_refused_once_that_is_lost(): void
+    {
+        // A HEIC uploaded under the sidecar is typed image/jpeg; back on GD its canonical is served
+        // while the cache disk holds it, and the stored bytes cannot be decoded once it does not.
+        $owner = Member::factory()->create();
+        $file = $this->uploaded($owner, 'jpeg-gps-orientation.jpg');
+        $this->overwriteStored($file, $this->fixture('heic-gps-orientation.heic'));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+
+        $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+
+        Storage::disk('image_cache')->deleteDirectory($file->name);
+
+        $this->actingAs($owner)->get($file->url())->assertNotFound();
+        Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/w_h.failed');
+    }
+
+    public function test_the_admin_raw_route_labels_the_stored_bytes_by_what_they_are(): void
+    {
+        $admin = AdminUser::factory()->create();
+        $heic = $this->stored('image/jpeg', $this->fixture('heic-gps-orientation.heic'), ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
+        // A row typed as a picture whose bytes are a document: never inline, whatever `type` says.
+        $html = $this->stored('image/jpeg', '<html><script>alert(1)</script></html>', ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
+
+        $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $heic->name]))
+            ->assertOk()->assertHeader('Content-Type', 'image/heic')->assertHeader('Content-Disposition', 'inline; filename='.$heic->name);
+
+        $response = $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $html->name]))->assertOk()
+            ->assertHeader('Content-Type', 'application/octet-stream');
+        $this->assertStringStartsWith('attachment', (string) $response->headers->get('Content-Disposition'));
+        $this->assertSame('<html><script>alert(1)</script></html>', $response->streamedContent());
+    }
+
     public function test_a_non_raster_attachment_keeps_the_stored_bytes_and_its_name(): void
     {
         $owner = Member::factory()->create();
@@ -125,6 +162,11 @@ class ImageCanonicalDeliveryTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         });
 
@@ -178,6 +220,15 @@ class ImageCanonicalDeliveryTest extends TestCase
             'member',
             (int) $owner->getKey(),
         );
+    }
+
+    private function overwriteStored(File $file, string $bytes): void
+    {
+        $stream = fopen('php://temp', 'r+b');
+        fwrite($stream, $bytes);
+        rewind($stream);
+        app(FileStorage::class)->writeStream($file, $stream);
+        fclose($stream);
     }
 
     /** @param  array<string, mixed>  $attributes */

@@ -20,9 +20,14 @@ final class GdImageProcessor implements ImageProcessor
         return false;
     }
 
+    public function intake(): ImageIntake
+    {
+        return ImageIntake::gd();
+    }
+
     public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
     {
-        ImageSourceLimit::preflight($bytes);
+        ImageSourceLimit::preflight($bytes, $this->intake());
 
         try {
             $image = $this->manager->decode($bytes);

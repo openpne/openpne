@@ -30,11 +30,11 @@ final class ImageSourceLimit
 
     /**
      * Refuses from the header alone, before any processor allocates: bytes over bytes(), a declared
-     * side over UploadLimit::dimension(), or more declared pixels than pixels().
+     * side over the intake's side limit where it has one, or more declared pixels than its pixel limit.
      *
      * @throws ImageProcessingException
      */
-    public static function preflight(string $bytes): void
+    public static function preflight(string $bytes, ImageIntake $intake): void
     {
         $maxBytes = self::bytes();
 
@@ -48,13 +48,13 @@ final class ImageSourceLimit
             throw new ImageProcessingException('The image header does not declare a size.');
         }
 
-        $side = UploadLimit::dimension();
+        $side = $intake->sideLimit();
 
-        if ($info[0] > $side || $info[1] > $side) {
+        if ($side !== null && ($info[0] > $side || $info[1] > $side)) {
             throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
         }
 
-        $pixels = self::pixels();
+        $pixels = $intake->pixelLimit();
 
         if ($pixels < $info[0] * $info[1]) {
             throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $pixels));

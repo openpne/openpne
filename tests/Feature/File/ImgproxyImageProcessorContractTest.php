@@ -45,6 +45,35 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
         $this->assertStringNotContainsString('ICCKEEPME', $canonical->bytes);
     }
 
+    public function test_a_heic_is_answered_as_a_clean_upright_jpeg(): void
+    {
+        // 12x6 declaring Orientation 6 with a GPS sentinel, as the fixture README describes.
+        $canonical = $this->canonical($this->fixture('heic-gps-orientation.heic'), 'image/heic');
+
+        $this->assertSame('image/jpeg', $canonical->mime);
+        $this->assertSame([6, 12], [$canonical->width, $canonical->height]);
+        $this->assertStringNotContainsString('2021:07:04', $canonical->bytes);
+        $this->assertFalse($canonical->animated);
+    }
+
+    public function test_an_avif_is_answered_as_a_clean_webp(): void
+    {
+        $canonical = $this->canonical($this->fixture('avif-copyright.avif'), 'image/avif');
+
+        $this->assertSame('image/webp', $canonical->mime);
+        $this->assertSame(IMAGETYPE_WEBP, getimagesizefromstring($canonical->bytes)[2]);
+        $this->assertStringNotContainsString('COPYRIGHT-LEAK', $canonical->bytes);
+    }
+
+    public function test_the_mime_handed_over_is_advisory(): void
+    {
+        // A stored HEIC row is typed image/jpeg (its canonical's type) and regenerated under that label.
+        $canonical = $this->processor()->process($this->fixture('heic-gps-orientation.heic'), 'image/jpeg', ImageSpec::canonical('jpg'));
+
+        $this->assertSame('image/jpeg', $canonical->mime);
+        $this->assertSame([6, 12], [$canonical->width, $canonical->height]);
+    }
+
     public function test_an_animation_over_the_frame_budget_is_kept_as_a_still(): void
     {
         // 200 frames of 600x600 are 72 MP in total, over the sidecar's 50 MP; one frame is well under.

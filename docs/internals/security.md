@@ -388,7 +388,9 @@ a verdict the cache disk keeps until the file is replaced, whatever the caps are
 an upload over it is refused as an upload, since its canonical is produced before
 the row is saved. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
-concurrent misses of the same picture.
+concurrent misses of the same picture. Under `imgproxy` the same header check
+applies the sidecar's budget instead (50 MP, no per-side limit), and HEIC and
+AVIF — which only the sidecar reads — are decoded nowhere but there.
 
 Two GD facts are accepted rather than worked around. GD cannot read an embedded
 ICC profile, so every re-encode drops it and a wide-gamut photo is then read as

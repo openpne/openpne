@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Files\Imgproxy;
 
 use App\Files\AnimationProbe;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -62,9 +63,14 @@ final class ImgproxyImageProcessor implements ImageProcessor
         return true;
     }
 
+    public function intake(): ImageIntake
+    {
+        return ImageIntake::imgproxy();
+    }
+
     public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
     {
-        ImageSourceLimit::preflight($bytes);
+        ImageSourceLimit::preflight($bytes, $this->intake());
 
         $name = $this->spool->put($bytes, ImageSpec::formatFor($mime) ?? 'bin');
         $keepFrames = $spec->isCanonical() || $spec->animated;

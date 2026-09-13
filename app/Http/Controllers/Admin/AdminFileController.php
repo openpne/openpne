@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Files\FileResponse;
 use App\Files\FileStorage;
+use App\Files\ImageIntake;
 use App\Http\Controllers\Controller;
 use App\Models\File;
 use Illuminate\Http\Request;
@@ -18,18 +19,37 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AdminFileController extends Controller
 {
+    /** Enough of the file for libmagic to name any raster container. */
+    private const SNIFF_BYTES = 4096;
+
     public function show(Request $request, File $file, FileStorage $storage): Response
     {
         // 404 (not 403) for non-admins so the endpoint does not confirm a file exists.
         abort_unless(Auth::guard('admin')->check(), 404);
         abort_unless($storage->exists($file), 404);
 
-        // Anything but a raster, SVG included, is an attachment so a stored file is never a same-origin document.
-        $raster = FileResponse::isRaster($file);
+        $cache = [
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            // The token names one immutable byte string, as on FileController.
+            'ETag' => '"'.$file->name.'"',
+        ];
+
+        $unchanged = response('', 200, $cache);
+        if ($unchanged->isNotModified($request)) {
+            return $unchanged;
+        }
+
+        $stream = $storage->readStream($file);
+        $head = (string) fread($stream, self::SNIFF_BYTES);
+
+        // Labelled by what the bytes are, not by `type` (the canonical's): a raster container the app
+        // reads is inline, anything else an attachment, so a stored file is never a same-origin document.
+        $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer($head);
+        $raster = FileResponse::isRaster($file) && is_string($sniffed) && in_array($sniffed, ImageIntake::imgproxy()->mimes(), true);
         $inline = $raster && ! $request->boolean('download');
 
-        $headers = [
-            'Content-Type' => $raster ? $file->type : 'application/octet-stream',
+        $headers = $cache + [
+            'Content-Type' => $raster ? $sniffed : 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
             'Content-Disposition' => HeaderUtils::makeDisposition(
                 $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT,
@@ -37,19 +57,10 @@ class AdminFileController extends Controller
                 $file->name, // ASCII fallback for the opaque token
             ),
             'X-Content-Type-Options' => 'nosniff',
-            'Cache-Control' => 'private, max-age=0, must-revalidate',
-            // The token names one immutable byte string, as on FileController.
-            'ETag' => '"'.$file->name.'"',
         ];
 
-        $unchanged = response('', 200, $headers);
-        if ($unchanged->isNotModified($request)) {
-            return $unchanged;
-        }
-
-        $stream = $storage->readStream($file);
-
-        return response()->stream(function () use ($stream): void {
+        return response()->stream(function () use ($head, $stream): void {
+            echo $head;
             fpassthru($stream);
             fclose($stream);
         }, 200, $headers);
