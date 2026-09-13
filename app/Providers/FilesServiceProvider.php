@@ -23,7 +23,7 @@ class FilesServiceProvider extends ServiceProvider
         // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
-        self::refuseRemovedDriverSetting();
+        self::refuseRemovedSettings();
 
         // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
         // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
@@ -58,7 +58,7 @@ class FilesServiceProvider extends ServiceProvider
     }
 
     /** Settings that were removed fail the boot while still set, rather than look honoured. */
-    public static function refuseRemovedDriverSetting(): void
+    public static function refuseRemovedSettings(): void
     {
         $legacy = config('openpne.images.legacy_driver');
 

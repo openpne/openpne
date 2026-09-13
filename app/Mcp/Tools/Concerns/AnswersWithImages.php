@@ -30,6 +30,9 @@ trait AnswersWithImages
 
     private const NO_THUMBNAIL = 'This site does not offer the thumbnail size these tools ask for. Ask for size=original.';
 
+    /** English like every other message on this wire; the translated userMessage() is for the web forms. */
+    private const PROCESSOR_DOWN = 'Image processing is temporarily unavailable. Try again in a moment.';
+
     /** Never a geometry built by hand: fromGeometry() is where the size whitelist is applied. */
     protected function transformFor(?string $size): ?ImageTransform
     {
@@ -70,7 +73,7 @@ trait AnswersWithImages
 
                 continue;
             } catch (ImageProcessorUnavailableException) {
-                return Response::error(ImageProcessorUnavailableException::userMessage());
+                return Response::error(self::PROCESSOR_DOWN);
             }
 
             $read += strlen($bytes);
