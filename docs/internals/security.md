@@ -401,8 +401,7 @@ refused.
 Original-size delivery is the canonical, so under GD an uploaded animation is a
 still there too, as OpenPNE 3's own GD path left it; a processor that keeps the
 frames is pinned by its contract test. Remote images are held to a stricter rule,
-4 MP and provably a single frame, because the bytes are not a member's upload
-([link-cards](link-cards.md)).
+4 MP, because the bytes are not a member's upload ([link-cards](link-cards.md)).
 
 Under `imgproxy` the decode leaves the PHP process: the sidecar holds its own
 resolution and frame budgets and is what an out-of-memory kill would take down,

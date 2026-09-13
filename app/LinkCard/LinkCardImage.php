@@ -14,11 +14,10 @@ use Illuminate\Http\UploadedFile;
 use Throwable;
 
 /**
- * Copies a card's image into a local File rather than hot-linking it. The order of checks in
- * `import()` (byte cap, real media type, animation, header dimensions by side and total pixels,
- * then the upload's own decode) is the security property, because a decoder allocates
- * width × height × 4 bytes per frame and an out-of-memory kill is not catchable; see
- * docs/internals/link-cards.md.
+ * Copies a card's image into a local File rather than hot-linking it. The byte cap, the sniffed type
+ * and the header dimensions are checked before the decode, so an in-process decoder allocates at most
+ * one bounded frame (docs/internals/link-cards.md, "The image is copied, and the order of checks is
+ * the safety").
  */
 final class LinkCardImage
 {
@@ -72,9 +71,7 @@ final class LinkCardImage
 
         $mime = $this->mediaTypeOf($response->body);
 
-        // Asked as "prove this is one still frame", not "does this look animated", so a parser that
-        // gave up is not an all-clear.
-        if ($mime === null || ! ImageContainer::isSafeStill($response->body, $mime)) {
+        if ($mime === null) {
             return null;
         }
 
@@ -163,7 +160,7 @@ final class LinkCardImage
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
         } catch (ImageProcessorUnavailableException $e) {
-            // An outage is not "no picture": left to the job, so the card is fetched again later.
+            // An outage is not "no picture": left to the job, which asks for the picture again later.
             throw $e;
         } catch (Throwable) {
             return null;

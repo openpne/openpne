@@ -7,10 +7,7 @@ namespace App\Files;
 use Intervention\Gif\Decoder as GifDecoder;
 use Throwable;
 
-/**
- * For bytes a processor produced, which are whole (a cache-disk canonical is published whole or not at
- * all); bytes from anywhere else are App\LinkCard\ImageContainer's question, answered fail-closed.
- */
+/** For bytes a processor produced, which are whole (a cache-disk canonical is published whole or not at all). */
 final class AnimationProbe
 {
     public const DEFAULT_GIF_WALK_KILOBYTES = 8192;

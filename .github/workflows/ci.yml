@@ -168,7 +168,7 @@ jobs:
       # One path per run: the test command takes a single path argument.
       - run: |
           set -e
-          for suite in tests/Unit/Files tests/Feature/File tests/Feature/Http/AppIconTest.php tests/Feature/Mcp/DiaryImageToolsTest.php tests/Feature/Mcp/TalkImageToolTest.php; do
+          for suite in tests/Unit/Files tests/Feature/File tests/Feature/LinkCard tests/Feature/Http/AppIconTest.php tests/Feature/Mcp/DiaryImageToolsTest.php tests/Feature/Mcp/TalkImageToolTest.php; do
             php artisan test --parallel "$suite"
           done
 

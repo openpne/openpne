@@ -276,7 +276,8 @@ Route::middleware('auth.session')->group(function () {
             'context' => 'diary|topic|event|timeline|talk|diaryComment|topicComment|eventComment',
             'record' => '[0-9]+',
             'format' => 'jpg|png|gif|webp',
-            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
+            // A box is required: the bare `w_h` canonical is the one form that may keep frames, and a card shows a still.
+            'geometry' => 'w[0-9]+_h[0-9]+(_sq)?',
             'name' => '[A-Za-z0-9_.-]+',
             'ext' => 'jpg|png|gif|webp',
         ])
