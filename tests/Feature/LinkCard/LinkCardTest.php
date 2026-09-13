@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
-use App\Files\ImageDimensions;
+use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
 use App\Models\File;
 use App\Models\LinkCard;
 use App\Support\LinkCardStatus;
@@ -47,7 +48,7 @@ class LinkCardTest extends TestCase
             'one side under the floor' => [[200, 150], false, 'Both sides must clear it, not just the wide one.'],
             // The term neither Signal nor Mattermost has: Mattermost would draw this one wide.
             'wide but short' => [[1000, 150], false, 'A short banner drawn full width reads as a stripe.'],
-            // `files` never records a zero side — ImageDimensions reads one as no size at all — so
+            // `files` never records a zero side — a canonical always has both — so
             // the case an unmeasurable picture actually produces is this one, not a 0.
             'no size recorded' => [null, false, 'A picture nothing could measure cannot be laid out.'],
             'no picture at all' => ['none', false, 'Nothing to draw large.'],
@@ -76,7 +77,8 @@ class LinkCardTest extends TestCase
         $bytes = (string) file_get_contents(base_path('tests/Fixtures/images/jpeg-gps-orientation.jpg'));
 
         $this->assertSame([12, 6], array_slice((array) getimagesizefromstring($bytes), 0, 2));
-        $this->assertSame([6, 12], ImageDimensions::fromBytes($bytes));
+        $canonical = app(ImageProcessor::class)->process($bytes, 'image/jpeg', ImageSpec::canonical('jpg'));
+        $this->assertSame([6, 12], [$canonical->width, $canonical->height]);
     }
 
     public function test_a_url_can_only_have_one_card(): void

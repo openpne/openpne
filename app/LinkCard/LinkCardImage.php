@@ -152,7 +152,7 @@ final class LinkCardImage
             }
 
             // `test: true` skips the was-this-really-uploaded check, which is about PHP's upload
-            // machinery; everything downstream, the single metadata strip included, is the path a
+            // machinery; everything downstream, the canonical re-encode included, is the path a
             // member upload takes.
             $upload = new UploadedFile($path, 'link-card.'.self::ACCEPTED[$mime], $mime, null, true);
 

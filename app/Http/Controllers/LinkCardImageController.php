@@ -15,8 +15,9 @@ use Illuminate\Http\Response;
 
 /**
  * Authorised through the post the URL names, re-deriving every condition from current data on each
- * request because each is something a URL can outlive (docs/internals/link-cards.md). Everything
- * fails as 404: a 403 would confirm that a card exists on a post the asker cannot see.
+ * request because each is something a URL can outlive (docs/internals/link-cards.md). Every refusal
+ * is a 404, a 403 would confirm that a card exists on a post the asker cannot see; only a processor
+ * outage, reached after every gate, answers otherwise.
  */
 class LinkCardImageController extends Controller
 {

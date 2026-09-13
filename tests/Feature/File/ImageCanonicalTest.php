@@ -272,13 +272,13 @@ class ImageCanonicalTest extends TestCase
         Storage::disk('image_cache')->assertExists($this->markerKey($stored));
     }
 
-    public function test_the_original_geometry_keeps_the_file_token_as_its_validator_while_it_serves_the_stored_bytes(): void
+    public function test_the_original_geometry_carries_the_canonical_key_as_its_validator(): void
     {
         $owner = Member::factory()->create();
         $file = $this->stored('image/png', $this->png(8, 8), $owner);
         $url = route('image.show', ['format' => 'png', 'geometry' => 'w_h', 'name' => $file->name, 'ext' => 'png']);
 
-        $this->actingAs($owner)->get($url)->assertOk()->assertHeader('ETag', '"'.$file->name.'"');
+        $this->actingAs($owner)->get($url)->assertOk()->assertHeader('ETag', ImageTransform::raw()->etag($file->name, 'png'));
     }
 
     public function test_a_processor_outage_at_upload_is_a_field_error_too(): void

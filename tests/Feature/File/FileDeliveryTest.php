@@ -7,22 +7,23 @@ use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 class FileDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_guest_gets_the_original_bytes_of_a_member_avatar(): void
+    public function test_a_guest_gets_a_member_avatar_inline(): void
     {
         // The route carries no login of its own — FilePolicy is the whole gate — so a guest gets
         // exactly what a web-public page shows.
-        $file = $this->memberImage(Member::factory()->create(), 'image/png', 'AVATAR');
+        $file = $this->memberImage(Member::factory()->create(), 'image/png', ImageBytes::png(8, 4));
 
         $response = $this->get(route('file.show', $file->name));
 
         $response->assertOk();
-        $this->assertSame('AVATAR', $response->streamedContent());
+        $this->assertSame([8, 4], array_slice((array) getimagesizefromstring($response->getContent()), 0, 2));
     }
 
     public function test_a_guest_is_denied_a_file_the_policy_does_not_open(): void
@@ -30,7 +31,7 @@ class FileDeliveryTest extends TestCase
         // 404, the same answer a member who may not read it gets: the response never distinguishes
         // "not yours" from "no such file", and never invites a login for bytes.
         $file = File::factory()->create(['related_entity_type' => null, 'related_entity_id' => null, 'type' => 'image/png']);
-        $this->writeBytes($file, 'orphan');
+        $this->writeBytes($file, ImageBytes::png());
 
         $this->get(route('file.show', $file->name))->assertNotFound();
     }
@@ -38,13 +39,13 @@ class FileDeliveryTest extends TestCase
     public function test_owner_gets_the_bytes_inline_with_hardening_headers(): void
     {
         $owner = Member::factory()->create();
-        $file = $this->memberImage($owner, 'image/png', 'PNGDATA');
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png(24, 12));
 
         $response = $this->actingAs($owner)->get(route('file.show', $file->name));
 
         $response->assertOk();
         $this->assertSame('image/png', $response->headers->get('Content-Type'));
-        $this->assertSame('PNGDATA', $response->streamedContent());
+        $this->assertSame([24, 12], array_slice((array) getimagesizefromstring($response->getContent()), 0, 2));
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
         $this->assertStringStartsWith('inline', (string) $response->headers->get('Content-Disposition'));
     }
@@ -52,7 +53,7 @@ class FileDeliveryTest extends TestCase
     public function test_another_member_can_fetch_an_image(): void
     {
         $owner = Member::factory()->create();
-        $file = $this->memberImage($owner, 'image/png', 'x');
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png());
 
         $this->actingAs(Member::factory()->create())
             ->get(route('file.show', $file->name))
@@ -64,7 +65,7 @@ class FileDeliveryTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $owner->blocksMade()->attach($viewer, ['created_at' => now()]);
-        $file = $this->memberImage($owner, 'image/png', 'secret');
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png());
 
         $this->actingAs($viewer)->get(route('file.show', $file->name))->assertNotFound();
     }
@@ -72,7 +73,7 @@ class FileDeliveryTest extends TestCase
     public function test_unlinked_file_is_not_served(): void
     {
         $file = File::factory()->create(['related_entity_type' => null, 'related_entity_id' => null, 'type' => 'image/png']);
-        $this->writeBytes($file, 'orphan');
+        $this->writeBytes($file, ImageBytes::png());
 
         $this->actingAs(Member::factory()->create())->get(route('file.show', $file->name))->assertNotFound();
     }
@@ -96,7 +97,7 @@ class FileDeliveryTest extends TestCase
         Storage::fake('local');
 
         $owner = Member::factory()->create();
-        $file = $this->memberImage($owner, 'image/png', 'DISKBYTES');
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png(16, 8));
 
         // File::url points at the app route, not a direct disk URL.
         $this->assertSame(route('file.show', ['file' => $file->name]), $file->url());
@@ -104,7 +105,7 @@ class FileDeliveryTest extends TestCase
         // And the disk backend streams through the app (status 200, not a redirect).
         $response = $this->actingAs($owner)->get($file->url());
         $response->assertOk();
-        $this->assertSame('DISKBYTES', $response->streamedContent());
+        $this->assertSame([16, 8], array_slice((array) getimagesizefromstring($response->getContent()), 0, 2));
     }
 
     private function memberImage(Member $owner, string $type, string $bytes): File

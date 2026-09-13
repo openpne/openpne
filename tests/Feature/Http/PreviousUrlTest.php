@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 /**
@@ -33,11 +34,11 @@ class PreviousUrlTest extends TestCase
         $file = File::factory()->create([
             'type' => 'image/png',
             'explicit_visibility' => File::VISIBILITY_PUBLIC,
-            'byte_size' => 7,
+            'byte_size' => strlen(ImageBytes::png()),
         ]);
 
         $stream = fopen('php://temp', 'r+');
-        fwrite($stream, 'PNGDATA');
+        fwrite($stream, ImageBytes::png());
         rewind($stream);
         app(FileStorage::class)->writeStream($file, $stream);
         fclose($stream);
@@ -52,11 +53,11 @@ class PreviousUrlTest extends TestCase
             'type' => 'image/png',
             'related_entity_type' => 'bannerImage',
             'related_entity_id' => $banner->getKey(),
-            'byte_size' => 7,
+            'byte_size' => strlen(ImageBytes::png()),
         ]);
 
         $stream = fopen('php://temp', 'r+');
-        fwrite($stream, 'PNGDATA');
+        fwrite($stream, ImageBytes::png());
         rewind($stream);
         app(FileStorage::class)->writeStream($file, $stream);
         fclose($stream);

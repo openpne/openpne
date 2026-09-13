@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 class PublicResponseCookiesTest extends TestCase
@@ -131,7 +132,7 @@ class PublicResponseCookiesTest extends TestCase
 
     private function fileWithBytes(array $attributes): File
     {
-        $content = 'PNGDATA';
+        $content = ImageBytes::png();
         $file = File::factory()->create($attributes + ['byte_size' => strlen($content)]);
 
         $stream = fopen('php://temp', 'r+');

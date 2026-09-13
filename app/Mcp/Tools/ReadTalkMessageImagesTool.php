@@ -112,7 +112,7 @@ class ReadTalkMessageImagesTool extends TalkTool
             'message_id' => $schema->integer()->min(1)->required()
                 ->description('The message to look at, as read-talk-messages reports it in id.'),
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
-                ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the bytes as they were uploaded — ask for it only when the detail decides something.'),
+                ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
                 ->description('One picture of the message, numbered from 1 in the order they were attached. Omit it for every picture on the message, which is also the way to learn how they are numbered.'),
         ];

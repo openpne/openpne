@@ -60,4 +60,23 @@ class ImageProcessorResolutionTest extends TestCase
         config(['openpne.images.legacy_driver' => null]);
         (new FilesServiceProvider($this->app))->register();
     }
+
+    public function test_a_lingering_strip_setting_fails_the_boot_whatever_its_value(): void
+    {
+        // env() turns the literal false into a bool, so that shape has to be refused too.
+        foreach (['true', 'false', true, false] as $legacy) {
+            config(['openpne.images.legacy_strip_metadata' => $legacy]);
+
+            try {
+                (new FilesServiceProvider($this->app))->register();
+                $this->fail('Expected OPENPNE_STRIP_IMAGE_METADATA='.var_export($legacy, true).' to be rejected.');
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString('OPENPNE_STRIP_IMAGE_METADATA', $e->getMessage());
+            }
+        }
+
+        // A failed register() leaves the container without the bindings the rest of the suite resolves.
+        config(['openpne.images.legacy_strip_metadata' => null]);
+        (new FilesServiceProvider($this->app))->register();
+    }
 }

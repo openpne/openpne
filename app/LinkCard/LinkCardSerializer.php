@@ -69,7 +69,7 @@ final class LinkCardSerializer
             'imageUrl' => CardContext::imageUrl($record, self::THUMBNAIL, self::THUMBNAIL, square: true),
             // The size the bytes render at, from the File: the card row's own columns are what the
             // container declared before decoding, and a sideways-shot JPEG declares its sides the
-            // other way round (`App\Files\ImageDimensions`).
+            // other way round.
             'imageWidth' => $card->image?->width,
             'imageHeight' => $card->image?->height,
             // Only the full-width shape asks for these; the thumbnail above is a fixed square.

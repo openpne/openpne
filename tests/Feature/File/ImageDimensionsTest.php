@@ -22,10 +22,8 @@ class ImageDimensionsTest extends TestCase
         $this->assertSame(120, $file->height);
     }
 
-    public function test_an_upload_that_bypasses_the_stripper_records_the_pixel_size(): void
+    public function test_a_gif_upload_records_the_pixel_size(): void
     {
-        // gif never goes through the stripper, so the bytes are read from the upload rather than
-        // from the stripped copy already in memory — a separate branch.
         $file = $this->upload(UploadedFile::fake()->createWithContent('a.gif', $this->fixture('tiny.gif')));
 
         $this->assertSame('image/gif', $file->type);
@@ -35,20 +33,7 @@ class ImageDimensionsTest extends TestCase
 
     public function test_an_upload_records_the_size_a_rotated_photo_renders_at(): void
     {
-        // The fixture declares 12x6 and carries Orientation 6, so it draws 6x12 — which is what
-        // ImageCache produces, because intervention/image auto-orients before it scales.
-        $file = $this->upload($this->rotatedPhoto());
-
-        $this->assertSame(6, $file->width);
-        $this->assertSame(12, $file->height);
-    }
-
-    public function test_an_unstripped_upload_records_the_rotated_size_too(): void
-    {
-        // The stripper re-emits Orientation instead of baking the rotation into the pixels, so the
-        // stripped bytes still declare 12x6 and still need the swap.
-        config(['openpne.images.strip_metadata' => false]);
-
+        // The fixture declares 12x6 and carries Orientation 6, so it draws 6x12, which the canonical is.
         $file = $this->upload($this->rotatedPhoto());
 
         $this->assertSame(6, $file->width);
@@ -81,8 +66,6 @@ class ImageDimensionsTest extends TestCase
     {
         // A header-only webp reads as an image but decodes to nothing; the canonical re-encode is the
         // gate, so it never becomes a File.
-        config(['openpne.images.strip_metadata' => false]);
-
         $this->expectException(ImageProcessingException::class);
 
         $this->upload(UploadedFile::fake()->createWithContent('broken.webp', $this->headerOnlyWebp()));

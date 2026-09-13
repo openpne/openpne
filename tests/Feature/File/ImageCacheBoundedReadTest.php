@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Fixtures\CountedByteStream;
 use Tests\Fixtures\CountingFileStorage;
+use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
 /**
@@ -89,17 +90,20 @@ class ImageCacheBoundedReadTest extends TestCase
 
     public function test_a_file_inside_the_budget_is_read_whole_and_an_absent_budget_reads_everything(): void
     {
-        $stored = random_bytes(2048);
+        $stored = ImageBytes::png(64, 48);
         $file = File::factory()->create(['type' => 'image/png', 'byte_size' => strlen($stored)]);
         $this->write($file, $stored);
 
-        // The budget is a ceiling, not a target: a file exactly at it fits, one byte under it does not.
-        $this->assertSame($stored, $this->bytes($file, 'w_h', strlen($stored)));
-        $this->assertSame($stored, $this->bytes($file, 'w_h', null));
+        // The budget is a ceiling, not a target: one byte under the file refuses it before anything is
+        // decoded, the file exactly at it fits and is answered as its canonical.
         $this->assertThrows(
             fn () => $this->bytes($file, 'w_h', strlen($stored) - 1),
             ImageBytesOverLimitException::class,
         );
+        $this->assertSame([], Storage::disk('image_cache')->allFiles());
+
+        $this->assertSame([64, 48], array_slice((array) getimagesizefromstring($this->bytes($file, 'w_h', strlen($stored))), 0, 2));
+        $this->assertSame([64, 48], array_slice((array) getimagesizefromstring($this->bytes($file, 'w_h', null)), 0, 2));
     }
 
     private function write(File $file, string $bytes): void

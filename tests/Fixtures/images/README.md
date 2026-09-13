@@ -1,7 +1,7 @@
 # Image fixtures
 
-Byte images for the metadata-strip and image-processor contract tests. Each carries a searchable
-`LEAK` or date sentinel, so a byte that survives a strip or a re-encode fails an assertion. GD wrote
+Byte images for the image-processor contract and canonical-delivery tests. Each carries a searchable
+`LEAK` or date sentinel, so a byte that survives a re-encode fails an assertion. GD wrote
 a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP / comment segments
 (a real GPS IFD plus Orientation) into the container:
 
@@ -12,7 +12,7 @@ a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP
 | `jpeg-app2-mixed.jpg` | a non-ICC APP2 (`MPFDROPME`) and a real `ICC_PROFILE` APP2 (`ICCKEEPME`) |
 | `jpeg-copyright.jpg` | APP1 EXIF whose only tag is Copyright (`COPYRIGHT-LEAK-2021`) + a COM segment (`COMMENT-LEAK`); base image 12x6. Backends that strip metadata tend to keep copyright by default |
 | `png-meta.png` | `eXIf` (GPS) + `tEXt` (`png-text-LEAK`) after IHDR |
-| `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped |
+| `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped (GD decodes it regardless) |
 | `webp-vp8x-meta.webp` | VP8X (flags ICC + reserved + EXIF + XMP) + image + odd-length EXIF + `XMP ` |
 | `tiny.gif` | plain GIF, no metadata |
-| `jpeg-truncated.jpg` | a JPEG cut short, so the strip fails closed. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |
+| `jpeg-truncated.jpg` | a JPEG cut short. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |
