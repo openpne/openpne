@@ -319,6 +319,40 @@ class FetchLinkCardTest extends TestCase
         $this->assertFalse($card->isStale());
     }
 
+    public function test_a_processor_outage_on_a_refresh_keeps_the_picture_the_card_already_has(): void
+    {
+        // The outage path writes the text and the schedule only: overwriting the image columns
+        // would strip a working card of its picture and leave the old File referenced by nothing.
+        $card = $this->card('https://example.com/article');
+        $file = File::factory()->create();
+        $card->update([
+            'status' => LinkCardStatus::Ok,
+            'title' => 'Old',
+            'image_file_id' => $file->id,
+            'image_width' => 20,
+            'image_height' => 20,
+            'expires_at' => CarbonImmutable::now()->subDay(),
+        ]);
+        $this->queueHtml(<<<'HTML'
+            <html><head>
+            <meta property="og:title" content="New">
+            <meta property="og:image" content="https://example.com/hero.png">
+            </head></html>
+            HTML);
+        $this->queueBinary($this->png(), 'image/png');
+        $this->app->instance(ImageProcessor::class, $this->outageProcessor());
+
+        $this->runJob($card->fresh());
+
+        $card->refresh();
+        $this->assertSame('New', $card->title);
+        $this->assertSame($file->id, $card->image_file_id, 'The picture must survive the outage with the card.');
+        $this->assertSame(20, $card->image_width);
+        $this->assertSame(1, File::count());
+        $this->assertSame(1, $card->failure_count);
+        $this->assertTrue($card->isStale());
+    }
+
     public function test_a_card_that_never_rendered_is_still_marked_failed(): void
     {
         $card = $this->card('https://example.com/never');

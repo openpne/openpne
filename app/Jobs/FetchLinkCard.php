@@ -155,22 +155,28 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         }
         $imported = $image['file'] ?? null;
 
-        return [
+        $text = [
             'status' => LinkCardStatus::Ok,
             'title' => $metadata->title,
             'description' => $metadata->description,
             'site_name' => $metadata->siteName,
             'author_name' => $metadata->authorName,
+            'fetched_at' => CarbonImmutable::now(),
+        ];
+
+        if ($pictureLater) {
+            // The picture the card already has stays with it, as a failure leaves it.
+            return $text + $this->staleUntil($card);
+        }
+
+        return $text + [
             'image_file_id' => $image['file']->id ?? null,
             'image_width' => $image['width'] ?? null,
             'image_height' => $image['height'] ?? null,
-            'fetched_at' => CarbonImmutable::now(),
-            ...($pictureLater ? $this->staleUntil($card) : [
-                'failure_count' => 0,
-                'expires_at' => CarbonImmutable::now()->addDays(7),
-                // Released, so a refresh after expiry can claim it.
-                'next_attempt_at' => null,
-            ]),
+            'failure_count' => 0,
+            'expires_at' => CarbonImmutable::now()->addDays(7),
+            // Released, so a refresh after expiry can claim it.
+            'next_attempt_at' => null,
         ];
     }
 

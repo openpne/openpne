@@ -366,7 +366,8 @@ limit alone permits 5000 × 5000 = 100 MB decoded, enough to end a 128 MB worker
 
 The frame count is no part of that bound. The GD processor decodes one frame whatever the source
 holds, and the `imgproxy` sidecar decodes out of process under its own frame and pixel budgets
-([images](images.md), "Processing"), so an animated image is imported like a still one. What the card
+([images](images.md), "Processing"), so an animated GIF is imported like a still one (an animated WebP
+is refused under GD as it always was, libgd being unable to read one). What the card
 shows is a still either way: it asks only for the 120px crop and the fit rungs, and the
 `linkCard.image` route accepts neither the bare `w_h` canonical, the one form that may keep frames,
 nor an `_a` form.
