@@ -6,6 +6,7 @@ use App\Models\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -33,15 +34,21 @@ class FileUploader
     public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
     {
         $type = $upload->getMimeType() ?? 'application/octet-stream';
-        $bytes = (string) file_get_contents($upload->getRealPath());
+        $format = ImageSpec::formatFor($type);
 
-        if ($this->shouldStrip($type)) {
+        // Only a raster or a stripped upload is held in memory; anything else streams from the temp file.
+        $bytes = $format !== null || $this->shouldStrip($type) ? (string) file_get_contents($upload->getRealPath()) : null;
+
+        if ($bytes !== null && $this->shouldStrip($type)) {
             $bytes = $this->stripper->strip($bytes, $type);
         }
 
         // Produced before anything is saved, so a refusal costs no compensation.
-        $format = ImageSpec::formatFor($type);
-        $canonical = $format !== null ? $this->processor->process($bytes, $type, ImageSpec::canonical($format)) : null;
+        $canonical = $format !== null ? $this->processor->process((string) $bytes, $type, ImageSpec::canonical($format)) : null;
+
+        if ($canonical !== null && strlen($canonical->bytes) > ImageSourceLimit::bytes()) {
+            throw new ImageProcessingException(sprintf('The canonical is %d bytes, over the %d byte source limit.', strlen($canonical->bytes), ImageSourceLimit::bytes()));
+        }
 
         $file = new File([
             // Opaque, backend-agnostic storage key and URL token (collision is
@@ -55,12 +62,17 @@ class FileUploader
             // FilePolicy serves it (an ownerless file is otherwise fail-closed denied).
             'explicit_visibility' => $explicitVisibility,
             // The stored length, which the canonical's is not.
-            'byte_size' => strlen($bytes),
+            'byte_size' => $bytes !== null ? strlen($bytes) : (int) $upload->getSize(),
             'width' => $canonical?->width,
             'height' => $canonical?->height,
         ]);
 
-        $stream = $this->memoryStream($bytes);
+        $stream = $bytes !== null ? $this->memoryStream($bytes) : fopen($upload->getRealPath(), 'rb');
+
+        if ($stream === false) {
+            throw new RuntimeException("Unable to open the uploaded file [{$file->name}].");
+        }
+
         $saved = false;
 
         try {

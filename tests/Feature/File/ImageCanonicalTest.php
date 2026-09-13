@@ -21,9 +21,11 @@ use App\Models\Diary;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\Visibility;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -187,9 +189,64 @@ class ImageCanonicalTest extends TestCase
             ['Accept' => 'application/json'],
         );
 
-        $response->assertStatus(422)->assertJsonValidationErrors('images.0');
+        $response->assertStatus(422)->assertJsonValidationErrors(['images.0' => ImageProcessingException::userMessage()]);
         $this->assertSame(0, File::count());
         $this->assertSame(0, Diary::count());
+    }
+
+    public function test_a_name_collision_leaves_the_existing_files_canonical_alone(): void
+    {
+        // The collision is forced by pinning the random token.
+        Str::createRandomStringsUsing(fn (int $length): string => str_repeat('a', $length));
+
+        try {
+            $existing = $this->upload(UploadedFile::fake()->image('a.png', 24, 24));
+            Storage::disk('image_cache')->assertExists($this->canonicalKey($existing));
+
+            try {
+                $this->upload(UploadedFile::fake()->image('b.png', 32, 32));
+                $this->fail('expected a name unique-constraint violation on the second upload');
+            } catch (QueryException) {
+                // expected: the second upload collides on files.name
+            }
+
+            Storage::disk('image_cache')->assertExists($this->canonicalKey($existing));
+            $this->assertSame([24, 24], $this->dimensions(app(ImageCache::class)->canonical($existing)));
+        } finally {
+            Str::createRandomStringsNormally();
+        }
+    }
+
+    public function test_a_variant_miss_on_a_published_canonical_honours_the_read_budget(): void
+    {
+        $file = $this->upload(UploadedFile::fake()->image('a.png', 240, 120));
+
+        $this->assertThrows(
+            fn () => app(ImageCache::class)->bytes($file, ImageTransform::fromGeometry('w120_h120'), 'png', maxBytes: 16),
+            ImageBytesOverLimitException::class,
+        );
+    }
+
+    public function test_a_canonical_over_the_source_limit_is_refused_like_its_source(): void
+    {
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->app->instance(ImageProcessor::class, $this->processorThatInflates(2048));
+
+        $this->assertThrows(fn () => $this->upload(UploadedFile::fake()->image('a.png', 8, 8)), ImageProcessingException::class);
+        $this->assertSame(0, File::count());
+
+        $stored = $this->stored('image/png', $this->png(8, 8));
+        $this->assertThrows(fn () => app(ImageCache::class)->canonical($stored), CanonicalUnavailableException::class);
+        Storage::disk('image_cache')->assertExists($this->markerKey($stored));
+    }
+
+    public function test_the_original_geometry_keeps_the_file_token_as_its_validator_while_it_serves_the_stored_bytes(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->stored('image/png', $this->png(8, 8), $owner);
+        $url = route('image.show', ['format' => 'png', 'geometry' => 'w_h', 'name' => $file->name, 'ext' => 'png']);
+
+        $this->actingAs($owner)->get($url)->assertOk()->assertHeader('ETag', '"'.$file->name.'"');
     }
 
     public function test_a_processor_outage_at_upload_is_a_field_error_too(): void
@@ -378,6 +435,25 @@ class ImageCanonicalTest extends TestCase
         $this->app->instance(ImageProcessor::class, $spy);
 
         return $spy;
+    }
+
+    /** Answers every request with $bytes bytes of PNG-shaped nothing, whatever the input. */
+    private function processorThatInflates(int $bytes): ImageProcessor
+    {
+        return new class($bytes) implements ImageProcessor
+        {
+            public function __construct(private readonly int $bytes) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                return new ProcessedImage(str_repeat('x', $this->bytes), $mime, 8, 8, false);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        };
     }
 
     private function processorThatIsDown(): ImageProcessor

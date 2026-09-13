@@ -149,9 +149,10 @@ the detail decides something.
 **One call answers at most 8 MB**, measured twice: against the files' recorded `byte_size` before a
 byte is read — the only number there is while nothing is in memory yet — and again by the read
 itself, because metadata can disagree with the bytes it describes. What is left of the cap is passed
-down to `ImageCache`, which stops a read one byte past it and refuses the file
-(`ImageBytesOverLimitException`) rather than reading it whole and measuring afterwards, so a row
-understating its file cannot put an unbounded object in memory. Either way the call is refused whole
+down to `ImageCache`, which stops a read — of the stored bytes, or of the canonical a thumbnail is
+drawn from — one byte past it and refuses the file (`ImageBytesOverLimitException`) rather than
+reading it whole and measuring afterwards, so a row understating its file cannot put an unbounded
+object in memory. Either way the call is refused whole
 rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
 preflight measures originals even when thumbnails were asked for: conservative, not exact.
 

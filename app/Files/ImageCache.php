@@ -69,7 +69,7 @@ class ImageCache
         $key = $this->canonicalKey($file);
 
         if ($disk->exists($key)) {
-            return (string) $disk->get($key);
+            return $this->cached($file, $key, $maxBytes);
         }
 
         $marker = $this->markerKey($file);
@@ -97,9 +97,44 @@ class ImageCache
             return $this->refuse($file, $marker, $e->getMessage());
         }
 
+        // A canonical is itself the input of every variant, so it is held to the same source limit.
+        if (strlen($processed->bytes) > $limit) {
+            return $this->refuse($file, $marker, 'canonical of '.strlen($processed->bytes)." bytes, over the {$limit} byte source limit");
+        }
+
         $this->publishOrReport($key, $processed->bytes);
 
         return $processed->bytes;
+    }
+
+    /** A cache hit read to the caller's budget, so an understated row cannot put an unbounded object in memory. */
+    private function cached(File $file, string $key, ?int $maxBytes): string
+    {
+        $disk = $this->disk();
+
+        if ($maxBytes === null) {
+            return (string) $disk->get($key);
+        }
+
+        $stream = $disk->readStream($key);
+
+        if ($stream === null) {
+            return (string) $disk->get($key);
+        }
+
+        try {
+            $bytes = (string) stream_get_contents($stream, max($maxBytes, 0) + 1);
+        } finally {
+            fclose($stream);
+        }
+
+        if (strlen($bytes) > $maxBytes) {
+            throw new ImageBytesOverLimitException(
+                "The canonical of file [{$file->id}] outgrows the {$maxBytes} byte budget of this read.",
+            );
+        }
+
+        return $bytes;
     }
 
     /**
@@ -121,11 +156,12 @@ class ImageCache
 
     /**
      * Written to a sibling temp key and moved into place: the local adapter writes the final path in
-     * place and readers take no lock, so a plain put can be read half-written and cached as a hit.
+     * place and readers take no lock, so a plain put can be read half-written and cached as a hit. Every
+     * derived file on this disk that a browser may receive goes through here.
      *
      * @throws ImageCachePublishException
      */
-    private function publish(string $key, string $bytes): void
+    public function publish(string $key, string $bytes): void
     {
         $disk = $this->disk();
         $temp = dirname($key).'/.tmp-'.Str::random(16);

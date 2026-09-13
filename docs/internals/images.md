@@ -73,7 +73,8 @@ Consumers must handle null rather than substituting a guess: a reserved box of t
 the layout twice, once when it is reserved and again when the picture disagrees with it.
 
 A raster upload the processor refuses is refused as an upload — the canonical is produced before the
-row is saved — so a stored raster File always has a size. Non-raster files are stored without one.
+row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
+without one.
 
 `openpne:backfill-image-dimensions` fills the rows that have none by reading each file's canonical,
 generating it where a row imported from OpenPNE 3 has none yet, so a run also warms those. Run it
@@ -148,7 +149,8 @@ changing it moves the layout. Classic keeps its 120px square.
   such a change: every variant regenerates on its next request, and the superseded files stay on
   the cache disk until their File is deleted (nothing prunes them).
 - **Clearing the cache disk no longer reaches browsers**: `/cache/img/…` answers carry the key
-  hashed as their `ETag` (`ImageTransform::etag`). `/file/{name}` and the admin raw
+  hashed as their `ETag` (`ImageTransform::etag`), except the `w_h` original, which still answers the
+  stored bytes and carries the file token until the canonical becomes its body. `/file/{name}` and the admin raw
   route carry the file token, whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. The public

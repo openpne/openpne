@@ -104,7 +104,7 @@ class AppIcon
             return self::shippedBytes($size);
         }
 
-        $disk->put($key, $bytes);
+        $this->cache->publish($key, $bytes);
 
         return $bytes;
     }

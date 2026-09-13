@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -18,6 +19,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        // Every raster upload publishes a canonical, so the cache disk is faked for the whole suite.
+        Storage::fake('image_cache');
 
         // Seeded only for RefreshDatabase tests, which own an isolated per-process database; the others
         // share the base database across parallel processes and none depend on the seed.

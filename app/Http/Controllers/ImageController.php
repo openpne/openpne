@@ -38,7 +38,9 @@ class ImageController extends Controller
             'Content-Type' => $file->type,
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=86400',
-            'ETag' => $transform->etag($file->name, $imageFormat),
+            // The original still answers the stored bytes, whose validator is the token; the canonical
+            // key becomes its validator only when the canonical becomes its body.
+            'ETag' => $transform->isRaw() ? '"'.$file->name.'"' : $transform->etag($file->name, $imageFormat),
         ]);
 
         if ($response->isNotModified($request)) {
