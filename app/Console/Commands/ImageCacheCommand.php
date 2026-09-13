@@ -103,7 +103,7 @@ class ImageCacheCommand extends Command
                 }
 
                 if (! $rebuild && $cache->hasCanonical($file)) {
-                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file), $cache->canonicalSize($file)) ? 1 : 0;
+                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file), fn (): ?int => $cache->canonicalSize($file)) ? 1 : 0;
 
                     continue;
                 }
@@ -183,14 +183,16 @@ class ImageCacheCommand extends Command
      * From a canonical already on the disk: only what the row lacks, read from the bytes.
      *
      * @param  callable(): string  $canonical
+     * @param  callable(): ?int  $canonicalSize
      */
-    private function recordMissingFacts(File $file, callable $canonical, ?int $canonicalSize): bool
+    private function recordMissingFacts(File $file, callable $canonical, callable $canonicalSize): bool
     {
+        $type = (string) $file->type;
         $missingSize = $file->width === null || $file->height === null;
-        // A format that never animates needs no bytes read to say so, and a GIF the probe would not walk is not read for it.
-        $missingAnimated = $file->animated === null && AnimationProbe::mayAnimate((string) $file->type)
-            && ! ($file->type === 'image/gif' && $canonicalSize !== null && $canonicalSize > AnimationProbe::maxGifWalkBytes());
-        $facts = $file->animated === null && ! AnimationProbe::mayAnimate((string) $file->type) ? ['animated' => false] : [];
+        // A format that never animates needs no bytes read to say so, and a canonical the probe would not walk is not read for it.
+        $missingAnimated = $file->animated === null && AnimationProbe::mayAnimate($type)
+            && (($size = $canonicalSize()) === null || AnimationProbe::wouldWalk($type, $size));
+        $facts = $file->animated === null && ! AnimationProbe::mayAnimate($type) ? ['animated' => false] : [];
 
         if (! $missingSize && ! $missingAnimated) {
             return $this->write($file, $facts);
@@ -206,7 +208,7 @@ class ImageCacheCommand extends Command
             $facts += ['width' => (int) $size[0], 'height' => (int) $size[1]];
         }
 
-        if ($missingAnimated && ($animated = AnimationProbe::of($bytes, (string) $file->type)) !== null) {
+        if ($missingAnimated && ($animated = AnimationProbe::of($bytes, $type)) !== null) {
             $facts['animated'] = $animated;
         }
 

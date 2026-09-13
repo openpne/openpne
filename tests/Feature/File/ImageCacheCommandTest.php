@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Gif\Builder;
+use Mockery;
 use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
@@ -142,24 +143,43 @@ class ImageCacheCommandTest extends TestCase
         $this->assertNull($unjudged->refresh()->animated);
     }
 
-    public function test_a_gif_over_the_walk_bound_stays_unknown_and_is_not_read(): void
+    public function test_a_gif_over_the_walk_bound_stays_unknown_and_its_canonical_is_not_read(): void
     {
-        // Configured in kilobytes; the canonical on the disk is over it, so the bytes are not fetched.
+        // Configured in kilobytes; the canonical on the disk is over it, so its bytes are never fetched.
         config(['openpne.images.max_gif_walk_kilobytes' => 1]);
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
         $file->update(['animated' => null]);
         Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'gif'), str_pad($this->animatedGif(), 2048, "\0"));
+        $cache = Mockery::mock(app(ImageCache::class))->makePartial();
+        $cache->shouldNotReceive('canonical');
+        $this->app->instance(ImageCache::class, $cache);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
             ->assertSuccessful();
         $this->assertNull($file->refresh()->animated);
 
+        $this->app->forgetInstance(ImageCache::class);
         config(['openpne.images.max_gif_walk_kilobytes' => 0]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
             ->assertSuccessful();
+        $this->assertTrue($file->refresh()->animated);
+    }
+
+    public function test_warm_reads_an_animated_webp_flag_from_its_canonical(): void
+    {
+        // The extended header's animation bit, at byte 20, is the whole answer for a WebP.
+        $webp = $this->webp("\x02".str_repeat("\x00", 9));
+        $file = $this->stored('image/webp', $webp);
+        $file->update(['width' => 8, 'height' => 8]);
+        Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'webp'), $webp);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+
         $this->assertTrue($file->refresh()->animated);
     }
 
@@ -316,6 +336,14 @@ class ImageCacheCommandTest extends TestCase
         $this->artisan('openpne:backfill-image-dimensions')->assertSuccessful();
 
         $this->assertSame([16, 8], [$cold->refresh()->width, $cold->height]);
+    }
+
+    /** A RIFF/WEBP whose first chunk is the extended header with the given flags byte. */
+    private function webp(string $vp8x): string
+    {
+        $chunk = 'VP8X'.pack('V', strlen($vp8x)).$vp8x;
+
+        return 'RIFF'.pack('V', 4 + strlen($chunk)).'WEBP'.$chunk;
     }
 
     /** Three frames of one shade each on an 8x8 screen. */

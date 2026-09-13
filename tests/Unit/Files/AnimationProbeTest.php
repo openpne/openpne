@@ -37,6 +37,16 @@ class AnimationProbeTest extends TestCase
         $this->assertNull(AnimationProbe::of('not a riff', 'image/webp'));
     }
 
+    public function test_the_shipped_walk_bound_is_the_documented_eight_megabytes(): void
+    {
+        // Pinned against .env.example and docs/internals/images.md, which quote the number.
+        $this->assertSame(8192, AnimationProbe::DEFAULT_GIF_WALK_KILOBYTES);
+        config(['openpne.images.max_gif_walk_kilobytes' => 0]);
+        $this->assertSame(8192 * 1024, AnimationProbe::maxGifWalkBytes());
+        $this->assertFalse(AnimationProbe::wouldWalk('image/gif', 8192 * 1024 + 1));
+        $this->assertTrue(AnimationProbe::wouldWalk('image/webp', PHP_INT_MAX));
+    }
+
     public function test_a_png_or_jpeg_is_never_animated(): void
     {
         // Neither processor keeps an APNG's frames (the contract test pins the acTL chunk gone).

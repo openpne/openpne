@@ -29,6 +29,16 @@ final class AnimationProbe
         return ($configured > 0 ? $configured : self::DEFAULT_GIF_WALK_KILOBYTES) * 1024;
     }
 
+    /** Whether the probe would read $bytes of $mime at all: a GIF over the walk bound is not, and its fact stays unknown. */
+    public static function wouldWalk(string $mime, int $bytes): bool
+    {
+        return match ($mime) {
+            'image/gif' => $bytes <= self::maxGifWalkBytes(),
+            'image/webp' => true,
+            default => false,
+        };
+    }
+
     /** True or false when the container says so, null when it cannot be read that far. */
     public static function of(string $bytes, string $mime): ?bool
     {
@@ -41,7 +51,7 @@ final class AnimationProbe
 
     private static function gif(string $bytes): ?bool
     {
-        if (strlen($bytes) > self::maxGifWalkBytes()) {
+        if (! self::wouldWalk('image/gif', strlen($bytes))) {
             return null;
         }
 

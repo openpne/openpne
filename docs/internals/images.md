@@ -79,16 +79,17 @@ the layout twice, once when it is reserved and again when the picture disagrees 
 more than one frame, false when it kept one, null when nothing has recorded it yet or the processor
 could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php) reads the answer's container;
 a walk it cannot finish is null, never a guess, and a GIF over `OPENPNE_IMAGE_MAX_GIF_WALK_KB` (8 MB
-unconfigured) is not walked at all, the walk costing about three times its bytes in memory, so such a
-GIF stays unknown however often `warm` runs and never has an `_a`; the bound is on bytes, so the same
-animation can be recorded from its WebP, whose flag sits in the header, and not from its GIF). Only a canonical is probed; a variant's frames are
-nobody's fact. GD records false; a true recorded before a switch to
-GD stands until the next `warm` or `rebuild`, and until then the `_a` variant under GD's own key is a
-still. The fact is what lets a fit variant be asked for animated: `w640_h640_a` is answered only for a
-file whose `animated` is true, and 404 otherwise, unknown included — a still served under the `_a` key would keep its ETag after
-the fact was recorded and stay a still in every browser that saw it. `warm` fills a null from the
-canonical on the disk, and `rebuild` rewrites the fact from the new canonical, since another processor
-may keep frames this one did not.
+unconfigured) is not walked at all, the walk costing about three times its bytes in memory, so such
+a GIF stays unknown however often `warm` runs and never has an `_a`; the bound is on bytes, so the
+same animation can be recorded from its WebP, whose flag sits in the header, and not from its GIF).
+Only a canonical is probed; a variant's frames are nobody's fact. GD records false; a true recorded
+before a switch to GD stands until the next `warm` or `rebuild`, and until then the `_a` variant
+under GD's own key is a still. The fact is what lets a fit variant be asked for animated:
+`w640_h640_a` is answered only for a file whose `animated` is true, and 404 otherwise, unknown
+included — a still served under the `_a` key would keep its ETag after the fact was recorded and
+stay a still in every browser that saw it. `warm` fills a null from the canonical on the disk, and
+`rebuild` rewrites the fact from the new canonical, since another processor may keep frames this one
+did not.
 
 A raster upload the processor refuses is refused as an upload — the canonical is produced before the
 row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
@@ -228,8 +229,8 @@ changing it moves the layout. Classic keeps its 120px square.
   permitting or not.
 - `_a` is the animated form of a fit box in `animated_sizes` (`w640_h640_a`), answered only for a
   file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
-  has `w_h` (the canonical keeps its frames where the processor does). An animated variant the sidecar refused over
-  budget is cached as a still until `rebuild`.
+  has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
+  sidecar refused over budget is cached as a still until `rebuild`.
 - A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
   encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing
   is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
