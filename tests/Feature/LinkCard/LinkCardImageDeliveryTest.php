@@ -46,6 +46,7 @@ class LinkCardImageDeliveryTest extends TestCase
     {
         parent::setUp();
 
+        Storage::fake('image_cache');
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, true);
         $this->author = Member::factory()->create();
         $this->card = LinkCard::factory()->create();

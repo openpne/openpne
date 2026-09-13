@@ -8,6 +8,7 @@ use App\Files\FileUploader;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
+use App\Files\UploadLimit;
 use App\Models\File;
 use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
@@ -149,7 +150,7 @@ final class LinkCardImage
      */
     private function withinLimit(array $dimensions): bool
     {
-        $side = (int) config('openpne.images.max_upload_dimension');
+        $side = UploadLimit::dimension();
         $pixels = (int) config('openpne.outbound.max_image_pixels');
 
         // Both, because either alone leaves a hole: a 1 x 50000000 strip passes a pixel-count check

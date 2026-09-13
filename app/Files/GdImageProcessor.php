@@ -67,7 +67,7 @@ final class GdImageProcessor implements ImageProcessor
             throw new ImageProcessingException('The image header does not declare a size.');
         }
 
-        $side = (int) config('openpne.images.max_upload_dimension');
+        $side = UploadLimit::dimension();
 
         if ($info[0] > $side || $info[1] > $side) {
             throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
