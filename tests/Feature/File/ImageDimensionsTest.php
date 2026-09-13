@@ -111,11 +111,11 @@ class ImageDimensionsTest extends TestCase
         $this->assertSame(48, $good->refresh()->width);
     }
 
-    public function test_the_backfill_does_not_touch_a_row_that_already_has_a_size(): void
+    public function test_the_backfill_does_not_touch_a_row_whose_canonical_exists(): void
     {
-        // Only a row without a size is written, so a re-run rewrites nothing; `rebuild` is the one
-        // action that overwrites a recorded size.
-        $file = $this->stored('image/png', $this->pngBytes(320, 200));
+        // A recorded size is rewritten only alongside a canonical made here; with the canonical in
+        // place a re-run reads nothing and rewrites nothing.
+        $file = $this->upload(UploadedFile::fake()->image('a.png', 320, 200));
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->backfill();

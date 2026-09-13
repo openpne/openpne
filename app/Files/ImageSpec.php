@@ -22,12 +22,6 @@ final class ImageSpec
         public readonly ?string $background,
     ) {}
 
-    /** @return list<string> */
-    public static function rasterMimes(): array
-    {
-        return array_keys(self::FORMATS);
-    }
-
     public static function formatFor(string $mime): ?string
     {
         return self::FORMATS[$mime] ?? null;

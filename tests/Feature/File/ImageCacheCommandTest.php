@@ -52,11 +52,12 @@ class ImageCacheCommandTest extends TestCase
         $cold = $this->stored('image/png', ImageBytes::png(64, 32));
         $sizeless = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
         $sizeless->update(['width' => null, 'height' => null]);
-        $this->stored('image/x-png', ImageBytes::png());
+        $unshown = $this->stored('image/x-png', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 1 picture(s), recorded 2 size(s).')
             ->expectsOutputToContain('unshown:     1')
+            ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/x-png")
             ->assertSuccessful();
 
         $this->assertTrue(app(ImageCache::class)->hasCanonical($cold));
@@ -82,12 +83,29 @@ class ImageCacheCommandTest extends TestCase
             ->expectsOutputToContain('skipped:     1')
             ->assertSuccessful();
         $this->assertFalse(app(ImageCache::class)->hasCanonical($file));
+        // The favicon verdict drawn from the refusal (App\Files\AppIcon) goes with it.
+        $icon = ImageTransform::encoderPrefix($file->name).'/app-icon-32.refused';
+        Storage::disk('image_cache')->put($icon, '');
 
         $this->artisan('openpne:image-cache', ['action' => 'warm', '--retry-failed' => true])
             ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
             ->assertSuccessful();
         $this->assertTrue(app(ImageCache::class)->hasCanonical($file));
         $this->assertNull(app(ImageCache::class)->refusal($file));
+        Storage::disk('image_cache')->assertMissing($icon);
+    }
+
+    public function test_warm_rewrites_the_size_of_a_picture_it_makes_a_canonical_for(): void
+    {
+        // A size recorded under another encoder (ext-exif arriving, say) is a different picture's.
+        $file = $this->stored('image/png', ImageBytes::png(64, 32));
+        $file->update(['width' => 10, 'height' => 5]);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->assertSuccessful();
+
+        $this->assertSame([64, 32], [$file->refresh()->width, $file->height]);
     }
 
     public function test_a_retry_during_an_outage_keeps_the_remembered_reason(): void
@@ -182,15 +200,16 @@ class ImageCacheCommandTest extends TestCase
     {
         $this->skipUnlessModeBitsBind();
 
-        // On a read the bytes in hand are still the answer; here nothing was made, and saying so is the job.
+        // Two cold pictures but one refusal counted: the run stops rather than discard any more.
         $file = $this->stored('image/png', ImageBytes::png());
+        $this->stored('image/png', ImageBytes::png());
         $root = Storage::disk('image_cache')->path('');
         chmod($root, 0o500);
 
         try {
             $this->artisan('openpne:image-cache', ['action' => 'warm'])
                 ->expectsOutputToContain('Warmed 0 picture(s)')
-                ->expectsOutputToContain('unwritten:   1')
+                ->expectsOutputToContain('unwritten:   1  (the cache disk refused the write; the run stopped there)')
                 ->assertFailed();
         } finally {
             chmod($root, 0o755);

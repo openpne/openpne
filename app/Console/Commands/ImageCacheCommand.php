@@ -41,20 +41,20 @@ class ImageCacheCommand extends Command
     private function status(ImageCache $cache): int
     {
         $total = $warm = $refused = $cold = $unshown = 0;
-        $listed = [];
+        $refusedRows = $unshownRows = [];
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$listed): void {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$refusedRows, &$unshownRows): void {
             foreach ($chunk as $file) {
                 $total++;
 
                 if ($file->imageFormat() === null) {
                     $unshown++;
-                    $this->remember($listed, $file, (string) $file->type);
+                    $this->remember($unshownRows, $file, (string) $file->type);
                 } elseif ($cache->hasCanonical($file)) {
                     $warm++;
                 } elseif (($reason = $cache->refusal($file)) !== null) {
                     $refused++;
-                    $this->remember($listed, $file, $reason);
+                    $this->remember($refusedRows, $file, $reason);
                 } else {
                     $cold++;
                 }
@@ -65,8 +65,9 @@ class ImageCacheCommand extends Command
         $this->line("  canonical: {$warm}");
         $this->line("  cold:      {$cold}  (made on first view, or by `openpne:image-cache warm`)");
         $this->line("  refused:   {$refused}".($refused > 0 ? '  (`openpne:image-cache warm --retry-failed` asks again, e.g. after raising a limit)' : ''));
+        $this->listRows($refusedRows, $refused);
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
-        $this->listRows($listed, $refused + $unshown);
+        $this->listRows($unshownRows, $unshown);
 
         return self::SUCCESS;
     }
@@ -74,12 +75,13 @@ class ImageCacheCommand extends Command
     private function warm(ImageCache $cache, bool $retryFailed, bool $rebuild): int
     {
         $n = ['done' => 0, 'sized' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
-        $listed = [];
+        $failedRows = $unshownRows = [];
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$listed): void {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows): bool {
             foreach ($chunk as $file) {
                 if ($file->imageFormat() === null) {
                     $n['unshown']++;
+                    $this->remember($unshownRows, $file, (string) $file->type);
 
                     continue;
                 }
@@ -107,20 +109,23 @@ class ImageCacheCommand extends Command
 
                     continue;
                 } catch (ImageCachePublishException $e) {
+                    // A disk that refused one write refuses the next, and rebuild has discarded before it writes.
                     $n['unwritten']++;
-                    $this->remember($listed, $file, $e->getMessage());
+                    $this->remember($failedRows, $file, $e->getMessage());
 
-                    continue;
+                    return false;
                 } catch (Throwable $e) {
                     $n['unreadable']++;
-                    $this->remember($listed, $file, $e->getMessage());
+                    $this->remember($failedRows, $file, $e->getMessage());
 
                     continue;
                 }
 
                 $n['done']++;
-                $n['sized'] += $this->recordSize($file, fn (): string => $canonical, force: $rebuild) ? 1 : 0;
+                $n['sized'] += $this->recordSize($file, fn (): string => $canonical, force: true) ? 1 : 0;
             }
+
+            return true;
         });
 
         $this->info(sprintf('%s %d picture(s), recorded %d size(s).', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['sized']));
@@ -128,9 +133,10 @@ class ImageCacheCommand extends Command
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
         $this->line("  unreadable:  {$n['unreadable']}  (the stored bytes could not be read)");
-        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write)");
+        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write".($n['unwritten'] > 0 ? '; the run stopped there' : '').')');
+        $this->listRows($failedRows, $n['unreadable'] + $n['unwritten']);
         $this->line("  unshown:     {$n['unshown']}  (stored under an image type this version does not show as a picture)");
-        $this->listRows($listed, $n['unreadable'] + $n['unwritten']);
+        $this->listRows($unshownRows, $n['unshown']);
 
         return $n['unavailable'] + $n['unreadable'] + $n['unwritten'] > 0 ? self::FAILURE : self::SUCCESS;
     }

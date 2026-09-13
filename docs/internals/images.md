@@ -107,8 +107,8 @@ will read and decode, whatever the upload rules were when the bytes arrived — 
 OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
 each follows the upload rules (at least 20480 KB or the upload cap, and the per-side limit squared),
 never no cap; a set value is taken as given. A favicon the processor refuses is remembered as such
-until `openpne:image-cache warm --retry-failed` or `rebuild` asks again, or the favicon is uploaded
-again, whatever the caps are set to in between.
+until `openpne:image-cache rebuild` asks again (`warm --retry-failed` does too, when the picture itself
+was refused), or the favicon is uploaded again, whatever the caps are set to in between.
 
 The upload cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool

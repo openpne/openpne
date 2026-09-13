@@ -82,8 +82,8 @@ class ImageCache
     }
 
     /**
-     * The operator's warm: a marker is asked about again and replaced by the new verdict, and a cache
-     * disk that refuses the write is an error here, unlike on a read.
+     * The operator's warm: it neither serves a hit nor honours a marker, the caller having decided
+     * both, and a cache disk that refuses the write is an error here, unlike on a read.
      *
      * @throws CanonicalUnavailableException
      * @throws ImageCachePublishException
@@ -216,6 +216,11 @@ class ImageCache
     private function forgetRefusal(File $file): void
     {
         $disk = $this->disk();
+
+        if (! $disk->exists($this->markerKey($file))) {
+            return;
+        }
+
         $disk->delete($this->markerKey($file));
 
         foreach ($disk->files(ImageTransform::encoderPrefix($file->name)) as $path) {
