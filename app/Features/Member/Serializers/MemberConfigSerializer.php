@@ -5,7 +5,9 @@ namespace App\Features\Member\Serializers;
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Profile\ProfilePageVisibility;
+use App\Files\ImageProcessor;
 use App\Models\Member;
+use App\Support\Autoplay;
 use App\Support\Feature;
 use App\Support\Look;
 use App\Support\LookResolver;
@@ -63,6 +65,18 @@ class MemberConfigSerializer
 
         if ($aiSettings->availableTo($member)) {
             $form['ai'] = ['count' => $member->aiAccounts()->count()];
+        }
+
+        // Offered only while the processor keeps frames, since under GD nothing animates for the
+        // switch to stop; the client hides the row when the key is absent.
+        if (app(ImageProcessor::class)->preservesAnimation()) {
+            $form['autoplayAnimations'] = [
+                'value' => $member->autoplayAnimations()->value,
+                'options' => array_map(
+                    static fn (Autoplay $choice): array => ['value' => $choice->value, 'label' => $choice->label()],
+                    Autoplay::cases(),
+                ),
+            ];
         }
 
         // Omitted under `modern_only`, since a member is never offered a surface they cannot get; the

@@ -10,6 +10,7 @@ use App\Features\Member\Queries\RandomMembers;
 use App\Models\Member;
 use App\Notifications\Push\WebPushConfig;
 use App\Services\TermService;
+use App\Support\Autoplay;
 use App\Support\BrandColor;
 use App\Support\Feature;
 use App\Support\LookResolver;
@@ -53,6 +54,9 @@ class HandleInertiaRequests extends Middleware
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
             // Resolved once for the request and never null: a guest's is always `standard`.
             'look' => LookResolver::resolve($request)->value,
+            // False for a guest, who cannot reach the switch that stops it (docs/internals/images.md,
+            // "Which placements animate"); a closure, so a partial reload that leaves it out reads no row.
+            'autoplayAnimations' => fn () => $user?->autoplayAnimations() === Autoplay::On,
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
             // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must
             // be present then.

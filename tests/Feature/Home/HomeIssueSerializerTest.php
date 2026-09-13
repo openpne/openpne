@@ -144,7 +144,7 @@ class HomeIssueSerializerTest extends TestCase
 
         $this->assertSame($first->url(), $image['url']);
         $this->assertSame(
-            ['id', 'url', 'thumbnailUrl', 'fitSources', 'cropSources', 'width', 'height'],
+            ['id', 'url', 'thumbnailUrl', 'fitSources', 'cropSources', 'width', 'height', 'animatedSources'],
             array_keys($image),
         );
     }
