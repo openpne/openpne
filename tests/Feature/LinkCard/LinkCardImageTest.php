@@ -7,16 +7,15 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageMetadataStripper;
+use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
+use App\Files\ProcessedImage;
 use App\LinkCard\LinkCardImage;
 use App\Models\File;
 use App\Models\LinkCard;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Interfaces\DecoderInterface;
-use Intervention\Image\Interfaces\ImageInterface;
 use RuntimeException;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
@@ -360,12 +359,12 @@ class LinkCardImageTest extends TestCase
         return array_values(array_diff(scandir($dir) ?: [], ['.', '..']));
     }
 
-    private function importer(?ImageManager $images = null, ?string $staging = null, ?FileUploader $uploader = null): LinkCardImage
+    private function importer(?ImageProcessor $images = null, ?string $staging = null, ?FileUploader $uploader = null): LinkCardImage
     {
         return new LinkCardImage(
             $this->fakeFetcher(),
             $uploader ?? $this->app->make(FileUploader::class),
-            $images ?? $this->app->make(ImageManager::class),
+            $images ?? $this->app->make(ImageProcessor::class),
             $staging,
         );
     }
@@ -448,22 +447,29 @@ class LinkCardImageTest extends TestCase
     }
 
     /**
-     * An ImageManager that records every decode.
+     * An ImageProcessor that records every process() call, the only route to a decode.
      *
      * Reading the header (getimagesizefromstring) is expected and cheap; going through the decoder is
      * what allocates width × height × 4 bytes, and is what must not happen for an oversized image.
      */
-    private function spyDecoder(): ImageManager
+    private function spyDecoder(): ImageProcessor
     {
-        return new class(new Driver) extends ImageManager
+        return new class($this->app->make(ImageProcessor::class)) implements ImageProcessor
         {
             public int $calls = 0;
 
-            public function decode(mixed $source, string|array|DecoderInterface|null $decoders = null): ImageInterface
+            public function __construct(private readonly ImageProcessor $inner) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
             {
                 $this->calls++;
 
-                return parent::decode($source, $decoders);
+                return $this->inner->process($bytes, $mime, $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return $this->inner->preservesAnimation();
             }
         };
     }

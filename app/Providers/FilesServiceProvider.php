@@ -5,12 +5,13 @@ namespace App\Providers;
 use App\Files\DbBlobFileStorage;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
+use App\Files\GdImageProcessor;
+use App\Files\ImageProcessor;
 use App\Files\UploadLimit;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 
@@ -21,6 +22,8 @@ class FilesServiceProvider extends ServiceProvider
         // Through config so a test can take either branch, and set unconditionally because
         // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
+
+        self::refuseRemovedDriverSetting();
 
         // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
         // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
@@ -37,26 +40,32 @@ class FilesServiceProvider extends ServiceProvider
                 : new DiskFileStorage($disk);
         });
 
-        $this->app->singleton(ImageManager::class, function (): ImageManager {
-            // An unrecognised value throws rather than falling back to GD, whose colour handling
-            // differs (GD cannot convert an embedded profile), so a typo never looks like it took effect.
-            $driver = match ($configured = config('openpne.images.driver')) {
-                'gd' => GdDriver::class,
-                'imagick' => ImagickDriver::class,
+        $this->app->singleton(ImageProcessor::class, function (): ImageProcessor {
+            // An unrecognised value throws rather than falling back to GD, so a typo never looks like
+            // it took effect.
+            return match ($configured = config('openpne.images.processor')) {
+                'gd' => new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)),
                 default => throw new InvalidArgumentException(
-                    "Unsupported openpne.images.driver [{$configured}]; expected 'gd' or 'imagick'.",
+                    "Unsupported openpne.images.processor [{$configured}]; expected 'gd'.",
                 ),
             };
-
-            // With decodeAnimation off, intervention/image 4.2.0 empties the Imagick object the decoder
-            // reads the media type from and every GIF fails, so it stays on for Imagick and
-            // StillImageDecoder collapses the frames instead.
-            return new ImageManager($driver, decodeAnimation: $driver === ImagickDriver::class);
         });
     }
 
     public function boot(): void
     {
         File::observe(FileObserver::class);
+    }
+
+    /** OPENPNE_IMAGE_DRIVER chose gd or imagick until imagick was dropped; a value still set fails the boot rather than look honoured. */
+    public static function refuseRemovedDriverSetting(): void
+    {
+        $legacy = config('openpne.images.legacy_driver');
+
+        if ($legacy !== null && $legacy !== '') {
+            throw new InvalidArgumentException(
+                "OPENPNE_IMAGE_DRIVER [{$legacy}] is no longer read: unset it and use OPENPNE_IMAGE_PROCESSOR=gd (imagick support was removed). With a cached config, delete bootstrap/cache/config.php as well.",
+            );
+        }
     }
 }

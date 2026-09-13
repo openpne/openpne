@@ -97,7 +97,15 @@ upload through Livewire's temporary endpoint before Filament validates, so
 12288 KB would silently be the admin cap above that size. That rule is global to Livewire uploads,
 which is fine while every one of them is an image; a non-image admin upload would need its own.
 
-The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
+A stored image has a second pair of caps, [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php):
+`OPENPNE_IMAGE_MAX_SOURCE_KB` and `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` bound what the image processor
+will read and decode, whatever the upload rules were when the bytes arrived — a row imported from
+OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
+each follows the upload rules (at least 20480 KB or the upload cap, and the per-side limit squared),
+never no cap; a set value is taken as given. A favicon the processor refuses is remembered as such
+until the favicon is uploaded again, whatever the caps are set to afterwards.
+
+The upload cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool
 that serves uploads and the CLI that runs tests and commands. Those limits, and the reverse proxy's,
 are prerequisites the operator sets alongside the cap, and the shipped `docker/` stack sizes them
@@ -135,9 +143,9 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
-- A variant's cache key carries token, geometry, format, generation, and the encoder — `driver`,
-  `quality`, and whether `ext-exif` is present — so any of those changing is a new variant, not a
-  stale one. It does **not** carry library or host versions (intervention/image, GD, Imagick,
+- A variant's cache key carries token, geometry, format, generation, and the encoder — the
+  `processor`, `quality`, and whether `ext-exif` is present — so any of those changing is a new
+  variant, not a stale one. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself
   such a change: every variant regenerates on its next request, and the superseded files stay on
   the cache disk until their File is deleted (nothing prunes them).

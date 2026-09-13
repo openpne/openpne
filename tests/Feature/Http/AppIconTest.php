@@ -166,6 +166,23 @@ class AppIconTest extends TestCase
         );
     }
 
+    public function test_a_favicon_the_processor_refuses_keeps_the_shipped_icon_and_remembers_that(): void
+    {
+        // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it.
+        $file = $this->setFavicon(512);
+        $this->assertSame([512, 512], $this->dimensionsOf($this->get($this->url(512))->assertOk()->getContent()));
+
+        Storage::fake('image_cache');
+        config(['openpne.images.max_upload_dimension' => 64]);
+
+        $this->assertSame(
+            file_get_contents(public_path('icon-512x512.png')),
+            $this->get($this->url(512))->assertOk()->getContent(),
+        );
+        Storage::disk('image_cache')->assertExists("{$file->name}/app-icon-512.refused");
+        Storage::disk('image_cache')->assertMissing("{$file->name}/app-icon-512.png");
+    }
+
     public function test_the_too_small_verdict_is_remembered_but_the_shipped_bytes_are_not(): void
     {
         $file = $this->setFavicon(32);

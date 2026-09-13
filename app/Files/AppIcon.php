@@ -8,7 +8,6 @@ use App\Support\SnsSettingKey;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Encoders\PngEncoder;
 
 /**
  * Transparency is flattened onto the white the manifest declares as its `background_color`, because
@@ -28,7 +27,7 @@ class AppIcon
 
     public function __construct(
         private readonly FileStorage $storage,
-        private readonly StillImageDecoder $decoder,
+        private readonly ImageProcessor $processor,
         private readonly SnsSettingService $settings,
     ) {}
 
@@ -68,14 +67,15 @@ class AppIcon
         $disk = $this->disk();
         $key = "{$source->name}/app-icon-{$size}.png";
         $tooSmall = "{$source->name}/app-icon-{$size}.unfit";
+        $refused = "{$source->name}/app-icon-{$size}.refused";
 
         if ($disk->exists($key)) {
             return (string) $disk->get($key);
         }
 
-        // Only the verdict is cached, never the shipped bytes, so an upgrade that replaces the
-        // shipped asset takes effect.
-        if ($disk->exists($tooSmall)) {
+        // Only the verdict (too small, or refused by the processor) is cached, never the shipped
+        // bytes, so an upgrade that replaces the shipped asset takes effect.
+        if ($disk->exists($tooSmall) || $disk->exists($refused)) {
             return self::shippedBytes($size);
         }
 
@@ -89,19 +89,24 @@ class AppIcon
             return self::shippedBytes($size);
         }
 
-        $bytes = $this->generate($original, $size);
+        try {
+            $bytes = $this->generate($original, $source->type, $size);
+        } catch (ImageProcessingException) {
+            $disk->put($refused, '');
+
+            return self::shippedBytes($size);
+        }
+
         $disk->put($key, $bytes);
 
         return $bytes;
     }
 
-    private function generate(string $original, int $size): string
+    private function generate(string $original, string $mime, int $size): string
     {
-        return $this->decoder->decode($original)
-            ->cover($size, $size)
-            ->fillTransparentAreas('ffffff')
-            ->encode(new PngEncoder)
-            ->toString();
+        return $this->processor
+            ->process($original, $mime, ImageSpec::cover($size, $size, 'png')->withBackground('ffffff'))
+            ->bytes;
     }
 
     private static function shippedBytes(int $size): string

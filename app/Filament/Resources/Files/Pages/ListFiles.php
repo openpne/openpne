@@ -24,7 +24,7 @@ class ListFiles extends ListPage
      */
     protected function getHeaderActions(): array
     {
-        $maxDimension = (int) config('openpne.images.max_upload_dimension', 5000);
+        $maxDimension = UploadLimit::dimension();
 
         return [
             // Ownerless and explicitly public: the image is meant for custom HTML/CSS, so

@@ -250,7 +250,7 @@ class BrandingSettings extends Page
 
     private static function maxDimension(): int
     {
-        return (int) config('openpne.images.max_upload_dimension', 5000);
+        return UploadLimit::dimension();
     }
 
     /**

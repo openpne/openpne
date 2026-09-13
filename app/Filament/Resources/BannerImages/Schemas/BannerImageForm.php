@@ -20,7 +20,7 @@ class BannerImageForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $maxDimension = (int) config('openpne.images.max_upload_dimension', 5000);
+        $maxDimension = UploadLimit::dimension();
 
         return $schema
             ->columns(1)

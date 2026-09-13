@@ -37,7 +37,9 @@ return [
 
     'images' => [
         // `exif` (whether ext-exif is loaded) is set at runtime by FilesServiceProvider, not here.
-        'driver' => env('OPENPNE_IMAGE_DRIVER', 'gd'), // gd (default) | imagick
+        'processor' => env('OPENPNE_IMAGE_PROCESSOR', 'gd'),
+        // Removed setting, read only so FilesServiceProvider can refuse a value that would otherwise be silently ignored.
+        'legacy_driver' => env('OPENPNE_IMAGE_DRIVER'),
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
         'allowed_sizes' => [
@@ -49,7 +51,11 @@ return [
         // Reject uploads larger than this on a side. The decoder allocates
         // width*height*4 bytes, so an unbounded dimension is a decompression-bomb
         // (memory exhaustion) vector even within the file-size limit.
-        'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', 5000),
+        'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', UploadLimit::DEFAULT_DIMENSION),
+        // Largest stored image a processor will read and decode (App\Files\ImageSourceLimit); an
+        // OpenPNE 3 row never met the upload rules, and a blank or 0 follows those rules, never no cap.
+        'max_source_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_KB', 0),
+        'max_source_pixels' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_PIXELS', 0),
         // Per-file cap for every image upload, in kilobytes; keep PHP's upload_max_filesize at or
         // above it (App\Files\UploadLimit, docs/internals/images.md).
         'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', UploadLimit::DEFAULT_KILOBYTES),
