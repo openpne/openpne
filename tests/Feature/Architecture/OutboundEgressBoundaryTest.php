@@ -11,10 +11,10 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Pins the single-seam rule from docs/internals/outbound-http.md: App\Outbound alone may open an
- * outbound connection, since SSRF defence is only the property that every fetch of a member-supplied
- * URL went through the guard. Stream wrappers and raw sockets are forbidden too, as they dereference
- * a URL just as well.
+ * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
+ * member supplied, since SSRF defence is only the property that every such fetch went through the
+ * guard; App\Files\Imgproxy dials one operator-configured address and nothing else. Stream wrappers
+ * and raw sockets are forbidden too, as they dereference a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
@@ -25,6 +25,7 @@ class OutboundEgressBoundaryTest extends TestCase
      */
     private const EGRESS_ALLOWLIST = [
         'Outbound',
+        'Files/Imgproxy',
     ];
 
     /**

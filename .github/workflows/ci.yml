@@ -114,6 +114,59 @@ jobs:
       - run: php artisan migrate --force
       - run: php artisan test --parallel
 
+  # The image suite again, against a live imgproxy sidecar, so the second ImageProcessor is held to
+  # the same contract as GD (docs/internals/images.md, "Processing"). The sidecar reads the checkout
+  # through a bind mount, which is how it sees the files the app spools for it. Not a required check
+  # until it has proven itself steady.
+  test-imgproxy:
+    name: Test (PHP 8.5, imgproxy)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      imgproxy:
+        image: ghcr.io/imgproxy/imgproxy:v4.0.14
+        env:
+          IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
+          IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
+          IMGPROXY_LOCAL_FILESYSTEM_ROOT: /workspace
+          IMGPROXY_ALLOWED_SOURCES: local://
+          IMGPROXY_ALLOW_SECURITY_OPTIONS: 'true'
+          IMGPROXY_MAX_ANIMATION_FRAMES: '200'
+        ports:
+          - 8080:8080
+        volumes:
+          - ${{ github.workspace }}:/workspace:ro
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      OPENPNE_IMAGE_PROCESSOR: imgproxy
+      OPENPNE_IMGPROXY_URL: http://127.0.0.1:8080
+      OPENPNE_IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
+      OPENPNE_IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
+      OPENPNE_IMGPROXY_SOURCE_PREFIX: storage/app/image-spool/
+      PAO_DISABLE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          coverage: none
+      - uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+          curl -fsS http://127.0.0.1:8080/health
+      - run: php artisan migrate --force
+      # One path per run: the test command takes a single path argument.
+      - run: |
+          set -e
+          for suite in tests/Unit/Files tests/Feature/File tests/Feature/Http/AppIconTest.php tests/Feature/Mcp/DiaryImageToolsTest.php tests/Feature/Mcp/TalkImageToolTest.php; do
+            php artisan test --parallel "$suite"
+          done
+
   # The mysql suite is the CI long-pole, so its work fans out across a matrix of internal shard jobs
   # and a fixed-name aggregator reports the single required status. paratest's --functional splits
   # work at the method level, making --shard=i/N a disjoint, complete partition; round-robin spreads

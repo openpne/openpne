@@ -6,6 +6,7 @@ namespace Tests\Feature\File;
 
 use App\Files\GdImageProcessor;
 use App\Files\ImageProcessor;
+use App\Files\Imgproxy\ImgproxyImageProcessor;
 use App\Providers\FilesServiceProvider;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -23,6 +24,33 @@ class ImageProcessorResolutionTest extends TestCase
     public function test_gd_resolves_to_the_in_process_processor(): void
     {
         $this->assertInstanceOf(GdImageProcessor::class, $this->processorFor('gd'));
+    }
+
+    public function test_imgproxy_resolves_to_the_sidecar_once_its_address_key_and_salt_are_set(): void
+    {
+        config(['openpne.images.imgproxy' => ['url' => 'http://imgproxy:8080', 'key' => 'ab12', 'salt' => 'cd34', 'source_prefix' => '', 'timeout' => 20, 'spool_disk' => 'image_spool']]);
+
+        $this->assertInstanceOf(ImgproxyImageProcessor::class, $this->processorFor('imgproxy'));
+    }
+
+    /** Each missing value is named by the env var the operator has to set, at resolution rather than on the first picture. */
+    public function test_imgproxy_without_an_address_or_a_hex_secret_is_refused_by_name(): void
+    {
+        foreach ([
+            'OPENPNE_IMGPROXY_URL' => ['url' => '', 'key' => 'ab12', 'salt' => 'cd34'],
+            'OPENPNE_IMGPROXY_URL' => ['url' => 'imgproxy:8080', 'key' => 'ab12', 'salt' => 'cd34'],
+            'OPENPNE_IMGPROXY_KEY' => ['url' => 'http://imgproxy:8080', 'key' => 'not-hex', 'salt' => 'cd34'],
+            'OPENPNE_IMGPROXY_SALT' => ['url' => 'http://imgproxy:8080', 'key' => 'ab12', 'salt' => ''],
+        ] as $env => $values) {
+            config(['openpne.images.imgproxy' => $values + ['source_prefix' => '', 'timeout' => 20, 'spool_disk' => 'image_spool']]);
+
+            try {
+                $this->processorFor('imgproxy');
+                $this->fail("Expected {$env} to be required.");
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString($env, $e->getMessage());
+            }
+        }
     }
 
     /**

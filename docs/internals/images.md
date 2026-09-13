@@ -133,6 +133,56 @@ base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it i
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.
 
+## Processing
+
+Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php), chosen by
+`OPENPNE_IMAGE_PROCESSOR`. `gd`, the default, decodes in the PHP process and needs nothing beyond
+`ext-gd`; `imgproxy` hands the bytes to an [imgproxy](https://imgproxy.net) sidecar the operator runs
+([`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php)). Both are held
+to one contract test: no source metadata survives a re-encode, EXIF Orientation is applied, a variant
+is a still, and the same header check refuses the same sources before anything is decoded. What
+differs:
+
+| | `gd` | `imgproxy` |
+|---|---|---|
+| Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
+| Animation | the canonical is a still | the canonical keeps up to 200 frames within 50 MP in total; over that, a still |
+| Where the decode runs | the php-fpm worker | the sidecar |
+| To install | nothing | the container (the compose file runs one) and three env values |
+
+Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
+view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories.
+
+**Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
+world-readable because the sidecar runs as another user), asks the sidecar for
+`local:///<prefix><name>` over a URL signed with `OPENPNE_IMGPROXY_KEY` / `OPENPNE_IMGPROXY_SALT`
+(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer to four times the source cap,
+and deletes the spooled file; leftovers of a request that died are swept an hour later on the next
+write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
+`OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
+`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
+The sidecar must allow `local://` sources and security options (`IMGPROXY_ALLOW_SECURITY_OPTIONS`),
+since a variant asks for one frame with `max_animation_frames`; every request also asks for metadata,
+colour-profile and copyright stripping and auto-rotation, so the sidecar's own defaults for those do not
+matter, and the app dials nothing but this one address ([outbound-http](outbound-http.md), "Key
+invariants").
+
+**What an answer means**, measured on imgproxy v4.0.14 (its documentation specifies only the 429):
+
+| imgproxy answers | when | the app |
+|---|---|---|
+| 200 | processed | keeps the result |
+| 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION`, counted over every frame of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
+| 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data) | refuses the picture while `/health` still answers, else an outage |
+| 429, 503, other 5xx; no connection; timeout; an answer over the cap | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
+| 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
+
+libvips is more tolerant than GD: a truncated JPEG, a PNG with a bad CRC or with garbage pixel data
+decodes to *something* rather than being refused, so what GD refuses and imgproxy accepts differs at
+the edges; the contract test pins only what both refuse. An outage on the upload path is shown to the
+member as a temporary failure; on a read it is a 503 with `Retry-After`, and every canonical already
+made keeps being served.
+
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and

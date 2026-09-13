@@ -7,6 +7,7 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\GdImageProcessor;
 use App\Files\ImageProcessor;
+use App\Files\Imgproxy\ImgproxyImageProcessor;
 use App\Files\UploadLimit;
 use App\Models\File;
 use App\Observers\FileObserver;
@@ -45,8 +46,9 @@ class FilesServiceProvider extends ServiceProvider
             // it took effect.
             return match ($configured = config('openpne.images.processor')) {
                 'gd' => new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)),
+                'imgproxy' => ImgproxyImageProcessor::fromConfig(),
                 default => throw new InvalidArgumentException(
-                    "Unsupported openpne.images.processor [{$configured}]; expected 'gd'.",
+                    "Unsupported openpne.images.processor [{$configured}]; expected 'gd' or 'imgproxy'.",
                 ),
             };
         });
