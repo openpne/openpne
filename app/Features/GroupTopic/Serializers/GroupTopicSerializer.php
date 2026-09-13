@@ -5,6 +5,7 @@ namespace App\Features\GroupTopic\Serializers;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\GroupTopicCommentThread;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\ImageLadder;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
@@ -40,7 +41,7 @@ class GroupTopicSerializer
     }
 
     /**
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null}
      */
     public static function detail(GroupTopic $topic, Member $viewer): array
     {
@@ -61,7 +62,7 @@ class GroupTopicSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
      */
     public static function comment(GroupTopicComment $comment, Member $viewer): array
     {
@@ -108,7 +109,7 @@ class GroupTopicSerializer
      * All sources are FilePolicy-gated; which one a surface takes is docs/internals/images.md,
      * "The two ladders". A row whose File is gone is tolerated defensively.
      *
-     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}
      */
     public static function image(GroupTopicImage|GroupTopicCommentImage $image): array
     {
@@ -117,24 +118,7 @@ class GroupTopicSerializer
         return [
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
-            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
-            'fitSources' => $file ? [
-                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
-            ] : [],
-            'cropSources' => $file ? [
-                'tall' => [
-                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
-                ],
-                'wide' => [
-                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
-                ],
-            ] : [],
-            'width' => $file?->width,
-            'height' => $file?->height,
+            ...ImageLadder::of($file),
         ];
     }
 

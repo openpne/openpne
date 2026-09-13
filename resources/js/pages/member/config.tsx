@@ -37,6 +37,8 @@ interface ConfigForm {
     ai?: { count: number };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; description: string; options: Option[] };
+    // Absent while the image processor drops frames (GD): nothing animates for the switch to stop.
+    autoplayAnimations?: { value: string; options: Option[] };
     // Absent while the site offers fewer than two looks; `current` is the stored choice's label
     // (null = following the site default), never the label of the look being rendered.
     look?: { current: string | null; default: string };
@@ -101,6 +103,7 @@ export default function MemberConfig() {
     const profile = useForm({ profile_visibility: form.profileVisibility?.value ?? '' });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
+    const autoplay = useForm({ autoplay_animations: form.autoplayAnimations?.value ?? '' });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closures below.
@@ -108,6 +111,7 @@ export default function MemberConfig() {
     const profileField = form.profileVisibility;
     const surfaceField = form.surface;
     const lookField = form.look;
+    const autoplayField = form.autoplayAnimations;
 
     // Preference radios apply on selection (no per-section save button); SavedIndicator is the
     // per-control feedback that replaces the page flash, which the server omits for these on Modern.
@@ -118,6 +122,10 @@ export default function MemberConfig() {
     const saveProfileVisibility = (value: string) => {
         profile.setData('profile_visibility', value);
         profile.post('/member/config/profile-visibility', { preserveScroll: true });
+    };
+    const saveAutoplay = (value: string) => {
+        autoplay.setData('autoplay_animations', value);
+        autoplay.post('/member/config/autoplay', { preserveScroll: true });
     };
     // The locale switch responds with a hard navigation (the page reloading in the chosen language
     // is the feedback), so no SavedIndicator here.
@@ -263,6 +271,33 @@ export default function MemberConfig() {
                         </RadioCardGroup>
                     </FormSection>
                 </GroupItem>
+
+                {autoplayField && (
+                    <GroupItem>
+                        <FormSection
+                            title={t('Autoplay animated pictures')}
+                            headingLevel="h3"
+                            description={t('Animated pictures in posts play on their own. A device set to reduce motion shows them still regardless.')}
+                        >
+                            <RadioCardGroup legend={t('Autoplay animated pictures')} error={autoplay.errors.autoplay_animations}>
+                                <div className="flex flex-wrap gap-2">
+                                    {autoplayField.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="autoplay_animations"
+                                            value={opt.value}
+                                            checked={autoplay.data.autoplay_animations === opt.value}
+                                            disabled={autoplay.processing}
+                                            onChange={(e) => saveAutoplay(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
+                            <SavedIndicator show={autoplay.recentlySuccessful} />
+                        </FormSection>
+                    </GroupItem>
+                )}
 
                 {surfaceField && (
                     <GroupItem>

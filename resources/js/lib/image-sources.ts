@@ -64,3 +64,8 @@ export function cropSrcSet(ladder: CropSource[] | undefined): string | null {
 
     return ladder.map((source) => `${source.url} ${source.width}w`).join(', ');
 }
+
+/** The hero's ladder: the animated rungs when the viewer takes motion and the file has them, else the stills. */
+export function heroSources(image: { fitSources: FitSource[]; animatedSources: FitSource[] }, animate: boolean): FitSource[] {
+    return animate && image.animatedSources.length > 0 ? image.animatedSources : image.fitSources;
+}

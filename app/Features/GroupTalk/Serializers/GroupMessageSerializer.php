@@ -6,6 +6,7 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\ImageLadder;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
@@ -27,7 +28,7 @@ class GroupMessageSerializer
      * @param  array<int, GroupMessage>  $parents  the answered messages of the whole page; required
      *                                             rather than defaulted, since a caller that omitted it would draw every
      *                                             reply as one whose parent was deleted
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, reactions: list<array{emoji: string, count: int, mine: bool}>, inReplyTo: array{deleted: bool, id?: int, cursor?: string, author?: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, excerpt?: string, thumbnailUrl?: string|null}|null, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
@@ -143,7 +144,7 @@ class GroupMessageSerializer
      * Tolerates a row whose File is gone, though the join cascades with it. Every surface picks from
      * the same two ladders (docs/internals/images.md, "The two ladders").
      *
-     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}
+     * @return array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}
      */
     public static function image(GroupMessageImage $image): array
     {
@@ -152,24 +153,7 @@ class GroupMessageSerializer
         return [
             'id' => $image->getKey(),
             'url' => $file?->url() ?? '',
-            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
-            'fitSources' => $file ? [
-                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
-            ] : [],
-            'cropSources' => $file ? [
-                'tall' => [
-                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
-                ],
-                'wide' => [
-                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
-                ],
-            ] : [],
-            'width' => $file?->width,
-            'height' => $file?->height,
+            ...ImageLadder::of($file),
         ];
     }
 

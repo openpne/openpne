@@ -73,6 +73,8 @@ export interface PageProps {
     enabledFeatures: Record<FeatureKey, boolean>;
     /** The server's `App\Support\Look`; `standard` for a guest whatever the site says. */
     look: LookId;
+    /** The member's autoplay switch; false for a guest. The OS reduced-motion preference is read on the client and wins. */
+    autoplayAnimations: boolean;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
     /** Null for a guest and while `groupTalk` is off. */

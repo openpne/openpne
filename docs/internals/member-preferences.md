@@ -49,9 +49,13 @@ default applies to every member who has not made an explicit choice. The default
 - `PushDelivery` is the same shape (`Member::pushDelivery()`, corrupt row reads `Enabled`). It
   defaults **on** because subscribing a device is the consent — the preference only pauses it
   afterwards. See [notifications.md](notifications.md#web-push).
+- `AutoplayAnimations` stores an [`App\Support\Autoplay`](../../app/Support/Autoplay.php) (`on` |
+  `off`), default `On`; a corrupt row reads **`Off`**, the opposite direction from the two above,
+  because motion nobody chose is the side to fail to. Read via `Member::autoplayAnimations()`; what
+  it switches is [images.md](images.md#which-placements-animate).
 
 Writes go through `Member::setPreference()` / `setPreferredSurface()` / `setPreferredLook()` /
-`setComposeEditor()` (store an explicit value, even one equal to the default) and
+`setComposeEditor()` / `setAutoplayAnimations()` (store an explicit value, even one equal to the default) and
 `resetPreference()` / `resetPreferredSurface()` / `resetPreferredLook()` (delete the row, back to
 default-following). `setPreference($default)` is **not** the same as a reset.
 
@@ -104,6 +108,11 @@ out of the write path.
   the serializer omits it and `updateSurface()` 403s a crafted POST — so no latent Classic
   preference can be pinned while Classic is unavailable.
 
+- **Autoplay animated pictures** is Modern-only too (Classic's 120px thumbnail is always a still) and
+  is served only while the image processor keeps frames — under GD nothing animates, so the row is
+  absent rather than inert. It posts to `member.config.autoplay` like the other instant-apply radios;
+  unlike the surface POST that endpoint is not gated on the processor, since a value stored under GD
+  is harmless and simply takes effect once frames are kept.
 - **Layout** is Modern-only (a look only changes how Modern renders) and is the one section that
   saves nothing itself: it starts a preview, and the preview bar is what keeps or drops it
   ([looks.md](looks.md#trying-a-look-on)). It is absent while the site offers fewer than two looks.
@@ -128,9 +137,10 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
 
 1. `PreferenceKey` is the only list of preferences; the case value is the stored `key`, and the
    codec branches on the case so keys may carry different value types.
-2. An absent row means "follow the default". Visibility keys and `ComposeEditor` have concrete
-   defaults; `PreferredSurface` and `PreferredLook` default to `null` (defer to the surface
-   fallback / the site default). Reset deletes the row; it is not `setPreference($default)`.
+2. An absent row means "follow the default". Visibility keys, `ComposeEditor`, `PushDelivery` and
+   `AutoplayAnimations` have concrete defaults; `PreferredSurface` and `PreferredLook` default to
+   `null` (defer to the surface fallback / the site default). Reset deletes the row; it is not
+   `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is
    never written back. The surface section is binary; `updateSurface()` pins only an actual change
    (chosen ≠ desktop surface), keeping an unset member unset, and redirects to the canonical URL
