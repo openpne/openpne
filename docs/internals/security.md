@@ -399,16 +399,28 @@ The processor also refuses before it decodes. The upload rules bound a member's
 upload (`dimensions`, `openpne.images.max_upload_dimension`, and
 `OPENPNE_IMAGE_MAX_UPLOAD_KB`, [images](images.md)), but a row imported from
 OpenPNE 3 never met them, so the GD processor reads the header first and rejects
-a declared side over `max_upload_dimension` or a source over
-`OPENPNE_IMAGE_MAX_SOURCE_KB` without allocating a pixel. An out-of-memory kill is
-not catchable, so this header check is the whole defence in the GD process.
+a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
+`OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
+or more declared pixels than `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` — without
+allocating anything. What this bounds is one decode at
+`max_source_pixels × 4` bytes: 100 MB at the shipped 25 MP, which is the size the
+upload rules already admit, so a host sized below that lowers both settings
+together. An out-of-memory kill is not catchable, so this header check is the
+whole defence in the GD process; nothing serialises concurrent misses of the same
+picture. Remote images are held to a stricter 4 MP because the bytes are not a
+member's upload ([link-cards](link-cards.md)).
 
-Imagick is no longer offered: it could not skip frames before allocating them, and
-colour management is what an out-of-process backend is for. Original-size delivery
-streams the stored bytes without decoding, so an uploaded animation still plays
-there. Remote images are held to a stricter rule — a link card refuses anything
-it cannot prove is a single frame, because the bytes are not a member's upload
-([link-cards](link-cards.md)).
+Two GD facts are accepted rather than worked around. GD cannot read an embedded
+ICC profile, so every re-encode drops it and a wide-gamut photo is then read as
+sRGB — colours shift; imagick, which could convert the profile, is no longer
+offered because it could not skip frames before allocating them, and colour
+management is what an out-of-process backend is for. And libjpeg recovers from a
+truncated JPEG, so cut-short bytes decode to a partial picture instead of being
+refused.
+
+Original-size delivery streams the stored bytes without decoding, so an uploaded
+animation still plays there. Remote images are held to a stricter rule — a link
+card refuses anything it cannot prove is a single frame ([link-cards](link-cards.md)).
 
 ## Cookies
 

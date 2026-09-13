@@ -6,6 +6,7 @@ namespace Tests\Feature\File;
 
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
+use App\Files\ImageSourceLimit;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
 use Intervention\Gif\Builder;
@@ -118,14 +119,46 @@ abstract class ImageProcessorContractTestCase extends TestCase
         }
     }
 
-    public function test_source_bytes_over_the_cap_are_refused(): void
+    public function test_a_body_that_does_not_decode_fails_deterministically(): void
+    {
+        // A sound header over pixels that are not PNG data: past the preflight, refused by the decoder.
+        $this->expectException(ImageProcessingException::class);
+        $this->expectExceptionMessage('decoded');
+
+        $this->processor()->process($this->pngWithGarbagePixels(10, 10, 64), 'image/png', ImageSpec::canonical('png'));
+    }
+
+    public function test_source_bytes_over_the_cap_are_refused_before_any_decode(): void
     {
         config(['openpne.images.max_source_kilobytes' => 1]);
 
-        $this->expectException(ImageProcessingException::class);
-        $this->expectExceptionMessage('source limit');
+        try {
+            $this->processor()->process($this->pngWithGarbagePixels(10, 10, 4096), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('A source over the cap was accepted.');
+        } catch (ImageProcessingException $e) {
+            // The body would fail the decoder with a different message, so this one proves the order.
+            $this->assertStringContainsString('source limit', $e->getMessage());
+        }
+    }
 
-        $this->processor()->process($this->png(400, 400), 'image/png', ImageSpec::canonical('png'));
+    public function test_a_header_over_the_pixel_budget_is_refused_within_the_side_limit(): void
+    {
+        config(['openpne.images.max_upload_dimension' => 5000, 'openpne.images.max_source_pixels' => 1_000_000]);
+
+        try {
+            $this->processor()->process($this->pngHeaderClaiming(2000, 1000), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('2 MP was accepted against a 1 MP budget.');
+        } catch (ImageProcessingException $e) {
+            $this->assertStringContainsString('2000x1000', $e->getMessage());
+        }
+    }
+
+    public function test_a_blank_source_cap_is_the_default_rather_than_no_cap(): void
+    {
+        config(['openpne.images.max_source_kilobytes' => 0, 'openpne.images.max_source_pixels' => '']);
+
+        $this->assertSame(20480 * 1024, ImageSourceLimit::bytes());
+        $this->assertSame(25_000_000, ImageSourceLimit::pixels());
     }
 
     private function canonical(string $bytes, string $mime): ProcessedImage
@@ -194,9 +227,20 @@ abstract class ImageProcessorContractTestCase extends TestCase
     /** A complete PNG container whose IHDR declares $width x $height and which carries no pixels. */
     private function pngHeaderClaiming(int $width, int $height): string
     {
-        $ihdr = pack('NN', $width, $height)."\x08\x06\x00\x00\x00";
-        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+        return "\x89PNG\r\n\x1a\n".$this->pngChunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00").$this->pngChunk('IEND', '');
+    }
 
-        return "\x89PNG\r\n\x1a\n".$chunk('IHDR', $ihdr).$chunk('IEND', '');
+    /** As above, with an IDAT of $garbage bytes that is not a zlib stream. */
+    private function pngWithGarbagePixels(int $width, int $height, int $garbage): string
+    {
+        return "\x89PNG\r\n\x1a\n"
+            .$this->pngChunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00")
+            .$this->pngChunk('IDAT', str_repeat("\xAB", $garbage))
+            .$this->pngChunk('IEND', '');
+    }
+
+    private function pngChunk(string $type, string $data): string
+    {
+        return pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
     }
 }

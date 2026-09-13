@@ -15,4 +15,4 @@ a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP
 | `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped |
 | `webp-vp8x-meta.webp` | VP8X (flags ICC + reserved + EXIF + XMP) + image + odd-length EXIF + `XMP ` |
 | `tiny.gif` | plain GIF, no metadata |
-| `jpeg-truncated.jpg` | a JPEG cut short, so the strip fails closed |
+| `jpeg-truncated.jpg` | a JPEG cut short, so the strip fails closed. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |

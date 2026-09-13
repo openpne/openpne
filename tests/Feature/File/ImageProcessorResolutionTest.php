@@ -6,14 +6,15 @@ namespace Tests\Feature\File;
 
 use App\Files\GdImageProcessor;
 use App\Files\ImageProcessor;
+use App\Providers\FilesServiceProvider;
 use InvalidArgumentException;
 use Tests\TestCase;
 
 class ImageProcessorResolutionTest extends TestCase
 {
-    private function processorFor(?string $configured, ?string $legacyDriver = null): ImageProcessor
+    private function processorFor(?string $configured): ImageProcessor
     {
-        config(['openpne.images.processor' => $configured, 'openpne.images.legacy_driver' => $legacyDriver]);
+        config(['openpne.images.processor' => $configured]);
         $this->app->forgetInstance(ImageProcessor::class);
 
         return $this->app->make(ImageProcessor::class);
@@ -40,16 +41,22 @@ class ImageProcessorResolutionTest extends TestCase
         }
     }
 
-    public function test_a_lingering_image_driver_setting_is_refused_whatever_its_value(): void
+    /** Refused at boot, so a deployment still naming the old setting fails before it serves a page. */
+    public function test_a_lingering_image_driver_setting_fails_the_boot_whatever_its_value(): void
     {
         foreach (['imagick', 'gd'] as $legacy) {
+            config(['openpne.images.legacy_driver' => $legacy]);
+
             try {
-                $this->processorFor('gd', $legacy);
+                (new FilesServiceProvider($this->app))->register();
                 $this->fail("Expected OPENPNE_IMAGE_DRIVER={$legacy} to be rejected.");
             } catch (InvalidArgumentException $e) {
                 $this->assertStringContainsString('OPENPNE_IMAGE_DRIVER', $e->getMessage());
                 $this->assertStringContainsString('OPENPNE_IMAGE_PROCESSOR', $e->getMessage());
             }
         }
+
+        config(['openpne.images.legacy_driver' => null]);
+        (new FilesServiceProvider($this->app))->register();
     }
 }

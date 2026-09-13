@@ -55,9 +55,9 @@ final class GdImageProcessor implements ImageProcessor
 
     private function preflight(string $bytes): void
     {
-        $maxBytes = (int) config('openpne.images.max_source_kilobytes') * 1024;
+        $maxBytes = ImageSourceLimit::bytes();
 
-        if ($maxBytes > 0 && strlen($bytes) > $maxBytes) {
+        if (strlen($bytes) > $maxBytes) {
             throw new ImageProcessingException(sprintf('The image is %d bytes, over the %d byte source limit.', strlen($bytes), $maxBytes));
         }
 
@@ -68,9 +68,10 @@ final class GdImageProcessor implements ImageProcessor
         }
 
         $side = (int) config('openpne.images.max_upload_dimension');
+        $pixels = ImageSourceLimit::pixels();
 
-        if ($info[0] > $side || $info[1] > $side) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $side));
+        if ($info[0] > $side || $info[1] > $side || $pixels < $info[0] * $info[1]) {
+            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side or %d pixel limit.', $info[0], $info[1], $side, $pixels));
         }
     }
 }

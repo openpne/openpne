@@ -447,7 +447,7 @@ class LinkCardImageTest extends TestCase
     }
 
     /**
-     * An ImageManager that records every decode.
+     * An ImageProcessor that records every process() call, the only route to a decode.
      *
      * Reading the header (getimagesizefromstring) is expected and cheap; going through the decoder is
      * what allocates width × height × 4 bytes, and is what must not happen for an oversized image.

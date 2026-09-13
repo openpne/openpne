@@ -97,6 +97,13 @@ upload through Livewire's temporary endpoint before Filament validates, so
 12288 KB would silently be the admin cap above that size. That rule is global to Livewire uploads,
 which is fine while every one of them is an image; a non-image admin upload would need its own.
 
+A stored image has a second pair of caps, [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php):
+`OPENPNE_IMAGE_MAX_SOURCE_KB` (20480) and `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` (25 000 000, the
+per-side default squared) bound what the image processor will read and decode, whatever the upload
+rules were when the bytes arrived — a row imported from OpenPNE 3 met none of them
+([security](security.md), "Decoding an upload"). Both read like the upload cap: blank or
+non-positive is the default, never no cap.
+
 The cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool
 that serves uploads and the CLI that runs tests and commands. Those limits, and the reverse proxy's,

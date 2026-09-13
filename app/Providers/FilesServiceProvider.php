@@ -23,6 +23,8 @@ class FilesServiceProvider extends ServiceProvider
         // config:cache runs this too and would otherwise freeze the build host's answer.
         config(['openpne.images.exif' => extension_loaded('exif')]);
 
+        self::refuseRemovedDriverSetting();
+
         // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
         // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
         config(['livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.UploadLimit::kilobytes()]]);
@@ -39,8 +41,6 @@ class FilesServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ImageProcessor::class, function (): ImageProcessor {
-            self::refuseRemovedDriverSetting();
-
             // An unrecognised value throws rather than falling back to GD, so a typo never looks like
             // it took effect.
             return match ($configured = config('openpne.images.processor')) {
@@ -57,7 +57,7 @@ class FilesServiceProvider extends ServiceProvider
         File::observe(FileObserver::class);
     }
 
-    /** OPENPNE_IMAGE_DRIVER chose gd or imagick until imagick was dropped; a value still set must not look honoured. */
+    /** OPENPNE_IMAGE_DRIVER chose gd or imagick until imagick was dropped; a value still set fails the boot rather than look honoured. */
     public static function refuseRemovedDriverSetting(): void
     {
         $legacy = config('openpne.images.legacy_driver');

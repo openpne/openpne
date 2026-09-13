@@ -88,7 +88,14 @@ class AppIcon
             return self::shippedBytes($size);
         }
 
-        $bytes = $this->generate($original, $source->type, $size);
+        try {
+            $bytes = $this->generate($original, $source->type, $size);
+        } catch (ImageProcessingException) {
+            $disk->put($tooSmall, '');
+
+            return self::shippedBytes($size);
+        }
+
         $disk->put($key, $bytes);
 
         return $bytes;

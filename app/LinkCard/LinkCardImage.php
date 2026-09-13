@@ -52,7 +52,7 @@ final class LinkCardImage
 
     /**
      * Null whenever the image cannot be had; a card without a picture is still a useful card, so
-     * nothing here throws.
+     * only a processor outage (ImageProcessorUnavailableException) is let through.
      *
      * @param  float|null  $deadline  The job's remaining budget.
      * @return array{file: File, width: int, height: int}|null
@@ -105,7 +105,8 @@ final class LinkCardImage
     private function isDecodable(string $bytes, string $mime): bool
     {
         try {
-            $this->images->process($bytes, $mime, ImageSpec::canonical(self::ACCEPTED[$mime]));
+            // The smallest fit: the decode is the check, and the encode of one pixel costs nothing.
+            $this->images->process($bytes, $mime, ImageSpec::fit(1, 1, self::ACCEPTED[$mime]));
 
             return true;
         } catch (ImageProcessingException) {

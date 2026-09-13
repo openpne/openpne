@@ -1,5 +1,6 @@
 <?php
 
+use App\Files\ImageSourceLimit;
 use App\Files\UploadLimit;
 
 return [
@@ -52,8 +53,10 @@ return [
         // width*height*4 bytes, so an unbounded dimension is a decompression-bomb
         // (memory exhaustion) vector even within the file-size limit.
         'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', 5000),
-        // Largest stored image a processor will read, in kilobytes; OpenPNE 3 rows never met the upload cap.
-        'max_source_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_KB', 20480),
+        // Largest stored image a processor will read and decode (App\Files\ImageSourceLimit); an
+        // OpenPNE 3 row never met the upload rules, and a blank or 0 means the default, not no cap.
+        'max_source_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_KB', ImageSourceLimit::DEFAULT_KILOBYTES),
+        'max_source_pixels' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_PIXELS', ImageSourceLimit::DEFAULT_PIXELS),
         // Per-file cap for every image upload, in kilobytes; keep PHP's upload_max_filesize at or
         // above it (App\Files\UploadLimit, docs/internals/images.md).
         'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', UploadLimit::DEFAULT_KILOBYTES),
