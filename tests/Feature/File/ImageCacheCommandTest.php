@@ -28,8 +28,8 @@ class ImageCacheCommandTest extends TestCase
         $warm = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
         $cold = $this->stored('image/png', ImageBytes::png());
         $refused = $this->stored('image/png', 'not an image at all');
-        // OpenPNE 3 accepted this type; nothing here shows it as a picture, so it must at least be listed.
-        $unshown = $this->stored('image/pjpeg', ImageBytes::png());
+        // A type nothing here shows as a picture (OpenPNE 3's API upload wrote any type) must at least be listed.
+        $unshown = $this->stored('image/bmp', ImageBytes::png());
         $this->stored('application/pdf', '%PDF-1.4');
         $this->assertThrows(fn () => app(ImageCache::class)->canonical($refused));
 
@@ -40,7 +40,7 @@ class ImageCacheCommandTest extends TestCase
             ->expectsOutputToContain('refused:   1')
             ->expectsOutputToContain('unshown:   1')
             ->expectsOutputToContain("#{$refused->id} {$refused->name}: ")
-            ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/pjpeg")
+            ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/bmp")
             ->assertSuccessful();
 
         $this->assertTrue(app(ImageCache::class)->hasCanonical($warm));
@@ -52,12 +52,12 @@ class ImageCacheCommandTest extends TestCase
         $cold = $this->stored('image/png', ImageBytes::png(64, 32));
         $sizeless = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
         $sizeless->update(['width' => null, 'height' => null]);
-        $unshown = $this->stored('image/x-png', ImageBytes::png());
+        $unshown = $this->stored('image/tiff', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 1 picture(s), recorded 2 size(s).')
             ->expectsOutputToContain('unshown:     1')
-            ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/x-png")
+            ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/tiff")
             ->assertSuccessful();
 
         $this->assertTrue(app(ImageCache::class)->hasCanonical($cold));

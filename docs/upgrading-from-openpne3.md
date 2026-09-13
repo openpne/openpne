@@ -216,8 +216,9 @@ $ php artisan openpne:image-cache warm
 
 Also safe to run again. Pictures OpenPNE 3 accepted but this version's limits refuse are listed by
 `php artisan openpne:image-cache status`; the site shows nothing for those until the limits are
-raised and `warm --retry-failed` is run. It also lists pictures stored under an image type this
-version does not show (`image/pjpeg`, `image/x-png`).
+raised and `warm --retry-failed` is run. It also lists rows stored under an image type this version
+does not show as a picture; the upgrade folds the two OpenPNE 3 aliases into shown types (below), so
+what remains came in through OpenPNE 3's unvalidated API upload with whatever type the client sent.
 
 ## What the upgrade changed
 
@@ -226,6 +227,9 @@ change from a problem when you go through it.
 
 - **Passwords** — OpenPNE 3 passwords keep working, and each one is quietly re-secured on its owner's
   first sign-in. Nobody has to reset anything.
+- **File types** — every file's type is lower-cased, and the two aliases OpenPNE 3's validator
+  admitted, `image/pjpeg` and `image/x-png`, become `image/jpeg` and `image/png`, so those pictures
+  are shown as pictures.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`.

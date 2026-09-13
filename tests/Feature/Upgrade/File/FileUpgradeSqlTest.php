@@ -94,6 +94,22 @@ class FileUpgradeSqlTest extends TestCase
         ]);
     }
 
+    public function test_browser_declared_image_types_become_the_types_this_version_shows(): void
+    {
+        // Compared in PHP: the column's case-insensitive collation would let `IMAGE/JPEG` satisfy a
+        // WHERE on `image/jpeg`, hiding a lost LOWER().
+        $this->seedFile(20, ['type' => 'image/pjpeg']);
+        $this->seedFile(21, ['type' => 'IMAGE/X-PNG']);
+        $this->seedFile(22, ['type' => 'IMAGE/JPEG']);
+        $this->seedFile(23, ['type' => 'image/gif']);
+        $this->seedFile(24, ['type' => 'application/pdf']);
+
+        $this->runUpgrade();
+
+        $types = DB::table('files')->whereBetween('id', [20, 24])->orderBy('id')->pluck('type')->all();
+        $this->assertSame(['image/jpeg', 'image/png', 'image/jpeg', 'image/gif', 'application/pdf'], $types);
+    }
+
     public function test_resolves_member_avatar_owner(): void
     {
         $this->seedFile(11);
