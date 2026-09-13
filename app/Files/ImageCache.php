@@ -155,6 +155,30 @@ class ImageCache
         $this->disk()->deleteDirectory($file->name);
     }
 
+    /** Remove what the current encoder produced for $file, so the next read makes it again. */
+    public function purgeGeneration(File $file): void
+    {
+        $this->disk()->deleteDirectory(ImageTransform::encoderPrefix($file->name));
+    }
+
+    public function hasCanonical(File $file): bool
+    {
+        return $this->disk()->exists($this->canonicalKey($file));
+    }
+
+    /** The reason the processor refused $file, or null when it has not. */
+    public function refusal(File $file): ?string
+    {
+        $marker = $this->markerKey($file);
+
+        return $this->disk()->exists($marker) ? (string) $this->disk()->get($marker) : null;
+    }
+
+    public function forgetRefusal(File $file): void
+    {
+        $this->disk()->delete($this->markerKey($file));
+    }
+
     /**
      * Written to a sibling temp key and moved into place: the local adapter writes the final path in
      * place and readers take no lock, so a plain put can be read half-written and cached as a hit. Every

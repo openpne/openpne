@@ -100,7 +100,7 @@ class ImageDimensionsTest extends TestCase
         $good = $this->stored('image/png', $this->pngBytes(48, 24));
 
         $this->artisan('openpne:backfill-image-dimensions')
-            ->expectsOutputToContain('Recorded dimensions for 1 file(s), skipped 2 unreadable one(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s); 1 refused, 0 skipped as refused before (pass --retry-failed), 0 unavailable (processor down), 1 unreadable.')
             ->assertSuccessful();
 
         $this->assertNull($broken->refresh()->width);

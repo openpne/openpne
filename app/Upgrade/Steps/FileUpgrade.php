@@ -37,7 +37,7 @@ class FileUpgrade extends UpgradeStep
     public function targetDefaults(): array
     {
         // A null explicit_visibility inherits from the owner; OpenPNE 3 records no image dimensions,
-        // so width/height arrive null for `openpne:backfill-image-dimensions` to fill.
+        // so width/height arrive null for `openpne:image-cache warm` to fill.
         return ['explicit_visibility', 'width', 'height'];
     }
 

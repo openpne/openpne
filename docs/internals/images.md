@@ -76,12 +76,14 @@ A raster upload the processor refuses is refused as an upload — the canonical 
 row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
 without one.
 
-`openpne:backfill-image-dimensions` fills the rows that have none by reading each file's canonical,
-generating it where a row imported from OpenPNE 3 has none yet, so a run also warms those. Run it
-after an OpenPNE 3 upgrade. It selects only null rows, so it is idempotent and an interrupted run
-resumes by being re-run; a file whose bytes are gone or refused by the processor is left null and
-reported as skipped rather than stopping the run, and a refused one is remembered as such
-([security](security.md), "Decoding an upload").
+`openpne:image-cache warm` makes the canonical of every picture that has none — a row imported from
+OpenPNE 3, or one evicted from the cache disk — and records the size of every row missing one. Run it
+after an OpenPNE 3 upgrade; it is idempotent and an interrupted run resumes by being re-run. A file
+whose bytes are gone is reported and passed over, and one the processor refuses is remembered as
+refused ([security](security.md), "Decoding an upload"): `status` lists those with the reason,
+`warm --retry-failed` asks the processor again (after a limit was raised, say), and `rebuild` discards
+everything the current encoder made and makes the canonicals afresh (after a quality change). A run
+in which the processor was unavailable exits non-zero so a deploy script notices.
 
 ## Upload size
 
