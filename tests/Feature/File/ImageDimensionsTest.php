@@ -99,20 +99,23 @@ class ImageDimensionsTest extends TestCase
         $missing = File::factory()->create(['type' => 'image/png']);
         $good = $this->stored('image/png', $this->pngBytes(48, 24));
 
+        // The row without bytes fails the run: a deploy script must not read "warm ran" as "every picture is made".
         $this->artisan('openpne:backfill-image-dimensions')
-            ->expectsOutputToContain('Recorded dimensions for 1 file(s), skipped 2 unreadable one(s).')
-            ->assertSuccessful();
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('refused:     1')
+            ->expectsOutputToContain('unreadable:  1')
+            ->assertFailed();
 
         $this->assertNull($broken->refresh()->width);
         $this->assertNull($missing->refresh()->width);
         $this->assertSame(48, $good->refresh()->width);
     }
 
-    public function test_the_backfill_does_not_touch_a_row_that_already_has_a_size(): void
+    public function test_the_backfill_does_not_touch_a_row_whose_canonical_exists(): void
     {
-        // The NULL filter is what makes a re-run cheap and safe; without it this row would be
-        // rewritten from its bytes.
-        $file = $this->stored('image/png', $this->pngBytes(320, 200));
+        // A recorded size is rewritten only alongside a canonical made here; with the canonical in
+        // place a re-run reads nothing and rewrites nothing.
+        $file = $this->upload(UploadedFile::fake()->image('a.png', 320, 200));
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->backfill();

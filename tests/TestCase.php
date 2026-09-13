@@ -40,12 +40,6 @@ abstract class TestCase extends BaseTestCase
         return in_array(RefreshDatabase::class, class_uses_recursive(static::class), true);
     }
 
-    /**
-     * The test container outlives a request, so between two requests in one test the objects that
-     * captured the first request's session store (guards, the built session driver, the redirector)
-     * and the scoped bindings must be forgotten by hand. Required when a test crosses the member/admin
-     * realm boundary or changes what a scoped service already counted.
-     */
     /** A read-only directory is only read-only for a non-root user. */
     protected function skipUnlessModeBitsBind(): void
     {
@@ -54,6 +48,12 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
+    /**
+     * The test container outlives a request, so between two requests in one test the objects that
+     * captured the first request's session store (guards, the built session driver, the redirector)
+     * and the scoped bindings must be forgotten by hand. Required when a test crosses the member/admin
+     * realm boundary or changes what a scoped service already counted.
+     */
     protected function freshRequestState(): void
     {
         $this->app['auth']->forgetGuards();
