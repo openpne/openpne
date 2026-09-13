@@ -160,6 +160,17 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame(3, $this->frameCount($response->getContent()));
     }
 
+    public function test_a_source_the_processor_refuses_is_not_found(): void
+    {
+        // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it: a
+        // deterministic refusal is the picture not being there, not a server error.
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner, 240, 120);
+        config(['openpne.images.max_upload_dimension' => 100]);
+
+        $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertNotFound();
+    }
+
     public function test_a_variant_cached_by_an_earlier_generation_is_not_served(): void
     {
         // The cache disk outlives a release, and a variant is only regenerated on a miss, so a

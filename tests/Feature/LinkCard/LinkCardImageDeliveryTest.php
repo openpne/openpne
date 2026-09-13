@@ -61,6 +61,14 @@ class LinkCardImageDeliveryTest extends TestCase
             ->assertHeader('Content-Type', 'image/png');
     }
 
+    public function test_a_picture_the_processor_refuses_is_not_found(): void
+    {
+        $diary = $this->diary(Visibility::Open);
+        config(['openpne.images.max_upload_dimension' => 10]);
+
+        $this->actingAs($this->author)->get($this->urlFor($diary))->assertNotFound();
+    }
+
     public function test_a_guest_gets_a_web_public_post_card(): void
     {
         // The bytes a web-public diary shows have to render for the signed-out reader it is for.

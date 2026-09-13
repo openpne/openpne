@@ -56,6 +56,7 @@ class ImageProcessorResolutionTest extends TestCase
             }
         }
 
+        // A failed register() leaves the container without the bindings the rest of the suite resolves.
         config(['openpne.images.legacy_driver' => null]);
         (new FilesServiceProvider($this->app))->register();
     }

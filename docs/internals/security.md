@@ -402,13 +402,13 @@ OpenPNE 3 never met them, so the GD processor reads the header first and rejects
 a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
 or more declared pixels than `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` — without
-allocating anything. What this bounds is one decode at
-`max_source_pixels × 4` bytes: 100 MB at the shipped 25 MP, which is the size the
-upload rules already admit, so a host sized below that lowers both settings
-together. An out-of-memory kill is not catchable, so this header check is the
-whole defence in the GD process; nothing serialises concurrent misses of the same
-picture. Remote images are held to a stricter 4 MP because the bytes are not a
-member's upload ([link-cards](link-cards.md)).
+allocating anything. Left blank, both follow the upload rules (the upload cap, and
+the per-side limit squared: 25 MP at the shipped 5000), so raising an upload limit
+raises them too. What this bounds is one decode at `max_source_pixels × 4` bytes,
+100 MB at the shipped default; a host sized below that sets the pixel cap lower,
+and uploads over it are then refused. An out-of-memory kill is not catchable, so
+this header check is the whole defence in the GD process; nothing serialises
+concurrent misses of the same picture.
 
 Two GD facts are accepted rather than worked around. GD cannot read an embedded
 ICC profile, so every re-encode drops it and a wide-gamut photo is then read as
@@ -419,8 +419,9 @@ truncated JPEG, so cut-short bytes decode to a partial picture instead of being
 refused.
 
 Original-size delivery streams the stored bytes without decoding, so an uploaded
-animation still plays there. Remote images are held to a stricter rule — a link
-card refuses anything it cannot prove is a single frame ([link-cards](link-cards.md)).
+animation still plays there. Remote images are held to a stricter rule, 4 MP and
+provably a single frame, because the bytes are not a member's upload
+([link-cards](link-cards.md)).
 
 ## Cookies
 

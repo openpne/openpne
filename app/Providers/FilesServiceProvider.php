@@ -64,7 +64,7 @@ class FilesServiceProvider extends ServiceProvider
 
         if ($legacy !== null && $legacy !== '') {
             throw new InvalidArgumentException(
-                "OPENPNE_IMAGE_DRIVER [{$legacy}] is no longer read: unset it and use OPENPNE_IMAGE_PROCESSOR=gd (imagick support was removed).",
+                "OPENPNE_IMAGE_DRIVER [{$legacy}] is no longer read: unset it and use OPENPNE_IMAGE_PROCESSOR=gd (imagick support was removed). With a cached config, delete bootstrap/cache/config.php as well.",
             );
         }
     }

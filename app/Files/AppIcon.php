@@ -67,14 +67,15 @@ class AppIcon
         $disk = $this->disk();
         $key = "{$source->name}/app-icon-{$size}.png";
         $tooSmall = "{$source->name}/app-icon-{$size}.unfit";
+        $refused = "{$source->name}/app-icon-{$size}.refused";
 
         if ($disk->exists($key)) {
             return (string) $disk->get($key);
         }
 
-        // Only the verdict is cached, never the shipped bytes, so an upgrade that replaces the
-        // shipped asset takes effect.
-        if ($disk->exists($tooSmall)) {
+        // Only the verdict (too small, or refused by the processor) is cached, never the shipped
+        // bytes, so an upgrade that replaces the shipped asset takes effect.
+        if ($disk->exists($tooSmall) || $disk->exists($refused)) {
             return self::shippedBytes($size);
         }
 
@@ -91,7 +92,7 @@ class AppIcon
         try {
             $bytes = $this->generate($original, $source->type, $size);
         } catch (ImageProcessingException) {
-            $disk->put($tooSmall, '');
+            $disk->put($refused, '');
 
             return self::shippedBytes($size);
         }

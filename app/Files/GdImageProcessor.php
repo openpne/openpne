@@ -68,10 +68,15 @@ final class GdImageProcessor implements ImageProcessor
         }
 
         $side = (int) config('openpne.images.max_upload_dimension');
+
+        if ($info[0] > $side || $info[1] > $side) {
+            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
+        }
+
         $pixels = ImageSourceLimit::pixels();
 
-        if ($info[0] > $side || $info[1] > $side || $pixels < $info[0] * $info[1]) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side or %d pixel limit.', $info[0], $info[1], $side, $pixels));
+        if ($pixels < $info[0] * $info[1]) {
+            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $pixels));
         }
     }
 }

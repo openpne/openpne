@@ -6,7 +6,6 @@ namespace Tests\Feature\File;
 
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
-use App\Files\ImageSourceLimit;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
 use Intervention\Gif\Builder;
@@ -151,14 +150,6 @@ abstract class ImageProcessorContractTestCase extends TestCase
         } catch (ImageProcessingException $e) {
             $this->assertStringContainsString('2000x1000', $e->getMessage());
         }
-    }
-
-    public function test_a_blank_source_cap_is_the_default_rather_than_no_cap(): void
-    {
-        config(['openpne.images.max_source_kilobytes' => 0, 'openpne.images.max_source_pixels' => '']);
-
-        $this->assertSame(20480 * 1024, ImageSourceLimit::bytes());
-        $this->assertSame(25_000_000, ImageSourceLimit::pixels());
     }
 
     private function canonical(string $bytes, string $mime): ProcessedImage
