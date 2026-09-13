@@ -64,6 +64,20 @@ class ImageSourceLimitTest extends TestCase
         }
     }
 
+    public function test_a_side_over_the_limit_is_refused_only_where_the_intake_has_one(): void
+    {
+        // Lane-independent teeth for the sidecar's missing per-side limit: the imgproxy contract test
+        // pins it too, but only where a sidecar answers.
+        config(['openpne.images.max_upload_dimension' => 100, 'openpne.images.max_source_pixels' => 1_000_000_000]);
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+        $wide = "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', 200, 10)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
+
+        ImageSourceLimit::preflight($wide, ImageIntake::imgproxy());
+
+        $this->expectException(ImageProcessingException::class);
+        ImageSourceLimit::preflight($wide, ImageIntake::gd());
+    }
+
     public function test_a_readable_header_over_the_cap_is_refused_under_both(): void
     {
         config(['openpne.images.max_source_pixels' => 100]);
