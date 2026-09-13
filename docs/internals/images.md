@@ -153,5 +153,5 @@ changing it moves the layout. Classic keeps its 120px square.
   or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
   admin raw route carry the file token, whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
-  is not shortened for it — revalidating every image would cost a PHP request each. The public
-  asset, banner and link-card image routes carry no validator (the last is `no-store` by design).
+  is not shortened for it — revalidating every image would cost a PHP request each. Only the
+  link-card image route carries no validator (it is `no-store` by design).
