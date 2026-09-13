@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\Concerns;
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageBytesOverLimitException;
 use App\Files\ImageCache;
+use App\Files\ImageProcessingException;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageTransform;
 use App\Models\File;
@@ -69,8 +70,9 @@ trait AnswersWithImages
                 );
             } catch (ImageBytesOverLimitException) {
                 return $this->tooLarge();
-            } catch (CanonicalUnavailableException) {
-                // A picture the processor refused is reported in its slot; the others still answer.
+            } catch (CanonicalUnavailableException|ImageProcessingException) {
+                // A picture the processor refused, as a canonical or as this variant, is reported in
+                // its slot; the others still answer.
                 $described[] = ['number' => $number, 'unavailable' => true];
 
                 continue;

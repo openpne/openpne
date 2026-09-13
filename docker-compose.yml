@@ -29,10 +29,15 @@ services:
       # The mapped uid has no passwd entry in the container; tools that insist on
       # a writable HOME (composer) get a harmless one.
       HOME: /tmp
+      # Where the imgproxy service below is; .env opts in with OPENPNE_IMAGE_PROCESSOR=imgproxy.
+      OPENPNE_IMGPROXY_URL: http://imgproxy:8080
+      OPENPNE_IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
+      OPENPNE_IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
     volumes:
       - .:/var/www/html
     depends_on:
       - mailpit
+      - imgproxy
 
   nginx:
     image: nginx:1.31.5-alpine
@@ -64,3 +69,21 @@ services:
     image: axllent/mailpit:v1.31.1
     ports:
       - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
+
+  # Optional image processor (docs/internals/images.md, "Processing"): reads the app's spool directory
+  # as local:// and is used only when .env says OPENPNE_IMAGE_PROCESSOR=imgproxy. The key and salt are
+  # this dev stack's; a production stack generates its own (openssl rand -hex 32) and sets the same
+  # values on the app. Security options are allowed because every URL the app sends is signed.
+  imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:v4.0.14
+    environment:
+      IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
+      IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /spool
+      IMGPROXY_ALLOWED_SOURCES: local://
+      IMGPROXY_ALLOW_SECURITY_OPTIONS: "true"
+      # Stated rather than inherited: the budgets docs/internals/images.md quotes.
+      IMGPROXY_MAX_SRC_RESOLUTION: "50"
+      IMGPROXY_MAX_ANIMATION_FRAME_RESOLUTION: "0"
+    volumes:
+      - ./storage/app/image-spool:/spool:ro

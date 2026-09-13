@@ -8,6 +8,7 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -302,6 +303,47 @@ class DiaryImageToolsTest extends McpTestCase
         $this->acting($author);
 
         $this->read(['diary_id' => $diary->getKey(), 'number' => 1])->assertHasErrors(['cannot be drawn']);
+    }
+
+    public function test_a_variant_the_processor_refuses_is_reported_in_its_slot_too(): void
+    {
+        // The first thumbnail is drawn before the swap and served from the cache after it; the second
+        // is drawn under a processor that keeps the canonical but refuses every variant.
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $this->attach($diary, 1);
+        $this->acting($author);
+        $this->read(['diary_id' => $diary->getKey()])->assertOk();
+        $this->attach($diary, 2);
+        $inner = $this->app->make(ImageProcessor::class);
+        $this->app->instance(ImageProcessor::class, new class($inner) implements ImageProcessor
+        {
+            public function __construct(private readonly ImageProcessor $inner) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                if (! $spec->isCanonical()) {
+                    throw new ImageProcessingException('the sidecar answered more than the cap');
+                }
+
+                return $this->inner->process($bytes, $mime, $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+        });
+        $this->app->forgetInstance(ImageCache::class);
+
+        $this->read(['diary_id' => $diary->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->count('images', 2)
+                ->where('images.0.number', 1)
+                ->where('images.1', ['number' => 2, 'unavailable' => true])
+                ->etc());
+        $this->read(['diary_id' => $diary->getKey(), 'number' => 2])->assertHasErrors(['cannot be drawn']);
     }
 
     public function test_a_processor_outage_refuses_the_call_whole(): void
@@ -747,17 +789,18 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, DiaryImage::query()->count());
     }
 
-    public function test_a_picture_that_cannot_be_decoded_is_refused_as_an_error_on_that_picture(): void
+    public function test_a_picture_the_processor_refuses_is_an_error_on_that_picture(): void
     {
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
 
-        // A PNG header over no pixels: getimagesize reads it, so it passes the rules, and the
-        // canonical re-encode fails closed.
-        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
-        $hollow = "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', 10, 10)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
+        // A picture the rules pass and the source cap, set under them, refuses at the header check both
+        // processors share; the first picture stays under that cap.
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->assertLessThan(1024, strlen(base64_decode($this->encodedImage(20, 20))));
+        $big = base64_decode($this->encodedImage(20, 20)).str_repeat("\0", 2048);
 
-        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($hollow)]])
+        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($big)]])
             ->assertHasErrors(['image']);
 
         $this->assertSame(0, Diary::query()->count());

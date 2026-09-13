@@ -133,6 +133,61 @@ base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it i
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.
 
+## Processing
+
+Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php), chosen by
+`OPENPNE_IMAGE_PROCESSOR`. `gd`, the default, decodes in the PHP process and needs nothing beyond
+`ext-gd`; `imgproxy` hands the bytes to an [imgproxy](https://imgproxy.net) sidecar the operator runs
+([`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php)). Both are held
+to one contract test: no source metadata survives a re-encode, EXIF Orientation is applied, a variant
+is a still, and the same header check refuses the same sources before anything is decoded. What
+differs:
+
+| | `gd` | `imgproxy` |
+|---|---|---|
+| Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
+| Animation | the canonical is a still | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still; an APNG is a still under both, libvips reading its first frame like libpng |
+| Where the decode runs | the php-fpm worker | the sidecar |
+| To install | nothing | the container (the compose file runs one) and three env values |
+
+Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
+view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories.
+
+**Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
+world-readable because the sidecar runs as another user), asks the sidecar for
+`local:///<prefix><name>` over a URL signed with `OPENPNE_IMGPROXY_KEY` / `OPENPNE_IMGPROXY_SALT`
+(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a capped sink (the source cap for a canonical, four times it for a variant), and
+deletes the spooled file; leftovers of a request that died are swept an hour later on the next
+write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
+`OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
+`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
+A sidecar of the operator's own needs three settings besides the key and salt:
+`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, `IMGPROXY_ALLOWED_SOURCES=local://` and
+`IMGPROXY_ALLOW_SECURITY_OPTIONS=true` — the last because every request states its own frame budget
+with `max_animation_frames` (one for a variant, `MAX_FRAMES` for a canonical), so the sidecar's default
+of a single frame does not apply, and it is safe because only the holder of the key can sign a request.
+Every request also asks for metadata, colour-profile and copyright stripping and auto-rotation, so the
+sidecar's defaults for those do not matter either, and the app dials nothing but this one address
+([outbound-http](outbound-http.md), "Key invariants").
+
+**What an answer means**, measured on imgproxy v4.0.14 (its documentation specifies only the 429):
+
+| imgproxy answers | when | the app |
+|---|---|---|
+| 200 | processed | keeps the result |
+| 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION` (50 MP unconfigured), counted over every frame kept of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` where an operator set one (the shipped stack leaves it off, the app's own cap having applied first) | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
+| 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data), or could not this once | an outage: `/health` cannot tell the two apart, so nothing is remembered and the next view asks again |
+| 200 running past the source limit | a canonical whose re-encode outgrows the cap | the transfer is cut and the picture refused, as the limit would refuse the canonical anyway; a variant is given four times the limit, and past that it is an outage |
+| 429, 503, other 5xx; no connection; timeout; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
+| 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
+
+libvips is more tolerant than GD: a truncated JPEG, a PNG with a bad CRC or with garbage pixel data
+decodes to *something* rather than being refused, so what GD refuses and imgproxy accepts differs at
+the edges; the contract test pins only what both refuse. An outage on the upload path is shown to the
+member as a temporary failure; on a read it is a 503 with `Retry-After`, and every canonical already
+made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
+would not, and is then refused like any other over it.
+
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and
