@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Files;
 
+use App\Files\ImageIntake;
+use App\Files\ImageProcessingException;
 use App\Files\ImageSourceLimit;
 use Tests\TestCase;
 
@@ -41,6 +43,33 @@ class ImageSourceLimitTest extends TestCase
         config(['openpne.images.max_source_pixels' => 0, 'openpne.images.max_upload_dimension' => '']);
 
         $this->assertSame(25_000_000, ImageSourceLimit::pixels());
+    }
+
+    public function test_an_unreadable_header_is_refused_only_where_the_decode_is_in_process(): void
+    {
+        // Out of process the sidecar measures the file itself; in process nothing unmeasured is decoded.
+        ImageSourceLimit::preflight('not a picture', ImageIntake::imgproxy());
+
+        $this->expectException(ImageProcessingException::class);
+        ImageSourceLimit::preflight('not a picture', ImageIntake::gd());
+    }
+
+    public function test_a_readable_header_over_the_cap_is_refused_under_both(): void
+    {
+        config(['openpne.images.max_source_pixels' => 100]);
+        $png = imagecreatetruecolor(20, 20);
+        ob_start();
+        imagepng($png);
+        $bytes = (string) ob_get_clean();
+
+        foreach ([ImageIntake::gd(), ImageIntake::imgproxy()] as $intake) {
+            try {
+                ImageSourceLimit::preflight($bytes, $intake);
+                $this->fail('400 pixels passed a 100 pixel cap.');
+            } catch (ImageProcessingException $e) {
+                $this->assertStringContainsString('20x20', $e->getMessage());
+            }
+        }
     }
 
     public function test_a_set_value_is_taken_as_given(): void

@@ -45,7 +45,13 @@ final class ImageSourceLimit
         $info = @getimagesizefromstring($bytes);
 
         if ($info === false || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
-            throw new ImageProcessingException('The image header does not declare a size.');
+            // A header this PHP cannot read (a HEIC before PHP 8.5) is left to a processor that decodes
+            // out of process under its own budget; in-process nothing unmeasured may be decoded.
+            if ($intake->decodesInProcess()) {
+                throw new ImageProcessingException('The image header does not declare a size.');
+            }
+
+            return;
         }
 
         $side = $intake->sideLimit();

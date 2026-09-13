@@ -23,6 +23,7 @@ final class ImageIntake
      */
     private function __construct(
         private readonly array $formats,
+        private readonly bool $inProcess,
         private readonly ?int $sideLimit,
         private readonly int $pixelLimit,
     ) {}
@@ -30,7 +31,7 @@ final class ImageIntake
     /** In-process decoding: the four types libgd reads, bounded by the upload rules. */
     public static function gd(): self
     {
-        return new self(self::STILL, UploadLimit::dimension(), ImageSourceLimit::pixels());
+        return new self(self::STILL, true, UploadLimit::dimension(), ImageSourceLimit::pixels());
     }
 
     /** Out-of-process decoding: no per-side cap, and the pixel cap is the sidecar's budget unless one is configured. */
@@ -38,7 +39,13 @@ final class ImageIntake
     {
         $configured = (int) config('openpne.images.max_source_pixels');
 
-        return new self(self::STILL + self::SIDECAR_ONLY, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000);
+        return new self(self::STILL + self::SIDECAR_ONLY, false, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000);
+    }
+
+    /** Whether a decode allocates in this process, which is what a header this PHP cannot read must not reach. */
+    public function decodesInProcess(): bool
+    {
+        return $this->inProcess;
     }
 
     /** The canonical's format for a source of $mime, or null where this processor cannot read it. */
