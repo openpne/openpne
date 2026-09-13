@@ -55,8 +55,9 @@ candidates, and every added size multiplies cached variants across the whole fil
 drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in every stored format,
 under the current cache generation. Add a size a surface actually paints, not a size that might be
 wanted. An entry listed in `animated_sizes` as well opens a third form, the `_a` animation, which
-costs about a canonical per picture — a 15 MB GIF makes a 15 MB `_a` at every size that offers it —
-so that list stays the fit rungs a surface will actually animate.
+costs about a canonical per picture — a 6 MB GIF makes a 6 MB `_a` at every size that offers it — so
+that list stays the fit rungs a surface will actually animate. (A GIF over
+`OPENPNE_IMAGE_MAX_GIF_WALK_KB` is never recorded as animating, so it has no `_a` at all.)
 
 ## files.width / files.height
 
@@ -77,12 +78,14 @@ the layout twice, once when it is reserved and again when the picture disagrees 
 `files.animated` is recorded beside the size, from the same canonical: true when the processor kept
 more than one frame, false when it kept one, null when nothing has recorded it yet or the processor
 could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php) reads the answer's container;
-a walk it cannot finish is null, never a guess, and a GIF over `AnimationProbe::MAX_GIF_WALK_BYTES` is
-not walked at all, the walk costing about three times its bytes in memory). Only a canonical is
-probed; a variant's frames are nobody's fact. GD records false; a true recorded before a switch to
+a walk it cannot finish is null, never a guess, and a GIF over `OPENPNE_IMAGE_MAX_GIF_WALK_KB` (8 MB
+unconfigured) is not walked at all, the walk costing about three times its bytes in memory, so such a
+GIF stays unknown however often `warm` runs and never has an `_a`; the bound is on bytes, so the same
+animation can be recorded from its WebP, whose flag sits in the header, and not from its GIF). Only a canonical is probed; a variant's frames are
+nobody's fact. GD records false; a true recorded before a switch to
 GD stands until the next `warm` or `rebuild`, and until then the `_a` variant under GD's own key is a
-still. The fact is what lets a fit variant be asked for animated: `w640_h640_a` is answered only for a file whose `animated` is true,
-and 404 otherwise, unknown included — a still served under the `_a` key would keep its ETag after
+still. The fact is what lets a fit variant be asked for animated: `w640_h640_a` is answered only for a
+file whose `animated` is true, and 404 otherwise, unknown included — a still served under the `_a` key would keep its ETag after
 the fact was recorded and stay a still in every browser that saw it. `warm` fills a null from the
 canonical on the disk, and `rebuild` rewrites the fact from the new canonical, since another processor
 may keep frames this one did not.
@@ -172,8 +175,9 @@ the old directories.
 **Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
 world-readable because the sidecar runs as another user), asks the sidecar for
 `local:///<prefix><name>` over a URL signed with `OPENPNE_IMGPROXY_KEY` / `OPENPNE_IMGPROXY_SALT`
-(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a sink capped at the source cap, and
-deletes the spooled file; leftovers of a request that died are swept an hour later on the next
+(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a capped sink (the source
+cap for a canonical, twice it for a variant, whose top rung may be a plain re-encode), and deletes the
+spooled file; leftovers of a request that died are swept an hour later on the next
 write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
 `OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
@@ -193,7 +197,7 @@ sidecar's defaults for those do not matter either, and the app dials nothing but
 | 200 | processed | keeps the result |
 | 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION` (50 MP unconfigured), counted over every frame kept of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` where an operator set one (the shipped stack leaves it off, the app's own cap having applied first) | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
 | 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data), or could not this once | an outage: `/health` cannot tell the two apart, so nothing is remembered and the next view asks again |
-| 200 running past the source limit | a re-encode that outgrows the cap | the transfer is cut; a canonical is refused, as the limit would refuse it anyway, and a variant, drawn from a canonical within the limit, is an outage |
+| 200 running past the cap | a re-encode that outgrows it | the transfer is cut; a canonical (capped at the source limit) is refused, as the limit would refuse it anyway, and a variant (capped at twice it) is an outage |
 | 429, 503, other 5xx; no connection; timeout; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
 | 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
 
@@ -223,8 +227,8 @@ changing it moves the layout. Classic keeps its 120px square.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
 - `_a` is the animated form of a fit box in `animated_sizes` (`w640_h640_a`), answered only for a
-  file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither has `w_h` (the
-  canonical keeps its frames where the processor does). An animated variant the sidecar refused over
+  file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
+  has `w_h` (the canonical keeps its frames where the processor does). An animated variant the sidecar refused over
   budget is cached as a still until `rebuild`.
 - A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
   encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing

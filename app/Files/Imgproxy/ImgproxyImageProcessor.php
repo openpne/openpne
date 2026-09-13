@@ -31,6 +31,9 @@ final class ImgproxyImageProcessor implements ImageProcessor
     /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
     public const MAX_FRAMES = 200;
 
+    /** A fit at a rung the canonical already fits is a plain re-encode, which can come out larger than it went in. */
+    private const VARIANT_CAP_FACTOR = 2;
+
     private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
     public function __construct(
@@ -99,9 +102,9 @@ final class ImgproxyImageProcessor implements ImageProcessor
     }
 
     /**
-     * The body is collected into a sink capped at the source limit, so a transfer past it is aborted
-     * rather than held. That limit would refuse a canonical anyway, so passing it is a verdict; a
-     * variant is drawn from a canonical within it, so passing it is an outage.
+     * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
+     * A canonical's cap is the source limit, which would refuse it anyway, so passing it is a verdict; a
+     * variant is drawn from a canonical within that limit, so past its headroom it is an outage.
      *
      * @return array{0: ResponseInterface, 1: string}
      *
@@ -110,7 +113,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
      */
     private function send(string $url, bool $canonical): array
     {
-        $cap = ImageSourceLimit::bytes();
+        $cap = ImageSourceLimit::bytes() * ($canonical ? 1 : self::VARIANT_CAP_FACTOR);
         $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $cap);
 
         try {
@@ -142,7 +145,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
             throw new ImageProcessingException("imgproxy answered more than the {$cap} byte source limit.");
         }
 
-        $this->outage("imgproxy answered more than the {$cap} byte source limit for a variant.");
+        $this->outage("imgproxy answered more than the {$cap} byte cap for a variant.");
     }
 
     /**

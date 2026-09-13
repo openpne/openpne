@@ -81,7 +81,7 @@ class ImageCacheCommand extends Command
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
         $this->line("  animated:  {$animated}  (recorded as animating)");
-        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded yet; `openpne:image-cache warm` records it)");
+        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; `openpne:image-cache warm` records it where the picture can be read, a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB never)');
 
         return self::SUCCESS;
     }
@@ -103,7 +103,7 @@ class ImageCacheCommand extends Command
                 }
 
                 if (! $rebuild && $cache->hasCanonical($file)) {
-                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file)) ? 1 : 0;
+                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file), $cache->canonicalSize($file)) ? 1 : 0;
 
                     continue;
                 }
@@ -184,12 +184,13 @@ class ImageCacheCommand extends Command
      *
      * @param  callable(): string  $canonical
      */
-    private function recordMissingFacts(File $file, callable $canonical): bool
+    private function recordMissingFacts(File $file, callable $canonical, ?int $canonicalSize): bool
     {
         $missingSize = $file->width === null || $file->height === null;
-        // A format that never animates needs no bytes read to say so.
-        $missingAnimated = $file->animated === null && in_array($file->type, ['image/gif', 'image/webp'], true);
-        $facts = $file->animated === null && ! $missingAnimated ? ['animated' => false] : [];
+        // A format that never animates needs no bytes read to say so, and a GIF the probe would not walk is not read for it.
+        $missingAnimated = $file->animated === null && AnimationProbe::mayAnimate((string) $file->type)
+            && ! ($file->type === 'image/gif' && $canonicalSize !== null && $canonicalSize > AnimationProbe::maxGifWalkBytes());
+        $facts = $file->animated === null && ! AnimationProbe::mayAnimate((string) $file->type) ? ['animated' => false] : [];
 
         if (! $missingSize && ! $missingAnimated) {
             return $this->write($file, $facts);

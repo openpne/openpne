@@ -211,6 +211,16 @@ class ImageCache
         return $this->disk()->exists($this->canonicalKey($file));
     }
 
+    /** The canonical's length on the disk, or null when there is none or the adapter cannot say. */
+    public function canonicalSize(File $file): ?int
+    {
+        try {
+            return $this->disk()->size($this->canonicalKey($file));
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     public function refusal(File $file): ?string
     {
         $marker = $this->markerKey($file);

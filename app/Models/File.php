@@ -58,13 +58,18 @@ class File extends Model
     }
 
     /**
-     * The size must be whitelisted in `openpne.images.allowed_sizes` to resolve. On Classic the
-     * requested size is the rendered size (docs/internals/images.md, "Classic is not part of this").
+     * The size must be whitelisted in `openpne.images.allowed_sizes` (and in `animated_sizes` when
+     * $animated) to resolve. On Classic the requested size is the rendered size (docs/internals/images.md,
+     * "Classic is not part of this").
      */
     public function thumbnailUrl(int $width, int $height, bool $square = false, bool $animated = false): string
     {
         if ($square && $animated) {
             throw new InvalidArgumentException('An animated variant is a fit box, never a crop.');
+        }
+
+        if ($animated && ! in_array("{$width}x{$height}", config('openpne.images.animated_sizes'), true)) {
+            throw new InvalidArgumentException("No animated variant is offered at {$width}x{$height}; see openpne.images.animated_sizes.");
         }
 
         $format = $this->imageFormat() ?? 'jpg';

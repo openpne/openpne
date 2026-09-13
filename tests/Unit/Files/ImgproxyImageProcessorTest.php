@@ -201,14 +201,20 @@ class ImgproxyImageProcessorTest extends TestCase
         }
     }
 
-    public function test_a_variant_answer_over_the_limit_is_an_outage(): void
+    public function test_a_variant_answer_over_twice_the_limit_is_an_outage(): void
     {
-        // Drawn from a canonical within the limit, a variant past it says something about the sidecar, not the picture.
+        // Drawn from a canonical within the limit, a variant past its headroom says something about the sidecar, not the picture.
         config(['openpne.images.max_source_kilobytes' => 1]);
-        $this->assertGreaterThan(1024, strlen($this->noisyPng(80, 80)));
+        $this->assertGreaterThan(2048, strlen($this->noisyPng(80, 80)));
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
 
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png')), ImageProcessorUnavailableException::class);
+        try {
+            $processor->process($this->png(8, 8), 'image/png', ImageSpec::fit(120, 120, 'png'));
+            $this->fail('A variant answer over its cap was kept.');
+        } catch (ImageProcessorUnavailableException $e) {
+            // The number pins the headroom: twice the 1 KB limit.
+            $this->assertStringContainsString('2048 byte cap', $e->getMessage());
+        }
         Log::shouldHaveReceived('error')->once();
     }
 

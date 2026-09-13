@@ -9,7 +9,7 @@ final class ProcessedImage
         public readonly string $mime,
         public readonly int $width,
         public readonly int $height,
-        /** null when the processor could not tell. */
+        /** null when not judged: the processor could not tell, or was not asked (a variant's frames are nobody's fact). */
         public readonly ?bool $animated,
     ) {}
 }

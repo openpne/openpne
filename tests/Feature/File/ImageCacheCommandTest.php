@@ -142,6 +142,27 @@ class ImageCacheCommandTest extends TestCase
         $this->assertNull($unjudged->refresh()->animated);
     }
 
+    public function test_a_gif_over_the_walk_bound_stays_unknown_and_is_not_read(): void
+    {
+        // Configured in kilobytes; the canonical on the disk is over it, so the bytes are not fetched.
+        config(['openpne.images.max_gif_walk_kilobytes' => 1]);
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $file->update(['animated' => null]);
+        Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'gif'), str_pad($this->animatedGif(), 2048, "\0"));
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
+            ->assertSuccessful();
+        $this->assertNull($file->refresh()->animated);
+
+        config(['openpne.images.max_gif_walk_kilobytes' => 0]);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+        $this->assertTrue($file->refresh()->animated);
+    }
+
     public function test_a_processor_that_cannot_tell_leaves_the_recorded_fact_alone(): void
     {
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));

@@ -13,23 +13,35 @@ use Throwable;
  */
 final class AnimationProbe
 {
-    /** The GIF walk builds every frame as an object at about three times the bytes, so past this it is not attempted. */
-    public const MAX_GIF_WALK_BYTES = 8 * 1024 * 1024;
+    public const DEFAULT_GIF_WALK_KILOBYTES = 8192;
+
+    /** The formats a processor's answer can animate in: JPEG has no frames, and neither processor keeps an APNG's (pinned by the contract test). */
+    public static function mayAnimate(string $mime): bool
+    {
+        return in_array($mime, ['image/gif', 'image/webp'], true);
+    }
+
+    /** The GIF walk builds every frame as an object at about three times the bytes, so past this it is not attempted and the answer is null. */
+    public static function maxGifWalkBytes(): int
+    {
+        $configured = (int) config('openpne.images.max_gif_walk_kilobytes');
+
+        return ($configured > 0 ? $configured : self::DEFAULT_GIF_WALK_KILOBYTES) * 1024;
+    }
 
     /** True or false when the container says so, null when it cannot be read that far. */
-    public static function of(string $bytes, string $mime, int $maxGifWalkBytes = self::MAX_GIF_WALK_BYTES): ?bool
+    public static function of(string $bytes, string $mime): ?bool
     {
         return match ($mime) {
-            'image/gif' => self::gif($bytes, $maxGifWalkBytes),
+            'image/gif' => self::gif($bytes),
             'image/webp' => self::webp($bytes),
-            // JPEG has no frames, and neither processor keeps an APNG's (pinned by the contract test).
             default => false,
         };
     }
 
-    private static function gif(string $bytes, int $maxWalkBytes): ?bool
+    private static function gif(string $bytes): ?bool
     {
-        if (strlen($bytes) > $maxWalkBytes) {
+        if (strlen($bytes) > self::maxGifWalkBytes()) {
             return null;
         }
 

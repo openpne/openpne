@@ -180,6 +180,8 @@ class ImageDeliveryTest extends TestCase
         // The `_a` in the URL reached the processor as the ask for frames.
         $this->assertSame([true], array_values(array_map(fn (ImageSpec $spec): bool => $spec->animated, array_filter($this->specsSeen, fn (ImageSpec $spec): bool => $spec->width === 640))));
         $this->assertThrows(fn () => $file->thumbnailUrl(640, 640, square: true, animated: true), \InvalidArgumentException::class);
+        // Allowed as a still, not listed in animated_sizes: refused when built rather than a 404 URL.
+        $this->assertThrows(fn () => $file->thumbnailUrl(120, 120, animated: true), \InvalidArgumentException::class);
         $this->assertNotSame($this->actingAs($owner)->get($file->thumbnailUrl(640, 640))->headers->get('ETag'), $response->headers->get('ETag'));
         $this->actingAs($owner)->get($this->url($file, 'w640_h640_sq_a', 'gif'))->assertNotFound();
         $this->actingAs($owner)->get($this->url($file, 'w_h_a', 'gif'))->assertNotFound();
