@@ -105,9 +105,11 @@ class AppIcon
             $disk->put($refused, '');
 
             return self::shippedBytes($size);
+        } catch (ImageProcessorUnavailableException) {
+            return self::shippedBytes($size);
         }
 
-        $this->cache->publish($key, $bytes);
+        $this->cache->publishOrReport($key, $bytes);
 
         return $bytes;
     }

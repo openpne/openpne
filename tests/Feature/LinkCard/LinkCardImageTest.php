@@ -445,10 +445,8 @@ class LinkCardImageTest extends TestCase
 
     /**
      * A PNG whose IHDR claims a huge size while the file stays tiny — the decompression-bomb shape.
-     * The CRC is left wrong on purpose: a decoder would reject it, which is the point, since nothing
-     * should get far enough to try.
+     * Well-formed (CRCs, an IDAT, IEND) so the container walk accepts it and the size gate is what refuses it.
      */
-    /** Well-formed (CRCs, an IDAT, IEND) so the container walk accepts it and the size gate is what refuses it. */
     private function pngHeaderClaiming(int $width, int $height): string
     {
         $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));

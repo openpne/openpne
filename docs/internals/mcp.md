@@ -154,7 +154,9 @@ drawn from — one byte past it and refuses the file (`ImageBytesOverLimitExcept
 reading it whole and measuring afterwards, so a row understating its file cannot put an unbounded
 object in memory. Either way the call is refused whole
 rather than trimmed, a partial answer being one the caller cannot tell from a complete one. The
-preflight measures originals even when thumbnails were asked for: conservative, not exact.
+preflight measures originals even when thumbnails were asked for: conservative, not exact. The read
+itself counts what is actually read, which for a thumbnail is the canonical the variant is drawn from,
+a re-encode that can be larger than the stored bytes.
 
 **A slot holding no picture is refused when `number` names it, and passed over when it does not** —
 the refusal rule above, applied inside a message: being told "that one is empty" would let the slots

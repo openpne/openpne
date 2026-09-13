@@ -36,8 +36,8 @@ class FileUploader
         $type = $upload->getMimeType() ?? 'application/octet-stream';
         $format = ImageSpec::formatFor($type);
 
-        // Only a raster or a stripped upload is held in memory; anything else streams from the temp file.
-        $bytes = $format !== null || $this->shouldStrip($type) ? (string) file_get_contents($upload->getRealPath()) : null;
+        // Only a raster is held in memory (the stripper's types are rasters); anything else streams from the temp file.
+        $bytes = $format !== null ? (string) file_get_contents($upload->getRealPath()) : null;
 
         if ($bytes !== null && $this->shouldStrip($type)) {
             $bytes = $this->stripper->strip($bytes, $type);

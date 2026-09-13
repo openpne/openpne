@@ -68,8 +68,8 @@ class ImageCache
         $disk = $this->disk();
         $key = $this->canonicalKey($file);
 
-        if ($disk->exists($key)) {
-            return $this->cached($file, $key, $maxBytes);
+        if ($disk->exists($key) && ($cached = $this->cached($file, $key, $maxBytes)) !== null) {
+            return $cached;
         }
 
         $marker = $this->markerKey($file);
@@ -107,19 +107,22 @@ class ImageCache
         return $processed->bytes;
     }
 
-    /** A cache hit read to the caller's budget, so an understated row cannot put an unbounded object in memory. */
-    private function cached(File $file, string $key, ?int $maxBytes): string
+    /**
+     * A cache hit read to the caller's budget, so an understated row cannot put an unbounded object in
+     * memory; null when the key vanished between exists() and the read, which the caller treats as a miss.
+     */
+    private function cached(File $file, string $key, ?int $maxBytes): ?string
     {
         $disk = $this->disk();
 
         if ($maxBytes === null) {
-            return (string) $disk->get($key);
+            return $disk->get($key);
         }
 
         $stream = $disk->readStream($key);
 
         if ($stream === null) {
-            return (string) $disk->get($key);
+            return null;
         }
 
         try {
@@ -183,7 +186,7 @@ class ImageCache
     }
 
     /** On a read path the bytes in hand are still the answer; a cache disk failure is reported, not served as an error. */
-    private function publishOrReport(string $key, string $bytes): void
+    public function publishOrReport(string $key, string $bytes): void
     {
         try {
             $this->publish($key, $bytes);
