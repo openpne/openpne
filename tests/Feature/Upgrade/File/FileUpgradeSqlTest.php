@@ -94,6 +94,23 @@ class FileUpgradeSqlTest extends TestCase
         ]);
     }
 
+    public function test_browser_declared_image_types_become_the_types_this_version_shows(): void
+    {
+        // OpenPNE 3 fell back to the browser's type when its guesser failed; these rows were shown
+        // as attachments, never as pictures.
+        $this->seedFile(20, ['type' => 'image/pjpeg']);
+        $this->seedFile(21, ['type' => 'IMAGE/X-PNG']);
+        $this->seedFile(22, ['type' => 'image/gif']);
+        $this->seedFile(23, ['type' => 'application/pdf']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 20, 'type' => 'image/jpeg']);
+        $this->assertDatabaseHas('files', ['id' => 21, 'type' => 'image/png']);
+        $this->assertDatabaseHas('files', ['id' => 22, 'type' => 'image/gif']);
+        $this->assertDatabaseHas('files', ['id' => 23, 'type' => 'application/pdf']);
+    }
+
     public function test_resolves_member_avatar_owner(): void
     {
         $this->seedFile(11);

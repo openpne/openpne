@@ -216,8 +216,7 @@ $ php artisan openpne:image-cache warm
 
 Also safe to run again. Pictures OpenPNE 3 accepted but this version's limits refuse are listed by
 `php artisan openpne:image-cache status`; the site shows nothing for those until the limits are
-raised and `warm --retry-failed` is run. It also lists pictures stored under an image type this
-version does not show (`image/pjpeg`, `image/x-png`).
+raised and `warm --retry-failed` is run.
 
 ## What the upgrade changed
 

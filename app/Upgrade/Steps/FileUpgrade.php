@@ -24,7 +24,7 @@ class FileUpgrade extends UpgradeStep
         return [
             'id' => Column::source('id'),
             'name' => Column::source('name'),
-            'type' => Column::source('type'),
+            'type' => Column::expr($this->typeExpr(), uses: ['type']),
             'original_filename' => Column::source('original_filename'),
             'byte_size' => Column::source('filesize'),
             'related_entity_type' => Column::expr($this->ownerTypeExpr(), uses: ['id']),
@@ -91,6 +91,15 @@ class FileUpgrade extends UpgradeStep
             "SELECT `%2\$s`.`%3\$s` AS `file_id`, '%4\$s' AS `owner_type`, `%2\$s`.`%5\$s` AS `owner_id` FROM %1\$s AS `%2\$s` WHERE `%2\$s`.`%3\$s` IS NOT NULL%6\$s",
             SourceRef::table($reference['table']), $reference['table'], $reference['file'], $reference['type'], $reference['id'], $reference['extra'] ?? '',
         );
+    }
+
+    /**
+     * OpenPNE 3 kept the browser's declared type when its guesser failed, so `image/pjpeg` and
+     * `image/x-png` (and upper case) reach `file.type`; here they become the types this version shows.
+     */
+    private function typeExpr(): string
+    {
+        return "CASE LOWER(`file`.`type`) WHEN 'image/pjpeg' THEN 'image/jpeg' WHEN 'image/x-png' THEN 'image/png' ELSE LOWER(`file`.`type`) END";
     }
 
     /** CASE returning the morph alias of the owning entity, or NULL when none owns the file. */
