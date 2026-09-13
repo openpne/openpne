@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Files\Imgproxy;
 
+use App\Files\AnimationProbe;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -18,9 +19,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Utils;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Log;
-use Intervention\Gif\Decoder as GifDecoder;
 use Psr\Http\Message\ResponseInterface;
-use Throwable;
 
 /**
  * The bytes reach the sidecar through the spool directory it reads as `local://`, never over a route
@@ -32,8 +31,8 @@ final class ImgproxyImageProcessor implements ImageProcessor
     /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
     public const MAX_FRAMES = 200;
 
-    /** A variant's answer has no limit of its own to be refused by, so it gets headroom over the source limit. */
-    private const VARIANT_CAP_FACTOR = 4;
+    /** A fit at a rung the canonical already fits is a plain re-encode, which can come out larger than it went in. */
+    private const VARIANT_CAP_FACTOR = 2;
 
     private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
@@ -68,26 +67,26 @@ final class ImgproxyImageProcessor implements ImageProcessor
         ImageSourceLimit::preflight($bytes);
 
         $name = $this->spool->put($bytes, ImageSpec::formatFor($mime) ?? 'bin');
-        $still = ! $spec->isCanonical();
+        $keepFrames = $spec->isCanonical() || $spec->animated;
 
         try {
-            [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
+            [$response, $body] = $this->send($this->url->signed($this->options($spec, $keepFrames), $name, $spec->format), $spec->isCanonical());
 
             // An animation over the sidecar's resolution budget is kept as a still rather than refused.
-            if ($response->getStatusCode() === 422 && ! $still && in_array($spec->format, ['gif', 'webp'], true)) {
-                $still = true;
-                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
+            if ($response->getStatusCode() === 422 && $keepFrames && in_array($spec->format, ['gif', 'webp'], true)) {
+                $keepFrames = false;
+                [$response, $body] = $this->send($this->url->signed($this->options($spec, $keepFrames), $name, $spec->format), $spec->isCanonical());
             }
 
-            return $this->read($response, $body, $spec->format, $still);
+            return $this->read($response, $body, $spec, $keepFrames);
         } finally {
             $this->spool->delete($name);
         }
     }
 
-    private function options(ImageSpec $spec, bool $still): string
+    private function options(ImageSpec $spec, bool $keepFrames): string
     {
-        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality'), 'maf:'.($still ? 1 : self::MAX_FRAMES)];
+        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality'), 'maf:'.($keepFrames ? self::MAX_FRAMES : 1)];
 
         if ($spec->cover) {
             $options[] = "rt:fill/w:{$spec->width}/h:{$spec->height}/el:1/g:ce";
@@ -104,8 +103,8 @@ final class ImgproxyImageProcessor implements ImageProcessor
 
     /**
      * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
-     * A canonical's cap is the source limit, which would refuse an answer that long anyway, so passing it
-     * is a verdict; a variant is held to nothing else, so its cap is headroom and passing it an outage.
+     * A canonical's cap is the source limit, which would refuse it anyway, so passing it is a verdict; a
+     * variant is drawn from a canonical within that limit, so past its headroom it is an outage.
      *
      * @return array{0: ResponseInterface, 1: string}
      *
@@ -153,9 +152,10 @@ final class ImgproxyImageProcessor implements ImageProcessor
      * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
-    private function read(ResponseInterface $response, string $body, string $format, bool $still): ProcessedImage
+    private function read(ResponseInterface $response, string $body, ImageSpec $spec, bool $keepFrames): ProcessedImage
     {
         $status = $response->getStatusCode();
+        $format = $spec->format;
 
         if ($status === 200) {
             $size = @getimagesizefromstring($body);
@@ -164,7 +164,15 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 return $this->outage("imgproxy answered 200 with bytes that are not a {$format}.");
             }
 
-            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], ! $still && $this->animated($body, $format));
+            // Only a canonical's frames are a fact anyone records, so only it is walked; a still asked
+            // for has one frame, and an animated variant is left unjudged.
+            $animated = match (true) {
+                ! $keepFrames => false,
+                $spec->isCanonical() => AnimationProbe::of($body, ImageSpec::mimeFor($format)),
+                default => null,
+            };
+
+            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], $animated);
         }
 
         $reason = substr(trim($body), 0, 200);
@@ -174,20 +182,6 @@ final class ImgproxyImageProcessor implements ImageProcessor
         }
 
         return $this->outage("imgproxy answered {$status}: {$reason}");
-    }
-
-    /** Whether the answer holds more than one frame; the GIF walk is the library's and a walk it cannot finish counts as a still. */
-    private function animated(string $bytes, string $format): bool
-    {
-        try {
-            return match ($format) {
-                'gif' => count(GifDecoder::decode($bytes)->frames()) > 1,
-                'webp' => str_contains(substr($bytes, 0, 64), 'ANIM'),
-                default => false,
-            };
-        } catch (Throwable) {
-            return false;
-        }
     }
 
     private function outage(string $message): never

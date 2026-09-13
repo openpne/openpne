@@ -54,7 +54,10 @@ candidates, and every added size multiplies cached variants across the whole fil
 `allowed_sizes` is a whitelist of `WxH` targets, and an unlisted one is a 404, so a request cannot
 drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in every stored format,
 under the current cache generation. Add a size a surface actually paints, not a size that might be
-wanted.
+wanted. An entry listed in `animated_sizes` as well opens a third form, the `_a` animation, which
+costs about a canonical per picture — a 6 MB GIF makes a 6 MB `_a` at every size that offers it — so
+that list stays the fit rungs a surface will actually animate. (A GIF over
+`OPENPNE_IMAGE_MAX_GIF_WALK_KB` is never recorded as animating, so it has no `_a` at all.)
 
 ## files.width / files.height
 
@@ -71,6 +74,22 @@ without it neither the canonical nor the size is turned upright, consistently.
 
 Consumers must handle null rather than substituting a guess: a reserved box of the wrong shape moves
 the layout twice, once when it is reserved and again when the picture disagrees with it.
+
+`files.animated` is recorded beside the size, from the same canonical: true when the processor kept
+more than one frame, false when it kept one, null when nothing has recorded it yet or the processor
+could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php) reads the answer's container;
+a walk it cannot finish is null, never a guess, and a GIF over `OPENPNE_IMAGE_MAX_GIF_WALK_KB` (8 MB
+unconfigured) is not walked at all, the walk costing about three times its bytes in memory, so such
+a GIF stays unknown however often `warm` runs and never has an `_a`; the bound is on bytes, so the
+same animation can be recorded from its WebP, whose flag sits in the header, and not from its GIF).
+Only a canonical is probed; a variant's frames are nobody's fact. GD records false; a true recorded
+before a switch to GD stands until the next `warm` or `rebuild`, and until then the `_a` variant
+under GD's own key is a still. The fact is what lets a fit variant be asked for animated:
+`w640_h640_a` is answered only for a file whose `animated` is true, and 404 otherwise, unknown
+included — a still served under the `_a` key would keep its ETag after the fact was recorded and
+stay a still in every browser that saw it. `warm` fills a null from the canonical on the disk, and
+`rebuild` rewrites the fact from the new canonical, since another processor may keep frames this one
+did not.
 
 A raster upload the processor refuses is refused as an upload — the canonical is produced before the
 row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
@@ -140,24 +159,26 @@ Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php)
 `ext-gd`; `imgproxy` hands the bytes to an [imgproxy](https://imgproxy.net) sidecar the operator runs
 ([`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php)). Both are held
 to one contract test: no source metadata survives a re-encode, EXIF Orientation is applied, a variant
-is a still, and the same header check refuses the same sources before anything is decoded. What
-differs:
+is a still unless its URL asks for the frames with `_a`, and the same header check refuses the same
+sources before anything is decoded. What differs:
 
 | | `gd` | `imgproxy` |
 |---|---|---|
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
-| Animation | the canonical is a still | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still; an APNG is a still under both, libvips reading its first frame like libpng |
+| Animation | the canonical and every variant are stills | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |
 | To install | nothing | the container (the compose file runs one) and three env values |
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
-view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories.
+view or by `openpne:image-cache warm`, which also records anew whether it animates; `rebuild` reclaims
+the old directories.
 
 **Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
 world-readable because the sidecar runs as another user), asks the sidecar for
 `local:///<prefix><name>` over a URL signed with `OPENPNE_IMGPROXY_KEY` / `OPENPNE_IMGPROXY_SALT`
-(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a capped sink (the source cap for a canonical, four times it for a variant), and
-deletes the spooled file; leftovers of a request that died are swept an hour later on the next
+(the sidecar's own `IMGPROXY_KEY` / `IMGPROXY_SALT`), reads the answer into a capped sink (the source
+cap for a canonical, twice it for a variant, whose top rung may be a plain re-encode), and deletes the
+spooled file; leftovers of a request that died are swept an hour later on the next
 write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
 `OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
@@ -177,7 +198,7 @@ sidecar's defaults for those do not matter either, and the app dials nothing but
 | 200 | processed | keeps the result |
 | 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION` (50 MP unconfigured), counted over every frame kept of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` where an operator set one (the shipped stack leaves it off, the app's own cap having applied first) | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
 | 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data), or could not this once | an outage: `/health` cannot tell the two apart, so nothing is remembered and the next view asks again |
-| 200 running past the source limit | a canonical whose re-encode outgrows the cap | the transfer is cut and the picture refused, as the limit would refuse the canonical anyway; a variant is given four times the limit, and past that it is an outage |
+| 200 running past the cap | a re-encode that outgrows it | the transfer is cut; a canonical (capped at the source limit) is refused, as the limit would refuse it anyway, and a variant (capped at twice it) is an outage |
 | 429, 503, other 5xx; no connection; timeout; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
 | 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
 
@@ -206,9 +227,13 @@ changing it moves the layout. Classic keeps its 120px square.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
-- A variant's cache key carries token, geometry, format, generation, and the encoder — the
-  `processor`, `quality`, and whether `ext-exif` is present — so any of those changing is a new
-  variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
+- `_a` is the animated form of a fit box in `animated_sizes` (`w640_h640_a`), answered only for a
+  file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
+  has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
+  sidecar refused over budget is cached as a still until `rebuild`.
+- A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
+  encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing
+  is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
   refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
   never from the stored bytes. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself

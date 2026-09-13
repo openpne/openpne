@@ -59,6 +59,12 @@ return [
             // Modern's fit ladder, and the cell-ratio crops (3:4 and 3:2) its grid places.
             '640x640', '1200x1200', '300x400', '600x800', '300x200', '600x400',
         ],
+        // The fit sizes that may be asked for animated (`_a`), a subset of the above: each costs a
+        // canonical-sized file per picture (docs/internals/images.md, "Adding a size").
+        'animated_sizes' => ['320x320', '640x640', '1200x1200'],
+        // Largest GIF whose frames are counted to record `files.animated` (App\Files\AnimationProbe);
+        // the count costs about three times the bytes in memory. Blank or non-positive is the default.
+        'max_gif_walk_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_GIF_WALK_KB', 0),
         // Reject uploads larger than this on a side. The decoder allocates
         // width*height*4 bytes, so an unbounded dimension is a decompression-bomb
         // (memory exhaustion) vector even within the file-size limit.

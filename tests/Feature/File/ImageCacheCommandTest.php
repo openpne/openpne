@@ -16,6 +16,8 @@ use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Gif\Builder;
+use Mockery;
 use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
@@ -39,6 +41,8 @@ class ImageCacheCommandTest extends TestCase
             ->expectsOutputToContain('cold:      1')
             ->expectsOutputToContain('refused:   1')
             ->expectsOutputToContain('unshown:   1')
+            ->expectsOutputToContain('animated:  0')
+            ->expectsOutputToContain('unknown:   2')
             ->expectsOutputToContain("#{$refused->id} {$refused->name}: ")
             ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/pjpeg")
             ->assertSuccessful();
@@ -55,7 +59,7 @@ class ImageCacheCommandTest extends TestCase
         $unshown = $this->stored('image/x-png', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 2 size(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 2.')
             ->expectsOutputToContain('unshown:     1')
             ->expectsOutputToContain("#{$unshown->id} {$unshown->name}: image/x-png")
             ->assertSuccessful();
@@ -72,7 +76,7 @@ class ImageCacheCommandTest extends TestCase
         config(['openpne.images.max_upload_dimension' => 16]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 0 picture(s), recorded 0 size(s).')
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
             ->expectsOutputToContain('refused:     1')
             ->assertSuccessful();
         $this->assertNotNull(app(ImageCache::class)->refusal($file));
@@ -88,7 +92,7 @@ class ImageCacheCommandTest extends TestCase
         Storage::disk('image_cache')->put($icon, '');
 
         $this->artisan('openpne:image-cache', ['action' => 'warm', '--retry-failed' => true])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
         $this->assertTrue(app(ImageCache::class)->hasCanonical($file));
         $this->assertNull(app(ImageCache::class)->refusal($file));
@@ -102,7 +106,7 @@ class ImageCacheCommandTest extends TestCase
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         $this->assertSame([64, 32], [$file->refresh()->width, $file->height]);
@@ -122,6 +126,106 @@ class ImageCacheCommandTest extends TestCase
         $this->assertSame($reason, app(ImageCache::class)->refusal($file));
     }
 
+    public function test_warm_fills_a_missing_animated_fact_from_the_canonical_and_leaves_what_it_cannot_judge(): void
+    {
+        // Both have a canonical on the disk; one the probe reads, one cut short so it cannot.
+        $known = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
+        $known->update(['animated' => null]);
+        $unjudged = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('b.gif', $this->animatedGif()));
+        $unjudged->update(['animated' => null]);
+        Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($unjudged->name, 'gif'), substr($this->animatedGif(), 0, 40));
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+
+        $this->assertFalse($known->refresh()->animated);
+        $this->assertNull($unjudged->refresh()->animated);
+    }
+
+    public function test_a_gif_over_the_walk_bound_stays_unknown_and_its_canonical_is_not_read(): void
+    {
+        // Configured in kilobytes; the canonical on the disk is over it, so its bytes are never fetched.
+        config(['openpne.images.max_gif_walk_kilobytes' => 1]);
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $file->update(['animated' => null]);
+        Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'gif'), str_pad($this->animatedGif(), 2048, "\0"));
+        $cache = Mockery::mock(app(ImageCache::class))->makePartial();
+        $cache->shouldNotReceive('canonical');
+        $this->app->instance(ImageCache::class, $cache);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
+            ->assertSuccessful();
+        $this->assertNull($file->refresh()->animated);
+
+        $this->app->forgetInstance(ImageCache::class);
+        config(['openpne.images.max_gif_walk_kilobytes' => 0]);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+        $this->assertTrue($file->refresh()->animated);
+    }
+
+    public function test_warm_reads_an_animated_webp_flag_from_its_canonical(): void
+    {
+        // The extended header's animation bit, at byte 20, is the whole answer for a WebP.
+        $webp = $this->webp("\x02".str_repeat("\x00", 9));
+        $file = $this->stored('image/webp', $webp);
+        $file->update(['width' => 8, 'height' => 8]);
+        Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'webp'), $webp);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+
+        $this->assertTrue($file->refresh()->animated);
+    }
+
+    public function test_a_processor_that_cannot_tell_leaves_the_recorded_fact_alone(): void
+    {
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $file->update(['animated' => true]);
+        $inner = $this->app->make(ImageProcessor::class);
+        $this->app->instance(ImageProcessor::class, new class($inner) implements ImageProcessor
+        {
+            public function __construct(private readonly ImageProcessor $inner) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                $processed = $this->inner->process($bytes, $mime, $spec);
+
+                return new ProcessedImage($processed->bytes, $processed->mime, $processed->width, $processed->height, null);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+        });
+        $this->app->forgetInstance(ImageCache::class);
+
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 0.')
+            ->assertSuccessful();
+
+        $this->assertTrue($file->refresh()->animated);
+    }
+
+    public function test_rebuild_rewrites_the_animated_fact_when_the_processor_disagrees_with_the_row(): void
+    {
+        // Same size, another verdict: the guard that skips an unchanged size must not skip this.
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
+        $file->update(['animated' => true]);
+
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+
+        $this->assertFalse($file->refresh()->animated);
+    }
+
     public function test_rebuild_discards_every_derived_file_and_makes_the_canonical_again(): void
     {
         $file = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 64, 32));
@@ -135,7 +239,7 @@ class ImageCacheCommandTest extends TestCase
         $file->update(['width' => 10, 'height' => 5]);
 
         $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
-            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 1.')
             ->assertSuccessful();
 
         Storage::disk('image_cache')->assertMissing($variant);
@@ -188,7 +292,7 @@ class ImageCacheCommandTest extends TestCase
         $good = $this->stored('image/png', ImageBytes::png());
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
             ->expectsOutputToContain('unreadable:  1')
             ->expectsOutputToContain("#{$missing->id} {$missing->name}: ")
             ->assertFailed();
@@ -232,6 +336,30 @@ class ImageCacheCommandTest extends TestCase
         $this->artisan('openpne:backfill-image-dimensions')->assertSuccessful();
 
         $this->assertSame([16, 8], [$cold->refresh()->width, $cold->height]);
+    }
+
+    /** A RIFF/WEBP whose first chunk is the extended header with the given flags byte. */
+    private function webp(string $vp8x): string
+    {
+        $chunk = 'VP8X'.pack('V', strlen($vp8x)).$vp8x;
+
+        return 'RIFF'.pack('V', 4 + strlen($chunk)).'WEBP'.$chunk;
+    }
+
+    /** Three frames of one shade each on an 8x8 screen. */
+    private function animatedGif(): string
+    {
+        $builder = Builder::canvas(8, 8);
+
+        foreach ([40, 140, 240] as $shade) {
+            $gd = imagecreate(8, 8);
+            imagecolorallocate($gd, $shade, 40, 200);
+            ob_start();
+            imagegif($gd);
+            $builder->addFrame(source: (string) ob_get_clean(), delay: 0.1);
+        }
+
+        return $builder->encode();
     }
 
     private function processorIsDown(): void

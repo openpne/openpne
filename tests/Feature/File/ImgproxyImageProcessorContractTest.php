@@ -57,7 +57,7 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
 
     public function test_an_answer_over_the_cap_is_cut_short_by_the_sink(): void
     {
-        // A 4x4 source under a 1 KB limit blown up to 2000x2000 runs past a variant's 4 KB cap, so the
+        // A 4x4 source under a 1 KB limit blown up to 2000x2000 runs past a variant's 2 KB cap, so the
         // sink cuts the transfer — libcurl's write error here, not the mock's short write.
         config(['openpne.images.max_source_kilobytes' => 1]);
 
@@ -65,7 +65,7 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
             $this->processor()->process($this->png(4, 4), 'image/png', ImageSpec::cover(2000, 2000, 'png'));
             $this->fail('An answer over the cap was kept.');
         } catch (ImageProcessorUnavailableException $e) {
-            $this->assertStringContainsString('4096 byte cap', $e->getMessage());
+            $this->assertStringContainsString('2048 byte cap for a variant', $e->getMessage());
         }
     }
 

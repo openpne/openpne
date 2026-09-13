@@ -370,7 +370,7 @@ an animation costs frames × width × height however small the encoded file is, 
 GD allocates those buffers outside PHP's `memory_limit`; a 31 KB 1000×1000 GIF of
 150 frames would cost ~650 MB. GD is therefore built with intervention/image's
 `decodeAnimation` off, so **a decode allocates one frame, never the frame count**,
-and a variant is always a still, as in OpenPNE 3.
+and a variant is a still whatever its URL asks for, as in OpenPNE 3.
 
 The processor also refuses before it decodes. The upload rules bound a member's
 upload (`dimensions`, `openpne.images.max_upload_dimension`, and

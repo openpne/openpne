@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * Serves thumbnail variants at the OpenPNE 3-compatible
- * `/cache/img/{format}/w{W}_h{H}[_sq]/{name}.{ext}` URL, so old image links keep
+ * `/cache/img/{format}/w{W}_h{H}[_sq|_a]/{name}.{ext}` URL, so old image links keep
  * working. Like FileController, every request is gated by FilePolicy — a member
  * avatar thumbnail is as private as the original.
  */
@@ -32,6 +32,9 @@ class ImageController extends Controller
 
         $transform = ImageTransform::fromGeometry($geometry);
         abort_unless($transform !== null, 404);
+
+        // Before the validator: a picture not known to animate has no animated variant, not a still under an ETag that would outlive the answer.
+        abort_unless(! $transform->animated || $file->animated === true, 404);
 
         // Checked after the policy so a viewer who may no longer see the file is answered 404, never 304.
         $response = response('', 200, [

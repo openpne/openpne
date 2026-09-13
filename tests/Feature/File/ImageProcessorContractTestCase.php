@@ -68,6 +68,16 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $this->assertFalse($variant->animated);
     }
 
+    public function test_an_animated_variant_keeps_frames_only_where_the_processor_does(): void
+    {
+        $variant = $this->processor()->process($this->animatedGif(), 'image/gif', ImageSpec::fit(120, 120, 'gif')->animated());
+        $preserves = $this->processor()->preservesAnimation();
+
+        $this->assertSame($preserves ? 3 : 1, $this->frameCount($variant->bytes));
+        // A variant's frames are nobody's fact: a processor that kept them need not say so.
+        $this->assertSame($preserves ? null : false, $variant->animated);
+    }
+
     public function test_the_canonical_keeps_an_animation_only_where_the_processor_says_so(): void
     {
         $canonical = $this->canonical($this->animatedGif(), 'image/gif');

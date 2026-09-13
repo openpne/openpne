@@ -256,7 +256,8 @@ Route::middleware('auth.session')->group(function () {
     Route::get('/cache/img/{format}/{geometry}/{name}.{ext}', [ImageController::class, 'show'])
         ->where([
             'format' => 'jpg|png|gif|webp',
-            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
+            // `_a` only here: the link-card route has no animated form (docs/internals/images.md, "Processing").
+            'geometry' => 'w[0-9]*_h[0-9]*(_sq|_a)?',
             // `.` is admitted because OpenPNE 3 file names allow [\w._-]; the pattern is not the gate,
             // since the File-name lookup and Flysystem's traversal guard decide what is served.
             'name' => '[A-Za-z0-9_.-]+',

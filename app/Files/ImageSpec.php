@@ -20,6 +20,7 @@ final class ImageSpec
         public readonly bool $cover,
         public readonly string $format,
         public readonly ?string $background,
+        public readonly bool $animated = false,
     ) {}
 
     public static function formatFor(string $mime): ?string
@@ -50,7 +51,17 @@ final class ImageSpec
     /** $hex is rrggbb without a leading #. */
     public function withBackground(string $hex): self
     {
-        return new self($this->width, $this->height, $this->cover, $this->format, $hex);
+        return new self($this->width, $this->height, $this->cover, $this->format, $hex, $this->animated);
+    }
+
+    /** Asks for every frame of a fit; a processor that keeps none answers a still, and a canonical asks without this. */
+    public function animated(): self
+    {
+        if ($this->cover) {
+            throw new InvalidArgumentException('An animated variant is a fit, never a cover: a cover upscales every frame.');
+        }
+
+        return new self($this->width, $this->height, $this->cover, $this->format, $this->background, true);
     }
 
     public function isCanonical(): bool
