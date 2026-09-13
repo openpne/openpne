@@ -6,7 +6,7 @@ namespace Tests\Feature\File;
 
 use App\Files\ImageProcessor;
 
-class GdImageProcessorContractTest extends ImageProcessorContractTest
+class GdImageProcessorContractTest extends ImageProcessorContractTestCase
 {
     protected function processor(): ImageProcessor
     {

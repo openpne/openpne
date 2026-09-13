@@ -16,7 +16,7 @@ use Tests\TestCase;
  * Every implementation is held to the same fixtures (tests/Fixtures/images/README.md): what the
  * seam promises is decided here, and a concrete test only names the processor.
  */
-abstract class ImageProcessorContractTest extends TestCase
+abstract class ImageProcessorContractTestCase extends TestCase
 {
     private const GPS_SENTINEL = '2021:07:04';
 
