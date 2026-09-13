@@ -76,7 +76,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
             // An animation over the sidecar's resolution budget is kept as a still rather than refused.
             if ($response->getStatusCode() === 422 && ! $still && in_array($spec->format, ['gif', 'webp'], true)) {
                 $still = true;
-                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), true);
+                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format), $spec->isCanonical());
             }
 
             return $this->read($response, $body, $spec->format, $still);
