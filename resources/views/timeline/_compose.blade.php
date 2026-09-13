@@ -29,7 +29,7 @@
                     <option value="{{ $option->value }}" @selected(old('visibility', \App\Support\Visibility::Members->value) == $option->value)>{{ __($option->label()) }}</option>
                 @endforeach
             </select>
-            <input id="timeline-submit-upload" type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+            <input id="timeline-submit-upload" type="file" name="image" accept="{{ image_upload_accept() }}">
             <button type="submit" id="timeline-submit-button" class="btn btn-primary timeline-submit">{{ __('Post an %activity%') }}</button>
         </div>
     </div>

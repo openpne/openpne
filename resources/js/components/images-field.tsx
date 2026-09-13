@@ -1,14 +1,26 @@
+import { usePage } from '@inertiajs/react';
 import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import type { PageProps } from '@/types';
 
-/**
- * Server contract (PostImageRules): raster only, a per-file byte cap the operator sets and 5000px —
- * the shrink targets sit well under the shipped defaults.
- */
-export const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
+/** The `<input accept>` list the server ships: what its image processor reads (PostImageRules is the gate). */
+export function useImageAccept(): string {
+    return usePage<PageProps>().props.imageUpload.accept;
+}
+
+/** The types in an accept list, exactly; a file's type is matched whole, never as a substring. */
+function acceptedTypes(accept: string): Set<string> {
+    return new Set(
+        accept
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.startsWith('image/')),
+    );
+}
+
 const MAX_EDGE = 2048;
 const JPEG_QUALITY = 0.82;
 /** Small-enough originals are submitted as picked, avoiding a pointless re-encode. */
@@ -18,7 +30,7 @@ const PASSTHROUGH_BYTES = 2 * 1024 * 1024;
  * EXIF — GPS included — does not survive the canvas, which is as much the point as the size is.
  * Returns the original when it cannot be decoded; the server validation answers those.
  */
-export async function shrink(file: File): Promise<File> {
+export async function shrink(file: File, accept: string): Promise<File> {
     // A GIF stays as picked: the canvas would flatten its animation, so an oversized one fails visibly.
     if (file.type === 'image/gif') {
         return file;
@@ -27,7 +39,7 @@ export async function shrink(file: File): Promise<File> {
         const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
         try {
             const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-            if (scale === 1 && file.size <= PASSTHROUGH_BYTES && ACCEPT.includes(file.type)) {
+            if (scale === 1 && file.size <= PASSTHROUGH_BYTES && acceptedTypes(accept).has(file.type)) {
                 return file;
             }
             const canvas = document.createElement('canvas');
@@ -77,6 +89,7 @@ interface ImagesFieldProps {
  */
 export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = MAX_POST_IMAGES }: ImagesFieldProps) {
     const t = useT();
+    const accept = useImageAccept();
     const [busy, setBusy] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
     // Mirrors the latest selection so an in-flight shrink can re-apply against removals/resets
@@ -114,7 +127,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
         try {
             const shrunk = new Map<File, File>();
             for (const raw of accepted) {
-                shrunk.set(raw, await shrink(raw));
+                shrunk.set(raw, await shrink(raw, accept));
             }
             onChange(latest.current.map((file) => shrunk.get(file) ?? file));
         } finally {
@@ -156,7 +169,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
             <input
                 id={id}
                 type="file"
-                accept={ACCEPT}
+                accept={accept}
                 multiple={max > 1}
                 disabled={busy || files.length >= max}
                 aria-invalid={error ? true : undefined}

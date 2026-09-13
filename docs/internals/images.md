@@ -153,8 +153,18 @@ A stored image has a second pair of caps, [`ImageSourceLimit`](../../app/Files/I
 `OPENPNE_IMAGE_MAX_SOURCE_KB` and `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` bound what the image processor
 will read and decode, whatever the upload rules were when the bytes arrived — a row imported from
 OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
-each follows the upload rules (at least 20480 KB or the upload cap, and the per-side limit squared),
-never no cap; a set value is taken as given. A favicon the processor refuses is remembered as such
+the byte cap is at least 20480 KB or the upload cap, and the pixel cap is the per-side limit squared
+under `gd` or the sidecar's 50 MP budget under `imgproxy` (`IMGPROXY_MAX_SRC_RESOLUTION`, the one
+setting a sidecar of the operator's own must keep, since the app cannot tell when it is unset), never
+no cap; a set value is taken as given. The per-side limit itself, `OPENPNE_IMAGE_MAX_DIMENSION`, and
+the `dimensions` rule that enforces it at upload apply where the decode is in-process; the sidecar
+takes a 48 MP photo whole, whose JPEG canonical can then outgrow the 20 MB source cap and be refused
+until `OPENPNE_IMAGE_MAX_SOURCE_KB` is raised. What the app reads from a HEIC header (PHP 8.5 and
+later; an older PHP reads none and leaves the file to the sidecar) is the first size the container
+declares — a tile's, or the coded size before cropping — rather than the picture's own, so for a
+HEIC the sidecar's budget, not this check, is the bound that holds; a HEIC
+over it is refused by the sidecar (a 422) like any other picture, and only bytes it cannot load at
+all answer as an outage. A favicon the processor refuses is remembered as such
 until `openpne:image-cache rebuild` asks again (`warm --retry-failed` does too, when the picture itself
 was refused), or the favicon is uploaded again, whatever the caps are set to in between.
 
@@ -185,11 +195,13 @@ Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php)
 `ext-gd`; `imgproxy` hands the bytes to an [imgproxy](https://imgproxy.net) sidecar the operator runs
 ([`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php)). Both are held
 to one contract test: no source metadata survives a re-encode, EXIF Orientation is applied, a variant
-is a still unless its URL asks for the frames with `_a`, and the same header check refuses the same
-sources before anything is decoded. What differs:
+is a still unless its URL asks for the frames with `_a`, and a header over the processor's own limits
+([`ImageIntake`](../../app/Files/ImageIntake.php)) is refused before anything is decoded. What differs:
 
 | | `gd` | `imgproxy` |
 |---|---|---|
+| Formats read | JPEG, PNG, GIF, WebP | those, and HEIC / HEIF (answered as JPEG) and AVIF (answered as WebP, the format a browser and the MCP tools can take everywhere); an upload of either is refused under `gd` |
+| Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (25 MP unconfigured) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set; a header PHP cannot read is refused too, unless the bytes are a container only the sidecar reads (a HEIC before PHP 8.5), which is left to the sidecar's own budget |
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
 | Animation | the canonical and every variant are stills | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |
@@ -197,7 +209,20 @@ sources before anything is decoded. What differs:
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
 view or by `openpne:image-cache warm`, which also records anew whether it animates; `rebuild` reclaims
-the old directories.
+the old directories. A picture only the sidecar could read keeps being served from a canonical already
+on the cache disk after a switch to `gd`, and is refused (a marker, a 404) once that canonical is
+missed or rebuilt: a HEIC because GD cannot decode it, an AVIF unless the host's GD was built with
+AVIF support.
+
+A raster row's `files.type` is its canonical's type, the one thing inline delivery ever answers — a
+HEIC upload is stored as `image/jpeg`, an AVIF as `image/webp` — while the stored bytes keep their own
+container and `original_filename` its extension. A processor is therefore handed the row's type as a
+record, not a promise: it judges the bytes themselves, and the admin raw route labels them by what
+they are. The upload rules take their types from the same intake, so the `<input accept>` list
+(`image_upload_accept()`, the `imageUpload` shared prop) offers HEIC and AVIF only where they will be
+read; with them absent, iOS transcodes a HEIC to JPEG itself, as it always has. A HEIF image
+sequence (`image/heic-sequence`, a burst or a Live Photo) is not among the types read and is
+refused by the upload rules like any other.
 
 **Transport.** The app writes the bytes to the `image_spool` disk (`storage/app/image-spool`,
 world-readable because the sidecar runs as another user), asks the sidecar for

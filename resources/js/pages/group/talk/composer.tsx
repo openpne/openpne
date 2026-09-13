@@ -3,7 +3,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'r
 import { BLEED_EDGES } from '@/components/card';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
-import { ACCEPT, shrink } from '@/components/images-field';
+import { shrink, useImageAccept } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
 import { Tip } from '@/components/ui/tooltip';
@@ -47,6 +47,7 @@ export function TalkComposer({
     onSend: (body: string, mentions: MentionPayloadRow[], images: File[]) => Promise<void>;
 }) {
     const t = useT();
+    const accept = useImageAccept();
     const form = useComposerEngaged();
     const [body, setBody] = useState('');
     const [mentions, setMentions] = useState<DraftMention[]>([]);
@@ -104,7 +105,7 @@ export function TalkComposer({
         try {
             const shrunk = new Map<File, File>();
             for (const raw of accepted) {
-                shrunk.set(raw, await shrink(raw));
+                shrunk.set(raw, await shrink(raw, accept));
             }
             select(held.current.map((image) => shrunk.get(image) ?? image));
         } finally {
@@ -229,7 +230,7 @@ export function TalkComposer({
             )}
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
-                <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
+                <input ref={fileInput} type="file" accept={accept} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
                 <Tip label={t('Attach an image')}>
                     <Button
                         variant="ghost"

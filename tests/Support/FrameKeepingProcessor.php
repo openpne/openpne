@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
@@ -18,5 +19,10 @@ final class FrameKeepingProcessor implements ImageProcessor
     public function preservesAnimation(): bool
     {
         return true;
+    }
+
+    public function intake(): ImageIntake
+    {
+        return ImageIntake::gd();
     }
 }

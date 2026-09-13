@@ -9,6 +9,9 @@ import type { TalkMessage } from './types';
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
+// The composer reads the upload accept list from the page's shared props.
+vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: { imageUpload: { accept: 'image/jpeg,image/png,image/gif,image/webp' } } }) }));
+
 afterEach(cleanup);
 
 const image: GridImage = {

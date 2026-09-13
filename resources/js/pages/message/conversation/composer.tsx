@@ -2,7 +2,7 @@ import { ImagePlus, SendHorizontal } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
 import { BLEED_EDGES } from '@/components/card';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
-import { ACCEPT, shrink } from '@/components/images-field';
+import { shrink, useImageAccept } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +28,7 @@ function imageErrorIn(errors: Record<string, string>): string {
  */
 export function ConversationComposer({ counterpartName, onSend }: { counterpartName: string; onSend: (body: string, images: File[]) => Promise<void> }) {
     const t = useT();
+    const accept = useImageAccept();
     const form = useComposerEngaged();
     const [body, setBody] = useState('');
     const [images, setImages] = useState<File[]>([]);
@@ -77,7 +78,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         try {
             const shrunk = new Map<File, File>();
             for (const raw of accepted) {
-                shrunk.set(raw, await shrink(raw));
+                shrunk.set(raw, await shrink(raw, accept));
             }
             select(held.current.map((image) => shrunk.get(image) ?? image));
         } finally {
@@ -179,7 +180,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
             )}
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
-                <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
+                <input ref={fileInput} type="file" accept={accept} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
                 <Tip label={t('Attach an image')}>
                     <Button
                         variant="ghost"

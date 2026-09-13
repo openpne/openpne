@@ -8,6 +8,7 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -333,6 +334,11 @@ class DiaryImageToolsTest extends McpTestCase
             {
                 return false;
             }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
+            }
         });
         $this->app->forgetInstance(ImageCache::class);
 
@@ -361,6 +367,11 @@ class DiaryImageToolsTest extends McpTestCase
             public function preservesAnimation(): bool
             {
                 return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
             }
         });
         Storage::disk('image_cache')->deleteDirectory($diary->images()->sole()->file->name);

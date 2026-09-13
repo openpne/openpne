@@ -6,6 +6,7 @@ import { Field } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
+import { useImageAccept } from '@/components/images-field';
 import { useT } from '@/lib/i18n';
 import { pickReadableTextColor } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ type AvatarProps = PageProps & {
 
 export default function MemberAvatar() {
     const t = useT();
+    const accept = useImageAccept();
     const { avatar, auth, badgeColor } = usePage<AvatarProps>().props;
 
     const upload = useForm<{ image: File | null }>({ image: null });
@@ -74,7 +76,7 @@ export default function MemberAvatar() {
                             id="avatar_image"
                             type="file"
                             name="image"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            accept={accept}
                             onChange={(e) => upload.setData('image', e.target.files?.[0] ?? null)}
                             required
                             className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"

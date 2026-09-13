@@ -8,6 +8,7 @@ use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\GdImageProcessor;
 use App\Files\ImageCache;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -435,6 +436,11 @@ class LinkCardImageTest extends TestCase
             {
                 return true;
             }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd();
+            }
         };
     }
 
@@ -462,6 +468,11 @@ class LinkCardImageTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return $this->inner->preservesAnimation();
+            }
+
+            public function intake(): ImageIntake
+            {
+                return $this->inner->intake();
             }
         };
     }

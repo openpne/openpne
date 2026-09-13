@@ -5,6 +5,7 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
 use App\Files\ImageTransform;
@@ -212,7 +213,7 @@ class ImageDeliveryTest extends TestCase
         $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertOk();
 
         Storage::fake('image_cache');
-        config(['openpne.images.max_upload_dimension' => 100]);
+        config(['openpne.images.max_source_pixels' => 100 * 100]);
 
         $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertNotFound();
     }
@@ -322,6 +323,11 @@ class ImageDeliveryTest extends TestCase
             public function preservesAnimation(): bool
             {
                 return $this->inner->preservesAnimation();
+            }
+
+            public function intake(): ImageIntake
+            {
+                return $this->inner->intake();
             }
         });
         $this->app->forgetInstance(ImageCache::class);

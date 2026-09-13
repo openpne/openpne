@@ -30,7 +30,7 @@ class FileUploader
     public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
     {
         $type = $upload->getMimeType() ?? 'application/octet-stream';
-        $format = ImageSpec::formatFor($type);
+        $format = $this->processor->intake()->canonicalFormat($type);
 
         // Only a raster is held in memory; anything else streams from the temp file.
         $bytes = $format !== null ? (string) file_get_contents($upload->getRealPath()) : null;
@@ -46,7 +46,9 @@ class FileUploader
             // Opaque, backend-agnostic storage key and URL token (collision is
             // caught by the files.name unique index).
             'name' => Str::random(40),
-            'type' => $type,
+            // A raster's type is its canonical's, the one thing inline delivery ever answers; the stored
+            // bytes keep their own container, which for a HEIC upload is not this.
+            'type' => $format !== null ? ImageSpec::mimeFor($format) : $type,
             'original_filename' => $upload->getClientOriginalName(),
             'related_entity_type' => $relatedType,
             'related_entity_id' => $relatedId,

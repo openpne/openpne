@@ -7,6 +7,7 @@ import { Field } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
+import { useImageAccept } from '@/components/images-field';
 import { useT } from '@/lib/i18n';
 import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { BodyCounter, overBodyLimit } from './body-counter';
@@ -21,6 +22,7 @@ export default function TimelineNew({
     visibilityOptions: VisibilityOption[];
 }) {
     const t = useT();
+    const accept = useImageAccept();
     const counterId = useId();
     const { data, setData, post, errors, processing, transform } = useForm({
         body: '',
@@ -88,7 +90,7 @@ export default function TimelineNew({
                         <input
                             id="timeline_image"
                             type="file"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            accept={accept}
                             onChange={(e) => setData('image', e.target.files?.[0] ?? null)}
                             className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                         />

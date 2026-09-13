@@ -18,3 +18,5 @@ a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP
 | `tiny.gif` | plain GIF, no metadata |
 | `jpeg-truncated.jpg` | a JPEG cut short. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |
 | `webp-animated-3frames.webp` | a 64x64 animated WebP of three frames, made by imgproxy v4.0.14 from a three-frame GIF (`rt:fit/w:64/h:64/maf:10`, `@webp`); libgd reads no animated WebP, which pins the link-card refusal under GD |
+| `heic-gps-orientation.heic` | `jpeg-gps-orientation.jpg` written by imgproxy v4.0.14 as HEIC with its metadata kept (`sm:0/kcr:1/ar:0`, `@heic`): 12x6 declaring Orientation 6, GPS sentinel intact; read by the sidecar only |
+| `avif-copyright.avif` | `jpeg-copyright.jpg` filled to 32x16 (AVIF cannot be written under 16px) and written by imgproxy as AVIF with its metadata kept (`rt:fill/w:32/h:16/el:1/sm:0/kcr:1`, `@avif`): `COPYRIGHT-LEAK` intact; read by the sidecar only |
