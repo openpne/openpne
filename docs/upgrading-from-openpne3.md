@@ -196,6 +196,10 @@ $ php artisan openpne:verify-upgrade | grep ': 0 rows'
 
 (`--json` emits the same report as JSON if you would rather consume it from a script.)
 
+Some are expected: a step carries an OpenPNE 3 plugin your site never installed, or a setting whose
+absence already means what you want. The rest are the ones to look into. That judgement is yours —
+the command cannot know which features your site had.
+
 Then index the hashtags of the migrated timeline posts, which the copy carries as plain text:
 
 ```console
@@ -212,11 +216,8 @@ $ php artisan openpne:image-cache warm
 
 Also safe to run again. Pictures OpenPNE 3 accepted but this version's limits refuse are listed by
 `php artisan openpne:image-cache status`; the site shows nothing for those until the limits are
-raised and `warm --retry-failed` is run.
-
-Some are expected: a step carries an OpenPNE 3 plugin your site never installed, or a setting whose
-absence already means what you want. The rest are the ones to look into. That judgement is yours —
-the command cannot know which features your site had.
+raised and `warm --retry-failed` is run. It also lists pictures stored under an image type this
+version does not show (`image/pjpeg`, `image/x-png`).
 
 ## What the upgrade changed
 

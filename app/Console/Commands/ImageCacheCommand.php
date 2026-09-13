@@ -6,8 +6,8 @@ namespace App\Console\Commands;
 
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageCache;
+use App\Files\ImageCachePublishException;
 use App\Files\ImageProcessorUnavailableException;
-use App\Files\ImageSpec;
 use App\Models\File;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,34 +26,35 @@ class ImageCacheCommand extends Command
 
     protected $description = 'Inspect, warm or rebuild the canonical of every stored picture';
 
-    private const REFUSED_TO_LIST = 20;
+    private const ROWS_TO_LIST = 20;
 
     public function handle(ImageCache $cache): int
     {
         return match ($this->argument('action')) {
             'status' => $this->status($cache),
             'warm' => $this->warm($cache, retryFailed: (bool) $this->option('retry-failed'), rebuild: false),
-            'rebuild' => $this->warm($cache, retryFailed: true, rebuild: true),
+            'rebuild' => $this->warm($cache, retryFailed: false, rebuild: true),
             default => $this->unknownAction(),
         };
     }
 
     private function status(ImageCache $cache): int
     {
-        $total = $warm = $refused = $cold = 0;
-        $reasons = [];
+        $total = $warm = $refused = $cold = $unshown = 0;
+        $listed = [];
 
-        $this->rasters()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$reasons): void {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$listed): void {
             foreach ($chunk as $file) {
                 $total++;
 
-                if ($cache->hasCanonical($file)) {
+                if ($file->imageFormat() === null) {
+                    $unshown++;
+                    $this->remember($listed, $file, (string) $file->type);
+                } elseif ($cache->hasCanonical($file)) {
                     $warm++;
                 } elseif (($reason = $cache->refusal($file)) !== null) {
                     $refused++;
-                    if (count($reasons) < self::REFUSED_TO_LIST) {
-                        $reasons[] = "  #{$file->id} {$file->name}: {$reason}";
-                    }
+                    $this->remember($listed, $file, $reason);
                 } else {
                     $cold++;
                 }
@@ -64,82 +65,94 @@ class ImageCacheCommand extends Command
         $this->line("  canonical: {$warm}");
         $this->line("  cold:      {$cold}  (made on first view, or by `openpne:image-cache warm`)");
         $this->line("  refused:   {$refused}".($refused > 0 ? '  (`openpne:image-cache warm --retry-failed` asks again, e.g. after raising a limit)' : ''));
-
-        foreach ($reasons as $line) {
-            $this->line($line);
-        }
-        if ($refused > count($reasons)) {
-            $this->line('  … '.($refused - count($reasons)).' more');
-        }
+        $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
+        $this->listRows($listed, $refused + $unshown);
 
         return self::SUCCESS;
     }
 
     private function warm(ImageCache $cache, bool $retryFailed, bool $rebuild): int
     {
-        $warmed = $sized = $refused = $skipped = $unavailable = $unreadable = 0;
+        $n = ['done' => 0, 'sized' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
+        $listed = [];
 
-        $this->rasters()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$warmed, &$sized, &$refused, &$skipped, &$unavailable, &$unreadable): void {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$listed): void {
             foreach ($chunk as $file) {
-                if ($rebuild) {
-                    $cache->purgeGeneration($file);
-                } elseif ($cache->hasCanonical($file)) {
-                    $sized += $this->recordSize($cache, $file) ? 1 : 0;
+                if ($file->imageFormat() === null) {
+                    $n['unshown']++;
 
                     continue;
-                } elseif ($cache->refusal($file) !== null) {
-                    if (! $retryFailed) {
-                        $skipped++;
+                }
 
-                        continue;
-                    }
-                    $cache->forgetRefusal($file);
+                if (! $rebuild && $cache->hasCanonical($file)) {
+                    $n['sized'] += $this->recordSize($file, fn (): string => $cache->canonical($file), force: false) ? 1 : 0;
+
+                    continue;
+                }
+
+                if (! $rebuild && ! $retryFailed && $cache->refusal($file) !== null) {
+                    $n['skipped']++;
+
+                    continue;
                 }
 
                 try {
-                    $cache->canonical($file);
+                    $canonical = $rebuild ? $cache->rebuild($file) : $cache->warm($file);
                 } catch (CanonicalUnavailableException) {
-                    $refused++;
+                    $n['refused']++;
 
                     continue;
                 } catch (ImageProcessorUnavailableException) {
-                    $unavailable++;
+                    $n['unavailable']++;
 
                     continue;
-                } catch (Throwable) {
-                    // The bytes are gone or unreadable: nothing to decode and nothing to remember.
-                    $unreadable++;
+                } catch (ImageCachePublishException $e) {
+                    $n['unwritten']++;
+                    $this->remember($listed, $file, $e->getMessage());
+
+                    continue;
+                } catch (Throwable $e) {
+                    $n['unreadable']++;
+                    $this->remember($listed, $file, $e->getMessage());
 
                     continue;
                 }
 
-                $warmed++;
-                $sized += $this->recordSize($cache, $file) ? 1 : 0;
+                $n['done']++;
+                $n['sized'] += $this->recordSize($file, fn (): string => $canonical, force: $rebuild) ? 1 : 0;
             }
         });
 
-        $this->info(sprintf(
-            'Warmed %d picture(s), recorded %d size(s); %d refused, %d skipped as refused before (pass --retry-failed), %d unavailable (processor down), %d unreadable.',
-            $warmed, $sized, $refused, $skipped, $unavailable, $unreadable,
-        ));
+        $this->info(sprintf('%s %d picture(s), recorded %d size(s).', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['sized']));
+        $this->line("  refused:     {$n['refused']}  (remembered; `warm --retry-failed` asks again)");
+        $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
+        $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
+        $this->line("  unreadable:  {$n['unreadable']}  (the stored bytes could not be read)");
+        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write)");
+        $this->line("  unshown:     {$n['unshown']}  (stored under an image type this version does not show as a picture)");
+        $this->listRows($listed, $n['unreadable'] + $n['unwritten']);
 
-        return $unavailable > 0 ? self::FAILURE : self::SUCCESS;
+        return $n['unavailable'] + $n['unreadable'] + $n['unwritten'] > 0 ? self::FAILURE : self::SUCCESS;
     }
 
-    /** Fills files.width/height from the canonical when a row has none; true when it wrote. */
-    private function recordSize(ImageCache $cache, File $file): bool
+    /** @param  callable(): string  $canonical */
+    private function recordSize(File $file, callable $canonical, bool $force): bool
     {
-        if ($file->width !== null && $file->height !== null) {
+        if (! $force && $file->width !== null && $file->height !== null) {
             return false;
         }
 
         try {
-            $size = @getimagesizefromstring($cache->canonical($file));
+            $size = @getimagesizefromstring($canonical());
         } catch (Throwable) {
             return false;
         }
 
         if ($size === false || $size[0] < 1 || $size[1] < 1) {
+            return false;
+        }
+
+        if ($file->width === (int) $size[0] && $file->height === (int) $size[1]) {
             return false;
         }
 
@@ -149,9 +162,29 @@ class ImageCacheCommand extends Command
     }
 
     /** @return Builder<File> */
-    private function rasters(): Builder
+    private function images(): Builder
     {
-        return File::query()->whereIn('type', ImageSpec::rasterMimes());
+        return File::query()->where('type', 'like', 'image/%');
+    }
+
+    /** @param  list<string>  $listed */
+    private function remember(array &$listed, File $file, string $text): void
+    {
+        if (count($listed) < self::ROWS_TO_LIST) {
+            $listed[] = "  #{$file->id} {$file->name}: {$text}";
+        }
+    }
+
+    /** @param  list<string>  $listed */
+    private function listRows(array $listed, int $total): void
+    {
+        foreach ($listed as $line) {
+            $this->line($line);
+        }
+
+        if ($total > count($listed)) {
+            $this->line('  … '.($total - count($listed)).' more');
+        }
     }
 
     private function unknownAction(): int

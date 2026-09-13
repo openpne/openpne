@@ -78,12 +78,17 @@ without one.
 
 `openpne:image-cache warm` makes the canonical of every picture that has none — a row imported from
 OpenPNE 3, or one evicted from the cache disk — and records the size of every row missing one. Run it
-after an OpenPNE 3 upgrade; it is idempotent and an interrupted run resumes by being re-run. A file
-whose bytes are gone is reported and passed over, and one the processor refuses is remembered as
-refused ([security](security.md), "Decoding an upload"): `status` lists those with the reason,
-`warm --retry-failed` asks the processor again (after a limit was raised, say), and `rebuild` discards
-everything the current encoder made and makes the canonicals afresh (after a quality change). A run
-in which the processor was unavailable exits non-zero so a deploy script notices.
+after an OpenPNE 3 upgrade; it is idempotent and an interrupted run resumes by being re-run. A picture
+the processor refuses is remembered as refused ([security](security.md), "Decoding an upload"):
+`status` lists those with the reason, and `warm --retry-failed` asks the processor again (after a
+limit was raised, say). `rebuild` discards every derived file of every picture — older encoder
+directories included, which nothing else reclaims — and makes the canonicals afresh, recording the
+size again; it is for bytes that changed under an unchanged key (a GD or libvips update, a damaged
+cache disk), a quality or processor change already being a new key. `rebuild` discards a picture's
+files only once its new canonical is in hand, and either run exits non-zero when any picture could
+not be made — the processor unavailable, the stored bytes unreadable, the cache disk refusing the
+write — so a deploy script notices. A row stored under an image type this version does not show as a
+picture (`image/pjpeg`, say, which OpenPNE 3 accepted) is counted as unshown and listed.
 
 ## Upload size
 
@@ -102,7 +107,8 @@ will read and decode, whatever the upload rules were when the bytes arrived — 
 OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
 each follows the upload rules (at least 20480 KB or the upload cap, and the per-side limit squared),
 never no cap; a set value is taken as given. A favicon the processor refuses is remembered as such
-until the favicon is uploaded again, whatever the caps are set to afterwards.
+until `openpne:image-cache warm --retry-failed` or `rebuild` asks again, or the favicon is uploaded
+again, whatever the caps are set to in between.
 
 The upload cap is read as configured, a blank or non-positive value meaning the shipped default; PHP's ini
 limits are not folded in, because they belong to the deployment and differ between the FPM pool

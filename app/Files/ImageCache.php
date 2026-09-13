@@ -78,6 +78,43 @@ class ImageCache
             throw new CanonicalUnavailableException("File [{$file->id}] was refused: ".(string) $disk->get($marker));
         }
 
+        return $this->generate($file, $maxBytes, strict: false, discard: false);
+    }
+
+    /**
+     * The operator's warm: a marker is asked about again and replaced by the new verdict, and a cache
+     * disk that refuses the write is an error here, unlike on a read.
+     *
+     * @throws CanonicalUnavailableException
+     * @throws ImageCachePublishException
+     * @throws ImageProcessorUnavailableException
+     */
+    public function warm(File $file): string
+    {
+        return $this->generate($file, null, strict: true, discard: false);
+    }
+
+    /**
+     * Every derived file of $file, older encoders included, is discarded only once the new canonical
+     * or verdict is in hand, so stored bytes that cannot be read leave the old ones in place.
+     *
+     * @throws CanonicalUnavailableException
+     * @throws ImageCachePublishException
+     * @throws ImageProcessorUnavailableException
+     */
+    public function rebuild(File $file): string
+    {
+        return $this->generate($file, null, strict: true, discard: true);
+    }
+
+    /**
+     * @throws CanonicalUnavailableException
+     * @throws ImageBytesOverLimitException
+     * @throws ImageCachePublishException
+     * @throws ImageProcessorUnavailableException
+     */
+    private function generate(File $file, ?int $maxBytes, bool $strict, bool $discard): string
+    {
         $limit = ImageSourceLimit::bytes();
         $budget = $maxBytes === null ? $limit : min($maxBytes, $limit);
 
@@ -88,21 +125,29 @@ class ImageCache
                 throw $e;
             }
 
-            return $this->refuse($file, $marker, "over the {$limit} byte source limit");
+            return $this->refuse($file, "over the {$limit} byte source limit", $strict, $discard);
         }
 
         try {
             $processed = $this->processor->process($bytes, $file->type, ImageSpec::canonical($this->format($file)));
         } catch (ImageProcessingException $e) {
-            return $this->refuse($file, $marker, $e->getMessage());
+            return $this->refuse($file, $e->getMessage(), $strict, $discard);
         }
 
         // A canonical is itself the input of every variant, so it is held to the same source limit.
         if (strlen($processed->bytes) > $limit) {
-            return $this->refuse($file, $marker, 'canonical of '.strlen($processed->bytes)." bytes, over the {$limit} byte source limit");
+            return $this->refuse($file, 'canonical of '.strlen($processed->bytes)." bytes, over the {$limit} byte source limit", $strict, $discard);
         }
 
-        $this->publishOrReport($key, $processed->bytes);
+        if ($discard) {
+            $this->purge($file);
+        }
+
+        $this->store($this->canonicalKey($file), $processed->bytes, $strict);
+
+        if ($strict && ! $discard) {
+            $this->forgetRefusal($file);
+        }
 
         return $processed->bytes;
     }
@@ -155,18 +200,11 @@ class ImageCache
         $this->disk()->deleteDirectory($file->name);
     }
 
-    /** Remove what the current encoder produced for $file, so the next read makes it again. */
-    public function purgeGeneration(File $file): void
-    {
-        $this->disk()->deleteDirectory(ImageTransform::encoderPrefix($file->name));
-    }
-
     public function hasCanonical(File $file): bool
     {
         return $this->disk()->exists($this->canonicalKey($file));
     }
 
-    /** The reason the processor refused $file, or null when it has not. */
     public function refusal(File $file): ?string
     {
         $marker = $this->markerKey($file);
@@ -174,9 +212,17 @@ class ImageCache
         return $this->disk()->exists($marker) ? (string) $this->disk()->get($marker) : null;
     }
 
-    public function forgetRefusal(File $file): void
+    /** The marker and the favicon verdicts drawn from it (App\Files\AppIcon), so a retry re-judges both. */
+    private function forgetRefusal(File $file): void
     {
-        $this->disk()->delete($this->markerKey($file));
+        $disk = $this->disk();
+        $disk->delete($this->markerKey($file));
+
+        foreach ($disk->files(ImageTransform::encoderPrefix($file->name)) as $path) {
+            if (str_ends_with($path, '.refused')) {
+                $disk->delete($path);
+            }
+        }
     }
 
     /**
@@ -219,11 +265,20 @@ class ImageCache
         }
     }
 
-    private function refuse(File $file, string $marker, string $reason): never
+    private function refuse(File $file, string $reason, bool $strict, bool $discard): never
     {
-        $this->publishOrReport($marker, $reason);
+        if ($discard) {
+            $this->purge($file);
+        }
+
+        $this->store($this->markerKey($file), $reason, $strict);
 
         throw new CanonicalUnavailableException("File [{$file->id}] was refused: {$reason}");
+    }
+
+    private function store(string $key, string $bytes, bool $strict): void
+    {
+        $strict ? $this->publish($key, $bytes) : $this->publishOrReport($key, $bytes);
     }
 
     private function canonicalKey(File $file): string

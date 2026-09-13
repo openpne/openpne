@@ -99,9 +99,12 @@ class ImageDimensionsTest extends TestCase
         $missing = File::factory()->create(['type' => 'image/png']);
         $good = $this->stored('image/png', $this->pngBytes(48, 24));
 
+        // The row without bytes fails the run: a deploy script must not read "warm ran" as "every picture is made".
         $this->artisan('openpne:backfill-image-dimensions')
-            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s); 1 refused, 0 skipped as refused before (pass --retry-failed), 0 unavailable (processor down), 1 unreadable.')
-            ->assertSuccessful();
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded 1 size(s).')
+            ->expectsOutputToContain('refused:     1')
+            ->expectsOutputToContain('unreadable:  1')
+            ->assertFailed();
 
         $this->assertNull($broken->refresh()->width);
         $this->assertNull($missing->refresh()->width);
@@ -110,8 +113,8 @@ class ImageDimensionsTest extends TestCase
 
     public function test_the_backfill_does_not_touch_a_row_that_already_has_a_size(): void
     {
-        // The NULL filter is what makes a re-run cheap and safe; without it this row would be
-        // rewritten from its bytes.
+        // Only a row without a size is written, so a re-run rewrites nothing; `rebuild` is the one
+        // action that overwrites a recorded size.
         $file = $this->stored('image/png', $this->pngBytes(320, 200));
         $file->update(['width' => 10, 'height' => 5]);
 
