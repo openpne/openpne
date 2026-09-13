@@ -20,7 +20,10 @@ class AnimatedSourcesProducersTest extends TestCase
 
     public function test_an_animated_variant_url_is_asked_for_by_the_ladder_alone(): void
     {
-        $this->assertSame(self::PRODUCERS, $this->filesContaining('animated: true', ['app', 'routes', 'resources/views'], ['*.php']));
+        // Named or positional: `thumbnailUrl($w, $h, $square, true)` asks for the same variant.
+        $asksForFrames = '/animated:\s*true|thumbnailUrl\((?:[^()]*,){3}\s*true\s*\)/';
+
+        $this->assertSame(self::PRODUCERS, $this->filesContaining($asksForFrames, ['app', 'routes', 'resources/views'], ['*.php']));
     }
 
     public function test_the_animated_ladder_is_read_by_the_hero_alone(): void
