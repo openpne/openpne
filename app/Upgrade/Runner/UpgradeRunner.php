@@ -209,6 +209,10 @@ final class UpgradeRunner
             // stamped without the data behind it.
             if ($walked) {
                 $this->stampSurfaceMode($out);
+
+                if ($migratesFiles) {
+                    $out('Next: `php artisan openpne:image-cache warm` makes the copy every migrated picture is shown from; until then each is made on its first view.');
+                }
             }
 
             return $walked;

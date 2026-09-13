@@ -31,7 +31,7 @@ class BannerImage extends Model
 
     /**
      * Null until the file has a recorded size: a row imported from OpenPNE 3 or uploaded before sizes
-     * were recorded gets one from `openpne:backfill-image-dimensions`, never from reading the bytes here.
+     * were recorded gets one from `openpne:image-cache warm`, never from reading the bytes here.
      *
      * @return array{0: int, 1: int}|null
      */

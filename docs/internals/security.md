@@ -350,7 +350,7 @@ Orientation as it draws, none is needed for the picture to stand upright. The in
 `Content-Disposition` names the file token, never the uploader's file name.
 
 This holds for rows imported from OpenPNE 3 too: their canonical is produced on first view, or ahead
-of time by `openpne:backfill-image-dimensions`, from the same bytes and by the same processor. Only
+of time by `openpne:image-cache warm`, from the same bytes and by the same processor. Only
 the admin monitoring route (`/admin/file/{name}/raw`) and a non-raster attachment stream the stored
 bytes as they are.
 
