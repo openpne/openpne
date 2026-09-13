@@ -32,6 +32,18 @@ class UploadLimitTest extends TestCase
         }
     }
 
+    public function test_a_blank_side_limit_is_the_default_rather_than_a_side_of_zero(): void
+    {
+        foreach ([0, -1, (int) ''] as $misconfigured) {
+            config()->set('openpne.images.max_upload_dimension', $misconfigured);
+
+            $this->assertSame(UploadLimit::DEFAULT_DIMENSION, UploadLimit::dimension());
+        }
+
+        config()->set('openpne.images.max_upload_dimension', 6000);
+        $this->assertSame(6000, UploadLimit::dimension());
+    }
+
     public function test_the_config_fallback_and_the_constant_are_one_number(): void
     {
         // The pinned env, the config fallback and the Livewire rule must be one number.

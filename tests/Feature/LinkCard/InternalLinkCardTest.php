@@ -7,6 +7,7 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
+use App\Files\ImageProcessor;
 use App\Files\ImageTransform;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
@@ -29,7 +30,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
@@ -361,7 +361,7 @@ class InternalLinkCardTest extends TestCase
             $fetcher,
             new MetadataExtractor,
             new OembedClient($fetcher),
-            new LinkCardImage($fetcher, $this->app->make(FileUploader::class), $this->app->make(ImageManager::class)),
+            new LinkCardImage($fetcher, $this->app->make(FileUploader::class), $this->app->make(ImageProcessor::class)),
             $this->app->make(LinkCardSettings::class),
         );
     }

@@ -48,9 +48,9 @@ final class ImageTransform
     }
 
     /**
-     * Bump when a change outside the cache key — this code, the image library, GD, Imagick, a codec
-     * — alters the bytes a transform produces, since a variant is otherwise only regenerated on a
-     * miss and the cache disk outlives a release.
+     * Bump when a change outside the cache key — this code, the image library, GD, a codec — alters
+     * the bytes a transform produces, since a variant is otherwise only regenerated on a miss and
+     * the cache disk outlives a release.
      */
     private const GENERATION = 2;
 
@@ -61,7 +61,7 @@ final class ImageTransform
     public function cacheKey(string $name, string $format): string
     {
         $suffix = $this->square ? '_sq' : '';
-        $encoder = $this->isRaw() ? '' : '/'.config('openpne.images.driver').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
+        $encoder = $this->isRaw() ? '' : '/'.config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 
         return "{$name}/g".self::GENERATION."{$encoder}/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }

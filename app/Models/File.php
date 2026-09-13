@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Files\ImageSpec;
 use Database\Factories\FileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -51,13 +52,7 @@ class File extends Model
 
     public function imageFormat(): ?string
     {
-        return match ($this->type) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            default => null,
-        };
+        return ImageSpec::formatFor((string) $this->type);
     }
 
     /**

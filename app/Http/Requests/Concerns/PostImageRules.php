@@ -48,7 +48,7 @@ final class PostImageRules
      */
     private static function imageRule(): array
     {
-        $max = (int) config('openpne.images.max_upload_dimension');
+        $max = UploadLimit::dimension();
 
         return ['file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:'.UploadLimit::kilobytes()];
     }

@@ -6,6 +6,7 @@ namespace Tests\Unit\Files;
 
 use App\Files\ImageMetadataStripException;
 use App\Files\ImageMetadataStripper;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
@@ -179,6 +180,6 @@ class ImageMetadataStripperTest extends TestCase
 
     private function manager(): ImageManager
     {
-        return app(ImageManager::class);
+        return new ImageManager(GdDriver::class, decodeAnimation: false);
     }
 }

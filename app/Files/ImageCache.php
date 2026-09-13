@@ -14,7 +14,7 @@ class ImageCache
 {
     public function __construct(
         private readonly FileStorage $storage,
-        private readonly StillImageDecoder $decoder,
+        private readonly ImageProcessor $processor,
     ) {}
 
     /**
@@ -51,17 +51,13 @@ class ImageCache
     {
         // The budget bounds the source, not the thumbnail: a thumbnail is never larger than its
         // source, so an over-budget source cannot yield an answer that fits.
-        $image = $this->decoder->decode($this->original($file, $maxBytes));
+        $bytes = $this->original($file, $maxBytes);
 
-        if ($transform->square) {
-            // Center-crop to fill the target box exactly, whatever its ratio.
-            $image->cover($transform->width, $transform->height);
-        } else {
-            // Fit within the box, preserving aspect ratio and never upscaling.
-            $image->scaleDown($transform->width, $transform->height);
-        }
+        $spec = $transform->square
+            ? ImageSpec::cover((int) $transform->width, (int) $transform->height, $format)
+            : ImageSpec::fit((int) $transform->width, (int) $transform->height, $format);
 
-        return $image->encodeUsingFileExtension($format, quality: (int) config('openpne.images.quality'))->toString();
+        return $this->processor->process($bytes, $file->type, $spec)->bytes;
     }
 
     private function original(File $file, ?int $maxBytes = null): string

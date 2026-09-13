@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Files\ImageCache;
+use App\Files\ImageProcessingException;
 use App\Files\ImageTransform;
 use App\Models\File;
 use Illuminate\Http\Request;
@@ -45,6 +46,10 @@ class ImageController extends Controller
             return $response;
         }
 
-        return $response->setContent($cache->bytes($file, $transform, $imageFormat));
+        try {
+            return $response->setContent($cache->bytes($file, $transform, $imageFormat));
+        } catch (ImageProcessingException) {
+            abort(404);
+        }
     }
 }

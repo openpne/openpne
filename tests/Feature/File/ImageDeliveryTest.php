@@ -12,7 +12,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Gif\Builder;
 use Intervention\Gif\Decoder;
-use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
 class ImageDeliveryTest extends TestCase
@@ -161,23 +160,18 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame(3, $this->frameCount($response->getContent()));
     }
 
-    public function test_the_imagick_driver_also_thumbnails_an_animated_gif_to_a_still(): void
+    public function test_a_source_the_processor_refuses_is_not_found(): void
     {
-        // The two drivers reach a still frame by different routes, and both have to end at one.
-        if (! extension_loaded('imagick')) {
-            $this->markTestSkipped('ext-imagick is not installed.');
-        }
-
-        config(['openpne.images.driver' => 'imagick']);
-        $this->app->forgetInstance(ImageManager::class);
-
+        // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it: a
+        // deterministic refusal is the picture not being there, not a server error.
         $owner = Member::factory()->create();
-        $file = $this->animatedGif($owner);
+        $file = $this->avatar($owner, 240, 120);
+        $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertOk();
 
-        $response = $this->actingAs($owner)->get($file->thumbnailUrl(120, 120));
+        Storage::fake('image_cache');
+        config(['openpne.images.max_upload_dimension' => 100]);
 
-        $response->assertOk();
-        $this->assertSame(1, $this->frameCount($response->getContent()));
+        $this->actingAs($owner)->get($file->thumbnailUrl(120, 120))->assertNotFound();
     }
 
     public function test_a_variant_cached_by_an_earlier_generation_is_not_served(): void

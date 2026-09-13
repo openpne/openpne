@@ -54,7 +54,7 @@ jobs:
       - name: Assert the image loads its image-processing extensions
         run: |
           docker compose exec -T app php -r '
-            foreach (["gd", "imagick", "exif"] as $ext) {
+            foreach (["gd", "exif"] as $ext) {
                 if (!extension_loaded($ext)) {
                     fwrite(STDERR, "$ext is not loaded\n");
                     exit(1);

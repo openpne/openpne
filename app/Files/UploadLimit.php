@@ -14,6 +14,16 @@ final class UploadLimit
 {
     public const DEFAULT_KILOBYTES = 5120;
 
+    public const DEFAULT_DIMENSION = 5000;
+
+    /** Per-side pixel limit on an upload, and the side a stored image may declare; blank is the default. */
+    public static function dimension(): int
+    {
+        $configured = (int) config('openpne.images.max_upload_dimension');
+
+        return $configured > 0 ? $configured : self::DEFAULT_DIMENSION;
+    }
+
     public static function kilobytes(): int
     {
         $configured = (int) config('openpne.images.max_upload_kilobytes');
