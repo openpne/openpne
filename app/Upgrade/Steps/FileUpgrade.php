@@ -95,7 +95,8 @@ class FileUpgrade extends UpgradeStep
 
     /**
      * OpenPNE 3's validator admitted `image/pjpeg` and `image/x-png` (lower-cased), and its API upload
-     * wrote the browser's type unvalidated; both are folded into the types this version shows.
+     * wrote the browser's type unvalidated; the aliases become the types this version shows, every
+     * other type is only lower-cased.
      */
     private function typeExpr(): string
     {
