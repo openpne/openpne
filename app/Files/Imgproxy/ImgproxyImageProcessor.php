@@ -10,26 +10,32 @@ use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSourceLimit;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
+use App\Outbound\CappedStream;
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Utils;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Log;
 use Intervention\Gif\Decoder as GifDecoder;
-use Psr\Http\Client\ClientExceptionInterface;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
 
 /**
  * The bytes reach the sidecar through the spool directory it reads as `local://`, never over a route
- * of this app. A 422, or a 500 while `/health` still answers, is imgproxy's verdict on the bytes;
- * every other failure is an outage or the operator's, logged and retried on the next read
- * (docs/internals/images.md, "Processing").
+ * of this app. Only a 422 is imgproxy's verdict on the bytes; every other failure is an outage or the
+ * operator's, logged and retried on the next read (docs/internals/images.md, "Processing").
  */
 final class ImgproxyImageProcessor implements ImageProcessor
 {
+    /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
+    public const MAX_FRAMES = 200;
+
     /** The answer can only be a re-encode of what was spooled, so this is headroom, not a budget. */
     private const RESPONSE_CAP_FACTOR = 4;
+
+    private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
     public function __construct(
         private readonly ClientInterface $client,
@@ -45,10 +51,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
             new Client([
                 RequestOptions::TIMEOUT => (float) $config['timeout'],
                 RequestOptions::CONNECT_TIMEOUT => 5.0,
-                RequestOptions::HTTP_ERRORS => false,
-                RequestOptions::ALLOW_REDIRECTS => false,
                 RequestOptions::PROXY => '',
-                RequestOptions::STREAM => true,
             ]),
             ImgproxyUrl::fromConfig($config),
             new Spool((string) $config['spool_disk']),
@@ -65,16 +68,18 @@ final class ImgproxyImageProcessor implements ImageProcessor
         ImageSourceLimit::preflight($bytes);
 
         $name = $this->spool->put($bytes, ImageSpec::formatFor($mime) ?? 'bin');
+        $still = ! $spec->isCanonical();
 
         try {
-            $response = $this->send($this->url->signed($this->options($spec, still: ! $spec->isCanonical()), $name, $spec->format));
+            [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format));
 
-            // An animation over the sidecar's frame budget is kept as a still rather than refused.
-            if ($response->getStatusCode() === 422 && $spec->isCanonical() && in_array($spec->format, ['gif', 'webp'], true)) {
-                $response = $this->send($this->url->signed($this->options($spec, still: true), $name, $spec->format));
+            // An animation over the sidecar's resolution budget is kept as a still rather than refused.
+            if ($response->getStatusCode() === 422 && ! $still && in_array($spec->format, ['gif', 'webp'], true)) {
+                $still = true;
+                [$response, $body] = $this->send($this->url->signed($this->options($spec, $still), $name, $spec->format));
             }
 
-            return $this->read($response, $spec->format);
+            return $this->read($response, $body, $spec->format, $still);
         } finally {
             $this->spool->delete($name);
         }
@@ -82,11 +87,7 @@ final class ImgproxyImageProcessor implements ImageProcessor
 
     private function options(ImageSpec $spec, bool $still): string
     {
-        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality')];
-
-        if ($still) {
-            $options[] = 'maf:1';
-        }
+        $options = ['sm:1', 'scp:1', 'ar:1', 'kcr:0', 'q:'.(int) config('openpne.images.quality'), 'maf:'.($still ? 1 : self::MAX_FRAMES)];
 
         if ($spec->cover) {
             $options[] = "rt:fill/w:{$spec->width}/h:{$spec->height}/el:1/g:ce";
@@ -102,90 +103,79 @@ final class ImgproxyImageProcessor implements ImageProcessor
     }
 
     /**
+     * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
+     *
+     * @return array{0: ResponseInterface, 1: string}
+     *
      * @throws ImageProcessorUnavailableException
      */
-    private function send(string $url): ResponseInterface
+    private function send(string $url): array
     {
+        $cap = ImageSourceLimit::bytes() * self::RESPONSE_CAP_FACTOR;
+        $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $cap);
+
         try {
-            return $this->client->sendRequest(new Request('GET', $url));
-        } catch (ClientExceptionInterface $e) {
+            $response = $this->client->send(new Request('GET', $url), [
+                RequestOptions::SINK => $sink,
+                RequestOptions::HTTP_ERRORS => false,
+                RequestOptions::ALLOW_REDIRECTS => false,
+            ]);
+        } catch (GuzzleException $e) {
+            if ($sink->wasCapped()) {
+                return $this->outage("imgproxy answered more than the {$cap} byte cap.");
+            }
+
             return $this->outage('imgproxy could not be reached: '.$e->getMessage());
         }
+
+        if ($sink->wasCapped()) {
+            return $this->outage("imgproxy answered more than the {$cap} byte cap.");
+        }
+
+        $sink->rewind();
+
+        return [$response, $sink->getContents()];
     }
 
     /**
      * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
-    private function read(ResponseInterface $response, string $format): ProcessedImage
+    private function read(ResponseInterface $response, string $body, string $format, bool $still): ProcessedImage
     {
         $status = $response->getStatusCode();
 
         if ($status === 200) {
-            $bytes = $this->body($response, ImageSourceLimit::bytes() * self::RESPONSE_CAP_FACTOR);
-            $size = @getimagesizefromstring($bytes);
+            $size = @getimagesizefromstring($body);
 
-            if ($size === false) {
-                return $this->outage('imgproxy answered 200 with bytes that are not an image.');
+            if ($size === false || $size[2] !== self::IMAGE_TYPES[$format]) {
+                return $this->outage("imgproxy answered 200 with bytes that are not a {$format}.");
             }
 
-            return new ProcessedImage($bytes, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], $this->animated($bytes, $format));
+            return new ProcessedImage($body, ImageSpec::mimeFor($format), (int) $size[0], (int) $size[1], ! $still && $this->animated($body, $format));
         }
 
-        $reason = trim($this->body($response, 1024));
+        $reason = substr(trim($body), 0, 200);
 
         if ($status === 422) {
             throw new ImageProcessingException("imgproxy refused the image: {$reason}");
         }
 
-        if ($status === 500 && $this->alive()) {
-            throw new ImageProcessingException("imgproxy could not decode the image: {$reason}");
-        }
-
         return $this->outage("imgproxy answered {$status}: {$reason}");
     }
 
-    /**
-     * @throws ImageProcessorUnavailableException
-     */
-    private function body(ResponseInterface $response, int $cap): string
-    {
-        $stream = $response->getBody();
-        $bytes = '';
-
-        try {
-            while (! $stream->eof() && strlen($bytes) <= $cap) {
-                $bytes .= $stream->read(65536);
-            }
-        } catch (Throwable $e) {
-            return $this->outage('imgproxy stopped answering: '.$e->getMessage());
-        } finally {
-            $stream->close();
-        }
-
-        if (strlen($bytes) > $cap) {
-            return $this->outage("imgproxy answered more than the {$cap} byte cap.");
-        }
-
-        return $bytes;
-    }
-
-    private function alive(): bool
-    {
-        try {
-            return $this->client->sendRequest(new Request('GET', $this->url->health()))->getStatusCode() === 200;
-        } catch (ClientExceptionInterface) {
-            return false;
-        }
-    }
-
+    /** Whether the answer holds more than one frame; the GIF walk is the library's and a walk it cannot finish counts as a still. */
     private function animated(string $bytes, string $format): bool
     {
-        return match ($format) {
-            'gif' => count(GifDecoder::decode($bytes)->frames()) > 1,
-            'webp' => str_contains(substr($bytes, 0, 64), 'ANIM'),
-            default => false,
-        };
+        try {
+            return match ($format) {
+                'gif' => count(GifDecoder::decode($bytes)->frames()) > 1,
+                'webp' => str_contains(substr($bytes, 0, 64), 'ANIM'),
+                default => false,
+            };
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function outage(string $message): never

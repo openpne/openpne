@@ -19,13 +19,14 @@ use Tests\TestCase;
 class OutboundEgressBoundaryTest extends TestCase
 {
     /**
-     * Directories allowed to speak to the network. Everything else in app/ must go through them.
+     * Directories, or single files, allowed to speak to the network. Everything else in app/ must go
+     * through them.
      *
      * @var list<string>
      */
     private const EGRESS_ALLOWLIST = [
         'Outbound',
-        'Files/Imgproxy',
+        'Files/Imgproxy/ImgproxyImageProcessor.php',
     ];
 
     /**
@@ -211,11 +212,11 @@ class OutboundEgressBoundaryTest extends TestCase
         return ! in_array($previousType, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW], true);
     }
 
-    public function test_the_allowlisted_directories_exist(): void
+    public function test_the_allowlisted_entries_exist(): void
     {
-        // A renamed directory would silently turn the allowlist into a no-op that still passes.
-        foreach (self::EGRESS_ALLOWLIST as $directory) {
-            $this->assertDirectoryExists(app_path($directory));
+        // A renamed directory or file would silently turn the allowlist into a no-op that still passes.
+        foreach (self::EGRESS_ALLOWLIST as $entry) {
+            $this->assertFileExists(app_path($entry));
         }
     }
 
@@ -358,8 +359,8 @@ class OutboundEgressBoundaryTest extends TestCase
 
     private function isAllowlisted(string $file): bool
     {
-        foreach (self::EGRESS_ALLOWLIST as $directory) {
-            if (str_starts_with($file, app_path($directory).'/')) {
+        foreach (self::EGRESS_ALLOWLIST as $entry) {
+            if ($file === app_path($entry) || str_starts_with($file, app_path($entry).'/')) {
                 return true;
             }
         }

@@ -146,7 +146,7 @@ differs:
 | | `gd` | `imgproxy` |
 |---|---|---|
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
-| Animation | the canonical is a still | the canonical keeps up to 200 frames within 50 MP in total; over that, a still |
+| Animation | the canonical is a still | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still; an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |
 | To install | nothing | the container (the compose file runs one) and three env values |
 
@@ -161,27 +161,31 @@ and deletes the spooled file; leftovers of a request that died are swept an hour
 write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
 `OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
-The sidecar must allow `local://` sources and security options (`IMGPROXY_ALLOW_SECURITY_OPTIONS`),
-since a variant asks for one frame with `max_animation_frames`; every request also asks for metadata,
-colour-profile and copyright stripping and auto-rotation, so the sidecar's own defaults for those do not
-matter, and the app dials nothing but this one address ([outbound-http](outbound-http.md), "Key
-invariants").
+A sidecar of the operator's own needs three settings besides the key and salt:
+`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, `IMGPROXY_ALLOWED_SOURCES=local://` and
+`IMGPROXY_ALLOW_SECURITY_OPTIONS=true` — the last because every request states its own frame budget
+with `max_animation_frames` (one for a variant, `MAX_FRAMES` for a canonical), so the sidecar's default
+of a single frame does not apply, and it is safe because only the holder of the key can sign a request.
+Every request also asks for metadata, colour-profile and copyright stripping and auto-rotation, so the
+sidecar's defaults for those do not matter either, and the app dials nothing but this one address
+([outbound-http](outbound-http.md), "Key invariants").
 
 **What an answer means**, measured on imgproxy v4.0.14 (its documentation specifies only the 429):
 
 | imgproxy answers | when | the app |
 |---|---|---|
 | 200 | processed | keeps the result |
-| 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION`, counted over every frame of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
-| 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data) | refuses the picture while `/health` still answers, else an outage |
-| 429, 503, other 5xx; no connection; timeout; an answer over the cap | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
+| 422 `Invalid source image` | not an image; over `IMGPROXY_MAX_SRC_RESOLUTION` (50 MP unconfigured), counted over every frame kept of an animation; over `IMGPROXY_MAX_SRC_FILE_SIZE` where an operator set one (the shipped stack leaves it off, the app's own cap having applied first) | refuses the picture, remembered as a refusal — a GIF or WebP canonical is first asked for again as a still |
+| 500 `Internal error` | libvips could not load the bytes (a PNG with no pixel data), or could not this once | an outage: `/health` cannot tell the two apart, so nothing is remembered and the next view asks again |
+| 429, 503, other 5xx; no connection; timeout; an answer over the cap; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
 | 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
 
 libvips is more tolerant than GD: a truncated JPEG, a PNG with a bad CRC or with garbage pixel data
 decodes to *something* rather than being refused, so what GD refuses and imgproxy accepts differs at
 the edges; the contract test pins only what both refuse. An outage on the upload path is shown to the
 member as a temporary failure; on a read it is a 503 with `Retry-After`, and every canonical already
-made keeps being served.
+made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
+would not, and is then refused like any other over it.
 
 ## Classic is not part of this
 

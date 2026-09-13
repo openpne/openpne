@@ -82,6 +82,8 @@ services:
       IMGPROXY_LOCAL_FILESYSTEM_ROOT: /spool
       IMGPROXY_ALLOWED_SOURCES: local://
       IMGPROXY_ALLOW_SECURITY_OPTIONS: "true"
-      IMGPROXY_MAX_ANIMATION_FRAMES: "200"
+      # Stated rather than inherited: the budgets docs/internals/images.md quotes.
+      IMGPROXY_MAX_SRC_RESOLUTION: "50"
+      IMGPROXY_MAX_ANIMATION_FRAME_RESOLUTION: "0"
     volumes:
       - ./storage/app/image-spool:/spool:ro

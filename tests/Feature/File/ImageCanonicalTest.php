@@ -209,6 +209,9 @@ class ImageCanonicalTest extends TestCase
     public function test_a_refused_upload_becomes_a_field_error_and_stores_nothing(): void
     {
         $author = Member::factory()->create();
+        // A picture the upload rules pass and the source cap, set under them, refuses at the header check
+        // both processors share.
+        config(['openpne.images.max_source_kilobytes' => 1]);
 
         $response = $this->actingAs($author)->post(
             route('diary.store'),
@@ -216,7 +219,7 @@ class ImageCanonicalTest extends TestCase
                 'title' => 'Broken',
                 'body' => 'b',
                 'visibility' => Visibility::Members->value,
-                'images' => [UploadedFile::fake()->createWithContent('hollow.png', $this->pngHeaderClaiming(10, 10))],
+                'images' => [UploadedFile::fake()->createWithContent('big.png', $this->png(64, 64).str_repeat("\0", 2048))],
             ],
             ['Accept' => 'application/json'],
         );
@@ -378,14 +381,6 @@ class ImageCanonicalTest extends TestCase
         imagepng($gd);
 
         return (string) ob_get_clean();
-    }
-
-    /** A complete PNG container whose IHDR declares $width x $height and which carries no pixels. */
-    private function pngHeaderClaiming(int $width, int $height): string
-    {
-        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
-
-        return "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', $width, $height)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
     }
 
     private function storageThatRefusesToRead(): FileStorage

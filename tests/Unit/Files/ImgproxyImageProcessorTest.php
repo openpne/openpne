@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Gif\Builder;
 use Intervention\Gif\Decoder;
+use League\Flysystem\UnableToRetrieveMetadata;
+use Mockery;
 use Tests\TestCase;
 use Throwable;
 
@@ -75,8 +77,7 @@ class ImgproxyImageProcessorTest extends TestCase
             '#^/[A-Za-z0-9_-]{43}/sm:1/scp:1/ar:1/kcr:0/q:85/maf:1/rt:fit/w:120/h:120/el:0/plain/local:///spool/[A-Za-z0-9]{32}\.png@png$#',
             $this->history[0]['request']->getUri()->getPath(),
         );
-        $this->assertMatchesRegularExpression('#/kcr:0/q:85/plain/local:///spool/[A-Za-z0-9]{32}\.png@png$#', $this->history[1]['request']->getUri()->getPath());
-        $this->assertStringNotContainsString('maf:', $this->history[1]['request']->getUri()->getPath());
+        $this->assertMatchesRegularExpression('#/kcr:0/q:85/maf:200/plain/local:///spool/[A-Za-z0-9]{32}\.png@png$#', $this->history[1]['request']->getUri()->getPath());
     }
 
     public function test_a_cover_asks_for_the_exact_box_and_a_background_flattens(): void
@@ -121,19 +122,24 @@ class ImgproxyImageProcessorTest extends TestCase
         $this->assertCount(1, $this->history);
     }
 
-    public function test_a_500_is_the_verdict_on_the_bytes_only_while_health_still_answers(): void
+    public function test_a_long_refusal_is_still_a_refusal(): void
     {
-        $processor = $this->processor(new Response(500, [], 'Internal error'), new Response(200, [], 'imgproxy is running'));
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessingException::class);
-        $this->assertSame('/health', $this->history[1]['request']->getUri()->getPath());
+        $processor = $this->processor(new Response(422, [], str_repeat('Invalid source image. ', 200)));
 
-        $processor = $this->processor(new Response(500, [], 'Internal error'), new ConnectException('refused', new Request('GET', 'http://imgproxy.test/health')));
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessorUnavailableException::class);
+        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessingException::class);
+    }
+
+    public function test_a_variant_of_an_animation_is_reported_still_without_a_walk(): void
+    {
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/gif'], $this->animatedGif(3)));
+
+        $this->assertFalse($processor->process($this->animatedGif(3), 'image/gif', ImageSpec::fit(30, 30, 'gif'))->animated);
     }
 
     public function test_every_other_answer_is_an_outage_that_is_logged(): void
     {
-        foreach ([429 => 'Too many requests', 503 => 'Timeout', 502 => 'Bad Gateway', 403 => 'Forbidden', 404 => 'Source is unreachable', 400 => 'Bad request'] as $status => $body) {
+        // 500 included: the sidecar's health endpoint cannot tell bytes it cannot load from a moment it could not.
+        foreach ([500 => 'Internal error', 429 => 'Too many requests', 503 => 'Timeout', 502 => 'Bad Gateway', 403 => 'Forbidden', 404 => 'Source is unreachable', 400 => 'Bad request'] as $status => $body) {
             $processor = $this->processor(new Response($status, [], $body));
 
             try {
@@ -144,57 +150,41 @@ class ImgproxyImageProcessorTest extends TestCase
             }
         }
 
-        Log::shouldHaveReceived('error')->times(6);
+        Log::shouldHaveReceived('error')->times(7);
     }
 
-    public function test_no_connection_and_an_answer_over_the_cap_are_outages_too(): void
+    public function test_no_connection_an_answer_over_the_cap_and_bytes_of_another_format_are_outages_too(): void
     {
         $processor = $this->processor(new ConnectException('timed out', new Request('GET', 'http://imgproxy.test/')));
         $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessorUnavailableException::class);
 
+        // A JPEG was asked for; a PNG under the cache key's .jpg would be served with the wrong type.
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
+        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/jpeg', ImageSpec::canonical('jpg')), ImageProcessorUnavailableException::class);
+
+        // A sound picture over the cap, so the cap alone is what refuses it.
         config(['openpne.images.max_source_kilobytes' => 1]);
-        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], str_repeat('x', 4097)));
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
+        $this->assertGreaterThan(4096, strlen($this->noisyPng(80, 80)));
         $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessorUnavailableException::class);
 
-        Log::shouldHaveReceived('error')->times(2);
+        Log::shouldHaveReceived('error')->times(3);
     }
 
-    public function test_bytes_over_the_source_limit_never_reach_the_sidecar(): void
+    public function test_a_stale_file_another_worker_swept_first_does_not_fail_the_request(): void
     {
-        config(['openpne.images.max_source_kilobytes' => 1]);
-        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
-
-        $this->assertThrows(fn () => $processor->process(str_repeat("\x89PNG", 1024), 'image/png', ImageSpec::canonical('png')), ImageProcessingException::class);
-
-        $this->assertCount(0, $this->history);
-        $this->assertSame([], Storage::disk('image_spool')->files());
-    }
-
-    public function test_the_spooled_file_is_there_for_the_request_and_gone_after_whatever_the_answer(): void
-    {
-        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)), new Response(422, [], 'Invalid source image'));
-
-        $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
-        $this->assertSame(1, $this->spooledDuringRequest);
-        $this->assertSame([], Storage::disk('image_spool')->files());
-
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')));
-        $this->assertSame([], Storage::disk('image_spool')->files());
-    }
-
-    public function test_a_spool_file_older_than_an_hour_is_swept_on_the_next_write(): void
-    {
+        // Listed, then gone before its age is read: the adapter throws here whatever the disk's `throw` says.
         $disk = Storage::disk('image_spool');
         $disk->put('dead.png', 'x');
-        touch($disk->path('dead.png'), time() - Spool::STALE_AFTER - 60);
-        $disk->put('.gitignore', '*');
-        touch($disk->path('.gitignore'), time() - Spool::STALE_AFTER - 60);
-        $disk->put('live.png', 'x');
+        $racing = Mockery::mock($disk)->makePartial();
+        $racing->shouldReceive('lastModified')->with('dead.png')->andThrow(UnableToRetrieveMetadata::lastModified('dead.png'));
+        Storage::set('image_spool', $racing);
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
 
-        $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
+        $processed = $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
 
-        $this->assertSame(['.gitignore', 'live.png'], $disk->files());
+        $this->assertSame([4, 4], [$processed->width, $processed->height]);
+        $this->assertSame(['dead.png'], $disk->files(), 'The request must leave no spool file of its own behind.');
     }
 
     private function processor(Response|Throwable ...$answers): ImgproxyImageProcessor
@@ -219,6 +209,21 @@ class ImgproxyImageProcessorTest extends TestCase
     {
         $gd = imagecreatetruecolor($width, $height);
         imagefill($gd, 0, 0, (int) imagecolorallocate($gd, 200, 30, 30));
+        ob_start();
+        imagepng($gd);
+
+        return (string) ob_get_clean();
+    }
+
+    private function noisyPng(int $width, int $height): string
+    {
+        mt_srand(7);
+        $gd = imagecreatetruecolor($width, $height);
+        for ($x = 0; $x < $width; $x++) {
+            for ($y = 0; $y < $height; $y++) {
+                imagesetpixel($gd, $x, $y, (int) imagecolorallocate($gd, mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255)));
+            }
+        }
         ob_start();
         imagepng($gd);
 

@@ -9,6 +9,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * The directory the sidecar reads as `local://`: a file lives here for one request and is deleted in
@@ -27,6 +28,7 @@ final class Spool
     public function put(string $bytes, string $format): string
     {
         $disk = $this->disk();
+        $this->sweep($disk);
         $name = Str::random(32).'.'.$format;
 
         if (! $disk->put($name, $bytes)) {
@@ -34,8 +36,6 @@ final class Spool
 
             throw new ImageProcessorUnavailableException("The image spool disk [{$this->disk}] refused the write.");
         }
-
-        $this->sweep($disk);
 
         return $name;
     }
@@ -45,14 +45,23 @@ final class Spool
         $this->disk()->delete($name);
     }
 
+    /** Best effort: another worker may sweep the same file first, and lastModified() throws for it whatever `throw` says. */
     private function sweep(Filesystem $disk): void
     {
         $cutoff = time() - self::STALE_AFTER;
 
         foreach ($disk->files() as $path) {
             // The directory's own .gitignore is not a spooled file.
-            if (! str_starts_with(basename($path), '.') && $disk->lastModified($path) < $cutoff) {
-                $disk->delete($path);
+            if (str_starts_with(basename($path), '.')) {
+                continue;
+            }
+
+            try {
+                if ($disk->lastModified($path) < $cutoff) {
+                    $disk->delete($path);
+                }
+            } catch (Throwable) {
+                continue;
             }
         }
     }

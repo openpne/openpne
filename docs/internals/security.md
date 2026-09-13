@@ -409,7 +409,10 @@ resolution and frame budgets and is what an out-of-memory kill would take down,
 and the app's header check still runs first so both refuse the same sources
 ([images](images.md), "Processing"). The sidecar sees only bytes the app spooled
 for it, over a signed URL to one operator-configured address; no URL a member
-typed reaches it.
+typed reaches it. The spool is world-readable so that the sidecar's user can read
+it, which on a host shared with other unix users leaves each upload readable to
+them for the length of one request; a host that shares users puts the spool on a
+volume they do not see.
 
 ## Cookies
 

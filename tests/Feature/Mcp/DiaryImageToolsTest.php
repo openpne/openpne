@@ -752,12 +752,12 @@ class DiaryImageToolsTest extends McpTestCase
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
 
-        // A PNG header over no pixels: getimagesize reads it, so it passes the rules, and the
-        // canonical re-encode fails closed.
-        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
-        $hollow = "\x89PNG\r\n\x1a\n".$chunk('IHDR', pack('NN', 10, 10)."\x08\x06\x00\x00\x00").$chunk('IEND', '');
+        // A picture the rules pass and the source cap, set under them, refuses at the header check both
+        // processors share; the first picture stays under that cap.
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $big = base64_decode($this->encodedImage(20, 20)).str_repeat("\0", 2048);
 
-        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($hollow)]])
+        $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($big)]])
             ->assertHasErrors(['image']);
 
         $this->assertSame(0, Diary::query()->count());

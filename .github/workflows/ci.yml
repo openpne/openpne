@@ -132,7 +132,9 @@ jobs:
           IMGPROXY_LOCAL_FILESYSTEM_ROOT: /workspace
           IMGPROXY_ALLOWED_SOURCES: local://
           IMGPROXY_ALLOW_SECURITY_OPTIONS: 'true'
-          IMGPROXY_MAX_ANIMATION_FRAMES: '200'
+          # Stated rather than inherited, so the budgets the docs quote are the ones tested.
+          IMGPROXY_MAX_SRC_RESOLUTION: '50'
+          IMGPROXY_MAX_ANIMATION_FRAME_RESOLUTION: '0'
         ports:
           - 8080:8080
         volumes:
@@ -160,6 +162,9 @@ jobs:
           touch database/database.sqlite
           curl -fsS http://127.0.0.1:8080/health
       - run: php artisan migrate --force
+      # The contract test skips itself without OPENPNE_IMAGE_PROCESSOR=imgproxy; here a skip would mean
+      # the lane tested GD twice and proved nothing, so it fails.
+      - run: php artisan test tests/Feature/File/ImgproxyImageProcessorContractTest.php --fail-on-skipped
       # One path per run: the test command takes a single path argument.
       - run: |
           set -e
