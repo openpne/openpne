@@ -14,5 +14,6 @@ a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP
 | `png-meta.png` | `eXIf` (GPS) + `tEXt` (`png-text-LEAK`) after IHDR |
 | `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped (GD decodes it regardless) |
 | `webp-vp8x-meta.webp` | VP8X (flags EXIF + XMP) + GD's VP8 image + an odd-length EXIF whose only tag is Copyright (`exif-LEAK 2021:07:04`) + `XMP ` (`xmp-LEAK`); a valid container, so libwebp reads it too |
+| `apng-2frames.png` | a 4x4 APNG of two frames (`acTL` + `fcTL`/`fdAT`), red then blue; both processors read the first frame only |
 | `tiny.gif` | plain GIF, no metadata |
 | `jpeg-truncated.jpg` | a JPEG cut short. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |

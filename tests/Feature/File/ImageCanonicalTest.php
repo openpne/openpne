@@ -212,6 +212,7 @@ class ImageCanonicalTest extends TestCase
         // A picture the upload rules pass and the source cap, set under them, refuses at the header check
         // both processors share.
         config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->assertLessThan(1024, strlen($this->png(64, 64)));
 
         $response = $this->actingAs($author)->post(
             route('diary.store'),

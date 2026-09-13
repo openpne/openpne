@@ -747,7 +747,7 @@ class DiaryImageToolsTest extends McpTestCase
         $this->assertSame(0, DiaryImage::query()->count());
     }
 
-    public function test_a_picture_that_cannot_be_decoded_is_refused_as_an_error_on_that_picture(): void
+    public function test_a_picture_the_processor_refuses_is_an_error_on_that_picture(): void
     {
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
@@ -755,6 +755,7 @@ class DiaryImageToolsTest extends McpTestCase
         // A picture the rules pass and the source cap, set under them, refuses at the header check both
         // processors share; the first picture stays under that cap.
         config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->assertLessThan(1024, strlen(base64_decode($this->encodedImage(20, 20))));
         $big = base64_decode($this->encodedImage(20, 20)).str_repeat("\0", 2048);
 
         $this->postDiary(['images' => [$this->encodedImage(20, 20), base64_encode($big)]])

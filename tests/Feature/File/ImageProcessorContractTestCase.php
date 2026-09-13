@@ -77,6 +77,17 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $this->assertSame($preserves, $canonical->animated);
     }
 
+    public function test_an_apng_is_a_still(): void
+    {
+        // libpng ignores the animation chunks and libvips reads the first frame, so no processor keeps them.
+        $canonical = $this->canonical($this->fixture('apng-2frames.png'), 'image/png');
+
+        $this->assertStringNotContainsString('acTL', $canonical->bytes);
+        $this->assertStringNotContainsString('fcTL', $canonical->bytes);
+        $this->assertFalse($canonical->animated);
+        $this->assertSame([4, 4], $this->dimensions($canonical->bytes));
+    }
+
     public function test_fit_scales_down_inside_the_box_and_never_up(): void
     {
         $source = $this->png(240, 120);
@@ -172,7 +183,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         return count(Decoder::decode($bytes)->frames());
     }
 
-    private function png(int $width, int $height): string
+    protected function png(int $width, int $height): string
     {
         $gd = imagecreatetruecolor($width, $height);
         imagefill($gd, 0, 0, (int) imagecolorallocate($gd, 200, 30, 30));

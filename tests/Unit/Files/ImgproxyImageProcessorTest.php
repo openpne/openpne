@@ -153,7 +153,7 @@ class ImgproxyImageProcessorTest extends TestCase
         Log::shouldHaveReceived('error')->times(7);
     }
 
-    public function test_no_connection_an_answer_over_the_cap_and_bytes_of_another_format_are_outages_too(): void
+    public function test_no_connection_and_bytes_of_another_format_are_outages_too(): void
     {
         $processor = $this->processor(new ConnectException('timed out', new Request('GET', 'http://imgproxy.test/')));
         $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessorUnavailableException::class);
@@ -162,13 +162,61 @@ class ImgproxyImageProcessorTest extends TestCase
         $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
         $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/jpeg', ImageSpec::canonical('jpg')), ImageProcessorUnavailableException::class);
 
-        // A sound picture over the cap, so the cap alone is what refuses it.
-        config(['openpne.images.max_source_kilobytes' => 1]);
-        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
-        $this->assertGreaterThan(4096, strlen($this->noisyPng(80, 80)));
-        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')), ImageProcessorUnavailableException::class);
+        Log::shouldHaveReceived('error')->times(2);
+    }
 
-        Log::shouldHaveReceived('error')->times(3);
+    public function test_an_answer_over_the_source_limit_is_a_refusal_not_an_outage(): void
+    {
+        // A sound picture over the limit, so the cap alone is what refuses it; the limit would refuse
+        // the canonical anyway, so nothing is gained by asking again.
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $this->assertGreaterThan(1024, strlen($this->noisyPng(80, 80)));
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->noisyPng(80, 80)));
+
+        try {
+            $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
+            $this->fail('An answer over the source limit was kept.');
+        } catch (ImageProcessingException $e) {
+            $this->assertStringContainsString('source limit', $e->getMessage());
+        }
+    }
+
+    public function test_bytes_over_the_source_limit_never_reach_the_sidecar(): void
+    {
+        config(['openpne.images.max_source_kilobytes' => 1]);
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
+
+        $this->assertThrows(fn () => $processor->process(str_repeat("\x89PNG", 1024), 'image/png', ImageSpec::canonical('png')), ImageProcessingException::class);
+
+        $this->assertCount(0, $this->history);
+        $this->assertSame([], Storage::disk('image_spool')->files());
+    }
+
+    public function test_the_spooled_file_is_there_for_the_request_and_gone_after_whatever_the_answer(): void
+    {
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)), new Response(422, [], 'Invalid source image'));
+
+        $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
+        $this->assertSame(1, $this->spooledDuringRequest);
+        $this->assertSame([], Storage::disk('image_spool')->files());
+
+        $this->assertThrows(fn () => $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png')));
+        $this->assertSame([], Storage::disk('image_spool')->files());
+    }
+
+    public function test_a_spool_file_older_than_an_hour_is_swept_on_the_next_write_and_a_dotfile_never(): void
+    {
+        $disk = Storage::disk('image_spool');
+        $disk->put('dead.png', 'x');
+        touch($disk->path('dead.png'), time() - Spool::STALE_AFTER - 60);
+        $disk->put('.gitignore', '*');
+        touch($disk->path('.gitignore'), time() - Spool::STALE_AFTER - 60);
+        $disk->put('live.png', 'x');
+        $processor = $this->processor(new Response(200, ['Content-Type' => 'image/png'], $this->png(4, 4)));
+
+        $processor->process($this->png(8, 8), 'image/png', ImageSpec::canonical('png'));
+
+        $this->assertSame(['.gitignore', 'live.png'], $disk->files());
     }
 
     public function test_a_stale_file_another_worker_swept_first_does_not_fail_the_request(): void

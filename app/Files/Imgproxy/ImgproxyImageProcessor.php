@@ -32,9 +32,6 @@ final class ImgproxyImageProcessor implements ImageProcessor
     /** Frames a canonical asks the sidecar to keep, whatever the sidecar's own default. */
     public const MAX_FRAMES = 200;
 
-    /** The answer can only be a re-encode of what was spooled, so this is headroom, not a budget. */
-    private const RESPONSE_CAP_FACTOR = 4;
-
     private const IMAGE_TYPES = ['jpg' => IMAGETYPE_JPEG, 'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
 
     public function __construct(
@@ -103,15 +100,17 @@ final class ImgproxyImageProcessor implements ImageProcessor
     }
 
     /**
-     * The body is collected into a capped sink, so a transfer past the cap is aborted rather than held.
+     * The body is collected into a sink capped at the source limit, so a transfer past it is aborted
+     * rather than held; an answer that long would be refused by that limit anyway, so it is a verdict.
      *
      * @return array{0: ResponseInterface, 1: string}
      *
+     * @throws ImageProcessingException
      * @throws ImageProcessorUnavailableException
      */
     private function send(string $url): array
     {
-        $cap = ImageSourceLimit::bytes() * self::RESPONSE_CAP_FACTOR;
+        $cap = ImageSourceLimit::bytes();
         $sink = new CappedStream(Utils::streamFor(fopen('php://temp', 'r+')), $cap);
 
         try {
@@ -121,15 +120,13 @@ final class ImgproxyImageProcessor implements ImageProcessor
                 RequestOptions::ALLOW_REDIRECTS => false,
             ]);
         } catch (GuzzleException $e) {
-            if ($sink->wasCapped()) {
-                return $this->outage("imgproxy answered more than the {$cap} byte cap.");
+            if (! $sink->wasCapped()) {
+                return $this->outage('imgproxy could not be reached: '.$e->getMessage());
             }
-
-            return $this->outage('imgproxy could not be reached: '.$e->getMessage());
         }
 
         if ($sink->wasCapped()) {
-            return $this->outage("imgproxy answered more than the {$cap} byte cap.");
+            throw new ImageProcessingException("imgproxy answered more than the {$cap} byte source limit.");
         }
 
         $sink->rewind();
