@@ -21,6 +21,7 @@ use App\Models\Diary;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\Visibility;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -107,21 +108,46 @@ class ImageCanonicalTest extends TestCase
         $this->assertSame([400, 400], $this->dimensions(app(ImageCache::class)->canonical($file)));
     }
 
-    public function test_an_upload_whose_canonical_cannot_be_published_is_rolled_back(): void
+    public function test_an_upload_whose_canonical_cannot_be_published_still_lands(): void
     {
+        // A full or read-only cache disk must not stop members posting; the first view regenerates.
         $root = Storage::disk('image_cache')->path('');
         chmod($root, 0o500);
 
         try {
-            $this->assertThrows(
-                fn () => $this->upload(UploadedFile::fake()->image('a.png', 24, 24)),
-                ImageCachePublishException::class,
-            );
+            $file = $this->upload(UploadedFile::fake()->image('a.png', 24, 24));
         } finally {
             chmod($root, 0o755);
         }
 
-        $this->assertSame(0, File::count());
+        $this->assertSame(1, File::count());
+        $this->assertSame([24, 24], [$file->width, $file->height]);
+        Storage::disk('image_cache')->assertMissing($this->canonicalKey($file));
+        $this->assertSame([24, 24], $this->dimensions(app(ImageCache::class)->canonical($file)));
+        Storage::disk('image_cache')->assertExists($this->canonicalKey($file));
+    }
+
+    public function test_publish_writes_a_sibling_temp_key_and_moves_it_into_place(): void
+    {
+        $disk = \Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('put')->once()->withArgs(fn (string $path, string $bytes): bool => str_starts_with($path, 'abc/g3/gd-q85/.tmp-') && $bytes === 'PNG')->andReturn(true);
+        $disk->shouldReceive('move')->once()->withArgs(fn (string $from, string $to): bool => str_starts_with($from, 'abc/g3/gd-q85/.tmp-') && $to === 'abc/g3/gd-q85/w_h.png')->andReturn(true);
+        Storage::shouldReceive('disk')->with(config('openpne.images.cache_disk'))->andReturn($disk);
+
+        app(ImageCache::class)->publish('abc/g3/gd-q85/w_h.png', 'PNG');
+    }
+
+    public function test_a_move_that_fails_removes_the_temp_key_and_throws(): void
+    {
+        $disk = \Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('put')->once()->andReturn(true);
+        $disk->shouldReceive('move')->once()->andReturn(false);
+        $disk->shouldReceive('delete')->once()->withArgs(fn (string $path): bool => str_starts_with($path, 'abc/g3/gd-q85/.tmp-'))->andReturn(true);
+        Storage::shouldReceive('disk')->with(config('openpne.images.cache_disk'))->andReturn($disk);
+
+        $this->expectException(ImageCachePublishException::class);
+
+        app(ImageCache::class)->publish('abc/g3/gd-q85/w_h.png', 'PNG');
     }
 
     public function test_a_storage_failure_after_the_canonical_was_published_purges_it(): void

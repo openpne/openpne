@@ -86,6 +86,9 @@ class AppIcon
             $disk->put($refused, '');
 
             return self::shippedBytes($size);
+        } catch (ImageProcessorUnavailableException) {
+            // An outage is not a verdict: the shipped icon now, the branded one when the processor is back.
+            return self::shippedBytes($size);
         }
 
         // The canonical's header is enough to rule the source out.

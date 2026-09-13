@@ -448,9 +448,15 @@ class LinkCardImageTest extends TestCase
      * The CRC is left wrong on purpose: a decoder would reject it, which is the point, since nothing
      * should get far enough to try.
      */
+    /** Well-formed (CRCs, an IDAT, IEND) so the container walk accepts it and the size gate is what refuses it. */
     private function pngHeaderClaiming(int $width, int $height): string
     {
-        return "\x89PNG\r\n\x1a\n".pack('N', 13).'IHDR'.pack('NN', $width, $height)."\x08\x02\x00\x00\x00".pack('N', 0);
+        $chunk = fn (string $type, string $data): string => pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
+
+        return "\x89PNG\r\n\x1a\n"
+            .$chunk('IHDR', pack('NN', $width, $height)."\x08\x02\x00\x00\x00")
+            .$chunk('IDAT', str_repeat("\xAB", 32))
+            .$chunk('IEND', '');
     }
 
     /**

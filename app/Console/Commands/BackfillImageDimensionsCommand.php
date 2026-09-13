@@ -18,7 +18,7 @@ class BackfillImageDimensionsCommand extends Command
 {
     protected $signature = 'openpne:backfill-image-dimensions';
 
-    protected $description = 'Record the pixel dimensions of stored images that have none';
+    protected $description = 'Record the pixel dimensions of stored images that have none, generating their canonical on the way';
 
     public function handle(ImageCache $cache): int
     {

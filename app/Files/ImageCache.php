@@ -138,14 +138,12 @@ class ImageCache
     }
 
     /**
-     * Write-through from an upload: the canonical FileUploader already produced, published before its
-     * transaction commits so a failure here rolls the upload back.
-     *
-     * @throws ImageCachePublishException
+     * Write-through from an upload: the canonical FileUploader already produced. A cache disk that
+     * refuses it is reported, not a reason to refuse the upload; the first view regenerates it.
      */
     public function putCanonical(File $file, ProcessedImage $processed): void
     {
-        $this->publish($this->canonicalKey($file), $processed->bytes);
+        $this->publishOrReport($this->canonicalKey($file), $processed->bytes);
     }
 
     /** Remove every cached variant, canonical and marker of $file (idempotent; a no-op when none exist). */

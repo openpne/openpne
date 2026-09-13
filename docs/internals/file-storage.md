@@ -39,8 +39,9 @@ atomic, both being in the same database. A disk backend's physical write and the
 join the transaction, so a failure after either was written is compensated in `FileUploader` itself
 — not in `FileObserver`, because a rollback never fires the `deleting` event — and only when the row
 was saved, since a `files.name` collision means the key belongs to a pre-existing file whose bytes and
-cache must survive. A cache disk that refuses the canonical fails the upload rather than leave a File
-whose first view would decode it again.
+cache must survive. A cache disk that refuses the canonical does not fail the upload: the refusal is
+reported and the first view regenerates the canonical, so a full or read-only cache disk degrades
+delivery, never posting.
 
 The residual race is accepted: if the commit fails after a successful disk write and the compensating
 delete does not run, the bytes are unreachable with no metadata row pointing at them and only waste

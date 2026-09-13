@@ -2,11 +2,10 @@
 
 namespace App\Features\Member\Actions;
 
-use App\Files\FileUploader;
+use App\Files\PostImages;
 use App\Models\Member;
 use App\Models\MemberImage;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 
 /**
  * The row lock serializes concurrent replaces, so a double submit cannot collide on the unique
@@ -15,17 +14,18 @@ use Illuminate\Support\Facades\DB;
  */
 class SetAvatar
 {
-    public function __construct(private readonly FileUploader $uploader) {}
+    public function __construct(private readonly PostImages $images) {}
 
     public function __invoke(Member $member, UploadedFile $upload): MemberImage
     {
-        [$image, $replaced] = DB::transaction(function () use ($member, $upload): array {
+        // compensating() owns the transaction, so a failure after the store deletes the new bytes and canonical.
+        [$image, $replaced] = $this->images->compensating(function (callable $store) use ($member, $upload): array {
             $member->newQuery()->whereKey($member->getKey())->lockForUpdate()->first();
 
             $replaced = $member->avatar()->with('file')->first();
             $member->avatar()->delete();
 
-            $file = $this->uploader->store($upload, 'member', (int) $member->getKey());
+            $file = $store($upload, 'member', (int) $member->getKey());
             $image = $member->avatar()->create(['file_id' => $file->getKey()]);
 
             return [$image, $replaced];

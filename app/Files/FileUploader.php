@@ -13,7 +13,7 @@ use Throwable;
  * The metadata row, the bytes and the canonical are written inside one DB transaction; a disk
  * backend's write and the cache disk cannot join it, so both are compensated here rather than in
  * FileObserver — a rollback never fires the deleting event (docs/internals/file-storage.md, "Writing
- * an upload").
+ * an upload"). A cache disk that will not take the canonical does not fail the upload.
  */
 class FileUploader
 {
@@ -82,7 +82,7 @@ class FileUploader
                 // clean up if a later step fails.
                 $saved = true;
 
-                // Published before the bytes, so a storage failure is the only thing left to undo.
+                // Published (best-effort) before the bytes, so a storage failure is the only thing left to undo.
                 if ($canonical !== null) {
                     $this->cache->putCanonical($file, $canonical);
                 }
