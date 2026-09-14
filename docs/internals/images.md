@@ -60,7 +60,8 @@ wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/Im
 always under `imgproxy`, and under `gd` when the host's libgd was built with it). For a photograph or
 a screenshot the WebP rung is the lighter form by a quarter to most of its size; for a one-pixel
 regular pattern — a screentone, a QR code, dense one-bit text — it is several times heavier, and the
-ladder makes no per-picture choice. A host whose GD cannot write WebP is offered none and answers a
+ladder makes no per-picture choice. The rung is also lossy whatever the source: a PNG's Modern rungs
+are no longer lossless, while its 120px square and its canonical stay PNG. A host whose GD cannot write WebP is offered none and answers a
 WebP transcode URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
 (`w_h`, re-encoded but never transcoded), the link-card ladders, the larger avatar squares and
 everything Classic paints stay in the file's own format. The answer's format is what the cache key,
@@ -68,9 +69,10 @@ the `ETag` and `Content-Type` carry, so `w640_h640.webp` and `w640_h640.jpg` of 
 variants with two validators. An `_a` asked for as WebP is an animated WebP under `imgproxy` (the
 still fallback over budget applies as for GIF); a PNG's transparency survives the re-encode. The
 ladder carries no own-format fallback: a browser older than that floor shows no Modern picture at
-all, which is the same floor the rest of Modern's front end already assumes; Classic keeps every
-picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100` makes every WebP variant
-lossless (intervention/image's mapping), around nine times the size of the default-quality rung.
+all, a floor no higher than the one the front end already assumes (Vite's default build target,
+Safari 16.4); Classic keeps every picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100`
+makes every WebP variant lossless (intervention/image's mapping), several times the size of the
+default-quality rung (nine, on a photograph).
 
 ## Which placements animate
 

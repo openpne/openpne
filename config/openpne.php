@@ -52,7 +52,7 @@ return [
         'legacy_driver' => env('OPENPNE_IMAGE_DRIVER'),
         'legacy_strip_metadata' => env('OPENPNE_STRIP_IMAGE_METADATA'),
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
-        // At 100, intervention/image writes a GD WebP variant lossless, around nine times the default-quality rung.
+        // At 100, intervention/image writes a GD WebP variant lossless, several times the default-quality rung.
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
         'allowed_sizes' => [
             // OpenPNE 3's default set.
