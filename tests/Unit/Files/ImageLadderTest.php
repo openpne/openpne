@@ -12,6 +12,7 @@ use App\Files\ProcessedImage;
 use App\Models\File;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use InvalidArgumentException;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
 
@@ -29,6 +30,19 @@ class ImageLadderTest extends TestCase
             ['url' => $file->thumbnailUrl(640, 640, animated: true, outputFormat: 'webp'), 'box' => 640],
             ['url' => $file->thumbnailUrl(1200, 1200, animated: true, outputFormat: 'webp'), 'box' => 1200],
         ], ImageLadder::of($file)['animatedSources']);
+    }
+
+    public function test_a_variant_url_names_the_files_own_format_or_webp_and_nothing_else(): void
+    {
+        $png = File::factory()->make(['type' => 'image/png']);
+        $webp = File::factory()->make(['type' => 'image/webp']);
+
+        $this->assertStringContainsString('/webp/w640_h640/', $png->thumbnailUrl(640, 640, outputFormat: 'webp'));
+        $this->assertStringContainsString('/webp/w640_h640/', $webp->thumbnailUrl(640, 640, outputFormat: 'webp'));
+        $this->assertStringContainsString('/png/w640_h640/', $png->thumbnailUrl(640, 640));
+
+        $this->expectException(InvalidArgumentException::class);
+        $png->thumbnailUrl(640, 640, outputFormat: 'jpg');
     }
 
     public function test_the_ladder_asks_for_webp_only_where_the_processor_writes_it(): void

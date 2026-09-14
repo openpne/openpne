@@ -57,9 +57,11 @@ and that format is either the file's own or WebP — shown by every current brow
 from version 14, 2020; the others long before) and written by both processors. A Modern ladder
 (`fitSources`, `cropSources`, `animatedSources`) asks for WebP
 wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/ImageIntake.php):
-always under `imgproxy`, and under `gd` when the host's libgd was built with it), since a WebP rung is
-the lighter form of the same picture; a host whose GD cannot write it is offered none and answers a
-WebP URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
+always under `imgproxy`, and under `gd` when the host's libgd was built with it). For a photograph or
+a screenshot the WebP rung is the lighter form by a quarter to most of its size; for a one-pixel
+regular pattern — a screentone, a QR code, dense one-bit text — it is several times heavier, and the
+ladder makes no per-picture choice. A host whose GD cannot write WebP is offered none and answers a
+WebP transcode URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
 (`w_h`, re-encoded but never transcoded), the link-card ladders, the larger avatar squares and
 everything Classic paints stay in the file's own format. The answer's format is what the cache key,
 the `ETag` and `Content-Type` carry, so `w640_h640.webp` and `w640_h640.jpg` of one file are two
@@ -68,7 +70,7 @@ still fallback over budget applies as for GIF); a PNG's transparency survives th
 ladder carries no own-format fallback: a browser older than that floor shows no Modern picture at
 all, which is the same floor the rest of Modern's front end already assumes; Classic keeps every
 picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100` makes every WebP variant
-lossless (intervention/image's mapping), larger than the JPEG it came from.
+lossless (intervention/image's mapping), around nine times the size of the default-quality rung.
 
 ## Which placements animate
 

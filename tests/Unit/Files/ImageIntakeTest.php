@@ -43,7 +43,8 @@ class ImageIntakeTest extends TestCase
     public function test_webp_is_written_by_the_sidecar_always_and_by_gd_as_its_libgd_allows(): void
     {
         $this->assertTrue(ImageIntake::imgproxy()->writesWebp());
-        $this->assertSame(function_exists('imagewebp'), ImageIntake::gd()->writesWebp());
+        // An oracle other than the detection itself, so swapping the check for a constant shows.
+        $this->assertSame((bool) (gd_info()['WebP Support'] ?? false), ImageIntake::gd()->writesWebp());
         $this->assertFalse(ImageIntake::gd(writesWebp: false)->writesWebp());
         $this->assertTrue(ImageIntake::gd(writesWebp: true)->writesWebp());
     }
