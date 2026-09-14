@@ -61,6 +61,7 @@ class File extends Model
      * The size must be whitelisted in `openpne.images.allowed_sizes` (and in `animated_sizes` when
      * $animated) to resolve, and $outputFormat is null for the file's own format or `webp`, the one other
      * format a variant may be asked for (docs/internals/images.md, "A variant may be asked for as WebP").
+     * On Classic the requested size is the rendered size (docs/internals/images.md, "Classic is not part of this").
      */
     public function thumbnailUrl(int $width, int $height, bool $square = false, bool $animated = false, ?string $outputFormat = null): string
     {

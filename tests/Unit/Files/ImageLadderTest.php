@@ -6,7 +6,9 @@ use App\Files\GdImageProcessor;
 use App\Files\ImageIntake;
 use App\Files\ImageLadder;
 use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\File;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
@@ -38,9 +40,25 @@ class ImageLadderTest extends TestCase
         $this->assertSame($file->thumbnailUrl(640, 640, outputFormat: 'webp'), ImageLadder::of($file)['fitSources'][1]['url']);
         $this->assertSame($file->thumbnailUrl(120, 120, square: true), ImageLadder::of($file)['thumbnailUrl']);
 
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
-        // Only the capability decides: the same GD host reads as writing WebP or not by its libgd.
-        $this->assertSame(ImageIntake::gd()->writesWebp() ? 'webp' : null, ImageLadder::variantFormat());
+        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new \LogicException('not decoded here');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd(writesWebp: false);
+            }
+        });
+        $this->assertNull(ImageLadder::variantFormat());
+        $this->assertSame($file->thumbnailUrl(640, 640), ImageLadder::of($file)['fitSources'][1]['url']);
     }
 
     public function test_a_still_or_unrecorded_file_offers_none(): void

@@ -53,8 +53,9 @@ candidates, and every added size multiplies cached variants across the whole fil
 ## A variant may be asked for as WebP
 
 The URL names the format it wants twice, as OpenPNE 3's did (`/cache/img/webp/w640_h640/{name}.webp`),
-and that format is either the file's own or WebP — the one format every browser shows and both
-processors write. A Modern ladder (`fitSources`, `cropSources`, `animatedSources`) asks for WebP
+and that format is either the file's own or WebP — shown by every current browser (Safari and iOS
+from version 14, 2020; the others long before) and written by both processors. A Modern ladder
+(`fitSources`, `cropSources`, `animatedSources`) asks for WebP
 wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/ImageIntake.php):
 always under `imgproxy`, and under `gd` when the host's libgd was built with it), since a WebP rung is
 the lighter form of the same picture; a host whose GD cannot write it is offered none and answers a
@@ -63,7 +64,11 @@ WebP URL with a 404 rather than a refusal it would remember. The 120px square, t
 everything Classic paints stay in the file's own format. The answer's format is what the cache key,
 the `ETag` and `Content-Type` carry, so `w640_h640.webp` and `w640_h640.jpg` of one file are two
 variants with two validators. An `_a` asked for as WebP is an animated WebP under `imgproxy` (the
-still fallback over budget applies as for GIF); a PNG's transparency survives the re-encode.
+still fallback over budget applies as for GIF); a PNG's transparency survives the re-encode. The
+ladder carries no own-format fallback: a browser older than that floor shows no Modern picture at
+all, which is the same floor the rest of Modern's front end already assumes; Classic keeps every
+picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100` makes every WebP variant
+lossless (intervention/image's mapping), larger than the JPEG it came from.
 
 ## Which placements animate
 
@@ -94,8 +99,9 @@ whatever the switch says — as Classic's link to the full picture always has.
 
 `allowed_sizes` is a whitelist of `WxH` targets, and an unlisted one is a 404, so a request cannot
 drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in the file's own format
-and as WebP, under the current cache generation — up to two variants per size per picture, since the
-own-format URL stays valid for whoever still holds one. Add a size a surface actually paints, not a size that might be
+and as WebP, under the current cache generation — up to four keys per size per picture (six where
+`animated_sizes` adds the `_a` form), since the own-format URL stays valid for whoever still holds
+one. Add a size a surface actually paints, not a size that might be
 wanted. An entry listed in `animated_sizes` as well opens a third form, the `_a` animation, which
 costs about a canonical per picture — a 6 MB GIF makes a 6 MB `_a` at every size that offers it — so
 that list stays the fit rungs a surface will actually animate. (A GIF over
@@ -230,8 +236,9 @@ on the cache disk after a switch to `gd`, and is refused (a marker, a 404) once 
 missed or rebuilt: a HEIC because GD cannot decode it, an AVIF unless the host's GD was built with
 AVIF support.
 
-A raster row's `files.type` is its canonical's type, the one thing inline delivery ever answers — a
-HEIC upload is stored as `image/jpeg`, an AVIF as `image/webp` — while the stored bytes keep their own
+A raster row's `files.type` is its canonical's type, what `/file/{name}` and the `w_h` original answer
+(a variant may answer as WebP instead) — a HEIC upload is stored as `image/jpeg`, an AVIF as
+`image/webp` — while the stored bytes keep their own
 container and `original_filename` its extension. A processor is therefore handed the row's type as a
 record, not a promise: it judges the bytes themselves, and the admin raw route labels them by what
 they are. The upload rules take their types from the same intake, so the `<input accept>` list

@@ -178,7 +178,7 @@ class ImageDeliveryTest extends TestCase
         $this->actingAs($owner)->get($this->url($file, 'w120_h120_sq', 'webp'))->assertNotFound();
 
         Storage::disk('image_cache')->assertMissing(ImageTransform::fromGeometry('w120_h120_sq')->cacheKey($file->name, 'webp'));
-        // The file's own format is not a transcode, so a WebP file keeps being served under the same processor.
+        // The gate is on transcoding alone: a WebP file's own URL passes it whatever the intake says.
         $webp = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.webp', $this->webpBytes()), 'member', (int) $owner->getKey());
         $this->actingAs($owner)->get($this->url($webp, 'w120_h120_sq', 'webp'))->assertOk()->assertHeader('Content-Type', 'image/webp');
     }

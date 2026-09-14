@@ -157,7 +157,7 @@ class ConversationSerializerTest extends ConversationTestCase
             ->getJson("/messages/{$other->getKey()}/messages")
             ->json('messages.0.images.0');
 
-        // The rung's format is the ladder's call (ImageLadderTest pins it); this test is about the shape.
+        // The rung's format is the ladder's call; this test is about the shape.
         $format = ImageLadder::variantFormat();
         $this->assertSame($file->thumbnailUrl(640, 640, outputFormat: $format), $image['fitSources'][1]['url']);
         $this->assertSame($file->thumbnailUrl(600, 800, square: true, outputFormat: $format), $image['cropSources']['tall'][1]['url']);

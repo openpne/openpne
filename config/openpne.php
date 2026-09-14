@@ -30,8 +30,8 @@ return [
     | 'cache_disk' filesystem disk. 'allowed_sizes' is a whitelist of WxH targets:
     | an unlisted size is rejected (404), so a request cannot drive unbounded
     | thumbnail generation / cache growth. OpenPNE 3's default set plus the sizes
-    | Modern draws from (docs/internals/images.md); every entry opens both the fit
-    | and the `_sq` crop, in every stored format.
+    | Modern draws from (docs/internals/images.md); every entry opens the fit and
+    | the `_sq` crop (and `_a` where listed) in the file's own format and as WebP.
     |
     */
 
@@ -52,6 +52,7 @@ return [
         'legacy_driver' => env('OPENPNE_IMAGE_DRIVER'),
         'legacy_strip_metadata' => env('OPENPNE_STRIP_IMAGE_METADATA'),
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
+        // At 100, intervention/image writes a GD WebP variant lossless, larger than the JPEG it came from.
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
         'allowed_sizes' => [
             // OpenPNE 3's default set.

@@ -15,7 +15,7 @@ final class ImageLadder
      */
     public static function of(?File $file): array
     {
-        $format = self::variantFormat();
+        $format = $file === null ? null : self::variantFormat();
 
         return [
             // The 120px square stays in the file's own format: Classic and the digests read this key too.
@@ -41,7 +41,7 @@ final class ImageLadder
         ];
     }
 
-    /** WebP where the processor writes it, so a Modern ladder is the lighter form; null asks for the file's own. */
+    /** The same intake the image route's capability gate reads, so no rung is offered that the route would refuse. */
     public static function variantFormat(): ?string
     {
         return app(ImageProcessor::class)->intake()->writesWebp() ? 'webp' : null;

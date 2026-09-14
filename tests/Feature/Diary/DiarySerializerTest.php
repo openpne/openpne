@@ -125,7 +125,7 @@ class DiarySerializerTest extends TestCase
 
         $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail($diary->getKey()), $owner);
 
-        // The rung's format is the ladder's call (ImageLadderTest pins it); this test is about the shape.
+        // The rung's format is the ladder's call; this test is about the shape.
         $this->assertSame($file->thumbnailUrl(640, 640, outputFormat: ImageLadder::variantFormat()), $detail['images'][0]['fitSources'][1]['url']);
         $this->assertSame(1600, $detail['images'][0]['width']);
         // thumbnails is derived from the same entries and stays the 120px square list it was.
