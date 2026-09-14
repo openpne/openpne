@@ -40,6 +40,15 @@ class ImageIntakeTest extends TestCase
         $this->assertSame('image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/avif,.heic,.heif,.avif', $intake->accept());
     }
 
+    public function test_webp_is_written_by_the_sidecar_always_and_by_gd_as_its_libgd_allows(): void
+    {
+        $this->assertTrue(ImageIntake::imgproxy()->writesWebp());
+        // An oracle other than the detection itself, so swapping the check for a constant shows.
+        $this->assertSame((bool) (gd_info()['WebP Support'] ?? false), ImageIntake::gd()->writesWebp());
+        $this->assertFalse(ImageIntake::gd(writesWebp: false)->writesWebp());
+        $this->assertTrue(ImageIntake::gd(writesWebp: true)->writesWebp());
+    }
+
     public function test_a_configured_pixel_cap_is_taken_as_given_by_both(): void
     {
         config(['openpne.images.max_source_pixels' => 1_000_000]);

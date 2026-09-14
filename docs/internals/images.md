@@ -50,6 +50,30 @@ candidates, and every added size multiplies cached variants across the whole fil
 
 `thumbnailUrl` — the 120px square — stays on those entries for the surfaces that read it.
 
+## A variant may be asked for as WebP
+
+The URL names the format it wants twice, as OpenPNE 3's did (`/cache/img/webp/w640_h640/{name}.webp`),
+and that format is either the file's own or WebP — shown by every current browser (Safari and iOS
+from version 14, 2020; the others long before) and written by both processors. A Modern ladder
+(`fitSources`, `cropSources`, `animatedSources`) asks for WebP
+wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/ImageIntake.php):
+always under `imgproxy`, and under `gd` when the host's libgd was built with it). For a photograph or
+a screenshot the WebP rung is the lighter form by a quarter to most of its size; for a one-pixel
+regular pattern — a screentone, a QR code, dense one-bit text — it is several times heavier, and the
+ladder makes no per-picture choice. At the default quality the rung is also lossy whatever the source: a PNG's Modern rungs
+are no longer lossless, while its 120px square and its canonical stay PNG. A host whose GD cannot write WebP is offered none and answers a
+WebP transcode URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
+(`w_h`, re-encoded but never transcoded), the link-card ladders, the larger avatar squares and
+everything Classic paints stay in the file's own format. The answer's format is what the cache key,
+the `ETag` and `Content-Type` carry, so `w640_h640.webp` and `w640_h640.jpg` of one file are two
+variants with two validators. An `_a` asked for as WebP is an animated WebP under `imgproxy` (the
+still fallback over budget applies as for GIF); a PNG's transparency survives the re-encode. The
+ladder carries no own-format fallback: a browser older than that floor shows no Modern picture at
+all, a floor no higher than the one the front end already assumes (Vite's default build target,
+Safari 16.4); Classic keeps every picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100`
+makes every WebP variant lossless (intervention/image's mapping), several times the size of the
+same rung at the default quality.
+
 ## Which placements animate
 
 [`ImageLadder`](../../app/Files/ImageLadder.php) builds every Modern picture payload and is the one
@@ -78,8 +102,10 @@ whatever the switch says — as Classic's link to the full picture always has.
 ## Adding a size
 
 `allowed_sizes` is a whitelist of `WxH` targets, and an unlisted one is a 404, so a request cannot
-drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in every stored format,
-under the current cache generation. Add a size a surface actually paints, not a size that might be
+drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in the file's own format
+and as WebP, under the current cache generation — up to four keys per size per picture (six where
+`animated_sizes` adds the `_a` form), since the own-format URL stays valid for whoever still holds
+one. Add a size a surface actually paints, not a size that might be
 wanted. An entry listed in `animated_sizes` as well opens a third form, the `_a` animation, which
 costs about a canonical per picture — a 6 MB GIF makes a 6 MB `_a` at every size that offers it — so
 that list stays the fit rungs a surface will actually animate. (A GIF over
@@ -214,8 +240,9 @@ on the cache disk after a switch to `gd`, and is refused (a marker, a 404) once 
 missed or rebuilt: a HEIC because GD cannot decode it, an AVIF unless the host's GD was built with
 AVIF support.
 
-A raster row's `files.type` is its canonical's type, the one thing inline delivery ever answers — a
-HEIC upload is stored as `image/jpeg`, an AVIF as `image/webp` — while the stored bytes keep their own
+A raster row's `files.type` is its canonical's type, what `/file/{name}` and the `w_h` original answer
+(a variant may answer as WebP instead) — a HEIC upload is stored as `image/jpeg`, an AVIF as
+`image/webp` — while the stored bytes keep their own
 container and `original_filename` its extension. A processor is therefore handed the row's type as a
 record, not a promise: it judges the bytes themselves, and the admin raw route labels them by what
 they are. The upload rules take their types from the same intake, so the `<input accept>` list
@@ -263,7 +290,7 @@ would not, and is then refused like any other over it.
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and
-changing it moves the layout. Classic keeps its 120px square.
+changing it moves the layout. Classic keeps its 120px square, in the file's own format.
 
 ## Key invariants
 
@@ -285,9 +312,9 @@ changing it moves the layout. Classic keeps its 120px square.
   file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
   has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
   sidecar refused over budget is cached as a still until `rebuild`.
-- A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
-  encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing
-  is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
+- A variant's cache key carries token, geometry (`_sq` / `_a` included), the format answered (the
+  file's own or WebP), generation, and the encoder — the `processor`, `quality`, and whether
+  `ext-exif` is present — so any of those changing is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
   refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
   never from the stored bytes. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself
