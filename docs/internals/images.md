@@ -60,7 +60,7 @@ wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/Im
 always under `imgproxy`, and under `gd` when the host's libgd was built with it). For a photograph or
 a screenshot the WebP rung is the lighter form by a quarter to most of its size; for a one-pixel
 regular pattern — a screentone, a QR code, dense one-bit text — it is several times heavier, and the
-ladder makes no per-picture choice. The rung is also lossy whatever the source: a PNG's Modern rungs
+ladder makes no per-picture choice. At the default quality the rung is also lossy whatever the source: a PNG's Modern rungs
 are no longer lossless, while its 120px square and its canonical stay PNG. A host whose GD cannot write WebP is offered none and answers a
 WebP transcode URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
 (`w_h`, re-encoded but never transcoded), the link-card ladders, the larger avatar squares and
@@ -72,7 +72,7 @@ ladder carries no own-format fallback: a browser older than that floor shows no 
 all, a floor no higher than the one the front end already assumes (Vite's default build target,
 Safari 16.4); Classic keeps every picture in its own format. Under `gd`, `OPENPNE_IMAGE_QUALITY=100`
 makes every WebP variant lossless (intervention/image's mapping), several times the size of the
-default-quality rung (nine, on a photograph).
+same rung at the default quality.
 
 ## Which placements animate
 
