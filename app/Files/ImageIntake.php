@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Files;
 
 /**
- * What a processor reads, the output format it makes of each source type, and the size it will take
- * from a header (docs/internals/images.md, "Processing").
+ * What a processor reads, the output format it makes of each source type, whether it writes WebP,
+ * and the size it will take from a header (docs/internals/images.md, "Processing").
  */
 final class ImageIntake
 {
@@ -23,14 +23,18 @@ final class ImageIntake
      */
     private function __construct(
         private readonly array $formats,
+        private readonly bool $writesWebp,
         private readonly ?int $sideLimit,
         private readonly int $pixelLimit,
     ) {}
 
-    /** In-process decoding: the four types libgd reads, bounded by the upload rules. */
-    public static function gd(): self
+    /**
+     * In-process decoding: the four types libgd reads, bounded by the upload rules. Whether it writes
+     * WebP is the host's libgd build, read unless a test says otherwise.
+     */
+    public static function gd(?bool $writesWebp = null): self
     {
-        return new self(self::STILL, UploadLimit::dimension(), ImageSourceLimit::pixels());
+        return new self(self::STILL, $writesWebp ?? function_exists('imagewebp'), UploadLimit::dimension(), ImageSourceLimit::pixels());
     }
 
     /** Out-of-process decoding: no per-side cap, and the pixel cap is the sidecar's budget unless one is configured. */
@@ -38,7 +42,13 @@ final class ImageIntake
     {
         $configured = (int) config('openpne.images.max_source_pixels');
 
-        return new self(self::STILL + self::SIDECAR_ONLY, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000);
+        return new self(self::STILL + self::SIDECAR_ONLY, true, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000);
+    }
+
+    /** Whether a variant may be asked for as WebP whatever its source is; a processor that cannot write it never offers one. */
+    public function writesWebp(): bool
+    {
+        return $this->writesWebp;
     }
 
     /** Whether $mime is read here and only ever out of process, where a header this PHP cannot read is the sidecar's to measure. */

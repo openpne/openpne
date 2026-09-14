@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\File;
 
+use App\Files\AnimationProbe;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -67,6 +68,14 @@ class ImgproxyImageProcessorContractTest extends ImageProcessorContractTestCase
         } catch (ImageProcessingException $e) {
             $this->assertStringContainsString('pixel limit', $e->getMessage());
         }
+    }
+
+    public function test_an_animated_fit_asked_for_as_webp_keeps_its_frames(): void
+    {
+        $variant = $this->processor()->process($this->animatedGif(), 'image/gif', ImageSpec::fit(120, 120, 'webp')->animated());
+
+        $this->assertSame('image/webp', $variant->mime);
+        $this->assertTrue(AnimationProbe::of($variant->bytes, 'image/webp'));
     }
 
     public function test_a_heic_is_answered_as_a_clean_upright_jpeg(): void
