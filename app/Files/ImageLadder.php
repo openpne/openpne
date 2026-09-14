@@ -15,27 +15,36 @@ final class ImageLadder
      */
     public static function of(?File $file): array
     {
+        $format = self::variantFormat();
+
         return [
+            // The 120px square stays in the file's own format: Classic and the digests read this key too.
             'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
             'fitSources' => $file ? [
-                ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-                ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-                ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
+                ['url' => $file->thumbnailUrl(320, 320, outputFormat: $format), 'box' => 320],
+                ['url' => $file->thumbnailUrl(640, 640, outputFormat: $format), 'box' => 640],
+                ['url' => $file->thumbnailUrl(1200, 1200, outputFormat: $format), 'box' => 1200],
             ] : [],
             'cropSources' => $file ? [
                 'tall' => [
-                    ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
+                    ['url' => $file->thumbnailUrl(300, 400, square: true, outputFormat: $format), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 800, square: true, outputFormat: $format), 'width' => 600],
                 ],
                 'wide' => [
-                    ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-                    ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
+                    ['url' => $file->thumbnailUrl(300, 200, square: true, outputFormat: $format), 'width' => 300],
+                    ['url' => $file->thumbnailUrl(600, 400, square: true, outputFormat: $format), 'width' => 600],
                 ],
             ] : [],
             'width' => $file?->width,
             'height' => $file?->height,
-            'animatedSources' => $file ? self::animatedSources($file) : [],
+            'animatedSources' => $file ? self::animatedSources($file, $format) : [],
         ];
+    }
+
+    /** WebP where the processor writes it, so a Modern ladder is the lighter form; null asks for the file's own. */
+    public static function variantFormat(): ?string
+    {
+        return app(ImageProcessor::class)->intake()->writesWebp() ? 'webp' : null;
     }
 
     /**
@@ -44,7 +53,7 @@ final class ImageLadder
      *
      * @return list<array{url: string, box: int}>
      */
-    private static function animatedSources(File $file): array
+    private static function animatedSources(File $file, ?string $format): array
     {
         if ($file->animated !== true || ! app(ImageProcessor::class)->preservesAnimation()) {
             return [];
@@ -53,7 +62,7 @@ final class ImageLadder
         $sources = [];
         foreach (config('openpne.images.animated_sizes') as $size) {
             [$width, $height] = array_map(intval(...), explode('x', $size));
-            $sources[] = ['url' => $file->thumbnailUrl($width, $height, animated: true), 'box' => $width];
+            $sources[] = ['url' => $file->thumbnailUrl($width, $height, animated: true, outputFormat: $format), 'box' => $width];
         }
 
         return $sources;

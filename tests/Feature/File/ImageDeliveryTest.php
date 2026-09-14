@@ -126,6 +126,75 @@ class ImageDeliveryTest extends TestCase
         $this->actingAs($owner)->get($url)->assertNotFound();
     }
 
+    public function test_a_variant_may_be_asked_for_as_webp_under_its_own_key_and_validator(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+
+        $response = $this->actingAs($owner)->get($this->url($file, 'w120_h120_sq', 'webp'))->assertOk();
+
+        $this->assertSame('image/webp', $response->headers->get('Content-Type'));
+        $this->assertSame(IMAGETYPE_WEBP, getimagesizefromstring((string) $response->getContent())[2]);
+        $transform = ImageTransform::fromGeometry('w120_h120_sq');
+        $this->assertSame($transform->etag($file->name, 'webp'), $response->headers->get('ETag'));
+        $this->assertNotSame($transform->etag($file->name, 'png'), $response->headers->get('ETag'));
+        Storage::disk('image_cache')->assertExists($transform->cacheKey($file->name, 'webp'));
+        Storage::disk('image_cache')->assertMissing($transform->cacheKey($file->name, 'png'));
+    }
+
+    public function test_the_canonical_is_never_transcoded_and_the_two_halves_must_agree(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+
+        $this->actingAs($owner)->get($this->url($file, 'w_h', 'webp'))->assertNotFound();
+        $this->actingAs($owner)->get(route('image.show', ['format' => 'png', 'geometry' => 'w120_h120_sq', 'name' => $file->name, 'ext' => 'webp']))->assertNotFound();
+    }
+
+    public function test_a_processor_that_cannot_write_webp_answers_a_webp_url_with_nothing_remembered(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+        $this->app->instance(ImageProcessor::class, new class($this->app->make(ImageProcessor::class)) implements ImageProcessor
+        {
+            public function __construct(private readonly ImageProcessor $inner) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                return $this->inner->process($bytes, $mime, $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return $this->inner->preservesAnimation();
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd(writesWebp: false);
+            }
+        });
+
+        $this->actingAs($owner)->get($this->url($file, 'w120_h120_sq', 'webp'))->assertNotFound();
+
+        Storage::disk('image_cache')->assertMissing(ImageTransform::fromGeometry('w120_h120_sq')->cacheKey($file->name, 'webp'));
+        // The file's own format is not a transcode, so a WebP file keeps being served under the same processor.
+        $webp = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.webp', $this->webpBytes()), 'member', (int) $owner->getKey());
+        $this->actingAs($owner)->get($this->url($webp, 'w120_h120_sq', 'webp'))->assertOk()->assertHeader('Content-Type', 'image/webp');
+    }
+
+    public function test_a_webp_url_is_gated_by_the_policy_before_its_validator(): void
+    {
+        $owner = Member::factory()->create();
+        $stranger = Member::factory()->create();
+        $file = $this->avatar($owner);
+        $etag = ImageTransform::fromGeometry('w120_h120_sq')->etag($file->name, 'webp');
+        $this->actingAs($owner)->get($this->url($file, 'w120_h120_sq', 'webp'))->assertOk();
+        $owner->blocksMade()->attach($stranger, ['created_at' => now()]);
+
+        $this->actingAs($stranger)->withHeader('If-None-Match', $etag)->get($this->url($file, 'w120_h120_sq', 'webp'))->assertNotFound();
+    }
+
     public function test_the_thumbnail_is_cached_then_purged_when_the_file_is_deleted(): void
     {
         $owner = Member::factory()->create();
@@ -273,6 +342,15 @@ class ImageDeliveryTest extends TestCase
             'member',
             (int) $owner->getKey(),
         );
+    }
+
+    private function webpBytes(): string
+    {
+        $gd = imagecreatetruecolor(20, 20);
+        ob_start();
+        imagewebp($gd);
+
+        return (string) ob_get_clean();
     }
 
     private function url(File $file, string $geometry, string $format = 'png'): string

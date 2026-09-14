@@ -23,6 +23,6 @@ final class FrameKeepingProcessor implements ImageProcessor
 
     public function intake(): ImageIntake
     {
-        return ImageIntake::gd();
+        return ImageIntake::imgproxy();
     }
 }

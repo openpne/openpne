@@ -3,6 +3,7 @@
 namespace Tests\Unit\Files;
 
 use App\Files\GdImageProcessor;
+use App\Files\ImageIntake;
 use App\Files\ImageLadder;
 use App\Files\ImageProcessor;
 use App\Files\ImageTransform;
@@ -22,10 +23,24 @@ class ImageLadderTest extends TestCase
         $file = File::factory()->make(['type' => 'image/gif', 'animated' => true]);
 
         $this->assertSame([
-            ['url' => $file->thumbnailUrl(320, 320, animated: true), 'box' => 320],
-            ['url' => $file->thumbnailUrl(640, 640, animated: true), 'box' => 640],
-            ['url' => $file->thumbnailUrl(1200, 1200, animated: true), 'box' => 1200],
+            ['url' => $file->thumbnailUrl(320, 320, animated: true, outputFormat: 'webp'), 'box' => 320],
+            ['url' => $file->thumbnailUrl(640, 640, animated: true, outputFormat: 'webp'), 'box' => 640],
+            ['url' => $file->thumbnailUrl(1200, 1200, animated: true, outputFormat: 'webp'), 'box' => 1200],
         ], ImageLadder::of($file)['animatedSources']);
+    }
+
+    public function test_the_ladder_asks_for_webp_only_where_the_processor_writes_it(): void
+    {
+        $file = File::factory()->make(['type' => 'image/jpeg']);
+
+        $this->keepFrames();
+        $this->assertSame('webp', ImageLadder::variantFormat());
+        $this->assertSame($file->thumbnailUrl(640, 640, outputFormat: 'webp'), ImageLadder::of($file)['fitSources'][1]['url']);
+        $this->assertSame($file->thumbnailUrl(120, 120, square: true), ImageLadder::of($file)['thumbnailUrl']);
+
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        // Only the capability decides: the same GD host reads as writing WebP or not by its libgd.
+        $this->assertSame(ImageIntake::gd()->writesWebp() ? 'webp' : null, ImageLadder::variantFormat());
     }
 
     public function test_a_still_or_unrecorded_file_offers_none(): void

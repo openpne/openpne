@@ -8,8 +8,11 @@ use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
+use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\ProcessedImage;
 use App\Models\DiaryImage;
 use App\Models\DirectMessageFile;
 use App\Models\File;
@@ -73,16 +76,19 @@ class AttachmentImageSerializationTest extends TestCase
     #[DataProvider('serializers')]
     public function test_it_ships_the_fit_ladder_and_the_intrinsic_size(callable $serialize): void
     {
+        // Asked for as WebP wherever the processor writes it (bound here rather than read off the host).
+        $this->app->instance(ImageProcessor::class, new FrameKeepingProcessor);
         $file = File::factory()->create(['type' => 'image/png', 'width' => 1600, 'height' => 900]);
 
         $entry = $serialize($file);
 
         $this->assertSame($file->url(), $entry['url']);
         $this->assertSame([
-            ['url' => $file->thumbnailUrl(320, 320), 'box' => 320],
-            ['url' => $file->thumbnailUrl(640, 640), 'box' => 640],
-            ['url' => $file->thumbnailUrl(1200, 1200), 'box' => 1200],
+            ['url' => $file->thumbnailUrl(320, 320, outputFormat: 'webp'), 'box' => 320],
+            ['url' => $file->thumbnailUrl(640, 640, outputFormat: 'webp'), 'box' => 640],
+            ['url' => $file->thumbnailUrl(1200, 1200, outputFormat: 'webp'), 'box' => 1200],
         ], $entry['fitSources']);
+        $this->assertStringEndsWith('.webp', $entry['fitSources'][1]['url']);
         $this->assertSame(1600, $entry['width']);
         $this->assertSame(900, $entry['height']);
     }
@@ -94,17 +100,18 @@ class AttachmentImageSerializationTest extends TestCase
         // A `width` here is the candidate's true intrinsic width, which is what lets the client
         // ship it as a `w` descriptor; each rung's height must hold the cell's ratio, or CSS cover
         // would re-crop the source it was given.
+        $this->app->instance(ImageProcessor::class, new FrameKeepingProcessor);
         $file = File::factory()->create(['type' => 'image/png']);
 
         $crops = $serialize($file)['cropSources'];
 
         $this->assertSame([
-            ['url' => $file->thumbnailUrl(300, 400, square: true), 'width' => 300],
-            ['url' => $file->thumbnailUrl(600, 800, square: true), 'width' => 600],
+            ['url' => $file->thumbnailUrl(300, 400, square: true, outputFormat: 'webp'), 'width' => 300],
+            ['url' => $file->thumbnailUrl(600, 800, square: true, outputFormat: 'webp'), 'width' => 600],
         ], $crops['tall']);
         $this->assertSame([
-            ['url' => $file->thumbnailUrl(300, 200, square: true), 'width' => 300],
-            ['url' => $file->thumbnailUrl(600, 400, square: true), 'width' => 600],
+            ['url' => $file->thumbnailUrl(300, 200, square: true, outputFormat: 'webp'), 'width' => 300],
+            ['url' => $file->thumbnailUrl(600, 400, square: true, outputFormat: 'webp'), 'width' => 600],
         ], $crops['wide']);
     }
 
@@ -132,9 +139,9 @@ class AttachmentImageSerializationTest extends TestCase
         $entry = $serialize($file);
 
         $this->assertSame([
-            ['url' => $file->thumbnailUrl(320, 320, animated: true), 'box' => 320],
-            ['url' => $file->thumbnailUrl(640, 640, animated: true), 'box' => 640],
-            ['url' => $file->thumbnailUrl(1200, 1200, animated: true), 'box' => 1200],
+            ['url' => $file->thumbnailUrl(320, 320, animated: true, outputFormat: 'webp'), 'box' => 320],
+            ['url' => $file->thumbnailUrl(640, 640, animated: true, outputFormat: 'webp'), 'box' => 640],
+            ['url' => $file->thumbnailUrl(1200, 1200, animated: true, outputFormat: 'webp'), 'box' => 1200],
         ], $entry['animatedSources']);
 
         foreach (array_column($entry['animatedSources'], 'url') as $url) {
@@ -161,6 +168,36 @@ class AttachmentImageSerializationTest extends TestCase
             $this->assertSame(1, preg_match('#/cache/img/[^/]+/([^/]+)/#', $url, $m), $url);
             $this->assertNotNull(ImageTransform::fromGeometry($m[1]), $m[1]);
         }
+    }
+
+    /** @param  callable(File): array<string, mixed>  $serialize */
+    #[DataProvider('serializers')]
+    public function test_a_processor_that_cannot_write_webp_is_asked_for_the_files_own_format(callable $serialize): void
+    {
+        $this->app->instance(ImageProcessor::class, new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                throw new \LogicException('not decoded here');
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return false;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::gd(writesWebp: false);
+            }
+        });
+        $file = File::factory()->create(['type' => 'image/png']);
+
+        $entry = $serialize($file);
+
+        $this->assertSame($file->thumbnailUrl(640, 640), $entry['fitSources'][1]['url']);
+        $this->assertSame($file->thumbnailUrl(300, 400, square: true), $entry['cropSources']['tall'][0]['url']);
+        $this->assertStringEndsWith('.png', $entry['fitSources'][1]['url']);
     }
 
     /** @param  callable(File): array<string, mixed>  $serialize */

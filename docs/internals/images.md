@@ -50,6 +50,21 @@ candidates, and every added size multiplies cached variants across the whole fil
 
 `thumbnailUrl` — the 120px square — stays on those entries for the surfaces that read it.
 
+## A variant may be asked for as WebP
+
+The URL names the format it wants twice, as OpenPNE 3's did (`/cache/img/webp/w640_h640/{name}.webp`),
+and that format is either the file's own or WebP — the one format every browser shows and both
+processors write. A Modern ladder (`fitSources`, `cropSources`, `animatedSources`) asks for WebP
+wherever the processor writes it ([`ImageIntake::writesWebp`](../../app/Files/ImageIntake.php):
+always under `imgproxy`, and under `gd` when the host's libgd was built with it), since a WebP rung is
+the lighter form of the same picture; a host whose GD cannot write it is offered none and answers a
+WebP URL with a 404 rather than a refusal it would remember. The 120px square, the canonical
+(`w_h`, re-encoded but never transcoded), the link-card ladders, the larger avatar squares and
+everything Classic paints stay in the file's own format. The answer's format is what the cache key,
+the `ETag` and `Content-Type` carry, so `w640_h640.webp` and `w640_h640.jpg` of one file are two
+variants with two validators. An `_a` asked for as WebP is an animated WebP under `imgproxy` (the
+still fallback over budget applies as for GIF); a PNG's transparency survives the re-encode.
+
 ## Which placements animate
 
 [`ImageLadder`](../../app/Files/ImageLadder.php) builds every Modern picture payload and is the one
@@ -78,8 +93,9 @@ whatever the switch says — as Classic's link to the full picture always has.
 ## Adding a size
 
 `allowed_sizes` is a whitelist of `WxH` targets, and an unlisted one is a 404, so a request cannot
-drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in every stored format,
-under the current cache generation. Add a size a surface actually paints, not a size that might be
+drive unbounded generation. Each entry opens both the fit and the `_sq` crop, in the file's own format
+and as WebP, under the current cache generation — up to two variants per size per picture, since the
+own-format URL stays valid for whoever still holds one. Add a size a surface actually paints, not a size that might be
 wanted. An entry listed in `animated_sizes` as well opens a third form, the `_a` animation, which
 costs about a canonical per picture — a 6 MB GIF makes a 6 MB `_a` at every size that offers it — so
 that list stays the fit rungs a surface will actually animate. (A GIF over
@@ -263,7 +279,7 @@ would not, and is then refused like any other over it.
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and
-changing it moves the layout. Classic keeps its 120px square.
+changing it moves the layout. Classic keeps its 120px square, in the file's own format.
 
 ## Key invariants
 
@@ -285,9 +301,9 @@ changing it moves the layout. Classic keeps its 120px square.
   file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
   has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
   sidecar refused over budget is cached as a still until `rebuild`.
-- A variant's cache key carries token, geometry (`_sq` / `_a` included), format, generation, and the
-  encoder — the `processor`, `quality`, and whether `ext-exif` is present — so any of those changing
-  is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
+- A variant's cache key carries token, geometry (`_sq` / `_a` included), the format answered (the
+  file's own or WebP), generation, and the encoder — the `processor`, `quality`, and whether
+  `ext-exif` is present — so any of those changing is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
   refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
   never from the stored bytes. It does **not** carry library or host versions (intervention/image, GD,
   their codecs): a change there has to bump `GENERATION`. Adding a segment to the key is itself

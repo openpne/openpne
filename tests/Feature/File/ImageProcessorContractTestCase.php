@@ -98,6 +98,26 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $this->assertSame([4, 4], $this->dimensions($canonical->bytes));
     }
 
+    public function test_a_variant_may_be_asked_for_as_webp_from_any_source(): void
+    {
+        // The lighter form a Modern ladder asks for; a PNG's transparency has to survive it.
+        if (! $this->processor()->intake()->writesWebp()) {
+            $this->markTestSkipped('This processor does not write WebP.');
+        }
+
+        foreach ([[$this->png(240, 120), 'image/png'], [$this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg'], [$this->animatedGif(), 'image/gif']] as [$bytes, $mime]) {
+            $variant = $this->processor()->process($bytes, $mime, ImageSpec::fit(120, 120, 'webp'));
+
+            $this->assertSame('image/webp', $variant->mime, $mime);
+            $this->assertSame(IMAGETYPE_WEBP, getimagesizefromstring($variant->bytes)[2], $mime);
+        }
+
+        $transparent = $this->processor()->process($this->transparentPng(32), 'image/png', ImageSpec::fit(16, 16, 'webp'));
+        $gd = imagecreatefromstring($transparent->bytes);
+        $this->assertNotFalse($gd);
+        $this->assertSame(127, imagecolorsforindex($gd, imagecolorat($gd, 8, 8))['alpha'], 'The transparency was flattened.');
+    }
+
     public function test_fit_scales_down_inside_the_box_and_never_up(): void
     {
         $source = $this->png(240, 120);
