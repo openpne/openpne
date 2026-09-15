@@ -209,7 +209,7 @@ $ php artisan openpne:timeline-backfill-hashtags
 It is safe to run again, and only the timeline is indexed — a group's talk never parses hashtags.
 
 Then make the site's copy of every migrated picture, so the first visitor does not pay for it, and
-record each picture's size and whether it animates:
+record each picture's size and, under the `imgproxy` processor, whether it animates:
 
 ```console
 $ php artisan openpne:image-cache warm

@@ -8,6 +8,7 @@ use App\Files\AnimationProbe;
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageCache;
 use App\Files\ImageCachePublishException;
+use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ProcessedImage;
 use App\Models\File;
@@ -33,12 +34,12 @@ class ImageCacheCommand extends Command
     /** Refusals in a row that end the run: a full or read-only cache disk, not one row's directory. */
     private const UNWRITTEN_STREAK_TO_STOP = 3;
 
-    public function handle(ImageCache $cache): int
+    public function handle(ImageCache $cache, ImageProcessor $processor): int
     {
         return match ($this->argument('action')) {
             'status' => $this->status($cache),
-            'warm' => $this->warm($cache, retryFailed: (bool) $this->option('retry-failed'), rebuild: false),
-            'rebuild' => $this->warm($cache, retryFailed: false, rebuild: true),
+            'warm' => $this->warm($cache, $processor->preservesAnimation(), retryFailed: (bool) $this->option('retry-failed'), rebuild: false),
+            'rebuild' => $this->warm($cache, $processor->preservesAnimation(), retryFailed: false, rebuild: true),
             default => $this->unknownAction(),
         };
     }
@@ -81,19 +82,19 @@ class ImageCacheCommand extends Command
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
         $this->line("  animated:  {$animated}  (recorded as animating)");
-        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; `openpne:image-cache warm` records it where the picture can be read, a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB never)');
+        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; `openpne:image-cache warm` records it where the picture can be read, for a GIF or WebP only under a processor that keeps frames, and never for a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB)');
 
         return self::SUCCESS;
     }
 
-    private function warm(ImageCache $cache, bool $retryFailed, bool $rebuild): int
+    private function warm(ImageCache $cache, bool $keepsFrames, bool $retryFailed, bool $rebuild): int
     {
         $n = ['done' => 0, 'facts' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
         $failedRows = $unshownRows = [];
         $streak = 0;
         $stopped = false;
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped): bool {
+        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $keepsFrames, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped): bool {
             foreach ($chunk as $file) {
                 if ($file->imageFormat() === null) {
                     $n['unshown']++;
@@ -103,7 +104,7 @@ class ImageCacheCommand extends Command
                 }
 
                 if (! $rebuild && $cache->hasCanonical($file)) {
-                    $n['facts'] += $this->recordMissingFacts($file, fn (): string => $cache->canonical($file), fn (): ?int => $cache->canonicalSize($file)) ? 1 : 0;
+                    $n['facts'] += $this->recordMissingFacts($file, $keepsFrames, fn (): string => $cache->canonical($file), fn (): ?int => $cache->canonicalSize($file)) ? 1 : 0;
 
                     continue;
                 }
@@ -185,12 +186,12 @@ class ImageCacheCommand extends Command
      * @param  callable(): string  $canonical
      * @param  callable(): ?int  $canonicalSize
      */
-    private function recordMissingFacts(File $file, callable $canonical, callable $canonicalSize): bool
+    private function recordMissingFacts(File $file, bool $keepsFrames, callable $canonical, callable $canonicalSize): bool
     {
         $type = (string) $file->type;
         $missingSize = $file->width === null || $file->height === null;
         // A format that never animates needs no bytes read to say so, and a canonical the probe would not walk is not read for it.
-        $missingAnimated = $file->animated === null && AnimationProbe::mayAnimate($type)
+        $missingAnimated = $file->animated === null && AnimationProbe::mayAnimate($type) && $keepsFrames
             && (($size = $canonicalSize()) === null || AnimationProbe::wouldWalk($type, $size));
         $facts = $file->animated === null && ! AnimationProbe::mayAnimate($type) ? ['animated' => false] : [];
 
