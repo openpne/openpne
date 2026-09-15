@@ -55,6 +55,7 @@ final class GdImageProcessor implements ImageProcessor
             throw new ImageProcessingException('The image could not be encoded: '.$e->getMessage(), 0, $e);
         }
 
-        return new ProcessedImage($encoded->toString(), $encoded->mediaType(), $image->width(), $image->height(), false);
+        // Keeping one frame of anything, GD cannot tell whether a GIF or WebP animates and leaves it unjudged (docs/internals/images.md, "files.width / files.height").
+        return new ProcessedImage($encoded->toString(), $encoded->mediaType(), $image->width(), $image->height(), AnimationProbe::mayAnimate($encoded->mediaType()) ? null : false);
     }
 }

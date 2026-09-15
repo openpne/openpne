@@ -65,7 +65,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $variant = $this->processor()->process($this->animatedGif(), 'image/gif', ImageSpec::fit(120, 120, 'gif'));
 
         $this->assertSame(1, $this->frameCount($variant->bytes));
-        $this->assertFalse($variant->animated);
+        $this->assertSame($this->processor()->preservesAnimation() ? false : null, $variant->animated);
     }
 
     public function test_an_animated_variant_keeps_frames_only_where_the_processor_does(): void
@@ -74,8 +74,8 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $preserves = $this->processor()->preservesAnimation();
 
         $this->assertSame($preserves ? 3 : 1, $this->frameCount($variant->bytes));
-        // A variant's frames are nobody's fact: a processor that kept them need not say so.
-        $this->assertSame($preserves ? null : false, $variant->animated);
+        // A variant's frames are nobody's fact, and GD judges no GIF, so neither processor says.
+        $this->assertNull($variant->animated);
     }
 
     public function test_the_canonical_keeps_an_animation_only_where_the_processor_says_so(): void
@@ -84,7 +84,16 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $preserves = $this->processor()->preservesAnimation();
 
         $this->assertSame($preserves ? 3 : 1, $this->frameCount($canonical->bytes));
-        $this->assertSame($preserves, $canonical->animated);
+        $this->assertSame($preserves ? true : null, $canonical->animated);
+    }
+
+    public function test_a_format_that_may_animate_is_judged_only_where_the_processor_keeps_frames(): void
+    {
+        // A still WebP is called still only by a processor that could have kept its frames; a JPEG has none to keep.
+        $preserves = $this->processor()->preservesAnimation();
+
+        $this->assertSame($preserves ? false : null, $this->canonical($this->fixture('webp-vp8x-meta.webp'), 'image/webp')->animated);
+        $this->assertFalse($this->canonical($this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg')->animated);
     }
 
     public function test_an_apng_is_a_still(): void

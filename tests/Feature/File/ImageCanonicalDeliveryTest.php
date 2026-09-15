@@ -7,6 +7,7 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\GdImageProcessor;
+use App\Files\ImageCache;
 use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
 
 /**
@@ -93,21 +95,34 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->assertStringContainsString(self::GPS_SENTINEL, $response->streamedContent());
     }
 
-    public function test_a_row_typed_by_its_canonical_is_served_from_the_cache_and_refused_once_that_is_lost(): void
+    public function test_a_picture_only_the_sidecar_reads_is_refused_after_a_switch_to_gd_and_served_again_after_a_switch_back(): void
     {
-        // A HEIC uploaded under the sidecar is typed image/jpeg; back on GD its canonical is served
-        // while the cache disk holds it, and the stored bytes cannot be decoded once it does not.
+        // A HEIC uploaded under the sidecar: typed image/jpeg, its canonical under the sidecar's encoder directory.
         $owner = Member::factory()->create();
-        $file = $this->uploaded($owner, 'jpeg-gps-orientation.jpg');
-        $this->overwriteStored($file, $this->fixture('heic-gps-orientation.heic'));
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $file = $this->stored('image/jpeg', $this->fixture('heic-gps-orientation.heic'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
+        $this->switchTo('imgproxy', new FrameKeepingProcessor);
+        app(ImageCache::class)->putCanonical($file, $gd->process($this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg', ImageSpec::canonical('jpg')));
 
         $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
 
-        Storage::disk('image_cache')->deleteDirectory($file->name);
+        $this->switchTo('gd', $gd);
 
         $this->actingAs($owner)->get($file->url())->assertNotFound();
         Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/w_h.failed');
+
+        $this->switchTo('imgproxy', new FrameKeepingProcessor);
+
+        $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+
+        // A rebuild under GD discards the sidecar's canonical as well, which the sidecar then makes again from the stored bytes.
+        $this->switchTo('gd', $gd);
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild'])->assertSuccessful();
+        $this->switchTo('imgproxy', $sidecar = $this->sidecarReadingTheHeic($gd));
+        Storage::disk('image_cache')->assertMissing(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
+
+        $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertSame(1, $sidecar->calls);
     }
 
     public function test_the_admin_raw_route_labels_the_stored_bytes_by_what_they_are(): void
@@ -225,6 +240,40 @@ class ImageCanonicalDeliveryTest extends TestCase
         ));
     }
 
+    /** Answers with the JPEG fixture's canonical, as the sidecar would for the HEIC made from it, and counts the asks. */
+    private function sidecarReadingTheHeic(GdImageProcessor $gd): ImageProcessor
+    {
+        return new class($gd, $this->fixture('jpeg-gps-orientation.jpg')) implements ImageProcessor
+        {
+            public int $calls = 0;
+
+            public function __construct(private readonly GdImageProcessor $gd, private readonly string $jpeg) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                $this->calls++;
+
+                return $this->gd->process($this->jpeg, 'image/jpeg', $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::imgproxy();
+            }
+        };
+    }
+
+    private function switchTo(string $name, ImageProcessor $processor): void
+    {
+        config(['openpne.images.processor' => $name]);
+        $this->app->instance(ImageProcessor::class, $processor);
+    }
+
     private function uploaded(Member $owner, string $fixture): File
     {
         return app(FileUploader::class)->store(
@@ -232,15 +281,6 @@ class ImageCanonicalDeliveryTest extends TestCase
             'member',
             (int) $owner->getKey(),
         );
-    }
-
-    private function overwriteStored(File $file, string $bytes): void
-    {
-        $stream = fopen('php://temp', 'r+b');
-        fwrite($stream, $bytes);
-        rewind($stream);
-        app(FileStorage::class)->writeStream($file, $stream);
-        fclose($stream);
     }
 
     /** @param  array<string, mixed>  $attributes */

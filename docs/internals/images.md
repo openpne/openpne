@@ -127,21 +127,24 @@ without it neither the canonical nor the size is turned upright, consistently.
 Consumers must handle null rather than substituting a guess: a reserved box of the wrong shape moves
 the layout twice, once when it is reserved and again when the picture disagrees with it.
 
-`files.animated` is recorded beside the size, from the same canonical: true when the processor kept
-more than one frame, false when it kept one, null when nothing has recorded it yet or the processor
-could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php) reads the answer's container;
-a walk it cannot finish is null, never a guess, and a GIF over `OPENPNE_IMAGE_MAX_GIF_WALK_KB` (8 MB
-unconfigured) is not walked at all, the walk costing about three times its bytes in memory, so such
-a GIF stays unknown however often `warm` runs and never has an `_a`; the bound is on bytes, so the
-same animation can be recorded from its WebP, whose flag sits in the header, and not from its GIF).
-Only a canonical is probed; a variant's frames are nobody's fact. GD records false; a true recorded
-before a switch to GD stands until the next `warm` or `rebuild`, and until then the `_a` variant
-under GD's own key is a still. The fact is what lets a fit variant be asked for animated:
-`w640_h640_a` is answered only for a file whose `animated` is true, and 404 otherwise, unknown
-included — a still served under the `_a` key would keep its ETag after the fact was recorded and
-stay a still in every browser that saw it. `warm` fills a null from the canonical on the disk, and
-`rebuild` rewrites the fact from the new canonical, since another processor may keep frames this one
-did not.
+`files.animated` is recorded beside the size, from the same canonical: true when a processor that
+keeps frames kept more than one, false when it kept one or the format has none, null when nothing has
+recorded it yet or the processor could not tell ([`AnimationProbe`](../../app/Files/AnimationProbe.php)
+reads the answer's container; a walk it cannot finish is null, never a guess, and a GIF over
+`OPENPNE_IMAGE_MAX_GIF_WALK_KB` (8 MB unconfigured) is not walked at all, the walk costing about three
+times its bytes in memory, so such a GIF stays unknown however often `warm` runs and never has an `_a`;
+the bound is on bytes, so the same animation can be recorded from its WebP, whose flag sits in the
+header, and not from its GIF). Only a canonical is probed; a variant's frames are nobody's fact. GD
+keeps one frame of anything, so it cannot tell whether a GIF or WebP animates and records null for one
+(a JPEG or PNG is false under either processor). A fact the sidecar recorded therefore stands under GD,
+which offers no `_a` URL for it; one a page already holds is answered with a still under GD's own key,
+which a browser that fetched it keeps for up to a day after a switch back, or with a 404 where it asks
+for WebP and the host's GD cannot write that. The fact is what lets a fit variant be asked for
+animated: `w640_h640_a` is answered only for a file whose `animated` is true, and 404 otherwise,
+unknown included — a still served under the `_a` key would keep its ETag after the fact was recorded
+and stay a still in every browser that saw it. `warm` fills a null from the canonical on the disk, for
+a GIF or WebP only under a processor that keeps frames, and `rebuild` rewrites the fact from the new
+canonical wherever the processor gives one, since another processor may keep frames this one did not.
 
 A raster upload the processor refuses is refused as an upload — the canonical is produced before the
 row is saved — so a raster File created by an upload always has a size. Non-raster files are stored
@@ -234,11 +237,13 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 | To install | nothing | the container (the compose file runs one) and three env values |
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
-view or by `openpne:image-cache warm`, which also records anew whether it animates; `rebuild` reclaims
-the old directories. A picture only the sidecar could read keeps being served from a canonical already
-on the cache disk after a switch to `gd`, and is refused (a marker, a 404) once that canonical is
-missed or rebuilt: a HEIC because GD cannot decode it, an AVIF unless the host's GD was built with
-AVIF support.
+view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories. Whether a GIF or WebP
+animates is recorded only under `imgproxy`, so after a switch to it `warm` records the pictures GD left
+unknown, including those a view has already made afresh. After a switch to `gd`, a picture only the
+sidecar could read is refused on its first view, a marker under GD's own encoder directory and a 404: a
+HEIC because GD cannot decode it, an AVIF unless the host's GD was built with AVIF support. It is
+served again after a switch back, from the sidecar's canonical still on the cache disk or, where a
+`rebuild` under `gd` discarded that, made afresh from the stored bytes.
 
 A raster row's `files.type` is its canonical's type, what `/file/{name}` and the `w_h` original answer
 (a variant may answer as WebP instead) — a HEIC upload is stored as `image/jpeg`, an AVIF as
@@ -311,7 +316,8 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 - `_a` is the animated form of a fit box in `animated_sizes` (`w640_h640_a`), answered only for a
   file whose recorded `animated` is true and 404 otherwise; a crop has no animated form, and neither
   has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
-  sidecar refused over budget is cached as a still until `rebuild`.
+  sidecar refused over budget is cached as a still until `rebuild`. Only a processor that keeps frames
+  records whether a GIF or WebP animates.
 - A variant's cache key carries token, geometry (`_sq` / `_a` included), the format answered (the
   file's own or WebP), generation, and the encoder — the `processor`, `quality`, and whether
   `ext-exif` is present — so any of those changing is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a

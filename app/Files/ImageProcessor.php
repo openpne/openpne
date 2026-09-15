@@ -16,6 +16,9 @@ interface ImageProcessor
 
     public function intake(): ImageIntake;
 
-    /** Whether a spec that asks for frames (a canonical, or an animated fit) keeps an animated source animated. */
+    /**
+     * Whether a spec that asks for frames (a canonical, or an animated fit) keeps an animated source animated.
+     * One that does not leaves `ProcessedImage::$animated` null for a format that may animate, so its answer never overwrites a frame-keeping processor's.
+     */
     public function preservesAnimation(): bool;
 }
