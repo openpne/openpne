@@ -114,6 +114,15 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->switchTo('imgproxy', new FrameKeepingProcessor);
 
         $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+
+        // A rebuild under GD discards the sidecar's canonical as well, which the sidecar then makes again from the stored bytes.
+        $this->switchTo('gd', $gd);
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild'])->assertSuccessful();
+        $this->switchTo('imgproxy', $sidecar = $this->sidecarReadingTheHeic($gd));
+        Storage::disk('image_cache')->assertMissing(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
+
+        $this->actingAs($owner)->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertSame(1, $sidecar->calls);
     }
 
     public function test_the_admin_raw_route_labels_the_stored_bytes_by_what_they_are(): void
@@ -231,6 +240,34 @@ class ImageCanonicalDeliveryTest extends TestCase
         ));
     }
 
+    /** Answers with the JPEG fixture's canonical, as the sidecar would for the HEIC made from it, and counts the asks. */
+    private function sidecarReadingTheHeic(GdImageProcessor $gd): ImageProcessor
+    {
+        return new class($gd, $this->fixture('jpeg-gps-orientation.jpg')) implements ImageProcessor
+        {
+            public int $calls = 0;
+
+            public function __construct(private readonly GdImageProcessor $gd, private readonly string $jpeg) {}
+
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                $this->calls++;
+
+                return $this->gd->process($this->jpeg, 'image/jpeg', $spec);
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::imgproxy();
+            }
+        };
+    }
+
     private function switchTo(string $name, ImageProcessor $processor): void
     {
         config(['openpne.images.processor' => $name]);
@@ -244,15 +281,6 @@ class ImageCanonicalDeliveryTest extends TestCase
             'member',
             (int) $owner->getKey(),
         );
-    }
-
-    private function overwriteStored(File $file, string $bytes): void
-    {
-        $stream = fopen('php://temp', 'r+b');
-        fwrite($stream, $bytes);
-        rewind($stream);
-        app(FileStorage::class)->writeStream($file, $stream);
-        fclose($stream);
     }
 
     /** @param  array<string, mixed>  $attributes */
