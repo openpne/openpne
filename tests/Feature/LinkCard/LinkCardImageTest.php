@@ -131,7 +131,7 @@ class LinkCardImageTest extends TestCase
         $this->assertNotNull($result);
         $this->assertSame(1, $decoder->calls);
         $this->assertSame(1, File::count());
-        $this->assertSame($decoder->preservesAnimation(), $result['file']->animated);
+        $this->assertSame($decoder->preservesAnimation() ? true : null, $result['file']->animated);
     }
 
     public function test_a_processor_outage_is_let_through_with_nothing_stored(): void

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\File;
 
+use App\Files\AnimationProbe;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
+use App\Files\GdImageProcessor;
 use App\Files\ImageCache;
 use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
@@ -18,7 +20,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Gif\Builder;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use Mockery;
+use Tests\Support\FrameKeepingProcessor;
 use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
@@ -135,6 +140,7 @@ class ImageCacheCommandTest extends TestCase
         $unjudged = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('b.gif', $this->animatedGif()));
         $unjudged->update(['animated' => null]);
         Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($unjudged->name, 'gif'), substr($this->animatedGif(), 0, 40));
+        $this->underAFrameKeepingProcessor();
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
@@ -151,6 +157,7 @@ class ImageCacheCommandTest extends TestCase
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
         $file->update(['animated' => null]);
         Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'gif'), str_pad($this->animatedGif(), 2048, "\0"));
+        $this->underAFrameKeepingProcessor();
         $cache = Mockery::mock(app(ImageCache::class))->makePartial();
         $cache->shouldNotReceive('canonical');
         $this->app->instance(ImageCache::class, $cache);
@@ -176,6 +183,7 @@ class ImageCacheCommandTest extends TestCase
         $file = $this->stored('image/webp', $webp);
         $file->update(['width' => 8, 'height' => 8]);
         Storage::disk('image_cache')->put(ImageTransform::raw()->cacheKey($file->name, 'webp'), $webp);
+        $this->underAFrameKeepingProcessor();
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 1.')
@@ -230,6 +238,48 @@ class ImageCacheCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertFalse($file->refresh()->animated);
+    }
+
+    public function test_a_picture_viewed_after_a_switch_to_a_frame_keeping_processor_is_recorded_by_the_next_warm(): void
+    {
+        // Uploaded under GD, then viewed once under the sidecar before the operator warms: the view makes the canonical.
+        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $this->useProcessor('imgproxy', $this->keepingFrames());
+        app(ImageCache::class)->canonical($file);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])->assertSuccessful();
+
+        $this->assertTrue($file->refresh()->animated);
+    }
+
+    public function test_under_gd_warm_leaves_a_gif_unjudged_without_reading_its_canonical(): void
+    {
+        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $this->assertNull($file->animated);
+        $cache = Mockery::mock(app(ImageCache::class))->makePartial();
+        $cache->shouldNotReceive('canonical');
+        $this->app->instance(ImageCache::class, $cache);
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('Warmed 0 picture(s), recorded facts for 0.')
+            ->assertSuccessful();
+
+        $this->assertNull($file->refresh()->animated);
+    }
+
+    public function test_a_gd_rebuild_keeps_the_fact_a_frame_keeping_processor_recorded(): void
+    {
+        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
+        $file->update(['animated' => true]);
+
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild'])
+            ->expectsOutputToContain('Rebuilt 1 picture(s), recorded facts for 0.')
+            ->assertSuccessful();
+
+        $this->assertTrue($file->refresh()->animated);
     }
 
     public function test_rebuild_discards_every_derived_file_and_makes_the_canonical_again(): void
@@ -366,6 +416,45 @@ class ImageCacheCommandTest extends TestCase
         }
 
         return $builder->encode();
+    }
+
+    private function useProcessor(string $name, ImageProcessor $processor): void
+    {
+        config(['openpne.images.processor' => $name]);
+        $this->app->instance(ImageProcessor::class, $processor);
+        $this->app->forgetInstance(ImageCache::class);
+    }
+
+    /** The configured processor name stays, so the canonicals already on the disk are the ones read. */
+    private function underAFrameKeepingProcessor(): void
+    {
+        $this->app->instance(ImageProcessor::class, new FrameKeepingProcessor);
+        $this->app->forgetInstance(ImageCache::class);
+    }
+
+    /** Stands in for the sidecar: the source is its own canonical, judged by the probe as the sidecar's answer is. */
+    private function keepingFrames(): ImageProcessor
+    {
+        return new class implements ImageProcessor
+        {
+            public function process(string $bytes, string $mime, ImageSpec $spec): ProcessedImage
+            {
+                $size = (array) getimagesizefromstring($bytes);
+                $type = ImageSpec::mimeFor($spec->format);
+
+                return new ProcessedImage($bytes, $type, (int) $size[0], (int) $size[1], AnimationProbe::of($bytes, $type));
+            }
+
+            public function preservesAnimation(): bool
+            {
+                return true;
+            }
+
+            public function intake(): ImageIntake
+            {
+                return ImageIntake::imgproxy();
+            }
+        };
     }
 
     private function processorIsDown(): void

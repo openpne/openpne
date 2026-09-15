@@ -24,14 +24,14 @@ class ImageDimensionsTest extends TestCase
         $this->assertSame(120, $file->height);
     }
 
-    public function test_a_gif_upload_records_the_pixel_size_and_that_it_does_not_animate(): void
+    public function test_a_still_gif_upload_records_the_pixel_size_and_is_called_still_only_where_frames_are_kept(): void
     {
         $file = $this->upload(UploadedFile::fake()->createWithContent('a.gif', $this->fixture('tiny.gif')));
 
         $this->assertSame('image/gif', $file->type);
         $this->assertSame(6, $file->width);
         $this->assertSame(6, $file->height);
-        $this->assertFalse($file->animated);
+        $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? false : null, $file->animated);
     }
 
     public function test_an_animated_gif_upload_records_the_frames_the_processor_kept(): void
@@ -47,7 +47,7 @@ class ImageDimensionsTest extends TestCase
 
         $file = $this->upload(UploadedFile::fake()->createWithContent('a.gif', $builder->encode()));
 
-        $this->assertSame(app(ImageProcessor::class)->preservesAnimation(), $file->animated);
+        $this->assertSame(app(ImageProcessor::class)->preservesAnimation() ? true : null, $file->animated);
     }
 
     public function test_an_upload_records_the_size_a_rotated_photo_renders_at(): void
