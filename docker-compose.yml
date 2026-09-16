@@ -40,7 +40,7 @@ services:
       - imgproxy
 
   nginx:
-    image: nginx:1.31.5-alpine
+    image: nginx:1.31.6-alpine
     ports:
       - "${OPENPNE_HTTP_PORT:-8080}:80"
     volumes:
@@ -51,7 +51,7 @@ services:
       - app
 
   vite:
-    image: node:26.8.1-bookworm-slim
+    image: node:26.8.2-bookworm-slim
     user: "${OPENPNE_UID:-1000}:${OPENPNE_GID:-1000}"
     working_dir: /var/www/html
     environment:
@@ -75,7 +75,7 @@ services:
   # this dev stack's; a production stack generates its own (openssl rand -hex 32) and sets the same
   # values on the app. Security options are allowed because every URL the app sends is signed.
   imgproxy:
-    image: ghcr.io/imgproxy/imgproxy:v4.0.14
+    image: ghcr.io/imgproxy/imgproxy:v4.0.15
     environment:
       IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
       IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
