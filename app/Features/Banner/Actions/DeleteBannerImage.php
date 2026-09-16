@@ -3,6 +3,7 @@
 namespace App\Features\Banner\Actions;
 
 use App\Models\BannerImage;
+use App\Models\File;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,7 +15,7 @@ class DeleteBannerImage
 {
     public function __invoke(BannerImage $image): void
     {
-        $file = DB::transaction(function () use ($image): ?\App\Models\File {
+        $file = DB::transaction(function () use ($image): ?File {
             $locked = $image->newQuery()->whereKey($image->getKey())->lockForUpdate()->first();
 
             if ($locked === null) {

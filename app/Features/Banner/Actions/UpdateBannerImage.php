@@ -4,6 +4,7 @@ namespace App\Features\Banner\Actions;
 
 use App\Files\PostImages;
 use App\Models\BannerImage;
+use App\Models\File;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -19,7 +20,7 @@ class UpdateBannerImage
      */
     public function __invoke(BannerImage $image, ?string $url, ?string $name, ?array $placementIds = null, ?UploadedFile $upload = null): BannerImage
     {
-        $replaced = $this->images->compensating(function (callable $store) use ($image, $url, $name, $placementIds, $upload): ?\App\Models\File {
+        $replaced = $this->images->compensating(function (callable $store) use ($image, $url, $name, $placementIds, $upload): ?File {
             $locked = $image->newQuery()->whereKey($image->getKey())->lockForUpdate()->first();
 
             $locked->update(['url' => $url, 'name' => $name]);
