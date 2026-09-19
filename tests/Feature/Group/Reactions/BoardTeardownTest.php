@@ -123,8 +123,8 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertBytesGone($files);
     }
 
-    /** A group of any size binds one parameter: MySQL caps a prepared statement at 65,535 placeholders, and a decade-old board passes that. */
-    public function test_the_teardown_reaches_every_row_by_subquery_and_binds_only_the_group_id(): void
+    /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, and a decade-old board's comments pass that. */
+    public function test_the_teardown_reaches_every_row_by_subquery_and_binds_nothing_but_the_group_id(): void
     {
         $group = $this->group();
         $author = $this->joined($group);
@@ -142,7 +142,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         app(DeleteGroup::class)->purge($group);
 
         $this->assertCount(2, $bindings, 'one File collection and one chunked reaction delete');
-        $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id and nothing else');
+        $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
         $this->assertCount(3, $bindings[1], 'the reaction delete binds the reactions\' own ids');
         $this->assertDatabaseCount('reactions', 0);
     }

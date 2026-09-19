@@ -106,7 +106,9 @@ Three paths take reactions away, and only the last is a cascade:
    utf8mb4 string.
 4. Add and remove take the reactor's member row shared, then the surface's container row, then
    re-read the content under it; a sweep takes the container row (a withdrawal, its author's member
-   row first) and reads the thread under it with locking reads. That is the one order. The member
+   row first) and reads the content under it — plain reads where the hold came first, as a delete's
+   do, locking reads where the transaction's snapshot came first, as a withdrawal's do. That is the
+   one order. The member
    cascade (which locks the rows it deletes, as any delete does, and sweeps nothing) and the
    OpenPNE 3 transfer are the writes outside it — and the transfer may carry a row by a member who
    no longer holds the surface's write permission, which they can then see but not remove.
