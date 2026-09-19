@@ -48,9 +48,9 @@ final class ActiveMember
      * Every OpenPNE 3 FK onto `member.id` that no step drops through memberRefs(), with its treatment
      * (docs/internals/upgrade.md, "Members who never activated"). A REFUSE `scope` replaces the FROM
      * step's filter and must describe every row whose member id reaches a target column;
-     * `scopeColumns` are the extra columns it reads.
+     * `scopeColumns` are its extra columns; `scopeBranches` splits it so the count can drop a branch whose tables the source lacks.
      *
-     * @return array<string, array{treatment: string, scope?: string, scopeColumns?: list<string>, reason?: string}>
+     * @return array<string, array{treatment: string, scope?: string, scopeBranches?: array<string, string>, scopeColumns?: list<string>, reason?: string}>
      */
     public static function references(): array
     {
@@ -78,8 +78,11 @@ final class ActiveMember
             // count only the first, so the scope is every row some landing copies.
             'activity_data.member_id' => ['treatment' => self::REFUSE,
                 'scope' => ActivityThread::migrated('activity_data'), 'scopeColumns' => ['id', 'in_reply_to_activity_id', 'foreign_table', 'foreign_id', 'public_flag']],
+            // One branch per letter: the count keeps only the branches whose tables the source has, since
+            // a like on a diary names opDiaryPlugin's table from opLikePlugin's row.
             'nice.member_id' => ['treatment' => self::REFUSE,
-                'scope' => NiceReactionUpgrade::onActivity(ActivityThread::migrated('activity_data')), 'scopeColumns' => ['foreign_table', 'foreign_id']],
+                'scope' => '('.implode(') OR (', NiceReactionUpgrade::carriedBranches()).')',
+                'scopeBranches' => NiceReactionUpgrade::carriedBranches(), 'scopeColumns' => ['foreign_table', 'foreign_id']],
 
             // --- UNUSED: no member id reaches a target row through these ---
             'member.invite_member_id' => ['treatment' => self::UNUSED,
