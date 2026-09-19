@@ -124,7 +124,7 @@ class WebPushResponseBodyBoundTest extends TestCase
             'aes128gcm',
         );
 
-        $member->notify(new WebPushNudge('direct_message_received', null, null));
+        $member->notify(new WebPushNudge(['kind' => 'direct_message_received'], null));
 
         // The channel retires a device on 404/410: the status survived the cut transfer.
         $this->assertSame(1, $sent);

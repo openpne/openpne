@@ -6,6 +6,7 @@ namespace App\Notifications\Push;
 
 use App\Features\Member\MemberDisplayName;
 use App\Features\Notifications\NotificationKindLabel;
+use App\Features\Notifications\NotificationPreview;
 use App\Features\Notifications\Queries\CountUnreadNotifications;
 use App\Models\Member;
 use App\Support\PushDelivery;
@@ -32,9 +33,9 @@ final class WebPushNudge extends Notification implements ShouldQueue
      */
     public int $timeout = 60;
 
+    /** @param array<string, mixed> $data the feed row's data: a kind, a reason and entity ids, nothing hydrated */
     public function __construct(
-        private readonly ?string $kind,
-        private readonly ?string $reason,
+        private readonly array $data,
         private readonly ?int $actorId,
     ) {}
 
@@ -53,11 +54,18 @@ final class WebPushNudge extends Notification implements ShouldQueue
         return WebPushConfig::configured() && $notifiable->pushDelivery() === PushDelivery::Enabled;
     }
 
+    /**
+     * The site's name is the notification's attribution line, which the device draws from the manifest;
+     * putting it in the title printed it twice.
+     */
     public function toWebPush(Member $notifiable): WebPushMessage
     {
+        $kind = is_string($this->data['kind'] ?? null) ? $this->data['kind'] : null;
+        $reason = is_string($this->data['reason'] ?? null) ? $this->data['reason'] : null;
+
         return (new WebPushMessage)
-            ->title(sns_name())
-            ->body(NotificationKindLabel::for($this->kind, $this->reason, $this->actorName()))
+            ->title(NotificationKindLabel::for($kind, $reason, $this->actorName()))
+            ->body(NotificationPreview::for($kind, $this->data, $notifiable) ?? '')
             ->icon(app_icon_url(192))
             ->tag(self::TAG)
             ->data([

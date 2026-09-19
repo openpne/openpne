@@ -7,12 +7,14 @@ namespace Tests\Feature\Notifications;
 use App\Jobs\BroadcastDiaryPosted;
 use App\Models\Diary;
 use App\Models\DirectMessage;
+use App\Models\DirectMessageFile;
 use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Push\WebPushNudge;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\PushDelivery;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Exceptions;
 use RuntimeException;
@@ -39,12 +41,12 @@ class WebPushNudgeTest extends TestCase
         $sender = Member::factory()->create(['name' => 'Kaoru']);
         $recipient = $this->subscribed();
 
-        $this->notifyOfMessage($recipient, $sender);
+        $this->notifyOfMessage($recipient, $sender, 'See you at 10.');
 
         $pushes = $this->pushesTo(self::ENDPOINT);
         $this->assertCount(1, $pushes);
-        $this->assertSame(sns_name(), $pushes[0]['title']);
-        $this->assertSame(__(':name sent you a message.', ['name' => 'Kaoru']), $pushes[0]['body']);
+        $this->assertSame(__(':name sent you a message.', ['name' => 'Kaoru']), $pushes[0]['title']);
+        $this->assertSame('See you at 10.', $pushes[0]['body']);
         $this->assertSame(app_icon_url(192), $pushes[0]['icon']);
         $this->assertSame('openpne-notifications', $pushes[0]['tag']);
         $this->assertSame('/notifications', $pushes[0]['data']['url']);
@@ -106,8 +108,8 @@ class WebPushNudgeTest extends TestCase
         $this->notifyOfMessage($japanese, $sender);
         $this->notifyOfMessage($english, $sender);
 
-        $this->assertSame('Kaoru さんからメッセージが届きました。', $this->pushesTo('https://push.example.com/ja')[0]['body']);
-        $this->assertSame('Kaoru sent you a message.', $this->pushesTo('https://push.example.com/en')[0]['body']);
+        $this->assertSame('Kaoru さんからメッセージが届きました。', $this->pushesTo('https://push.example.com/ja')[0]['title']);
+        $this->assertSame('Kaoru sent you a message.', $this->pushesTo('https://push.example.com/en')[0]['title']);
     }
 
     /** Sent directly here: the interleave has no request shape. */
@@ -117,12 +119,68 @@ class WebPushNudgeTest extends TestCase
         $goneActorId = Member::factory()->create()->getKey();
         Member::destroy($goneActorId);
 
-        $recipient->notify(new WebPushNudge('direct_message_received', null, (int) $goneActorId));
+        $recipient->notify(new WebPushNudge(['kind' => 'direct_message_received'], (int) $goneActorId));
 
         $this->assertSame(
             __(':name sent you a message.', ['name' => __('Withdrawn member')]),
-            $this->pushesTo(self::ENDPOINT)[0]['body'],
+            $this->pushesTo(self::ENDPOINT)[0]['title'],
         );
+    }
+
+    public function test_a_message_deleted_before_the_send_leaves_the_sentence_without_a_body(): void
+    {
+        $recipient = $this->subscribed();
+        $sender = Member::factory()->create();
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'body' => 'Gone soon']);
+        $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+        $data = ['kind' => 'direct_message_received', 'sender_id' => $sender->getKey(), 'direct_message_id' => $message->getKey()];
+        $message->delete();
+
+        $recipient->notify(new WebPushNudge($data, (int) $sender->getKey()));
+
+        $push = $this->pushesTo(self::ENDPOINT)[0];
+        $this->assertSame(__(':name sent you a message.', ['name' => $sender->name]), $push['title']);
+        $this->assertArrayNotHasKey('body', $push);
+    }
+
+    public function test_a_message_of_pictures_only_previews_as_the_image_stand_in(): void
+    {
+        $recipient = $this->subscribed();
+        $sender = Member::factory()->create();
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'body' => '']);
+        $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+        DirectMessageFile::factory()->create(['direct_message_id' => $message->getKey()]);
+
+        $recipient->notify(new DirectMessageReceivedNotification($sender, $message));
+
+        $this->assertSame(__('Image'), $this->pushesTo(self::ENDPOINT)[0]['body']);
+    }
+
+    public function test_a_kind_with_nothing_to_quote_carries_the_sentence_alone(): void
+    {
+        $recipient = $this->subscribed();
+        $requester = Member::factory()->create(['name' => 'Kaoru']);
+
+        $recipient->notify(new WebPushNudge(['kind' => 'friend_requested', 'requester_id' => $requester->getKey()], (int) $requester->getKey()));
+
+        $push = $this->pushesTo(self::ENDPOINT)[0];
+        $this->assertSame(__(':name sent you a %friend% request.', ['name' => 'Kaoru']), $push['title']);
+        $this->assertArrayNotHasKey('body', $push);
+    }
+
+    public function test_a_diary_hidden_from_the_recipient_before_the_send_is_not_quoted(): void
+    {
+        $recipient = $this->subscribed();
+        $author = Member::factory()->create(['name' => 'Kaoru']);
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Secret', 'body' => 'Not for you']);
+        $data = ['kind' => 'diary_posted', 'author_id' => $author->getKey(), 'diary_id' => $diary->getKey()];
+        $diary->forceFill(['visibility' => Visibility::Private])->save();
+
+        $recipient->notify(new WebPushNudge($data, (int) $author->getKey()));
+
+        $push = $this->pushesTo(self::ENDPOINT)[0];
+        $this->assertSame(__(':name posted a new %diary%.', ['name' => 'Kaoru']), $push['title']);
+        $this->assertArrayNotHasKey('body', $push);
     }
 
     /** The fan-out writes rows through the same $member->notify(), so push rides along unchanged. */
@@ -131,7 +189,7 @@ class WebPushNudgeTest extends TestCase
         $author = Member::factory()->create(['name' => 'Kaoru']);
         $first = $this->subscribed('https://push.example.com/first');
         $second = $this->subscribed('https://push.example.com/second');
-        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Lunch', 'body' => "First line\nSecond line"]);
 
         BroadcastDiaryPosted::dispatch((int) $diary->getKey());
 
@@ -139,8 +197,11 @@ class WebPushNudgeTest extends TestCase
             $this->assertSame(1, $member->notifications()->count());
         }
         $expected = __(':name posted a new %diary%.', ['name' => 'Kaoru']);
-        $this->assertSame($expected, $this->pushesTo('https://push.example.com/first')[0]['body']);
-        $this->assertSame($expected, $this->pushesTo('https://push.example.com/second')[0]['body']);
+        foreach (['first', 'second'] as $endpoint) {
+            $push = $this->pushesTo("https://push.example.com/{$endpoint}")[0];
+            $this->assertSame($expected, $push['title']);
+            $this->assertSame("Lunch\nFirst line Second line", $push['body']);
+        }
     }
 
     public function test_an_expired_subscription_is_deleted_by_the_reports(): void
@@ -206,9 +267,9 @@ class WebPushNudgeTest extends TestCase
         return $member;
     }
 
-    private function notifyOfMessage(Member $recipient, Member $sender): void
+    private function notifyOfMessage(Member $recipient, Member $sender, string $body = 'Hello'): void
     {
-        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'body' => $body]);
         // The receipt a send materializes: without it the notification's delivery-time check reads
         // this as a message that is not the recipient's, and nothing is delivered to push at all.
         $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
