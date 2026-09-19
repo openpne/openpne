@@ -45,9 +45,10 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
     }
 
     /**
-     * OpenPNE 3's `NotificationMailTable::fetchTemplate()` reads a row only while `template` is truthy,
-     * so '' and '0' are the values it ignores; compared as bytes because the source collation pads
-     * spaces. Public so MailTemplatePreflight inspects the same rows the step carries.
+     * OpenPNE 3's template loader (`sfTemplateSwitchableLoaderDoctrine`) rejects a body that casts to
+     * a falsy string, so '' and '0' are the values it never sends; compared as bytes because the source
+     * collation pads spaces, and ' ' is a body it does send. Public so MailTemplatePreflight inspects
+     * the same rows the step carries.
      */
     public static function templateCarriedExpr(): string
     {

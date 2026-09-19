@@ -143,11 +143,13 @@ that fold onto one `term_overrides` (name, locale) key and a value wider than th
 ERROR for the same reason.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
-step copies bodies without parsing them. A translation whose template is empty is neither carried
-nor tested: OpenPNE 3 ignores such a row and sends its built-in sample, which is what an absent
-OpenPNE 4 row sends. Two passes per row: a lenient render reports what
-production would throw, then a strict render (`strict_variables`) reports a referenced-but-absent
-variable. Names and locales are resolved through the steps' own SQL
+step copies bodies without parsing them. A translation whose template is empty (or the single
+character `0`) is neither carried nor tested: OpenPNE 3 never sends such a body and falls back to its
+built-in sample, which is what an absent OpenPNE 4 row sends. A blanked signature is the visible
+case: OpenPNE 3 appended its sample signature regardless, so after the cutover the stock one is
+appended — the wording changes, not whether there is one. Two passes per row: a lenient render
+reports what production would throw, then a strict render (`strict_variables`) reports a
+referenced-but-absent variable. Names and locales are resolved through the steps' own SQL
 (`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the source
 collation is case-insensitive and PAD SPACE, so a PHP comparison would cover a different row set
 than the INSERT.

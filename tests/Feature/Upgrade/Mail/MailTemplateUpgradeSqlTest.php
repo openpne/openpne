@@ -162,12 +162,15 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedTranslation(3, 'en_US', 'Friend linked', '0');
         $this->seedMail(6, 'pc_notifyNewMessage');
         $this->seedTranslation(6, 'ja_JP', '新着', "\n");
+        // A body of one space is sent by OpenPNE 3; the source collation would equate it with ''.
+        $this->seedTranslation(6, 'en_US', 'New', ' ');
 
         $this->runUpgrade();
         app(MailTemplateService::class)->clearCache();
 
         $this->assertDatabaseMissing('mail_template_translations', ['mail_template_id' => 3]);
         $this->assertDatabaseHas('mail_template_translations', ['mail_template_id' => 6, 'locale' => 'ja', 'body' => "\n"]);
+        $this->assertSame(' ', DB::table('mail_template_translations')->where(['mail_template_id' => 6, 'locale' => 'en'])->value('body'));
 
         $rendered = app(MailTemplateService::class)->render(
             MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']],
