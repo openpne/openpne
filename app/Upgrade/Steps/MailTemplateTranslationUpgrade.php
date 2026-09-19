@@ -11,7 +11,8 @@ use App\Upgrade\UpgradeStep;
 /**
  * OpenPNE 3 `notification_mail_translation` → OpenPNE 4 `mail_template_translations`, keyed by the
  * notification_mail id (mail_template_id) and restricted to the templates MailTemplateUpgrade
- * imports. Subject and body copy verbatim so a migrated template renders byte-for-byte.
+ * imports. The body copies verbatim so a migrated template renders byte-for-byte; the subject does
+ * too except that an empty title becomes NULL.
  */
 class MailTemplateTranslationUpgrade extends UpgradeStep
 {
@@ -24,7 +25,8 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
         return [
             'mail_template_id' => Column::source('id'),
             'locale' => Column::expr(SourceLocale::foldExpr(), uses: ['lang']),
-            'subject' => Column::source('title'),
+            // OpenPNE 3 sent its caller's subject for an empty title, never an empty one; NULL selects the default here.
+            'subject' => Column::expr("CASE WHEN CAST(`title` AS BINARY) = '' THEN NULL ELSE `title` END", uses: ['title']),
             'body' => Column::source('template'),
         ];
     }

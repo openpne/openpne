@@ -178,6 +178,26 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
     }
 
+    public function test_an_empty_title_migrates_as_no_subject_override(): void
+    {
+        $this->seedMail(3, 'pc_friendLinkComplete');
+        $this->seedTranslation(3, 'ja_JP', '', '{{ member.name }}さんとフレンドになりました。');
+        // Spaces only: the source collation would equate it with '', OpenPNE 3 sent it as the subject.
+        $this->seedTranslation(3, 'en_US', '  ', 'custom');
+
+        $this->runUpgrade();
+        app(MailTemplateService::class)->clearCache();
+
+        $this->assertDatabaseHas('mail_template_translations', ['mail_template_id' => 3, 'locale' => 'ja', 'subject' => null]);
+        $this->assertSame('  ', DB::table('mail_template_translations')->where(['mail_template_id' => 3, 'locale' => 'en'])->value('subject'));
+
+        $rendered = app(MailTemplateService::class)->render(
+            MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']],
+        );
+        $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
+        $this->assertStringContainsString('Bobさんとフレンドになりました。', $rendered->body);
+    }
+
     public function test_a_migrated_customized_body_renders_through_the_service(): void
     {
         // An admin customized the OpenPNE 3 friend-accepted body; after the upgrade the OpenPNE 4 service

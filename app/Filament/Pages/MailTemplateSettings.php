@@ -202,6 +202,7 @@ class MailTemplateSettings extends Page implements HasTable
             if ($template->isSendable()) {
                 $fields[] = TextInput::make("{$locale}__subject")
                     ->label(__('Subject'))
+                    ->helperText(__('Leave blank to use the default subject.'))
                     ->maxLength(255)
                     ->rules([$this->syntaxRule($template, $locale, 'subject')]);
             }
@@ -275,12 +276,11 @@ class MailTemplateSettings extends Page implements HasTable
         $overrides = [];
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             $body = $this->normalize((string) ($data["{$locale}__body"] ?? ''));
-            $subject = $template->isSendable()
-                ? trim((string) ($data["{$locale}__subject"] ?? ''))
-                : null;
+            // A blank or default subject is stored as NULL so the row keeps tracking the registry subject.
+            $typed = $template->isSendable() ? trim((string) ($data["{$locale}__subject"] ?? '')) : '';
+            $subject = $typed !== '' && $typed !== (string) $template->defaultSubject($locale) ? $typed : null;
 
-            $isDefault = $body === $template->defaultBody($locale)
-                && ($subject ?? '') === (string) $template->defaultSubject($locale);
+            $isDefault = $body === $template->defaultBody($locale) && $subject === null;
 
             if (! $isDefault) {
                 $overrides[$locale] = ['subject' => $subject, 'body' => $body];
