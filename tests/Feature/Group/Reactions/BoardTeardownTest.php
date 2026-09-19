@@ -20,6 +20,7 @@ use App\Features\Reactions\ReactionVocabulary;
 use App\Files\FileStorage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Http\UploadedFile;
@@ -333,6 +334,68 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 2);
         $this->assertModelExists($file);
         $this->assertTrue(app(FileStorage::class)->exists($file));
+    }
+
+    /** The topic goes between the route binding and the gate's own read of it, where a typed relation would answer 500. */
+    public function test_a_comment_whose_topic_went_after_the_binding_is_not_found(): void
+    {
+        $group = $this->group();
+        $member = $this->joined($group);
+        $comment = $this->topicComment($group);
+        GroupTopicComment::retrieved(function (GroupTopicComment $retrieved) use ($comment): void {
+            if ($retrieved->is($comment)) {
+                DB::table('group_topics')->where('id', $comment->group_topic_id)->delete();
+            }
+        });
+
+        $this->react($member, $comment)->assertNotFound();
+        $this->unreact($member, $comment)->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($comment))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** The group goes between the binding of a body and the gate, which reads the group off it. */
+    public function test_a_body_whose_group_went_after_the_binding_is_not_found(): void
+    {
+        $group = $this->group();
+        $member = $this->joined($group);
+        $event = $this->eventBody($group);
+        GroupEvent::retrieved(function (GroupEvent $retrieved) use ($event): void {
+            if ($retrieved->is($event)) {
+                DB::table('groups')->where('id', $event->group_id)->delete();
+            }
+        });
+
+        $this->react($member, $event)->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($event))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** Past a chunk the body sweep re-runs its subquery for the next page and still reaches every row: the delete statements read [1000, remainder]. */
+    public function test_the_body_sweep_pages_the_reactions_past_the_chunk_size(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $topics = GroupTopic::factory()->count(1001)->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        DB::table('reactions')->insert($topics->map(fn (GroupTopic $topic): array => [
+            'reactable_type' => $topic->getMorphClass(),
+            'reactable_id' => $topic->getKey(),
+            'member_id' => $author->getKey(),
+            'emoji' => $this->emoji(0),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->all());
+        $sizes = [];
+        DB::listen(function ($query) use (&$sizes): void {
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $sizes[] = count($query->bindings);
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertSame([1000, 1], $sizes);
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_reacting_to_a_comment_whose_topic_is_gone_writes_nothing(): void

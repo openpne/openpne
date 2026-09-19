@@ -33,7 +33,7 @@ class GroupEventReactionController extends Controller
 
     public function index(GroupEvent $event, Reactors $reactors): JsonResponse
     {
-        abort_unless(GroupEventAccess::canViewEvent($event, $this->viewer()), 404);
+        abort_unless(GroupEventAccess::canViewEvent($this->board($event), $this->viewer()), 404);
 
         return response()->json(['groups' => $reactors($event)]);
     }
@@ -50,22 +50,22 @@ class GroupEventReactionController extends Controller
 
     public function indexComment(GroupEventComment $comment, Reactors $reactors): JsonResponse
     {
-        abort_unless(GroupEventAccess::canViewEvent($comment->event, $this->viewer()), 404);
+        abort_unless(GroupEventAccess::canViewEvent($this->board($comment->event), $this->viewer()), 404);
 
         return response()->json(['groups' => $reactors($comment)]);
     }
 
-    private function add(Request $request, GroupEvent $event, GroupEvent|GroupEventComment $reactable, AddReaction $action, ReactionAggregates $reactions): JsonResponse
+    private function add(Request $request, ?GroupEvent $event, GroupEvent|GroupEventComment $reactable, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        abort_unless(GroupEventAccess::canComment($event, $this->viewer()), 404);
+        abort_unless(GroupEventAccess::canComment($this->board($event), $this->viewer()), 404);
         $emoji = (string) $request->validate((new StoreReactionRequest)->rules())['emoji'];
 
         return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new BoardReactionSurface), $reactable, $reactions);
     }
 
-    private function remove(Request $request, GroupEvent $event, GroupEvent|GroupEventComment $reactable, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    private function remove(Request $request, ?GroupEvent $event, GroupEvent|GroupEventComment $reactable, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        abort_unless(GroupEventAccess::canComment($event, $this->viewer()), 404);
+        abort_unless(GroupEventAccess::canComment($this->board($event), $this->viewer()), 404);
         $emoji = (string) $request->validate(StoreReactionRequest::removeRules())['emoji'];
 
         return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new BoardReactionSurface), $reactable, $reactions);
@@ -80,5 +80,13 @@ class GroupEventReactionController extends Controller
         }
 
         return response()->json(['reactions' => $reactions->of($this->viewer(), $reactable)]);
+    }
+
+    /** Null, or an event whose group went, is a board deleted between the route binding and this read: gone, so not found. */
+    private function board(?GroupEvent $event): GroupEvent
+    {
+        abort_unless($event !== null && $event->group !== null, 404);
+
+        return $event;
     }
 }

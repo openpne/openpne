@@ -164,6 +164,8 @@ class BoardReactionLockOrderTest extends TestCase
         $this->assertWaitedOn('group_events', $outcomes[3]);
         $this->assertSame('refused', $this->raceReaction($reactor, $topicComment));
         $this->assertSame('refused', $this->raceReaction($reactor, $eventComment));
+        $this->assertSame('refused', $this->raceReaction($reactor, $topicComment->topic));
+        $this->assertSame('refused', $this->raceReaction($reactor, $eventComment->event));
         $this->assertDatabaseCount('groups', 0);
         $this->assertDatabaseCount('reactions', 0);
     }
