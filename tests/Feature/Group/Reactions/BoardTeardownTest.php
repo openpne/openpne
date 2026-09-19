@@ -182,6 +182,38 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    /** The comments are paged too, so what PHP holds is one page: a group past the page size needs a second content read. */
+    public function test_the_reaction_sweep_pages_the_comments_past_the_page_size(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $at = now();
+        DB::table('group_topic_comments')->insert(array_map(fn (int $i): array => [
+            'group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => $i, 'body' => 'B', 'created_at' => $at, 'updated_at' => $at,
+        ], range(1, 1001)));
+        $commentIds = DB::table('group_topic_comments')->where('group_topic_id', $topic->getKey())->pluck('id')->all();
+        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+            'reactable_type' => 'groupTopicComment', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
+        ], $commentIds));
+        $pages = 0;
+        $deletes = [];
+        DB::listen(function ($query) use (&$pages, &$deletes): void {
+            if (preg_match('/^select [`"]id[`"] from [`"]group_topic_comments[`"] .* limit 1000$/', $query->sql)) {
+                $pages++;
+            }
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $deletes[] = count($query->bindings);
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertSame(2, $pages, 'a thousand and one comments are two pages');
+        $this->assertSame([1000, 1], $deletes);
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_a_failed_teardown_leaves_the_boards_reactions_and_bytes(): void
     {
         $group = $this->group();
