@@ -6,6 +6,8 @@ use App\Compat\RouteParityRegistry;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
@@ -43,7 +45,7 @@ class TimelineController extends Controller
 {
     use RespondsWithSurface;
 
-    public function index(Request $request, HomeFeed $query, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
+    public function index(Request $request, HomeFeed $query, RecentReplies $recentReplies, ReactionAggregates $reactions): View|InertiaResponse|RedirectResponse
     {
         if ($redirect = StreamRequest::legacyPageRedirect($request)) {
             return $redirect;
@@ -60,7 +62,8 @@ class TimelineController extends Controller
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
                 'viewerId' => $viewer->getKey(),
-                'posts' => $this->stream($page, $before, $viewer),
+                'posts' => $this->stream($page, $before, $viewer, $reactions),
+                'reactionVocabulary' => ReactionVocabulary::all(),
                 'streamGeneration' => StreamProps::generation(),
                 'headUrl' => $before === null ? null : route('timeline.index'),
                 'canPost' => TimelinePosting::enabled(),
@@ -68,7 +71,7 @@ class TimelineController extends Controller
         ]);
     }
 
-    public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
+    public function member(Request $request, MemberTimeline $query, Member $member, RecentReplies $recentReplies, ReactionAggregates $reactions): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         // The subject first: a blocked viewer gets the uniform 404 before any redirect could say the member exists.
@@ -85,7 +88,7 @@ class TimelineController extends Controller
                 'posts' => $this->withInlineReplies($page, $recentReplies)->rows,
                 ...$this->streamLinks($page, $before, 'timeline.member', 'timeline.member.rows', ['member' => $owner]),
             ]),
-            SurfaceResolver::MODERN => function () use ($owner, $viewer, $page, $before) {
+            SurfaceResolver::MODERN => function () use ($owner, $viewer, $page, $before, $reactions) {
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
                 $owner->loadMissing('avatar.file');
 
@@ -94,7 +97,8 @@ class TimelineController extends Controller
                     'isOwner' => $viewer->is($owner),
                     'canPost' => TimelinePosting::enabled(),
                     'viewerId' => $viewer->getKey(),
-                    'posts' => $this->stream($page, $before, $viewer),
+                    'posts' => $this->stream($page, $before, $viewer, $reactions),
+                    'reactionVocabulary' => ReactionVocabulary::all(),
                     'streamGeneration' => StreamProps::generation(),
                     'headUrl' => $before === null ? null : route('timeline.member', ['member' => $owner]),
                 ]);
@@ -107,7 +111,7 @@ class TimelineController extends Controller
      * query, so `#Tag` and `#ＴＡＧ` reach the same page; the normalized form is what the page shows,
      * since that is the topic the reader is actually on.
      */
-    public function tag(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies): View|InertiaResponse|RedirectResponse
+    public function tag(Request $request, string $tag, TagFeed $query, RecentReplies $recentReplies, ReactionAggregates $reactions): View|InertiaResponse|RedirectResponse
     {
         if ($redirect = StreamRequest::legacyPageRedirect($request)) {
             return $redirect;
@@ -127,14 +131,15 @@ class TimelineController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/tag', [
                 'viewerId' => $viewer->getKey(),
                 'tag' => $normalized,
-                'posts' => $this->stream($page, $before, $viewer),
+                'posts' => $this->stream($page, $before, $viewer, $reactions),
+                'reactionVocabulary' => ReactionVocabulary::all(),
                 'streamGeneration' => StreamProps::generation(),
                 'headUrl' => $before === null ? null : route('timeline.tag', ['tag' => $normalized]),
             ]),
         ]);
     }
 
-    public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows, ReactionAggregates $reactions): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         $post = $query($viewer, $timelinePost);
@@ -171,12 +176,17 @@ class TimelineController extends Controller
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', ['post' => $post]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
-                'post' => TimelinePostSerializer::entry($post, $viewer),
-                'replies' => array_map(fn (TimelinePost $reply): array => TimelinePostSerializer::entry($reply, $viewer), $post->replies->all()),
-                'viewerId' => $viewer->getKey(),
-                'canPost' => TimelinePosting::enabled(),
-            ]),
+            SurfaceResolver::MODERN => function () use ($post, $viewer, $reactions) {
+                $chips = $reactions($viewer, TimelinePost::class, [(int) $post->getKey(), ...$post->replies->modelKeys()]);
+
+                return Inertia::render('timeline/show', [
+                    'post' => TimelinePostSerializer::entry($post, $viewer, $chips[$post->getKey()] ?? []),
+                    'replies' => array_map(fn (TimelinePost $reply): array => TimelinePostSerializer::entry($reply, $viewer, $chips[$reply->getKey()] ?? []), $post->replies->all()),
+                    'viewerId' => $viewer->getKey(),
+                    'canPost' => TimelinePosting::enabled(),
+                    'reactionVocabulary' => ReactionVocabulary::all(),
+                ]);
+            },
         ]);
     }
 
@@ -373,9 +383,11 @@ class TimelineController extends Controller
     }
 
     /** @param  StreamPage<TimelinePost>  $page */
-    private function stream(StreamPage $page, ?StreamCursor $before, Member $viewer): ScrollProp
+    private function stream(StreamPage $page, ?StreamCursor $before, Member $viewer, ReactionAggregates $reactions): ScrollProp
     {
-        return StreamProps::scroll($page, fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer), $before);
+        $chips = $reactions($viewer, TimelinePost::class, $page->rows->modelKeys());
+
+        return StreamProps::scroll($page, fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer, $chips[$post->getKey()] ?? []), $before);
     }
 
     /**

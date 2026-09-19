@@ -177,6 +177,38 @@ announcement: a diary's own notification already reaches the same audience, and 
 event's reaches its group, so the line would add a site-wide notification nobody asked for.
 Deleting the record does not remove its line, as in OpenPNE 3 — the post carries no reference back.
 
+## Reactions
+
+A post or a reply takes the emoji reactions of [reactions.md](reactions.md), on its own three routes
+(`timeline.reactions.*`, [`TimelineReactionController`](../../app/Features/Timeline/TimelineReactionController.php)).
+Two things are the timeline's own:
+
+- **Reacting takes the thread's clearance and nothing else.** A reply is judged at its root
+  (`TimelineAccess::canViewThread`), as replying is. The posting switch is not consulted: it stops
+  authoring, and a site with it off still receives the [automatic lines](#automatic-posts) a
+  reaction is the one answer to.
+- **The lock is the thread root.** A thread is deleted from its root, and the replies go by FK
+  cascade while their reactions go by nothing — so a reaction onto a reply that took only the reply's
+  lock could commit after the root's sweep and outlive the reply. Every reaction write, the post's
+  delete and the withdrawal sweep therefore take
+  [`TimelineThreadLock`](../../app/Features/Timeline/TimelineThreadLock.php): the root row
+  exclusively, then the reply re-read under it. A withdrawing member's posts and replies go with
+  the member row's cascade, so every row they wrote is re-enumerated under the member row's lock
+  and swept inside that same transaction, root first: a root takes its replies with it, a reply
+  under someone else's root is swept alone. A post committed from another device after the earlier
+  drain is caught there. The member's own roots are held exclusively, in root order, as
+  the cascade will take them; another member's root is held **shared** — enough to exclude a
+  reaction writer, and compatible with the shared lock another member's in-flight reply holds on
+  it through its foreign key. The thread is re-read under that hold with a locking read: a
+  consistent read would show the transaction's snapshot, taken before the thread was held, and miss
+  a reply committed since. While it runs, a reaction onto any thread the member wrote in waits for
+  the commit; reads do not, and a reply waits only where it would be the first under the root just
+  after a swept one — the locking read's next-key lock covers that gap, as InnoDB's do.
+
+Nothing polls a feed, so no watermark moves; a page carries each row's chips from one grouped read,
+and a write answers with the row's whole chip row. The dashboard digest carries them too, though its
+row draws none.
+
 ## Key invariants
 
 - Offsets and lengths are Unicode code points, half-open, ascending, non-overlapping. The write path
@@ -190,6 +222,10 @@ Deleting the record does not remove its line, as in OpenPNE 3 — the post carri
 - A reply inherits its parent's visibility; the thread is one audience — which is also what a
   notification's viewability and its feed row's link are judged against.
 - The events' mention snapshot is the only input to notification precedence; no path re-derives it.
+- A reaction is gated at the thread root and locked at the thread root; a reply's own author and
+  the posting switch are not consulted.
+- A post's delete and a member's withdrawal sweep the thread's reactions under the root lock, in the
+  transaction that removes the rows — the cascade reaches none of them.
 
 ## Classic inline replies
 

@@ -35,6 +35,7 @@ use App\Features\Notifications\NotificationSettingsController;
 use App\Features\Notifications\PushSubscriptionController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
+use App\Features\Timeline\TimelineReactionController;
 use App\Files\AppIcon;
 use App\Http\Controllers\Admin\AdminFileController;
 use App\Http\Controllers\AppIconController;
@@ -441,6 +442,16 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // fragment, gated exactly as the thread page is.
         Route::get('/timeline/{timelinePost}/replies', 'replies')->whereNumber('timelinePost')->name('timeline.replies');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
+    });
+
+    // Two URLs rather than one toggle, as the talk's (group.talk.reactions.*).
+    Route::middleware(EnsureFeatureEnabled::class.':timeline')->controller(TimelineReactionController::class)->group(function () {
+        Route::post('/timeline/{timelinePost}/reactions', 'store')
+            ->whereNumber('timelinePost')->middleware('throttle:reaction')->name('timeline.reactions.store');
+        Route::post('/timeline/{timelinePost}/reactions/delete', 'delete')
+            ->whereNumber('timelinePost')->middleware('throttle:reaction')->name('timeline.reactions.delete');
+        Route::get('/timeline/{timelinePost}/reactions', 'index')
+            ->whereNumber('timelinePost')->name('timeline.reactions.index');
     });
 
     Route::controller(TimelineController::class)->group(function () {

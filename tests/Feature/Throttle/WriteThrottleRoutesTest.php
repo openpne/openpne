@@ -49,6 +49,8 @@ class WriteThrottleRoutesTest extends TestCase
             'member.config.ai.groups.join' => ['member.config.ai.groups.join', 'throttle:group-join'],
             'group.talk.reactions.store' => ['group.talk.reactions.store', 'throttle:reaction'],
             'group.talk.reactions.delete' => ['group.talk.reactions.delete', 'throttle:reaction'],
+            'timeline.reactions.store' => ['timeline.reactions.store', 'throttle:reaction'],
+            'timeline.reactions.delete' => ['timeline.reactions.delete', 'throttle:reaction'],
         ];
     }
 

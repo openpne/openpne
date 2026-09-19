@@ -3,8 +3,8 @@
 namespace Tests\Feature\GroupTalk;
 
 use App\Features\Group\Actions\DeleteGroup;
-use App\Features\GroupTalk\Queries\MessageReactors;
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Reactions\Queries\Reactors;
 use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\Reaction;
@@ -257,7 +257,7 @@ class TalkReactionTest extends TalkReactionTestCase
     {
         $group = $this->group();
         $message = $this->message($group);
-        $total = MessageReactors::PER_EMOJI + 5;
+        $total = Reactors::PER_EMOJI + 5;
         $reactors = Member::factory()->count($total)->create();
 
         $at = now();
@@ -274,7 +274,7 @@ class TalkReactionTest extends TalkReactionTestCase
             ->getJson("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/reactions")
             ->assertOk()
             ->assertJsonPath('groups.0.count', $total)
-            ->assertJsonCount(MessageReactors::PER_EMOJI, 'groups.0.members')
+            ->assertJsonCount(Reactors::PER_EMOJI, 'groups.0.members')
             // The cap takes the first to react, not an arbitrary hundred.
             ->assertJsonPath('groups.0.members.0.id', $reactors->first()->getKey());
     }
