@@ -29,29 +29,47 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * One parent at a time, so a page is a range of that parent's own index rather than a sort of the group's.
+     * One parent at a time, so a page is a range of that parent's own index; small parents pool to a thousand before the reactions are read.
+     *
+     * @param  iterable<int>  $parentIds
      */
-    public static function comments(string $alias, string $table, string $parentColumn, Builder $parentIds): void
+    public static function comments(string $alias, string $table, string $parentColumn, iterable $parentIds): void
     {
-        foreach ((clone $parentIds)->orderBy('id')->pluck('id') as $parentId) {
-            self::commentsOf($alias, $table, $parentColumn, (int) $parentId);
+        $pool = [];
+        foreach ($parentIds as $parentId) {
+            foreach (self::pagesOf($table, $parentColumn, (int) $parentId) as $page) {
+                $pool = [...$pool, ...$page];
+                while (count($pool) >= self::CHUNK) {
+                    self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', array_splice($pool, 0, self::CHUNK)));
+                }
+            }
+        }
+        if ($pool !== []) {
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $pool));
         }
     }
 
-    /** Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the tie, and is NOT NULL, so no null arm is needed. */
-    public static function commentsOf(string $alias, string $table, string $parentColumn, int $parentId): void
+    /**
+     * Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the
+     * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL plans a
+     * row constructor here as a filter over the whole parent, not a range from the cursor.
+     *
+     * @return iterable<list<int>>
+     */
+    private static function pagesOf(string $table, string $parentColumn, int $parentId): iterable
     {
         $cursor = null;
         do {
             $query = DB::table($table)->where($parentColumn, $parentId);
             if ($cursor !== null) {
-                $query->whereRowValues(['number', 'id'], '>', $cursor);
+                [$number, $id] = $cursor;
+                $query->where(fn (Builder $after) => $after->where('number', '>', $number)->orWhere(fn (Builder $tie) => $tie->where('number', $number)->where('id', '>', $id)));
             }
             $page = $query->orderBy('number')->orderBy('id')->limit(self::CHUNK)->get(['id', 'number']);
             if ($page->isEmpty()) {
                 break;
             }
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
+            yield $page->pluck('id')->map(fn ($id): int => (int) $id)->all();
             $cursor = [(int) $page->last()->number, (int) $page->last()->id];
         } while ($page->count() === self::CHUNK);
     }
@@ -72,7 +90,8 @@ final class BoardSweep
                     if ($at === null) {
                         $after->where(fn (Builder $nulls) => $nulls->whereNull('created_at')->where('id', '>', $id))->orWhereNotNull('created_at');
                     } else {
-                        $after->whereRowValues(['created_at', 'id'], '>', [$at, $id]);
+                        // The OR of the two arms, not a row constructor, which MySQL plans as a filter over the whole room.
+                        $after->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id));
                     }
                 });
             }

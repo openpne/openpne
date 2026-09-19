@@ -45,7 +45,7 @@ class DeleteEvent
                 ->pluck('id')
                 ->all();
 
-            BoardSweep::commentsOf((new GroupEventComment)->getMorphClass(), 'group_event_comments', 'group_event_id', (int) $locked->getKey());
+            BoardSweep::comments((new GroupEventComment)->getMorphClass(), 'group_event_comments', 'group_event_id', [(int) $locked->getKey()]);
 
             $locked->delete();
 
