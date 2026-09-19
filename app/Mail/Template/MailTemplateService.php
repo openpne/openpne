@@ -97,7 +97,7 @@ class MailTemplateService
         ];
     }
 
-    /** A stored '' predates the NULL rule and is read as NULL: no mail is sent with an empty Subject header. */
+    /** A stored '' predates the NULL rule and is read as NULL. */
     private function subjectTemplate(MailTemplate $template, string $locale): ?string
     {
         $override = $this->override($template, $locale, 'subject');

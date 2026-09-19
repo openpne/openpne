@@ -23,6 +23,8 @@ class MailTemplateTest extends TestCase
                 if ($template->isSendable()) {
                     $this->assertNotNull($template->defaultSubject($locale), "sendable {$template->value}/{$locale} needs a subject");
                     $this->assertNotSame('', $template->defaultSubject($locale));
+                    // The editor trims what it saves before comparing with the default; padding here would make an untouched save an override.
+                    $this->assertSame(trim((string) $template->defaultSubject($locale)), $template->defaultSubject($locale));
                 } else {
                     $this->assertNull($template->defaultSubject($locale), 'the signature has no subject');
                 }
