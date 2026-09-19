@@ -25,7 +25,7 @@ final class ActivityPreflight
 
     private ?string $database = null;
 
-    public function inspect(string $sourcePrefix, ?string $sourceDatabase): ActivityPreflightReport
+    public function inspect(string $sourcePrefix, ?string $sourceDatabase): PreflightReport
     {
         $this->prefix = $sourcePrefix;
         $this->database = $sourceDatabase;
@@ -106,7 +106,7 @@ final class ActivityPreflight
             $warnings[] = self::templateMessage((string) $row->template, (string) $row->landing, (int) $row->rows);
         }
 
-        return new ActivityPreflightReport($errors, $warnings);
+        return new PreflightReport($errors, $warnings);
     }
 
     /** @param  list<int>  $ids */

@@ -75,10 +75,10 @@ final class UpgradeRunner
         // structural verdict guards; their errors are rows a step would fail on mid-run.
         $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
             ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
-            : new ActivityPreflightReport([], []);
+            : new PreflightReport([], []);
         $niceReport = ! $report->hasErrors()
             ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
-            : new ActivityPreflightReport([], []);
+            : new PreflightReport([], []);
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;

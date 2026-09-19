@@ -14,6 +14,13 @@ trait SeedsSourceNice
         DB::statement(SourceSchema::default()->createStatement('nice', withoutForeignKeys: true));
     }
 
+    /** The same table with the letter column folding case, as a source outside the stock DDL may. */
+    protected function createCaseInsensitiveSourceNiceTable(): void
+    {
+        DB::statement('DROP TABLE IF EXISTS `nice`');
+        DB::statement(str_replace('COLLATE utf8mb3_bin', 'COLLATE utf8mb3_general_ci', SourceSchema::default()->createStatement('nice', withoutForeignKeys: true)));
+    }
+
     protected function dropSourceNiceTable(): void
     {
         DB::statement('DROP TABLE IF EXISTS `nice`');

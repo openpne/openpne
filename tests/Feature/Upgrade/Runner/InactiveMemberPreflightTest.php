@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Models\Group;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
@@ -12,6 +13,8 @@ use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
+use App\Upgrade\Steps\GroupMessageReactionUpgrade;
+use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
@@ -126,6 +129,17 @@ class InactiveMemberPreflightTest extends TestCase
 
         $this->seedNice(21, memberId: 2, foreignId: 10);
         [$ok, $output] = $this->runSteps($steps, new RunOptions(forceRestart: true));
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
+
+        // The group landing counts too, not only the first reaction step's own filter.
+        DB::table('nice')->where('id', 21)->delete();
+        DB::table('community')->insert(['id' => 1, 'name' => 'C', 'file_id' => null, 'community_category_id' => null, 'created_at' => '2015-01-01 00:00:00', 'updated_at' => '2015-01-01 00:00:00']);
+        Group::factory()->create(['id' => 1]);
+        $this->seedActivity(12, memberId: 1, foreignTable: 'community');
+        $this->seedNice(22, memberId: 2, foreignId: 12);
+        [$ok, $output] = $this->runSteps([...$steps, new GroupMessageUpgrade, new GroupMessageReactionUpgrade], new RunOptions(forceRestart: true));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);

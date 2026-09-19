@@ -135,6 +135,28 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    /** The stock DDL is byte-collated and would hide a comparison that is not. */
+    public function test_a_letter_is_its_bytes_whatever_the_sources_collation(): void
+    {
+        $this->createCaseInsensitiveSourceNiceTable();
+        $member = $this->activeMember();
+        $this->seedActivity(1, $member->id);
+        // Distinct targets: the folding unique index would refuse `D` and `d` on one id.
+        $this->seedNice(1, $member->id, 'a', 1); // not an activity like, whatever the collation says
+        $this->seedNice(2, $member->id, 'D', 2);
+        $this->seedNice(3, $member->id, 'd', 3);
+
+        $lines = [];
+        (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertDatabaseCount('reactions', 0);
+        $this->assertContains('WARN '.NicePreflight::otherLikeMessage('diaries', 1, [2]), $lines);
+        $this->assertContains('WARN '.NicePreflight::otherLikeMessage('diary comments', 1, [3]), $lines);
+        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('a', 1, [1]), $lines);
+    }
+
     public function test_verify_agrees_on_both_targets(): void
     {
         [$author, $fan] = $this->activeMembers(2);

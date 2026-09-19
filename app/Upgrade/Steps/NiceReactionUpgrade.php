@@ -72,7 +72,7 @@ abstract class NiceReactionUpgrade extends UpgradeStep
             .' WHERE `activity_data`.`id` = `nice`.`foreign_id` AND '.$landing.')';
     }
 
-    /** Compared as bytes: opLikePlugin's own reads do, since a 0.9-era source may hold the column case-insensitive and `D` and `d` are two tables. */
+    /** Compared as bytes, as opLikePlugin's own reads do: `D` and `d` are two tables, and the source's collation is its own. */
     public static function onTable(string $letter): string
     {
         return "`nice`.`foreign_table` = CAST('{$letter}' AS BINARY)";
