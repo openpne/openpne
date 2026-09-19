@@ -117,8 +117,8 @@ template and locale, a diary, message, topic, event or timeline post belonging t
 finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
 a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
 attached files, a file that two records point at (OpenPNE 4 gives a file one owner, so one
-record's readers would see it from the other's page), or a member who liked one post or talk message twice
-(OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
+record's readers would see it from the other's page), or a member who liked one post, talk message,
+diary or comment twice (OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
 
 **`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
 

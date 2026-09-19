@@ -48,9 +48,9 @@ final class ActiveMember
      * Every OpenPNE 3 FK onto `member.id` that no step drops through memberRefs(), with its treatment
      * (docs/internals/upgrade.md, "Members who never activated"). A REFUSE `scope` replaces the FROM
      * step's filter and must describe every row whose member id reaches a target column;
-     * `scopeColumns` are the extra columns it reads.
+     * `scopeColumns` are its extra columns; `scopeBranches` splits it so the count can drop a branch whose tables the source lacks.
      *
-     * @return array<string, array{treatment: string, scope?: string, scopeColumns?: list<string>, reason?: string}>
+     * @return array<string, array{treatment: string, scope?: string, scopeBranches?: array<string, string>, scopeColumns?: list<string>, reason?: string}>
      */
     public static function references(): array
     {

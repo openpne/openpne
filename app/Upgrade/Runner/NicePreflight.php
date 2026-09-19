@@ -41,6 +41,7 @@ final class NicePreflight
 
         foreach (NiceReactionUpgrade::carriedBranches() as $letter => $branch) {
             $known[] = NiceReactionUpgrade::onTable($letter);
+            // Only a record letter can lack its table: the activity and community tables are core, required by the structural check.
             $table = NiceReactionUpgrade::RECORD_TABLES[$letter] ?? null;
             if ($table !== null && ! in_array($table, $readTables, true)) {
                 [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter));
