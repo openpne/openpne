@@ -2,14 +2,13 @@
 
 namespace App\Features\GroupEvent\Actions;
 
+use App\Features\Group\BoardSweep;
 use App\Features\GroupEvent\Exceptions\GroupEventActionException;
 use App\Features\GroupEvent\Exceptions\GroupEventActionFailure;
 use App\Features\GroupEvent\GroupEventAccess;
-use App\Models\File;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
 use App\Models\Member;
-use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteEvent
@@ -31,32 +30,27 @@ class DeleteEvent
      */
     public function purge(GroupEvent $event): void
     {
-        $files = DB::transaction(function () use ($event): array {
+        $fileIds = DB::transaction(function () use ($event): array {
             $locked = GroupEvent::whereKey($event->getKey())->lockForUpdate()->first();
             if ($locked === null) {
                 return [];
             }
 
-            $commentIds = $locked->comments()->pluck('id')->all();
+            $comments = DB::table('group_event_comments')->where('group_event_id', $locked->getKey())->select('id');
 
-            Reaction::query()
-                ->where('reactable_type', (new GroupEventComment)->getMorphClass())
-                ->whereIn('reactable_id', $commentIds)
-                ->delete();
-
-            $files = File::query()
+            $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_event_images')->where('post_id', $locked->getKey())->select('file_id'))
-                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $commentIds)->select('file_id'))
-                ->get()
+                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $comments)->select('file_id'))
+                ->pluck('id')
                 ->all();
+
+            BoardSweep::reactions((new GroupEventComment)->getMorphClass(), $comments);
 
             $locked->delete();
 
-            return $files;
-        });
+            return $fileIds;
+        }, attempts: 3);
 
-        foreach ($files as $file) {
-            $file->delete();
-        }
+        BoardSweep::files($fileIds);
     }
 }

@@ -114,12 +114,37 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
+        // One delete per alias that had rows (the talk had none), each inside the one transaction.
+        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
         $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
         $this->assertDatabaseCount('group_topics', 1);
         $this->assertDatabaseCount('reactions', 1);
         $this->assertDatabaseHas('reactions', ['reactable_id' => $otherGroupsComment->getKey()]);
         $this->assertBytesGone($files);
+    }
+
+    /** A group of any size binds one parameter: MySQL caps a prepared statement at 65,535 placeholders, and a decade-old board passes that. */
+    public function test_the_teardown_reaches_every_row_by_subquery_and_binds_only_the_group_id(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
+        foreach (range(1, 3) as $i) {
+            $this->react($author, app(CreateTopicComment::class)($author, $topic, "reply {$i}", []))->assertOk();
+        }
+        $bindings = [];
+        DB::listen(function ($query) use (&$bindings): void {
+            if (preg_match('/^select .* from [`"]files[`"] where [`"]id[`"] in \(select|^delete from [`"]reactions[`"]/', $query->sql)) {
+                $bindings[] = $query->bindings;
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertCount(2, $bindings, 'one File collection and one chunked reaction delete');
+        $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id and nothing else');
+        $this->assertCount(3, $bindings[1], 'the reaction delete binds the reactions\' own ids');
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_a_failed_teardown_leaves_the_boards_reactions_and_bytes(): void
