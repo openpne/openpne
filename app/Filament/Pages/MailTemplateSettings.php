@@ -275,12 +275,13 @@ class MailTemplateSettings extends Page implements HasTable
         $overrides = [];
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             $body = $this->normalize((string) ($data["{$locale}__body"] ?? ''));
-            $subject = $template->isSendable()
-                ? trim((string) ($data["{$locale}__subject"] ?? ''))
+            // A blank subject means the default one, as it did in OpenPNE 3; the row's NULL selects it.
+            $subject = $template->isSendable() && trim((string) ($data["{$locale}__subject"] ?? '')) !== ''
+                ? trim((string) $data["{$locale}__subject"])
                 : null;
 
             $isDefault = $body === $template->defaultBody($locale)
-                && ($subject ?? '') === (string) $template->defaultSubject($locale);
+                && ($subject === null || $subject === (string) $template->defaultSubject($locale));
 
             if (! $isDefault) {
                 $overrides[$locale] = ['subject' => $subject, 'body' => $body];

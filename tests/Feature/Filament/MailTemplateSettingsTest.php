@@ -57,6 +57,36 @@ class MailTemplateSettingsTest extends TestCase
         $this->assertStringContainsString('カスタム本文 Bob', $rendered->body);
     }
 
+    public function test_a_blank_subject_keeps_the_default_subject_over_a_custom_body(): void
+    {
+        Livewire::test(MailTemplateSettings::class)
+            ->callAction(
+                TestAction::make('edit')->table('friend-accepted'),
+                data: ['ja__subject' => '  ', 'ja__body' => 'カスタム本文 {{ member.name }}'],
+            )
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('mail_template_translations', ['locale' => 'ja', 'subject' => null, 'body' => 'カスタム本文 {{ member.name }}']);
+
+        $rendered = app(MailTemplateService::class)->render(
+            MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']],
+        );
+        $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
+        $this->assertStringContainsString('カスタム本文 Bob', $rendered->body);
+    }
+
+    public function test_a_blank_subject_over_the_default_body_writes_no_row(): void
+    {
+        Livewire::test(MailTemplateSettings::class)
+            ->callAction(
+                TestAction::make('edit')->table('friend-accepted'),
+                data: ['ja__subject' => '', 'ja__body' => MailTemplate::FriendAccepted->defaultBody('ja')],
+            )
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('mail_templates', ['key' => 'friend-accepted']);
+    }
+
     public function test_resetting_a_body_to_the_default_removes_the_override(): void
     {
         $id = DB::table('mail_templates')->insertGetId(['key' => 'friend-accepted', 'is_enabled' => true]);

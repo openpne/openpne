@@ -24,7 +24,8 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
         return [
             'mail_template_id' => Column::source('id'),
             'locale' => Column::expr(SourceLocale::foldExpr(), uses: ['lang']),
-            'subject' => Column::source('title'),
+            // OpenPNE 3 falls back to the caller's subject for an empty title; NULL is what selects the default here.
+            'subject' => Column::expr("CASE WHEN CAST(`title` AS BINARY) = '' THEN NULL ELSE `title` END", uses: ['title']),
             'body' => Column::source('template'),
         ];
     }

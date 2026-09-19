@@ -178,6 +178,24 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
     }
 
+    /** OpenPNE 3 sends the caller's subject when the saved title is empty, so the row must not override the subject. */
+    public function test_an_empty_title_migrates_as_no_subject_override(): void
+    {
+        $this->seedMail(3, 'pc_friendLinkComplete');
+        $this->seedTranslation(3, 'ja_JP', '', '{{ member.name }}さんとフレンドになりました。');
+
+        $this->runUpgrade();
+        app(MailTemplateService::class)->clearCache();
+
+        $this->assertDatabaseHas('mail_template_translations', ['mail_template_id' => 3, 'locale' => 'ja', 'subject' => null]);
+
+        $rendered = app(MailTemplateService::class)->render(
+            MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']],
+        );
+        $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
+        $this->assertStringContainsString('Bobさんとフレンドになりました。', $rendered->body);
+    }
+
     public function test_a_migrated_customized_body_renders_through_the_service(): void
     {
         // An admin customized the OpenPNE 3 friend-accepted body; after the upgrade the OpenPNE 4 service
