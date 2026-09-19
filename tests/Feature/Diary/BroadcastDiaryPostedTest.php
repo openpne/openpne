@@ -145,6 +145,58 @@ class BroadcastDiaryPostedTest extends TestCase
         Notification::assertNotSentTo($friend, DiaryPostedNotification::class);
     }
 
+    public function test_should_send_drops_a_diary_since_narrowed(): void
+    {
+        [$author, $reader] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+        $notification = new DiaryPostedNotification($diary, $author, ['mail', 'database']);
+
+        $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
+
+        $diary->forceFill(['visibility' => Visibility::Private])->save();
+
+        $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
+    }
+
+    public function test_should_send_drops_a_block_landing_while_queued(): void
+    {
+        [$author, $reader] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $notification = new DiaryPostedNotification($diary, $author, ['mail']);
+
+        $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
+
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $reader->getKey()]);
+
+        $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
+    }
+
+    public function test_should_send_drops_a_reader_who_blocked_the_author_while_queued(): void
+    {
+        [$author, $reader] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $notification = new DiaryPostedNotification($diary, $author, ['mail']);
+
+        $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
+
+        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey()]);
+
+        $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
+    }
+
+    public function test_should_send_drops_a_ban_landing_while_queued(): void
+    {
+        [$author, $reader] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $notification = new DiaryPostedNotification($diary, $author, ['mail']);
+
+        $this->assertTrue($notification->shouldSend($reader->fresh(), 'database'));
+
+        $reader->forceFill(['is_login_rejected' => true])->save();
+
+        $this->assertFalse($notification->shouldSend($reader->fresh(), 'database'));
+    }
+
     public function test_a_member_without_an_address_gets_the_feed_row_but_no_mail(): void
     {
         Notification::fake();

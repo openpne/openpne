@@ -8,7 +8,9 @@ namespace App\Mail\Template;
  * Bodies are read verbatim from `resources/mail-templates/{locale}/{key}.twig` so the OpenPNE 3 text stays
  * byte-exact; subjects are single lines kept here, null only for the non-sendable signature. A template
  * with an OpenPNE 3 origin carries that project's `sample:` text verbatim
- * (`OpenPNE3/lib/config/config/mail_template.yml`).
+ * (`OpenPNE3/lib/config/config/mail_template.yml`), except that `diary-posted` and
+ * `direct-message-received` quote the content the source wording only linked to, and the latter's
+ * subject names the sender.
  */
 final class MailTemplateDefaults
 {
@@ -39,8 +41,8 @@ final class MailTemplateDefaults
             'ja' => '{{ op_term.friend }}リクエストが届きました',
         ],
         'direct-message-received' => [
-            'en' => 'You have a new message',
-            'ja' => '新しいメッセージが届きました',
+            'en' => '{{ member.name }} sent you a message',
+            'ja' => '{{ member.name }} さんからメッセージが届きました',
         ],
         'diary-comment' => [
             'en' => 'New comment on "{{ diary_title }}"',

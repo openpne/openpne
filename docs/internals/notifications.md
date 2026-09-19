@@ -225,11 +225,13 @@ kinds that gap is harmless: the recipient already holds the thing being announce
 where the mail carries content the recipient's access to can lapse — a ban, a new block, a revoked
 friendship on a Friends thread, a member who has left the group, a message the recipient has purged —
 so every timeline notification, both group talk notifications (the mention and the per-message
-broadcast, which additionally re-checks mute and whether the message has since been read) and the
-direct message re-run their eligibility in `shouldSend()`, the one hook `NotificationSender` consults
+broadcast, which additionally re-checks mute and whether the message has since been read), the
+direct message and the new-diary broadcast (whose mail quotes a diary the author may since have
+narrowed) re-run their eligibility in `shouldSend()`, the one hook `NotificationSender` consults
 immediately before each channel send
 ([`TimelineNotificationEligibility`](../../app/Features/Timeline/TimelineNotificationEligibility.php),
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php),
+[`DiaryAccess`](../../app/Features/Diary/DiaryAccess.php),
 and [`DirectMessageReceivedNotification`](../../app/Notifications/DirectMessage/DirectMessageReceivedNotification.php)'s
 own — asked once, so it stays with the notification — each composed with the feature gate through a
 trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays

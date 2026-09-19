@@ -2,6 +2,8 @@
 
 namespace App\Notifications\Diary;
 
+use App\Features\Block\BlockLookup;
+use App\Features\Diary\DiaryAccess;
 use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Diary;
@@ -9,6 +11,7 @@ use App\Models\Member;
 use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
 use App\Notifications\FeatureNotification;
+use App\Support\BodyRenderer;
 use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,9 +24,14 @@ use Illuminate\Notifications\Notification;
  */
 class DiaryPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
-    use GatedByFeature;
+    use GatedByFeature {
+        shouldSend as private featureShouldSend;
+    }
     use Queueable;
     use RendersMailTemplate;
+
+    /** A diary deleted with its author while queued cannot be restored, and there is nothing left to announce. */
+    public bool $deleteWhenMissingModels = true;
 
     /** @param list<string> $channels */
     public function __construct(
@@ -37,6 +45,18 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
         return Feature::Diary;
     }
 
+    /**
+     * SerializesModels hands this fresh rows, so a diary narrowed, a ban or a block landing while
+     * queued is not delivered; the block is checked both ways, as the audience query excludes it.
+     */
+    public function shouldSend(Member $notifiable, string $channel): bool
+    {
+        return $this->featureShouldSend($notifiable, $channel)
+            && ! $notifiable->is_login_rejected
+            && DiaryAccess::canView($notifiable, $this->diary)
+            && ! BlockLookup::hasAnyBlockBetween($notifiable, $this->author);
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {
@@ -48,6 +68,7 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
         return $this->mailFromTemplate(MailTemplate::DiaryPostedNotified, [
             'member_name' => MemberDisplayName::of($this->author),
             'diary_title' => $this->diary->title,
+            'body' => BodyRenderer::plainText($this->diary->body, $this->diary->format),
             'url' => route('diary.show', ['diary' => $this->diary->getKey()]),
         ]);
     }
