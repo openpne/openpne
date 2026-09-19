@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Check, Link as LinkIcon, Reply, Trash2, X } from 'lucide-react';
+import { Copy, Link as LinkIcon, Reply, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
@@ -7,13 +7,13 @@ import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
-import { Tip } from '@/components/ui/tooltip';
+import type { RowReactions } from '@/components/reactions/reaction-bar';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu, type RowMenuItem } from '@/components/row/row-menu';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
-import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
-import { canCopyLink, canCopyText, messageLink } from './message-sheet';
-import { ICON_BUTTON, QUICK_REACTIONS, ReactionAdd, ReactionChips, ReactionPickerGrid } from '@/components/reactions/reaction-bar';
+import { canCopyLink, canCopyText, messageLink } from './message-link';
 import type { TalkMessage, TalkReplyReference } from './types';
 
 /**
@@ -77,29 +77,22 @@ export interface TalkRowReactions {
     onShowReactors: () => void;
 }
 
-/**
- * The revealing states beat `pointer-fine:pointer-events-none` by selector specificity, so a bare
- * `pointer-events-auto` would tie it and leave the controls dead to every click
- * (docs/internals/group-talk.md, "The row's action bar").
- */
-const ROW_ACTIONS =
-    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto has-[[data-ack]]:opacity-100 has-[[data-ack]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
-
 const COPIED_MS = 1500;
+
+type Copied = 'text' | 'link';
 
 /**
  * A refusal is answered as well as a success: silence would leave the clipboard's previous contents
- * to read as a copy that worked. `data-ack` also holds the bar out while an answer is showing
- * ({@see ROW_ACTIONS}), so a click that leaves the row does not fade the check it earned.
+ * to read as a copy that worked. The answer lives on the row, since the menu it was chosen from is
+ * gone by the time the write settles.
  */
-function CopyLinkButton({ messageId }: { messageId: number }) {
-    const t = useT();
-    const [ack, setAck] = useState<'copied' | 'failed' | null>(null);
+function useCopyAck() {
+    const [ack, setAck] = useState<{ what: Copied; outcome: 'copied' | 'failed' } | null>(null);
     const timer = useRef<number | null>(null);
     const mounted = useRef(true);
 
     // An acknowledgement still pending when the row leaves must not set state on an unmounted
-    // control — the write itself can outlive the row, so the flag covers the settle as well as the
+    // row — the write itself can outlive the row, so the flag covers the settle as well as the
     // timeout it would have scheduled.
     useEffect(
         () => () => {
@@ -111,56 +104,32 @@ function CopyLinkButton({ messageId }: { messageId: number }) {
         [],
     );
 
-    const answer = (outcome: 'copied' | 'failed') => {
-        if (!mounted.current) {
-            return;
-        }
-        setAck(outcome);
-        if (timer.current !== null) {
-            window.clearTimeout(timer.current);
-        }
-        timer.current = window.setTimeout(() => {
-            setAck(null);
-            timer.current = null;
-        }, COPIED_MS);
+    const copy = (what: Copied, text: string) => {
+        const answer = (outcome: 'copied' | 'failed') => {
+            if (!mounted.current) {
+                return;
+            }
+            setAck({ what, outcome });
+            if (timer.current !== null) {
+                window.clearTimeout(timer.current);
+            }
+            timer.current = window.setTimeout(() => {
+                setAck(null);
+                timer.current = null;
+            }, COPIED_MS);
+        };
+        void navigator.clipboard.writeText(text).then(
+            () => answer('copied'),
+            () => answer('failed'),
+        );
     };
 
-    return (
-        <>
-            <Tip label={t('Copy link')}>
-                <button
-                    type="button"
-                    data-ack={ack ?? undefined}
-                    onClick={() =>
-                        void navigator.clipboard.writeText(messageLink(messageId)).then(
-                            () => answer('copied'),
-                            () => answer('failed'),
-                        )
-                    }
-                    className={ICON_BUTTON}
-                >
-                    {ack === 'copied' ? (
-                        <Check className="size-4 text-success" aria-hidden />
-                    ) : ack === 'failed' ? (
-                        <X className="size-4 text-destructive" aria-hidden />
-                    ) : (
-                        <LinkIcon className="size-4" aria-hidden />
-                    )}
-                </button>
-            </Tip>
-            {/* Beside the control rather than inside it: a button's subtree is presentational by the
-                ARIA spec, and the region stays in the tree whether or not it has words. */}
-            <span aria-live="polite" className="sr-only">
-                {ack === 'copied' ? t('Link copied.') : ack === 'failed' ? t('The link could not be copied.') : null}
-            </span>
-        </>
-    );
+    return { ack, copy };
 }
 
 export function TalkMessageRow({
     message,
     onDelete,
-    onOpenActions,
     onReply,
     onJumpToReply,
     canReply,
@@ -171,7 +140,6 @@ export function TalkMessageRow({
 }: {
     message: TalkMessage;
     onDelete: (id: number) => void;
-    onOpenActions: () => void;
     onReply: () => void;
     onJumpToReply: (parent: { id: number; cursor: string }) => void;
     /** Whether the viewer may post, and so start a reply. Not the message's own fact like canDelete. */
@@ -187,12 +155,39 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
-    const pressOpens =
-        reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
-    const press = useLongPress(onOpenActions, { enabled: pressOpens });
+    const { ack, copy } = useCopyAck();
+    const rowReactions: RowReactions = {
+        chips: reactions.chips,
+        vocabulary: reactions.vocabulary,
+        onToggle: reactions.canReact ? reactions.onToggle : undefined,
+        onShowReactors: reactions.onShowReactors,
+    };
 
-    const content = (
-        <>
+    const ackLine =
+        ack === null
+            ? null
+            : ack.what === 'link'
+              ? ack.outcome === 'copied'
+                  ? t('Link copied.')
+                  : t('The link could not be copied.')
+              : ack.outcome === 'copied'
+                ? t('Text copied.')
+                : t('The text could not be copied.');
+
+    // canCopyLink puts the menu on rows whose reader has no other power — an Everyone room's
+    // non-member — deliberately: an address is takeable by anyone who may read the message.
+    const items: (RowMenuItem | null)[] = [
+        reactorsItem(t, rowReactions),
+        canReply ? { label: t('Reply'), icon: Reply, onSelect: onReply } : null,
+        canCopyText(message.body) ? { label: t('Copy text'), icon: Copy, onSelect: () => copy('text', message.body) } : null,
+        canCopyLink() ? { label: t('Copy link'), icon: LinkIcon, onSelect: () => copy('link', messageLink(message.id)) } : null,
+        // The menu names no message, so the action must say what it acts on.
+        message.canDelete ? { label: t('Delete message'), icon: Trash2, destructive: true, onSelect: () => onDelete(message.id) } : null,
+    ];
+    const menu = <RowMenu items={items} />;
+
+    const body = (
+        <RowBody reactions={rowReactions} trailing={grouped ? menu : undefined}>
             {/* Trimmed rather than compared to '': an upgraded body may be whitespace, and an empty
                 paragraph would leave its height behind. */}
             {hasBody && (
@@ -202,81 +197,21 @@ export function TalkMessageRow({
             )}
             <LinkCard card={message.linkCard} className="mt-2" />
             <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
-            <ReactionChips
-                chips={reactions.chips}
-                onToggle={reactions.canReact ? reactions.onToggle : undefined}
-                onShowReactors={reactions.onShowReactors}
-            />
-        </>
-    );
-
-    // canCopyLink puts the bar on rows whose reader has no other power — an Everyone room's
-    // non-member — deliberately: an address is takeable by anyone who may read the message.
-    const actions = (reactions.canReact || canReply || message.canDelete || canCopyLink()) && (
-        <div className={ROW_ACTIONS}>
-            {reactions.canReact && (
-                <>
-                    {/* Gone entirely on coarse pointers rather than invisible: a screen reader would
-                        otherwise hear each one beside the same emoji's chip, two same-named toggles
-                        per row. */}
-                    <div className="flex items-center gap-1 pointer-coarse:hidden">
-                        <ReactionPickerGrid
-                            chips={reactions.chips}
-                            vocabulary={reactions.vocabulary.slice(0, QUICK_REACTIONS)}
-                            onPick={reactions.onToggle}
-                            buttonClassName="size-8 text-base"
-                        />
-                    </div>
-                    <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
-                </>
-            )}
-            {canReply && (
-                <Tip label={t('Reply')}>
-                    <button type="button" onClick={onReply} className={ICON_BUTTON}>
-                        <Reply className="size-4" aria-hidden />
-                    </button>
-                </Tip>
-            )}
-            {canCopyLink() && (
-                // The address the sheet offers a thumb, one click here: text is the cursor's to
-                // select, so of the two copies only the link earns a place in the bar.
-                <CopyLinkButton messageId={message.id} />
-            )}
-            {message.canDelete && (
-                // On a touch screen this button is a screen reader's only delete, heard once per row.
-                <Tip label={t('Delete message')}>
-                    <button
-                        type="button"
-                        onClick={() => onDelete(message.id)}
-                        className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}
-                    >
-                        <Trash2 className="size-4" aria-hidden />
-                    </button>
-                </Tip>
-            )}
-        </div>
+        </RowBody>
     );
 
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
         <li
             data-talk-message-id={message.id}
-            {...press}
             className={cn(
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
                 'group relative isolate px-4 sm:px-5',
-                // Deliberately not gated on `pressOpens`, since the lens and the image menu a held
-                // finger raises would land on the sheet; on a no-clipboard install a touch reader
-                // can then neither select nor copy a body, which is accepted.
-                'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
                 // The space between turns is a margin rather than padding, so the tint under the
                 // pointer wraps the words evenly and the gap between two turns stays untinted.
                 'py-1',
                 !grouped && !separatorAbove && 'mt-3',
-                // Above its siblings for as long as its controls are out, so a bar taller than its
-                // own row keeps the hits it draws over the rows either side (see ROW_ACTIONS).
-                'hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10 has-[[data-ack]]:z-10',
                 // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
                 'transition-colors duration-100 hover:bg-muted',
             )}
@@ -331,7 +266,7 @@ export function TalkMessageRow({
                             <span className="sr-only">
                                 {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="clockTime" />
                             </span>
-                            {content}
+                            {body}
                         </>
                     ) : (
                         <>
@@ -345,13 +280,18 @@ export function TalkMessageRow({
                                 )}
                                 <AiChip isAi={author?.isAi ?? false} />
                                 <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
+                                <span className="ml-auto shrink-0">{menu}</span>
                             </div>
-                            {content}
+                            {body}
                         </>
                     )}
+                    {/* Beside the row's controls rather than inside a menu item: the item is gone once chosen. */}
+                    {ackLine !== null && <p className={cn('mt-1 text-xs', ack?.outcome === 'copied' ? 'text-success' : 'text-destructive')}>{ackLine}</p>}
+                    <span aria-live="polite" className="sr-only">
+                        {ackLine}
+                    </span>
                 </div>
             </div>
-            {actions}
         </li>
     );
 }

@@ -20,7 +20,7 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 afterEach(cleanup);
-// Fake timers must not outlive a failing assertion in the tests that arm them.
+// Fake timers must not outlive a failing assertion in the test that arms them.
 afterEach(() => vi.useRealTimers());
 // Likewise the clipboard: vitest shares the environment across a file, so a shadow left in place
 // would be what every later test in it sees.
@@ -43,68 +43,35 @@ const message: TalkMessage = {
 
 function renderRow(
     over: Partial<TalkMessage> = {},
-    props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void; onOpenActions?: () => void } = {},
+    props: { canReply?: boolean; canReact?: boolean; grouped?: boolean; onReply?: () => void; onDelete?: (id: number) => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void } = {},
 ) {
     return renderWithProviders(
         <ul>
             <TalkMessageRow
                 message={{ ...message, ...over }}
-                onDelete={vi.fn()}
-                onOpenActions={props.onOpenActions ?? vi.fn()}
+                onDelete={props.onDelete ?? vi.fn()}
                 onReply={props.onReply ?? vi.fn()}
                 onJumpToReply={props.onJumpToReply ?? vi.fn()}
                 canReply={props.canReply ?? true}
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+                grouped={props.grouped ?? false}
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: props.canReact ?? true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
             />
         </ul>,
     );
 }
 
-/** A row with nothing a press could open — no react, reply, delete, chip, or clipboard. */
-function renderInertRow(onOpenActions: () => void = vi.fn()) {
-    return renderWithProviders(
-        <ul>
-            <TalkMessageRow
-                message={{ ...message, canDelete: false }}
-                onDelete={vi.fn()}
-                onOpenActions={onOpenActions}
-                onReply={vi.fn()}
-                onJumpToReply={vi.fn()}
-                canReply={false}
-                reactions={{ chips: [], vocabulary: ['\u{1F44D}'], canReact: false, onToggle: vi.fn(), onShowReactors: vi.fn() }}
-            />
-        </ul>,
-    );
-}
+const tick = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+const openMenu = () => fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
 
-test('a press on a row with nothing to open raises no sheet', () => {
-    vi.useFakeTimers();
+test('a reader who may not post gets no add button, and a menu that offers only the reactor list, disabled while there are no chips', () => {
     clipboard(null);
-    const onOpenActions = vi.fn();
-    renderInertRow(onOpenActions);
+    renderRow({ canDelete: false }, { canReply: false, canReact: false });
 
-    press(document.querySelector('[data-talk-message-id]')!);
-
-    expect(onOpenActions).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
+    openMenu();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['See who reacted']);
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' }).getAttribute('aria-disabled')).toBe('true');
 });
-
-test('a press on a row with something to open raises the sheet', () => {
-    vi.useFakeTimers();
-    const onOpenActions = vi.fn();
-    renderRow({}, { onOpenActions });
-
-    press(document.querySelector('[data-talk-message-id]')!);
-
-    expect(onOpenActions).toHaveBeenCalled();
-});
-
-/** A finger held still for longer than the hold — the whole of what makes a press a press. */
-function press(row: Element) {
-    fireEvent.pointerDown(row, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
-    act(() => {
-        vi.advanceTimersByTime(600);
-    });
-}
 
 /** The live reference a reply draws above its header, distinct from the row's own author and body. */
 const liveReply = {
@@ -116,29 +83,27 @@ const liveReply = {
     thumbnailUrl: null as string | null,
 };
 
-/** What a screen shows of them is CSS a component test never loads, so this asserts only that the
- *  names exist to be reached at all. */
-test.each([false, true])('a row (grouped: %s) offers reacting, replying and deleting by name', (grouped) => {
-    renderWithProviders(
-        <ul>
-            <TalkMessageRow
-                message={message}
-                onDelete={vi.fn()}
-                onOpenActions={vi.fn()}
-                onReply={vi.fn()}
-                onJumpToReply={vi.fn()}
-                canReply={true}
-                grouped={grouped}
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
-            />
-        </ul>,
-    );
+test.each([false, true])('a row (grouped: %s) offers reacting on the row and replying, copying and deleting in its menu', async (grouped) => {
+    clipboard(vi.fn(() => Promise.resolve()));
+    const onReply = vi.fn();
+    const onDelete = vi.fn();
+    renderRow({}, { grouped, onReply, onDelete });
 
-    // The head of the vocabulary is in the row itself, not only behind the picker the button opens.
-    expect(screen.getByRole('button', { name: '👍' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Reply' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Delete message' })).toBeTruthy();
+    openMenu();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['See who reacted', 'Reply', 'Copy text', 'Copy link', 'Delete message']);
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete message' }));
+    await tick();
+    expect(onDelete).toHaveBeenCalledWith(7);
+});
+
+test('a folded row keeps its menu beside the add button, since it has no header line to hold it', () => {
+    const { container } = renderRow({}, { grouped: true });
+
+    const menu = screen.getByRole('button', { name: 'More actions' });
+    expect(menu.parentElement?.contains(screen.getByRole('button', { name: 'Add a reaction' }))).toBe(true);
+    expect(container.querySelector('a[href="/member/3"]')).toBeNull();
 });
 
 test('a reply draws its reference above the row: the parent author, the excerpt, and a live jump', () => {
@@ -183,10 +148,11 @@ test('a reply to a deleted parent reads as deleted and is not a jump', () => {
     expect(screen.queryByRole('button', { name: 'Go to the replied message' })).toBeNull();
 });
 
-test('a reader who may not post is offered no reply control', () => {
+test('a reader who may not post is offered no reply', () => {
     renderRow({}, { canReply: false });
+    openMenu();
 
-    expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Reply' })).toBeNull();
 });
 
 test('the row carries the time alone, beside the author rather than at the far edge', () => {
@@ -199,20 +165,7 @@ test('the row carries the time alone, beside the author rather than at the far e
 });
 
 test('a folded row keeps its time in the gutter, spoken as well as drawn', () => {
-    const { container } = renderWithProviders(
-        <ul>
-            <TalkMessageRow
-                message={message}
-                onDelete={vi.fn()}
-                onOpenActions={vi.fn()}
-                onReply={vi.fn()}
-                onJumpToReply={vi.fn()}
-                canReply={true}
-                grouped
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
-            />
-        </ul>,
-    );
+    const { container } = renderRow({}, { grouped: true });
 
     // Counted rather than located: a selector down the row's boxes resolves to the gutter only by
     // today's order of children, and the companion test below asserts an absence.
@@ -276,46 +229,52 @@ function clipboard(writeText: ((text: string) => Promise<void>) | null) {
     Object.defineProperty(navigator, 'clipboard', { value: writeText === null ? undefined : { writeText }, configurable: true });
 }
 
-test('the actions bar copies the message link in one click', () => {
-    const writeText = vi.fn(() => Promise.resolve());
-    clipboard(writeText);
-    window.history.replaceState(null, '', '/groups/3/talk');
-    renderRow();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
-
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
-    window.history.replaceState(null, '', '/');
-});
-
-test('no clipboard leaves the bar without a link button', () => {
-    clipboard(null);
-    renderRow();
-
-    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
-});
-
-test('a completed copy answers with a check and a spoken line, then offers again', async () => {
-    vi.useFakeTimers();
-    const writeText = vi.fn(() => Promise.resolve());
-    clipboard(writeText);
-    window.history.replaceState(null, '', '/groups/3/talk');
-    renderRow();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+async function chooseCopy(name: 'Copy link' | 'Copy text') {
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name }));
+    await tick();
     await act(async () => {
         await Promise.resolve();
     });
+}
 
-    // Spoken on completion, not on the click: the acknowledgement claims the write happened.
-    expect(screen.getByText('Link copied.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBe('copied');
+test('the menu copies the message link and the body', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    renderRow();
 
-    act(() => {
-        vi.advanceTimersByTime(1600);
-    });
+    await chooseCopy('Copy link');
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
+    await chooseCopy('Copy text');
+    expect(writeText).toHaveBeenLastCalledWith('Bring the good rope');
+    window.history.replaceState(null, '', '/');
+});
+
+test('no clipboard leaves the menu without either copy', () => {
+    clipboard(null);
+    renderRow();
+    openMenu();
+
+    expect(screen.queryByRole('menuitem', { name: 'Copy link' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Copy text' })).toBeNull();
+});
+
+test('a completed copy is answered on the row, spoken and shown, then the answer clears', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/groups/3/talk');
+    renderRow();
+
+    await chooseCopy('Copy link');
+
+    // Spoken on completion, not on the choice: the acknowledgement claims the write happened, and it
+    // lives on the row because the menu it was chosen from is gone by then.
+    expect(screen.getAllByText('Link copied.')).toHaveLength(2);
+    expect(screen.getByText('Link copied.', { selector: '[aria-live] *, [aria-live]' })).toBeTruthy();
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 1600)));
     expect(screen.queryByText('Link copied.')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Copy link' }).getAttribute('data-ack')).toBeNull();
     window.history.replaceState(null, '', '/');
 });
 
@@ -324,24 +283,23 @@ test('a refused copy says so rather than letting the old clipboard read as succe
     clipboard(writeText);
     renderRow();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
-    await act(async () => {
-        await Promise.resolve();
-    });
+    await chooseCopy('Copy text');
 
-    expect(screen.queryByText('Link copied.')).toBeNull();
-    expect(screen.getByText('The link could not be copied.')).toBeTruthy();
+    expect(screen.queryByText('Text copied.')).toBeNull();
+    expect(screen.getAllByText('The text could not be copied.').length).toBeGreaterThan(0);
 });
 
 test('a write that completes after the row left schedules nothing', async () => {
-    vi.useFakeTimers();
     let settle = () => {};
     const writeText = vi.fn(() => new Promise<void>((resolve) => (settle = resolve)));
     clipboard(writeText);
     window.history.replaceState(null, '', '/groups/3/talk');
     const view = renderRow();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    await tick();
+    vi.useFakeTimers();
     view.unmount();
     settle();
     await act(async () => {

@@ -1,4 +1,4 @@
-import { SmilePlus, Users } from 'lucide-react';
+import { SmilePlus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ActionSheet } from '@/components/row/action-sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,16 +33,14 @@ export const ICON_BUTTON =
 /** A row's standing control: 32px drawn, and under a finger a 44px hit box that costs the row no height. */
 export const ROW_ICON_BUTTON = cn(ICON_BUTTON, "relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.5 pointer-coarse:before:content-['']");
 
-/** The chips alone, drawn only once there are any; whatever stands beside them is the caller's. */
+/** The chips alone, drawn only once there are any. */
 export function ReactionChipsRow({
     chips,
     onToggle,
-    children,
 }: {
     chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
-    children?: React.ReactNode;
 }) {
     if (chips.length === 0) {
         return null;
@@ -70,34 +68,7 @@ export function ReactionChipsRow({
                     </button>
                 ),
             )}
-            {children}
         </div>
-    );
-}
-
-/** A chat row's chips, the reactor list beside them. */
-export function ReactionChips({
-    chips,
-    onToggle,
-    onShowReactors,
-}: {
-    chips: ReactionChip[];
-    onToggle?: (emoji: string, mine: boolean) => void;
-    /** Absent for a reader the names are not offered to. */
-    onShowReactors?: () => void;
-}) {
-    const t = useT();
-
-    return (
-        <ReactionChipsRow chips={chips} onToggle={onToggle}>
-            {onShowReactors !== undefined && (
-                <Tip label={t('See who reacted')}>
-                    <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
-                        <Users className="size-4" aria-hidden />
-                    </button>
-                </Tip>
-            )}
-        </ReactionChipsRow>
     );
 }
 
@@ -105,9 +76,6 @@ export function ReactionChips({
 // so "this one is yours" is said the same way wherever an emoji can be pressed.
 const PICKER_BUTTON =
     'inline-flex items-center justify-center rounded-full border border-transparent text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
-
-// Three is what fits before the bar crowds the row it floats over.
-export const QUICK_REACTIONS = 3;
 
 /**
  * One source for both places the picker is offered, so the two cannot drift into different answers to

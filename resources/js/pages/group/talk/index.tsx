@@ -25,7 +25,6 @@ import type { MentionPayloadRow } from '@/lib/mention-draft';
 import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
-import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { TalkUnreadDigestCard } from './unread-digest';
@@ -366,12 +365,6 @@ export default function GroupTalkIndex() {
     // a fresh read every poll tick.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
 
-    // Held as an id and resolved against the stream, so a message deleted under the reader takes its
-    // sheet with it.
-    const [sheetFor, setSheetFor] = useState<number | null>(null);
-    const closeSheet = useCallback(() => setSheetFor(null), []);
-    const sheetMessage = sheetFor === null ? undefined : messages.find((message) => message.id === sheetFor);
-
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
         if (isPending(pendingReactions, messageId, emoji)) {
             return;
@@ -475,7 +468,6 @@ export default function GroupTalkIndex() {
                                 <TalkMessageRow
                                     message={message}
                                     onDelete={remove}
-                                    onOpenActions={() => setSheetFor(message.id)}
                                     onReply={() => setReplyTo(message)}
                                     onJumpToReply={jumpToReply}
                                     canReply={canPost}
@@ -523,20 +515,6 @@ export default function GroupTalkIndex() {
                 <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
             )}
 
-            {sheetMessage !== undefined && (
-                <TalkMessageSheet
-                    message={sheetMessage}
-                    chips={chipsWithPending(sheetMessage.reactions ?? [], pendingReactions, sheetMessage.id)}
-                    vocabulary={reactionVocabulary}
-                    canReact={canPost}
-                    canReply={canPost}
-                    onToggle={(emoji, mine) => toggleReaction(sheetMessage.id, emoji, mine)}
-                    onShowReactors={() => setReactorsFor(sheetMessage.id)}
-                    onReply={() => setReplyTo(sheetMessage)}
-                    onDelete={() => void remove(sheetMessage.id)}
-                    onClose={closeSheet}
-                />
-            )}
 
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />

@@ -710,48 +710,16 @@ The reverse of the polymorphic column: nothing cascades a reaction away with the
   group, inside the same lock transaction as the image sweep.
 - A withdrawing member's own, which *is* a cascade: `member_id` is a real foreign key.
 
-## The row's action bar
+## The row's controls
 
-`ROW_ACTIONS` ([`pages/group/talk/message-row.tsx`](../../resources/js/pages/group/talk/message-row.tsx))
-is one class string reaching a row's controls by two lanes.
-
-Where a cursor can point, the bar floats over the row's top-right and is revealed by hovering the row
-or by a keyboard reaching into it: a row at rest is what was said, not what can be done about it, and
-standing the controls in the flow would hold their width open on every row for controls nobody is
-looking at. The keyboard half is `:focus-visible`, never `:focus-within` — a click leaves focus on
-what was clicked, so a reader who follows a link or opens a picture in the body takes the pointer away
-and leaves the bar revealed over a row nobody is on. The browser withholds `:focus-visible` from a
-mouse click for exactly that reason, and Tab still brings the bar out where it is the only way to
-reach it.
-
-Where there is no cursor the controls are `sr-only` rather than hidden: a long press opens the sheet,
-a screen reader on a touch screen cannot hold one, and these buttons are that reader's only way to
-what the sheet offers.
-
-`pointer-events` is what keeps an invisible Delete from answering a finger on a hybrid machine — a
-laptop with a touch screen answers `pointer: fine`, so the controls stay drawn there, and
-`opacity: 0` alone does not stop a tap. The revealing states beat the default by selector specificity
-(0,2,0 against 0,1,0), not by source order, since Tailwind emits `pointer-fine` after them:
-simplifying the reveal to a bare `pointer-events-auto` would tie the specificity, hand the cascade
-back to source order, and leave the controls dead to every click. Nothing in the coarse lane writes
-`pointer-events` at all, so a touch screen reader's activation path is untouched.
-
-One class wins differently. The trailing `pointer-coarse:focus-within:absolute` re-floats the bar when
-a hardware keyboard tabs into the coarse lane, where `not-sr-only`'s `position: static` would
-otherwise drop it into the flow and shove the row taller on every Tab; it ties that rule's specificity
-and wins on emission order alone. If it ever loses, the bar goes back to standing in the flow, wider —
-a look, not a lockout.
-
-**The bar is taller than the row it belongs to**, and is meant to be: 38px of controls over a
-follow-up row that is one line of text. It overhangs both edges, so the row lifts above its siblings
-for exactly as long as the bar is out — the `z-10` states on the row match the bar's revealing ones,
-`data-ack` among them, so an acknowledgement outlives the pointer leaving. Without the lift the
-overhang is painted over by the next row, which takes its hits as well, so a cursor moving down onto
-the bar's own foot leaves the row and the bar the hand was reaching for disappears. Nothing here may
-reintroduce a row-height floor: the spacing between turns is the list's to choose. On the list's first
-row with no older history the card's own clip shaves 4px off the bar's top — the clip does not branch
-on the frame, so this holds at every width — known and accepted over teaching the first row a
-different geometry.
+A message row is drawn as [reactions.md](reactions.md#the-row) says: the kebab at the end of the
+author line, or beside the add button in the column for a follow-up row that has no author line; the
+add button beside the body; the chips under it once there are any. The kebab holds who reacted,
+reply, copy text, copy link and delete. Copying is offered to everyone who may read the message, a
+non-member of an Everyone room included — an address is takeable by anyone who may read it — and is
+answered on the row, spoken and shown, since the menu it was chosen from is gone by the time the
+write settles. Nothing here opens on a hover or a long press, and no row carries a control that
+holds its width open for nobody.
 
 ## Access
 
