@@ -2,7 +2,7 @@ import { SmilePlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tip } from '@/components/ui/tooltip';
-import type { ChatReactionChip } from '@/lib/chat/types';
+import type { ReactionChip } from '@/lib/reactions/types';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
@@ -17,15 +17,23 @@ const CHIP_MINE = 'border-selected bg-selected/10 text-foreground';
 
 const CHIP_THEIRS = 'border-input text-muted-foreground';
 
+/** What a row needs to draw and change its reactions; a page wires one per row. */
+export interface RowReactions {
+    chips: ReactionChip[];
+    vocabulary: string[];
+    onToggle: (emoji: string, mine: boolean) => void;
+    onShowReactors: () => void;
+}
+
 export const ICON_BUTTON =
     'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function TalkReactionChips({
+export function ReactionChips({
     chips,
     onToggle,
     onShowReactors,
 }: {
-    chips: ChatReactionChip[];
+    chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
     onShowReactors: () => void;
@@ -38,7 +46,7 @@ export function TalkReactionChips({
 
     return (
         // The attribute is the seam a verification script holds the chips by, the way the row's id names the row.
-        <div data-talk-reactions className="mt-2 flex flex-wrap items-center gap-1">
+        <div data-reactions className="mt-2 flex flex-wrap items-center gap-1">
             {chips.map((chip) =>
                 onToggle === undefined ? (
                     <span key={chip.emoji} className={cn(CHIP_BASE, chip.mine ? CHIP_MINE : CHIP_THEIRS)}>
@@ -81,13 +89,13 @@ export const QUICK_REACTIONS = 3;
  * the same question. The buttons come loose rather than in a box: what encloses them is the caller's
  * business.
  */
-export function TalkReactionPickerGrid({
+export function ReactionPickerGrid({
     chips,
     vocabulary,
     onPick,
     buttonClassName = 'size-10',
 }: {
-    chips: ChatReactionChip[];
+    chips: ReactionChip[];
     vocabulary: string[];
     onPick: (emoji: string, mine: boolean) => void;
     /** The tap target: a cursor's bar and popover work at 32–40px, a thumb's sheet wants past the 44 floor. */
@@ -114,12 +122,12 @@ export function TalkReactionPickerGrid({
     );
 }
 
-export function TalkReactionAdd({
+export function ReactionAdd({
     chips,
     vocabulary,
     onPick,
 }: {
-    chips: ChatReactionChip[];
+    chips: ReactionChip[];
     /** What this site offers, as the page was rendered with it — never a copy held in the bundle. */
     vocabulary: string[];
     onPick: (emoji: string, mine: boolean) => void;
@@ -141,7 +149,7 @@ export function TalkReactionAdd({
             {/* Portalled because the card the list stands in clips its overflow, and capped at four
                 columns so a set this list does not choose cannot run off a phone's edge. */}
             <PopoverContent side="top" align="end" aria-label={t('Reactions')} className="flex w-max max-w-[13.5rem] flex-wrap gap-1">
-                <TalkReactionPickerGrid
+                <ReactionPickerGrid
                     chips={chips}
                     vocabulary={vocabulary}
                     onPick={(emoji, mine) => {

@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
+import { ReactionAdd, ReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
@@ -17,9 +18,10 @@ import type { TimelinePostEntry } from './types';
 interface TimelinePostCardProps {
     post: TimelinePostEntry;
     viewerId: number;
+    reactions: RowReactions;
 }
 
-export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
+export function TimelinePostCard({ post, viewerId, reactions }: TimelinePostCardProps) {
     const t = useT();
     const confirm = useConfirm();
     const isOwn = post.author.id === viewerId;
@@ -41,6 +43,8 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                     <AiChip isAi={post.author.isAi} />
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                    {/* Always on show: a feed row has no hover lane or long-press sheet to hide it in. */}
+                    <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
                     <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={repliesPhrase(t, post.replyCount)} />
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
                         <Timestamp at={post.createdAt} preset="relative" />
@@ -52,6 +56,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} variant="post" />
+            <ReactionChips chips={reactions.chips} onToggle={reactions.onToggle} onShowReactors={reactions.onShowReactors} />
             {isOwn && (
                 <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                     {t('Delete')}

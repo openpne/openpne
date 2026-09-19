@@ -44,10 +44,11 @@ const post: TimelinePostEntry = {
     linkCard: null,
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     createdAt: '2026-09-05T12:00:00+09:00',
+    reactions: [],
 };
 
 function renderShow(canPost: boolean) {
-    inertia.page = { component: 'timeline/show', url: '/timeline/7', props: { post, replies: [], viewerId: 1, canPost } };
+    inertia.page = { component: 'timeline/show', url: '/timeline/7', props: { post, replies: [], viewerId: 1, canPost, reactionVocabulary: ['\u{1F44D}'] } };
 
     return renderWithProviders(<TimelineShow />);
 }

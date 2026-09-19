@@ -1,10 +1,10 @@
-import type { ChatReactionChip } from './types';
+import type { ReactionChip } from './types.ts';
 
 /** Two verbs rather than a flip, as the two endpoints are. */
 export type ReactionOp = 'add' | 'remove';
 
 export interface PendingReaction {
-    messageId: number;
+    targetId: number;
     emoji: string;
     op: ReactionOp;
 }
@@ -12,7 +12,7 @@ export interface PendingReaction {
 /**
  * Overlaying rather than writing the guess into the list is what makes a refusal harmless: it takes
  * its own entry away and nothing else, leaving a reaction the poll delivered meanwhile. Keyed by
- * (message, emoji), which is also the in-flight rule: a second tap on the same chip is ignored
+ * (target, emoji), which is also the in-flight rule: a second tap on the same chip is ignored
  * rather than queued.
  */
 export type PendingReactions = ReadonlyMap<string, PendingReaction>;
@@ -20,8 +20,8 @@ export type PendingReactions = ReadonlyMap<string, PendingReaction>;
 /** NUL, because an emoji is an arbitrary short string and this must not collide with one. */
 const KEY_SEPARATOR = '\u0000';
 
-export function pendingKey(messageId: number, emoji: string): string {
-    return `${messageId}${KEY_SEPARATOR}${emoji}`;
+export function pendingKey(targetId: number, emoji: string): string {
+    return `${targetId}${KEY_SEPARATOR}${emoji}`;
 }
 
 export function noPending(): PendingReactions {
@@ -29,13 +29,13 @@ export function noPending(): PendingReactions {
 }
 
 /** Whether this chip already has a tap out — the one thing that refuses a new one. */
-export function isPending(pending: PendingReactions, messageId: number, emoji: string): boolean {
-    return pending.has(pendingKey(messageId, emoji));
+export function isPending(pending: PendingReactions, targetId: number, emoji: string): boolean {
+    return pending.has(pendingKey(targetId, emoji));
 }
 
-export function withPending(pending: PendingReactions, messageId: number, emoji: string, op: ReactionOp): PendingReactions {
+export function withPending(pending: PendingReactions, targetId: number, emoji: string, op: ReactionOp): PendingReactions {
     const next = new Map(pending);
-    next.set(pendingKey(messageId, emoji), { messageId, emoji, op });
+    next.set(pendingKey(targetId, emoji), { targetId, emoji, op });
 
     return next;
 }
@@ -44,8 +44,8 @@ export function withPending(pending: PendingReactions, messageId: number, emoji:
  * Only the entry this tap made is taken: an answer arriving after another chip's tap has gone out
  * must not take that one's guess off the screen with it.
  */
-export function withoutPending(pending: PendingReactions, messageId: number, emoji: string): PendingReactions {
-    const key = pendingKey(messageId, emoji);
+export function withoutPending(pending: PendingReactions, targetId: number, emoji: string): PendingReactions {
+    const key = pendingKey(targetId, emoji);
     if (!pending.has(key)) {
         return pending;
     }
@@ -55,10 +55,10 @@ export function withoutPending(pending: PendingReactions, messageId: number, emo
     return next;
 }
 
-export function chipsWithPending(chips: ChatReactionChip[], pending: PendingReactions, messageId: number): ChatReactionChip[] {
+export function chipsWithPending(chips: ReactionChip[], pending: PendingReactions, targetId: number): ReactionChip[] {
     let drawn = chips;
     for (const tap of pending.values()) {
-        if (tap.messageId === messageId) {
+        if (tap.targetId === targetId) {
             drawn = applyReactionOutcome(drawn, tap.emoji, tap.op);
         }
     }
@@ -71,7 +71,7 @@ export function chipsWithPending(chips: ChatReactionChip[], pending: PendingReac
  * it is idempotent: it moves the viewer's own line only when the row disagrees with it. A delta
  * rather than the aggregate the write answered with, so changes the poll delivered meanwhile stand.
  */
-export function applyReactionOutcome(chips: ChatReactionChip[], emoji: string, op: ReactionOp): ChatReactionChip[] {
+export function applyReactionOutcome(chips: ReactionChip[], emoji: string, op: ReactionOp): ReactionChip[] {
     const held = chips.find((chip) => chip.emoji === emoji);
 
     if (op === 'add') {

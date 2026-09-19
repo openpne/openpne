@@ -1,10 +1,13 @@
 import { Head, usePage } from '@inertiajs/react';
 import { LoadOlder } from '@/components/load-older';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
+import { rowReactions, timelineReactionEndpoints } from './reactions';
 import type { TimelineStream, TimelinePostAuthor } from './types';
 
 interface MemberProps extends PageProps {
@@ -14,11 +17,14 @@ interface MemberProps extends PageProps {
     posts: TimelineStream;
     streamGeneration: string;
     headUrl: string | null;
+    /** What this site offers, as the page was rendered with it. */
+    reactionVocabulary: string[];
 }
 
 export default function TimelineMember() {
     const t = useT();
-    const { owner, isOwner, viewerId, posts, streamGeneration, headUrl } = usePage<MemberProps>().props;
+    const { owner, isOwner, viewerId, posts, streamGeneration, headUrl, reactionVocabulary } = usePage<MemberProps>().props;
+    const reactions = useReactions(timelineReactionEndpoints, streamGeneration);
     const title = isOwner ? t('%Activity%') : t(":name's %activity%", { name: owner.name });
 
     return (
@@ -33,13 +39,14 @@ export default function TimelineMember() {
                         <Panel flush>
                             <List>
                                 {posts.data.map((post) => (
-                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
+                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} reactions={rowReactions(post, reactionVocabulary, reactions)} />
                                 ))}
                             </List>
                         </Panel>
                     </LoadOlder>
                 </>
             )}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );
 }

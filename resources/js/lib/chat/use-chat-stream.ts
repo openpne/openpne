@@ -22,7 +22,7 @@ import {
     retireIntents,
     watermark,
 } from './stream-state';
-import type { ReactionOp } from './reaction-overlay';
+import type { ReactionOp } from '../reactions/overlay.ts';
 import type { ChatPage, ChatStreamRow } from './types';
 
 const POLL_MS = 8_000;
