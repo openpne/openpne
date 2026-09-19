@@ -162,9 +162,9 @@ class WithdrawMember
 
     /**
      * Re-enumerated under the member row's lock, not from the earlier drain: a post committed from
-     * another device in between goes with the member row's cascade, which reaches no reaction. Each
-     * thread is held shared in the same transaction as that cascade, so a reaction landing meanwhile
-     * waits and then finds the row gone (docs/internals/timeline.md, "Reactions").
+     * another device in between goes with the member row's cascade, which reaches no reaction. The
+     * thread is re-read under its lock with a locking read: a consistent read would show the
+     * transaction's snapshot, taken before the thread was held (docs/internals/timeline.md, "Reactions").
      */
     private function sweepTimelineReactions(int $memberId): void
     {
@@ -175,12 +175,14 @@ class WithdrawMember
             ->get(['id', 'in_reply_to_id']);
 
         foreach ($rows as $row) {
-            if (! TimelineThreadLock::hold($row, shared: true)) {
+            // The member's own root exclusively, as the cascade will take it; another member's root
+            // shared, so an in-flight reply holding it through its foreign key is not waited on.
+            if (! TimelineThreadLock::hold($row, shared: $row->in_reply_to_id !== null)) {
                 continue;
             }
 
             $ids = $row->in_reply_to_id === null
-                ? [(int) $row->getKey(), ...$row->replies()->pluck('id')->all()]
+                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()]
                 : [(int) $row->getKey()];
 
             Reaction::query()

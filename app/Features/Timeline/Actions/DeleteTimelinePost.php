@@ -22,7 +22,7 @@ class DeleteTimelinePost
                 return [];
             }
 
-            $ids = [(int) $post->getKey(), ...$post->replies()->pluck('id')->all()];
+            $ids = [(int) $post->getKey(), ...$post->replies()->sharedLock()->pluck('id')->all()];
 
             Reaction::query()
                 ->where('reactable_type', $post->getMorphClass())

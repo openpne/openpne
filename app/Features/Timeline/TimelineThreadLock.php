@@ -14,10 +14,9 @@ use Illuminate\Support\Facades\DB;
 final class TimelineThreadLock
 {
     /**
-     * Call inside a transaction: the lock is held until it commits. A shared hold excludes the
-     * writers (they take the rows exclusively) without excluding another shared holder, which is
-     * what a withdrawal needs: it already holds the member row exclusively, and a reply the member
-     * is writing at that moment holds this root shared through its foreign key.
+     * Call inside a transaction: the lock is held until it commits. A shared hold still excludes
+     * the reaction writers, which take the rows exclusively, without waiting on another member's
+     * in-flight reply, which holds the root shared through its foreign key.
      */
     public static function hold(TimelinePost $post, bool $shared = false): bool
     {

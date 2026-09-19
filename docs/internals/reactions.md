@@ -98,10 +98,11 @@ Three paths take reactions away, and only the last is a cascade:
 3. `ReactionVocabulary` is the only place the set is written down, its size included. It bounds what
    may be added; what may be removed is whatever the member holds, and the column takes any short
    utf8mb4 string.
-4. Every surface write path — add, remove, and the sweeps of the content's delete and the
-   container's teardown — takes the reactor's member row shared, then the surface's container row,
-   then re-reads the content under it: the one order. The member cascade and the OpenPNE 3 transfer
-   are the writes outside it, and neither takes a lock.
+4. Add and remove take the reactor's member row shared, then the surface's container row, then
+   re-read the content under it; a sweep takes the container row (a withdrawal, its author's member
+   row first) and reads the thread under it with locking reads. That is the one order. The member
+   cascade (which locks the rows it deletes, as any delete does, and sweeps nothing) and the
+   OpenPNE 3 transfer are the writes outside it.
 5. Nothing about a chip row grows with the content's audience: the counts are aggregated in SQL
    rather than hydrated, and the reactor list ships an exact count with at most a hundred names.
 6. A reaction notifies nobody and moves no unread state.
