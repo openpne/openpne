@@ -31,13 +31,15 @@ interface ShowProps extends PageProps {
     viewerId: number;
     canPost: boolean;
     reactionVocabulary: string[];
+    /** Fresh on every server render, so a reply posted or deleted resets what a write was answered with. */
+    renderGeneration: string;
 }
 
 export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { post, replies, viewerId, canPost, reactionVocabulary } = usePage<ShowProps>().props;
-    const reactions = useReactions(timelineReactionEndpoints, post.id);
+    const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
     const rootReactions = rowReactions(post, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.

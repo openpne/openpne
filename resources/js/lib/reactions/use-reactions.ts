@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from './overlay';
 import type { ReactionChip } from './types';
@@ -18,10 +18,15 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
     const [pending, setPending] = useState<PendingReactions>(noPending);
     const [answered, setAnswered] = useState<ReadonlyMap<number, ReactionChip[]>>(() => new Map());
     const [reactorsFor, setReactorsFor] = useState<number | null>(null);
+    // Per row, the number of the latest write sent: an answer to an earlier one is not drawn over a
+    // later one's, since nothing polls to put the row right afterwards.
+    const sent = useRef(new Map<number, number>());
 
     useEffect(() => {
         setAnswered(new Map());
         setPending(noPending());
+        setReactorsFor(null);
+        sent.current = new Map();
     }, [resetKey]);
 
     const chips = useCallback(
@@ -36,6 +41,8 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
             }
             const op: ReactionOp = mine ? 'remove' : 'add';
             setPending((current) => withPending(current, id, emoji, op));
+            const ticket = (sent.current.get(id) ?? 0) + 1;
+            sent.current.set(id, ticket);
 
             const settle = () => setPending((current) => withoutPending(current, id, emoji));
 
@@ -48,7 +55,7 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
                 .then((response) => (response.ok ? (response.json() as Promise<{ reactions?: ReactionChip[] }>) : null))
                 .then((payload) => {
                     // A refusal says nothing to the reader: the guess goes away and the row stands.
-                    if (payload?.reactions !== undefined) {
+                    if (payload?.reactions !== undefined && sent.current.get(id) === ticket) {
                         const row = payload.reactions;
                         setAnswered((current) => new Map(current).set(id, row));
                     }

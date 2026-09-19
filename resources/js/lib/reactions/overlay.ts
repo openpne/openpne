@@ -69,7 +69,7 @@ export function chipsWithPending(chips: ReactionChip[], pending: PendingReaction
 /**
  * Applied both while the tap is out and again when the write says it landed, which is safe because
  * it is idempotent: it moves the viewer's own line only when the row disagrees with it. A delta
- * rather than the aggregate the write answered with, so changes the poll delivered meanwhile stand.
+ * rather than the aggregate the write answered with, so changes that arrived meanwhile stand.
  */
 export function applyReactionOutcome(chips: ReactionChip[], emoji: string, op: ReactionOp): ReactionChip[] {
     const held = chips.find((chip) => chip.emoji === emoji);

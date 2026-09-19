@@ -17,7 +17,6 @@ const CHIP_MINE = 'border-selected bg-selected/10 text-foreground';
 
 const CHIP_THEIRS = 'border-input text-muted-foreground';
 
-/** What a row needs to draw and change its reactions; a page wires one per row. */
 export interface RowReactions {
     chips: ReactionChip[];
     vocabulary: string[];

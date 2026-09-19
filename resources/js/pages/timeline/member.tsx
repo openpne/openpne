@@ -17,7 +17,6 @@ interface MemberProps extends PageProps {
     posts: TimelineStream;
     streamGeneration: string;
     headUrl: string | null;
-    /** What this site offers, as the page was rendered with it. */
     reactionVocabulary: string[];
 }
 

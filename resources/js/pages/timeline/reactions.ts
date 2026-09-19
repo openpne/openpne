@@ -8,7 +8,6 @@ export const timelineReactionEndpoints: ReactionEndpoints = {
     reactors: (id) => `/timeline/${id}/reactions`,
 };
 
-/** The row's controls from the page's one hook, so every card and reply is wired the same way. */
 export function rowReactions(
     post: TimelinePostEntry,
     vocabulary: string[],

@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import TimelineShow from './show';
@@ -47,8 +47,8 @@ const post: TimelinePostEntry = {
     reactions: [],
 };
 
-function renderShow(canPost: boolean) {
-    inertia.page = { component: 'timeline/show', url: '/timeline/7', props: { post, replies: [], viewerId: 1, canPost, reactionVocabulary: ['\u{1F44D}'] } };
+function renderShow(canPost: boolean, over: Record<string, unknown> = {}) {
+    inertia.page = { component: 'timeline/show', url: '/timeline/7', props: { post, replies: [], viewerId: 1, canPost, reactionVocabulary: ['\u{1F44D}'], renderGeneration: 'g1', ...over } };
 
     return renderWithProviders(<TimelineShow />);
 }
@@ -61,4 +61,25 @@ test('the reply form follows the posting switch', () => {
     renderShow(false);
     expect(screen.queryByLabelText('Reply')).toBeNull();
     expect(screen.getByText('already here')).toBeTruthy();
+});
+
+test('a fresh render of the same thread shows the rows it was rendered with, not an earlier answer', async () => {
+    // The page keeps its state across a reply post (Inertia preserves it on POST), so only a value
+    // the server changes per render can tell a fresh render from a re-render of the same post.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ reactions: [{ emoji: '\u{1F44D}', count: 1, mine: true }] }) } as Response)));
+    const { rerender } = renderShow(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a reaction' }));
+    await act(async () => {
+        const thumb = screen.getAllByRole('button', { pressed: false }).find((b) => b.textContent === '\u{1F44D}');
+        if (thumb === undefined) throw new Error('the picker did not offer the thumbs up');
+        fireEvent.click(thumb);
+    });
+    expect(screen.getByRole('button', { pressed: true }).textContent).toContain('1');
+
+    inertia.page = { ...inertia.page, props: { ...inertia.page.props, post: { ...post, reactions: [{ emoji: '\u{1F44D}', count: 2, mine: true }] }, renderGeneration: 'g2' } };
+    rerender(<TimelineShow />);
+
+    expect(screen.getByRole('button', { pressed: true }).textContent).toContain('2');
+    vi.unstubAllGlobals();
 });
