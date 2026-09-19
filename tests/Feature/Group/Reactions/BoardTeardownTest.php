@@ -214,6 +214,34 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    /** The room is paged in its own index's order, (created_at, id) under the group, so no page sorts or scans past the room. */
+    public function test_the_talk_sweep_pages_the_messages_in_the_room_index_order(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $at = now();
+        DB::table('group_messages')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => "m{$i}", 'created_at' => $at, 'updated_at' => $at,
+        ], range(1, 1001)));
+        $messageIds = DB::table('group_messages')->where('group_id', $group->getKey())->pluck('id')->all();
+        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+            'reactable_type' => 'groupMessage', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
+        ], $messageIds));
+        $pages = [];
+        DB::listen(function ($query) use (&$pages): void {
+            if (preg_match('/from [`"]group_messages[`"] where .*order by [`"]created_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
+                $pages[] = $query->bindings;
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        // Two pages: the second starts after the first page's last (created_at, id), all one timestamp here.
+        $this->assertCount(2, $pages);
+        $this->assertSame($messageIds[999], $pages[1][3], 'the cursor is the last row of the page');
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_a_failed_teardown_leaves_the_boards_reactions_and_bytes(): void
     {
         $group = $this->group();
