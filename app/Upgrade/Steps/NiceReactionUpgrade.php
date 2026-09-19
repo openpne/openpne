@@ -75,6 +75,6 @@ abstract class NiceReactionUpgrade extends UpgradeStep
     /** Compared as bytes: opLikePlugin's own reads do, since a 0.9-era source may hold the column case-insensitive and `D` and `d` are two tables. */
     public static function onTable(string $letter): string
     {
-        return "`nice`.`foreign_table` = BINARY '{$letter}'";
+        return "`nice`.`foreign_table` = CAST('{$letter}' AS BINARY)";
     }
 }

@@ -146,7 +146,11 @@ more than one owning row points at, across every `FileUpgrade::ownedFileReferenc
 never made the file columns unique, and a file with two owners would be read under one owner's
 audience from the other's page, so it is an ERROR. `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
-ERROR for the same reason.
+ERROR for the same reason. `NicePreflight` counts a member's second like on one migrated activity as
+an ERROR for the same reason again (opLikePlugin's unique index came after 0.9), and the likes the
+transfer leaves behind — on activities not migrated, on the other four kinds of record, and under a
+letter the plugin never writes — as WARNs; it runs only when `nice` is present, since the plugin is
+optional.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. A translation whose template is empty is neither carried

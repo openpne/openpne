@@ -105,6 +105,10 @@ class NiceReactionUpgradeSqlTest extends TestCase
         DB::statement('ALTER TABLE `nice` DROP INDEX `member_id_foreign_table_foreign_id_UNIQUE_idx`');
         $this->seedNice(1, $member->id, 'A', 1);
         $this->seedNice(2, $member->id, 'A', 1);
+        $this->seedActivity(9, $member->id, ['foreign_table' => 'diary']); // not migrated: its twins are no abort
+        $this->seedNice(3, $member->id, 'A', 9);
+        $this->seedNice(4, $member->id, 'A', 9);
+        $this->seedNice(5, $member->id, 'x', 1); // a letter opLikePlugin never writes
 
         $lines = [];
         $ran = (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
@@ -112,7 +116,8 @@ class NiceReactionUpgradeSqlTest extends TestCase
         });
 
         $this->assertFalse($ran);
-        $this->assertContains('ERROR '.NicePreflight::duplicateLikeMessage(1, [1]), $lines);
+        $this->assertContains('ERROR '.NicePreflight::duplicateLikeMessage(1, [2]), $lines);
+        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, 5), $lines);
         $this->assertDatabaseCount('reactions', 0);
     }
 

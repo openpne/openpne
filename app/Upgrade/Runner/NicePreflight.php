@@ -29,7 +29,9 @@ final class NicePreflight
      */
     public function inspect(string $sourcePrefix, ?string $sourceDatabase, array $readTables): ActivityPreflightReport
     {
-        if (array_diff(['nice', 'activity_data', 'community'], $readTables) !== []) {
+        // The activity and community tables are core, and the refused member scope already required
+        // them of the structural check; only the plugin's own table can be missing.
+        if (! in_array('nice', $readTables, true)) {
             return new ActivityPreflightReport([], []);
         }
         $this->prefix = $sourcePrefix;
@@ -42,7 +44,7 @@ final class NicePreflight
         // the OpenPNE 4 unique key would fail the INSERT on the second row mid-run.
         $migrated = NiceReactionUpgrade::onActivity(ActivityThread::migrated('activity_data'));
         $twins = DB::select($this->resolve(
-            'SELECT MIN(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice').' AS `nice` WHERE '.$migrated
+            'SELECT MAX(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice').' AS `nice` WHERE '.$migrated
             .' GROUP BY `nice`.`member_id`, `nice`.`foreign_id` HAVING COUNT(*) > 1 ORDER BY `id`',
         ));
         if ($twins !== []) {
@@ -61,13 +63,24 @@ final class NicePreflight
             }
         }
 
+        // opLikePlugin's API stores any one letter, so a third-party plugin's likes are counted too.
+        $known = implode(' OR ', array_map(static fn (string $letter): string => NiceReactionUpgrade::onTable($letter), ['A', ...array_keys(self::OTHER_TABLES)]));
+        foreach (DB::select($this->resolve('SELECT `nice`.`foreign_table` AS `letter`, COUNT(*) AS `rows`, MIN(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice')." AS `nice` WHERE NOT ({$known}) GROUP BY `nice`.`foreign_table` ORDER BY `nice`.`foreign_table`")) as $row) {
+            $warnings[] = self::unknownTableLikeMessage((string) $row->letter, (int) $row->rows, (int) $row->id);
+        }
+
         return new ActivityPreflightReport($errors, $warnings);
     }
 
-    /** @param  list<int>  $ids */
+    /** @param  list<int>  $ids  the later row of each pair */
     public static function duplicateLikeMessage(int $pairs, array $ids): string
     {
-        return "source `nice` has {$pairs} member/activity pair(s) liked more than once (e.g. ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Delete the duplicates in the source, then re-run.';
+        return "source `nice` has {$pairs} member/activity pair(s) liked more than once (e.g. the later rows, ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Delete the later row of each pair in the source, then re-run.';
+    }
+
+    public static function unknownTableLikeMessage(string $letter, int $rows, int $firstId): string
+    {
+        return "source `nice` has {$rows} like(s) on foreign_table '{$letter}', which opLikePlugin itself does not write (from id {$firstId}) — a third-party plugin or a source customisation. Not migrated.";
     }
 
     /** @param  list<int>  $ids */
