@@ -17,9 +17,10 @@ use App\Models\TimelinePostTag;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the row's chips, passed rather than read off the model so a page costs one grouped read
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, reactions: list<array{emoji: string, count: int, mine: bool}>}
      */
-    public static function entry(TimelinePost $post, ?Member $viewer): array
+    public static function entry(TimelinePost $post, ?Member $viewer, array $reactions): array
     {
         $images = $post->images->map([self::class, 'image'])->all();
 
@@ -49,6 +50,7 @@ class TimelinePostSerializer
             'author' => MemberRefSerializer::ref($post->member),
             'linkCard' => LinkCardSerializer::card($post, $viewer),
             'createdAt' => $post->created_at->toIso8601String(),
+            'reactions' => $reactions,
         ];
     }
 

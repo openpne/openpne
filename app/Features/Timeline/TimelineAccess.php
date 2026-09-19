@@ -34,4 +34,12 @@ final class TimelineAccess
 
         return $post->visibility->value <= Visibility::clearanceFor($viewer, $owner)->value;
     }
+
+    /** A thread is one audience, judged at its root: a reply's own author is not consulted. */
+    public static function canViewThread(Member $viewer, TimelinePost $post): bool
+    {
+        $root = $post->in_reply_to_id === null ? $post : $post->parent;
+
+        return $root !== null && self::canView($viewer, $root);
+    }
 }

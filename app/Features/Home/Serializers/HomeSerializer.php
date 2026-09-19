@@ -29,6 +29,7 @@ class HomeSerializer
      * @param  array{friendRequests: int, unreadMessages: int}  $unread  shell attention counts
      * @param  Collection<int, Group>  $pendingApprovals  admin groups with applicants_count
      * @param  Collection<int, TalkRoom>  $talkRooms  the viewer's conversations, most recent first
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $timelineReactions  chips keyed by post id
      * @return array{announcements: array, talkRooms: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
@@ -40,6 +41,7 @@ class HomeSerializer
         array $unread,
         Collection $pendingApprovals,
         Collection $talkRooms,
+        array $timelineReactions,
     ): array {
         return [
             'announcements' => [
@@ -55,7 +57,7 @@ class HomeSerializer
             // so there is no pager here to feed.
             'talkRooms' => $talkRooms->map([TalkRoomSerializer::class, 'room'])->all(),
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
-            'timeline' => $timeline->map(fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer))->all(),
+            'timeline' => $timeline->map(fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer, $timelineReactions[$post->getKey()] ?? []))->all(),
             'groupActivity' => $groupActivity->map([self::class, 'activityEntry'])->all(),
             'myDiaries' => $myDiaries->map([DiarySerializer::class, 'summary'])->all(),
         ];

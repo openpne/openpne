@@ -5,10 +5,10 @@ namespace App\Features\GroupTalk;
 use App\Features\GroupTalk\Actions\AddMessageReaction;
 use App\Features\GroupTalk\Actions\RemoveMessageReaction;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
-use App\Features\GroupTalk\Queries\MessageReactionAggregates;
-use App\Features\GroupTalk\Queries\MessageReactors;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Features\Reactions\Queries\Reactors;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\GroupTalk\StoreReactionRequest;
+use App\Http\Requests\Reactions\StoreReactionRequest;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
  */
 class GroupTalkReactionController extends Controller
 {
-    public function store(StoreReactionRequest $request, Group $group, GroupMessage $message, AddMessageReaction $action, MessageReactionAggregates $reactions): JsonResponse
+    public function store(StoreReactionRequest $request, Group $group, GroupMessage $message, AddMessageReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeWrite($group, $message);
 
@@ -37,7 +37,7 @@ class GroupTalkReactionController extends Controller
      * The emoji is checked for shape only, never against the vocabulary: a member holds reactions
      * from whatever the site offered at the time, and narrowing it must not strand them.
      */
-    public function delete(Request $request, Group $group, GroupMessage $message, RemoveMessageReaction $action, MessageReactionAggregates $reactions): JsonResponse
+    public function delete(Request $request, Group $group, GroupMessage $message, RemoveMessageReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeWrite($group, $message);
         $emoji = (string) $request->validate(['emoji' => ['required', 'string', 'max:32']])['emoji'];
@@ -51,7 +51,7 @@ class GroupTalkReactionController extends Controller
         return $this->state($message, $reactions);
     }
 
-    public function index(Group $group, GroupMessage $message, MessageReactors $reactors): JsonResponse
+    public function index(Group $group, GroupMessage $message, Reactors $reactors): JsonResponse
     {
         abort_unless($message->group_id === $group->getKey(), 404);
         abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
@@ -65,7 +65,7 @@ class GroupTalkReactionController extends Controller
         abort_unless(GroupTalkAccess::canPost($group, $this->viewer()), 404);
     }
 
-    private function state(GroupMessage $message, MessageReactionAggregates $reactions): JsonResponse
+    private function state(GroupMessage $message, ReactionAggregates $reactions): JsonResponse
     {
         return response()->json(['reactions' => $reactions->of($this->viewer(), $message)]);
     }

@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLinkCard;
+use App\Models\Concerns\HasReactions;
 use Database\Factories\GroupMessageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * A message is never edited, so HasLinkCard's invalidation half has no call site here.
@@ -21,6 +21,7 @@ class GroupMessage extends Model
     use HasFactory;
 
     use HasLinkCard;
+    use HasReactions;
 
     protected function casts(): array
     {
@@ -52,14 +53,5 @@ class GroupMessage extends Model
     public function images(): HasMany
     {
         return $this->hasMany(GroupMessageImage::class)->orderBy('number');
-    }
-
-    /**
-     * @return MorphMany<Reaction, $this> oldest first: the reactor list is capped, so this order
-     *                                    decides which reactors it shows
-     */
-    public function reactions(): MorphMany
-    {
-        return $this->morphMany(Reaction::class, 'reactable')->orderBy('created_at')->orderBy('id');
     }
 }

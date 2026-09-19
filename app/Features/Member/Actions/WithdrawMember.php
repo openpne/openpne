@@ -7,9 +7,11 @@ use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\GroupRole;
 use App\Features\Member\Events\MemberWithdrawn;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
+use App\Features\Timeline\TimelineThreadLock;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Models\Reaction;
 use App\Models\TimelinePost;
 use App\Support\SecurityLog;
 use App\Support\ViewerRelations;
@@ -140,6 +142,8 @@ class WithdrawMember
                     return false;
                 }
 
+                $this->sweepTimelineReactions($id);
+
                 $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
 
                 return true;
@@ -154,6 +158,38 @@ class WithdrawMember
         }
 
         throw new RuntimeException("Member {$id} still held memberships or AI accounts after the withdrawal drain cap.");
+    }
+
+    /**
+     * Re-enumerated under the member row's lock, not from the earlier drain: a post committed from
+     * another device in between goes with the member row's cascade, which reaches no reaction. The
+     * thread is re-read under its lock with a locking read: a consistent read would show the
+     * transaction's snapshot, taken before the thread was held (docs/internals/timeline.md, "Reactions").
+     */
+    private function sweepTimelineReactions(int $memberId): void
+    {
+        $rows = TimelinePost::query()
+            ->where('member_id', $memberId)
+            ->orderByRaw('coalesce(in_reply_to_id, id)')
+            ->orderBy('id')
+            ->get(['id', 'in_reply_to_id']);
+
+        foreach ($rows as $row) {
+            // The member's own root exclusively, as the cascade will take it; another member's root
+            // shared, so an in-flight reply holding it through its foreign key is not waited on.
+            if (! TimelineThreadLock::hold($row, shared: $row->in_reply_to_id !== null)) {
+                continue;
+            }
+
+            $ids = $row->in_reply_to_id === null
+                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()]
+                : [(int) $row->getKey()];
+
+            Reaction::query()
+                ->where('reactable_type', $row->getMorphClass())
+                ->whereIn('reactable_id', $ids)
+                ->delete();
+        }
     }
 
     /**
