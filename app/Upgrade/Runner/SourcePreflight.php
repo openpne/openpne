@@ -428,7 +428,7 @@ final class SourcePreflight
      */
     private static function availableBranches(array $branches, array $available): string
     {
-        $kept = $branches;
+        $kept = array_filter($branches, static fn (string $sql): bool => array_diff(SourceRef::tablesIn($sql), $available) === []);
 
         return $kept === [] ? '1 = 0' : '('.implode(') OR (', $kept).')';
     }
