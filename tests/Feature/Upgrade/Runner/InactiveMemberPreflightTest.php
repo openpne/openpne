@@ -16,6 +16,7 @@ use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
 use App\Upgrade\Steps\GroupMessageReactionUpgrade;
 use App\Upgrade\Steps\GroupMessageUpgrade;
+use App\Upgrade\Steps\GroupTopicCommentReactionUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
@@ -168,6 +169,30 @@ class InactiveMemberPreflightTest extends TestCase
         $this->createSources('diary', 'diary_comment');
         $this->seedDiary(1, memberId: 1);
         [$ok, $output] = $this->runSteps([...$steps, new DiaryUpgrade], new RunOptions(forceRestart: true));
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
+    }
+
+    public function test_a_like_by_an_inactive_member_on_a_topic_comment_aborts_only_where_the_board_plugin_is_installed(): void
+    {
+        $this->createSources('member', 'activity_data', 'activity_image', 'community', 'nice');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        Member::factory()->create(['id' => 1]);
+        $this->seedActivity(10, memberId: 1);
+        DB::table('nice')->insert(['id' => 31, 'member_id' => 2, 'foreign_table' => 't', 'foreign_id' => 1,
+            'foreign_hash' => md5('t,1'), 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        $steps = [new TimelinePostUpgrade, new TimelineReactionUpgrade, new GroupTopicCommentReactionUpgrade];
+
+        [$ok, $output] = $this->runSteps($steps);
+        $this->assertTrue($ok, $output);
+
+        // Both board comment tables the like scope names, or the plugin group reads as partial.
+        $this->createSources('community_topic_comment', 'community_event_comment');
+        DB::table('community_topic_comment')->insert(['id' => 1, 'community_topic_id' => 1, 'member_id' => 1, 'number' => 1, 'body' => 'B',
+            'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
+        [$ok, $output] = $this->runSteps($steps, new RunOptions(forceRestart: true));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);

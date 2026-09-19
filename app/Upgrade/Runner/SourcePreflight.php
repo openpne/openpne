@@ -419,7 +419,6 @@ final class SourcePreflight
         return null;
     }
 
-    /** @param  list<string>  $readTables */
     /**
      * Only the branches whose tables the source has: the count runs before the absent optional tables are materialised.
      *
@@ -433,6 +432,7 @@ final class SourcePreflight
         return $kept === [] ? '1 = 0' : '('.implode(') OR (', $kept).')';
     }
 
+    /** @param  list<string>  $readTables */
     private function readsColumn(array $readTables, string $table, string $column, string $prefix, ?string $database): bool
     {
         return in_array($table, $readTables, true)
