@@ -52,7 +52,8 @@ member — and a new request silently replaces a different pending nominee.
 touches — File bytes and reactions — across four kinds of content, in one transaction:
 
 1. The group row is X-locked, then every topic and event row under it, in id order.
-2. Under those locks the comment ids are read with locking reads, the image Files of the talk, the
+2. Under those locks the comment ids are read (plain reads: the parents' locks already exclude a new
+   comment, and a shared lock would only be upgraded by the cascade), the image Files of the talk, the
    topics, the events and their comments are collected, the reactions on the talk messages and on
    the board comments are deleted (`reactable_id` is polymorphic and carries no foreign key), and
    the group's own top-image File is read — `groups.file_id` is a mutable self-column, so a stale
@@ -129,8 +130,8 @@ A topic's or an event's comment takes the emoji reactions of [reactions.md](reac
 The topic and event bodies themselves take none. Two things are the boards' own:
 
 - **Reacting is the group's write permission** (`canComment`: membership), as commenting is; the
-  reactor list is the board's read permission. A non-member reading an open board sees the chips
-  as counts, with no way to change them.
+  reactor list is the board's read permission on the route, though the page offers it to members
+  only. A non-member reading an open board sees the chips as counts, with no way to change them.
 - **The lock is the topic or event row**
   ([`BoardCommentLock`](../../app/Features/Group/BoardCommentLock.php)): the parent exclusively,
   then the comment re-read under it, the order a comment delete already took. A withdrawing

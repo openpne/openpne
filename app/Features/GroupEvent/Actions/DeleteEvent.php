@@ -37,7 +37,7 @@ class DeleteEvent
                 return [];
             }
 
-            $commentIds = $locked->comments()->sharedLock()->pluck('id')->all();
+            $commentIds = $locked->comments()->pluck('id')->all();
 
             Reaction::query()
                 ->where('reactable_type', (new GroupEventComment)->getMorphClass())
