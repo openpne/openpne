@@ -14,6 +14,8 @@ use App\Features\GroupEvent\Queries\ShowEvent;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -22,8 +24,10 @@ use App\Http\Requests\GroupEvent\UpdateEventRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use App\Support\Stream\StreamProps;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,7 +69,7 @@ class GroupEventController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $event, ShowEvent $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse
+    public function show(Request $request, int $event, ShowEvent $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows, ReactionAggregates $reactions): View|InertiaResponse
     {
         $found = $query($event);
         abort_if($found === null, 404);
@@ -95,7 +99,7 @@ class GroupEventController extends Controller
                     'isFull' => $found->isFull(),
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards, $reactions) {
                 $found->loadMissing('member.avatar.file');
                 $thread = GroupEventCommentThread::paginate($found, $request->query('order'), $request->query('page'));
                 $linkCards->ensureAll($thread->comments);
@@ -103,8 +107,10 @@ class GroupEventController extends Controller
                 return Inertia::render('group/event/show', [
                     'group' => GroupSerializer::summary($found->group),
                     'event' => GroupEventSerializer::detail($found, $viewer),
-                    'thread' => GroupEventSerializer::thread($thread, $viewer),
+                    'thread' => GroupEventSerializer::thread($thread, $viewer, $reactions($viewer, GroupEventComment::class, $thread->comments->modelKeys())),
                     'canComment' => GroupEventAccess::canComment($found, $viewer),
+                    'reactionVocabulary' => ReactionVocabulary::all(),
+                    'renderGeneration' => StreamProps::generation(),
                     'canEdit' => GroupEventAccess::canEditEvent($found, $viewer),
                     // RSVP button state: OpenPNE 3 shows participate/cancel only while the roster is
                     // open, keyed on the viewer's membership and the capacity/time guards.

@@ -7,7 +7,10 @@ use App\Features\GroupEvent\Exceptions\GroupEventActionFailure;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Models\File;
 use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\Member;
+use App\Models\Reaction;
+use Illuminate\Support\Facades\DB;
 
 class DeleteEvent
 {
@@ -20,31 +23,40 @@ class DeleteEvent
         $this->purge($event);
     }
 
-    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
+    /**
+     * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
+     * The cascade drops the comments and the `*_image` link rows but never the File bytes nor the
+     * comments' reactions, so both are collected under the event lock; the reactions go inside the
+     * transaction and the Files after it.
+     */
     public function purge(GroupEvent $event): void
     {
-        // Collect every owned image File — the event's and its comments' — before the row is gone:
-        // the cascade drops the *_image link rows but never the bytes, which a disk deletes for good.
-        $files = $this->ownedImageFiles($event);
+        $files = DB::transaction(function () use ($event): array {
+            $locked = GroupEvent::whereKey($event->getKey())->lockForUpdate()->first();
+            if ($locked === null) {
+                return [];
+            }
 
-        $event->delete(); // FK cascade removes comments, participant rows and all *_image link rows
+            $commentIds = $locked->comments()->sharedLock()->pluck('id')->all();
+
+            Reaction::query()
+                ->where('reactable_type', (new GroupEventComment)->getMorphClass())
+                ->whereIn('reactable_id', $commentIds)
+                ->delete();
+
+            $files = File::query()
+                ->whereIn('id', DB::table('group_event_images')->where('post_id', $locked->getKey())->select('file_id'))
+                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $commentIds)->select('file_id'))
+                ->get()
+                ->all();
+
+            $locked->delete();
+
+            return $files;
+        });
 
         foreach ($files as $file) {
             $file->delete();
         }
-    }
-
-    /** @return array<int, File> */
-    private function ownedImageFiles(GroupEvent $event): array
-    {
-        $files = $event->images()->with('file')->get()->pluck('file')->all();
-
-        foreach ($event->comments()->with('images.file')->get() as $comment) {
-            foreach ($comment->images as $image) {
-                $files[] = $image->file;
-            }
-        }
-
-        return array_values(array_filter($files));
     }
 }

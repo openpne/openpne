@@ -55,6 +55,10 @@ class WriteThrottleRoutesTest extends TestCase
             'diary.reactions.delete' => ['diary.reactions.delete', 'throttle:reaction'],
             'diary.comment.reactions.store' => ['diary.comment.reactions.store', 'throttle:reaction'],
             'diary.comment.reactions.delete' => ['diary.comment.reactions.delete', 'throttle:reaction'],
+            'group.topics.reactions.store' => ['group.topics.reactions.store', 'throttle:reaction'],
+            'group.topics.reactions.delete' => ['group.topics.reactions.delete', 'throttle:reaction'],
+            'group.events.reactions.store' => ['group.events.reactions.store', 'throttle:reaction'],
+            'group.events.reactions.delete' => ['group.events.reactions.delete', 'throttle:reaction'],
         ];
     }
 

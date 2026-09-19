@@ -5,22 +5,19 @@ namespace App\Features\Group\Actions;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
-use App\Features\GroupEvent\Actions\DeleteEvent;
-use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMessage;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteGroup
 {
-    public function __construct(
-        private readonly DeleteTopic $deleteTopic,
-        private readonly DeleteEvent $deleteEvent,
-    ) {}
-
     public function __invoke(Member $actor, Group $group): void
     {
         if (! GroupMembership::isAdmin($group, $actor)) {
@@ -30,51 +27,55 @@ class DeleteGroup
         $this->purge($group);
     }
 
-    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
+    /**
+     * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
+     * Every File and reaction under the group is collected under the group row's lock and, for the
+     * boards, under each topic's and event's, and the bytes are purged after the commit
+     * (docs/internals/group-boards.md, "Tearing a group down").
+     */
     public function purge(Group $group): void
     {
-        // Each nested topic and event goes through its own purge first: the group cascade drops
-        // their rows but never their File bytes.
-        foreach ($group->topics()->get() as $topic) {
-            $this->deleteTopic->purge($topic);
-        }
-
-        foreach ($group->events()->get() as $event) {
-            $this->deleteEvent->purge($event);
-        }
-
-        // The talk sweep and the group's own image are read under this lock — talk is written
-        // concurrently, and file_id is a mutable self-column — and the bytes are purged after the
-        // commit (docs/internals/group-boards.md, "Tearing a group down").
-        [$image, $talkImages] = DB::transaction(function () use ($group): array {
+        $files = DB::transaction(function () use ($group): array {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->first();
             if ($locked === null) {
-                return [null, new Collection]; // already deleted by a concurrent request
+                return []; // already deleted by a concurrent request
             }
 
-            $talkImages = File::query()
+            $topicIds = GroupTopic::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
+            $eventIds = GroupEvent::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
+            $topicCommentIds = GroupTopicComment::query()->whereIn('group_topic_id', $topicIds)->sharedLock()->pluck('id')->all();
+            $eventCommentIds = GroupEventComment::query()->whereIn('group_event_id', $eventIds)->sharedLock()->pluck('id')->all();
+
+            $files = File::query()
                 ->whereIn('id', DB::table('group_message_images')
                     ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
                     ->where('group_messages.group_id', $locked->getKey())
                     ->select('group_message_images.file_id'))
-                ->get();
+                ->orWhereIn('id', DB::table('group_topic_images')->whereIn('post_id', $topicIds)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_topic_comment_images')->whereIn('post_id', $topicCommentIds)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_event_images')->whereIn('post_id', $eventIds)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $eventCommentIds)->select('file_id'))
+                ->get()
+                ->all();
 
-            // `reactions.reactable_id` is polymorphic and carries no foreign key, so the cascade
-            // would leave every reaction behind (docs/internals/group-talk.md, "Reclaiming the rows").
-            DB::table('reactions')
-                ->where('reactable_type', (new GroupMessage)->getMorphClass())
-                ->whereIn('reactable_id', DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'))
-                ->delete();
+            foreach ([
+                (new GroupMessage)->getMorphClass() => DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'),
+                (new GroupTopicComment)->getMorphClass() => $topicCommentIds,
+                (new GroupEventComment)->getMorphClass() => $eventCommentIds,
+            ] as $alias => $ids) {
+                Reaction::query()->where('reactable_type', $alias)->whereIn('reactable_id', $ids)->delete();
+            }
 
-            $file = $locked->image()->first();
+            // `groups.file_id` is a mutable self-column: read under the lock, or an edit that just
+            // replaced the image would orphan the new File.
+            $image = $locked->image()->first();
             $locked->delete();
 
-            return [$file, $talkImages];
+            return $image === null ? $files : [...$files, $image];
         });
 
-        $image?->delete();
-        foreach ($talkImages as $talkImage) {
-            $talkImage->delete();
+        foreach ($files as $file) {
+            $file->delete();
         }
     }
 }

@@ -25,6 +25,18 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    /** The gate answers before the payload is looked at, so a room the viewer may not speak in reads the same whether the emoji is valid or not. */
+    public function test_an_invalid_emoji_from_a_non_member_is_still_not_found(): void
+    {
+        $group = $this->group();
+        $message = $this->message($group);
+        $outsider = Member::factory()->create();
+
+        $this->react($outsider, $group, $message, 'not an emoji')->assertNotFound();
+        $this->unreact($outsider, $group, $message, str_repeat('x', 64))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_a_non_member_cannot_read_the_reactors_of_a_members_only_group(): void
     {
         $group = $this->group(TopicReadAccess::MembersOnly);
