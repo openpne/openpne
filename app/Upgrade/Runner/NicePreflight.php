@@ -16,7 +16,6 @@ final class NicePreflight
 {
     private const SAMPLE = 5;
 
-    /** What each record letter's likes are on, for the operator. */
     private const RECORD_NAMES = ['D' => 'diaries', 'd' => 'diary comments', 't' => 'topic comments', 'e' => 'event comments'];
 
     private string $prefix = '';
