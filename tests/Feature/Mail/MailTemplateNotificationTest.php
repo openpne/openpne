@@ -100,6 +100,26 @@ class MailTemplateNotificationTest extends TestCase
 
         $this->assertSame('Kaoru sent you a message', $mail->subject);
         $this->assertStringContainsString("See you at 10.\nBring the notes.", $this->renderMailText($mail));
+
+        app()->setLocale('ja');
+        $mail = (new DirectMessageReceivedNotification($sender, $message))->toMail($recipient);
+
+        $this->assertSame('Kaoru さんからメッセージが届きました', $mail->subject);
+        $this->assertStringContainsString("See you at 10.\nBring the notes.", $this->renderMailText($mail));
+    }
+
+    public function test_the_stock_message_mail_quotes_the_stand_in_for_a_picture_only_message(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create()->all();
+        $pictures = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => null, 'body' => '']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $pictures->getKey()]);
+
+        app()->setLocale('en');
+
+        $this->assertStringContainsString(
+            "sent you a message.\n\n".__('Image')."\n\n",
+            $this->renderMailText((new DirectMessageReceivedNotification($sender, $pictures))->toMail($recipient)),
+        );
     }
 
     public function test_the_stock_diary_mail_quotes_the_body_as_plain_text(): void
@@ -111,6 +131,9 @@ class MailTemplateNotificationTest extends TestCase
         $text = $this->renderMailText((new DiaryPostedNotification($diary, $author, ['mail']))->toMail($recipient));
 
         $this->assertStringContainsString("Lunch\n\nSoup today\n\nAnd bread", $text);
+
+        app()->setLocale('ja');
+        $this->assertStringContainsString("Lunch\n\nSoup today\n\nAnd bread", $this->renderMailText((new DiaryPostedNotification($diary, $author, ['mail']))->toMail($recipient)));
     }
 
     /** The stock OpenPNE 3 wording once linked to the message rather than quoting it; this wording quotes it in its own words. */

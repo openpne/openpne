@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Diary;
 
+use App\Features\Diary\DiaryAccess;
 use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
 use App\Models\Diary;
@@ -22,7 +23,9 @@ use Illuminate\Notifications\Notification;
  */
 class DiaryPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
-    use GatedByFeature;
+    use GatedByFeature {
+        shouldSend as private featureShouldSend;
+    }
     use Queueable;
     use RendersMailTemplate;
 
@@ -36,6 +39,13 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
     public static function feature(): Feature
     {
         return Feature::Diary;
+    }
+
+    /** SerializesModels hands this a fresh row, so a diary narrowed while queued is not mailed out. */
+    public function shouldSend(Member $notifiable, string $channel): bool
+    {
+        return $this->featureShouldSend($notifiable, $channel)
+            && DiaryAccess::canView($notifiable, $this->diary);
     }
 
     /** @return list<string> */

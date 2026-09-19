@@ -9,7 +9,8 @@ namespace App\Mail\Template;
  * byte-exact; subjects are single lines kept here, null only for the non-sendable signature. A template
  * with an OpenPNE 3 origin carries that project's `sample:` text verbatim
  * (`OpenPNE3/lib/config/config/mail_template.yml`), except that `diary-posted` and
- * `direct-message-received` quote the content the source wording only linked to.
+ * `direct-message-received` quote the content the source wording only linked to, and the latter's
+ * subject names the sender.
  */
 final class MailTemplateDefaults
 {
