@@ -22,13 +22,13 @@ final class BoardSweep
      */
     public static function holdBoards(int $groupId): void
     {
-        DB::table('group_topics')->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->count();
-        DB::table('group_events')->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->count();
+        DB::table('group_topics')->where('group_id', $groupId)->lockForUpdate()->count();
+        DB::table('group_events')->where('group_id', $groupId)->lockForUpdate()->count();
     }
 
     /**
-     * Call inside the teardown's transaction after its parent locks and before any consistent read:
-     * the snapshot is then taken under the locks, so these plain reads see every committed row.
+     * Call inside the teardown's transaction, with the parent rows locked before its first consistent
+     * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
      */
     public static function reactions(string $alias, Builder $contentIds): void
     {

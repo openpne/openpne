@@ -178,7 +178,7 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertSame([1000, count($rows) - 1000], $deletes);
+        $this->assertSame(array_map('count', array_chunk(range(1, count($rows)), 1000)), $deletes);
         $this->assertDatabaseCount('reactions', 0);
     }
 
