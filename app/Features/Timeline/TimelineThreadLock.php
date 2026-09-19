@@ -7,9 +7,9 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Every write that touches a thread's reactions takes this first: the root row exclusively, then
- * the reply when the target is one (docs/internals/timeline.md, "Reactions"). Both are locking
- * reads, so under REPEATABLE READ they see the latest committed row rather than the snapshot.
+ * Every write that touches a thread's reactions takes this first: the root row, then the reply when
+ * the target is one, exclusively unless the caller asks for shared (docs/internals/timeline.md, "Reactions").
+ * Both are locking reads, so under REPEATABLE READ they see the latest committed row rather than the snapshot.
  */
 final class TimelineThreadLock
 {
