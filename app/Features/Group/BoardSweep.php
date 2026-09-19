@@ -29,7 +29,7 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * One parent at a time, so a page is a range of that parent's comments rather than a sort of the group's.
+     * One parent at a time, so a page is a range of that parent's own index rather than a sort of the group's.
      */
     public static function comments(string $alias, string $table, string $parentColumn, Builder $parentIds): void
     {
@@ -38,35 +38,50 @@ final class BoardSweep
         }
     }
 
+    /** Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the tie. */
     public static function commentsOf(string $alias, string $table, string $parentColumn, int $parentId): void
     {
-        $after = 0;
+        $cursor = null;
         do {
-            $page = DB::table($table)->where($parentColumn, $parentId)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
-            if ($page === []) {
-                break;
+            $query = DB::table($table)->where($parentColumn, $parentId);
+            if ($cursor !== null) {
+                $query->whereRowValues(['number', 'id'], '>', $cursor);
             }
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page));
-            $after = (int) end($page);
-        } while (count($page) === self::CHUNK);
-    }
-
-    /** The messages are paged in their index's own order, (created_at, id) under the group, so no page sorts or skips the room. */
-    public static function messages(string $alias, int $groupId): void
-    {
-        [$at, $id] = ['1970-01-01 00:00:00', 0];
-        do {
-            $page = DB::table('group_messages')
-                ->where('group_id', $groupId)
-                ->where(fn (Builder $q) => $q->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id)))
-                ->orderBy('created_at')->orderBy('id')
-                ->limit(self::CHUNK)
-                ->get(['id', 'created_at']);
+            $page = $query->orderBy('number')->orderBy('id')->limit(self::CHUNK)->get(['id', 'number']);
             if ($page->isEmpty()) {
                 break;
             }
             self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
-            [$at, $id] = [(string) $page->last()->created_at, (int) $page->last()->id];
+            $cursor = [(int) $page->last()->number, (int) $page->last()->id];
+        } while ($page->count() === self::CHUNK);
+    }
+
+    /**
+     * Paged in the room index's own order, (created_at, id) under the group. The first page carries no
+     * cursor and a null timestamp has its own arm, since a keyset would otherwise never reach a row
+     * that sorts before its start — a null or zero date the transfer copied as it was.
+     */
+    public static function messages(string $alias, int $groupId): void
+    {
+        $first = true;
+        [$at, $id] = [null, 0];
+        do {
+            $query = DB::table('group_messages')->where('group_id', $groupId);
+            if (! $first) {
+                $query->where(function (Builder $after) use ($at, $id): void {
+                    if ($at === null) {
+                        $after->where(fn (Builder $nulls) => $nulls->whereNull('created_at')->where('id', '>', $id))->orWhereNotNull('created_at');
+                    } else {
+                        $after->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id));
+                    }
+                });
+            }
+            $page = $query->orderBy('created_at')->orderBy('id')->limit(self::CHUNK)->get(['id', 'created_at']);
+            if ($page->isEmpty()) {
+                break;
+            }
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
+            [$at, $id, $first] = [$page->last()->created_at === null ? null : (string) $page->last()->created_at, (int) $page->last()->id, false];
         } while ($page->count() === self::CHUNK);
     }
 
