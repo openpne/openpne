@@ -3,11 +3,14 @@
 namespace App\Features\Member\Actions;
 
 use App\Features\Diary\Actions\DeleteDiary;
+use App\Features\Diary\DiaryThreadLock;
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\GroupRole;
 use App\Features\Member\Events\MemberWithdrawn;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\TimelineThreadLock;
+use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -143,6 +146,7 @@ class WithdrawMember
                 }
 
                 $this->sweepTimelineReactions($id);
+                $this->sweepDiaryReactions($id);
 
                 $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
 
@@ -188,6 +192,30 @@ class WithdrawMember
             Reaction::query()
                 ->where('reactable_type', $row->getMorphClass())
                 ->whereIn('reactable_id', $ids)
+                ->delete();
+        }
+    }
+
+    /**
+     * The diaries too: a comment the member left on another's diary stays with a null author, so its
+     * reactions stay with it (docs/internals/diary.md, "Reactions").
+     */
+    private function sweepDiaryReactions(int $memberId): void
+    {
+        $diaries = Diary::query()->where('member_id', $memberId)->orderBy('id')->get(['id']);
+
+        foreach ($diaries as $diary) {
+            if (! DiaryThreadLock::hold($diary)) {
+                continue;
+            }
+
+            Reaction::query()
+                ->where('reactable_type', $diary->getMorphClass())
+                ->where('reactable_id', $diary->getKey())
+                ->delete();
+            Reaction::query()
+                ->where('reactable_type', (new DiaryComment)->getMorphClass())
+                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all())
                 ->delete();
         }
     }

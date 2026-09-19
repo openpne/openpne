@@ -1,9 +1,9 @@
 # Reactions
 
 An emoji a member puts on a piece of content, in the one `reactions` table
-([`app/Features/Reactions`](../../app/Features/Reactions)). Group talk was the first surface and the
-timeline the second; each surface owns its screens, its routes and its authorization, and shares
-everything below.
+([`app/Features/Reactions`](../../app/Features/Reactions)). Group talk was the first surface, the
+timeline the second and the diary the third; each surface owns its screens, its routes and its
+authorization, and shares everything below.
 
 ## One table, no foreign key to the content
 
@@ -58,6 +58,7 @@ their own content mid-withdrawal would otherwise close a cycle. The one order is
 |---|---|---|
 | group talk ([group-talk.md](group-talk.md#one-lock-order)) | group row → message | bumps the group's reaction version |
 | timeline ([timeline.md](timeline.md#reactions)) | thread root → reply (a root is its own container) | nothing: feeds do not poll |
+| diary ([diary.md](diary.md#reactions)) | diary row → comment (a diary is its own container) | nothing: the page does not poll |
 
 A surface's own delete and teardown take the same order before they sweep, which is what keeps the
 paths from deadlocking as well as from racing. The single order is a property of the code; the
@@ -71,7 +72,8 @@ The chip row is counted in SQL and never hydrated
 read serves a whole page, and a write answers from the same query. The chips are a handful of
 numbers, but the rows behind them are one per reactor per emoji. Groups are ordered by their earliest
 row, so the chips read in the order the emoji first appeared. Chips are **passed** into a serializer,
-never read off the model, so a page cannot cost a query per row by accident.
+never read off the model, so a page cannot cost a query per row by accident. The viewer may be
+absent — a guest on a web-public diary — and then no chip is `mine`.
 
 Who reacted is exactly that part, so the names come from `GET .../reactions` when a dialog is opened,
 and nowhere else. That read is bounded too
@@ -84,8 +86,8 @@ and no more — the list is read by a person.
 Three paths take reactions away, and only the last is a cascade:
 
 - the content's own delete, sweeping under the surface's lock in the same transaction;
-- the container's teardown (a group's purge, a member's withdrawal for the posts and replies that go
-  with the member row), likewise under the lock;
+- the container's teardown (a group's purge, a member's withdrawal for the posts, replies and
+  diaries that go with the member row), likewise under the lock;
 - the reacting member's withdrawal — `member_id` is a real foreign key.
 
 ## Key invariants

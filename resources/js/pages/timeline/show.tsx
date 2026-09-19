@@ -9,7 +9,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
-import { ReactionChips } from '@/components/reactions/reaction-bar';
+import { RowReactionChips } from '@/components/reactions/reaction-bar';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -87,7 +87,7 @@ export default function TimelineShow() {
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
-                <ReactionChips chips={rootReactions.chips} onToggle={rootReactions.onToggle} onShowReactors={rootReactions.onShowReactors} add={{ vocabulary: reactionVocabulary, onPick: rootReactions.onToggle }} />
+                <RowReactionChips reactions={rootReactions} />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}

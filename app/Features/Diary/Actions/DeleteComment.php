@@ -2,10 +2,13 @@
 
 namespace App\Features\Diary\Actions;
 
+use App\Features\Diary\DiaryThreadLock;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Exceptions\DiaryActionFailure;
 use App\Models\DiaryComment;
 use App\Models\Member;
+use App\Models\Reaction;
+use Illuminate\Support\Facades\DB;
 
 class DeleteComment
 {
@@ -18,14 +21,28 @@ class DeleteComment
         $this->purge($comment);
     }
 
-    /** No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities"). */
+    /**
+     * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
+     * The reactions are swept under the diary lock inside the transaction; the File bytes are purged after it.
+     */
     public function purge(DiaryComment $comment): void
     {
-        // Collect the comment's owned image Files before the cascade drops the *_image link rows;
-        // their bytes (irreversible on a disk backend) are purged after the row is gone.
-        $files = $comment->images()->with('file')->get()->pluck('file')->filter()->values()->all();
+        $files = DB::transaction(function () use ($comment): array {
+            if (! DiaryThreadLock::hold($comment)) {
+                return [];
+            }
 
-        $comment->delete();
+            Reaction::query()
+                ->where('reactable_type', $comment->getMorphClass())
+                ->where('reactable_id', $comment->getKey())
+                ->delete();
+
+            $files = $comment->images()->with('file')->get()->pluck('file')->filter()->values()->all();
+
+            $comment->delete();
+
+            return $files;
+        });
 
         foreach ($files as $file) {
             $file->delete();

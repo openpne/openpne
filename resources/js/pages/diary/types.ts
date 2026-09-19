@@ -1,5 +1,6 @@
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
+import type { ReactionChip } from '@/lib/reactions/types';
 
 export type DiaryVisibility = 'open' | 'members' | 'friends' | 'private';
 
@@ -38,6 +39,7 @@ export interface DiaryDetail extends DiarySummary {
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     images: GridImage[];
+    reactions: ReactionChip[];
 }
 
 /** `createdAt` is an offset-bearing ISO instant. */
@@ -57,6 +59,7 @@ export interface DiaryComment {
     author: DiaryAvatarAuthor | null; // null once the author has withdrawn
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side
+    reactions: ReactionChip[];
 }
 
 /** One page of the comment thread, listed oldest-first whichever way the pages are walked. */

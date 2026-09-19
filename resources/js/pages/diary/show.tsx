@@ -7,10 +7,11 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
+import { RowReactionChips } from '@/components/reactions/reaction-bar';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
-import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -18,8 +19,10 @@ import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { commentsPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
+import { DiaryCommentRow } from './comment-row';
+import { diaryCommentReactionEndpoints, diaryReactionEndpoints, rowReactions } from './reactions';
 import { diaryThreadLink } from './thread-link';
 import type { DiaryDetail, DiaryNeighbor, DiaryThread } from './types';
 
@@ -28,13 +31,20 @@ interface ShowProps extends PageProps {
     thread: DiaryThread;
     older: DiaryNeighbor | null; // older entry by the same author
     newer: DiaryNeighbor | null; // newer entry by the same author
+    reactionVocabulary: string[];
+    /** Fresh per render: a comment posted or deleted re-renders the page under the same URL. */
+    renderGeneration: string;
 }
 
 export default function DiaryShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { diary, thread, older, newer, auth } = usePage<ShowProps>().props;
+    const { diary, thread, older, newer, auth, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
+    // Two rows of state, one per endpoint set: the entry and its comments are reacted to on different URLs.
+    const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
+    const commentReactions = useReactions(diaryCommentReactionEndpoints, renderGeneration);
+    const canReact = auth.user !== null;
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -78,6 +88,8 @@ export default function DiaryShow() {
                 <LinkCard card={diary.linkCard} />
 
                 <ImageGrid images={diary.images} variant="post" className="mt-1" />
+
+                <RowReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
 
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
@@ -143,34 +155,12 @@ export default function DiaryShow() {
                     )}
                     <List>
                         {thread.comments.map((comment) => (
-                            <li key={comment.id} className="space-y-2 px-4 py-4 sm:px-5">
-                                {/* Flex header (not inline prose) — inline text-link inside a muted
-                                    text block trips axe link-in-text-block; this also matches the
-                                    topic/event comment header shape. */}
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} isAi={comment.author?.isAi ?? false} size="md" decorative />
-                                    {comment.author ? (
-                                        <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
-                                            {comment.author.name}
-                                        </Link>
-                                    ) : (
-                                        <span className="truncate">{t('Withdrawn member')}</span>
-                                    )}
-                                    <AiChip isAi={comment.author?.isAi ?? false} />
-                                    <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <Timestamp at={comment.createdAt} preset="relative" className="shrink-0" />
-                                    {comment.deletable && (
-                                        <button type="button" onClick={() => deleteComment(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>
-                                            {t('Delete')}
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="whitespace-pre-wrap break-words">
-                                    <UserText text={comment.body} />
-                                </p>
-                                <LinkCard card={comment.linkCard} className="mt-1" />
-                                <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
-                            </li>
+                            <DiaryCommentRow
+                                key={comment.id}
+                                comment={comment}
+                                onDelete={deleteComment}
+                                reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canReact ? commentReactions : null)}
+                            />
                         ))}
                     </List>
                 </Panel>
@@ -193,6 +183,9 @@ export default function DiaryShow() {
                 </form>
             </Panel>
             )}
+
+            {diaryReactions.reactorsFor !== null && <ReactorsDialog url={diaryReactions.reactorsUrl(diaryReactions.reactorsFor)} onClose={diaryReactions.closeReactors} />}
+            {commentReactions.reactorsFor !== null && <ReactorsDialog url={commentReactions.reactorsUrl(commentReactions.reactorsFor)} onClose={commentReactions.closeReactors} />}
         </>
     );
 }
