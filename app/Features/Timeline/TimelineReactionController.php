@@ -15,16 +15,18 @@ use Illuminate\Http\Request;
 
 /**
  * Reacting takes the thread's clearance, not the posting switch: the switch stops authoring, and
- * a site with it off still receives the automatic lines a reaction is the one answer to.
+ * a site with it off still receives the automatic lines a reaction is the one answer to. The gate
+ * runs before the emoji is validated, so an invalid payload gets the same 404 as a valid one.
  */
 class TimelineReactionController extends Controller
 {
-    public function store(StoreReactionRequest $request, TimelinePost $timelinePost, AddReaction $action, ReactionAggregates $reactions): JsonResponse
+    public function store(Request $request, TimelinePost $timelinePost, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeThread($timelinePost);
+        $emoji = (string) $request->validate((new StoreReactionRequest)->rules())['emoji'];
 
         try {
-            $action($this->viewer(), $timelinePost, $request->validated('emoji'), new TimelineReactionSurface);
+            $action($this->viewer(), $timelinePost, $emoji, new TimelineReactionSurface);
         } catch (ReactionRefused) {
             abort(404);
         }

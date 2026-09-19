@@ -27,7 +27,7 @@ class DiariesTable
 
                 TextColumn::make('member.name')
                     ->label(__('Member'))
-                    ->default('-') // author SET-NULL once the member withdraws
+                    ->default('-')
                     ->searchable()
                     ->sortable(),
 

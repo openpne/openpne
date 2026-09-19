@@ -286,7 +286,7 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `direct-message-send` | 10 / 30 | member id / client IP | direct message compose send, draft-edit send, chat send |
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (friend page and notification center) |
 | `group-join` | 15 / 40 | member id / client IP | group join, member approve, member decline, AI account group join |
-| `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline) |
+| `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary) |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the

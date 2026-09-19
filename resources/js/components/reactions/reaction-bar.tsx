@@ -20,8 +20,21 @@ const CHIP_THEIRS = 'border-input text-muted-foreground';
 export interface RowReactions {
     chips: ReactionChip[];
     vocabulary: string[];
-    onToggle: (emoji: string, mine: boolean) => void;
-    onShowReactors: () => void;
+    /** Both absent for a reader who may not react here: the chips stay as counts. */
+    onToggle?: (emoji: string, mine: boolean) => void;
+    onShowReactors?: () => void;
+}
+
+/** A feed row's chips: the add button sits at the end of the chips whenever the reader may react. */
+export function RowReactionChips({ reactions }: { reactions: RowReactions }) {
+    return (
+        <ReactionChips
+            chips={reactions.chips}
+            onToggle={reactions.onToggle}
+            onShowReactors={reactions.onShowReactors}
+            add={reactions.onToggle === undefined ? undefined : { vocabulary: reactions.vocabulary, onPick: reactions.onToggle }}
+        />
+    );
 }
 
 export const ICON_BUTTON =
@@ -36,7 +49,8 @@ export function ReactionChips({
     chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
-    onShowReactors: () => void;
+    /** Absent for a reader the names are not offered to. */
+    onShowReactors?: () => void;
     /** A feed row keeps its add button here, at the end of the chips, and so draws the row even with none; a chat row offers it elsewhere. */
     add?: { vocabulary: string[]; onPick: (emoji: string, mine: boolean) => void };
 }) {
@@ -70,7 +84,7 @@ export function ReactionChips({
             )}
             {add !== undefined && <ReactionAdd chips={chips} vocabulary={add.vocabulary} onPick={add.onPick} />}
             {/* Only ever offered beside chips: with none there is nobody to name. */}
-            {chips.length > 0 && (
+            {chips.length > 0 && onShowReactors !== undefined && (
                 <Tip label={t('See who reacted')}>
                     <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
                         <Users className="size-4" aria-hidden />

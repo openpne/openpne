@@ -20,12 +20,13 @@ use Illuminate\Http\Request;
  */
 class GroupTalkReactionController extends Controller
 {
-    public function store(StoreReactionRequest $request, Group $group, GroupMessage $message, AddMessageReaction $action, ReactionAggregates $reactions): JsonResponse
+    public function store(Request $request, Group $group, GroupMessage $message, AddMessageReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeWrite($group, $message);
+        $emoji = (string) $request->validate((new StoreReactionRequest)->rules())['emoji'];
 
         try {
-            $action($this->viewer(), $message, $request->validated('emoji'));
+            $action($this->viewer(), $message, $emoji);
         } catch (GroupTalkActionException) {
             abort(404);
         }

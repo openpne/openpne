@@ -19,6 +19,8 @@ use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -26,6 +28,7 @@ use App\Http\Requests\Diary\StoreDiaryRequest;
 use App\Http\Requests\Diary\UpdateDiaryRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\Member;
 use App\Support\GuestLoginRedirect;
 use App\Support\Stream\StreamCursor;
@@ -247,7 +250,7 @@ class DiaryController extends Controller
         ], bodyIdRoute: $bodyIdRoute);
     }
 
-    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows, ReactionAggregates $reactions): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewerOrGuest();
         $found = $query($viewer, $diary);
@@ -288,7 +291,7 @@ class DiaryController extends Controller
                     'nextDiary' => $newer,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $older, $newer, $linkCards) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $older, $newer, $linkCards, $reactions) {
                 $thread = DiaryCommentThread::paginate(
                     $found, $request->query('size'), $request->query('order'), $request->query('page'),
                 );
@@ -296,10 +299,12 @@ class DiaryController extends Controller
                 $linkCards->ensureAll($thread->comments);
 
                 return Inertia::render('diary/show', [
-                    'diary' => DiarySerializer::detail($found, $viewer),
-                    'thread' => DiarySerializer::thread($thread, $viewer),
+                    'diary' => DiarySerializer::detail($found, $viewer, $reactions->of($viewer, $found)),
+                    'thread' => DiarySerializer::thread($thread, $viewer, $reactions($viewer, DiaryComment::class, $thread->comments->modelKeys())),
                     'older' => DiarySerializer::neighbor($older),
                     'newer' => DiarySerializer::neighbor($newer),
+                    'reactionVocabulary' => ReactionVocabulary::all(),
+                    'renderGeneration' => StreamProps::generation(),
                 ]);
             },
         ]);
@@ -349,7 +354,7 @@ class DiaryController extends Controller
                 'visibilityOptions' => $options,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
-                'diary' => DiarySerializer::detail($diary, $viewer),
+                'diary' => DiarySerializer::detail($diary, $viewer, []),
                 'visibility' => (string) $diary->visibility->value,
                 'visibilityOptions' => self::modernVisibilityOptions($options),
                 'composeEditor' => $viewer->composeEditor()->value,

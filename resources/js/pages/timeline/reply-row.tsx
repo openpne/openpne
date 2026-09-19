@@ -1,6 +1,6 @@
 import { EntityText } from '@/components/entity-text';
 import { LinkCard } from '@/components/link-card';
-import { ReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { Timestamp } from '@/components/timestamp';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { useT } from '@/lib/i18n';
@@ -27,7 +27,7 @@ export function TimelineReplyRow({ reply, viewerId, onDelete, reactions }: { rep
                 <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
             </p>
             <LinkCard card={reply.linkCard} />
-            <ReactionChips chips={reactions.chips} onToggle={reactions.onToggle} onShowReactors={reactions.onShowReactors} add={{ vocabulary: reactions.vocabulary, onPick: reactions.onToggle }} />
+            <RowReactionChips reactions={reactions} />
             {reply.author.id === viewerId && (
                 <button type="button" onClick={() => onDelete(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
                     {t('Delete')}
