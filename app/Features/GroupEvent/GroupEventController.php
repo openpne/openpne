@@ -106,7 +106,7 @@ class GroupEventController extends Controller
 
                 return Inertia::render('group/event/show', [
                     'group' => GroupSerializer::summary($found->group),
-                    'event' => GroupEventSerializer::detail($found, $viewer),
+                    'event' => GroupEventSerializer::detail($found, $viewer, $reactions->of($viewer, $found)),
                     'thread' => GroupEventSerializer::thread($thread, $viewer, $reactions($viewer, GroupEventComment::class, $thread->comments->modelKeys())),
                     'canComment' => GroupEventAccess::canComment($found, $viewer),
                     'reactionVocabulary' => ReactionVocabulary::all(),
@@ -239,7 +239,7 @@ class GroupEventController extends Controller
 
                 return Inertia::render('group/event/members', [
                     'group' => GroupSerializer::summary($event->group),
-                    'event' => GroupEventSerializer::detail($event, $viewer),
+                    'event' => GroupEventSerializer::detail($event, $viewer, []),
                     'participants' => GroupEventSerializer::participantPaginator($participants),
                 ]);
             },

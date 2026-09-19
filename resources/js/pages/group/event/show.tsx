@@ -7,7 +7,8 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
 import { Pencil, Trash2 } from 'lucide-react';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
-import { RowMenu } from '@/components/row/row-menu';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
 import { CivilDate, Timestamp } from '@/components/timestamp';
@@ -22,7 +23,7 @@ import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { BoardCommentRow } from '@/pages/group/board-comment-row';
-import { eventCommentReactionEndpoints } from '@/pages/group/reactions';
+import { eventCommentReactionEndpoints, eventReactionEndpoints } from '@/pages/group/reactions';
 import type { CommunitySummary, EventDetail, EventThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
@@ -43,7 +44,10 @@ export default function GroupEventShow() {
     const t = useT();
     const confirm = useConfirm();
     const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    // Two rows of state, one per endpoint set: the event and its comments are reacted to on different URLs.
+    const eventReactions = useReactions(eventReactionEndpoints, renderGeneration);
     const reactions = useReactions(eventCommentReactionEndpoints, renderGeneration);
+    const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -102,6 +106,7 @@ export default function GroupEventShow() {
                     <span className="ml-auto shrink-0">
                         <RowMenu
                             items={[
+                                reactorsItem(t, bodyReactions),
                                 canEdit ? { label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` } : null,
                                 canEdit ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deleteEvent } : null,
                             ]}
@@ -139,9 +144,11 @@ export default function GroupEventShow() {
                     </dd>
                 </dl>
 
-                <RichBody body={event.body} bodyHtml={event.bodyHtml} />
-                <LinkCard card={event.linkCard} />
-                <ImageGrid images={event.images} variant="post" className="mt-2" />
+                <RowBody reactions={bodyReactions} contentClassName="space-y-3">
+                    <RichBody body={event.body} bodyHtml={event.bodyHtml} />
+                    <LinkCard card={event.linkCard} />
+                    <ImageGrid images={event.images} variant="post" className="mt-2" />
+                </RowBody>
             </Panel>
 
             <Panel title={commentsPhrase(t, thread.total)} flush>
@@ -210,6 +217,7 @@ export default function GroupEventShow() {
                     </form>
                 </Panel>
             )}
+            {eventReactions.reactorsFor !== null && <ReactorsDialog url={eventReactions.reactorsUrl(eventReactions.reactorsFor)} onClose={eventReactions.closeReactors} />}
             {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );

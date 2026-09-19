@@ -43,7 +43,8 @@ class GroupTopicSerializer
     /**
      * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null}
      */
-    public static function detail(GroupTopic $topic, Member $viewer): array
+    /** @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the topic's chips, passed rather than read off the model */
+    public static function detail(GroupTopic $topic, Member $viewer, array $reactions): array
     {
         return [
             'id' => $topic->getKey(),
@@ -58,6 +59,7 @@ class GroupTopicSerializer
             'linkCard' => LinkCardSerializer::card($topic, $viewer),
             'createdAt' => $topic->created_at->toIso8601String(),
             'editedAt' => $topic->edited_at?->toIso8601String(),
+            'reactions' => $reactions,
         ];
     }
 

@@ -7,7 +7,8 @@ import { type FormEvent } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { ImagesField } from '@/components/images-field';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
-import { RowMenu } from '@/components/row/row-menu';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
@@ -22,7 +23,7 @@ import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { BoardCommentRow } from '@/pages/group/board-comment-row';
-import { topicCommentReactionEndpoints } from '@/pages/group/reactions';
+import { topicCommentReactionEndpoints, topicReactionEndpoints } from '@/pages/group/reactions';
 import type { CommunitySummary, TopicDetail, TopicThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
@@ -40,7 +41,10 @@ export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    // Two rows of state, one per endpoint set: the topic and its comments are reacted to on different URLs.
+    const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
     const reactions = useReactions(topicCommentReactionEndpoints, renderGeneration);
+    const bodyReactions = rowReactions(topic.id, topic.reactions, reactionVocabulary, canComment ? topicReactions : null);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -95,6 +99,7 @@ export default function GroupTopicShow() {
                     <span className="ml-auto shrink-0">
                         <RowMenu
                             items={[
+                                reactorsItem(t, bodyReactions),
                                 canEdit ? { label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` } : null,
                                 canEdit ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deleteTopic } : null,
                             ]}
@@ -102,9 +107,11 @@ export default function GroupTopicShow() {
                     </span>
                 </div>
 
-                <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
-                <LinkCard card={topic.linkCard} />
-                <ImageGrid images={topic.images} variant="post" className="mt-2" />
+                <RowBody reactions={bodyReactions} contentClassName="space-y-3">
+                    <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
+                    <LinkCard card={topic.linkCard} />
+                    <ImageGrid images={topic.images} variant="post" className="mt-2" />
+                </RowBody>
             </Panel>
 
             <Panel title={commentsPhrase(t, thread.total)} flush>
@@ -159,6 +166,7 @@ export default function GroupTopicShow() {
                     </form>
                 </Panel>
             )}
+            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} onClose={topicReactions.closeReactors} />}
             {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );

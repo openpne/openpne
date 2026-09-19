@@ -7,8 +7,10 @@ use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
 use App\Models\GroupMessage;
+use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +62,8 @@ class DeleteGroup
                 ->all();
 
             BoardSweep::messages((new GroupMessage)->getMorphClass(), $groupId);
+            BoardSweep::rows((new GroupTopic)->getMorphClass(), clone $topics);
+            BoardSweep::rows((new GroupEvent)->getMorphClass(), clone $events);
             BoardSweep::comments((new GroupTopicComment)->getMorphClass(), 'group_topic_comments', 'group_topic_id', (clone $topics)->orderBy('id')->pluck('id'));
             BoardSweep::comments((new GroupEventComment)->getMorphClass(), 'group_event_comments', 'group_event_id', (clone $events)->orderBy('id')->pluck('id'));
 

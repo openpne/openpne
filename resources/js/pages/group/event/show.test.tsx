@@ -41,6 +41,7 @@ const event: EventDetail = {
     applicationDeadline: null,
     capacity: null,
     participantCount: 0,
+    reactions: [],
 };
 
 const thread: EventThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
@@ -70,13 +71,17 @@ function renderShow(canEdit: boolean) {
     return renderWithProviders(<GroupEventShow />);
 }
 
-test('an editor edits and deletes the event from its menu; a reader who may not has no menu on it', () => {
+test('an editor edits and deletes the event from its menu; every member reacts to it and lists its reactors', () => {
     renderShow(true);
+    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
     fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
     expect(screen.getByRole('menuitem', { name: 'Edit' }).getAttribute('href')).toBe('/events/12/edit');
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' })).toBeTruthy();
 
     cleanup();
     renderShow(false);
-    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' })).toBeTruthy();
 });

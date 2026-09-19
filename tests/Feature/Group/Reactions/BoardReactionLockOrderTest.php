@@ -3,7 +3,7 @@
 namespace Tests\Feature\Group\Reactions;
 
 use App\Features\Group\Actions\DeleteGroup;
-use App\Features\Group\BoardCommentReactionSurface;
+use App\Features\Group\BoardReactionSurface;
 use App\Features\GroupEvent\Actions\DeleteEvent;
 use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Features\GroupTopic\Actions\DeleteTopicComment;
@@ -70,6 +70,40 @@ class BoardReactionLockOrderTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    public function test_a_reaction_on_the_topic_itself_racing_its_delete_waits_at_the_topic_and_a_later_one_is_refused(): void
+    {
+        $topic = GroupTopic::factory()->create();
+        $reactor = Member::factory()->create();
+        $outcome = null;
+
+        GroupTopic::deleting(function () use (&$outcome, $reactor, $topic): void {
+            $outcome = $this->raceReaction($reactor, $topic);
+        });
+
+        (new DeleteTopic)->purge($topic);
+
+        $this->assertWaitedOn('group_topics', $outcome);
+        $this->assertSame('refused', $this->raceReaction($reactor, $topic));
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    public function test_a_reaction_on_the_event_itself_racing_its_delete_waits_at_the_event_and_a_later_one_is_refused(): void
+    {
+        $event = GroupEvent::factory()->create();
+        $reactor = Member::factory()->create();
+        $outcome = null;
+
+        GroupEvent::deleting(function () use (&$outcome, $reactor, $event): void {
+            $outcome = $this->raceReaction($reactor, $event);
+        });
+
+        (new DeleteEvent)->purge($event);
+
+        $this->assertWaitedOn('group_events', $outcome);
+        $this->assertSame('refused', $this->raceReaction($reactor, $event));
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_a_reaction_racing_an_event_delete_waits_at_the_event_and_a_later_one_is_refused(): void
     {
         $comment = GroupEventComment::factory()->create();
@@ -113,7 +147,12 @@ class BoardReactionLockOrderTest extends TestCase
         $outcomes = null;
 
         Group::deleting(function () use (&$outcomes, $reactor, $topicComment, $eventComment): void {
-            $outcomes = [$this->raceReaction($reactor, $topicComment), $this->raceReaction($reactor, $eventComment)];
+            $outcomes = [
+                $this->raceReaction($reactor, $topicComment),
+                $this->raceReaction($reactor, $eventComment),
+                $this->raceReaction($reactor, $topicComment->topic),
+                $this->raceReaction($reactor, $eventComment->event),
+            ];
         });
 
         app(DeleteGroup::class)->purge($group);
@@ -121,6 +160,8 @@ class BoardReactionLockOrderTest extends TestCase
         $this->assertNotNull($outcomes, 'the race was never run');
         $this->assertWaitedOn('group_topics', $outcomes[0]);
         $this->assertWaitedOn('group_events', $outcomes[1]);
+        $this->assertWaitedOn('group_topics', $outcomes[2]);
+        $this->assertWaitedOn('group_events', $outcomes[3]);
         $this->assertSame('refused', $this->raceReaction($reactor, $topicComment));
         $this->assertSame('refused', $this->raceReaction($reactor, $eventComment));
         $this->assertDatabaseCount('groups', 0);
@@ -141,11 +182,11 @@ class BoardReactionLockOrderTest extends TestCase
     }
 
     /** @return string 'written' | 'refused' | 'waited:<the statement that timed out>' */
-    private function raceReaction(Member $reactor, GroupTopicComment|GroupEventComment $comment): string
+    private function raceReaction(Member $reactor, GroupTopic|GroupEvent|GroupTopicComment|GroupEventComment $comment): string
     {
         return $this->onSecondConnection(function () use ($reactor, $comment): string {
             try {
-                app(AddReaction::class)($reactor, $comment, ReactionVocabulary::all()[0], new BoardCommentReactionSurface);
+                app(AddReaction::class)($reactor, $comment, ReactionVocabulary::all()[0], new BoardReactionSurface);
 
                 return 'written';
             } catch (QueryException $e) {

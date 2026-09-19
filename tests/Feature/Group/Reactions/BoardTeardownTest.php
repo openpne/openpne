@@ -3,7 +3,7 @@
 namespace Tests\Feature\Group\Reactions;
 
 use App\Features\Group\Actions\DeleteGroup;
-use App\Features\Group\BoardCommentReactionSurface;
+use App\Features\Group\BoardReactionSurface;
 use App\Features\GroupEvent\Actions\CreateEvent;
 use App\Features\GroupEvent\Actions\CreateEventComment;
 use App\Features\GroupEvent\Actions\DeleteEvent;
@@ -60,33 +60,39 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    public function test_deleting_a_topic_sweeps_its_comments_reactions_and_purges_the_bytes(): void
+    public function test_deleting_a_topic_sweeps_its_own_and_its_comments_reactions_and_purges_the_bytes(): void
     {
         $group = $this->group();
         $author = $this->joined($group);
         $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
         $comment = app(CreateTopicComment::class)($author, $topic, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $topic)->assertOk();
         $files = [$topic->images()->with('file')->firstOrFail()->file, $comment->images()->with('file')->firstOrFail()->file];
         $levels = $this->sweepLevels();
 
         app(DeleteTopic::class)->purge($topic->fresh());
 
-        $this->assertSame([DB::transactionLevel() + 1], $levels());
+        // The topic's own reactions and its comments' go in two deletes, both inside the one transaction.
+        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
         $this->assertDatabaseCount('reactions', 0);
         $this->assertBytesGone($files);
     }
 
-    public function test_deleting_an_event_sweeps_its_comments_reactions_and_purges_the_bytes(): void
+    public function test_deleting_an_event_sweeps_its_own_and_its_comments_reactions_and_purges_the_bytes(): void
     {
         $group = $this->group();
         $author = $this->joined($group);
         $event = app(CreateEvent::class)($author, $group, $this->eventForm(), [UploadedFile::fake()->image('e.png', 20, 20)]);
         $comment = app(CreateEventComment::class)($author, $event, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $event)->assertOk();
         $files = [$event->images()->with('file')->firstOrFail()->file, $comment->images()->with('file')->firstOrFail()->file];
+        $levels = $this->sweepLevels();
 
         app(DeleteEvent::class)->purge($event->fresh());
+
+        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
 
         $this->assertDatabaseCount('reactions', 0);
         $this->assertBytesGone($files);
@@ -103,6 +109,8 @@ class BoardTeardownTest extends BoardReactionTestCase
         $eventComment = app(CreateEventComment::class)($author, $event, 'reply', [UploadedFile::fake()->image('ec.png', 20, 20)]);
         $this->react($author, $topicComment)->assertOk();
         $this->react($author, $eventComment)->assertOk();
+        $this->react($author, $topic)->assertOk();
+        $this->react($author, $event)->assertOk();
         $otherGroup = $this->group();
         $otherGroupsComment = $this->topicComment($otherGroup);
         $this->react($this->joined($otherGroup), $otherGroupsComment)->assertOk();
@@ -117,7 +125,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         app(DeleteGroup::class)->purge($group);
 
         // One delete per alias that had rows (the talk had none), each inside the one transaction.
-        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
+        $this->assertSame(array_fill(0, 4, DB::transactionLevel() + 1), $levels());
         $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
         $this->assertDatabaseCount('group_topics', 1);
         $this->assertDatabaseCount('reactions', 1);
@@ -137,6 +145,8 @@ class BoardTeardownTest extends BoardReactionTestCase
             $this->react($author, app(CreateTopicComment::class)($author, $topic, "reply {$i}", []))->assertOk();
         }
         $this->react($author, app(CreateEventComment::class)($author, $event, 'reply', []))->assertOk();
+        $this->react($author, $topic)->assertOk();
+        $this->react($author, $event)->assertOk();
         $bindings = [];
         DB::listen(function ($query) use (&$bindings): void {
             if (preg_match('/^select .* from [`"]files[`"] where [`"]id[`"] in \(select|^delete from [`"]reactions[`"]/', $query->sql)) {
@@ -146,10 +156,12 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertCount(3, $bindings, 'one File collection and one chunked reaction delete per board');
+        $this->assertCount(5, $bindings, 'one File collection and one chunked reaction delete per board arm: the two bodies, then the two comment sets');
         $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
-        $this->assertCount(3, $bindings[1], 'the topic reaction delete binds the reactions\' own ids');
-        $this->assertCount(1, $bindings[2], 'the event reaction delete binds the reactions\' own ids');
+        $this->assertCount(1, $bindings[1], 'the topic body delete binds the reaction\'s own id');
+        $this->assertCount(1, $bindings[2], 'the event body delete binds the reaction\'s own id');
+        $this->assertCount(3, $bindings[3], 'the topic comment delete binds the reactions\' own ids');
+        $this->assertCount(1, $bindings[4], 'the event comment delete binds the reactions\' own ids');
         $this->assertDatabaseCount('reactions', 0);
     }
 
@@ -303,6 +315,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
         $comment = app(CreateTopicComment::class)($author, $topic, 'reply', []);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $topic)->assertOk();
         $file = $topic->images()->with('file')->firstOrFail()->file;
 
         Group::deleting(function (): void {
@@ -317,7 +330,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         }
 
         $this->assertDatabaseHas('groups', ['id' => $group->getKey()]);
-        $this->assertDatabaseCount('reactions', 1);
+        $this->assertDatabaseCount('reactions', 2);
         $this->assertModelExists($file);
         $this->assertTrue(app(FileStorage::class)->exists($file));
     }
@@ -329,7 +342,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         DB::table('group_topic_comments')->where('id', $comment->getKey())->delete();
 
         try {
-            app(AddReaction::class)($this->joined($group), $comment, $this->emoji(0), new BoardCommentReactionSurface);
+            app(AddReaction::class)($this->joined($group), $comment, $this->emoji(0), new BoardReactionSurface);
             $this->fail('the write was not refused');
         } catch (ReactionRefused) {
             $this->addToAssertionCount(1);
