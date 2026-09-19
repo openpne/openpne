@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Diary;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Diary\DiaryAccess;
 use App\Features\Member\MemberDisplayName;
 use App\Mail\Template\MailTemplate;
@@ -29,6 +30,9 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
     use Queueable;
     use RendersMailTemplate;
 
+    /** A diary deleted with its author while queued cannot be restored, and there is nothing left to announce. */
+    public bool $deleteWhenMissingModels = true;
+
     /** @param list<string> $channels */
     public function __construct(
         public readonly Diary $diary,
@@ -41,11 +45,16 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
         return Feature::Diary;
     }
 
-    /** SerializesModels hands this a fresh row, so a diary narrowed while queued is not mailed out. */
+    /**
+     * SerializesModels hands this fresh rows, so a diary narrowed, a ban or a block landing while
+     * queued is not mailed out; the block is checked both ways, as the audience query excludes it.
+     */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
         return $this->featureShouldSend($notifiable, $channel)
-            && DiaryAccess::canView($notifiable, $this->diary);
+            && ! $notifiable->is_login_rejected
+            && DiaryAccess::canView($notifiable, $this->diary)
+            && ! BlockLookup::hasAnyBlockBetween($notifiable, $this->author);
     }
 
     /** @return list<string> */
