@@ -6,14 +6,17 @@ namespace Tests\Feature\Mail;
 
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
+use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageFile;
 use App\Models\Member;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
+use App\Support\BodyFormat;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -86,7 +89,31 @@ class MailTemplateNotificationTest extends TestCase
         );
     }
 
-    /** The stock OpenPNE 3 wording links to the message rather than quoting it; this is the wording that quotes it. */
+    public function test_the_stock_message_mail_quotes_the_body_and_names_the_sender_in_the_subject(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create()->all();
+        $sender->forceFill(['name' => 'Kaoru'])->save();
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'body' => "See you at 10.\nBring the notes."]);
+
+        app()->setLocale('en');
+        $mail = (new DirectMessageReceivedNotification($sender, $message))->toMail($recipient);
+
+        $this->assertSame('Kaoru sent you a message', $mail->subject);
+        $this->assertStringContainsString("See you at 10.\nBring the notes.", $this->renderMailText($mail));
+    }
+
+    public function test_the_stock_diary_mail_quotes_the_body_as_plain_text(): void
+    {
+        [$author, $recipient] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Lunch', 'body' => "**Soup** today\n\nAnd bread", 'format' => BodyFormat::Markdown]);
+
+        app()->setLocale('en');
+        $text = $this->renderMailText((new DiaryPostedNotification($diary, $author, ['mail']))->toMail($recipient));
+
+        $this->assertStringContainsString("Lunch\n\nSoup today\n\nAnd bread", $text);
+    }
+
+    /** The stock OpenPNE 3 wording once linked to the message rather than quoting it; this wording quotes it in its own words. */
     private function quoteTheBodyInTheMessageMail(): void
     {
         $id = DB::table('mail_templates')->insertGetId([

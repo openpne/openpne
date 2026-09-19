@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
 use App\Notifications\FeatureNotification;
+use App\Support\BodyRenderer;
 use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -48,6 +49,7 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
         return $this->mailFromTemplate(MailTemplate::DiaryPostedNotified, [
             'member_name' => MemberDisplayName::of($this->author),
             'diary_title' => $this->diary->title,
+            'body' => BodyRenderer::plainText($this->diary->body, $this->diary->format),
             'url' => route('diary.show', ['diary' => $this->diary->getKey()]),
         ]);
     }
