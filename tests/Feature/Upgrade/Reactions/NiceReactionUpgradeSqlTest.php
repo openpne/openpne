@@ -274,7 +274,6 @@ class NiceReactionUpgradeSqlTest extends TestCase
 
         $out = implode("\n", $lines);
         $this->assertFalse($report->failed(), $out);
-        $this->assertStringContainsString('PASS TimelineReactionUpgrade', $out);
         foreach (['TimelineReactionUpgrade', 'GroupMessageReactionUpgrade', 'DiaryReactionUpgrade', 'DiaryCommentReactionUpgrade', 'GroupTopicCommentReactionUpgrade', 'GroupEventCommentReactionUpgrade'] as $step) {
             $this->assertStringContainsString("PASS {$step}", $out);
         }
