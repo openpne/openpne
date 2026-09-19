@@ -29,7 +29,8 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * Paged by content id and then by reaction id, so PHP holds a page of each and no statement grows.
+     * Paged by content id and then by reaction id, so PHP holds a page of each, no statement grows,
+     * and no subquery is re-run per page of reactions.
      */
     public static function reactions(string $alias, Builder $contentIds): void
     {
@@ -42,12 +43,6 @@ final class BoardSweep
             self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page));
             $after = (int) end($page);
         } while (count($page) === self::CHUNK);
-    }
-
-    /** For content that outnumbers its reactions, as talk does: paged by reaction id over the one subquery, which is cheap on its own. */
-    public static function reactionsOn(string $alias, Builder $contentIds): void
-    {
-        self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $contentIds));
     }
 
     private static function deleteMatching(Builder $matching): void
