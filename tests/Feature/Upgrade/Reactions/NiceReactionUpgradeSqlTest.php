@@ -192,8 +192,10 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $report = (new NicePreflight)->inspect('', null, ['nice', 'activity_data', 'community', 'community_topic_comment']);
 
         $this->assertSame([], $report->errors);
-        $this->assertContains(NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]), $report->warnings);
-        $this->assertContains(NicePreflight::goneTargetLikeMessage('topic comments', 1, [2]), $report->warnings);
+        $this->assertSame([
+            NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]),
+            NicePreflight::goneTargetLikeMessage('topic comments', 1, [2]),
+        ], $report->warnings);
     }
 
     /** The stock DDL is byte-collated and would hide a comparison that is not. */
@@ -206,6 +208,8 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $this->seedNice(1, $member->id, 'a', 1); // not an activity like, whatever the collation says
         $this->seedNice(2, $member->id, 'D', 2);
         $this->seedNice(3, $member->id, 'd', 3);
+        $this->seedNice(4, $member->id, 'X', 1); // two unknown letters the collation folds into one
+        $this->seedNice(5, $member->id, 'x', 2);
 
         $lines = [];
         (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
@@ -216,9 +220,34 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('diaries', 1, [2]), $lines);
         $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('diary comments', 1, [3]), $lines);
         $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('a', 1, [1]), $lines);
+        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('X', 1, [4]), $lines);
+        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
     }
 
-    public function test_verify_agrees_on_both_targets(): void
+    /** A pre-index source with a folding collation: one member's likes on diary 1 and diary comment 1 are two targets, not a doubled like. */
+    public function test_a_diary_and_a_comment_like_on_one_id_are_not_twins_under_a_folding_collation(): void
+    {
+        $this->createCaseInsensitiveSourceNiceTable();
+        DB::statement('ALTER TABLE `nice` DROP INDEX `member_id_foreign_table_foreign_id_UNIQUE_idx`');
+        $member = $this->activeMember();
+        $this->seedDiary(1, $member->id);
+        $this->seedRecord('diary_comment', 1, ['diary_id' => 1, 'member_id' => $member->id]);
+        $this->seedNice(1, $member->id, 'D', 1);
+        $this->seedNice(2, $member->id, 'd', 1);
+
+        $lines = [];
+        $ran = (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertTrue($ran, implode("\n", $lines));
+        $this->assertSame(
+            [[1, 'diary', 1], [2, 'diaryComment', 1]],
+            DB::table('reactions')->orderBy('id')->get()->map(fn (object $r): array => [(int) $r->id, $r->reactable_type, (int) $r->reactable_id])->all(),
+        );
+    }
+
+    public function test_verify_agrees_on_every_target(): void
     {
         [$author, $fan] = $this->activeMembers(2);
         $this->seedActivity(1, $author->id);
@@ -227,8 +256,14 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $this->seedNice(2, $fan->id, 'A', 2);
         $this->seedNice(3, $author->id, 'A', 2);
         $this->seedDiary(1, $author->id);
+        $this->seedRecord('diary_comment', 2, ['diary_id' => 1, 'member_id' => $author->id]);
+        $this->seedRecord('community_topic_comment', 3, ['community_topic_id' => 1, 'member_id' => $author->id]);
+        $this->seedRecord('community_event_comment', 4, ['community_event_id' => 1, 'member_id' => $author->id]);
         $this->seedNice(4, $fan->id, 'D', 1);
         $this->seedNice(5, $fan->id, 'D', 2); // no diary 2
+        $this->seedNice(6, $fan->id, 'd', 2);
+        $this->seedNice(7, $fan->id, 't', 3);
+        $this->seedNice(8, $fan->id, 'e', 4);
 
         $steps = $this->steps();
         (new UpgradeRunner(new InsertSelectCompiler, $steps))->run(new RunOptions);
@@ -240,10 +275,10 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $out = implode("\n", $lines);
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS TimelineReactionUpgrade', $out);
-        $this->assertStringContainsString('PASS GroupMessageReactionUpgrade', $out);
-        $this->assertStringContainsString('PASS DiaryReactionUpgrade', $out);
-        $this->assertStringContainsString('PASS GroupEventCommentReactionUpgrade', $out);
-        $this->assertDatabaseCount('reactions', 4);
+        foreach (['TimelineReactionUpgrade', 'GroupMessageReactionUpgrade', 'DiaryReactionUpgrade', 'DiaryCommentReactionUpgrade', 'GroupTopicCommentReactionUpgrade', 'GroupEventCommentReactionUpgrade'] as $step) {
+            $this->assertStringContainsString("PASS {$step}", $out);
+        }
+        $this->assertDatabaseCount('reactions', 7);
     }
 
     private function runSteps(): void
