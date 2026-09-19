@@ -2,51 +2,105 @@
 
 namespace Tests\Feature\Architecture;
 
+use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
  * A raw SQL fragment may name identifiers and expressions of the code's own; a runtime value goes
- * through a binding. Every fragment built at runtime is listed here with its reason, so a new one
- * has to be argued for.
+ * through a binding. Every fragment that `app/` builds at runtime, the upgrade aside, is listed here
+ * by its opening text with its reason, so a new one has to be argued for.
  */
 class RawSqlValueInterpolationTest extends TestCase
 {
-    /** @var array<string, string> file => why a fragment may be built at runtime there */
+    /** @var array<string, array<string, string>> file => fragment argument's opening text => why it may be built */
     private const ALLOWED = [
-        'app/Features/Group/BoardSweep.php' => 'the group id, an int: MySQL plans a large room\'s page as a filter from its head when the leading index column is bound',
-        'app/Features/Diary/Queries/MemberDiaryMonthlyCounts.php' => 'the month expression is chosen per driver by the code',
-        'app/Features/Timeline/Queries/MentionCandidates.php' => 'the length function is chosen per driver by the code',
-        'app/Features/GroupTalk/Queries/GroupTalkMentionCandidates.php' => 'the length function is chosen per driver by the code',
-        'app/Features/Member/Queries/SearchMembers.php' => 'visibility and age expressions composed by the code; every value is bound',
-        'app/Features/Member/Queries/VisibleSelfIntroductions.php' => 'the visibility expression composed by the code; every value is bound',
+        'app/Features/Group/BoardSweep.php' => [
+            '\'`group_id` = \'.$groupId' => 'the group id, an int: MySQL plans a large room\'s page as a filter from its head when the leading index column is bound',
+        ],
+        'app/Features/Group/BoardBumpedAt.php' => [
+            '"UPDATE {$table} SET bumped_at = "' => 'the board\'s table and column names come from a class constant; the id is bound',
+            '"SELECT COUNT(*) FROM {$table} WHERE bumped_at <> "' => 'the board\'s table and column names come from a class constant',
+        ],
+        'app/Features/Diary/Queries/MemberDiaryMonthlyCounts.php' => [
+            '"{$ym} as ym' => 'the month expression is chosen per driver by the code',
+        ],
+        'app/Features/Timeline/Queries/MentionCandidates.php' => [
+            '"{$length}(members.name) <= ?"' => 'the length function is chosen per driver by the code',
+        ],
+        'app/Features/GroupTalk/Queries/GroupTalkMentionCandidates.php' => [
+            '"{$length}(members.name) <= ?"' => 'the length function is chosen per driver by the code',
+        ],
+        'app/Features/Member/Queries/SearchMembers.php' => [
+            '"{$effVis} <= {$this->clearanceCase()}"' => 'the visibility expression is composed by the code from an enum default; the viewer id is bound',
+            '"({$expr} >= ? AND {$expr} <= ?)"' => 'the age expression is chosen per driver by the code; the bounds are bound',
+            '"({$expr} >= ? OR {$expr} <= ?)"' => 'the age expression is chosen per driver by the code; the bounds are bound',
+            '"{$expr} >= ?"' => 'the age expression is chosen per driver by the code; the bound is bound',
+            '"{$expr} <= ?"' => 'the age expression is chosen per driver by the code; the bound is bound',
+            '"(({$effAge} <= {$this->clearanceCase()}) AND' => 'the age visibility expression is composed by the code from enum values and driver-chosen column names; the viewer id is bound',
+        ],
+        'app/Features/Member/Queries/VisibleSelfIntroductions.php' => [
+            '"{$effVis} <= {$this->clearanceCase()}"' => 'the visibility expression is composed by the code from an enum default; the viewer id is bound',
+        ],
     ];
 
-    private const RAW_CALL = '/(?:whereRaw|selectRaw|orderByRaw|groupByRaw|havingRaw|fromRaw|DB::raw)\s*\(\s*(.*)$/';
+    private const RAW_CALL = '/(?:whereRaw|selectRaw|orderByRaw|groupByRaw|havingRaw|fromRaw|DB::raw|DB::(?:statement|unprepared|select|selectOne|scalar|insert|update|delete|affectingStatement)|new (?:Query)?Expression)\s*\(\s*(.*)$/';
 
     public function test_no_raw_sql_fragment_interpolates_a_runtime_value(): void
     {
         $offending = [];
         foreach ($this->sources() as $path => $lines) {
-            foreach ($lines as $number => $line) {
-                if (preg_match(self::RAW_CALL, $line, $m) === 1 && self::fragmentIsBuilt($m[1]) && ! isset(self::ALLOWED[$path])) {
-                    $offending[] = "{$path}:".($number + 1);
+            foreach (self::builtFragments($lines) as $number => $argument) {
+                if (! self::allowed($path, $argument)) {
+                    $offending[] = "{$path}:{$number}";
                 }
             }
         }
 
-        $this->assertSame([], $offending, 'raw SQL with a variable in it: bind the value, or list the file with its reason');
+        $this->assertSame([], $offending, 'raw SQL with a variable in it: bind the value, or list the fragment with its reason');
     }
 
-    public function test_every_allowed_file_still_has_the_inlining(): void
+    public function test_every_allowed_fragment_is_still_built(): void
     {
-        foreach (self::ALLOWED as $path => $reason) {
-            $built = false;
-            foreach (file(base_path($path), FILE_IGNORE_NEW_LINES) ?: [] as $line) {
-                $built = $built || (preg_match(self::RAW_CALL, $line, $m) === 1 && self::fragmentIsBuilt($m[1]));
+        foreach (self::ALLOWED as $path => $fragments) {
+            $built = iterator_to_array(self::builtFragments(file(base_path($path), FILE_IGNORE_NEW_LINES) ?: []), false);
+            foreach (array_keys($fragments) as $opening) {
+                $this->assertNotEmpty(
+                    array_filter($built, fn (string $argument): bool => str_starts_with($argument, $opening)),
+                    "{$path} no longer builds a fragment opening with {$opening}; drop it from the list",
+                );
             }
-            $this->assertTrue($built, "{$path} no longer builds a fragment at runtime; drop it from the list");
+        }
+    }
+
+    private static function allowed(string $path, string $argument): bool
+    {
+        foreach (array_keys(self::ALLOWED[$path] ?? []) as $opening) {
+            if (str_starts_with($argument, $opening)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A call whose argument list continues on the next line is judged by that line.
+     *
+     * @param  list<string>  $lines
+     * @return iterable<int, string> 1-based line => the fragment argument
+     */
+    private static function builtFragments(array $lines): iterable
+    {
+        foreach ($lines as $index => $line) {
+            if (preg_match(self::RAW_CALL, $line, $m) !== 1) {
+                continue;
+            }
+            $argument = trim($m[1]) === '' ? trim($lines[$index + 1] ?? '') : $m[1];
+            if (self::fragmentIsBuilt($argument)) {
+                yield $index + 1 => $argument;
+            }
         }
     }
 
@@ -70,9 +124,9 @@ class RawSqlValueInterpolationTest extends TestCase
     private function sources(): iterable
     {
         $root = base_path('app');
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root)) as $file) {
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
             if (! $file->isFile() || $file->getExtension() !== 'php' || str_starts_with($file->getPathname(), base_path('app/Upgrade'))) {
-                continue; // the transfer compiles its SQL from source-schema constants, not runtime values
+                continue; // The upgrade's fragments carry operator-supplied schema identifiers from the command's options, never member input.
             }
             yield substr($file->getPathname(), strlen(base_path()) + 1) => file($file->getPathname(), FILE_IGNORE_NEW_LINES) ?: [];
         }
