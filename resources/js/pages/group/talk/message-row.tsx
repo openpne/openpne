@@ -13,7 +13,7 @@ import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { canCopyLink, canCopyText, messageLink } from './message-sheet';
-import { ICON_BUTTON, QUICK_REACTIONS, TalkReactionAdd, TalkReactionChips, TalkReactionPickerGrid } from './reaction-bar';
+import { ICON_BUTTON, QUICK_REACTIONS, ReactionAdd, ReactionChips, ReactionPickerGrid } from '@/components/reactions/reaction-bar';
 import type { TalkMessage, TalkReplyReference } from './types';
 
 /**
@@ -202,7 +202,7 @@ export function TalkMessageRow({
             )}
             <LinkCard card={message.linkCard} className="mt-2" />
             <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
-            <TalkReactionChips
+            <ReactionChips
                 chips={reactions.chips}
                 onToggle={reactions.canReact ? reactions.onToggle : undefined}
                 onShowReactors={reactions.onShowReactors}
@@ -220,14 +220,14 @@ export function TalkMessageRow({
                         otherwise hear each one beside the same emoji's chip, two same-named toggles
                         per row. */}
                     <div className="flex items-center gap-1 pointer-coarse:hidden">
-                        <TalkReactionPickerGrid
+                        <ReactionPickerGrid
                             chips={reactions.chips}
                             vocabulary={reactions.vocabulary.slice(0, QUICK_REACTIONS)}
                             onPick={reactions.onToggle}
                             buttonClassName="size-8 text-base"
                         />
                     </div>
-                    <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
+                    <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
                 </>
             )}
             {canReply && (

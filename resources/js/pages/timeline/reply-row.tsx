@@ -1,5 +1,6 @@
 import { EntityText } from '@/components/entity-text';
 import { LinkCard } from '@/components/link-card';
+import { ReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { Timestamp } from '@/components/timestamp';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { useT } from '@/lib/i18n';
@@ -11,7 +12,7 @@ import type { TimelinePostEntry } from './types';
  * A row of its own rather than markup inside the page, so a test can render it: a payload assertion
  * cannot see whether a reply's link card is drawn.
  */
-export function TimelineReplyRow({ reply, viewerId, onDelete }: { reply: TimelinePostEntry; viewerId: number; onDelete: (id: number) => void }) {
+export function TimelineReplyRow({ reply, viewerId, onDelete, reactions }: { reply: TimelinePostEntry; viewerId: number; onDelete: (id: number) => void; reactions: RowReactions }) {
     const t = useT();
 
     return (
@@ -26,6 +27,7 @@ export function TimelineReplyRow({ reply, viewerId, onDelete }: { reply: Timelin
                 <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
             </p>
             <LinkCard card={reply.linkCard} />
+            <ReactionChips chips={reactions.chips} onToggle={reactions.onToggle} onShowReactors={reactions.onShowReactors} add={{ vocabulary: reactions.vocabulary, onPick: reactions.onToggle }} />
             {reply.author.id === viewerId && (
                 <button type="button" onClick={() => onDelete(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
                     {t('Delete')}

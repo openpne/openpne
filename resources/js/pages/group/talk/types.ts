@@ -26,13 +26,6 @@ export interface TalkMessage extends ChatStreamRow {
     canDelete: boolean;
 }
 
-/** Who holds one emoji on a message: the exact count, and at most Reactors::PER_EMOJI names. */
-export interface TalkReactorGroup {
-    emoji: string;
-    count: number;
-    members: MemberRef[];
-}
-
 export type TalkPage = ChatPage<TalkMessage>;
 
 /**

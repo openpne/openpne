@@ -1,6 +1,7 @@
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 import type { MentionEntity, TagEntity } from '@/lib/entity-split';
+import type { ReactionChip } from '@/lib/reactions/types';
 
 export type TimelinePostVisibility = 'open' | 'members' | 'friends' | 'private';
 
@@ -24,6 +25,8 @@ export interface TimelinePostEntry {
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TimelinePostAuthor;
     createdAt: string;
+    /** The emoji on this post, in the order they first appeared. Always sent, empty for none. */
+    reactions: ReactionChip[];
 }
 
 /** The rows of one feed page; the older cursor travels in Inertia's scroll metadata, not here. */

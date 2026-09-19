@@ -9,15 +9,19 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
+import { ReactionChips } from '@/components/reactions/reaction-bar';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { useReactions } from '@/lib/reactions/use-reactions';
 import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import { BodyCounter, overBodyLimit } from './body-counter';
+import { rowReactions, timelineReactionEndpoints } from './reactions';
 import { TimelineReplyRow } from './reply-row';
 import type { TimelinePostEntry } from './types';
 
@@ -26,12 +30,17 @@ interface ShowProps extends PageProps {
     replies: TimelinePostEntry[];
     viewerId: number;
     canPost: boolean;
+    reactionVocabulary: string[];
+    /** Fresh on every server render, so a reply posted or deleted resets what a write was answered with. */
+    renderGeneration: string;
 }
 
 export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { post, replies, viewerId, canPost } = usePage<ShowProps>().props;
+    const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
+    const rootReactions = rowReactions(post, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -78,6 +87,7 @@ export default function TimelineShow() {
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
+                <ReactionChips chips={rootReactions.chips} onToggle={rootReactions.onToggle} onShowReactors={rootReactions.onShowReactors} add={{ vocabulary: reactionVocabulary, onPick: rootReactions.onToggle }} />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}
@@ -89,7 +99,7 @@ export default function TimelineShow() {
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
-                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} />
+                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} reactions={rowReactions(reply, reactionVocabulary, reactions)} />
                         ))}
                     </List>
                 </Panel>
@@ -121,6 +131,7 @@ export default function TimelineShow() {
                 </form>
             </Panel>
             )}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );
 }

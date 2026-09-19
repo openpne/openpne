@@ -11,7 +11,8 @@ final class StreamProps
     /**
      * A value only a full page render refreshes: keying the client's stream component on it remounts
      * the component, and with it Inertia's stored next cursor, whenever the rows were replaced rather
-     * than merged (docs/internals/ordering.md, "Keyset and offset").
+     * than merged (docs/internals/ordering.md, "Keyset and offset"). A page with no stream keys what a
+     * write was answered with on it, for the same reason.
      */
     public static function generation(): string
     {

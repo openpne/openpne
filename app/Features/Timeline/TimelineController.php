@@ -185,6 +185,7 @@ class TimelineController extends Controller
                     'viewerId' => $viewer->getKey(),
                     'canPost' => TimelinePosting::enabled(),
                     'reactionVocabulary' => ReactionVocabulary::all(),
+                    'renderGeneration' => StreamProps::generation(),
                 ]);
             },
         ]);

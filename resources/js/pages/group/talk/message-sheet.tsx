@@ -4,7 +4,7 @@ import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { TalkReactionPickerGrid } from './reaction-bar';
+import { ReactionPickerGrid } from '@/components/reactions/reaction-bar';
 import type { TalkMessage } from './types';
 
 /** The ring is inset because the frame below clips: drawn outside, a full-width item's own would be cut away. */
@@ -103,7 +103,7 @@ export function TalkMessageSheet({
                     // Four to a row rather than wrapping: a set meant to be scanned should not
                     // change shape with its own length.
                     <div className="grid grid-cols-4 justify-items-center gap-y-2 pb-2">
-                        <TalkReactionPickerGrid
+                        <ReactionPickerGrid
                             chips={chips}
                             vocabulary={vocabulary}
                             // A held one keeps its own colours: written after these, they replace

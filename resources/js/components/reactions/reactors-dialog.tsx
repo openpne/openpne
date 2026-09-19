@@ -6,18 +6,18 @@ import { Spinner } from '@/components/spinner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
-import type { TalkReactorGroup } from './types';
+import type { ReactorGroup } from '@/lib/reactions/types';
 
-/** A refusal closes the dialog without a word (docs/internals/group-talk.md, "Reactions"). */
-export function TalkReactorsDialog({ url, onClose }: { url: string; onClose: () => void }) {
+/** A refusal closes the dialog without a word (docs/internals/reactions.md, "Reading"). */
+export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => void }) {
     const t = useT();
-    const [groups, setGroups] = useState<TalkReactorGroup[] | null>(null);
+    const [groups, setGroups] = useState<ReactorGroup[] | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
 
         fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
-            .then((response) => (response.ok ? (response.json() as Promise<{ groups?: TalkReactorGroup[] }>) : Promise.reject(new Error(String(response.status)))))
+            .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : Promise.reject(new Error(String(response.status)))))
             .then((payload) => setGroups(payload.groups ?? []))
             .catch(() => {
                 if (!controller.signal.aborted) {
