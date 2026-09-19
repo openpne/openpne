@@ -74,9 +74,7 @@ group's, so a reaction arriving between the sweep and the cascade would take a f
 outlive its comment. Holding every topic and event exclusively is what makes such a writer
 wait and then find its comment gone. A single topic or event goes the same way on its own
 (`DeleteTopic::purge`, `DeleteEvent::purge`): its row X-locked, its comments read under it, their
-reactions swept, its Files purged after the commit. SQLite takes no row locks, so the
-single-connection tests pin the rows and the transaction and the MySQL-only lock-order tests pin
-which statement a racing writer waits on.
+reactions swept, its Files purged after the commit.
 
 ## Comment threads page by id
 

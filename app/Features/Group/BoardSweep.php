@@ -7,11 +7,7 @@ use App\Models\Reaction;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The reclaiming statements a teardown shares, shaped for a group of any size: reactions are found
- * a page at a time, in each table's index order, and deleted by primary key in chunks, so the sweep locks only the rows it deletes
- * (docs/internals/group-boards.md, "Tearing a group down").
- */
+/** See docs/internals/group-boards.md, "Tearing a group down". */
 final class BoardSweep
 {
     private const CHUNK = 1000;
@@ -29,7 +25,6 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * One parent at a time, so a page is a range of that parent's own index; small parents pool to a thousand before the reactions are read.
      *
      * @param  iterable<int>  $parentIds
      */
@@ -52,7 +47,7 @@ final class BoardSweep
     /**
      * Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the
      * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL 8.4 plans
-     * a row constructor here as a filter over the whole parent, not a range from the cursor (measured).
+     * a row constructor here as a filter over the whole parent, not a range from the cursor.
      *
      * @return iterable<list<int>>
      */
@@ -84,7 +79,7 @@ final class BoardSweep
         $first = true;
         [$at, $id] = [null, 0];
         do {
-            // The group id as a literal: with the leading index column bound, MySQL 8.4 plans a large room's continuation page as a filter from its head (measured); the cursor may stay bound.
+            // The group id as a literal: with the leading index column bound, MySQL 8.4 plans a large room's continuation page as a filter from its head.
             $query = DB::table('group_messages')->whereRaw('`group_id` = '.$groupId);
             if (! $first) {
                 $query->where(function (Builder $after) use ($at, $id): void {

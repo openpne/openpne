@@ -104,10 +104,6 @@ class BoardReactionLockOrderTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /**
-     * The group row alone would not stop a board writer, which never takes it: the teardown holds
-     * every topic and event exclusively, and that is the row the writer waits on.
-     */
     public function test_a_reaction_racing_a_group_teardown_waits_at_the_topic_not_the_group(): void
     {
         $group = Group::factory()->create();

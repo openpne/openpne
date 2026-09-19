@@ -92,7 +92,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertBytesGone($files);
     }
 
-    /** The first pin of the group teardown's board arm: every board row's reactions and bytes go, in one transaction under the group row. */
+    /** Every board row's reactions and bytes go, in one transaction under the group row. */
     public function test_tearing_a_group_down_sweeps_the_boards_reactions_and_purges_their_bytes(): void
     {
         $group = $this->group();

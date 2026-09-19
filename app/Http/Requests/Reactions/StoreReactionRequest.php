@@ -23,7 +23,7 @@ class StoreReactionRequest extends FormRequest
     }
 
     /**
-     * Bounded by the column, not the vocabulary (RemoveReaction).
+     * Bounded by the column, not the vocabulary, so an emoji the site withdrew can still be removed.
      *
      * @return array<string, mixed>
      */
