@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 /**
  * Adding and removing are two URLs rather than one toggle, so a tap that is retried, doubled or
  * racing the poll settles where the member pointed.
+ * The gate runs before the emoji is validated, so an invalid payload gets the same 404 as a valid one.
  */
 class GroupTalkReactionController extends Controller
 {
@@ -41,7 +42,7 @@ class GroupTalkReactionController extends Controller
     public function delete(Request $request, Group $group, GroupMessage $message, RemoveMessageReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeWrite($group, $message);
-        $emoji = (string) $request->validate(['emoji' => ['required', 'string', 'max:32']])['emoji'];
+        $emoji = (string) $request->validate(StoreReactionRequest::removeRules())['emoji'];
 
         try {
             $action($this->viewer(), $message, $emoji);

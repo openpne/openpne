@@ -16,10 +16,12 @@ use App\Features\Group\GroupController;
 use App\Features\Group\GroupMemberManageController;
 use App\Features\GroupEvent\GroupEventCommentController;
 use App\Features\GroupEvent\GroupEventController;
+use App\Features\GroupEvent\GroupEventReactionController;
 use App\Features\GroupTalk\GroupTalkController;
 use App\Features\GroupTalk\GroupTalkReactionController;
 use App\Features\GroupTopic\GroupTopicCommentController;
 use App\Features\GroupTopic\GroupTopicController;
+use App\Features\GroupTopic\GroupTopicReactionController;
 use App\Features\Home\HomeController;
 use App\Features\Home\HomeIssueController;
 use App\Features\Home\UnreadCountsController;
@@ -698,6 +700,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/topics/comments/{comment}/delete', 'delete')->whereNumber('comment')->name('group.topics.comment.delete');
     });
 
+    Route::middleware(EnsureFeatureEnabled::class.':groupTopic')->controller(GroupTopicReactionController::class)->group(function () {
+        Route::post('/topics/comments/{comment}/reactions', 'store')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('group.topics.reactions.store');
+        Route::post('/topics/comments/{comment}/reactions/delete', 'delete')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('group.topics.reactions.delete');
+        Route::get('/topics/comments/{comment}/reactions', 'index')
+            ->whereNumber('comment')->name('group.topics.reactions.index');
+    });
+
     // OpenPNE 3 /communityTopic/* redirects, GET only; the query rides along so a ?page=N bookmark
     // does not reset to page 1.
     Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':groupTopic')->group(function () {
@@ -763,6 +774,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/events/{event}/comments', 'store')->whereNumber('event')->middleware('throttle:posting')->name('group.events.comment.store');
         Route::get('/events/comments/{comment}/delete', 'showDelete')->whereNumber('comment')->name('group.events.comment.delete.show');
         Route::post('/events/comments/{comment}/delete', 'delete')->whereNumber('comment')->name('group.events.comment.delete');
+    });
+
+    Route::middleware(EnsureFeatureEnabled::class.':groupEvent')->controller(GroupEventReactionController::class)->group(function () {
+        Route::post('/events/comments/{comment}/reactions', 'store')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('group.events.reactions.store');
+        Route::post('/events/comments/{comment}/reactions/delete', 'delete')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('group.events.reactions.delete');
+        Route::get('/events/comments/{comment}/reactions', 'index')
+            ->whereNumber('comment')->name('group.events.reactions.index');
     });
 
     // OpenPNE 3 /communityEvent/* redirects, GET only; the query rides along so a ?page=N bookmark

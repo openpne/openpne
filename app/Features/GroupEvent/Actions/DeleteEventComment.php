@@ -8,6 +8,7 @@ use App\Features\GroupEvent\Exceptions\GroupEventActionFailure;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Models\GroupEventComment;
 use App\Models\Member;
+use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteEventComment
@@ -32,6 +33,11 @@ class DeleteEventComment
         DB::transaction(function () use ($comment): void {
             // Parent before comment row: the reverse order deadlocks against a event delete.
             $thread = $comment->event()->lockForUpdate()->firstOrFail();
+            // The reactions go by nothing: `reactable_id` carries no foreign key.
+            Reaction::query()
+                ->where('reactable_type', $comment->getMorphClass())
+                ->where('reactable_id', $comment->getKey())
+                ->delete();
             $comment->delete();
             BoardBumpedAt::settle($thread);
         });

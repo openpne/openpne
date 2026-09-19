@@ -2,8 +2,8 @@
 
 An emoji a member puts on a piece of content, in the one `reactions` table
 ([`app/Features/Reactions`](../../app/Features/Reactions)). Group talk was the first surface, the
-timeline the second and the diary the third; each surface owns its screens, its routes and its
-authorization, and shares everything below.
+timeline the second, the diary the third and the group boards' comments the fourth; each surface
+owns its screens, its routes and its authorization, and shares everything below.
 
 ## One table, no foreign key to the content
 
@@ -59,6 +59,10 @@ their own content mid-withdrawal would otherwise close a cycle. The one order is
 | group talk ([group-talk.md](group-talk.md#one-lock-order)) | group row → message | bumps the group's reaction version |
 | timeline ([timeline.md](timeline.md#reactions)) | thread root → reply (a root is its own container) | nothing: feeds do not poll |
 | diary ([diary.md](diary.md#reactions)) | diary row → comment (a diary is its own container) | nothing: the page does not poll |
+| group boards ([group-boards.md](group-boards.md#reactions)) | topic or event row → comment | nothing: the page does not poll |
+
+A board's teardown is the one place the container is two rows deep: the group row, then every topic
+and event under it, since a board writer takes the topic or event row and never the group's.
 
 A surface's own delete and teardown take the same order before they sweep, which is what keeps the
 paths from deadlocking as well as from racing. The single order is a property of the code; the
@@ -102,10 +106,12 @@ Three paths take reactions away, and only the last is a cascade:
    utf8mb4 string.
 4. Add and remove take the reactor's member row shared, then the surface's container row, then
    re-read the content under it; a sweep takes the container row (a withdrawal, its author's member
-   row first) and reads the thread under it with locking reads. That is the one order. The member
-   cascade (which locks the rows it deletes, as any delete does, and sweeps nothing) and the
-   OpenPNE 3 transfer are the writes outside it — and the transfer may carry a row by a member who
-   no longer holds the surface's write permission, which they can then see but not remove.
+   row first) and reads the content under it — plain reads where the hold came first, as a delete's
+   do, locking reads where the transaction's snapshot came first, as a withdrawal's do. That is the
+   one order. The member cascade (which locks the rows it deletes, as any delete does, and sweeps
+   nothing) and the OpenPNE 3 transfer are the writes outside it — and the transfer may carry a row
+   by a member who no longer holds the surface's write permission, which they can then see but not
+   remove.
 5. Nothing about a chip row grows with the content's audience: the counts are aggregated in SQL
    rather than hydrated, and the reactor list ships an exact count with at most a hundred names.
 6. A reaction notifies nobody and moves no unread state.

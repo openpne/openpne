@@ -38,7 +38,8 @@ class DeleteDiary
                 return [];
             }
 
-            $commentIds = $diary->comments()->sharedLock()->pluck('id')->all();
+            // The transaction's first consistent read, so its snapshot is taken under the lock above.
+            $commentIds = $diary->comments()->pluck('id')->all();
 
             Reaction::query()
                 ->where('reactable_type', $diary->getMorphClass())
@@ -54,7 +55,7 @@ class DeleteDiary
             $diary->delete();
 
             return $files;
-        });
+        }, attempts: 3);
 
         foreach ($files as $file) {
             $file->delete();

@@ -1,15 +1,15 @@
 import { AiChip } from '@/components/ai-chip';
+import { Avatar } from '@/components/avatar';
+import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
-import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
-import { Avatar } from '@/components/avatar';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
-import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -17,7 +17,11 @@ import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { commentsPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { rowReactions } from '@/lib/reactions/row';
+import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
+import { BoardCommentRow } from '@/pages/group/board-comment-row';
+import { topicCommentReactionEndpoints } from '@/pages/group/reactions';
 import type { CommunitySummary, TopicDetail, TopicThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
@@ -26,12 +30,16 @@ interface ShowProps extends PageProps {
     thread: TopicThread;
     canComment: boolean;
     canEdit: boolean;
+    reactionVocabulary: string[];
+    /** Fresh per render: a comment posted or deleted re-renders the page under the same URL. */
+    renderGeneration: string;
 }
 
 export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { topic, thread, canComment, canEdit } = usePage<ShowProps>().props;
+    const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const reactions = useReactions(topicCommentReactionEndpoints, renderGeneration);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -129,31 +137,12 @@ export default function GroupTopicShow() {
                 ) : (
                     <List>
                         {thread.comments.map((comment) => (
-                            <li key={comment.id} className="px-4 py-4 sm:px-5">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} isAi={comment.author?.isAi ?? false} size="md" decorative />
-                                    {comment.author ? (
-                                        <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
-                                            {comment.author.name}
-                                        </Link>
-                                    ) : (
-                                        <span className="truncate">{t('Withdrawn member')}</span>
-                                    )}
-                                    <AiChip isAi={comment.author?.isAi ?? false} />
-                                    <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <Timestamp at={comment.createdAt} preset="relative" className="shrink-0" />
-                                    {comment.deletable && (
-                                        <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
-                                            {t('Delete')}
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="mt-1 whitespace-pre-wrap break-words">
-                                    <UserText text={comment.body} />
-                                </p>
-                                <LinkCard card={comment.linkCard} className="mt-2" />
-                                <ImageGrid images={comment.images} variant="boxed" className="mt-2" />
-                            </li>
+                            <BoardCommentRow
+                                key={comment.id}
+                                comment={comment}
+                                onDelete={deleteComment}
+                                reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canComment ? reactions : null)}
+                            />
                         ))}
                     </List>
                 )}
@@ -172,6 +161,7 @@ export default function GroupTopicShow() {
                     </form>
                 </Panel>
             )}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );
 }

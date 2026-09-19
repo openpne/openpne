@@ -81,7 +81,8 @@ class CommentLinkCardCoverageTest extends TestCase
             ));
         }
 
-        $this->assertGreaterThanOrEqual(4, $modern, 'The Modern screens are no longer found by this rule.');
+        // Three files: the diary comment row, the board comment row (topics and events share it) and the timeline reply row.
+        $this->assertGreaterThanOrEqual(3, $modern, 'The Modern screens are no longer found by this rule.');
         $this->assertGreaterThanOrEqual(4, $classic, 'The Classic screens are no longer found by this rule.');
     }
 

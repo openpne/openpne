@@ -8,6 +8,7 @@ use App\Features\GroupTopic\Exceptions\GroupTopicActionFailure;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
+use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteTopicComment
@@ -32,6 +33,11 @@ class DeleteTopicComment
         DB::transaction(function () use ($comment): void {
             // Parent before comment row: the reverse order deadlocks against a topic delete.
             $thread = $comment->topic()->lockForUpdate()->firstOrFail();
+            // The reactions go by nothing: `reactable_id` carries no foreign key.
+            Reaction::query()
+                ->where('reactable_type', $comment->getMorphClass())
+                ->where('reactable_id', $comment->getKey())
+                ->delete();
             $comment->delete();
             BoardBumpedAt::settle($thread);
         });
