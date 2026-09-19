@@ -106,3 +106,34 @@ results to `created_at` at or after midnight N days ago in the site zone — Ope
 `date('Y-m-d 00:00:00', strtotime('-N days'))`, so 0 is today alone. Both are this screen's alone:
 the Modern member archive's keyword filter is an OpenPNE 4 face OpenPNE 3 never had, and neither
 switch reaches it.
+
+## Reactions
+
+A diary and each of its comments take the emoji reactions of [reactions.md](reactions.md), on six
+routes (`diary.reactions.*`, `diary.comment.reactions.*`,
+[`DiaryReactionController`](../../app/Features/Diary/DiaryReactionController.php)). Two things are
+the diary's own:
+
+- **Reacting takes the diary's clearance**, the same `DiaryAccess::canView` gate commenting takes;
+  a comment is judged at its diary. The routes sit behind `auth`, so a guest on a web-public diary
+  sees the chips as counts, with no way to change them and no reactor list.
+- **The lock is the diary row.** A diary is deleted from its row, and the comments go by FK cascade
+  while their reactions go by nothing — so every reaction write, the diary's and the comment's
+  delete and the withdrawal sweep take
+  [`DiaryThreadLock`](../../app/Features/Diary/DiaryThreadLock.php): the diary row exclusively,
+  then the comment re-read under it. A withdrawing member's diaries go with the member row's
+  cascade, so they are re-enumerated under the member row's lock and swept inside that same
+  transaction, each diary held exclusively and its comments re-read under it with a locking read.
+  The member's comments on other diaries stay (`member_id` is set null), and so do the reactions on
+  them.
+
+Nothing polls the page, so no watermark moves; the show page carries the diary's chips and its
+comments' from at most two grouped reads.
+
+## Key invariants
+
+1. A comment's reaction is gated and locked at its diary: `DiaryAccess::canView` on the diary, the
+   diary row before the comment row.
+2. The diary's delete, the comment's delete and the withdrawal sweep take the diary row before they
+   sweep reactions, inside the transaction that deletes the rows. The two deletes purge File bytes
+   after it; the withdrawal's late diaries go by the member cascade, which purges no bytes.

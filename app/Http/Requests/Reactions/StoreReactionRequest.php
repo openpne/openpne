@@ -10,8 +10,8 @@ class StoreReactionRequest extends FormRequest
 {
     /**
      * What may be added is the site's vocabulary and nothing else — the picker offers exactly this
-     * set, so anything else is a client that made it up. What may be *removed* is deliberately not
-     * bounded by it (RemoveReaction).
+     * set, so anything else is a client that made it up. Not injected: each surface validates these
+     * rules after its own gate, so a refused request cannot tell an invalid payload from a valid one.
      *
      * @return array<string, mixed>
      */

@@ -52,9 +52,10 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the row's chips, passed rather than read off the model so a page costs one grouped read
+     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, reactions: list<array{emoji: string, count: int, mine: bool}>}
      */
-    public static function detail(Diary $diary, ?Member $viewer): array
+    public static function detail(Diary $diary, ?Member $viewer, array $reactions): array
     {
         $images = $diary->images->map([self::class, 'image'])->all();
 
@@ -77,6 +78,7 @@ class DiarySerializer
             'author' => MemberRefSerializer::ref($diary->member),
             'linkCard' => LinkCardSerializer::card($diary, $viewer),
             'createdAt' => $diary->created_at->toIso8601String(),
+            'reactions' => $reactions,
         ];
     }
 
@@ -120,9 +122,10 @@ class DiarySerializer
      * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
      * permission, computed server-side so the client never re-derives authorization.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool, reactions: list<array{emoji: string, count: int, mine: bool}>}
      */
-    public static function comment(DiaryComment $comment, ?Member $viewer): array
+    public static function comment(DiaryComment $comment, ?Member $viewer, array $reactions): array
     {
         return [
             'id' => $comment->getKey(),
@@ -133,25 +136,28 @@ class DiarySerializer
             'author' => $comment->member ? MemberRefSerializer::ref($comment->member) : null,
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => $comment->isDeletableBy($viewer),
+            'reactions' => $reactions,
         ];
     }
 
     /**
      * @param  Collection<int, DiaryComment>  $comments
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by comment id, as ReactionAggregates answers
      * @return list<array>
      */
-    public static function comments(Collection $comments, ?Member $viewer): array
+    public static function comments(Collection $comments, ?Member $viewer, array $reactions): array
     {
-        return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer))->all();
+        return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer, $reactions[(int) $comment->getKey()] ?? []))->all();
     }
 
     /**
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by comment id
      * @return array{comments: list<array>, total: int, size: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
      */
-    public static function thread(DiaryCommentThread $thread, ?Member $viewer): array
+    public static function thread(DiaryCommentThread $thread, ?Member $viewer, array $reactions): array
     {
         return [
-            'comments' => self::comments($thread->comments, $viewer),
+            'comments' => self::comments($thread->comments, $viewer, $reactions),
             'total' => $thread->total,
             'size' => $thread->size,
             'page' => $thread->page,

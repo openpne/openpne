@@ -164,6 +164,47 @@ class WithdrawMemberTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
+    /** An entry from another device between the drain and the member lock goes by the cascade, which reaches no reaction. */
+    public function test_sweeps_the_reactions_on_an_entry_posted_after_the_drain(): void
+    {
+        $member = Member::factory()->create();
+        $drained = Diary::factory()->create(['member_id' => $member->getKey()]);
+        $bystander = Member::factory()->create();
+        $late = null;
+
+        // Fires inside the drain's delete of $drained: after the enumeration, before the member lock.
+        Diary::deleted(function (Diary $diary) use (&$late, $drained, $member, $bystander): void {
+            if ($late === null && $diary->is($drained)) {
+                $late = Diary::factory()->create(['member_id' => $member->getKey()]);
+                $comment = DiaryComment::factory()->create(['diary_id' => $late->getKey()]);
+                $late->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+                $comment->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+            }
+        });
+
+        $this->withdraw($member);
+
+        $this->assertNotNull($late);
+        $this->assertDatabaseMissing('diaries', ['id' => $late->getKey()]);
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** The comment stays with a null author, so what others put on it stays too. */
+    public function test_keeps_the_reactions_on_the_members_comment_under_anothers_entry(): void
+    {
+        $member = Member::factory()->create();
+        $comment = DiaryComment::factory()->create([
+            'diary_id' => Diary::factory()->create()->getKey(),
+            'member_id' => $member->getKey(),
+        ]);
+        $comment->reactions()->create(['member_id' => Member::factory()->create()->getKey(), 'emoji' => "\u{1F44D}"]);
+
+        $this->withdraw($member);
+
+        $this->assertDatabaseHas('diary_comments', ['id' => $comment->getKey(), 'member_id' => null]);
+        $this->assertDatabaseHas('reactions', ['reactable_id' => $comment->getKey(), 'reactable_type' => 'diaryComment']);
+    }
+
     public function test_retains_set_null_content_with_a_null_author(): void
     {
         $member = Member::factory()->create();

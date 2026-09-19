@@ -4,6 +4,7 @@ namespace App\Features\Reactions\Queries;
 
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,7 +21,7 @@ class ReactionAggregates
      * @return array<int, list<array{emoji: string, count: int, mine: bool}>> keyed by content id;
      *                                                                        content nobody reacted to has no key at all
      */
-    public function __invoke(Member $viewer, string $reactable, array $ids): array
+    public function __invoke(?Member $viewer, string $reactable, array $ids): array
     {
         if ($ids === []) {
             return [];
@@ -31,7 +32,11 @@ class ReactionAggregates
             ->whereIn('reactable_id', $ids)
             ->select('reactable_id', 'emoji')
             ->selectRaw('count(*) as total')
-            ->selectRaw('max(case when member_id = ? then 1 else 0 end) as mine', [(int) $viewer->getKey()])
+            ->when(
+                $viewer === null,
+                fn (Builder $query) => $query->selectRaw('0 as mine'),
+                fn (Builder $query) => $query->selectRaw('max(case when member_id = ? then 1 else 0 end) as mine', [(int) $viewer->getKey()]),
+            )
             ->groupBy('reactable_id', 'emoji')
             ->orderBy('reactable_id')
             ->orderByRaw('min(created_at)')
@@ -51,7 +56,7 @@ class ReactionAggregates
     }
 
     /** @return list<array{emoji: string, count: int, mine: bool}> */
-    public function of(Member $viewer, Model $reactable): array
+    public function of(?Member $viewer, Model $reactable): array
     {
         return $this($viewer, $reactable::class, [(int) $reactable->getKey()])[(int) $reactable->getKey()] ?? [];
     }
