@@ -38,7 +38,7 @@ final class BoardSweep
         }
     }
 
-    /** Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the tie. */
+    /** Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the tie, and is NOT NULL, so no null arm is needed. */
     public static function commentsOf(string $alias, string $table, string $parentColumn, int $parentId): void
     {
         $cursor = null;
@@ -72,7 +72,7 @@ final class BoardSweep
                     if ($at === null) {
                         $after->where(fn (Builder $nulls) => $nulls->whereNull('created_at')->where('id', '>', $id))->orWhereNotNull('created_at');
                     } else {
-                        $after->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id));
+                        $after->whereRowValues(['created_at', 'id'], '>', [$at, $id]);
                     }
                 });
             }
