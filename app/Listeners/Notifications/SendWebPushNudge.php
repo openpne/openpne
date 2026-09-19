@@ -41,11 +41,7 @@ final class SendWebPushNudge
             assert($row instanceof DatabaseNotification);
 
             $member->notify(
-                (new WebPushNudge(
-                    $row->data['kind'] ?? null,
-                    $row->data['reason'] ?? null,
-                    NotificationFeedSerializer::actorId($row),
-                ))->locale($member->locale ?? app()->getLocale()),
+                (new WebPushNudge($row->data, NotificationFeedSerializer::actorId($row)))->locale($member->locale ?? app()->getLocale()),
             );
         } catch (Throwable $e) {
             report($e);

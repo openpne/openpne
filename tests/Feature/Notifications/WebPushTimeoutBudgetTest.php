@@ -27,7 +27,7 @@ class WebPushTimeoutBudgetTest extends TestCase
 
         $worst = PushSubscriptionController::MAX_DEVICES * $timeout;
 
-        $this->assertLessThanOrEqual((new WebPushNudge(null, null, null))->timeout, $worst);
+        $this->assertLessThanOrEqual((new WebPushNudge([], null))->timeout, $worst);
     }
 
     /**
@@ -41,7 +41,7 @@ class WebPushTimeoutBudgetTest extends TestCase
 
         $worst = PushSubscriptionController::MAX_DEVICES * $config['timeout'];
 
-        $this->assertLessThanOrEqual((new WebPushNudge(null, null, null))->timeout, $worst);
+        $this->assertLessThanOrEqual((new WebPushNudge([], null))->timeout, $worst);
     }
 
     /**
@@ -57,7 +57,7 @@ class WebPushTimeoutBudgetTest extends TestCase
 
     public function test_the_job_gives_up_before_any_queue_hands_it_out_again(): void
     {
-        $timeout = (new WebPushNudge(null, null, null))->timeout;
+        $timeout = (new WebPushNudge([], null))->timeout;
 
         foreach ((array) config('queue.connections') as $name => $connection) {
             if (in_array($name, self::NO_READABLE_RESERVATION_WINDOW, true)) {
