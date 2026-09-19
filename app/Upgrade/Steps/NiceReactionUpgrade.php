@@ -68,7 +68,13 @@ abstract class NiceReactionUpgrade extends UpgradeStep
     /** SQL boolean over the alias `nice`: a like on an activity that satisfies `$landing` (over `activity_data`). */
     public static function onActivity(string $landing): string
     {
-        return "`nice`.`foreign_table` = 'A' AND EXISTS (SELECT 1 FROM ".SourceRef::table('activity_data').' AS `activity_data`'
+        return self::onTable('A').' AND EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data').' AS `activity_data`'
             .' WHERE `activity_data`.`id` = `nice`.`foreign_id` AND '.$landing.')';
+    }
+
+    /** Compared as bytes: opLikePlugin's own reads do, since a 0.9-era source may hold the column case-insensitive and `D` and `d` are two tables. */
+    public static function onTable(string $letter): string
+    {
+        return "`nice`.`foreign_table` = BINARY '{$letter}'";
     }
 }

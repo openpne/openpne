@@ -27,7 +27,7 @@ trait SeedsSourceNice
             'member_id' => $memberId,
             'foreign_table' => $table,
             'foreign_id' => $foreignId,
-            'foreign_hash' => md5("{$table}{$foreignId}"),
+            'foreign_hash' => md5("{$table},{$foreignId}"),
             'created_at' => $at,
             'updated_at' => $at,
         ]);

@@ -16,6 +16,7 @@ use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
+use App\Upgrade\Steps\TimelineReactionUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -34,7 +35,7 @@ class InactiveMemberPreflightTest extends TestCase
 
     private const SOURCE_TABLES = ['member', 'diary', 'diary_image', 'member_relationship', 'message', 'message_type',
         'message_send_list', 'deleted_message', 'community', 'community_config', 'community_category',
-        'community_member', 'community_member_position', 'member_config', 'activity_data', 'activity_image'];
+        'community_member', 'community_member_position', 'member_config', 'activity_data', 'activity_image', 'nice'];
 
     protected function setUp(): void
     {
@@ -106,6 +107,28 @@ class InactiveMemberPreflightTest extends TestCase
         [$ok, $output] = $this->runSteps([new TimelinePostUpgrade, new TimelineReplyUpgrade]);
 
         $this->assertTrue($ok, $output);
+    }
+
+    public function test_a_like_by_an_inactive_member_aborts_only_where_its_activity_is_migrated(): void
+    {
+        $this->createSources('member', 'activity_data', 'activity_image', 'community', 'nice');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        Member::factory()->create(['id' => 1]);
+        $this->seedActivity(10, memberId: 1);
+        $this->seedActivity(11, memberId: 1, foreignTable: 'diary'); // not migrated
+        $this->seedNice(20, memberId: 2, foreignId: 11);
+        $steps = [new TimelinePostUpgrade, new TimelineReactionUpgrade];
+
+        [$ok, $output] = $this->runSteps($steps);
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('nice.member_id', $output);
+
+        $this->seedNice(21, memberId: 2, foreignId: 10);
+        [$ok, $output] = $this->runSteps($steps, new RunOptions(forceRestart: true));
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
     }
 
     public function test_a_rows_own_step_filter_scopes_the_count(): void
@@ -386,6 +409,12 @@ class InactiveMemberPreflightTest extends TestCase
             'is_pc' => 1, 'is_mobile' => 1, 'source' => null, 'source_uri' => null, 'foreign_table' => $foreignTable, 'foreign_id' => $foreignTable === null ? null : 1,
             'template' => null, 'template_param' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00',
         ]);
+    }
+
+    private function seedNice(int $id, int $memberId, int $foreignId): void
+    {
+        DB::table('nice')->insert(['id' => $id, 'member_id' => $memberId, 'foreign_table' => 'A', 'foreign_id' => $foreignId,
+            'foreign_hash' => md5("A,{$foreignId}"), 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
     }
 
     private function seedDiary(int $id, int $memberId): void

@@ -82,11 +82,38 @@ class NiceReactionUpgradeSqlTest extends TestCase
         $this->seedNice(2, $member->id, 'A', 2);
         $this->seedNice(3, $member->id, 'A', 404); // activity gone
 
-        $warnings = (new NicePreflight)->inspect('', null, ['nice', 'activity_data', 'community']);
-        $this->runSteps();
+        $this->seedNice(4, $member->id, 'D', 1);
+        $this->seedNice(5, $member->id, 'e', 1);
 
+        $lines = [];
+        $ran = (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertTrue($ran, implode("\n", $lines));
         $this->assertSame([2], DB::table('reactions')->pluck('id')->map(fn ($id) => (int) $id)->all());
-        $this->assertSame([NicePreflight::unmigratedActivityLikeMessage(2, [1, 3])], $warnings);
+        $this->assertContains('WARN '.NicePreflight::unmigratedActivityLikeMessage(2, [1, 3]), $lines);
+        $this->assertContains('WARN '.NicePreflight::otherLikeMessage('diaries', 1, [4]), $lines);
+        $this->assertContains('WARN '.NicePreflight::otherLikeMessage('event comments', 1, [5]), $lines);
+    }
+
+    public function test_two_likes_by_one_member_on_one_activity_abort_before_any_write(): void
+    {
+        $member = $this->activeMember();
+        $this->seedActivity(1, $member->id);
+        // A 0.9-era source: the unique index over (member, table, id) arrived later.
+        DB::statement('ALTER TABLE `nice` DROP INDEX `member_id_foreign_table_foreign_id_UNIQUE_idx`');
+        $this->seedNice(1, $member->id, 'A', 1);
+        $this->seedNice(2, $member->id, 'A', 1);
+
+        $lines = [];
+        $ran = (new UpgradeRunner(new InsertSelectCompiler, $this->steps()))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertFalse($ran);
+        $this->assertContains('ERROR '.NicePreflight::duplicateLikeMessage(1, [1]), $lines);
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_likes_on_anything_but_an_activity_are_not_this_steps(): void

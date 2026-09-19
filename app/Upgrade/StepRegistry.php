@@ -216,7 +216,7 @@ final class StepRegistry
                 'tables' => ['message', 'message_file', 'message_send_list', 'message_type', 'deleted_message'],
             ],
             'opLikePlugin' => [
-                'floor' => '1.0.0',
+                'floor' => '0.9.0',
                 'tables' => ['nice'],
             ],
             'opCommunityTopicPlugin' => [

@@ -132,6 +132,7 @@ record's readers would see it from the other's page). Fix the source and dry-run
 | Timeline threads scoped to something other than a community, or replies scoped differently from their thread | A thread lands where its first post does; any other scope is not migrated. |
 | Activity images held only as a URL | OpenPNE 4 keeps an image as a file, so these are not migrated. |
 | Likes (`opLikePlugin`) on activities that are not migrated | A like lands where its activity does; one on an activity left behind is left behind with it. |
+| Likes on diaries, diary comments, topic comments or event comments, counted per kind | Not carried yet: only a like on a timeline post has a place to land. |
 | Template activities (`diary` / `community_topic` / `community_event`), with where they land | The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; a template OpenPNE 4 does not know keeps its stored text. |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
@@ -255,8 +256,8 @@ change from a problem when you go through it.
   member's own choice stays on their account, applying whenever the site setting lets members choose.
   A site that never had the setting starts members-only.
 - **Likes** — an `opLikePlugin` like on a timeline post becomes a 👍 reaction on the post or the
-  group talk message it became, by the same member at the same time. Likes on diaries and board
-  comments are not carried yet.
+  group talk message it became, by the same member at the same time. Likes on diaries, diary
+  comments, topic comments and event comments are not carried yet; the dry run counts each kind.
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how

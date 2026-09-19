@@ -63,8 +63,8 @@ class VerifierAbsentOptionalTest extends TestCase
 
     public function test_an_uninstalled_like_plugin_passes_the_runner_and_verify(): void
     {
-        // The like steps read `activity_data` and `community` too, so the preflight that counts the
-        // likes left behind must not touch a `nice` that was never there.
+        // `community` is here for the `nice.member_id` refuse scope, which routes through
+        // ActivityThread::migrated; the preflight counting likes must not touch a `nice` never there.
         foreach (['member', 'activity_data', 'activity_image', 'community'] as $table) {
             DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
         }
