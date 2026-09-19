@@ -10,8 +10,10 @@ use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentImageUpgrade;
+use App\Upgrade\Steps\DiaryCommentReactionUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
+use App\Upgrade\Steps\DiaryReactionUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\DirectMessageFileUpgrade;
 use App\Upgrade\Steps\DirectMessageRecipientUpgrade;
@@ -24,6 +26,7 @@ use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
 use App\Upgrade\Steps\GroupEventCommentImageUpgrade;
+use App\Upgrade\Steps\GroupEventCommentReactionUpgrade;
 use App\Upgrade\Steps\GroupEventCommentUpgrade;
 use App\Upgrade\Steps\GroupEventImageUpgrade;
 use App\Upgrade\Steps\GroupEventMemberUpgrade;
@@ -35,6 +38,7 @@ use App\Upgrade\Steps\GroupMessageImageUpgrade;
 use App\Upgrade\Steps\GroupMessageReactionUpgrade;
 use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
+use App\Upgrade\Steps\GroupTopicCommentReactionUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentUpgrade;
 use App\Upgrade\Steps\GroupTopicImageUpgrade;
 use App\Upgrade\Steps\GroupTopicUpgrade;
@@ -124,6 +128,10 @@ final class StepRegistry
             // A like on an activity lands where the activity did; both targets exist by here.
             TimelineReactionUpgrade::class,
             GroupMessageReactionUpgrade::class,
+            DiaryReactionUpgrade::class,
+            DiaryCommentReactionUpgrade::class,
+            GroupTopicCommentReactionUpgrade::class,
+            GroupEventCommentReactionUpgrade::class,
             // navigation_translations.id references navigations.id, so translations run after.
             NavigationUpgrade::class,
             NavigationTranslationUpgrade::class,
