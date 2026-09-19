@@ -23,7 +23,7 @@ export function RowBody({
             <div className={cn(controls && 'grid grid-cols-[minmax(0,1fr)_auto] gap-x-2')}>
                 <div className={contentClassName}>{children}</div>
                 {controls && (
-                    <div className="flex items-end gap-1 self-end">
+                    <div className="flex items-end gap-1 self-end pointer-coarse:gap-3">
                         {trailing}
                         {reactions.onToggle !== undefined && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
                     </div>

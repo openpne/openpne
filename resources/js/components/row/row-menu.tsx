@@ -38,15 +38,18 @@ export function RowMenu({ items }: { items: (RowMenuItem | null)[] }) {
     const choose = (run: () => void) => {
         pending.current = run;
     };
-    const closed = (event: Event) => {
+    const runChosen = () => {
         const run = pending.current;
         pending.current = null;
-        if (run === null) {
+        run?.();
+    };
+    const closed = (event: Event) => {
+        if (pending.current === null) {
             return;
         }
         event.preventDefault();
         trigger.current?.focus({ preventScroll: true });
-        run();
+        runChosen();
     };
     const present = items.filter((item): item is RowMenuItem => item !== null);
     const plain = present.filter((item) => item.destructive !== true);
@@ -64,7 +67,7 @@ export function RowMenu({ items }: { items: (RowMenuItem | null)[] }) {
                         <Ellipsis className="size-4" aria-hidden />
                     </button>
                 </Tip>
-                <ActionSheet open={open} onOpenChange={setOpen} title={t('More actions')} onCloseAutoFocus={closed}>
+                <ActionSheet open={open} onOpenChange={setOpen} title={t('More actions')} returnFocusTo={trigger} onClosed={runChosen}>
                     {plain.length > 0 && <div className={SHEET_GROUP}>{plain.map((item) => sheetItem(item, choose, () => setOpen(false)))}</div>}
                     {destructive.length > 0 && <div className={cn(SHEET_GROUP, 'mt-1')}>{destructive.map((item) => sheetItem(item, choose, () => setOpen(false)))}</div>}
                 </ActionSheet>
@@ -103,7 +106,9 @@ function menuItem(item: RowMenuItem, choose: (run: () => void) => void) {
     if (item.href !== undefined) {
         return (
             <DropdownMenuItem key={item.label} asChild disabled={item.disabled} className={className}>
-                <Link href={item.href}>{body}</Link>
+                <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
+                    {body}
+                </Link>
             </DropdownMenuItem>
         );
     }
@@ -127,7 +132,7 @@ function sheetItem(item: RowMenuItem, choose: (run: () => void) => void, close: 
 
     if (item.href !== undefined) {
         return (
-            <Link key={item.label} href={item.href} className={className} onClick={close}>
+            <Link key={item.label} href={item.href} className={cn(className, item.disabled && 'pointer-events-none opacity-50')} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined} onClick={close}>
                 {body}
             </Link>
         );

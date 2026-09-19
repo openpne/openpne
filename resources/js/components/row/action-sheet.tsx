@@ -1,4 +1,4 @@
-import { useRef, type ComponentProps, type ReactNode } from 'react';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
 
@@ -8,18 +8,24 @@ export const SHEET_ITEM =
 
 export const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-card divide-y divide-border';
 
-/** A finger's overlay for a row's controls: named for the reader who cannot see it, drawn as a grabber for everyone else. */
+/**
+ * A finger's overlay for a row's controls: named for the reader who cannot see it, drawn as a grabber
+ * for everyone else. Opened by its own button rather than a Radix trigger, so it is told where focus
+ * goes back to, and `onClosed` runs once it is there.
+ */
 export function ActionSheet({
     open,
     onOpenChange,
     title,
-    onCloseAutoFocus,
+    returnFocusTo,
+    onClosed,
     children,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
-    onCloseAutoFocus?: ComponentProps<typeof SheetContent>['onCloseAutoFocus'];
+    returnFocusTo: RefObject<HTMLElement | null>;
+    onClosed?: () => void;
     children: ReactNode;
 }) {
     const t = useT();
@@ -33,7 +39,11 @@ export function ActionSheet({
                 side="bottom"
                 closeLabel={t('Close')}
                 aria-describedby={undefined}
-                onCloseAutoFocus={onCloseAutoFocus}
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    returnFocusTo.current?.focus({ preventScroll: true });
+                    onClosed?.();
+                }}
                 // The trap's default first stop is the first control, and a focus ring drawn there
                 // reads as "you hold this one" on a tile nobody pressed.
                 onOpenAutoFocus={(event) => {

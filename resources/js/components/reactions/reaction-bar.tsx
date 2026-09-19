@@ -1,5 +1,5 @@
 import { SmilePlus, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActionSheet } from '@/components/row/action-sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tip } from '@/components/ui/tooltip';
@@ -162,6 +162,7 @@ export function ReactionAdd({
     // Each row's picker holds its own: pressing another row's button is an outside press to this one,
     // so one is open at a time without the page closing it from outside.
     const [open, setOpen] = useState(false);
+    const trigger = useRef<HTMLButtonElement>(null);
     const pick = (emoji: string, mine: boolean) => {
         setOpen(false);
         onPick(emoji, mine);
@@ -171,11 +172,11 @@ export function ReactionAdd({
         return (
             <>
                 <Tip label={t('Add a reaction')}>
-                    <button type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={ROW_ICON_BUTTON}>
+                    <button ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={ROW_ICON_BUTTON}>
                         <SmilePlus className="size-4" aria-hidden />
                     </button>
                 </Tip>
-                <ActionSheet open={open} onOpenChange={setOpen} title={t('Reactions')}>
+                <ActionSheet open={open} onOpenChange={setOpen} title={t('Reactions')} returnFocusTo={trigger}>
                     {/* Four to a row rather than wrapping: a set meant to be scanned should not change shape with its own length. */}
                     <div className="grid grid-cols-4 justify-items-center gap-y-2 pb-2">
                         <ReactionPickerGrid chips={chips} vocabulary={vocabulary} buttonClassName="size-12 text-2xl border-input bg-muted" onPick={pick} />

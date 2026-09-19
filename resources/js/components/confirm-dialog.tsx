@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertDialog } from 'radix-ui';
 import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
@@ -37,9 +37,15 @@ export function useConfirm() {
 export function ConfirmDialogHost() {
     const t = useT();
     const [opts, setOpts] = useState<ResolvedOptions | null>(null);
+    // Held apart from `opts`: the content is drawn once more after `opts` is cleared, and that render's handler is the one the close runs.
+    const opener = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
-        const handler = (e: Event) => setOpts((e as CustomEvent<ResolvedOptions>).detail);
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<ResolvedOptions>).detail;
+            opener.current = detail.opener;
+            setOpts(detail);
+        };
         window.addEventListener(EVENT_NAME, handler);
         return () => window.removeEventListener(EVENT_NAME, handler);
     }, []);
@@ -49,7 +55,6 @@ export function ConfirmDialogHost() {
         opts?.resolve(ok);
         setOpts(null);
     };
-    const opener = opts?.opener ?? null;
 
     return (
         <AlertDialog.Root
@@ -63,7 +68,7 @@ export function ConfirmDialogHost() {
                 <AlertDialog.Content
                     onCloseAutoFocus={(event) => {
                         event.preventDefault();
-                        opener?.focus({ preventScroll: true });
+                        opener.current?.focus({ preventScroll: true });
                     }}
                     className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-card-foreground shadow-xl"
                 >

@@ -6,7 +6,7 @@ function matches(): boolean {
     return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(COARSE_QUERY).matches;
 }
 
-/** Whether the primary pointer is a finger: false where the query cannot be asked, so a server render draws the cursor's overlays. */
+/** Whether the primary pointer is a finger; false where the query cannot be asked. */
 export function useCoarsePointer(): boolean {
     const [coarse, setCoarse] = useState(matches);
 

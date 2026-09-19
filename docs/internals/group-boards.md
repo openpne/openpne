@@ -141,8 +141,8 @@ The topic and event bodies themselves take none. Two things are the boards' own:
   member's comments stay with a null author, and so do the reactions on them; the group teardown
   above is what sweeps a board.
 
-A comment row is drawn as [reactions.md](reactions.md#the-row) says, and so are the topic and
-event bodies, whose kebab holds edit and delete.
+A comment row is drawn as [reactions.md](reactions.md#the-row) says; the topic and event bodies
+keep their edit and delete in a kebab of the same kind.
 
 ## Key invariants
 

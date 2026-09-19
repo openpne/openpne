@@ -35,7 +35,8 @@ test('a list with nothing in it draws no control', () => {
 
 test('the destructive choice stands last, past a divider, and a plain one runs its action once the menu has gone', async () => {
     const remove = vi.fn();
-    const edit = vi.fn();
+    // What the choice sees as focused is the contract: a dialog it opens records that as its way back.
+    const edit = vi.fn(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More actions' })));
     renderWithProviders(<RowMenu items={[{ label: 'Delete', icon: Trash2, destructive: true, onSelect: remove }, { label: 'Edit', icon: Pencil, onSelect: edit }]} />);
     open();
 
@@ -72,9 +73,9 @@ test('who reacted is listed for a reader who may see it, disabled while nobody h
     expect(screen.getByRole('menuitem', { name: 'See who reacted' }).getAttribute('aria-disabled')).toBe('true');
 });
 
-test('a finger gets the same choices in a sheet, and a chosen one closes it before it runs', async () => {
+test('a finger gets the same choices in a sheet; a chosen one closes it before it runs, and focus comes back to the kebab either way', async () => {
     coarse.value = true;
-    const remove = vi.fn();
+    const remove = vi.fn(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More actions' })));
     renderWithProviders(<RowMenu items={[{ label: 'Edit', icon: Pencil, href: '/x' }, { label: 'Delete', icon: Trash2, destructive: true, onSelect: remove }]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
@@ -86,4 +87,11 @@ test('a finger gets the same choices in a sheet, and a chosen one closes it befo
     expect(screen.queryByRole('dialog')).toBeNull();
     await tick();
     expect(remove).toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More actions' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'More actions' }), { key: 'Escape' });
+    await tick();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More actions' }));
 });
