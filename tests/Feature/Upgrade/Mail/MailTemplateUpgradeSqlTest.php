@@ -154,6 +154,30 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseMissing('mail_template_translations', ['mail_template_id' => 5]);
     }
 
+    /** OpenPNE 3 ignores a saved row whose template is empty and sends its sample, so the row must not become an override. */
+    public function test_an_empty_template_row_is_not_carried_and_the_stock_wording_sends(): void
+    {
+        $this->seedMail(3, 'pc_friendLinkComplete');
+        $this->seedTranslation(3, 'ja_JP', 'フレンド成立のお知らせ', '');
+        $this->seedTranslation(3, 'en_US', 'Friend linked', '');
+        $this->seedMail(6, 'pc_notifyNewMessage');
+        $this->seedTranslation(6, 'ja_JP', '新着', "\n");
+        // A body of one space is sent by OpenPNE 3; the source collation would equate it with ''.
+        $this->seedTranslation(6, 'en_US', 'New', ' ');
+
+        $this->runUpgrade();
+        app(MailTemplateService::class)->clearCache();
+
+        $this->assertDatabaseMissing('mail_template_translations', ['mail_template_id' => 3]);
+        $this->assertDatabaseHas('mail_template_translations', ['mail_template_id' => 6, 'locale' => 'ja', 'body' => "\n"]);
+        $this->assertSame(' ', DB::table('mail_template_translations')->where(['mail_template_id' => 6, 'locale' => 'en'])->value('body'));
+
+        $rendered = app(MailTemplateService::class)->render(
+            MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']],
+        );
+        $this->assertStringStartsWith('Bob さんがあなたの', $rendered->subject);
+    }
+
     public function test_a_migrated_customized_body_renders_through_the_service(): void
     {
         // An admin customized the OpenPNE 3 friend-accepted body; after the upgrade the OpenPNE 4 service

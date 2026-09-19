@@ -32,15 +32,26 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
     public function filter(): ?string
     {
         return sprintf(
-            '`id` IN (SELECT `id` FROM %s WHERE `name` IN (%s))',
+            '`id` IN (SELECT `id` FROM %s WHERE `name` IN (%s)) AND %s',
             SourceRef::table('notification_mail'),
             $this->sourceNameList(),
+            self::templateCarriedExpr(),
         );
     }
 
     public function filterColumns(): array
     {
-        return ['id'];
+        return ['id', 'template'];
+    }
+
+    /**
+     * OpenPNE 3's template loader (`sfTemplateSwitchableLoaderDoctrine`) rejects an empty body and
+     * sends its sample instead; compared as bytes because the source collation pads spaces, and ' '
+     * is a body it does send. Public so MailTemplatePreflight inspects the same rows the step carries.
+     */
+    public static function templateCarriedExpr(): string
+    {
+        return "CAST(`template` AS BINARY) <> ''";
     }
 
     public function targetDefaults(): array
