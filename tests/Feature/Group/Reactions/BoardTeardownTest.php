@@ -126,12 +126,15 @@ class BoardTeardownTest extends BoardReactionTestCase
     /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, and a decade-old board's comments pass that. */
     public function test_the_teardown_reaches_every_row_by_subquery_and_binds_nothing_but_the_group_id(): void
     {
+        $this->group(); // so the group's id differs from its first topic's and event's
         $group = $this->group();
         $author = $this->joined($group);
         $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
+        $event = app(CreateEvent::class)($author, $group, $this->eventForm(), [UploadedFile::fake()->image('e.png', 20, 20)]);
         foreach (range(1, 3) as $i) {
             $this->react($author, app(CreateTopicComment::class)($author, $topic, "reply {$i}", []))->assertOk();
         }
+        $this->react($author, app(CreateEventComment::class)($author, $event, 'reply', []))->assertOk();
         $bindings = [];
         DB::listen(function ($query) use (&$bindings): void {
             if (preg_match('/^select .* from [`"]files[`"] where [`"]id[`"] in \(select|^delete from [`"]reactions[`"]/', $query->sql)) {
@@ -141,9 +144,10 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertCount(2, $bindings, 'one File collection and one chunked reaction delete');
+        $this->assertCount(3, $bindings, 'one File collection and one chunked reaction delete per board');
         $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
-        $this->assertCount(3, $bindings[1], 'the reaction delete binds the reactions\' own ids');
+        $this->assertCount(3, $bindings[1], 'the topic reaction delete binds the reactions\' own ids');
+        $this->assertCount(1, $bindings[2], 'the event reaction delete binds the reactions\' own ids');
         $this->assertDatabaseCount('reactions', 0);
     }
 

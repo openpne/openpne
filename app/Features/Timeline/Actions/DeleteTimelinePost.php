@@ -22,6 +22,7 @@ class DeleteTimelinePost
                 return [];
             }
 
+            // The transaction's first consistent read, so its snapshot is taken under the lock above.
             $ids = [(int) $post->getKey(), ...$post->replies()->pluck('id')->all()];
 
             Reaction::query()
@@ -40,7 +41,7 @@ class DeleteTimelinePost
             $post->delete();
 
             return $files;
-        });
+        }, attempts: 3);
 
         foreach ($files as $file) {
             $file->delete();
