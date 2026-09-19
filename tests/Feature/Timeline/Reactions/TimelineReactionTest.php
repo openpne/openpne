@@ -92,6 +92,17 @@ class TimelineReactionTest extends TimelineReactionTestCase
         $this->react($rootsFriend, $reply)->assertOk();
     }
 
+    /** The gate answers before the payload is looked at, so an id the viewer may not see reads the same whether the emoji is valid or not. */
+    public function test_an_invalid_emoji_on_a_post_the_viewer_may_not_see_is_still_not_found(): void
+    {
+        $post = TimelinePost::factory()->private()->create();
+        $stranger = Member::factory()->create();
+
+        $this->react($stranger, $post, 'not an emoji')->assertNotFound();
+        $this->unreact($stranger, $post, str_repeat('x', 64))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_reacting_is_not_posting(): void
     {
         $post = $this->rootPost();

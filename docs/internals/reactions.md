@@ -2,8 +2,8 @@
 
 An emoji a member puts on a piece of content, in the one `reactions` table
 ([`app/Features/Reactions`](../../app/Features/Reactions)). Group talk was the first surface, the
-timeline the second and the diary the third; each surface owns its screens, its routes and its
-authorization, and shares everything below.
+timeline the second, the diary the third and the group boards' comments the fourth; each surface
+owns its screens, its routes and its authorization, and shares everything below.
 
 ## One table, no foreign key to the content
 
@@ -59,6 +59,7 @@ their own content mid-withdrawal would otherwise close a cycle. The one order is
 | group talk ([group-talk.md](group-talk.md#one-lock-order)) | group row → message | bumps the group's reaction version |
 | timeline ([timeline.md](timeline.md#reactions)) | thread root → reply (a root is its own container) | nothing: feeds do not poll |
 | diary ([diary.md](diary.md#reactions)) | diary row → comment (a diary is its own container) | nothing: the page does not poll |
+| group boards ([group-boards.md](group-boards.md#reactions)) | topic or event row → comment | nothing: the page does not poll |
 
 A surface's own delete and teardown take the same order before they sweep, which is what keeps the
 paths from deadlocking as well as from racing. The single order is a property of the code; the
