@@ -51,7 +51,8 @@ member — and a new request silently replaces a different pending nominee.
 [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) reclaims what no cascade
 touches — File bytes and reactions — across four kinds of content, in one transaction:
 
-1. The group row is X-locked, then every topic and event row under it, in id order.
+1. The group row is X-locked, then every topic and event row under it (teardowns of one group are
+   already serialised by its row, so no order among them is needed).
 2. Under those locks the image Files of the talk, the topics, the events and their comments are
    collected and the reactions on the talk messages and on the board comments are deleted
    (`reactable_id` is polymorphic and carries no foreign key). Every row is reached by subquery from
