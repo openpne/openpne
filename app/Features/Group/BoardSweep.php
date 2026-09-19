@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The reclaiming statements a teardown shares, shaped for a group of any size: reactions are found
- * a page of content at a time and deleted by primary key in chunks, so the sweep locks only the rows it deletes
+ * a page at a time and deleted by primary key in chunks, so the sweep locks only the rows it deletes
  * (docs/internals/group-boards.md, "Tearing a group down").
  */
 final class BoardSweep
@@ -29,7 +29,7 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * Paged by content id, so neither the ids held in PHP nor a statement grows with the group.
+     * Paged by content id and then by reaction id, so PHP holds a page of each and no statement grows.
      */
     public static function reactions(string $alias, Builder $contentIds): void
     {
@@ -39,17 +39,28 @@ final class BoardSweep
             if ($page === []) {
                 break;
             }
-            $ids = DB::table('reactions')
-                ->where('reactable_type', $alias)
-                ->whereIn('reactable_id', $page)
-                ->orderBy('id')
-                ->pluck('id')
-                ->all();
-            foreach (array_chunk($ids, self::CHUNK) as $chunk) {
-                Reaction::query()->whereIn('id', $chunk)->delete();
-            }
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page));
             $after = (int) end($page);
         } while (count($page) === self::CHUNK);
+    }
+
+    /** For content that outnumbers its reactions, as talk does: paged by reaction id over the one subquery, which is cheap on its own. */
+    public static function reactionsOn(string $alias, Builder $contentIds): void
+    {
+        self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $contentIds));
+    }
+
+    private static function deleteMatching(Builder $matching): void
+    {
+        $after = 0;
+        do {
+            $ids = (clone $matching)->where('reactions.id', '>', $after)->orderBy('reactions.id')->limit(self::CHUNK)->pluck('reactions.id')->all();
+            if ($ids === []) {
+                break;
+            }
+            Reaction::query()->whereIn('id', $ids)->delete();
+            $after = (int) end($ids);
+        } while (count($ids) === self::CHUNK);
     }
 
     /**
