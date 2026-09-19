@@ -116,8 +116,9 @@ only partly present, files whose bytes are missing, two mail translations that w
 template and locale, a diary, message, topic, event or timeline post belonging to a member who never
 finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
 a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
-attached files, or a file that two records point at (OpenPNE 4 gives a file one owner, so one
-record's readers would see it from the other's page). Fix the source and dry-run again.
+attached files, a file that two records point at (OpenPNE 4 gives a file one owner, so one
+record's readers would see it from the other's page), or a member who liked one post or talk message twice
+(OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
 
 **`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
 
@@ -131,6 +132,9 @@ record's readers would see it from the other's page). Fix the source and dry-run
 | Community timeline threads whose community is gone, or that were not posted to every member | Not migrated: a group's talk belongs to a group, and holds no per-message audience. The friends-only and private community posts OpenPNE 3 allowed have nowhere to land. |
 | Timeline threads scoped to something other than a community, or replies scoped differently from their thread | A thread lands where its first post does; any other scope is not migrated. |
 | Activity images held only as a URL | OpenPNE 4 keeps an image as a file, so these are not migrated. |
+| Likes (`opLikePlugin`) on activities that are not migrated | A like lands where its activity does; one on an activity left behind is left behind with it. |
+| Likes on diaries, diary comments, topic comments or event comments, counted per kind | Not carried yet: only a like on a timeline post has a place to land. |
+| Likes under a `foreign_table` letter opLikePlugin never writes | A third-party plugin or a local customisation put them there; not migrated. |
 | Template activities (`diary` / `community_topic` / `community_event`), with where they land | The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; a template OpenPNE 4 does not know keeps its stored text. |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
@@ -253,6 +257,9 @@ change from a problem when you go through it.
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.
   A site that never had the setting starts members-only.
+- **Likes** — an `opLikePlugin` like on a timeline post becomes a 👍 reaction on the post or the
+  group talk message it became, by the same member at the same time. Likes on diaries, diary
+  comments, topic comments and event comments are not carried yet; the dry run counts each kind.
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how

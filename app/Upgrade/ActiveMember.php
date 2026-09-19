@@ -5,6 +5,7 @@ namespace App\Upgrade;
 use App\Upgrade\Steps\ActivityThread;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
+use App\Upgrade\Steps\NiceReactionUpgrade;
 
 /**
  * OpenPNE 3 `member.is_active` read as "is this a member at all": an inactive row is a registration
@@ -77,6 +78,8 @@ final class ActiveMember
             // count only the first, so the scope is every row some landing copies.
             'activity_data.member_id' => ['treatment' => self::REFUSE,
                 'scope' => ActivityThread::migrated('activity_data'), 'scopeColumns' => ['id', 'in_reply_to_activity_id', 'foreign_table', 'foreign_id', 'public_flag']],
+            'nice.member_id' => ['treatment' => self::REFUSE,
+                'scope' => NiceReactionUpgrade::onActivity(ActivityThread::migrated('activity_data')), 'scopeColumns' => ['foreign_table', 'foreign_id']],
 
             // --- UNUSED: no member id reaches a target row through these ---
             'member.invite_member_id' => ['treatment' => self::UNUSED,
@@ -85,7 +88,6 @@ final class ActiveMember
                 'reason' => "Correlates a message's trash/purge state with its own sender; produces a timestamp, not a member id."],
             'diary_comment_unread.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (per-member read state is not migrated).'],
             'diary_comment_update.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (per-member read state is not migrated).'],
-            'nice.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (opLikePlugin has no OpenPNE 4 counterpart yet).'],
             'o_auth_member_token.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (OAuth is not migrated).'],
             'oauth_consumer.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (OAuth is not migrated).'],
             'openid_trust_log.member_id' => ['treatment' => self::UNUSED, 'reason' => 'No step reads it (OpenID is not migrated).'],

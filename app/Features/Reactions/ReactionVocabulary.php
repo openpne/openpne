@@ -9,11 +9,14 @@ namespace App\Features\Reactions;
  */
 final class ReactionVocabulary
 {
+    /** What an OpenPNE 3 opLikePlugin like becomes: the transfer writes this and nothing else. */
+    public const LIKE = "\u{1F44D}";
+
     /** @return list<string> */
     public static function all(): array
     {
         return [
-            "\u{1F44D}",        // thumbs up
+            self::LIKE,
             "\u{2764}\u{FE0F}", // red heart, VS16-qualified so it is not drawn as a text dingbat
             "\u{1F602}",        // face with tears of joy
             "\u{1F62E}",        // face with open mouth

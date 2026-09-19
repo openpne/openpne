@@ -4,9 +4,11 @@ namespace Tests\Feature\Upgrade;
 
 use App\Mail\Template\MailTemplate;
 use App\Upgrade\ActiveMember;
+use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
+use App\Upgrade\Steps\NiceReactionUpgrade;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -274,6 +276,32 @@ class UpgradeMatrixAuditTest extends TestCase
         foreach ((new FileUpgrade)->ownedFileReferences() as $reference => $spec) {
             $this->assertArrayHasKey($spec['type'], $morphMap,
                 "FileUpgrade owns {$reference} as morph alias '{$spec['type']}', which is not in the morph map");
+        }
+    }
+
+    public function test_reaction_upgrade_morph_aliases_are_registered(): void
+    {
+        $morphMap = Relation::morphMap();
+        $seen = 0;
+
+        foreach (StepRegistry::all() as $step) {
+            if ($step instanceof NiceReactionUpgrade) {
+                $seen++;
+                $this->assertArrayHasKey($step->reactableAlias(), $morphMap, class_basename($step)." writes morph alias '{$step->reactableAlias()}', which is not in the morph map");
+            }
+        }
+
+        $this->assertGreaterThan(0, $seen);
+    }
+
+    public function test_the_refused_like_scope_keeps_naming_the_tables_the_like_preflight_reads(): void
+    {
+        // NicePreflight is gated on `nice` alone and reads the activity routing; the structural check
+        // requires those tables only because the refused `nice.member_id` scope names them.
+        $scope = ActiveMember::references()['nice.member_id']['scope'] ?? '';
+
+        foreach (['activity_data', 'community'] as $table) {
+            $this->assertStringContainsString(SourceRef::table($table), $scope, "the nice.member_id scope no longer reads `{$table}`, which NicePreflight still queries");
         }
     }
 

@@ -13,6 +13,12 @@ use PHPUnit\Framework\TestCase;
  */
 class ReactionVocabularyTest extends TestCase
 {
+    /** Pinned as a literal, not as `all()[0]`: a per-site vocabulary may drop or move 👍, and the transfer still writes this. */
+    public function test_an_openpne3_like_is_the_thumbs_up(): void
+    {
+        $this->assertSame("\u{1F44D}", ReactionVocabulary::LIKE);
+    }
+
     public function test_the_vocabulary_is_the_pinned_code_points(): void
     {
         $this->assertSame(

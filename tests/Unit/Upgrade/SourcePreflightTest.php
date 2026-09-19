@@ -42,7 +42,7 @@ class SourcePreflightTest extends TestCase
     {
         $optional = StepRegistry::optionalPluginSources();
 
-        $this->assertSame(['opDiaryPlugin', 'opMessagePlugin', 'opCommunityTopicPlugin'], array_keys($optional));
+        $this->assertSame(['opDiaryPlugin', 'opMessagePlugin', 'opLikePlugin', 'opCommunityTopicPlugin'], array_keys($optional));
         $this->assertSame('1.1.1', $optional['opDiaryPlugin']['floor']);
         $this->assertContains('diary_image', $optional['opDiaryPlugin']['tables']);
     }

@@ -59,6 +59,12 @@ was created. Every SQL that routes a row lives in
 Template rows (`template IS NOT NULL`) copy their stored body like any other and are rewritten
 afterwards by the `ActivityTemplateTransform` pass (below).
 
+A like (`nice`, `foreign_table = 'A'`) follows the activity it is on through the same routing
+(`NiceReactionUpgrade::onActivity`): a landed activity's like becomes a 👍 `reactions` row on the
+post or message, keyed by the model's morph alias, and a like on an activity left behind is left
+behind with it (`NicePreflight` counts those). The step reads the activity's landing at run time, as
+the image steps do, since nothing records where an activity went.
+
 ## Members who never activated
 
 OpenPNE 3 `member.is_active = 0` is a registration that never completed: `MemberTable::createPre()`
@@ -140,7 +146,11 @@ more than one owning row points at, across every `FileUpgrade::ownedFileReferenc
 never made the file columns unique, and a file with two owners would be read under one owner's
 audience from the other's page, so it is an ERROR. `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
-ERROR for the same reason.
+ERROR for the same reason. `NicePreflight` counts a member's second like on one migrated activity as
+an ERROR for the same reason again (opLikePlugin's unique index came after 0.9), and the likes the
+transfer leaves behind — on activities not migrated, on the other four kinds of record, and under a
+letter the plugin never writes — as WARNs; it runs only when `nice` is present, since the plugin is
+optional.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. A translation whose template is empty is neither carried

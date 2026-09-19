@@ -32,6 +32,7 @@ use App\Upgrade\Steps\GroupEventUpgrade;
 use App\Upgrade\Steps\GroupJoinRequestUpgrade;
 use App\Upgrade\Steps\GroupMemberUpgrade;
 use App\Upgrade\Steps\GroupMessageImageUpgrade;
+use App\Upgrade\Steps\GroupMessageReactionUpgrade;
 use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentUpgrade;
@@ -57,6 +58,7 @@ use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\Steps\TimelinePostImageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
+use App\Upgrade\Steps\TimelineReactionUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
 
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
@@ -119,6 +121,9 @@ final class StepRegistry
             GroupEventMemberUpgrade::class,
             // group_messages reference groups and members; a reply's lineage column carries no FK.
             GroupMessageUpgrade::class,
+            // A like on an activity lands where the activity did; both targets exist by here.
+            TimelineReactionUpgrade::class,
+            GroupMessageReactionUpgrade::class,
             // navigation_translations.id references navigations.id, so translations run after.
             NavigationUpgrade::class,
             NavigationTranslationUpgrade::class,
@@ -209,6 +214,10 @@ final class StepRegistry
             'opMessagePlugin' => [
                 'floor' => '0.8.2',
                 'tables' => ['message', 'message_file', 'message_send_list', 'message_type', 'deleted_message'],
+            ],
+            'opLikePlugin' => [
+                'floor' => '0.9.0',
+                'tables' => ['nice'],
             ],
             'opCommunityTopicPlugin' => [
                 'floor' => '1.0.0',

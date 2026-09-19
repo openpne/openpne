@@ -75,7 +75,10 @@ final class UpgradeRunner
         // structural verdict guards; their errors are rows a step would fail on mid-run.
         $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
             ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
-            : new ActivityPreflightReport([], []);
+            : new PreflightReport([], []);
+        $niceReport = ! $report->hasErrors()
+            ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+            : new PreflightReport([], []);
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;
@@ -83,17 +86,17 @@ final class UpgradeRunner
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : [];
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
             $out("ERROR {$error}");
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;

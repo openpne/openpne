@@ -9,6 +9,8 @@ use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
+use App\Upgrade\Steps\TimelinePostUpgrade;
+use App\Upgrade\Steps\TimelineReactionUpgrade;
 use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
@@ -59,6 +61,27 @@ class VerifierAbsentOptionalTest extends TestCase
         $this->assertStringContainsString('PASS DiaryUpgrade', $out);
     }
 
+    public function test_an_uninstalled_like_plugin_passes_the_runner_and_verify(): void
+    {
+        // `community` is here for the `nice.member_id` refuse scope, which routes through
+        // ActivityThread::migrated; the preflight counting likes must not touch a `nice` never there.
+        foreach (['member', 'activity_data', 'activity_image', 'community'] as $table) {
+            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
+        }
+        $steps = [new TimelinePostUpgrade, new TimelineReactionUpgrade];
+
+        $lines = [];
+        $ran = (new UpgradeRunner(new InsertSelectCompiler, $steps))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+        [$report, $out] = $this->verify($steps);
+
+        $this->assertTrue($ran, implode("\n", $lines));
+        $this->assertStringContainsString('DONE TimelineReactionUpgrade: 0 rows', implode("\n", $lines));
+        $this->assertFalse($report->failed(), $out);
+        $this->assertStringContainsString('PASS TimelineReactionUpgrade', $out);
+    }
+
     public function test_a_partial_plugin_group_is_reported_not_thrown(): void
     {
         // opDiary present but missing `diary_image` (an old or corrupt plugin) must be reported, not
@@ -88,7 +111,7 @@ class VerifierAbsentOptionalTest extends TestCase
 
     private function dropSources(): void
     {
-        foreach (['diary', 'diary_image', 'member'] as $table) {
+        foreach (['diary', 'diary_image', 'nice', 'activity_data', 'activity_image', 'community', 'member'] as $table) {
             DB::statement("DROP TABLE IF EXISTS `{$table}`");
         }
     }
