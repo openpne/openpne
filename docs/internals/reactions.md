@@ -90,8 +90,8 @@ and no more — the list is read by a person.
 Every Modern row that carries reactions is drawn one way
 ([`components/row`](../../resources/js/components/row)): a kebab at the end of the header line, the
 add button in a column to the right of the body at its foot, and the chips under the body only once
-there are any. A row with no header line — a follow-up message in a talk — keeps both controls in
-the column, side by side. The kebab holds what the row offers this viewer (who reacted, edit,
+there are any. A row with no header line keeps both controls in the column, side by side, which is
+where a talk's follow-up messages will put them. The kebab holds what the row offers this viewer (who reacted, edit,
 delete), the destructive choice apart after a divider; it is drawn for every viewer who is offered
 anything, and who reacted is listed disabled rather than dropped while nobody has reacted, so a
 row's shape does not tell that someone did. Delete is never a standing control.

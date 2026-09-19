@@ -9,9 +9,8 @@ export const SHEET_ITEM =
 export const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-card divide-y divide-border';
 
 /**
- * A finger's overlay for a row's controls: named for the reader who cannot see it, drawn as a grabber
- * for everyone else. Opened by its own button rather than a Radix trigger, so it is told where focus
- * goes back to, and `onClosed` runs once it is there.
+ * Opened by its own button rather than a Radix trigger, so it is told where focus goes back to, and `onClosed` runs once it is there.
+ * `returnFocusTo` must still be in the document when the sheet closes.
  */
 export function ActionSheet({
     open,

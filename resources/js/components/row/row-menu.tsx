@@ -106,7 +106,7 @@ function menuItem(item: RowMenuItem, choose: (run: () => void) => void) {
     if (item.href !== undefined) {
         return (
             <DropdownMenuItem key={item.label} asChild disabled={item.disabled} className={className}>
-                <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
+                <Link href={item.href} {...(item.disabled ? { 'aria-disabled': true, tabIndex: -1 } : {})}>
                     {body}
                 </Link>
             </DropdownMenuItem>
