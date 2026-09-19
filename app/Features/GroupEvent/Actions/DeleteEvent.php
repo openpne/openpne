@@ -38,6 +38,7 @@ class DeleteEvent
 
             $comments = DB::table('group_event_comments')->where('group_event_id', $locked->getKey())->select('id');
 
+            // The transaction's first consistent read, so its snapshot is taken under the lock above.
             $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_event_images')->where('post_id', $locked->getKey())->select('file_id'))
                 ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $comments)->select('file_id'))

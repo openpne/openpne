@@ -16,18 +16,37 @@ final class BoardSweep
 {
     private const CHUNK = 1000;
 
-    /** Call inside the teardown's transaction, after its parent locks: the content ids are read plain and are complete under them. */
+    /**
+     * Every topic and event row of the group, exclusively: a board writer takes one of these and
+     * never the group row. Call under the group row's lock, before any consistent read.
+     */
+    public static function holdBoards(int $groupId): void
+    {
+        DB::table('group_topics')->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->count();
+        DB::table('group_events')->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->count();
+    }
+
+    /**
+     * Call inside the teardown's transaction after its parent locks and before any consistent read:
+     * the snapshot is then taken under the locks, so these plain reads see every committed row.
+     */
     public static function reactions(string $alias, Builder $contentIds): void
     {
-        $ids = DB::table('reactions')
-            ->where('reactable_type', $alias)
-            ->whereIn('reactable_id', $contentIds)
-            ->pluck('id')
-            ->all();
-
-        foreach (array_chunk($ids, self::CHUNK) as $chunk) {
-            Reaction::query()->whereIn('id', $chunk)->delete();
-        }
+        $after = 0;
+        do {
+            $ids = DB::table('reactions')
+                ->where('reactable_type', $alias)
+                ->whereIn('reactable_id', $contentIds)
+                ->where('id', '>', $after)
+                ->orderBy('id')
+                ->limit(self::CHUNK)
+                ->pluck('id')
+                ->all();
+            if ($ids !== []) {
+                Reaction::query()->whereIn('id', $ids)->delete();
+                $after = (int) end($ids);
+            }
+        } while (count($ids) === self::CHUNK);
     }
 
     /**

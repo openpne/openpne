@@ -7,10 +7,8 @@ use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Models\Group;
-use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
 use App\Models\GroupMessage;
-use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
@@ -41,16 +39,14 @@ class DeleteGroup
             }
             $groupId = (int) $locked->getKey();
 
-            // The locks, not the ids: everything below reaches the rows by subquery, so a group of
-            // any size binds one parameter.
-            GroupTopic::query()->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->pluck('id');
-            GroupEvent::query()->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->pluck('id');
+            BoardSweep::holdBoards($groupId);
 
             $topics = DB::table('group_topics')->where('group_id', $groupId)->select('id');
             $events = DB::table('group_events')->where('group_id', $groupId)->select('id');
             $topicComments = DB::table('group_topic_comments')->whereIn('group_topic_id', $topics)->select('id');
             $eventComments = DB::table('group_event_comments')->whereIn('group_event_id', $events)->select('id');
 
+            // The transaction's first consistent read, so its snapshot is taken under the locks above.
             $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_message_images')
                     ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')

@@ -187,7 +187,7 @@ class WithdrawMember
             }
 
             $ids = $row->in_reply_to_id === null
-                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()]
+                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()] // locking: the snapshot predates the hold
                 : [(int) $row->getKey()];
 
             Reaction::query()
@@ -216,7 +216,7 @@ class WithdrawMember
                 ->delete();
             Reaction::query()
                 ->where('reactable_type', (new DiaryComment)->getMorphClass())
-                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all())
+                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all()) // locking: the snapshot predates the hold
                 ->delete();
         }
     }

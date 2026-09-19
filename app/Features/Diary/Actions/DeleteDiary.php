@@ -38,6 +38,7 @@ class DeleteDiary
                 return [];
             }
 
+            // The transaction's first consistent read, so its snapshot is taken under the lock above.
             $commentIds = $diary->comments()->pluck('id')->all();
 
             Reaction::query()
@@ -54,7 +55,7 @@ class DeleteDiary
             $diary->delete();
 
             return $files;
-        });
+        }, attempts: 3);
 
         foreach ($files as $file) {
             $file->delete();
