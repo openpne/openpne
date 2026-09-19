@@ -4,21 +4,20 @@ namespace App\Upgrade\Runner;
 
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceRef;
-use App\Upgrade\Steps\ActivityThread;
 use App\Upgrade\Steps\NiceReactionUpgrade;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Counts the likes the transfer leaves behind, so their drop is not silent, and the ones the step
+ * Counts the likes the transfer leaves behind, so their drop is not silent, and the ones a step
  * would fail on. It runs before the absent optional tables are materialised, so a source without
- * opLikePlugin is not queried.
+ * opLikePlugin is not queried, and a letter whose own plugin is absent is counted without its table.
  */
 final class NicePreflight
 {
     private const SAMPLE = 5;
 
-    /** opLikePlugin's one-letter targets other than an activity. */
-    private const OTHER_TABLES = ['D' => 'diaries', 'd' => 'diary comments', 't' => 'topic comments', 'e' => 'event comments'];
+    /** What each record letter's likes are on, for the operator. */
+    private const RECORD_NAMES = ['D' => 'diaries', 'd' => 'diary comments', 't' => 'topic comments', 'e' => 'event comments'];
 
     private string $prefix = '';
 
@@ -29,8 +28,6 @@ final class NicePreflight
      */
     public function inspect(string $sourcePrefix, ?string $sourceDatabase, array $readTables): PreflightReport
     {
-        // The activity and community tables are core, and the refused member scope already required
-        // them of the structural check; only the plugin's own table can be missing.
         if (! in_array('nice', $readTables, true)) {
             return new PreflightReport([], []);
         }
@@ -39,28 +36,42 @@ final class NicePreflight
 
         $errors = [];
         $warnings = [];
+        $carried = [];
+        $known = [];
+
+        foreach (NiceReactionUpgrade::carriedBranches() as $letter => $branch) {
+            $known[] = NiceReactionUpgrade::onTable($letter);
+            $table = NiceReactionUpgrade::RECORD_TABLES[$letter] ?? null;
+            if ($table !== null && ! in_array($table, $readTables, true)) {
+                [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter));
+                if ($rows > 0) {
+                    $warnings[] = self::uninstalledTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids);
+                }
+
+                continue;
+            }
+            $carried[] = $branch;
+
+            [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter).' AND NOT ('.$branch.')');
+            if ($rows > 0) {
+                $warnings[] = $letter === 'A'
+                    ? self::unmigratedActivityLikeMessage($rows, $ids)
+                    : self::goneTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids);
+            }
+        }
 
         // A table built before opLikePlugin declared its unique index was never given one by a
         // migration, so a doubled like can exist and would fail the OpenPNE 4 unique key mid-run.
-        $migrated = NiceReactionUpgrade::onActivity(ActivityThread::migrated('activity_data'));
         $twins = DB::select($this->resolve(
-            'SELECT MAX(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice').' AS `nice` WHERE '.$migrated
-            .' GROUP BY `nice`.`member_id`, `nice`.`foreign_id` HAVING COUNT(*) > 1 ORDER BY `id`',
+            'SELECT MAX(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice').' AS `nice` WHERE ('.implode(') OR (', $carried).')'
+            .' GROUP BY `nice`.`member_id`, CAST(`nice`.`foreign_table` AS BINARY), `nice`.`foreign_id` HAVING COUNT(*) > 1 ORDER BY `id`',
         ));
         if ($twins !== []) {
             $errors[] = self::duplicateLikeMessage(count($twins), array_slice(array_map(static fn (object $r): int => (int) $r->id, $twins), 0, self::SAMPLE));
         }
 
-        [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable('A').' AND NOT ('.$migrated.')');
-        if ($rows > 0) {
-            $warnings[] = self::unmigratedActivityLikeMessage($rows, $ids);
-        }
-
-        // One pass over every other letter: the four the plugin writes and whatever else its API let through.
-        foreach ($this->grouped('NOT '.NiceReactionUpgrade::onTable('A')) as [$letter, $rows, $ids]) {
-            $warnings[] = isset(self::OTHER_TABLES[$letter])
-                ? self::otherLikeMessage(self::OTHER_TABLES[$letter], $rows, $ids)
-                : self::unknownTableLikeMessage($letter, $rows, $ids);
+        foreach ($this->grouped('NOT ('.implode(') AND NOT (', $known).')') as [$letter, $rows, $ids]) {
+            $warnings[] = self::unknownTableLikeMessage($letter, $rows, $ids);
         }
 
         return new PreflightReport($errors, $warnings);
@@ -69,7 +80,7 @@ final class NicePreflight
     /** @param  list<int>  $ids  the later row of each pair */
     public static function duplicateLikeMessage(int $pairs, array $ids): string
     {
-        return "source `nice` has {$pairs} member/activity pair(s) liked more than once (e.g. the later rows, ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Keep only the earliest row of each pair in the source, then re-run.';
+        return "source `nice` has {$pairs} member/target pair(s) liked more than once (e.g. the later rows, ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Keep only the earliest row of each pair in the source, then re-run.';
     }
 
     /** @param  list<int>  $ids */
@@ -79,9 +90,15 @@ final class NicePreflight
     }
 
     /** @param  list<int>  $ids */
-    public static function otherLikeMessage(string $what, int $rows, array $ids): string
+    public static function goneTargetLikeMessage(string $what, int $rows, array $ids): string
     {
-        return "source `nice` has {$rows} like(s) on {$what} (e.g. ids ".implode(', ', $ids).') — not migrated: only likes on activities are carried yet.';
+        return "source `nice` has {$rows} like(s) on {$what} that no longer exist (e.g. ids ".implode(', ', $ids).') — nothing to land on, so not migrated.';
+    }
+
+    /** @param  list<int>  $ids */
+    public static function uninstalledTargetLikeMessage(string $what, int $rows, array $ids): string
+    {
+        return "source `nice` has {$rows} like(s) on {$what}, whose plugin is not installed on this source (e.g. ids ".implode(', ', $ids).') — nothing to land on, so not migrated.';
     }
 
     /** @param  list<int>  $ids */

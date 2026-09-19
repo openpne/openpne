@@ -6,6 +6,11 @@ use App\Models\GroupMessage;
 
 class GroupMessageReactionUpgrade extends NiceReactionUpgrade
 {
+    protected function letter(): string
+    {
+        return 'A';
+    }
+
     protected function reactable(): string
     {
         return GroupMessage::class;
@@ -13,6 +18,6 @@ class GroupMessageReactionUpgrade extends NiceReactionUpgrade
 
     protected function landing(): string
     {
-        return ActivityThread::landsInGroup('activity_data');
+        return self::onActivity(ActivityThread::landsInGroup('activity_data'));
     }
 }

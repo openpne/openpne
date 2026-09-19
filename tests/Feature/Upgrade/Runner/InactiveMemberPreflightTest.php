@@ -9,6 +9,7 @@ use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
+use App\Upgrade\Steps\DiaryReactionUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
@@ -140,6 +141,33 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedActivity(12, memberId: 1, foreignTable: 'community');
         $this->seedNice(22, memberId: 2, foreignId: 12);
         [$ok, $output] = $this->runSteps([...$steps, new GroupMessageUpgrade, new GroupMessageReactionUpgrade], new RunOptions(forceRestart: true));
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
+    }
+
+    /** The like names opDiaryPlugin's table from opLikePlugin's row: without the plugin the branch is skipped, with it the like is counted. */
+    public function test_a_like_by_an_inactive_member_on_a_diary_aborts_only_where_the_diary_plugin_is_installed(): void
+    {
+        $this->createSources('member', 'activity_data', 'activity_image', 'community', 'nice');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        Member::factory()->create(['id' => 1]);
+        $this->seedActivity(10, memberId: 1);
+        DB::table('nice')->insert(['id' => 30, 'member_id' => 2, 'foreign_table' => 'D', 'foreign_id' => 1,
+            'foreign_hash' => md5('D,1'), 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        $steps = [new TimelinePostUpgrade, new TimelineReactionUpgrade, new DiaryReactionUpgrade];
+
+        [$ok, $output] = $this->runSteps($steps, new RunOptions(dryRun: true));
+        $this->assertTrue($ok, $output);
+        [$ok, $output] = $this->runSteps($steps);
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('nice.member_id', $output);
+
+        // Both tables the like scope names, or the plugin group reads as partial.
+        $this->createSources('diary', 'diary_comment');
+        $this->seedDiary(1, memberId: 1);
+        [$ok, $output] = $this->runSteps([...$steps, new DiaryUpgrade], new RunOptions(forceRestart: true));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
