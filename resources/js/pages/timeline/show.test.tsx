@@ -30,7 +30,10 @@ vi.mock('@inertiajs/react', () => ({
     }),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+});
 
 const post: TimelinePostEntry = {
     id: 7,
@@ -81,5 +84,4 @@ test('a fresh render of the same thread shows the rows it was rendered with, not
     rerender(<TimelineShow />);
 
     expect(screen.getByRole('button', { pressed: true }).textContent).toContain('2');
-    vi.unstubAllGlobals();
 });

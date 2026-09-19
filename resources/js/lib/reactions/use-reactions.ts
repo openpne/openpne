@@ -18,15 +18,15 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
     const [pending, setPending] = useState<PendingReactions>(noPending);
     const [answered, setAnswered] = useState<ReadonlyMap<number, ReactionChip[]>>(() => new Map());
     const [reactorsFor, setReactorsFor] = useState<number | null>(null);
-    // Per row, the number of the latest write sent: an answer to an earlier one is not drawn over a
-    // later one's, since nothing polls to put the row right afterwards.
+    // An answer is drawn only past the last one drawn on its row, and neither count resets with the page.
     const sent = useRef(new Map<number, number>());
+    const drawn = useRef(new Map<number, number>());
 
     useEffect(() => {
         setAnswered(new Map());
         setPending(noPending());
         setReactorsFor(null);
-        sent.current = new Map();
+        drawn.current = new Map(sent.current);
     }, [resetKey]);
 
     const chips = useCallback(
@@ -55,7 +55,8 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
                 .then((response) => (response.ok ? (response.json() as Promise<{ reactions?: ReactionChip[] }>) : null))
                 .then((payload) => {
                     // A refusal says nothing to the reader: the guess goes away and the row stands.
-                    if (payload?.reactions !== undefined && sent.current.get(id) === ticket) {
+                    if (payload?.reactions !== undefined && ticket > (drawn.current.get(id) ?? 0)) {
+                        drawn.current.set(id, ticket);
                         const row = payload.reactions;
                         setAnswered((current) => new Map(current).set(id, row));
                     }

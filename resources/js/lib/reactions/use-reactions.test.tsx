@@ -104,3 +104,44 @@ test('a fresh page closes the reactor list it was opened on', () => {
     rerender({ key: 'b' });
     expect(result.current.reactorsFor).toBeNull();
 });
+
+test('a later tap that is refused does not take away what an earlier one was answered with', async () => {
+    const pending: Array<(value: Response) => void> = [];
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>((r) => pending.push(r))),
+    );
+    const { result } = renderHook(() => useReactions(endpoints, 'page-1'));
+
+    act(() => result.current.toggle(7, '👍', false));
+    act(() => result.current.toggle(7, '❤️', false));
+    await act(async () => {
+        pending[1]?.(answer({}, false));
+    });
+    await act(async () => {
+        pending[0]?.(answer({ reactions: [{ emoji: '👍', count: 1, mine: true }] }));
+    });
+
+    expect(result.current.chips(7, [])).toEqual([{ emoji: '👍', count: 1, mine: true }]);
+});
+
+test('an answer from before a fresh page is not drawn after it, even after a new tap on the row', async () => {
+    const pending: Array<(value: Response) => void> = [];
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>((r) => pending.push(r))),
+    );
+    const { result, rerender } = renderHook(({ key }) => useReactions(endpoints, key), { initialProps: { key: 'a' } });
+
+    act(() => result.current.toggle(7, '👍', false));
+    rerender({ key: 'b' });
+    act(() => result.current.toggle(7, '❤️', false));
+    await act(async () => {
+        pending[1]?.(answer({ reactions: [{ emoji: '❤️', count: 1, mine: true }] }));
+    });
+    await act(async () => {
+        pending[0]?.(answer({ reactions: [{ emoji: '👍', count: 1, mine: true }] }));
+    });
+
+    expect(result.current.chips(7, [])).toEqual([{ emoji: '❤️', count: 1, mine: true }]);
+});
