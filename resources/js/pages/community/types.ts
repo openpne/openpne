@@ -1,5 +1,6 @@
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
+import type { ReactionChip } from '@/lib/reactions/types';
 
 export interface CommunityCategory {
     id: number;
@@ -111,6 +112,7 @@ export interface TopicComment {
     author: TopicAuthor | null;
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side
+    reactions: ReactionChip[];
 }
 
 export interface PaginatedTopics {

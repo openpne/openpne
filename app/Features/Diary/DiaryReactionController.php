@@ -22,12 +22,12 @@ class DiaryReactionController extends Controller
 {
     public function store(Request $request, Diary $diary, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $diary, $diary, $action, $reactions);
+        return $this->add($request, $diary, $diary, $action, $reactions);
     }
 
     public function delete(Request $request, Diary $diary, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $diary, $diary, $action, $reactions);
+        return $this->remove($request, $diary, $diary, $action, $reactions);
     }
 
     public function index(Diary $diary, Reactors $reactors): JsonResponse
@@ -39,12 +39,12 @@ class DiaryReactionController extends Controller
 
     public function storeComment(Request $request, DiaryComment $comment, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $comment->diary, $comment, $action, $reactions);
+        return $this->add($request, $comment->diary, $comment, $action, $reactions);
     }
 
     public function deleteComment(Request $request, DiaryComment $comment, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $comment->diary, $comment, $action, $reactions);
+        return $this->remove($request, $comment->diary, $comment, $action, $reactions);
     }
 
     public function indexComment(DiaryComment $comment, Reactors $reactors): JsonResponse
@@ -54,15 +54,26 @@ class DiaryReactionController extends Controller
         return response()->json(['groups' => $reactors($comment)]);
     }
 
-    private function write(Request $request, ?Diary $diary, Diary|DiaryComment $reactable, AddReaction|RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    private function add(Request $request, ?Diary $diary, Diary|DiaryComment $reactable, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeDiary($diary);
+        $emoji = (string) $request->validate((new StoreReactionRequest)->rules())['emoji'];
 
-        $rules = $action instanceof AddReaction ? (new StoreReactionRequest)->rules() : ['emoji' => ['required', 'string', 'max:32']];
-        $emoji = (string) $request->validate($rules)['emoji'];
+        return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new DiaryReactionSurface), $reactable, $reactions);
+    }
 
+    private function remove(Request $request, ?Diary $diary, Diary|DiaryComment $reactable, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    {
+        $this->authorizeDiary($diary);
+        $emoji = (string) $request->validate(StoreReactionRequest::removeRules())['emoji'];
+
+        return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new DiaryReactionSurface), $reactable, $reactions);
+    }
+
+    private function answer(callable $write, Diary|DiaryComment $reactable, ReactionAggregates $reactions): JsonResponse
+    {
         try {
-            $action($this->viewer(), $reactable, $emoji, new DiaryReactionSurface);
+            $write();
         } catch (ReactionRefused) {
             abort(404);
         }

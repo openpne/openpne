@@ -13,6 +13,8 @@ use App\Features\GroupTopic\Queries\ShowTopic;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -21,8 +23,10 @@ use App\Http\Requests\GroupTopic\UpdateTopicRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use App\Support\Stream\StreamProps;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +68,7 @@ class GroupTopicController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $topic, ShowTopic $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows): View|InertiaResponse
+    public function show(Request $request, int $topic, ShowTopic $query, LinkCardSync $linkCards, ConsumeNotificationRows $feedRows, ReactionAggregates $reactions): View|InertiaResponse
     {
         $found = $query($topic);
         abort_if($found === null, 404);
@@ -92,7 +96,7 @@ class GroupTopicController extends Controller
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards, $reactions) {
                 $found->loadMissing('member.avatar.file');
                 $thread = GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
                 $linkCards->ensureAll($thread->comments);
@@ -100,8 +104,10 @@ class GroupTopicController extends Controller
                 return Inertia::render('group/topic/show', [
                     'group' => GroupSerializer::summary($found->group),
                     'topic' => GroupTopicSerializer::detail($found, $viewer),
-                    'thread' => GroupTopicSerializer::thread($thread, $viewer),
+                    'thread' => GroupTopicSerializer::thread($thread, $viewer, $reactions($viewer, GroupTopicComment::class, $thread->comments->modelKeys())),
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),
+                    'reactionVocabulary' => ReactionVocabulary::all(),
+                    'renderGeneration' => StreamProps::generation(),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
                 ]);
             },

@@ -22,7 +22,8 @@ class DeleteTimelinePost
                 return [];
             }
 
-            $ids = [(int) $post->getKey(), ...$post->replies()->sharedLock()->pluck('id')->all()];
+            // The transaction's first consistent read, so its snapshot is taken under the lock above.
+            $ids = [(int) $post->getKey(), ...$post->replies()->pluck('id')->all()];
 
             Reaction::query()
                 ->where('reactable_type', $post->getMorphClass())
@@ -40,7 +41,7 @@ class DeleteTimelinePost
             $post->delete();
 
             return $files;
-        });
+        }, attempts: 3);
 
         foreach ($files as $file) {
             $file->delete();
