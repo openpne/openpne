@@ -336,11 +336,13 @@ final class SourcePreflight
      * broken dump the guard would otherwise swallow). Not part of inspect(): it reads columns
      * inspect() establishes, so call it only on a clean structural verdict.
      *
+     * @param  list<string>  $absentOptional
      * @return array{refused: array<string, int>, dangling: array<string, int>} reference => rows
      */
-    public function inactiveMemberReferences(string $prefix, ?string $database): array
+    public function inactiveMemberReferences(string $prefix, ?string $database, array $absentOptional = []): array
     {
         $readTables = $this->readTables();
+        $available = array_values(array_diff($readTables, $absentOptional));
         $compiler = new InsertSelectCompiler;
 
         $count = function (string $table, string $condition, ?string $scope) use ($compiler, $prefix, $database): int {
@@ -357,9 +359,10 @@ final class SourcePreflight
                 continue;
             }
 
-            // A ledger scope replaces the FROM step's filter: the rows reaching a target member
-            // column are not always that step's rows (a correlated subquery has its own predicate).
-            $scope = $meta['scope'] ?? $this->fromStepFilter($table);
+            // A ledger scope replaces the FROM step's filter, since a correlated subquery reaches the target column with its own predicate.
+            $scope = isset($meta['scopeBranches'])
+                ? self::availableBranches($meta['scopeBranches'], $available)
+                : ($meta['scope'] ?? $this->fromStepFilter($table));
             $rows = $count($table, 'not '.ActiveMember::referenceGuard($table, $column), $scope);
             if ($rows > 0) {
                 $refused[$reference] = $rows;
@@ -414,6 +417,19 @@ final class SourcePreflight
         }
 
         return null;
+    }
+
+    /**
+     * Only the branches whose tables the source has: the count runs before the absent optional tables are materialised.
+     *
+     * @param  array<string, string>  $branches
+     * @param  list<string>  $available
+     */
+    private static function availableBranches(array $branches, array $available): string
+    {
+        $kept = array_filter($branches, static fn (string $sql): bool => array_diff(SourceRef::tablesIn($sql), $available) === []);
+
+        return $kept === [] ? '1 = 0' : '('.implode(') OR (', $kept).')';
     }
 
     /** @param  list<string>  $readTables */

@@ -68,7 +68,7 @@ final class UpgradeRunner
         // unresolvable inactive-member reference or a member missing from the source is a state no
         // step can migrate correctly.
         $memberErrors = ! $report->hasErrors()
-            ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase))
+            ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase, $report->absentOptional))
             : [];
 
         // The activity routing's counts and the one-owner-per-file count, both reading rows the

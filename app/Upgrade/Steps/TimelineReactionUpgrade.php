@@ -6,6 +6,11 @@ use App\Models\TimelinePost;
 
 class TimelineReactionUpgrade extends NiceReactionUpgrade
 {
+    protected function letter(): string
+    {
+        return 'A';
+    }
+
     protected function reactable(): string
     {
         return TimelinePost::class;
@@ -13,6 +18,6 @@ class TimelineReactionUpgrade extends NiceReactionUpgrade
 
     protected function landing(): string
     {
-        return ActivityThread::landsOnTimeline('activity_data');
+        return self::onActivity(ActivityThread::landsOnTimeline('activity_data'));
     }
 }

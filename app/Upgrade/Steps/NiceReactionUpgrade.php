@@ -9,20 +9,31 @@ use App\Upgrade\UpgradeStep;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Shared shape for the OpenPNE 3 opLikePlugin `nice` rows on activities: one 👍 per row, landing
- * where the activity's thread did (docs/internals/upgrade.md, "Activity threads"). The alias is read
- * off the model rather than written down, as every reaction's is.
+ * Shared shape for the OpenPNE 3 opLikePlugin `nice` rows: one 👍 per row, on the content its
+ * `foreign_table` letter names, where that content lands (docs/internals/upgrade.md, "Source preflight").
+ * The alias is read off the model rather than written down, as every reaction's is.
  */
 abstract class NiceReactionUpgrade extends UpgradeStep
 {
+    /** The record letters and their source tables; `A` (an activity) lands by the activity routing instead. */
+    public const RECORD_TABLES = [
+        'D' => 'diary',
+        'd' => 'diary_comment',
+        't' => 'community_topic_comment',
+        'e' => 'community_event_comment',
+    ];
+
     protected string $source = 'nice';
 
     protected string $target = 'reactions';
 
-    /** @return class-string<Model> the content a landed activity became */
+    /** The `foreign_table` byte opLikePlugin writes for this step's content. */
+    abstract protected function letter(): string;
+
+    /** @return class-string<Model> the content a landed like becomes */
     abstract protected function reactable(): string;
 
-    /** SQL boolean over the alias `activity_data`: the activity lands in this step's content. */
+    /** SQL boolean over the alias `nice`: the liked source row exists and the transfer carries it. */
     abstract protected function landing(): string;
 
     public function reactableAlias(): string
@@ -45,7 +56,7 @@ abstract class NiceReactionUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return self::onActivity($this->landing());
+        return self::onTable($this->letter()).' AND '.$this->landing();
     }
 
     public function filterColumns(): array
@@ -65,16 +76,38 @@ abstract class NiceReactionUpgrade extends UpgradeStep
         ];
     }
 
-    /** SQL boolean over the alias `nice`: a like on an activity that satisfies `$landing` (over `activity_data`). */
+    /** SQL boolean over the alias `nice`: the liked activity satisfies `$landing` (over the alias `activity_data`). */
     public static function onActivity(string $landing): string
     {
-        return self::onTable('A').' AND EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data').' AS `activity_data`'
+        return 'EXISTS (SELECT 1 FROM '.SourceRef::table('activity_data').' AS `activity_data`'
             .' WHERE `activity_data`.`id` = `nice`.`foreign_id` AND '.$landing.')';
+    }
+
+    /** SQL boolean over the alias `nice`: the liked row of `$table` exists; the record steps carry every row. */
+    public static function onRecord(string $table): string
+    {
+        return 'EXISTS (SELECT 1 FROM '.SourceRef::table($table).' AS `liked` WHERE `liked`.`id` = `nice`.`foreign_id`)';
     }
 
     /** Compared as bytes, as opLikePlugin's own reads do: `D` and `d` are two tables, and the source's collation is its own. */
     public static function onTable(string $letter): string
     {
         return "`nice`.`foreign_table` = CAST('{$letter}' AS BINARY)";
+    }
+
+    /**
+     * The rows some reaction step carries, one branch per letter so a caller can drop the branches
+     * whose tables the source lacks.
+     *
+     * @return array<string, string> letter => SQL boolean over the alias `nice`
+     */
+    public static function carriedBranches(): array
+    {
+        $branches = ['A' => self::onTable('A').' AND '.self::onActivity(ActivityThread::migrated('activity_data'))];
+        foreach (self::RECORD_TABLES as $letter => $table) {
+            $branches[$letter] = self::onTable($letter).' AND '.self::onRecord($table);
+        }
+
+        return $branches;
     }
 }

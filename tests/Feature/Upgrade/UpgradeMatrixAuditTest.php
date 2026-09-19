@@ -294,6 +294,23 @@ class UpgradeMatrixAuditTest extends TestCase
         $this->assertGreaterThan(0, $seen);
     }
 
+    /** A letter in the ledger without a step would abort on an inactive liker and drop its likes without a WARN. */
+    public function test_every_letter_the_like_ledger_carries_has_a_registered_step_and_no_other(): void
+    {
+        $letters = [];
+        foreach (StepRegistry::all() as $step) {
+            if ($step instanceof NiceReactionUpgrade) {
+                $letters[] = (new \ReflectionMethod($step, 'letter'))->invoke($step);
+            }
+        }
+        sort($letters);
+        $ledger = array_keys(NiceReactionUpgrade::carriedBranches());
+        sort($ledger);
+
+        $this->assertSame($ledger, array_values(array_unique($letters)));
+        $this->assertSame(['A', 'A', 'D', 'd', 'e', 't'], $letters, 'two activity steps, one step per record letter');
+    }
+
     public function test_the_refused_like_scope_keeps_naming_the_tables_the_like_preflight_reads(): void
     {
         // NicePreflight is gated on `nice` alone and reads the activity routing; the structural check

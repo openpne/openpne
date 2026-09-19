@@ -3,11 +3,13 @@
 namespace Tests\Feature\Upgrade\Verify;
 
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\NicePreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryImageUpgrade;
+use App\Upgrade\Steps\DiaryReactionUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReactionUpgrade;
@@ -80,6 +82,29 @@ class VerifierAbsentOptionalTest extends TestCase
         $this->assertStringContainsString('DONE TimelineReactionUpgrade: 0 rows', implode("\n", $lines));
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS TimelineReactionUpgrade', $out);
+    }
+
+    /** opLikePlugin without opDiaryPlugin: the diary reaction step reads a table the source lacks, through the like's letter. */
+    public function test_a_like_plugin_without_the_diary_plugin_passes_the_runner_and_verify(): void
+    {
+        foreach (['member', 'activity_data', 'activity_image', 'community', 'nice'] as $table) {
+            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
+        }
+        DB::table('nice')->insert(['id' => 1, 'member_id' => 1, 'foreign_table' => 'D', 'foreign_id' => 1,
+            'foreign_hash' => md5('D,1'), 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        $steps = [new TimelinePostUpgrade, new TimelineReactionUpgrade, new DiaryReactionUpgrade];
+
+        $lines = [];
+        $ran = (new UpgradeRunner(new InsertSelectCompiler, $steps))->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+        [$report, $out] = $this->verify($steps);
+
+        $this->assertTrue($ran, implode("\n", $lines));
+        $this->assertStringContainsString('DONE DiaryReactionUpgrade: 0 rows', implode("\n", $lines));
+        $this->assertContains('WARN '.NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]), $lines);
+        $this->assertFalse($report->failed(), $out);
+        $this->assertStringContainsString('PASS DiaryReactionUpgrade', $out);
     }
 
     public function test_a_partial_plugin_group_is_reported_not_thrown(): void
