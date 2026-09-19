@@ -56,7 +56,7 @@ touches — File bytes and reactions — across four kinds of content, in one tr
 2. Under those locks the image Files of the talk, the topics, the events and their comments are
    collected and the reactions on the talk messages and on the board comments are deleted
    (`reactable_id` is polymorphic and carries no foreign key). Every row is reached by subquery from
-   the group id and the reactions are read and deleted by primary key in chunks, so no statement
+   the group id and the reactions are read once and deleted by primary key in chunks, so no statement
    grows with the group and the sweep locks only the rows it deletes. The group's own top-image
    File id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
