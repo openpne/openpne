@@ -89,7 +89,7 @@ class AiAccountDisplayNameTest extends TestCase
         $this->assertStringNotContainsString(__(':name (AI)', ['name' => '']), $text);
     }
 
-    public function test_a_push_body_names_the_ai_account_as_one(): void
+    public function test_a_push_title_names_the_ai_account_as_one(): void
     {
         $this->configureVapid();
         $this->fakeWebPushTransport();
@@ -102,7 +102,7 @@ class AiAccountDisplayNameTest extends TestCase
 
         $pushes = $this->pushesTo(self::ENDPOINT);
         $this->assertCount(1, $pushes);
-        $this->assertSame(__(':name sent you a message.', ['name' => __(':name (AI)', ['name' => 'Shirabe'])]), $pushes[0]['body']);
+        $this->assertSame(__(':name sent you a message.', ['name' => __(':name (AI)', ['name' => 'Shirabe'])]), $pushes[0]['title']);
     }
 
     public function test_a_feed_sentence_names_the_ai_account_as_one(): void

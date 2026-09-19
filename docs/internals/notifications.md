@@ -165,7 +165,7 @@ drops `mail` and web push for it at `NotificationSending`, whatever the catalog 
 client reads.
 
 The other direction — an AI account as the *actor* a notification is about — is a display rule:
-wherever the actor's name is baked into a string (the feed sentence, the push body, a mail template
+wherever the actor's name is baked into a string (the feed sentence, the push title, a mail template
 variable), it goes through [`MemberDisplayName`](../../app/Features/Member/MemberDisplayName.php),
 which appends the AI marker. Surfaces that render components ship `isAi` on the member reference and
 draw a chip instead, so no name is ever marked twice.
@@ -259,11 +259,24 @@ is wrapped in a `try`/`report()`: an exception escaping it would retry that job 
 feed row**. Its guards are ordered config → subscription probe → member toggle, since most members
 have no device and the probe is what keeps a member-wide fan-out at one query per recipient.
 
-The payload ([`WebPushNudge`](../../app/Notifications/Push/WebPushNudge.php)) carries the same
-sentence the feed row renders (`NotificationKindLabel`, so there is no second wording list), a fixed
-tag so a new nudge collapses the previous one on the device, and the unread count read at send time
-for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
-and the send degrades to the withdrawn-member label instead of failing to restore.
+The payload ([`WebPushNudge`](../../app/Notifications/Push/WebPushNudge.php)) carries as its title
+the same sentence the feed row renders (`NotificationKindLabel`, so there is no second wording list),
+as its body a preview of what the row is about
+([`NotificationPreview`](../../app/Features/Notifications/NotificationPreview.php): a post's title
+and excerpt, a message's or comment's first line, the image stand-in for a message of pictures only,
+nothing for a kind with no content such as a `%friend%` request), a fixed tag so a new nudge collapses
+the previous one on the device, and the unread count read at send time for the app badge. The site's
+name is not in the title: the device prints its own attribution line — the manifest name on an
+installed web app, the origin in a plain browser. It is constructed from scalars, not models: an
+actor who withdraws between the row and the send degrades to the withdrawn-member label instead of
+failing to restore, and the preview is resolved from the row's ids at send time under the same access
+checks the feed applies when a row is opened — content deleted or hidden from the recipient by then
+leaves the sentence alone, never a stale copy. Whether the body shows on a locked screen is the
+device's preview setting (iOS "Show Previews", Android's lock-screen notification content); there is
+no member switch beside it, and no kind withholds content it has. The subscription consent below was given for a
+payload that named the event; it now quotes the event, and the shared-browser window that
+reconciliation leaves open (below) carries that quote until the next authenticated navigation closes
+it. That is accepted as is: the window is the same one, only its content grew.
 
 A tap on the notification is answered by the worker ([`public/sw.js`](../../public/sw.js)) **with
 messages, never by opening the destination itself**; the page routes
