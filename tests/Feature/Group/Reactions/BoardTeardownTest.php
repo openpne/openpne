@@ -239,7 +239,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         // Two pages: the first carries no cursor, the second starts after its last (created_at, id), all one timestamp here.
         $this->assertCount(2, $pages);
         $this->assertCount(1, $pages[0]);
-        $this->assertSame($messageIds[999], $pages[1][3], 'the cursor is the last row of the page');
+        $this->assertSame($messageIds[999], $pages[1][2], 'the cursor is the last row of the page');
         $this->assertDatabaseCount('reactions', 0);
     }
 
@@ -259,6 +259,30 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** A page that ends on a null timestamp continues by id among the nulls, since no timestamp compares past null. */
+    public function test_the_talk_sweep_continues_past_a_page_of_undated_messages(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        DB::table('group_messages')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => "m{$i}", 'created_at' => null, 'updated_at' => null,
+        ], range(1, 1001)));
+        $last = DB::table('group_messages')->where('group_id', $group->getKey())->max('id');
+        $at = now();
+        DB::table('reactions')->insert(['reactable_type' => 'groupMessage', 'reactable_id' => $last, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at]);
+        $pages = 0;
+        DB::listen(function ($query) use (&$pages): void {
+            if (preg_match('/from [`"]group_messages[`"] where .*limit 1000$/', $query->sql)) {
+                $pages++;
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertSame(2, $pages);
         $this->assertDatabaseCount('reactions', 0);
     }
 
