@@ -47,7 +47,7 @@ class DiaryPostedNotification extends Notification implements FeatureNotificatio
 
     /**
      * SerializesModels hands this fresh rows, so a diary narrowed, a ban or a block landing while
-     * queued is not mailed out; the block is checked both ways, as the audience query excludes it.
+     * queued is not delivered; the block is checked both ways, as the audience query excludes it.
      */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
