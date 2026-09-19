@@ -17,9 +17,9 @@ use Tests\Concerns\OpensSecondConnection;
 use Tests\TestCase;
 
 /**
- * The write is fired from inside the delete's transaction — after its sweep, before its row
- * delete — on a second connection, which is the interleaving a single-connection test cannot make:
- * a reaction that took only the reply's lock would commit there and outlive the reply.
+ * The write is fired from inside the delete's transaction, after its sweep and before its row
+ * delete, on a second connection: the interleaving in which a reply-only lock would let the
+ * reaction outlive the reply. What is pinned is the statement the write timed out on.
  */
 class TimelineReactionLockOrderTest extends TestCase
 {
@@ -49,7 +49,7 @@ class TimelineReactionLockOrderTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_a_reaction_racing_a_thread_delete_waits_on_the_root_and_finds_the_reply_gone(): void
+    public function test_a_reaction_racing_a_thread_delete_waits_at_the_root_and_a_later_one_is_refused(): void
     {
         $root = TimelinePost::factory()->create();
         $reply = TimelinePost::factory()->replyTo($root)->create();
@@ -68,7 +68,7 @@ class TimelineReactionLockOrderTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    public function test_a_reaction_racing_a_withdrawal_waits_on_the_thread_and_finds_the_reply_gone(): void
+    public function test_a_reaction_racing_a_withdrawal_waits_at_the_root_and_a_later_one_is_refused(): void
     {
         $leaving = Member::factory()->create();
         $root = TimelinePost::factory()->create();
@@ -87,6 +87,31 @@ class TimelineReactionLockOrderTest extends TestCase
         $this->assertWaitedOnTheRoot($outcome);
         $this->assertSame('refused', $this->raceReaction($reactor, $reply));
         $this->assertDatabaseMissing('timeline_posts', ['id' => $reply->getKey()]);
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /**
+     * The reactor's own row comes before any thread lock: the withdrawal holds it exclusively while
+     * it takes the roots, so a reaction that took a root first would close a cycle with it.
+     */
+    public function test_a_leaving_members_own_reaction_waits_at_their_member_row_before_any_thread_lock(): void
+    {
+        $leaving = Member::factory()->create();
+        $root = TimelinePost::factory()->create();
+        $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $leaving->getKey()]);
+        $outcome = null;
+
+        Member::deleting(function (Member $member) use (&$outcome, $leaving, $reply): void {
+            if ($member->is($leaving)) {
+                $outcome = $this->raceReaction($leaving, $reply);
+            }
+        });
+
+        app(WithdrawMember::class)($leaving);
+
+        $this->assertNotNull($outcome);
+        $this->assertStringStartsWith('waited:', $outcome, "the reaction did not wait ({$outcome})");
+        $this->assertMatchesRegularExpression('/from `members`.*lock in share mode/is', substr($outcome, strlen('waited:')), "waited on the wrong statement: {$outcome}");
         $this->assertDatabaseCount('reactions', 0);
     }
 

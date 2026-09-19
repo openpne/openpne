@@ -22,7 +22,7 @@ class RemoveReaction
     public function __invoke(Member $member, Model $reactable, string $emoji, ReactionSurface $surface): bool
     {
         return DB::transaction(function () use ($member, $reactable, $emoji, $surface): bool {
-            if (! $surface->hold($reactable)) {
+            if (! AddReaction::holdReactor($member) || ! $surface->hold($reactable)) {
                 throw new ReactionRefused;
             }
 

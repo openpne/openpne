@@ -51,7 +51,7 @@ class GroupTalkController extends Controller
 
         $props = [
             'group' => GroupSerializer::summary($group),
-            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->modelKeys()), $replies($group, $page->messages)),
+            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->map(fn (GroupMessage $message): int => (int) $message->getKey())->all()), $replies($group, $page->messages)),
             'anchor' => $anchor === null ? null : ['messageId' => $anchor->getKey()],
             'canPost' => $permissions->canPost,
             // Only a member holds a cursor or a mute, so only a member is offered either.
@@ -113,7 +113,7 @@ class GroupTalkController extends Controller
         $linkCards->ensureAll($page->messages);
 
         $permissions = GroupTalkPermissions::for($group, $viewer);
-        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->modelKeys()), $replies($group, $page->messages));
+        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->map(fn (GroupMessage $message): int => (int) $message->getKey())->all()), $replies($group, $page->messages));
 
         if ($reactionsAfter !== null) {
             $payload += $this->touched($touched($group, $reactionsAfter), $group, $permissions, $snapshot ?? 0, $reactions, $replies);
@@ -142,7 +142,7 @@ class GroupTalkController extends Controller
     {
         $capped = $rows->count() > GroupTalkMessages::PER_PAGE;
         $rows = $rows->take(GroupTalkMessages::PER_PAGE);
-        $chips = $reactions($permissions->member, GroupMessage::class, $rows->modelKeys());
+        $chips = $reactions($permissions->member, GroupMessage::class, $rows->map(fn (GroupMessage $message): int => (int) $message->getKey())->all());
         $parents = $replies($group, $rows);
 
         return [

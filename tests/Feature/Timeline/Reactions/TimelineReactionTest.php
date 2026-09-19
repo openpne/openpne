@@ -73,19 +73,23 @@ class TimelineReactionTest extends TimelineReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /** The thread is one audience: the reply's own author is not who the clearance is read against. */
+    /** The reply's author is the viewer's friend and the root's is not, so judging the reply alone would answer 200 where the thread page answers 404. */
     public function test_a_reply_is_gated_at_its_root(): void
     {
         $author = Member::factory()->create();
         $root = TimelinePost::factory()->friends()->create(['member_id' => $author->getKey()]);
-        $friend = Member::factory()->create();
-        $this->befriend($author, $friend);
-        $reply = $this->reply($root, $friend);
-        $stranger = Member::factory()->create();
+        $rootsFriend = Member::factory()->create();
+        $this->befriend($author, $rootsFriend);
+        $reply = $this->reply($root, $rootsFriend);
+        $viewer = Member::factory()->create();
+        $this->befriend($rootsFriend, $viewer);
 
-        $this->react($stranger, $reply)->assertNotFound();
-        $this->react($friend, $reply)->assertOk();
-        $this->assertDatabaseHas('reactions', ['reactable_id' => $reply->getKey()]);
+        $this->actingAs($viewer)->get("/timeline/{$root->getKey()}")->assertNotFound();
+        $this->react($viewer, $reply)->assertNotFound();
+        $this->actingAs($viewer)->getJson("/timeline/{$reply->getKey()}/reactions")->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+
+        $this->react($rootsFriend, $reply)->assertOk();
     }
 
     public function test_reacting_is_not_posting(): void

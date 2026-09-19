@@ -822,30 +822,21 @@ role once per request and the serializer asks it per row.
 14. A reaction is not a message. It writes no `group_messages` row and no unread read looks at a
     version, so cursors, badges and the room list's order cannot move because of one — and nothing
     notifies, since the room's badge is what says something happened here.
-15. `reactable_type` is written through the model's morph alias, never as a literal — the OpenPNE 3
-    `nice` transfer included, when it arrives.
-16. At most one row per (content, member, emoji), so a member may hold several emoji on one message.
-    Narrowing that to one is lossy, which is why the wide key is a decision rather than a default.
-17. `ReactionVocabulary` is the only place the set is written down, its size included. It bounds what
-    may be added; what may be removed is whatever the member holds, and the column takes any short
-    utf8mb4 string.
-18. Every state change through the app bumps the version and a no-op does not, so a watermark only
+15. The table, the wide key, the vocabulary, the lock order and the SQL-counted chip row are
+    [reactions.md](reactions.md#key-invariants); talk's container is the group row.
+16. Every state change through the app bumps the version and a no-op does not, so a watermark only
     moves for something worth re-reading. The withdrawal cascade is the one exempt write; the client
     merges a touched row only over an id it already holds.
-19. Reading a message's reactions is `canView` and writing one is `canPost`, with no per-row filter
+17. Reading a message's reactions is `canView` and writing one is `canPost`, with no per-row filter
     either way and 404 for every refusal — the conversation's own rules.
-20. Three paths take reactions away: the message's delete, the group's teardown, and the member's
+18. Three paths take reactions away: the message's delete, the group's teardown, and the member's
     withdrawal. Only the last is a cascade, because `reactable_id` carries no foreign key.
-21. Live agreement is the latest window's alone. A history window catches up on return, and a poll
+19. Live agreement is the latest window's alone. A history window catches up on return, and a poll
     that carries no watermark is answered as one that never asked.
-22. Every write that touches a reaction takes the group row's exclusive lock first and re-reads the
-    message under it — the one order, shared with the message's purge and the group's teardown.
-23. Nothing about a chip row grows with the room: the counts are aggregated in SQL rather than
-    hydrated, and the reactor list ships an exact count with at most a hundred names.
-24. A reply is an ordinary message. It orders, counts as unread and leads a room like any other, and
+20. A reply is an ordinary message. It orders, counts as unread and leads a room like any other, and
     the reference it carries adds no notification of its own.
-25. The parent lookup is bound to the group, so an id from another conversation reads as deleted, and
+21. The parent lookup is bound to the group, so an id from another conversation reads as deleted, and
     only one level is ever serialized.
-26. A message's link card is attached once and never invalidated, because a message is never edited.
+22. A message's link card is attached once and never invalidated, because a message is never edited.
     The conversation page is what asks for one on read; the rows it decorates itself with are not
     asked about.

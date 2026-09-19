@@ -139,6 +139,31 @@ class WithdrawMemberTest extends TestCase
         $this->assertDatabaseHas('reactions', ['reactable_id' => $root->getKey()]);
     }
 
+    /** A post from another device between the drain and the member lock goes by the cascade, which reaches no reaction. */
+    public function test_sweeps_the_reactions_on_a_thread_posted_after_the_drain(): void
+    {
+        $member = Member::factory()->create();
+        $drained = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        $bystander = Member::factory()->create();
+        $late = null;
+
+        // Fires inside the drain's delete of $drained: after the enumeration, before the member lock.
+        TimelinePost::deleted(function (TimelinePost $post) use (&$late, $drained, $member, $bystander): void {
+            if ($late === null && $post->is($drained)) {
+                $late = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+                $reply = TimelinePost::factory()->replyTo($late)->create();
+                $late->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+                $reply->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+            }
+        });
+
+        $this->withdraw($member);
+
+        $this->assertNotNull($late);
+        $this->assertDatabaseMissing('timeline_posts', ['id' => $late->getKey()]);
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
     public function test_retains_set_null_content_with_a_null_author(): void
     {
         $member = Member::factory()->create();

@@ -46,7 +46,13 @@ and take the surface's locks first, through its
 container row exclusively and re-reads the content under it, both as locking reads so they see what
 is committed rather than the transaction's snapshot, and answers false when the content is gone
 (`ReactionRefused`, which every surface turns into its usual 404). `touched()` runs only after a row
-actually changed, for a surface that keeps a watermark. The two orders in use:
+actually changed, for a surface that keeps a watermark.
+
+Before the surface's locks, the write takes the **reactor's own member row, shared**. The insert's
+foreign-key check would take that lock anyway, only last — and a withdrawal holds the member row
+exclusively while it sweeps the member's content under the surface's locks, so a reactor reacting to
+their own content mid-withdrawal would otherwise close a cycle. The one order is therefore
+**member → container → content**:
 
 | surface | container → content | `touched()` |
 |---|---|---|
@@ -55,7 +61,8 @@ actually changed, for a surface that keeps a watermark. The two orders in use:
 
 A surface's own delete and teardown take the same order before they sweep, which is what keeps the
 paths from deadlocking as well as from racing. The single order is a property of the code; the
-MySQL-only lock-order tests hold the container from a second connection and show the write waiting.
+MySQL-only lock-order tests hold a row from a second connection and pin which locking read the write
+waits on.
 
 ## Reading
 
@@ -77,8 +84,8 @@ and no more — the list is read by a person.
 Three paths take reactions away, and only the last is a cascade:
 
 - the content's own delete, sweeping under the surface's lock in the same transaction;
-- the container's teardown (a group's purge, a member's withdrawal for the replies that go with the
-  member row), likewise under the lock;
+- the container's teardown (a group's purge, a member's withdrawal for the posts and replies that go
+  with the member row), likewise under the lock;
 - the reacting member's withdrawal — `member_id` is a real foreign key.
 
 ## Key invariants
@@ -91,9 +98,10 @@ Three paths take reactions away, and only the last is a cascade:
 3. `ReactionVocabulary` is the only place the set is written down, its size included. It bounds what
    may be added; what may be removed is whatever the member holds, and the column takes any short
    utf8mb4 string.
-4. Every write that touches a reaction takes its surface's container row exclusively first and
-   re-reads the content under it — the one order, shared with the content's delete and the
-   container's teardown.
+4. Every surface write path — add, remove, and the sweeps of the content's delete and the
+   container's teardown — takes the reactor's member row shared, then the surface's container row,
+   then re-reads the content under it: the one order. The member cascade and the OpenPNE 3 transfer
+   are the writes outside it, and neither takes a lock.
 5. Nothing about a chip row grows with the content's audience: the counts are aggregated in SQL
    rather than hydrated, and the reactor list ships an exact count with at most a hundred names.
 6. A reaction notifies nobody and moves no unread state.

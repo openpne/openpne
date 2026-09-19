@@ -5,8 +5,8 @@ namespace App\Features\Reactions;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * What a reaction write needs from the content it lands on. See docs/internals/reactions.md,
- * "One write path, one lock per surface".
+ * What a reaction write needs from the content it lands on (docs/internals/reactions.md, "One write
+ * path, one lock per surface").
  */
 interface ReactionSurface
 {

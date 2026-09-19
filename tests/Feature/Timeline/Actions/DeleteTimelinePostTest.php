@@ -72,6 +72,8 @@ class DeleteTimelinePostTest extends TestCase
     {
         $post = TimelinePost::factory()->create();
         $post->reactions()->create(['member_id' => Member::factory()->create()->getKey(), 'emoji' => "\u{1F44D}"]);
+        // Relative to the level the test itself runs at: RefreshDatabase already wraps everything.
+        $outside = DB::transactionLevel();
         $depth = [];
         DB::listen(function ($query) use (&$depth): void {
             if (str_contains($query->sql, 'delete from')) {
@@ -82,7 +84,7 @@ class DeleteTimelinePostTest extends TestCase
         (new DeleteTimelinePost)($post);
 
         $this->assertNotEmpty($depth);
-        $this->assertSame([], array_filter($depth, fn (int $level): bool => $level < 1), 'a delete ran outside the transaction');
+        $this->assertSame([], array_filter($depth, fn (int $level): bool => $level <= $outside), 'a delete ran outside the action\'s transaction');
     }
 
     public function test_purges_the_owned_image_file_and_join_row(): void

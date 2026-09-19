@@ -192,9 +192,13 @@ Two things are the timeline's own:
   lock could commit after the root's sweep and outlive the reply. Every reaction write, the post's
   delete and the withdrawal sweep therefore take
   [`TimelineThreadLock`](../../app/Features/Timeline/TimelineThreadLock.php): the root row
-  exclusively, then the reply re-read under it. A withdrawing member's replies sit under other
-  members' roots and go with the member row's cascade, so their reactions are swept inside that same
-  transaction, root lock first.
+  exclusively, then the reply re-read under it. A withdrawing member's posts and replies go with
+  the member row's cascade, so every thread they touch is re-enumerated under the member row's lock
+  and swept inside that same transaction, root first — a post committed from another device after
+  the earlier drain is caught there. That sweep holds the thread **shared**: enough to exclude a
+  reaction writer, and compatible with the shared lock a reply the member is writing at that moment
+  holds on the root through its foreign key, so the two cannot wait on each other. While it runs,
+  a reaction onto any thread the member wrote in waits for the commit; replies and reads do not.
 
 Nothing polls a feed, so no watermark moves; a page carries each row's chips from one grouped read,
 and a write answers with the row's whole chip row. The dashboard digest carries them too, though its
