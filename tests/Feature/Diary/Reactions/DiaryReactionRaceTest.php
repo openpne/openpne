@@ -50,6 +50,28 @@ class DiaryReactionRaceTest extends DiaryReactionTestCase
         $this->assertRefused(fn () => app(RemoveReaction::class)($member, $diary, $this->emoji(0), new DiaryReactionSurface));
     }
 
+    /** The comment is bound, then its diary is read: between the two the diary can go, and the comment with it by cascade. */
+    public function test_a_comment_whose_entry_went_after_the_binding_is_not_found(): void
+    {
+        $comment = $this->comment($this->diary());
+        $member = Member::factory()->create();
+        $this->instance(AddReaction::class, new class extends AddReaction
+        {
+            public function __invoke(Member $member, $reactable, string $emoji, $surface): bool
+            {
+                throw new RuntimeException('the gate let a comment without an entry through');
+            }
+        });
+        DiaryComment::retrieved(function (DiaryComment $retrieved) use ($comment): void {
+            if ($retrieved->is($comment) && DB::table('diaries')->where('id', $comment->diary_id)->exists()) {
+                DB::table('diaries')->where('id', $comment->diary_id)->delete();
+            }
+        });
+
+        $this->react($member, $comment)->assertNotFound();
+        $this->actingAs($member)->getJson("/diary/comment/{$comment->getKey()}/reactions")->assertNotFound();
+    }
+
     public function test_a_refused_write_answers_404(): void
     {
         $diary = $this->diary();

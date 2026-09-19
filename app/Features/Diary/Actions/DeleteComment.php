@@ -23,7 +23,7 @@ class DeleteComment
 
     /**
      * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
-     * The reactions are swept under the diary lock inside the transaction; the File bytes are purged after it.
+     * The reactions are swept under the diary lock inside the transaction; the File bytes, irreversible on a disk backend, are purged after it.
      */
     public function purge(DiaryComment $comment): void
     {

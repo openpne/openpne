@@ -144,11 +144,34 @@ class DiaryReactionTest extends DiaryReactionTestCase
     {
         $diary = $this->diary();
         $this->react(Member::factory()->create(), $diary)->assertOk();
+        $bindings = null;
+        DB::listen(function ($query) use (&$bindings): void {
+            if (preg_match('/from\s+[`"]?reactions[`"]?/i', $query->sql) && str_contains($query->sql, 'group by')) {
+                $bindings = $query->bindings;
+            }
+        });
 
         $this->assertSame(
             [$diary->getKey() => [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => false]]],
             app(ReactionAggregates::class)(null, Diary::class, [$diary->getKey()]),
         );
+
+        // The type and the id are bound; no member id is.
+        $this->assertSame(['diary', $diary->getKey()], $bindings);
+    }
+
+    /** The gate answers before the payload is looked at, so an id the viewer may not see reads the same whether the emoji is valid or not. */
+    public function test_an_invalid_emoji_on_an_entry_the_viewer_may_not_see_is_still_not_found(): void
+    {
+        $diary = Diary::factory()->private()->create();
+        $comment = $this->comment($diary);
+        $stranger = Member::factory()->create();
+
+        $this->react($stranger, $diary, 'not an emoji')->assertNotFound();
+        $this->unreact($stranger, $diary, str_repeat('x', 64))->assertNotFound();
+        $this->react($stranger, $comment, 'not an emoji')->assertNotFound();
+        $this->unreact($stranger, $comment, str_repeat('x', 64))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_reacting_twice_with_the_same_emoji_changes_nothing(): void

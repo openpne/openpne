@@ -128,11 +128,12 @@ the diary's own:
   them.
 
 Nothing polls the page, so no watermark moves; the show page carries the diary's chips and its
-comments' from two grouped reads.
+comments' from at most two grouped reads.
 
 ## Key invariants
 
 1. A comment's reaction is gated and locked at its diary: `DiaryAccess::canView` on the diary, the
    diary row before the comment row.
 2. The diary's delete, the comment's delete and the withdrawal sweep take the diary row before they
-   sweep reactions, inside the transaction that deletes the rows; File bytes are purged after it.
+   sweep reactions, inside the transaction that deletes the rows. The two deletes purge File bytes
+   after it; the withdrawal's late diaries go by the member cascade, which purges no bytes.

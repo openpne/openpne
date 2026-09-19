@@ -16,12 +16,13 @@ import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import { BodyCounter, overBodyLimit } from './body-counter';
-import { rowReactions, timelineReactionEndpoints } from './reactions';
+import { timelineReactionEndpoints } from './reactions';
 import { TimelineReplyRow } from './reply-row';
 import type { TimelinePostEntry } from './types';
 
@@ -40,7 +41,7 @@ export default function TimelineShow() {
     const confirm = useConfirm();
     const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
-    const rootReactions = rowReactions(post, reactionVocabulary, reactions);
+    const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -99,7 +100,7 @@ export default function TimelineShow() {
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
-                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} reactions={rowReactions(reply, reactionVocabulary, reactions)} />
+                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, reactions)} />
                         ))}
                     </List>
                 </Panel>

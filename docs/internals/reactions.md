@@ -86,8 +86,8 @@ and no more — the list is read by a person.
 Three paths take reactions away, and only the last is a cascade:
 
 - the content's own delete, sweeping under the surface's lock in the same transaction;
-- the container's teardown (a group's purge, a member's withdrawal for the posts, replies and
-  diaries that go with the member row), likewise under the lock;
+- the container's teardown (a group's purge, a member's withdrawal for the posts, replies, diaries
+  and those diaries' comments that go with the member row), likewise under the lock;
 - the reacting member's withdrawal — `member_id` is a real foreign key.
 
 ## Key invariants

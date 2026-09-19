@@ -29,7 +29,7 @@ class DeleteDiary
      * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
      * The cascade drops the comments and the `*_image` link rows but never the File bytes nor the
      * reactions, so both are collected under the diary lock; the reactions go inside the transaction
-     * and the Files after it.
+     * and the Files after it, since their bytes are irreversible on a disk backend.
      */
     public function purge(Diary $diary): void
     {

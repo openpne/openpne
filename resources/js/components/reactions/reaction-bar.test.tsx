@@ -25,6 +25,13 @@ test('a reader who may not react gets counts and nothing to press', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
 
+test('the reactor list is offered only where a handler for it is given, whatever the chips can do', () => {
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary: ['\u{1F44D}'], onToggle: vi.fn() }} />);
+
+    expect(screen.getByRole('button', { name: /2/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+});
+
 test('a row with nothing on it and no reader who may react draws nothing', () => {
     const { container } = renderWithProviders(<RowReactionChips reactions={{ chips: [], vocabulary: ['\u{1F44D}'] }} />);
 

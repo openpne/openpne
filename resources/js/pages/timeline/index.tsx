@@ -4,10 +4,11 @@ import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
-import { rowReactions, timelineReactionEndpoints } from './reactions';
+import { timelineReactionEndpoints } from './reactions';
 import type { TimelineStream } from './types';
 
 interface IndexProps extends PageProps {
@@ -36,7 +37,7 @@ export default function TimelineIndex() {
                         <Panel flush>
                             <List>
                                 {posts.data.map((post) => (
-                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} reactions={rowReactions(post, reactionVocabulary, reactions)} />
+                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} reactions={rowReactions(post.id, post.reactions, reactionVocabulary, reactions)} />
                                 ))}
                             </List>
                         </Panel>

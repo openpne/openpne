@@ -19,10 +19,11 @@ import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { commentsPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { DiaryCommentRow } from './comment-row';
-import { diaryCommentReactionEndpoints, diaryReactionEndpoints, rowReactions } from './reactions';
+import { diaryCommentReactionEndpoints, diaryReactionEndpoints } from './reactions';
 import { diaryThreadLink } from './thread-link';
 import type { DiaryDetail, DiaryNeighbor, DiaryThread } from './types';
 
