@@ -40,7 +40,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     private const SOURCE_TABLES = ['member', 'diary', 'diary_image', 'member_relationship', 'message', 'message_type',
         'message_send_list', 'deleted_message', 'community', 'community_config', 'community_category',
-        'community_member', 'community_member_position', 'member_config', 'activity_data', 'activity_image', 'nice'];
+        'community_member', 'community_member_position', 'member_config', 'activity_data', 'activity_image', 'nice',
+        'diary_comment', 'community_topic_comment', 'community_event_comment'];
 
     protected function setUp(): void
     {
