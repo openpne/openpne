@@ -31,15 +31,18 @@ export function ReactionChips({
     chips,
     onToggle,
     onShowReactors,
+    add,
 }: {
     chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
     onShowReactors: () => void;
+    /** A feed row keeps its add button here, at the end of the chips, and so draws the row even with none; a chat row offers it elsewhere. */
+    add?: { vocabulary: string[]; onPick: (emoji: string, mine: boolean) => void };
 }) {
     const t = useT();
 
-    if (chips.length === 0) {
+    if (chips.length === 0 && add === undefined) {
         return null;
     }
 
@@ -65,12 +68,15 @@ export function ReactionChips({
                     </button>
                 ),
             )}
+            {add !== undefined && <ReactionAdd chips={chips} vocabulary={add.vocabulary} onPick={add.onPick} />}
             {/* Only ever offered beside chips: with none there is nobody to name. */}
-            <Tip label={t('See who reacted')}>
-                <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
-                    <Users className="size-4" aria-hidden />
-                </button>
-            </Tip>
+            {chips.length > 0 && (
+                <Tip label={t('See who reacted')}>
+                    <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
+                        <Users className="size-4" aria-hidden />
+                    </button>
+                </Tip>
+            )}
         </div>
     );
 }

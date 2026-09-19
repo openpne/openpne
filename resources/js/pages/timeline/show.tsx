@@ -9,7 +9,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
-import { ReactionAdd, ReactionChips } from '@/components/reactions/reaction-bar';
+import { ReactionChips } from '@/components/reactions/reaction-bar';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -80,17 +80,14 @@ export default function TimelineShow() {
                         </Link>
                         <AiChip isAi={post.author.isAi} />
                     </div>
-                    <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
-                        <ReactionAdd chips={rootReactions.chips} vocabulary={reactionVocabulary} onPick={rootReactions.onToggle} />
-                        <Timestamp at={post.createdAt} preset="absolute" />
-                    </div>
+                    <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">
                     <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
-                <ReactionChips chips={rootReactions.chips} onToggle={rootReactions.onToggle} onShowReactors={rootReactions.onShowReactors} />
+                <ReactionChips chips={rootReactions.chips} onToggle={rootReactions.onToggle} onShowReactors={rootReactions.onShowReactors} add={{ vocabulary: reactionVocabulary, onPick: rootReactions.onToggle }} />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}
