@@ -84,14 +84,14 @@ final class BoardSweep
         $first = true;
         [$at, $id] = [null, 0];
         do {
-            $query = DB::table('group_messages')->where('group_id', $groupId);
+            // The group id as a literal: with the leading index column bound, MySQL 8.4 plans a large room's continuation page as a filter from its head (measured); the cursor may stay bound.
+            $query = DB::table('group_messages')->whereRaw('`group_id` = '.$groupId);
             if (! $first) {
                 $query->where(function (Builder $after) use ($at, $id): void {
                     if ($at === null) {
                         $after->where(fn (Builder $nulls) => $nulls->whereNull('created_at')->where('id', '>', $id))->orWhereNotNull('created_at');
                     } else {
-                        // Literals, not placeholders: with the cursor bound, MySQL 8.4 plans a large room's page as a filter from its head (measured); the values are the row just read.
-                        $after->whereRaw(sprintf('(`created_at` > %1$s or (`created_at` = %1$s and `id` > %2$d))', self::timestampLiteral($at), $id));
+                        $after->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id));
                     }
                 });
             }
@@ -102,16 +102,6 @@ final class BoardSweep
             self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
             [$at, $id, $first] = [$page->last()->created_at === null ? null : (string) $page->last()->created_at, (int) $page->last()->id, false];
         } while ($page->count() === self::CHUNK);
-    }
-
-    /** Only the one shape a timestamp column returns may be inlined. */
-    private static function timestampLiteral(string $at): string
-    {
-        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $at) !== 1) {
-            throw new \UnexpectedValueException("Not a timestamp: {$at}");
-        }
-
-        return "'{$at}'";
     }
 
     private static function deleteMatching(Builder $matching): void

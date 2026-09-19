@@ -239,11 +239,12 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        // Two pages: the first carries no cursor, the second starts after its last (created_at, id) as literals, all one timestamp here.
+        // Two pages: the first carries no cursor, the second starts after its last (created_at, id), all one timestamp here.
         $this->assertCount(2, $pages);
-        $this->assertCount(1, $pages[0]['bindings']);
-        $this->assertSame([$group->getKey()], $pages[1]['bindings'], 'the cursor is inlined, only the group id is bound');
-        $this->assertStringContainsString("`id` > {$messageIds[999]})", $pages[1]['sql'], 'the cursor is the last row of the page');
+        $this->assertSame([], $pages[0]['bindings'], 'the group id is inlined, not bound');
+        $this->assertStringContainsString("`group_id` = {$group->getKey()}", $pages[1]['sql']);
+        $this->assertCount(3, $pages[1]['bindings'], 'the cursor is bound as the two arms');
+        $this->assertSame($messageIds[999], $pages[1]['bindings'][2], 'the cursor is the last row of the page');
         $this->assertDatabaseCount('reactions', 0);
     }
 
