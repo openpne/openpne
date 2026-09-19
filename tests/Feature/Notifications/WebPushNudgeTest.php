@@ -147,13 +147,56 @@ class WebPushNudgeTest extends TestCase
     {
         $recipient = $this->subscribed();
         $sender = Member::factory()->create();
-        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'body' => '']);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => null, 'body' => '']);
         $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
         DirectMessageFile::factory()->create(['direct_message_id' => $message->getKey()]);
 
         $recipient->notify(new DirectMessageReceivedNotification($sender, $message));
 
         $this->assertSame(__('Image'), $this->pushesTo(self::ENDPOINT)[0]['body']);
+    }
+
+    public function test_a_message_reading_zero_is_still_quoted(): void
+    {
+        $recipient = $this->subscribed();
+
+        $this->notifyOfMessage($recipient, Member::factory()->create(), '0');
+
+        $this->assertSame('0', $this->pushesTo(self::ENDPOINT)[0]['body']);
+    }
+
+    public function test_a_legacy_subject_only_message_is_quoted_by_its_subject(): void
+    {
+        $recipient = $this->subscribed();
+        $sender = Member::factory()->create();
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey(), 'subject' => 'Only a subject', 'body' => '']);
+        $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+
+        $recipient->notify(new DirectMessageReceivedNotification($sender, $message));
+
+        $this->assertSame('Only a subject', $this->pushesTo(self::ENDPOINT)[0]['body']);
+    }
+
+    /**
+     * The push library refuses a payload over 4078 bytes for every device of the recipient at once, and
+     * pads only up to 2820; the bound is checked at the widest the inputs can be, in JSON-escaped
+     * Japanese and emoji.
+     */
+    public function test_the_widest_payload_stays_under_the_push_librarys_padding_bound(): void
+    {
+        $author = Member::factory()->create(['name' => str_repeat('亜', 255)]);
+        $recipient = $this->subscribed();
+        $diary = Diary::factory()->create([
+            'member_id' => $author->getKey(),
+            'title' => str_repeat('亜', 300),
+            'body' => str_repeat('😀', 300),
+        ]);
+        $recipient->forceFill(['locale' => 'ja'])->save();
+
+        $recipient->notify(new WebPushNudge(['kind' => 'diary_posted', 'author_id' => $author->getKey(), 'diary_id' => $diary->getKey()], (int) $author->getKey()));
+
+        $sent = $this->webPushTransport->sent[0]['payload'];
+        $this->assertLessThan(2820, strlen((string) $sent));
     }
 
     public function test_a_kind_with_nothing_to_quote_carries_the_sentence_alone(): void

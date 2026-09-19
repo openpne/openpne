@@ -91,7 +91,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($message->body, $message->files()->exists());
+        return self::plain($message->body, $message->files()->exists(), $message->subject);
     }
 
     private static function talkMessage(?int $id, Member $recipient): ?string
@@ -162,10 +162,9 @@ final class NotificationPreview
         return $lines === [] ? null : implode("\n", $lines);
     }
 
-    /** Words first, then the image stand-in; a message with neither has nothing to preview. */
-    private static function plain(?string $body, bool $hasImages): ?string
+    private static function plain(?string $body, bool $hasImages, ?string $fallback = null): ?string
     {
-        $line = ChatPreview::lineOrImages([BodyText::excerpt($body)], $hasImages);
+        $line = ChatPreview::lineOrImages([BodyText::excerpt($body), BodyText::excerpt($fallback)], $hasImages);
 
         return $line === '' ? null : $line;
     }

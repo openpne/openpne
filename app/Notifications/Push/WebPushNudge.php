@@ -63,15 +63,18 @@ final class WebPushNudge extends Notification implements ShouldQueue
         $kind = is_string($this->data['kind'] ?? null) ? $this->data['kind'] : null;
         $reason = is_string($this->data['reason'] ?? null) ? $this->data['reason'] : null;
 
-        return (new WebPushMessage)
+        $message = (new WebPushPayload)
             ->title(NotificationKindLabel::for($kind, $reason, $this->actorName()))
-            ->body(NotificationPreview::for($kind, $this->data, $notifiable) ?? '')
             ->icon(app_icon_url(192))
             ->tag(self::TAG)
             ->data([
                 'url' => '/notifications',
                 'unreadCount' => (new CountUnreadNotifications)($notifiable),
             ]);
+
+        $preview = NotificationPreview::for($kind, $this->data, $notifiable);
+
+        return $preview === null ? $message : $message->body($preview);
     }
 
     private function actorName(): ?string
