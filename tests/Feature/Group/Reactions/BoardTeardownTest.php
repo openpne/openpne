@@ -233,16 +233,17 @@ class BoardTeardownTest extends BoardReactionTestCase
         $pages = [];
         DB::listen(function ($query) use (&$pages): void {
             if (preg_match('/from [`"]group_messages[`"] where .*order by [`"]created_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
-                $pages[] = $query->bindings;
+                $pages[] = ['sql' => $query->sql, 'bindings' => $query->bindings];
             }
         });
 
         app(DeleteGroup::class)->purge($group);
 
-        // Two pages: the first carries no cursor, the second starts after its last (created_at, id), all one timestamp here.
+        // Two pages: the first carries no cursor, the second starts after its last (created_at, id) as literals, all one timestamp here.
         $this->assertCount(2, $pages);
-        $this->assertCount(1, $pages[0]);
-        $this->assertSame($messageIds[999], $pages[1][3], 'the cursor is the last row of the page');
+        $this->assertCount(1, $pages[0]['bindings']);
+        $this->assertSame([$group->getKey()], $pages[1]['bindings'], 'the cursor is inlined, only the group id is bound');
+        $this->assertStringContainsString("`id` > {$messageIds[999]})", $pages[1]['sql'], 'the cursor is the last row of the page');
         $this->assertDatabaseCount('reactions', 0);
     }
 
