@@ -17,8 +17,13 @@ trait SeedsSourceNice
     /** The same table with the letter column folding case, as a source outside the stock DDL may. */
     protected function createCaseInsensitiveSourceNiceTable(): void
     {
+        $ddl = SourceSchema::default()->createStatement('nice', withoutForeignKeys: true);
+        $folding = str_replace('COLLATE utf8mb3_bin', 'COLLATE utf8mb3_general_ci', $ddl);
+        if ($folding === $ddl) {
+            throw new \RuntimeException('the nice DDL no longer spells its column collation as expected; the folding fixture would be a binary one');
+        }
         DB::statement('DROP TABLE IF EXISTS `nice`');
-        DB::statement(str_replace('COLLATE utf8mb3_bin', 'COLLATE utf8mb3_general_ci', SourceSchema::default()->createStatement('nice', withoutForeignKeys: true)));
+        DB::statement($folding);
     }
 
     protected function dropSourceNiceTable(): void

@@ -40,8 +40,8 @@ final class NicePreflight
         $errors = [];
         $warnings = [];
 
-        // opLikePlugin declares its unique index but no migration adds it, so a doubled like exists and
-        // would fail the OpenPNE 4 unique key mid-run.
+        // A table built before opLikePlugin declared its unique index was never given one by a
+        // migration, so a doubled like can exist and would fail the OpenPNE 4 unique key mid-run.
         $migrated = NiceReactionUpgrade::onActivity(ActivityThread::migrated('activity_data'));
         $twins = DB::select($this->resolve(
             'SELECT MAX(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice').' AS `nice` WHERE '.$migrated
