@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The reclaiming statements a teardown shares, shaped for a group of any size: reactions are found
- * by subquery, read once, and deleted by primary key in chunks, so the sweep locks only the rows it deletes
+ * a page of content at a time and deleted by primary key in chunks, so the sweep locks only the rows it deletes
  * (docs/internals/group-boards.md, "Tearing a group down").
  */
 final class BoardSweep
@@ -28,21 +28,28 @@ final class BoardSweep
 
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
-     * read: the snapshot is then taken under the locks, so this plain read sees every committed row.
-     * One read, not a page per chunk: re-running the subquery per chunk made the hold quadratic.
+     * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
+     * Paged by content id, so neither the ids held in PHP nor a statement grows with the group.
      */
     public static function reactions(string $alias, Builder $contentIds): void
     {
-        $ids = DB::table('reactions')
-            ->where('reactable_type', $alias)
-            ->whereIn('reactable_id', $contentIds)
-            ->orderBy('id')
-            ->pluck('id')
-            ->all();
-
-        foreach (array_chunk($ids, self::CHUNK) as $chunk) {
-            Reaction::query()->whereIn('id', $chunk)->delete();
-        }
+        $after = 0;
+        do {
+            $page = (clone $contentIds)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
+            if ($page === []) {
+                break;
+            }
+            $ids = DB::table('reactions')
+                ->where('reactable_type', $alias)
+                ->whereIn('reactable_id', $page)
+                ->orderBy('id')
+                ->pluck('id')
+                ->all();
+            foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+                Reaction::query()->whereIn('id', $chunk)->delete();
+            }
+            $after = (int) end($page);
+        } while (count($page) === self::CHUNK);
     }
 
     /**
