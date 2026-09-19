@@ -18,6 +18,7 @@ use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Visibility;
 use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -98,13 +99,59 @@ class NotificationPreviewTest extends TestCase
         $this->assertSame($expected, NotificationPreview::for($data['kind'], $data, $recipient));
     }
 
-    public function test_a_room_the_recipient_left_is_not_quoted(): void
+    /** @return array<string, array{0: Closure(Member): array<string, mixed>}> */
+    public static function hiddenKinds(): array
+    {
+        return [
+            'diary_commented on a private diary' => [fn (Member $recipient): array => [
+                'kind' => 'diary_commented',
+                'comment_id' => DiaryComment::factory()->create(['diary_id' => Diary::factory()->private()->create()->getKey()])->getKey(),
+            ]],
+            'direct_message_received without a receipt for the recipient' => [function (Member $recipient): array {
+                $message = DirectMessage::factory()->create(['body' => 'Not yours']);
+                $message->recipients()->create(['recipient_id' => Member::factory()->create()->getKey()]);
+
+                return ['kind' => 'direct_message_received', 'direct_message_id' => $message->getKey()];
+            }],
+            'group_talk_new_message in a members-only room' => [fn (Member $recipient): array => [
+                'kind' => 'group_talk_new_message',
+                'message_id' => GroupMessage::factory()->create(['group_id' => self::closedGroup()->getKey()])->getKey(),
+            ]],
+            'group_topic_posted on a members-only board' => [fn (Member $recipient): array => [
+                'kind' => 'group_topic_posted',
+                'topic_id' => GroupTopic::factory()->create(['group_id' => self::closedGroup()->getKey()])->getKey(),
+            ]],
+            'group_event_posted on a members-only board' => [fn (Member $recipient): array => [
+                'kind' => 'group_event_posted',
+                'event_id' => GroupEvent::factory()->create(['group_id' => self::closedGroup()->getKey()])->getKey(),
+            ]],
+            'group_topic_commented on a members-only board' => [fn (Member $recipient): array => [
+                'kind' => 'group_topic_commented',
+                'comment_id' => GroupTopicComment::factory()->create(['group_topic_id' => GroupTopic::factory()->create(['group_id' => self::closedGroup()->getKey()])->getKey()])->getKey(),
+            ]],
+            'group_event_commented on a members-only board' => [fn (Member $recipient): array => [
+                'kind' => 'group_event_commented',
+                'comment_id' => GroupEventComment::factory()->create(['group_event_id' => GroupEvent::factory()->create(['group_id' => self::closedGroup()->getKey()])->getKey()])->getKey(),
+            ]],
+            'timeline_posted privately' => [fn (Member $recipient): array => [
+                'kind' => 'timeline_posted',
+                'post_id' => TimelinePost::factory()->create(['visibility' => Visibility::Private])->getKey(),
+            ]],
+            'timeline_replied under a private root' => [fn (Member $recipient): array => [
+                'kind' => 'timeline_replied',
+                'post_id' => TimelinePost::factory()->replyTo(TimelinePost::factory()->create(['visibility' => Visibility::Private]))->create()->getKey(),
+            ]],
+        ];
+    }
+
+    /** @param Closure(Member): array<string, mixed> $scenario */
+    #[DataProvider('hiddenKinds')]
+    public function test_content_the_recipient_may_not_read_is_not_quoted(Closure $scenario): void
     {
         $recipient = Member::factory()->create();
-        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $message = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'body' => 'Private talk']);
+        $data = $scenario($recipient);
 
-        $this->assertNull(NotificationPreview::for('group_talk_new_message', ['kind' => 'group_talk_new_message', 'message_id' => $message->getKey()], $recipient));
+        $this->assertNull(NotificationPreview::for($data['kind'], $data, $recipient));
     }
 
     public function test_a_missing_or_malformed_id_previews_nothing(): void
@@ -113,6 +160,11 @@ class NotificationPreviewTest extends TestCase
 
         $this->assertNull(NotificationPreview::for('diary_posted', ['kind' => 'diary_posted'], $recipient));
         $this->assertNull(NotificationPreview::for('diary_posted', ['kind' => 'diary_posted', 'diary_id' => 'abc'], $recipient));
+    }
+
+    private static function closedGroup(): Group
+    {
+        return Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
     }
 
     private static function joinedGroup(Member $member): Group

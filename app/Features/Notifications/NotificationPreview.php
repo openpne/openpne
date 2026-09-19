@@ -164,7 +164,7 @@ final class NotificationPreview
 
     private static function plain(?string $body, bool $hasImages, ?string $fallback = null): ?string
     {
-        $line = ChatPreview::lineOrImages([BodyText::excerpt($body), BodyText::excerpt($fallback)], $hasImages);
+        $line = ChatPreview::lineOrImages([BodyText::excerpt($body), (string) $fallback], $hasImages);
 
         return $line === '' ? null : $line;
     }

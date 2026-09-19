@@ -191,12 +191,11 @@ class WebPushNudgeTest extends TestCase
             'title' => str_repeat('亜', 300),
             'body' => str_repeat('😀', 300),
         ]);
-        $recipient->forceFill(['locale' => 'ja'])->save();
 
-        $recipient->notify(new WebPushNudge(['kind' => 'diary_posted', 'author_id' => $author->getKey(), 'diary_id' => $diary->getKey()], (int) $author->getKey()));
+        $recipient->notify((new WebPushNudge(['kind' => 'diary_posted', 'author_id' => $author->getKey(), 'diary_id' => $diary->getKey()], (int) $author->getKey()))->locale('ja'));
 
-        $sent = $this->webPushTransport->sent[0]['payload'];
-        $this->assertLessThan(2820, strlen((string) $sent));
+        $size = strlen((string) $this->webPushTransport->sent[0]['payload']);
+        $this->assertLessThan(2820, $size, "payload is {$size} bytes");
     }
 
     public function test_a_kind_with_nothing_to_quote_carries_the_sentence_alone(): void

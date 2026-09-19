@@ -273,7 +273,7 @@ failing to restore, and the preview is resolved from the row's ids at send time 
 checks the feed applies when a row is opened — content deleted or hidden from the recipient by then
 leaves the sentence alone, never a stale copy. Whether the body shows on a locked screen is the
 device's preview setting (iOS "Show Previews", Android's lock-screen notification content); there is
-no member switch beside it, and no kind is exempt. The subscription consent below was given for a
+no member switch beside it, and no kind withholds content it has. The subscription consent below was given for a
 payload that named the event; it now quotes the event, and the shared-browser window that
 reconciliation leaves open (below) carries that quote until the next authenticated navigation closes
 it. That is accepted as is: the window is the same one, only its content grew.
