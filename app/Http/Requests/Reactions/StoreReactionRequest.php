@@ -21,4 +21,14 @@ class StoreReactionRequest extends FormRequest
             'emoji' => ['required', 'string', Rule::in(ReactionVocabulary::all())],
         ];
     }
+
+    /**
+     * Bounded by the column, not the vocabulary, so an emoji the site withdrew can still be removed.
+     *
+     * @return array<string, mixed>
+     */
+    public static function removeRules(): array
+    {
+        return ['emoji' => ['required', 'string', 'max:32']];
+    }
 }

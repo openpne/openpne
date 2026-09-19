@@ -74,9 +74,10 @@ class GroupEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the row's chips, passed rather than read off the model so a page costs one grouped read
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, createdAt: string, deletable: bool, reactions: list<array{emoji: string, count: int, mine: bool}>}
      */
-    public static function comment(GroupEventComment $comment, Member $viewer): array
+    public static function comment(GroupEventComment $comment, Member $viewer, array $reactions): array
     {
         return [
             'id' => $comment->getKey(),
@@ -87,25 +88,28 @@ class GroupEventSerializer
             'author' => self::author($comment->member),
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => GroupEventAccess::canDeleteComment($comment, $viewer),
+            'reactions' => $reactions,
         ];
     }
 
     /**
      * @param  Collection<int, GroupEventComment>  $comments
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by comment id, as ReactionAggregates answers
      * @return list<array>
      */
-    public static function comments(Collection $comments, Member $viewer): array
+    public static function comments(Collection $comments, Member $viewer, array $reactions): array
     {
-        return $comments->map(fn (GroupEventComment $comment): array => self::comment($comment, $viewer))->all();
+        return $comments->map(fn (GroupEventComment $comment): array => self::comment($comment, $viewer, $reactions[(int) $comment->getKey()] ?? []))->all();
     }
 
     /**
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by comment id
      * @return array{comments: list<array>, total: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
      */
-    public static function thread(GroupEventCommentThread $thread, Member $viewer): array
+    public static function thread(GroupEventCommentThread $thread, Member $viewer, array $reactions): array
     {
         return [
-            'comments' => self::comments($thread->comments, $viewer),
+            'comments' => self::comments($thread->comments, $viewer, $reactions),
             'total' => $thread->total,
             'page' => $thread->page,
             'lastPage' => $thread->lastPage,

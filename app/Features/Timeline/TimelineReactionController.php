@@ -37,7 +37,7 @@ class TimelineReactionController extends Controller
     public function delete(Request $request, TimelinePost $timelinePost, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
     {
         $this->authorizeThread($timelinePost);
-        $emoji = (string) $request->validate(['emoji' => ['required', 'string', 'max:32']])['emoji'];
+        $emoji = (string) $request->validate(StoreReactionRequest::removeRules())['emoji'];
 
         try {
             $action($this->viewer(), $timelinePost, $emoji, new TimelineReactionSurface);

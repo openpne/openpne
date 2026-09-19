@@ -122,7 +122,7 @@ class WithdrawMember
         // Nothing pre-purges the member's other sessions, so a device could keep re-joining; the cap
         // bounds that spin and throws with the content purged and the row kept.
         for ($attempt = 0; $attempt < 10; $attempt++) {
-            // Retried on deadlock: a comment on the member's own late diary holds that diary row and waits on this member row.
+            // Retried on deadlock: a reply or a comment on the member's own late content holds that content row and waits on this member row.
             $done = DB::transaction(function () use ($id): bool {
                 // While this row is X-locked a concurrent `group_members` insert blocks on InnoDB's
                 // FK parent-row lock until we commit, after which it fails the FK.
@@ -187,7 +187,7 @@ class WithdrawMember
             }
 
             $ids = $row->in_reply_to_id === null
-                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()]
+                ? [(int) $row->getKey(), ...$row->replies()->sharedLock()->pluck('id')->all()] // locking: the snapshot predates the hold
                 : [(int) $row->getKey()];
 
             Reaction::query()
@@ -216,7 +216,7 @@ class WithdrawMember
                 ->delete();
             Reaction::query()
                 ->where('reactable_type', (new DiaryComment)->getMorphClass())
-                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all())
+                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all()) // locking: the snapshot predates the hold
                 ->delete();
         }
     }
