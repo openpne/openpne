@@ -159,7 +159,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
     {
         $this->seedMail(3, 'pc_friendLinkComplete');
         $this->seedTranslation(3, 'ja_JP', 'フレンド成立のお知らせ', '');
-        $this->seedTranslation(3, 'en_US', 'Friend linked', '0');
+        $this->seedTranslation(3, 'en_US', 'Friend linked', '');
         $this->seedMail(6, 'pc_notifyNewMessage');
         $this->seedTranslation(6, 'ja_JP', '新着', "\n");
         // A body of one space is sent by OpenPNE 3; the source collation would equate it with ''.
