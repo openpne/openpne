@@ -52,11 +52,12 @@ member — and a new request silently replaces a different pending nominee.
 touches — File bytes and reactions — across four kinds of content, in one transaction:
 
 1. The group row is X-locked, then every topic and event row under it, in id order.
-2. Under those locks the comment ids are read (plain reads: the parents' locks already exclude a new
-   comment, and a shared lock would only be upgraded by the cascade), the image Files of the talk, the
-   topics, the events and their comments are collected, the reactions on the talk messages and on
-   the board comments are deleted (`reactable_id` is polymorphic and carries no foreign key), and
-   the group's own top-image File is read — `groups.file_id` is a mutable self-column, so a stale
+2. Under those locks the image Files of the talk, the topics, the events and their comments are
+   collected and the reactions on the talk messages and on the board comments are deleted
+   (`reactable_id` is polymorphic and carries no foreign key) — every row reached by subquery from
+   the group id and the reactions deleted by primary key in chunks, so a group of any size binds
+   one parameter and the sweep locks only the rows it deletes — and the group's own top-image File
+   id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
 3. The group is deleted, the cascade taking memberships, join requests, messages, topics, events,
    comments and every `*_image` link row with it.
@@ -64,9 +65,10 @@ touches — File bytes and reactions — across four kinds of content, in one tr
    bytes.
 
 The group row alone does not stabilise the boards: a talk writer takes the group row
-([group-talk.md](group-talk.md), "One lock order"), but a board writer takes the topic or event row
-and never the group's, so a reaction arriving between the sweep and the cascade would take a free
-topic and outlive its comment. Holding every topic and event exclusively is what makes such a writer
+([group-talk.md](group-talk.md), "One lock order"), and a new topic or event waits on it too through
+its foreign key, but a comment or reaction writer takes the topic or event row and never the
+group's, so a reaction arriving between the sweep and the cascade would take a free topic and
+outlive its comment. Holding every topic and event exclusively is what makes such a writer
 wait and then find its comment gone. A single topic or event goes the same way on its own
 (`DeleteTopic::purge`, `DeleteEvent::purge`): its row X-locked, its comments read under it, their
 reactions swept, its Files purged after the commit. SQLite takes no row locks, so the

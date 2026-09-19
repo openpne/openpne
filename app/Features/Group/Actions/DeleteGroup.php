@@ -2,10 +2,10 @@
 
 namespace App\Features\Group\Actions;
 
+use App\Features\Group\BoardSweep;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
-use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -13,7 +13,6 @@ use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
-use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteGroup
@@ -35,49 +34,47 @@ class DeleteGroup
      */
     public function purge(Group $group): void
     {
-        $files = DB::transaction(function () use ($group): array {
+        $fileIds = DB::transaction(function () use ($group): array {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->first();
             if ($locked === null) {
                 return []; // already deleted by a concurrent request
             }
+            $groupId = (int) $locked->getKey();
 
-            $topicIds = GroupTopic::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
-            $eventIds = GroupEvent::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
-            // Plain reads: the parent rows' locks already exclude a new comment, and a shared lock here
-            // would only be upgraded by the cascade, against a withdrawal setting the same rows' author null.
-            $topicCommentIds = GroupTopicComment::query()->whereIn('group_topic_id', $topicIds)->pluck('id')->all();
-            $eventCommentIds = GroupEventComment::query()->whereIn('group_event_id', $eventIds)->pluck('id')->all();
+            // The locks, not the ids: everything below reaches the rows by subquery, so a group of
+            // any size binds one parameter.
+            GroupTopic::query()->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->pluck('id');
+            GroupEvent::query()->where('group_id', $groupId)->orderBy('id')->lockForUpdate()->pluck('id');
 
-            $files = File::query()
+            $topics = DB::table('group_topics')->where('group_id', $groupId)->select('id');
+            $events = DB::table('group_events')->where('group_id', $groupId)->select('id');
+            $topicComments = DB::table('group_topic_comments')->whereIn('group_topic_id', $topics)->select('id');
+            $eventComments = DB::table('group_event_comments')->whereIn('group_event_id', $events)->select('id');
+
+            $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_message_images')
                     ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
-                    ->where('group_messages.group_id', $locked->getKey())
+                    ->where('group_messages.group_id', $groupId)
                     ->select('group_message_images.file_id'))
-                ->orWhereIn('id', DB::table('group_topic_images')->whereIn('post_id', $topicIds)->select('file_id'))
-                ->orWhereIn('id', DB::table('group_topic_comment_images')->whereIn('post_id', $topicCommentIds)->select('file_id'))
-                ->orWhereIn('id', DB::table('group_event_images')->whereIn('post_id', $eventIds)->select('file_id'))
-                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $eventCommentIds)->select('file_id'))
-                ->get()
+                ->orWhereIn('id', DB::table('group_topic_images')->whereIn('post_id', $topics)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_topic_comment_images')->whereIn('post_id', $topicComments)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_event_images')->whereIn('post_id', $events)->select('file_id'))
+                ->orWhereIn('id', DB::table('group_event_comment_images')->whereIn('post_id', $eventComments)->select('file_id'))
+                ->pluck('id')
                 ->all();
 
-            foreach ([
-                (new GroupMessage)->getMorphClass() => DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'),
-                (new GroupTopicComment)->getMorphClass() => $topicCommentIds,
-                (new GroupEventComment)->getMorphClass() => $eventCommentIds,
-            ] as $alias => $ids) {
-                Reaction::query()->where('reactable_type', $alias)->whereIn('reactable_id', $ids)->delete();
-            }
+            BoardSweep::reactions((new GroupMessage)->getMorphClass(), DB::table('group_messages')->where('group_id', $groupId)->select('id'));
+            BoardSweep::reactions((new GroupTopicComment)->getMorphClass(), $topicComments);
+            BoardSweep::reactions((new GroupEventComment)->getMorphClass(), $eventComments);
 
             // `groups.file_id` is a mutable self-column: read under the lock, or an edit that just
             // replaced the image would orphan the new File.
-            $image = $locked->image()->first();
+            $image = $locked->file_id;
             $locked->delete();
 
-            return $image === null ? $files : [...$files, $image];
-        });
+            return $image === null ? $fileIds : [...$fileIds, (int) $image];
+        }, attempts: 3);
 
-        foreach ($files as $file) {
-            $file->delete();
-        }
+        BoardSweep::files($fileIds);
     }
 }
