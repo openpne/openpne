@@ -145,13 +145,16 @@ ERROR for the same reason.
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. A translation whose template is empty is neither carried
 nor tested: OpenPNE 3 never sends such a body and falls back to its built-in sample, which is what
-an absent OpenPNE 4 row sends. A blanked signature is the visible case: OpenPNE 3 appended its
-sample signature regardless, so after the cutover the stock one is appended — the wording changes,
-not whether there is one. Two passes per row: a lenient render reports what production would throw,
-then a strict render (`strict_variables`) reports a referenced-but-absent variable. Names and locales are resolved through the steps' own SQL
-(`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the source
-collation is case-insensitive and PAD SPACE, so a PHP comparison would cover a different row set
-than the INSERT.
+an absent OpenPNE 4 row sends. An empty title is carried as a NULL subject, so the OpenPNE 4 default
+subject is sent where OpenPNE 3 sent its caller's own — never an empty header. A title of spaces
+only is carried as it is, since OpenPNE 3 sent it; the editor trims it away on its next save. A
+blanked signature is the visible case: OpenPNE 3 appended its sample signature regardless, so after
+the cutover the stock one is appended — the wording changes, not whether there is one. Two passes
+per row: a lenient render reports what production would throw, then a strict render
+(`strict_variables`) reports a referenced-but-absent variable. Names and locales are resolved
+through the steps' own SQL (`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the
+source collation is case-insensitive and PAD SPACE, so a PHP comparison would cover a different row
+set than the INSERT.
 
 ## Checkpoints and resume
 
