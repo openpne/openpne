@@ -24,6 +24,10 @@ trait SeedsSourceNice
         }
         DB::statement('DROP TABLE IF EXISTS `nice`');
         DB::statement($folding);
+        $collation = DB::scalar('SELECT `COLLATION_NAME` FROM `information_schema`.`COLUMNS` WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?', ['nice', 'foreign_table']);
+        if (! str_ends_with((string) $collation, '_ci')) {
+            throw new \RuntimeException("the folding fixture's letter column came out {$collation}");
+        }
     }
 
     protected function dropSourceNiceTable(): void
