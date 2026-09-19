@@ -203,6 +203,17 @@ class MailTemplatePreflightTest extends TestCase
         $this->assertStringNotContainsString('does not render', $output);
     }
 
+    /** OpenPNE 3 never reads such a row, and the step does not carry it, so its subject is not a fault to report. */
+    public function test_an_empty_template_row_is_not_render_tested(): void
+    {
+        $this->insertTemplate(subject: '{{ "x"|upper }}', body: '');
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertTrue($ok);
+        $this->assertStringNotContainsString('sandbox violation', $output);
+    }
+
     public function test_the_preflight_is_read_only(): void
     {
         $this->insertTemplate(body: '{{ "shout"|upper }}');

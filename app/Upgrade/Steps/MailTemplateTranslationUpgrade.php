@@ -32,15 +32,26 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
     public function filter(): ?string
     {
         return sprintf(
-            '`id` IN (SELECT `id` FROM %s WHERE `name` IN (%s))',
+            '`id` IN (SELECT `id` FROM %s WHERE `name` IN (%s)) AND %s',
             SourceRef::table('notification_mail'),
             $this->sourceNameList(),
+            self::templateCarriedExpr(),
         );
     }
 
     public function filterColumns(): array
     {
-        return ['id'];
+        return ['id', 'template'];
+    }
+
+    /**
+     * OpenPNE 3's `NotificationMailTable::fetchTemplate()` reads a row only while `template` is truthy,
+     * so '' and '0' are the values it ignores; compared as bytes because the source collation pads
+     * spaces. Public so MailTemplatePreflight inspects the same rows the step carries.
+     */
+    public static function templateCarriedExpr(): string
+    {
+        return "CAST(`template` AS BINARY) NOT IN ('', '0')";
     }
 
     public function targetDefaults(): array

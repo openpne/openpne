@@ -143,7 +143,9 @@ that fold onto one `term_overrides` (name, locale) key and a value wider than th
 ERROR for the same reason.
 
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
-step copies bodies without parsing them. Two passes per row: a lenient render reports what
+step copies bodies without parsing them. A translation whose template is empty is neither carried
+nor tested: OpenPNE 3 ignores such a row and sends its built-in sample, which is what an absent
+OpenPNE 4 row sends. Two passes per row: a lenient render reports what
 production would throw, then a strict render (`strict_variables`) reports a referenced-but-absent
 variable. Names and locales are resolved through the steps' own SQL
 (`MailTemplateUpgrade::keyCase()`, `SourceLocale::foldExpr()`): the source
