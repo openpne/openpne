@@ -17,7 +17,7 @@ final class NicePreflight
 {
     private const SAMPLE = 5;
 
-    /** opLikePlugin's one-letter targets other than an activity, in its own order. */
+    /** opLikePlugin's one-letter targets other than an activity. */
     private const OTHER_TABLES = ['D' => 'diaries', 'd' => 'diary comments', 't' => 'topic comments', 'e' => 'event comments'];
 
     private string $prefix = '';
@@ -58,10 +58,10 @@ final class NicePreflight
 
         // One pass over every other letter, the four the plugin writes and whatever else its API let
         // through — a NULL included, which the 0.9 schema allowed.
-        foreach ($this->grouped('NOT '.NiceReactionUpgrade::onTable('A').' OR `nice`.`foreign_table` IS NULL') as $letter => [$rows, $ids]) {
-            $warnings[] = isset(self::OTHER_TABLES[$letter])
+        foreach ($this->grouped('NOT '.NiceReactionUpgrade::onTable('A').' OR `nice`.`foreign_table` IS NULL') as [$letter, $rows, $ids]) {
+            $warnings[] = $letter !== null && isset(self::OTHER_TABLES[$letter])
                 ? self::otherLikeMessage(self::OTHER_TABLES[$letter], $rows, $ids)
-                : self::unknownTableLikeMessage($letter, $rows, $ids);
+                : self::unknownTableLikeMessage($letter ?? '(null)', $rows, $ids);
         }
 
         return new ActivityPreflightReport($errors, $warnings);
@@ -79,7 +79,7 @@ final class NicePreflight
         return "source `nice` has {$rows} like(s) on foreign_table '{$letter}', which opLikePlugin itself does not write (e.g. ids ".implode(', ', $ids).') — a third-party plugin or a source customisation. Not migrated.';
     }
 
-    /** @return array<string, array{int, list<int>}> letter ('' for NULL) => [rows, first ids] */
+    /** @return list<array{string|null, int, list<int>}> [letter, rows, first ids], a NULL letter apart from an empty one */
     private function grouped(string $where): array
     {
         $from = 'FROM '.SourceRef::table('nice').' AS `nice` WHERE ('.$where.')';
@@ -90,7 +90,7 @@ final class NicePreflight
                 static fn (object $r): int => (int) $r->id,
                 DB::select($this->resolve("SELECT `nice`.`id` AS `id` {$from} AND {$match} ORDER BY `nice`.`id` LIMIT ".self::SAMPLE), $group->letter === null ? [] : [$group->letter]),
             );
-            $result[(string) $group->letter] = [(int) $group->rows, $ids];
+            $result[] = [$group->letter === null ? null : (string) $group->letter, (int) $group->rows, $ids];
         }
 
         return $result;

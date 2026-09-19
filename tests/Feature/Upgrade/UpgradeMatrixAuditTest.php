@@ -294,7 +294,7 @@ class UpgradeMatrixAuditTest extends TestCase
         $this->assertGreaterThan(0, $seen);
     }
 
-    public function test_the_like_preflight_reads_only_tables_the_refused_like_scope_requires(): void
+    public function test_the_refused_like_scope_keeps_naming_the_tables_the_like_preflight_reads(): void
     {
         // NicePreflight is gated on `nice` alone and reads the activity routing; the structural check
         // requires those tables only because the refused `nice.member_id` scope names them.
