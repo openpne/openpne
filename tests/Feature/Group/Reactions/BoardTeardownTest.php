@@ -16,10 +16,12 @@ use App\Features\GroupTopic\Actions\DeleteTopicComment;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
 use App\Features\Reactions\Actions\AddReaction;
 use App\Features\Reactions\Exceptions\ReactionRefused;
+use App\Features\Reactions\ReactionVocabulary;
 use App\Files\FileStorage;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -148,6 +150,35 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
         $this->assertCount(3, $bindings[1], 'the topic reaction delete binds the reactions\' own ids');
         $this->assertCount(1, $bindings[2], 'the event reaction delete binds the reactions\' own ids');
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** The chunk is the other half of the placeholder cap: past it the sweep must issue another statement, not a bigger one. */
+    public function test_the_reaction_sweep_deletes_in_chunks_past_the_chunk_size(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comments = GroupTopicComment::factory()->count(126)->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+        $at = now();
+        $rows = [];
+        foreach ($comments as $comment) {
+            foreach (ReactionVocabulary::all() as $emoji) {
+                $rows[] = ['reactable_type' => $comment->getMorphClass(), 'reactable_id' => $comment->getKey(), 'member_id' => $author->getKey(), 'emoji' => $emoji, 'created_at' => $at, 'updated_at' => $at];
+            }
+        }
+        DB::table('reactions')->insert($rows);
+        $this->assertGreaterThan(1000, count($rows));
+        $deletes = [];
+        DB::listen(function ($query) use (&$deletes): void {
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $deletes[] = count($query->bindings);
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertSame([1000, count($rows) - 1000], $deletes);
         $this->assertDatabaseCount('reactions', 0);
     }
 
