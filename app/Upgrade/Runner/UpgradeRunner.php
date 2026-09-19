@@ -76,6 +76,9 @@ final class UpgradeRunner
         $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
             ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : new ActivityPreflightReport([], []);
+        $niceWarnings = ! $report->hasErrors()
+            ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+            : [];
         $sharedFileError = $migratesFiles && ! $report->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
             : null;
@@ -89,7 +92,7 @@ final class UpgradeRunner
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceWarnings) as $warning) {
             $out("WARN {$warning}");
         }
 

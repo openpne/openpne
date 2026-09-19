@@ -59,6 +59,12 @@ was created. Every SQL that routes a row lives in
 Template rows (`template IS NOT NULL`) copy their stored body like any other and are rewritten
 afterwards by the `ActivityTemplateTransform` pass (below).
 
+A like (`nice`, `foreign_table = 'A'`) follows the activity it is on through the same routing
+(`NiceReactionUpgrade::onActivity`): a landed activity's like becomes a 👍 `reactions` row on the
+post or message, keyed by the model's morph alias, and a like on an activity left behind is left
+behind with it (`NicePreflight` counts those). The step reads the activity's landing at run time, as
+the image steps do, since nothing records where an activity went.
+
 ## Members who never activated
 
 OpenPNE 3 `member.is_active = 0` is a registration that never completed: `MemberTable::createPre()`

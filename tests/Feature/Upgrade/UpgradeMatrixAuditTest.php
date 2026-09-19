@@ -7,6 +7,7 @@ use App\Upgrade\ActiveMember;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
+use App\Upgrade\Steps\NiceReactionUpgrade;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -275,6 +276,21 @@ class UpgradeMatrixAuditTest extends TestCase
             $this->assertArrayHasKey($spec['type'], $morphMap,
                 "FileUpgrade owns {$reference} as morph alias '{$spec['type']}', which is not in the morph map");
         }
+    }
+
+    public function test_reaction_upgrade_morph_aliases_are_registered(): void
+    {
+        $morphMap = Relation::morphMap();
+        $seen = 0;
+
+        foreach (StepRegistry::all() as $step) {
+            if ($step instanceof NiceReactionUpgrade) {
+                $seen++;
+                $this->assertArrayHasKey($step->reactableAlias(), $morphMap, class_basename($step)." writes morph alias '{$step->reactableAlias()}', which is not in the morph map");
+            }
+        }
+
+        $this->assertGreaterThan(0, $seen);
     }
 
     public function test_every_read_source_table_exists_in_the_fixture(): void

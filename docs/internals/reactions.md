@@ -91,7 +91,7 @@ Three paths take reactions away, and only the last is a cascade:
 ## Key invariants
 
 1. `reactable_type` is written through the model's morph alias, never as a literal — the OpenPNE 3
-   `nice` transfer included, when it arrives.
+   `nice` transfer included, which reads the alias off the model it lands on.
 2. At most one row per (content, member, emoji), so a member may hold several emoji on one piece of
    content. Narrowing that to one is lossy, which is why the wide key is a decision rather than a
    default.
