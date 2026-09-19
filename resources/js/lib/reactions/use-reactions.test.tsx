@@ -136,11 +136,13 @@ test('an answer from before a fresh page is not drawn after it, even after a new
     act(() => result.current.toggle(7, '👍', false));
     rerender({ key: 'b' });
     act(() => result.current.toggle(7, '❤️', false));
-    await act(async () => {
-        pending[1]?.(answer({ reactions: [{ emoji: '❤️', count: 1, mine: true }] }));
-    });
+    // The stale answer first: a counter that restarted with the page would let it through here.
     await act(async () => {
         pending[0]?.(answer({ reactions: [{ emoji: '👍', count: 1, mine: true }] }));
+    });
+    expect(result.current.chips(7, [])).toEqual([{ emoji: '❤️', count: 1, mine: true }]);
+    await act(async () => {
+        pending[1]?.(answer({ reactions: [{ emoji: '❤️', count: 1, mine: true }] }));
     });
 
     expect(result.current.chips(7, [])).toEqual([{ emoji: '❤️', count: 1, mine: true }]);
