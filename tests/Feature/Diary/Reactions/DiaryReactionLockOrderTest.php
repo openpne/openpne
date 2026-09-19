@@ -103,10 +103,6 @@ class DiaryReactionLockOrderTest extends TestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /**
-     * The reactor's own row comes before any diary lock: the withdrawal holds it exclusively while
-     * it takes the entries, so a reaction that took an entry first would close a cycle with it.
-     */
     public function test_a_leaving_members_own_reaction_waits_at_their_member_row_before_any_entry_lock(): void
     {
         $leaving = Member::factory()->create();
