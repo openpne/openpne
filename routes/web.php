@@ -8,6 +8,7 @@ use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
+use App\Features\Diary\DiaryReactionController;
 use App\Features\DirectMessage\ConversationController;
 use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
@@ -416,6 +417,21 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->middleware('throttle:posting')->name('diary.comment.store');
         Route::get('/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('diary.comment.delete.show');
         Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');
+    });
+
+    Route::middleware(EnsureFeatureEnabled::class.':diary')->controller(DiaryReactionController::class)->group(function () {
+        Route::post('/diary/{diary}/reactions', 'store')
+            ->whereNumber('diary')->middleware('throttle:reaction')->name('diary.reactions.store');
+        Route::post('/diary/{diary}/reactions/delete', 'delete')
+            ->whereNumber('diary')->middleware('throttle:reaction')->name('diary.reactions.delete');
+        Route::get('/diary/{diary}/reactions', 'index')
+            ->whereNumber('diary')->name('diary.reactions.index');
+        Route::post('/diary/comment/{comment}/reactions', 'storeComment')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('diary.comment.reactions.store');
+        Route::post('/diary/comment/{comment}/reactions/delete', 'deleteComment')
+            ->whereNumber('comment')->middleware('throttle:reaction')->name('diary.comment.reactions.delete');
+        Route::get('/diary/comment/{comment}/reactions', 'indexComment')
+            ->whereNumber('comment')->name('diary.comment.reactions.index');
     });
 
     Route::controller(DiaryCommentController::class)->group(function () {
