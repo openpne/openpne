@@ -51,8 +51,8 @@ final class BoardSweep
 
     /**
      * Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the
-     * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL plans a
-     * row constructor here as a filter over the whole parent, not a range from the cursor.
+     * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL 8.4 plans
+     * a row constructor here as a filter over the whole parent, not a range from the cursor (measured).
      *
      * @return iterable<list<int>>
      */
@@ -90,7 +90,7 @@ final class BoardSweep
                     if ($at === null) {
                         $after->where(fn (Builder $nulls) => $nulls->whereNull('created_at')->where('id', '>', $id))->orWhereNotNull('created_at');
                     } else {
-                        // The OR of the two arms, not a row constructor, which MySQL plans as a filter over the whole room.
+                        // The OR of the two arms, not a row constructor, which MySQL 8.4 plans as a filter over the whole room (measured).
                         $after->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id));
                     }
                 });

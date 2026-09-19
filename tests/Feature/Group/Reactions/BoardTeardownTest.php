@@ -192,15 +192,15 @@ class BoardTeardownTest extends BoardReactionTestCase
         DB::table('group_topic_comments')->insert(array_map(fn (int $i): array => [
             'group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => $i, 'body' => 'B', 'created_at' => $at, 'updated_at' => $at,
         ], range(1, 1001)));
-        $commentIds = DB::table('group_topic_comments')->where('group_topic_id', $topic->getKey())->pluck('id')->all();
+        $commentIds = DB::table('group_topic_comments')->where('group_topic_id', $topic->getKey())->orderBy('id')->pluck('id')->all();
         DB::table('reactions')->insert(array_map(fn (int $id): array => [
             'reactable_type' => 'groupTopicComment', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
         ], $commentIds));
-        $pages = 0;
+        $pages = [];
         $deletes = [];
         DB::listen(function ($query) use (&$pages, &$deletes): void {
             if (preg_match('/from [`"]group_topic_comments[`"] where .*order by [`"]number[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
-                $pages++;
+                $pages[] = $query->bindings;
             }
             if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
                 $deletes[] = count($query->bindings);
@@ -209,7 +209,10 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertSame(2, $pages, 'a thousand and one comments are two pages');
+        $this->assertCount(2, $pages, 'a thousand and one comments are two pages');
+        // The second page's cursor is the OR of two arms, number above or number equal with id above, so four bindings with the parent.
+        $this->assertCount(4, $pages[1]);
+        $this->assertSame($commentIds[999], $pages[1][3], 'the cursor is the last row of the page');
         $this->assertSame([1000, 1], $deletes);
         $this->assertDatabaseCount('reactions', 0);
     }
