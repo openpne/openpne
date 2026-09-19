@@ -239,7 +239,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         // Two pages: the first carries no cursor, the second starts after its last (created_at, id), all one timestamp here.
         $this->assertCount(2, $pages);
         $this->assertCount(1, $pages[0]);
-        $this->assertSame($messageIds[999], $pages[1][2], 'the cursor is the last row of the page');
+        $this->assertSame($messageIds[999], $pages[1][3], 'the cursor is the last row of the page');
         $this->assertDatabaseCount('reactions', 0);
     }
 
