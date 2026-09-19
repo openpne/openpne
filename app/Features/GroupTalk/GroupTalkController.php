@@ -10,13 +10,13 @@ use App\Features\GroupTalk\Actions\SetTalkMute;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
-use App\Features\GroupTalk\Queries\MessageReactionAggregates;
 use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Queries\TalkAbsenceDigest;
 use App\Features\GroupTalk\Queries\TalkUnreadSnapshot;
 use App\Features\GroupTalk\Queries\TouchedGroupMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Features\Reactions\ReactionVocabulary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
@@ -34,7 +34,7 @@ use Inertia\Response as InertiaResponse;
 
 class GroupTalkController extends Controller
 {
-    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, MessageReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, ReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -51,7 +51,7 @@ class GroupTalkController extends Controller
 
         $props = [
             'group' => GroupSerializer::summary($group),
-            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages), $replies($group, $page->messages)),
+            'page' => GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->modelKeys()), $replies($group, $page->messages)),
             'anchor' => $anchor === null ? null : ['messageId' => $anchor->getKey()],
             'canPost' => $permissions->canPost,
             // Only a member holds a cursor or a mute, so only a member is offered either.
@@ -91,7 +91,7 @@ class GroupTalkController extends Controller
      * A cursor that does not parse is simply no cursor: a position is not a permission, and the gate
      * has already decided the audience.
      */
-    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, MessageReactionAggregates $reactions, ReplyReferences $replies, LinkCardSync $linkCards): JsonResponse
+    public function messages(Request $request, Group $group, GroupTalkMessages $query, TouchedGroupMessages $touched, ReactionAggregates $reactions, ReplyReferences $replies, LinkCardSync $linkCards): JsonResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -113,7 +113,7 @@ class GroupTalkController extends Controller
         $linkCards->ensureAll($page->messages);
 
         $permissions = GroupTalkPermissions::for($group, $viewer);
-        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, $page->messages), $replies($group, $page->messages));
+        $payload = GroupMessageSerializer::page($page, $permissions, $reactions($viewer, GroupMessage::class, $page->messages->modelKeys()), $replies($group, $page->messages));
 
         if ($reactionsAfter !== null) {
             $payload += $this->touched($touched($group, $reactionsAfter), $group, $permissions, $snapshot ?? 0, $reactions, $replies);
@@ -138,11 +138,11 @@ class GroupTalkController extends Controller
      * @param  Collection<int, GroupMessage>  $rows  one over the cap, as the query returns them
      * @return array{touched: list<array>, reactionsVersion: int}
      */
-    private function touched(Collection $rows, Group $group, GroupTalkPermissions $permissions, int $snapshot, MessageReactionAggregates $reactions, ReplyReferences $replies): array
+    private function touched(Collection $rows, Group $group, GroupTalkPermissions $permissions, int $snapshot, ReactionAggregates $reactions, ReplyReferences $replies): array
     {
         $capped = $rows->count() > GroupTalkMessages::PER_PAGE;
         $rows = $rows->take(GroupTalkMessages::PER_PAGE);
-        $chips = $reactions($permissions->member, $rows);
+        $chips = $reactions($permissions->member, GroupMessage::class, $rows->modelKeys());
         $parents = $replies($group, $rows);
 
         return [

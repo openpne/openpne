@@ -14,10 +14,12 @@ use App\Features\Home\Queries\LatestHomeIssue;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Features\Home\Serializers\HomeSerializer;
+use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Member;
+use App\Models\TimelinePost;
 use App\Services\GadgetService;
 use App\Support\Feature;
 use App\Support\SurfaceResolver;
@@ -100,6 +102,7 @@ class HomeController extends Controller
         JoinedTalkRooms $talkRooms,
         UnreadCounts $unread,
         PendingJoinRequestCounts $pendingApprovals,
+        ReactionAggregates $reactions,
     ): Response {
         /** @var Member $viewer */
         $viewer = $request->user();
@@ -109,15 +112,18 @@ class HomeController extends Controller
         $diaryOn = Feature::Diary->enabled();
         $groupOn = Feature::Group->enabled();
 
+        $timeline = Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect();
+
         return Inertia::render('dashboard', HomeSerializer::dashboard(
             $viewer,
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
-            Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect(),
+            $timeline,
             $groupActivity($viewer, self::PREVIEW),
             $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
             $unread->for($viewer),
             $groupOn ? $pendingApprovals($viewer) : collect(),
             Feature::GroupTalk->enabled() ? $talkRooms->take($viewer, self::PREVIEW) : collect(),
+            $reactions($viewer, TimelinePost::class, $timeline->map(fn (TimelinePost $post): int => (int) $post->getKey())->all()),
         ));
     }
 

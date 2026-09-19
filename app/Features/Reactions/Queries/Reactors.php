@@ -1,24 +1,28 @@
 <?php
 
-namespace App\Features\GroupTalk\Queries;
+namespace App\Features\Reactions\Queries;
 
 use App\Features\Member\Serializers\MemberRefSerializer;
-use App\Models\GroupMessage;
+use App\Models\Concerns\HasReactions;
 use App\Models\Member;
 use App\Models\Reaction;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-class MessageReactors
+class Reactors
 {
     /** Past this the dialog has the exact count and no more names. */
     public const PER_EMOJI = 100;
 
-    /** @return list<array{emoji: string, count: int, members: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>}> */
-    public function __invoke(GroupMessage $message): array
+    /**
+     * @param  Model&HasReactions  $reactable
+     * @return list<array{emoji: string, count: int, members: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>}>
+     */
+    public function __invoke(Model $reactable): array
     {
         $counts = DB::table('reactions')
-            ->where('reactable_type', $message->getMorphClass())
-            ->where('reactable_id', $message->getKey())
+            ->where('reactable_type', $reactable->getMorphClass())
+            ->where('reactable_id', $reactable->getKey())
             ->select('emoji')
             ->selectRaw('count(*) as total')
             ->groupBy('emoji')
@@ -30,7 +34,7 @@ class MessageReactors
         return $counts->map(fn (object $row): array => [
             'emoji' => (string) $row->emoji,
             'count' => (int) $row->total,
-            'members' => $this->members($message, (string) $row->emoji),
+            'members' => $this->members($reactable, (string) $row->emoji),
         ])->values()->all();
     }
 
@@ -38,11 +42,12 @@ class MessageReactors
      * A row whose member is null is dropped rather than rendered: the withdrawal that cascades the
      * reaction away can commit between the count and this read.
      *
+     * @param  Model&HasReactions  $reactable
      * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}>
      */
-    private function members(GroupMessage $message, string $emoji): array
+    private function members(Model $reactable, string $emoji): array
     {
-        return $message->reactions()
+        return $reactable->reactions()
             ->where('emoji', $emoji)
             ->with('member.avatar.file')
             ->limit(self::PER_EMOJI)

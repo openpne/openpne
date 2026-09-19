@@ -122,6 +122,23 @@ class WithdrawMemberTest extends TestCase
         $this->assertModelMissing($postFile);
     }
 
+    /** A reply goes with the member row's cascade, which reaches no reaction — the sweep is the action's. */
+    public function test_sweeps_the_reactions_others_left_on_the_members_replies(): void
+    {
+        $member = Member::factory()->create();
+        $root = TimelinePost::factory()->create();
+        $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $member->getKey()]);
+        $bystander = Member::factory()->create();
+        $reply->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+        $root->reactions()->create(['member_id' => $bystander->getKey(), 'emoji' => "\u{1F44D}"]);
+
+        $this->withdraw($member);
+
+        $this->assertDatabaseMissing('timeline_posts', ['id' => $reply->getKey()]);
+        $this->assertDatabaseMissing('reactions', ['reactable_id' => $reply->getKey()]);
+        $this->assertDatabaseHas('reactions', ['reactable_id' => $root->getKey()]);
+    }
+
     public function test_retains_set_null_content_with_a_null_author(): void
     {
         $member = Member::factory()->create();

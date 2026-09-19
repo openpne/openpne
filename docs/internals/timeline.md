@@ -177,6 +177,29 @@ announcement: a diary's own notification already reaches the same audience, and 
 event's reaches its group, so the line would add a site-wide notification nobody asked for.
 Deleting the record does not remove its line, as in OpenPNE 3 — the post carries no reference back.
 
+## Reactions
+
+A post or a reply takes the emoji reactions of [reactions.md](reactions.md), on its own three routes
+(`timeline.reactions.*`, [`TimelineReactionController`](../../app/Features/Timeline/TimelineReactionController.php)).
+Two things are the timeline's own:
+
+- **Reacting takes the thread's clearance and nothing else.** A reply is judged at its root
+  (`TimelineAccess::canViewThread`), as replying is. The posting switch is not consulted: it stops
+  authoring, and a site with it off still receives the [automatic lines](#automatic-posts) a
+  reaction is the one answer to.
+- **The lock is the thread root.** A thread is deleted from its root, and the replies go by FK
+  cascade while their reactions go by nothing — so a reaction onto a reply that took only the reply's
+  lock could commit after the root's sweep and outlive the reply. Every reaction write, the post's
+  delete and the withdrawal sweep therefore take
+  [`TimelineThreadLock`](../../app/Features/Timeline/TimelineThreadLock.php): the root row
+  exclusively, then the reply re-read under it. A withdrawing member's replies sit under other
+  members' roots and go with the member row's cascade, so their reactions are swept inside that same
+  transaction, root lock first.
+
+Nothing polls a feed, so no watermark moves; a page carries each row's chips from one grouped read,
+and a write answers with the row's whole chip row. The dashboard digest carries them too, though its
+row draws none.
+
 ## Key invariants
 
 - Offsets and lengths are Unicode code points, half-open, ascending, non-overlapping. The write path
@@ -190,6 +213,10 @@ Deleting the record does not remove its line, as in OpenPNE 3 — the post carri
 - A reply inherits its parent's visibility; the thread is one audience — which is also what a
   notification's viewability and its feed row's link are judged against.
 - The events' mention snapshot is the only input to notification precedence; no path re-derives it.
+- A reaction is gated at the thread root and locked at the thread root; a reply's own author and
+  the posting switch are not consulted.
+- A post's delete and a member's withdrawal sweep the thread's reactions under the root lock, in the
+  transaction that removes the rows — the cascade reaches none of them.
 
 ## Classic inline replies
 

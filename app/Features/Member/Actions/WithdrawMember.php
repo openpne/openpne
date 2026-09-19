@@ -7,9 +7,11 @@ use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\GroupRole;
 use App\Features\Member\Events\MemberWithdrawn;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
+use App\Features\Timeline\TimelineThreadLock;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Models\Reaction;
 use App\Models\TimelinePost;
 use App\Support\SecurityLog;
 use App\Support\ViewerRelations;
@@ -140,6 +142,8 @@ class WithdrawMember
                     return false;
                 }
 
+                $this->sweepReplyReactions($id);
+
                 $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
 
                 return true;
@@ -154,6 +158,33 @@ class WithdrawMember
         }
 
         throw new RuntimeException("Member {$id} still held memberships or AI accounts after the withdrawal drain cap.");
+    }
+
+    /**
+     * The member's replies sit under other members' threads and go with the member row's cascade,
+     * which reaches no reaction. Each is swept here under the thread lock, in the same transaction
+     * as that cascade, so a reaction landing meanwhile waits and then finds the reply gone
+     * (docs/internals/timeline.md, "Reactions").
+     */
+    private function sweepReplyReactions(int $memberId): void
+    {
+        $replies = TimelinePost::query()
+            ->where('member_id', $memberId)
+            ->whereNotNull('in_reply_to_id')
+            ->orderBy('in_reply_to_id')
+            ->orderBy('id')
+            ->get(['id', 'in_reply_to_id']);
+
+        foreach ($replies as $reply) {
+            if (! TimelineThreadLock::hold($reply)) {
+                continue;
+            }
+
+            Reaction::query()
+                ->where('reactable_type', $reply->getMorphClass())
+                ->where('reactable_id', $reply->getKey())
+                ->delete();
+        }
     }
 
     /**

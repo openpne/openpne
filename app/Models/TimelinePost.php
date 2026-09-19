@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLinkCard;
+use App\Models\Concerns\HasReactions;
 use App\Support\Visibility;
 use Database\Factories\TimelinePostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +20,7 @@ class TimelinePost extends Model
     use HasFactory;
 
     use HasLinkCard;
+    use HasReactions;
 
     protected function casts(): array
     {

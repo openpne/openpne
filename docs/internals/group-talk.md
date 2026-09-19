@@ -54,7 +54,7 @@ would silently change nothing for the sites that matter — the ones with no row
 | `group_message_images` | join rows to `files`, numbered slots, shaped exactly like `timeline_post_images` — see [Images](#images) |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
-| `reactions` (+ `groups.talk_reaction_seq`, `group_messages.reactions_version`) | the emoji on a message, keyed polymorphically so the surfaces after talk share the table — see [Reactions](#reactions) |
+| `reactions` (+ `groups.talk_reaction_seq`, `group_messages.reactions_version`) | the emoji on a message — [reactions.md](reactions.md), and [Reactions](#reactions) for what talk adds |
 
 `group_message_mentions` and `group_message_images` are both written by the composer — see
 [Mentions](#mentions) and [Images](#images).
@@ -644,43 +644,10 @@ private message's URL is not one this site announces to the far end.
 ## Reactions
 
 An emoji on a message, in the `reactions` table — polymorphic from the first row, because talk is
-where reactions land first and not where they stop. `reactable_id` therefore carries no foreign key,
-which is the whole reason two of the three deletion paths below have to sweep by hand.
-
-**One member may hold several emoji on one message**: the unique key is `(reactable_type,
-reactable_id, member_id, emoji)`. Narrowing it to one emoji per member later would have to throw rows
-away, which is why the wide key is a decision rather than the shape that fell out. On
-MySQL `emoji` is `utf8mb4_bin`, since the default collation equates a code point with its
-VS16-qualified form (`U+2764` = `U+2764 U+FE0F`) and SQLite's binary TEXT does not — the two engines
-would otherwise disagree about what counts as one reaction.
-
-[`ReactionVocabulary`](../../app/Features/Reactions/ReactionVocabulary.php) is the only place the set
-is written down, its size included: the add rule reads it, the page ships it to the picker as
-`reactionVocabulary`, and the tests pin its bytes. Nothing in the bundle holds a copy, so one render
-draws its picker from one set. A prop is fixed at render time, though — a tab left open across a
-deploy goes on offering what it was rendered with, and what closes that skew is the server: the add
-rule refuses a retired emoji with a 422 and the client's optimistic chip reverts. What may be
-**added** is that set; what may be **removed** is whatever the member is holding, unchecked —
-otherwise narrowing the vocabulary would strand every reaction already written with a retired emoji.
-
-Add and remove are two URLs rather than one toggle, for the reason [mute](#mute) is a state rather
-than a flip: a tap that is retried, doubled, or racing the poll has to settle where the member
-pointed. Both are idempotent at the row level — the insert leans on the unique key, the delete on a
-`WHERE` — and both answer with the message's **whole** chip row, so a reaction someone else added in
-the meantime arrives in the same response. Writing is `canPost` (reacting is speaking in the room),
-reading the reactor list is `canView`, and a refusal is the usual 404.
-
-That chip row is counted in SQL and never hydrated
-([`MessageReactionAggregates`](../../app/Features/GroupTalk/Queries/MessageReactionAggregates.php)):
-one grouped read serves a whole page, and a write answers from the same query. The chips are a
-handful of numbers, but the rows behind them are one per reactor per emoji — reading them per page
-and per poll would cost the size of the room for something the payload never names.
-
-Who reacted is exactly that part, so the names come from `GET .../reactions` when a dialog is opened,
-and nowhere else. That read is bounded too
-([`MessageReactors`](../../app/Features/GroupTalk/Queries/MessageReactors.php)): an emoji's count is
-exact and the first hundred reactors travel with it, in the order they reacted. Past that the dialog
-has the number and no more — the list is read by a person.
+where reactions land first and not where they stop. The table, the vocabulary, the two-URL write, the
+SQL-counted chip row and the bounded reactor list are [reactions.md](reactions.md); what follows is
+what talk adds. Writing is `canPost` (reacting is speaking in the room), reading the reactor list is
+`canView`, and a refusal is the usual 404.
 
 Nothing notifies. The room's unread badge is what tells a member something happened here, and a
 reaction did not happen *to* them in the sense a mention does.
@@ -721,12 +688,9 @@ so cursors, badges and the room list's order cannot move because someone reacted
 
 ### One lock order
 
-A gate is answered before the write it guards runs, and `reactable_id` carries no foreign key — so
-nothing at the engine level would refuse a reaction onto a message, or a group, deleted in between,
-and what it left would be a row nothing ever collects. Every reaction write therefore takes
-[`TalkWriteLock`](../../app/Features/GroupTalk/TalkWriteLock.php) first: the group's row
-exclusively, then the message re-read under it, both as locking reads so they see what is committed
-rather than the transaction's snapshot. A message that is gone is the talk's usual 404.
+Talk's [`ReactionSurface`](reactions.md#one-write-path-one-lock-per-surface) is
+[`TalkWriteLock`](../../app/Features/GroupTalk/TalkWriteLock.php): the group's row exclusively, then
+the message re-read under it. A message that is gone is the talk's usual 404.
 
 The order is the same everywhere, which is what keeps these paths from deadlocking as well as from
 racing: the add, the remove, a message's own purge and the group teardown that sweeps a whole
