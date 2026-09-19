@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade;
 
 use App\Mail\Template\MailTemplate;
 use App\Upgrade\ActiveMember;
+use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
@@ -291,6 +292,17 @@ class UpgradeMatrixAuditTest extends TestCase
         }
 
         $this->assertGreaterThan(0, $seen);
+    }
+
+    public function test_the_like_preflight_reads_only_tables_the_refused_like_scope_requires(): void
+    {
+        // NicePreflight is gated on `nice` alone and reads the activity routing; the structural check
+        // requires those tables only because the refused `nice.member_id` scope names them.
+        $scope = ActiveMember::references()['nice.member_id']['scope'] ?? '';
+
+        foreach (['activity_data', 'community'] as $table) {
+            $this->assertStringContainsString(SourceRef::table($table), $scope, "the nice.member_id scope no longer reads `{$table}`, which NicePreflight still queries");
+        }
     }
 
     public function test_every_read_source_table_exists_in_the_fixture(): void

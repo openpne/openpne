@@ -117,7 +117,7 @@ class NiceReactionUpgradeSqlTest extends TestCase
 
         $this->assertFalse($ran);
         $this->assertContains('ERROR '.NicePreflight::duplicateLikeMessage(1, [2]), $lines);
-        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, 5), $lines);
+        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
         $this->assertDatabaseCount('reactions', 0);
     }
 

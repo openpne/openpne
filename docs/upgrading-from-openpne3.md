@@ -117,7 +117,7 @@ template and locale, a diary, message, topic, event or timeline post belonging t
 finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
 a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
 attached files, a file that two records point at (OpenPNE 4 gives a file one owner, so one
-record's readers would see it from the other's page), or a member who liked one timeline post twice
+record's readers would see it from the other's page), or a member who liked one post or talk message twice
 (OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
 
 **`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
@@ -134,6 +134,7 @@ record's readers would see it from the other's page), or a member who liked one 
 | Activity images held only as a URL | OpenPNE 4 keeps an image as a file, so these are not migrated. |
 | Likes (`opLikePlugin`) on activities that are not migrated | A like lands where its activity does; one on an activity left behind is left behind with it. |
 | Likes on diaries, diary comments, topic comments or event comments, counted per kind | Not carried yet: only a like on a timeline post has a place to land. |
+| Likes under a `foreign_table` letter opLikePlugin never writes | A third-party plugin or a local customisation put them there; not migrated. |
 | Template activities (`diary` / `community_topic` / `community_event`), with where they land | The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; a template OpenPNE 4 does not know keeps its stored text. |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the

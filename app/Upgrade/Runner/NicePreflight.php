@@ -56,17 +56,12 @@ final class NicePreflight
             $warnings[] = self::unmigratedActivityLikeMessage($rows, $ids);
         }
 
-        foreach (self::OTHER_TABLES as $letter => $what) {
-            [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter));
-            if ($rows > 0) {
-                $warnings[] = self::otherLikeMessage($what, $rows, $ids);
-            }
-        }
-
-        // opLikePlugin's API stores any one letter, so a third-party plugin's likes are counted too.
-        $known = implode(' OR ', array_map(static fn (string $letter): string => NiceReactionUpgrade::onTable($letter), ['A', ...array_keys(self::OTHER_TABLES)]));
-        foreach (DB::select($this->resolve('SELECT `nice`.`foreign_table` AS `letter`, COUNT(*) AS `rows`, MIN(`nice`.`id`) AS `id` FROM '.SourceRef::table('nice')." AS `nice` WHERE NOT ({$known}) GROUP BY `nice`.`foreign_table` ORDER BY `nice`.`foreign_table`")) as $row) {
-            $warnings[] = self::unknownTableLikeMessage((string) $row->letter, (int) $row->rows, (int) $row->id);
+        // One pass over every other letter, the four the plugin writes and whatever else its API let
+        // through — a NULL included, which the 0.9 schema allowed.
+        foreach ($this->grouped('NOT '.NiceReactionUpgrade::onTable('A').' OR `nice`.`foreign_table` IS NULL') as $letter => [$rows, $ids]) {
+            $warnings[] = isset(self::OTHER_TABLES[$letter])
+                ? self::otherLikeMessage(self::OTHER_TABLES[$letter], $rows, $ids)
+                : self::unknownTableLikeMessage($letter, $rows, $ids);
         }
 
         return new ActivityPreflightReport($errors, $warnings);
@@ -75,12 +70,30 @@ final class NicePreflight
     /** @param  list<int>  $ids  the later row of each pair */
     public static function duplicateLikeMessage(int $pairs, array $ids): string
     {
-        return "source `nice` has {$pairs} member/activity pair(s) liked more than once (e.g. the later rows, ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Delete the later row of each pair in the source, then re-run.';
+        return "source `nice` has {$pairs} member/activity pair(s) liked more than once (e.g. the later rows, ids ".implode(', ', $ids).') — OpenPNE 4 keeps one reaction per member and emoji, so the reaction step would fail mid-run. Keep only the earliest row of each pair in the source, then re-run.';
     }
 
-    public static function unknownTableLikeMessage(string $letter, int $rows, int $firstId): string
+    /** @param  list<int>  $ids */
+    public static function unknownTableLikeMessage(string $letter, int $rows, array $ids): string
     {
-        return "source `nice` has {$rows} like(s) on foreign_table '{$letter}', which opLikePlugin itself does not write (from id {$firstId}) — a third-party plugin or a source customisation. Not migrated.";
+        return "source `nice` has {$rows} like(s) on foreign_table '{$letter}', which opLikePlugin itself does not write (e.g. ids ".implode(', ', $ids).') — a third-party plugin or a source customisation. Not migrated.';
+    }
+
+    /** @return array<string, array{int, list<int>}> letter ('' for NULL) => [rows, first ids] */
+    private function grouped(string $where): array
+    {
+        $from = 'FROM '.SourceRef::table('nice').' AS `nice` WHERE ('.$where.')';
+        $result = [];
+        foreach (DB::select($this->resolve("SELECT `nice`.`foreign_table` AS `letter`, COUNT(*) AS `rows` {$from} GROUP BY `nice`.`foreign_table` ORDER BY `nice`.`foreign_table`")) as $group) {
+            $match = $group->letter === null ? '`nice`.`foreign_table` IS NULL' : '`nice`.`foreign_table` = CAST(? AS BINARY)';
+            $ids = array_map(
+                static fn (object $r): int => (int) $r->id,
+                DB::select($this->resolve("SELECT `nice`.`id` AS `id` {$from} AND {$match} ORDER BY `nice`.`id` LIMIT ".self::SAMPLE), $group->letter === null ? [] : [$group->letter]),
+            );
+            $result[(string) $group->letter] = [(int) $group->rows, $ids];
+        }
+
+        return $result;
     }
 
     /** @param  list<int>  $ids */
