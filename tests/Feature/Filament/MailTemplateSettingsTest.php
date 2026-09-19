@@ -75,6 +75,18 @@ class MailTemplateSettingsTest extends TestCase
         $this->assertStringContainsString('カスタム本文 Bob', $rendered->body);
     }
 
+    public function test_editing_only_the_body_leaves_the_subject_tracking_the_default(): void
+    {
+        Livewire::test(MailTemplateSettings::class)
+            ->callAction(
+                TestAction::make('edit')->table('friend-accepted'),
+                data: ['ja__body' => 'カスタム本文 {{ member.name }}'],
+            )
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('mail_template_translations', ['locale' => 'ja', 'subject' => null, 'body' => 'カスタム本文 {{ member.name }}']);
+    }
+
     public function test_a_blank_subject_over_the_default_body_writes_no_row(): void
     {
         Livewire::test(MailTemplateSettings::class)

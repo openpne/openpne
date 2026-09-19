@@ -97,9 +97,12 @@ class MailTemplateService
         ];
     }
 
+    /** A stored '' predates the NULL rule and is read as NULL: no mail is sent with an empty Subject header. */
     private function subjectTemplate(MailTemplate $template, string $locale): ?string
     {
-        return $this->override($template, $locale, 'subject') ?? $template->defaultSubject($locale);
+        $override = $this->override($template, $locale, 'subject');
+
+        return $override === null || $override === '' ? $template->defaultSubject($locale) : $override;
     }
 
     private function bodyTemplate(MailTemplate $template, string $locale): string
@@ -108,7 +111,8 @@ class MailTemplateService
     }
 
     /**
-     * A row's absence is what selects the default: a present row is honoured as-is, an empty body included.
+     * A row's absence is what selects the default: a present row's body is honoured as-is, an empty body
+     * included, while a NULL subject selects the default subject.
      * Per locale — a ja recipient never falls back to an en override, and an unedited locale uses its own
      * default, which the OpenPNE 3 import populates for both.
      */

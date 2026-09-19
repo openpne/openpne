@@ -91,6 +91,28 @@ class MailTemplateServiceTest extends TestCase
         $this->assertStringContainsString('Custom Bob', $rendered->body);
     }
 
+    /** Rows written before the NULL rule may hold ''; neither value may reach the Subject header. */
+    public function test_a_null_or_empty_subject_override_sends_the_default_subject(): void
+    {
+        $this->setSnsName('My Group');
+        $id = DB::table('mail_templates')->insertGetId([
+            'key' => MailTemplate::FriendAccepted->value,
+            'is_enabled' => true,
+        ]);
+        DB::table('mail_template_translations')->insert([
+            ['mail_template_id' => $id, 'locale' => 'en', 'subject' => null, 'body' => 'Custom en'],
+            ['mail_template_id' => $id, 'locale' => 'ja', 'subject' => '', 'body' => 'Custom ja'],
+        ]);
+
+        $en = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
+        $ja = $this->service()->render(MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']]);
+
+        $this->assertSame('Bob accepted your friend link request', $en->subject);
+        $this->assertStringContainsString('Custom en', $en->body);
+        $this->assertStringStartsWith('Bob さんがあなたの', $ja->subject);
+        $this->assertStringContainsString('Custom ja', $ja->body);
+    }
+
     public function test_override_is_per_locale_with_no_cross_language_fallback(): void
     {
         $this->setSnsName('My Group');
