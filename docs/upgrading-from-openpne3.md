@@ -297,8 +297,8 @@ conservative one: OpenPNE 3's registration form saves the nickname, password and
 *before* it activates the account, so an abandoned signup that reached that point would otherwise
 arrive in OpenPNE 4 as a member who can sign in.
 
-What the upgrade will not decide for you is content — a diary, message, topic or event — belonging to
-one of those members. Stock OpenPNE 3 cannot produce it, so its presence means something wrote to
+What the upgrade will not decide for you is content — a diary, message, topic, event or like — belonging
+to one of those members. Stock OpenPNE 3 cannot produce it, so its presence means something wrote to
 your database outside OpenPNE 3, and dropping it would take its comments and attachments too. The
 preflight names the table and the row count and stops. Delete or reassign those rows in the source
 and run again.

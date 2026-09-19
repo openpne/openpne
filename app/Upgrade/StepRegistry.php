@@ -125,7 +125,7 @@ final class StepRegistry
             GroupEventMemberUpgrade::class,
             // group_messages reference groups and members; a reply's lineage column carries no FK.
             GroupMessageUpgrade::class,
-            // A like on an activity lands where the activity did; both targets exist by here.
+            // A like lands on what its letter names, every one of which exists by here.
             TimelineReactionUpgrade::class,
             GroupMessageReactionUpgrade::class,
             DiaryReactionUpgrade::class,
