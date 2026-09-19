@@ -132,6 +132,7 @@ enum MailTemplate: string
                 variables: [
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'diary_title' => ['help' => 'The %diary% title.', 'sample' => 'Example title'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %diary% URL.', 'sample' => 'https://example.test'],
                 ],
             ),

@@ -134,7 +134,7 @@ It also takes words **or** at least one attachment, and refuses only a message w
 without the second upload wire and without mentions. That contract is the chat endpoint's; the
 mailbox forms keep OpenPNE 3's required subject and body, and the Modern draft screen is a mailbox
 form, not a chat one. Where a message with no words is listed — the conversation list, and the
-received-message mail on a site whose wording quotes the body — a stand-in
+received-message mail, whose stock wording quotes the body — a stand-in
 ([`ChatPreview`](../../app/Support/ChatPreview.php)) says a picture arrived. The list reaches it last:
 body, then subject, then the stand-in.
 
