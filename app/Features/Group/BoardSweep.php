@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The reclaiming statements a teardown shares, shaped for a group of any size: reactions are found
- * a page at a time and deleted by primary key in chunks, so the sweep locks only the rows it deletes
+ * a page at a time, in each table's index order, and deleted by primary key in chunks, so the sweep locks only the rows it deletes
  * (docs/internals/group-boards.md, "Tearing a group down").
  */
 final class BoardSweep
@@ -29,20 +29,45 @@ final class BoardSweep
     /**
      * Call inside the teardown's transaction, with the parent rows locked before its first consistent
      * read: the snapshot is then taken under the locks, so these plain reads see every committed row.
-     * Paged by content id and then by reaction id, so PHP holds a page of each, no statement grows,
-     * and no subquery is re-run per page of reactions.
+     * One parent at a time, so a page is a range of that parent's comments rather than a sort of the group's.
      */
-    public static function reactions(string $alias, Builder $contentIds): void
+    public static function comments(string $alias, string $table, string $parentColumn, Builder $parentIds): void
+    {
+        foreach ((clone $parentIds)->orderBy('id')->pluck('id') as $parentId) {
+            self::commentsOf($alias, $table, $parentColumn, (int) $parentId);
+        }
+    }
+
+    public static function commentsOf(string $alias, string $table, string $parentColumn, int $parentId): void
     {
         $after = 0;
         do {
-            $page = (clone $contentIds)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
+            $page = DB::table($table)->where($parentColumn, $parentId)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
             if ($page === []) {
                 break;
             }
             self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page));
             $after = (int) end($page);
         } while (count($page) === self::CHUNK);
+    }
+
+    /** The messages are paged in their index's own order, (created_at, id) under the group, so no page sorts or skips the room. */
+    public static function messages(string $alias, int $groupId): void
+    {
+        [$at, $id] = ['1970-01-01 00:00:00', 0];
+        do {
+            $page = DB::table('group_messages')
+                ->where('group_id', $groupId)
+                ->where(fn (Builder $q) => $q->where('created_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('created_at', $at)->where('id', '>', $id)))
+                ->orderBy('created_at')->orderBy('id')
+                ->limit(self::CHUNK)
+                ->get(['id', 'created_at']);
+            if ($page->isEmpty()) {
+                break;
+            }
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
+            [$at, $id] = [(string) $page->last()->created_at, (int) $page->last()->id];
+        } while ($page->count() === self::CHUNK);
     }
 
     private static function deleteMatching(Builder $matching): void

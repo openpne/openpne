@@ -59,9 +59,9 @@ class DeleteGroup
                 ->pluck('id')
                 ->all();
 
-            BoardSweep::reactions((new GroupMessage)->getMorphClass(), DB::table('group_messages')->where('group_id', $groupId)->select('id'));
-            BoardSweep::reactions((new GroupTopicComment)->getMorphClass(), $topicComments);
-            BoardSweep::reactions((new GroupEventComment)->getMorphClass(), $eventComments);
+            BoardSweep::messages((new GroupMessage)->getMorphClass(), $groupId);
+            BoardSweep::comments((new GroupTopicComment)->getMorphClass(), 'group_topic_comments', 'group_topic_id', $topics);
+            BoardSweep::comments((new GroupEventComment)->getMorphClass(), 'group_event_comments', 'group_event_id', $events);
 
             // `groups.file_id` is a mutable self-column: read under the lock, or an edit that just
             // replaced the image would orphan the new File.

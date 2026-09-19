@@ -45,7 +45,7 @@ class DeleteTopic
                 ->pluck('id')
                 ->all();
 
-            BoardSweep::reactions((new GroupTopicComment)->getMorphClass(), $comments);
+            BoardSweep::commentsOf((new GroupTopicComment)->getMorphClass(), 'group_topic_comments', 'group_topic_id', (int) $locked->getKey());
 
             $locked->delete();
 
