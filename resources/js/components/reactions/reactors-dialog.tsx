@@ -12,6 +12,8 @@ import type { ReactorGroup } from '@/lib/reactions/types';
 export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => void }) {
     const t = useT();
     const [groups, setGroups] = useState<ReactorGroup[] | null>(null);
+    // Opened from a menu rather than a trigger of its own, so the dialog names its own way back: what held focus as it mounted.
+    const [opener] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
 
     useEffect(() => {
         const controller = new AbortController();
@@ -30,7 +32,15 @@ export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => v
 
     return (
         <Dialog open onOpenChange={(next) => !next && onClose()}>
-            <DialogContent closeLabel={t('Close')} aria-describedby={undefined} className="max-h-[70vh] overflow-y-auto">
+            <DialogContent
+                closeLabel={t('Close')}
+                aria-describedby={undefined}
+                className="max-h-[70vh] overflow-y-auto"
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    opener?.focus({ preventScroll: true });
+                }}
+            >
                 <DialogTitle className={headingVariants({ variant: 'section' })}>{t('Reactions')}</DialogTitle>
                 {groups === null ? (
                     <p className="flex justify-center py-6 text-muted-foreground">

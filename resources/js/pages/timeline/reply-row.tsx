@@ -1,11 +1,12 @@
 import { EntityText } from '@/components/entity-text';
 import { LinkCard } from '@/components/link-card';
-import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import type { RowReactions } from '@/components/reactions/reaction-bar';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { Timestamp } from '@/components/timestamp';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 import type { TimelinePostEntry } from './types';
 
 /**
@@ -17,22 +18,21 @@ export function TimelineReplyRow({ reply, viewerId, onDelete, reactions }: { rep
 
     return (
         <li className="space-y-1 px-4 py-3 sm:px-5">
-            <div className="flex items-center justify-between text-sm">
-                <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
+            <div className="flex items-center justify-between gap-2 text-sm">
+                <Link href={`/member/${reply.author.id}/timeline`} className="truncate text-link hover:underline">
                     {reply.author.name}
                 </Link>
-                <Timestamp at={reply.createdAt} preset="relative" className="text-muted-foreground" />
+                <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                    <Timestamp at={reply.createdAt} preset="relative" />
+                    <RowMenu items={[reactorsItem(t, reactions), reply.author.id === viewerId ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => onDelete(reply.id) } : null]} />
+                </div>
             </div>
-            <p className="whitespace-pre-wrap break-words">
-                <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
-            </p>
-            <LinkCard card={reply.linkCard} />
-            <RowReactionChips reactions={reactions} />
-            {reply.author.id === viewerId && (
-                <button type="button" onClick={() => onDelete(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
-                    {t('Delete')}
-                </button>
-            )}
+            <RowBody reactions={reactions} contentClassName="space-y-1">
+                <p className="whitespace-pre-wrap break-words">
+                    <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
+                </p>
+                <LinkCard card={reply.linkCard} />
+            </RowBody>
         </li>
     );
 }

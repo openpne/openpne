@@ -1,9 +1,11 @@
 import { SmilePlus, Users } from 'lucide-react';
 import { useState } from 'react';
+import { ActionSheet } from '@/components/row/action-sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tip } from '@/components/ui/tooltip';
 import type { ReactionChip } from '@/lib/reactions/types';
 import { useT } from '@/lib/i18n';
+import { useCoarsePointer } from '@/lib/use-coarse-pointer';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,38 +27,24 @@ export interface RowReactions {
     onShowReactors?: () => void;
 }
 
-/** A feed row's chips: the add button sits at the end of the chips whenever the reader may react. */
-export function RowReactionChips({ reactions }: { reactions: RowReactions }) {
-    return (
-        <ReactionChips
-            chips={reactions.chips}
-            onToggle={reactions.onToggle}
-            onShowReactors={reactions.onShowReactors}
-            add={reactions.onToggle === undefined ? undefined : { vocabulary: reactions.vocabulary, onPick: reactions.onToggle }}
-        />
-    );
-}
-
 export const ICON_BUTTON =
     'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function ReactionChips({
+/** A row's standing control: 32px drawn, and under a finger a 44px hit box that costs the row no height. */
+export const ROW_ICON_BUTTON = cn(ICON_BUTTON, "relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.5 pointer-coarse:before:content-['']");
+
+/** The chips alone, drawn only once there are any; whatever stands beside them is the caller's. */
+export function ReactionChipsRow({
     chips,
     onToggle,
-    onShowReactors,
-    add,
+    children,
 }: {
     chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
-    /** Absent for a reader the names are not offered to. */
-    onShowReactors?: () => void;
-    /** A feed row keeps its add button here, at the end of the chips, and so draws the row even with none; a chat row offers it elsewhere. */
-    add?: { vocabulary: string[]; onPick: (emoji: string, mine: boolean) => void };
+    children?: React.ReactNode;
 }) {
-    const t = useT();
-
-    if (chips.length === 0 && add === undefined) {
+    if (chips.length === 0) {
         return null;
     }
 
@@ -82,16 +70,34 @@ export function ReactionChips({
                     </button>
                 ),
             )}
-            {add !== undefined && <ReactionAdd chips={chips} vocabulary={add.vocabulary} onPick={add.onPick} />}
-            {/* Only ever offered beside chips: with none there is nobody to name. */}
-            {chips.length > 0 && onShowReactors !== undefined && (
+            {children}
+        </div>
+    );
+}
+
+/** A chat row's chips, the reactor list beside them. */
+export function ReactionChips({
+    chips,
+    onToggle,
+    onShowReactors,
+}: {
+    chips: ReactionChip[];
+    onToggle?: (emoji: string, mine: boolean) => void;
+    /** Absent for a reader the names are not offered to. */
+    onShowReactors?: () => void;
+}) {
+    const t = useT();
+
+    return (
+        <ReactionChipsRow chips={chips} onToggle={onToggle}>
+            {onShowReactors !== undefined && (
                 <Tip label={t('See who reacted')}>
                     <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
                         <Users className="size-4" aria-hidden />
                     </button>
                 </Tip>
             )}
-        </div>
+        </ReactionChipsRow>
     );
 }
 
@@ -152,15 +158,38 @@ export function ReactionAdd({
     onPick: (emoji: string, mine: boolean) => void;
 }) {
     const t = useT();
+    const coarse = useCoarsePointer();
     // Each row's picker holds its own: pressing another row's button is an outside press to this one,
     // so one is open at a time without the page closing it from outside.
     const [open, setOpen] = useState(false);
+    const pick = (emoji: string, mine: boolean) => {
+        setOpen(false);
+        onPick(emoji, mine);
+    };
+
+    if (coarse) {
+        return (
+            <>
+                <Tip label={t('Add a reaction')}>
+                    <button type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={ROW_ICON_BUTTON}>
+                        <SmilePlus className="size-4" aria-hidden />
+                    </button>
+                </Tip>
+                <ActionSheet open={open} onOpenChange={setOpen} title={t('Reactions')}>
+                    {/* Four to a row rather than wrapping: a set meant to be scanned should not change shape with its own length. */}
+                    <div className="grid grid-cols-4 justify-items-center gap-y-2 pb-2">
+                        <ReactionPickerGrid chips={chips} vocabulary={vocabulary} buttonClassName="size-12 text-2xl border-input bg-muted" onPick={pick} />
+                    </div>
+                </ActionSheet>
+            </>
+        );
+    }
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <Tip label={t('Add a reaction')}>
                 <PopoverTrigger asChild>
-                    <button type="button" className={ICON_BUTTON}>
+                    <button type="button" className={ROW_ICON_BUTTON}>
                         <SmilePlus className="size-4" aria-hidden />
                     </button>
                 </PopoverTrigger>
@@ -168,14 +197,7 @@ export function ReactionAdd({
             {/* Portalled because the card the list stands in clips its overflow, and capped at four
                 columns so a set this list does not choose cannot run off a phone's edge. */}
             <PopoverContent side="top" align="end" aria-label={t('Reactions')} className="flex w-max max-w-[13.5rem] flex-wrap gap-1">
-                <ReactionPickerGrid
-                    chips={chips}
-                    vocabulary={vocabulary}
-                    onPick={(emoji, mine) => {
-                        setOpen(false);
-                        onPick(emoji, mine);
-                    }}
-                />
+                <ReactionPickerGrid chips={chips} vocabulary={vocabulary} onPick={pick} />
             </PopoverContent>
         </Popover>
     );

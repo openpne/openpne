@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TimelineReplyRow } from './reply-row';
@@ -18,6 +18,9 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 afterEach(cleanup);
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+const openMenu = () => fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
 
 const reply: TimelinePostEntry = {
     id: 7,
@@ -65,11 +68,16 @@ test('a reply with no card draws only its words', () => {
     expect(screen.getByText('The good one is the second link')).toBeTruthy();
 });
 
-test('only the reply author is offered the delete control', () => {
-    renderWithProviders(<TimelineReplyRow reply={reply} viewerId={3} onDelete={vi.fn()} reactions={reactions} />);
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+test('only the reply author is offered delete, in the menu, and it names the reply', async () => {
+    const onDelete = vi.fn();
+    renderWithProviders(<TimelineReplyRow reply={reply} viewerId={3} onDelete={onDelete} reactions={reactions} />);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await tick();
+    expect(onDelete).toHaveBeenCalledWith(7);
 
     cleanup();
     renderWithProviders(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} reactions={reactions} />);
-    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    openMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull();
 });

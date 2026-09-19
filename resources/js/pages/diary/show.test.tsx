@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import DiaryShow from './show';
@@ -66,11 +66,23 @@ function renderShow(user: { id: number } | null) {
     return renderWithProviders(<DiaryShow />);
 }
 
-test('a signed-in reader may react to the entry and to each comment', () => {
+test('a signed-in reader may react to the entry and to each comment, and each row lists its reactors from its menu', () => {
     renderShow({ id: 9 });
 
     expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'See who reacted' })).toHaveLength(2);
+    const menus = screen.getAllByRole('button', { name: 'More actions' });
+    expect(menus).toHaveLength(2);
+    fireEvent.keyDown(menus[0] as HTMLElement, { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' }).hasAttribute('data-disabled')).toBe(false);
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
+});
+
+test('the owner edits and deletes the entry from its menu', () => {
+    renderShow({ id: 3 });
+
+    fireEvent.keyDown(screen.getAllByRole('button', { name: 'More actions' })[0] as HTMLElement, { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Edit' }).getAttribute('href')).toBe('/diary/edit/5');
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
 });
 
 test('a guest on a web-public entry reads the counts and has nothing to press', () => {
@@ -78,6 +90,6 @@ test('a guest on a web-public entry reads the counts and has nothing to press', 
 
     expect(container.querySelectorAll('[data-reactions]')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
 });

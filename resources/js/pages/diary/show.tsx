@@ -1,19 +1,19 @@
 import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
-import { RowReactionChips } from '@/components/reactions/reaction-bar';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,6 +46,7 @@ export default function DiaryShow() {
     const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
     const commentReactions = useReactions(diaryCommentReactionEndpoints, renderGeneration);
     const canReact = auth.user !== null;
+    const entryReactions = rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null);
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -77,31 +78,27 @@ export default function DiaryShow() {
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} isAi={diary.author.isAi} size="md" decorative />
-                    <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
+                    <Link href={`/member/${diary.author.id}`} className="min-w-0 truncate text-link hover:underline">
                         {diary.author.name}
                     </Link>
                     <AiChip isAi={diary.author.isAi} />
-                    <span>&mdash; <Timestamp at={diary.createdAt} preset="absolute" /></span>
+                    <span className="shrink-0">&mdash; <Timestamp at={diary.createdAt} preset="absolute" /></span>
+                    <span className="ml-auto shrink-0">
+                        <RowMenu
+                            items={[
+                                reactorsItem(t, entryReactions),
+                                isOwner ? { label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` } : null,
+                                isOwner ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deleteDiary } : null,
+                            ]}
+                        />
+                    </span>
                 </div>
 
-                <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
-
-                <LinkCard card={diary.linkCard} />
-
-                <ImageGrid images={diary.images} variant="post" className="mt-1" />
-
-                <RowReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
-
-                {isOwner && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/diary/edit/${diary.id}`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <button type="button" onClick={deleteDiary} className={dangerActionClass}>
-                            {t('Delete')}
-                        </button>
-                    </div>
-                )}
+                <RowBody reactions={entryReactions} contentClassName="space-y-4">
+                    <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
+                    <LinkCard card={diary.linkCard} />
+                    <ImageGrid images={diary.images} variant="post" className="mt-1" />
+                </RowBody>
             </Panel>
 
             {(older || newer) && (

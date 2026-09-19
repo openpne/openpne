@@ -20,6 +20,9 @@ vi.mock('@inertiajs/react', () => ({
 
 afterEach(cleanup);
 
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+const openMenu = () => fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+
 const post: TimelinePostEntry = {
     id: 7,
     body: 'a post',
@@ -55,14 +58,26 @@ test('a chip is its own toggle and says whether it is held', () => {
     expect(onToggle).toHaveBeenCalledWith('\u{2764}\u{FE0F}', false);
 });
 
-test('the add button is always on the card and the reactor list only beside chips', () => {
+test('the add button stands on the card and the reactor list waits in the menu until there are chips', async () => {
     const onShowReactors = vi.fn();
-    const { rerender } = renderWithProviders(<TimelinePostCard post={post} viewerId={1} reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors }} />);
+    const { container, rerender } = renderWithProviders(<TimelinePostCard post={post} viewerId={1} reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors }} />);
 
     expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+    expect(container.querySelector('[data-reactions]')).toBeNull();
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull();
 
     rerender(<TimelinePostCard post={post} viewerId={1} reactions={{ chips: [{ emoji: '\u{1F44D}', count: 1, mine: false }], vocabulary, onToggle: vi.fn(), onShowReactors }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'See who reacted' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'See who reacted' }));
+    await tick();
     expect(onShowReactors).toHaveBeenCalled();
+});
+
+test('only the author is offered delete, in the menu', () => {
+    renderWithProviders(<TimelinePostCard post={post} viewerId={3} reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn() }} />);
+    openMenu();
+
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 });

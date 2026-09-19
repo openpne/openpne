@@ -11,7 +11,7 @@ export type ConfirmOptions = {
     danger?: boolean;
 };
 
-type ResolvedOptions = ConfirmOptions & { resolve: (ok: boolean) => void };
+type ResolvedOptions = ConfirmOptions & { resolve: (ok: boolean) => void; opener: HTMLElement | null };
 
 const EVENT_NAME = 'modern:confirm-request';
 
@@ -25,7 +25,9 @@ const EVENT_NAME = 'modern:confirm-request';
 export function useConfirm() {
     return (options: ConfirmOptions): Promise<boolean> =>
         new Promise<boolean>((resolve) => {
-            window.dispatchEvent(new CustomEvent<ResolvedOptions>(EVENT_NAME, { detail: { ...options, resolve } }));
+            // Asked from a menu rather than a trigger of its own, so the question names its own way back: what holds focus as it is asked.
+            const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            window.dispatchEvent(new CustomEvent<ResolvedOptions>(EVENT_NAME, { detail: { ...options, resolve, opener } }));
         });
 }
 
@@ -47,6 +49,7 @@ export function ConfirmDialogHost() {
         opts?.resolve(ok);
         setOpts(null);
     };
+    const opener = opts?.opener ?? null;
 
     return (
         <AlertDialog.Root
@@ -57,7 +60,13 @@ export function ConfirmDialogHost() {
         >
             <AlertDialog.Portal>
                 <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-                <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-card-foreground shadow-xl">
+                <AlertDialog.Content
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        opener?.focus({ preventScroll: true });
+                    }}
+                    className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-card-foreground shadow-xl"
+                >
                     {opts && (
                         <>
                             <div className="space-y-2 px-5 pb-4 pt-5">

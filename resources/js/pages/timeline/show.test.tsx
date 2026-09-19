@@ -85,3 +85,15 @@ test('a fresh render of the same thread shows the rows it was rendered with, not
 
     expect(screen.getByRole('button', { pressed: true }).textContent).toContain('2');
 });
+
+test('the author deletes the root post from its menu, and a reader who is not sees no delete', () => {
+    renderShow(true, { viewerId: 3 });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'See who reacted' }).getAttribute('aria-disabled')).toBe('true');
+
+    cleanup();
+    renderShow(true);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull();
+});

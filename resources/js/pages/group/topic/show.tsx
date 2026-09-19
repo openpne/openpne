@@ -4,15 +4,16 @@ import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { ImagesField } from '@/components/images-field';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
+import { RowMenu } from '@/components/row/row-menu';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { commentsPhrase } from '@/lib/count-phrase';
@@ -82,31 +83,28 @@ export default function GroupTopicShow() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} isAi={topic.author?.isAi ?? false} size="md" decorative />
                     {topic.author ? (
-                        <Link href={`/member/${topic.author.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${topic.author.id}`} className="min-w-0 truncate text-link hover:underline">
                             {topic.author.name}
                         </Link>
                     ) : (
-                        <span>{t('Withdrawn member')}</span>
+                        <span className="min-w-0 truncate">{t('Withdrawn member')}</span>
                     )}
                     <AiChip isAi={topic.author?.isAi ?? false} />
-                    <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
-                    {topic.editedAt && <span className="text-xs">({t('Edited')})</span>}
+                    <span className="shrink-0">&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
+                    {topic.editedAt && <span className="shrink-0 text-xs">({t('Edited')})</span>}
+                    <span className="ml-auto shrink-0">
+                        <RowMenu
+                            items={[
+                                canEdit ? { label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` } : null,
+                                canEdit ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deleteTopic } : null,
+                            ]}
+                        />
+                    </span>
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />
                 <ImageGrid images={topic.images} variant="post" className="mt-2" />
-
-                {canEdit && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/topics/${topic.id}/edit`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <button type="button" onClick={deleteTopic} className={dangerActionClass}>
-                            {t('Delete')}
-                        </button>
-                    </div>
-                )}
             </Panel>
 
             <Panel title={commentsPhrase(t, thread.total)} flush>

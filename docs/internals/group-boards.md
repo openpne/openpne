@@ -141,6 +141,9 @@ The topic and event bodies themselves take none. Two things are the boards' own:
   member's comments stay with a null author, and so do the reactions on them; the group teardown
   above is what sweeps a board.
 
+A comment row is drawn as [reactions.md](reactions.md#the-row) says, and so are the topic and
+event bodies, whose kebab holds edit and delete.
+
 ## Key invariants
 
 1. A board comment's reaction is gated by the group's membership and locked at its topic or event:

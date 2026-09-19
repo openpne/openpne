@@ -128,7 +128,8 @@ the diary's own:
   them.
 
 Nothing polls the page, so no watermark moves; the show page carries the diary's chips and its
-comments' from at most two grouped reads.
+comments' from at most two grouped reads. The entry and each comment are drawn as
+[reactions.md](reactions.md#the-row) says: the kebab holds edit, delete and who reacted.
 
 ## Key invariants
 

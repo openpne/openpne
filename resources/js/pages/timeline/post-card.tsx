@@ -1,18 +1,18 @@
 import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Link, router } from '@inertiajs/react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Trash2 } from 'lucide-react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
-import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
-import { dangerActionClass } from '@/components/ui/danger-link';
+import type { RowReactions } from '@/components/reactions/reaction-bar';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import type { TimelinePostEntry } from './types';
 
 interface TimelinePostCardProps {
@@ -47,20 +47,16 @@ export function TimelinePostCard({ post, viewerId, reactions }: TimelinePostCard
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
                         <Timestamp at={post.createdAt} preset="relative" />
                     </Link>
+                    <RowMenu items={[reactorsItem(t, reactions), isOwn ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deletePost } : null]} />
                 </div>
             </div>
-            <p className="whitespace-pre-wrap break-words">
-                <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
-            </p>
-            <LinkCard card={post.linkCard} />
-            <ImageGrid images={post.images} variant="post" />
-            {/* Under the body, where the eye is after reading: a feed row has no hover lane or long-press sheet. */}
-            <RowReactionChips reactions={reactions} />
-            {isOwn && (
-                <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
-                    {t('Delete')}
-                </button>
-            )}
+            <RowBody reactions={reactions} contentClassName="space-y-2">
+                <p className="whitespace-pre-wrap break-words">
+                    <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
+                </p>
+                <LinkCard card={post.linkCard} />
+                <ImageGrid images={post.images} variant="post" />
+            </RowBody>
         </li>
     );
 }

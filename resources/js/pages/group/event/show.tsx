@@ -5,13 +5,14 @@ import { LinkCard } from '@/components/link-card';
 import { UserText } from '@/components/user-text';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
+import { Pencil, Trash2 } from 'lucide-react';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
+import { RowMenu } from '@/components/row/row-menu';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
 import { CivilDate, Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -89,15 +90,23 @@ export default function GroupEventShow() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} isAi={event.author?.isAi ?? false} size="md" decorative />
                     {event.author ? (
-                        <Link href={`/member/${event.author.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${event.author.id}`} className="min-w-0 truncate text-link hover:underline">
                             {event.author.name}
                         </Link>
                     ) : (
-                        <span>{t('Withdrawn member')}</span>
+                        <span className="min-w-0 truncate">{t('Withdrawn member')}</span>
                     )}
                     <AiChip isAi={event.author?.isAi ?? false} />
-                    <span>&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>
-                    {event.editedAt && <span className="text-xs">({t('Edited')})</span>}
+                    <span className="shrink-0">&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>
+                    {event.editedAt && <span className="shrink-0 text-xs">({t('Edited')})</span>}
+                    <span className="ml-auto shrink-0">
+                        <RowMenu
+                            items={[
+                                canEdit ? { label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` } : null,
+                                canEdit ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: deleteEvent } : null,
+                            ]}
+                        />
+                    </span>
                 </div>
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
@@ -133,17 +142,6 @@ export default function GroupEventShow() {
                 <RichBody body={event.body} bodyHtml={event.bodyHtml} />
                 <LinkCard card={event.linkCard} />
                 <ImageGrid images={event.images} variant="post" className="mt-2" />
-
-                {canEdit && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/events/${event.id}/edit`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <button type="button" onClick={deleteEvent} className={dangerActionClass}>
-                            {t('Delete')}
-                        </button>
-                    </div>
-                )}
             </Panel>
 
             <Panel title={commentsPhrase(t, thread.total)} flush>

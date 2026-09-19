@@ -2,13 +2,14 @@ import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
-import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import type { RowReactions } from '@/components/reactions/reaction-bar';
+import { RowBody } from '@/components/row/row-body';
+import { reactorsItem, RowMenu } from '@/components/row/row-menu';
 import { Timestamp } from '@/components/timestamp';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 import type { DiaryComment } from './types';
 
 /** A row of its own rather than markup inside the page, so a test can render it. */
@@ -31,18 +32,15 @@ export function DiaryCommentRow({ comment, onDelete, reactions }: { comment: Dia
                 <AiChip isAi={comment.author?.isAi ?? false} />
                 <span className="ml-auto shrink-0">#{comment.number}</span>
                 <Timestamp at={comment.createdAt} preset="relative" className="shrink-0" />
-                {comment.deletable && (
-                    <button type="button" onClick={() => onDelete(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>
-                        {t('Delete')}
-                    </button>
-                )}
+                <RowMenu items={[reactorsItem(t, reactions), comment.deletable ? { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => onDelete(comment.id) } : null]} />
             </div>
-            <p className="whitespace-pre-wrap break-words">
-                <UserText text={comment.body} />
-            </p>
-            <LinkCard card={comment.linkCard} className="mt-1" />
-            <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
-            <RowReactionChips reactions={reactions} />
+            <RowBody reactions={reactions}>
+                <p className="whitespace-pre-wrap break-words">
+                    <UserText text={comment.body} />
+                </p>
+                <LinkCard card={comment.linkCard} className="mt-1" />
+                <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
+            </RowBody>
         </li>
     );
 }

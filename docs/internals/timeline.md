@@ -207,7 +207,8 @@ Two things are the timeline's own:
 
 Nothing polls a feed, so no watermark moves; a page carries each row's chips from one grouped read,
 and a write answers with the row's whole chip row. The dashboard digest carries them too, though its
-row draws none.
+row draws none. A card, the thread root and a reply are drawn as
+[reactions.md](reactions.md#the-row) says: the kebab holds delete and who reacted.
 
 ## Key invariants
 

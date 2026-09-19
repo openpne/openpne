@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { BoardCommentRow } from './board-comment-row';
@@ -18,6 +18,9 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 afterEach(cleanup);
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+const openMenu = () => fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
 
 const comment: TopicComment = {
     id: 7,
@@ -45,8 +48,15 @@ test('a reader who is not a member sees the counts and nothing to press', () => 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
 
-test('only a deletable comment offers the delete control', () => {
-    renderWithProviders(<BoardCommentRow comment={{ ...comment, deletable: true }} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: [] }} />);
+test('only a deletable comment offers delete, in the menu, and it names the comment', async () => {
+    const onDelete = vi.fn();
+    renderWithProviders(<BoardCommentRow comment={{ ...comment, deletable: true }} onDelete={onDelete} reactions={{ chips: [], vocabulary: [] }} />);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await tick();
+    expect(onDelete).toHaveBeenCalledWith(comment.id);
 
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    cleanup();
+    renderWithProviders(<BoardCommentRow comment={comment} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: [] }} />);
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
 });
