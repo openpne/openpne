@@ -59,7 +59,7 @@ class DeleteGroup
                 ->pluck('id')
                 ->all();
 
-            BoardSweep::reactions((new GroupMessage)->getMorphClass(), DB::table('group_messages')->where('group_id', $groupId)->select('id'));
+            BoardSweep::reactionsOn((new GroupMessage)->getMorphClass(), DB::table('group_messages')->where('group_id', $groupId)->select('id'));
             BoardSweep::reactions((new GroupTopicComment)->getMorphClass(), $topicComments);
             BoardSweep::reactions((new GroupEventComment)->getMorphClass(), $eventComments);
 
