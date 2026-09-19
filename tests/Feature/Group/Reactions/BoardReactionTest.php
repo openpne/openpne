@@ -15,7 +15,7 @@ class BoardReactionTest extends BoardReactionTestCase
     /** @return array<string, array{string}> */
     public static function boards(): array
     {
-        return ['topic' => ['topicComment'], 'event' => ['eventComment']];
+        return ['topic' => ['topicComment'], 'event' => ['eventComment'], 'topic body' => ['topicBody'], 'event body' => ['eventBody']];
     }
 
     #[DataProvider('boards')]
@@ -31,7 +31,7 @@ class BoardReactionTest extends BoardReactionTestCase
     }
 
     #[DataProvider('boards')]
-    public function test_a_member_reacting_writes_a_row_under_the_comments_alias(string $make): void
+    public function test_a_member_reacting_writes_a_row_under_the_targets_alias(string $make): void
     {
         $group = $this->group();
         $comment = $this->{$make}($group);
@@ -42,7 +42,7 @@ class BoardReactionTest extends BoardReactionTestCase
             ->assertExactJson(['reactions' => [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => true]]]);
 
         $this->assertDatabaseHas('reactions', [
-            'reactable_type' => $comment instanceof GroupTopicComment ? 'groupTopicComment' : 'groupEventComment',
+            'reactable_type' => $comment->getMorphClass(),
             'reactable_id' => $comment->getKey(),
             'member_id' => $member->getKey(),
         ]);
@@ -133,13 +133,18 @@ class BoardReactionTest extends BoardReactionTestCase
         $this->setSnsSetting(SnsSettingKey::FeatureGroupTopicEnabled, false);
         $this->freshRequestState();
         $this->react($member, $topic)->assertNotFound();
+        $this->react($member, $topic->topic)->assertNotFound();
         $this->actingAs($member)->getJson($this->path($topic))->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($topic->topic))->assertNotFound();
         $this->react($member, $event)->assertOk();
+        $this->react($member, $event->event)->assertOk();
 
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEventEnabled, false);
         $this->freshRequestState();
         $this->react($member, $event)->assertNotFound();
+        $this->react($member, $event->event)->assertNotFound();
         $this->actingAs($member)->getJson($this->path($event))->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($event->event))->assertNotFound();
     }
 
     #[DataProvider('boards')]
@@ -187,13 +192,14 @@ class BoardReactionTest extends BoardReactionTestCase
     }
 
     /** One grouped read serves the page of comments, and each row still gets its own chips. */
-    public function test_the_topic_page_gives_each_comment_its_chips_from_one_grouped_read(): void
+    public function test_the_topic_page_gives_the_body_and_each_comment_their_chips_from_two_reads(): void
     {
         $group = $this->group();
         $viewer = $this->joined($group);
         $first = $this->topicComment($group);
         $second = GroupTopicComment::factory()->create(['group_topic_id' => $first->group_topic_id, 'member_id' => $viewer->getKey(), 'number' => 2]);
         $this->react($viewer, $second, $this->emoji(1))->assertOk();
+        $this->react($viewer, $first->topic, $this->emoji(2))->assertOk();
 
         $reads = [];
         DB::listen(function ($query) use (&$reads): void {
@@ -205,25 +211,28 @@ class BoardReactionTest extends BoardReactionTestCase
         $this->actingAs($viewer)
             ->get("/topics/{$first->group_topic_id}")
             ->assertInertia(fn ($page) => $page
+                ->where('topic.reactions', [['emoji' => $this->emoji(2), 'count' => 1, 'mine' => true]])
                 ->where('thread.comments.0.reactions', [])
                 ->where('thread.comments.1.reactions', [['emoji' => $this->emoji(1), 'count' => 1, 'mine' => true]])
                 ->where('reactionVocabulary.0', $this->emoji(0))
                 ->has('renderGeneration'));
 
-        $this->assertCount(1, $reads, 'the page read reactions more than once');
-        $this->assertMatchesRegularExpression('/group by/i', $reads[0]);
+        $this->assertCount(2, $reads, 'one read for the body and one for the page of comments');
+        $this->assertMatchesRegularExpression('/group by/i', $reads[1]);
     }
 
-    public function test_the_event_page_gives_each_comment_its_chips(): void
+    public function test_the_event_page_gives_the_body_and_each_comment_their_chips(): void
     {
         $group = $this->group();
         $viewer = $this->joined($group);
         $comment = $this->eventComment($group);
         $this->react($viewer, $comment)->assertOk();
+        $this->react($viewer, $comment->event, $this->emoji(1))->assertOk();
 
         $this->actingAs($viewer)
             ->get("/events/{$comment->group_event_id}")
             ->assertInertia(fn ($page) => $page
+                ->where('event.reactions', [['emoji' => $this->emoji(1), 'count' => 1, 'mine' => true]])
                 ->where('thread.comments.0.reactions', [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => true]])
                 ->where('reactionVocabulary.0', $this->emoji(0)));
     }
@@ -255,9 +264,9 @@ class BoardReactionTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    /** The comment stays with a null author when its author withdraws, so what others put on it stays too. */
+    /** The row stays with a null author when its author withdraws, so what others put on it stays too. */
     #[DataProvider('boards')]
-    public function test_a_withdrawing_author_leaves_the_reactions_on_their_comment(string $make): void
+    public function test_a_withdrawing_author_leaves_the_reactions_on_their_row(string $make): void
     {
         $group = $this->group();
         $author = $this->joined($group);

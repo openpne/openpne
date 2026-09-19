@@ -45,6 +45,16 @@ final class BoardSweep
     }
 
     /**
+     * The reactions on the parent rows themselves, reached by the caller's subquery: a group holds
+     * far fewer topics and events than comments, so the subquery is re-run per page of reactions without paging the rows.
+     * Call before the rows are deleted, or the subquery finds nothing to reach.
+     */
+    public static function rows(string $alias, Builder $ids): void
+    {
+        self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $ids));
+    }
+
+    /**
      * Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the
      * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL 8.4 plans
      * a row constructor here as a filter over the whole parent, not a range from the cursor.

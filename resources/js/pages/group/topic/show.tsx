@@ -5,6 +5,7 @@ import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { ImagesField } from '@/components/images-field';
+import { RowReactionChips } from '@/components/reactions/reaction-bar';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
@@ -21,7 +22,7 @@ import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { BoardCommentRow } from '@/pages/group/board-comment-row';
-import { topicCommentReactionEndpoints } from '@/pages/group/reactions';
+import { topicCommentReactionEndpoints, topicReactionEndpoints } from '@/pages/group/reactions';
 import type { CommunitySummary, TopicDetail, TopicThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
@@ -39,7 +40,10 @@ export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    // Two rows of state, one per endpoint set: the topic and its comments are reacted to on different URLs.
+    const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
     const reactions = useReactions(topicCommentReactionEndpoints, renderGeneration);
+    const bodyReactions = rowReactions(topic.id, topic.reactions, reactionVocabulary, canComment ? topicReactions : null);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -96,6 +100,7 @@ export default function GroupTopicShow() {
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />
                 <ImageGrid images={topic.images} variant="post" className="mt-2" />
+                <RowReactionChips reactions={bodyReactions} />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
@@ -161,6 +166,7 @@ export default function GroupTopicShow() {
                     </form>
                 </Panel>
             )}
+            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} onClose={topicReactions.closeReactors} />}
             {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );
