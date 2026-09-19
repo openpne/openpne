@@ -7,7 +7,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
-import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
+import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/reactions/overlay';
 import { foldsInto } from '@/lib/chat/message-grouping';
 import { separatorsAbove } from '@/lib/chat/separators';
 import { digestPlacement, dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
@@ -27,7 +27,7 @@ import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
 import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
-import { TalkReactorsDialog } from './reactors-dialog';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { TalkUnreadDigestCard } from './unread-digest';
 import type { TalkMessage, TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
@@ -520,7 +520,7 @@ export default function GroupTalkIndex() {
             )}
 
             {reactorsFor !== null && (
-                <TalkReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
+                <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
             )}
 
             {sheetMessage !== undefined && (

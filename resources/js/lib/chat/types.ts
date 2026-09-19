@@ -1,8 +1,6 @@
-export interface ChatReactionChip {
-    emoji: string;
-    count: number;
-    mine: boolean;
-}
+import type { ReactionChip } from '@/lib/reactions/types';
+
+export type ChatReactionChip = ReactionChip;
 
 /** What the stream machinery reads of a message; bodies, authors and attachments are the page's own. */
 export interface ChatStreamRow {

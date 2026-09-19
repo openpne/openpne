@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
+import { ReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
@@ -17,9 +18,10 @@ import type { TimelinePostEntry } from './types';
 interface TimelinePostCardProps {
     post: TimelinePostEntry;
     viewerId: number;
+    reactions: RowReactions;
 }
 
-export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
+export function TimelinePostCard({ post, viewerId, reactions }: TimelinePostCardProps) {
     const t = useT();
     const confirm = useConfirm();
     const isOwn = post.author.id === viewerId;
@@ -52,6 +54,8 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} variant="post" />
+            {/* Under the body, where the eye is after reading: a feed row has no hover lane or long-press sheet. */}
+            <ReactionChips chips={reactions.chips} onToggle={reactions.onToggle} onShowReactors={reactions.onShowReactors} add={{ vocabulary: reactions.vocabulary, onPick: reactions.onToggle }} />
             {isOwn && (
                 <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                     {t('Delete')}

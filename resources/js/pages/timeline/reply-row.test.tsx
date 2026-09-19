@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TimelineReplyRow } from './reply-row';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import type { TimelinePostEntry } from './types';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -30,7 +31,10 @@ const reply: TimelinePostEntry = {
     tags: [],
     linkCard: null,
     createdAt: '2026-08-21T10:00:00+09:00',
+    reactions: [],
 };
+
+const reactions = { chips: [], vocabulary: ['\u{1F44D}'], onToggle: vi.fn(), onShowReactors: vi.fn() };
 
 const card = {
     url: 'https://www.example.com/article',
@@ -48,24 +52,24 @@ const card = {
 test('a reply draws the card its body earned', () => {
     // The server side of this shipped once with nothing drawn: a payload assertion sees `linkCard`
     // on the row and says nothing about whether anyone renders it.
-    render(<TimelineReplyRow reply={{ ...reply, linkCard: card }} viewerId={1} onDelete={vi.fn()} />);
+    renderWithProviders(<TimelineReplyRow reply={{ ...reply, linkCard: card }} viewerId={1} onDelete={vi.fn()} reactions={reactions} />);
 
     expect(screen.getByText('A title from the page')).toBeTruthy();
     expect(screen.getByText('example.com')).toBeTruthy();
 });
 
 test('a reply with no card draws only its words', () => {
-    const { container } = render(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} />);
+    const { container } = renderWithProviders(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} reactions={reactions} />);
 
     expect(container.querySelector('a[rel*="nofollow"]')).toBeNull();
     expect(screen.getByText('The good one is the second link')).toBeTruthy();
 });
 
 test('only the reply author is offered the delete control', () => {
-    render(<TimelineReplyRow reply={reply} viewerId={3} onDelete={vi.fn()} />);
+    renderWithProviders(<TimelineReplyRow reply={reply} viewerId={3} onDelete={vi.fn()} reactions={reactions} />);
     expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
 
     cleanup();
-    render(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} />);
+    renderWithProviders(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} reactions={reactions} />);
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 });

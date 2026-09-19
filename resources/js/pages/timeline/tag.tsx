@@ -1,10 +1,13 @@
 import { Head, usePage } from '@inertiajs/react';
 import { LoadOlder } from '@/components/load-older';
+import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { StreamEmpty, StreamHead } from '@/components/stream-empty';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
+import { rowReactions, timelineReactionEndpoints } from './reactions';
 import type { TimelineStream } from './types';
 
 interface TagProps extends PageProps {
@@ -13,13 +16,15 @@ interface TagProps extends PageProps {
     posts: TimelineStream;
     streamGeneration: string;
     headUrl: string | null;
+    reactionVocabulary: string[];
 }
 
 // A reading page: the home feed's list with no compose box, since nothing here says which tag a new
 // post would carry.
 export default function TimelineTag() {
     const t = useT();
-    const { tag, viewerId, posts, streamGeneration, headUrl } = usePage<TagProps>().props;
+    const { tag, viewerId, posts, streamGeneration, headUrl, reactionVocabulary } = usePage<TagProps>().props;
+    const reactions = useReactions(timelineReactionEndpoints, streamGeneration);
 
     return (
         <>
@@ -33,13 +38,14 @@ export default function TimelineTag() {
                         <Panel flush>
                             <List>
                                 {posts.data.map((post) => (
-                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
+                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} reactions={rowReactions(post, reactionVocabulary, reactions)} />
                                 ))}
                             </List>
                         </Panel>
                     </LoadOlder>
                 </>
             )}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );
 }

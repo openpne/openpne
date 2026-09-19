@@ -1,4 +1,4 @@
-import { applyReactionOutcome, type ReactionOp } from './reaction-overlay.ts';
+import { applyReactionOutcome, type ReactionOp } from '../reactions/overlay.ts';
 import type { ChatPage, ChatStreamRow } from './types';
 
 /**

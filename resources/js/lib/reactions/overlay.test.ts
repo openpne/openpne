@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyReactionOutcome, chipsWithPending, isPending, noPending, withoutPending, withPending } from './reaction-overlay.ts';
-import type { ChatReactionChip } from './types.ts';
+import { applyReactionOutcome, chipsWithPending, isPending, noPending, withoutPending, withPending } from './overlay.ts';
+import type { ReactionChip } from './types.ts';
 
 const THUMBS = '\u{1F44D}';
 const HEART = '\u{2764}\u{FE0F}';
 
-const chip = (emoji: string, count: number, mine = false): ChatReactionChip => ({ emoji, count, mine });
+const chip = (emoji: string, count: number, mine = false): ReactionChip => ({ emoji, count, mine });
 
-const drawn = (chips: ChatReactionChip[], pending: ReturnType<typeof noPending>) => chipsWithPending(chips, pending, 1);
+const drawn = (chips: ReactionChip[], pending: ReturnType<typeof noPending>) => chipsWithPending(chips, pending, 1);
 
 test('an emoji nobody holds is drawn as a new chip of one', () => {
     const pending = withPending(noPending(), 1, THUMBS, 'add');
