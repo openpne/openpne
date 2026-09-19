@@ -61,6 +61,9 @@ their own content mid-withdrawal would otherwise close a cycle. The one order is
 | diary ([diary.md](diary.md#reactions)) | diary row → comment (a diary is its own container) | nothing: the page does not poll |
 | group boards ([group-boards.md](group-boards.md#reactions)) | topic or event row → comment | nothing: the page does not poll |
 
+A board's teardown is the one place the container is two rows deep: the group row, then every topic
+and event under it, since a board writer takes the topic or event row and never the group's.
+
 A surface's own delete and teardown take the same order before they sweep, which is what keeps the
 paths from deadlocking as well as from racing. The single order is a property of the code; the
 MySQL-only lock-order tests hold a row from a second connection and pin which locking read the write

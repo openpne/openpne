@@ -38,7 +38,7 @@ class DeleteDiary
                 return [];
             }
 
-            $commentIds = $diary->comments()->sharedLock()->pluck('id')->all();
+            $commentIds = $diary->comments()->pluck('id')->all();
 
             Reaction::query()
                 ->where('reactable_type', $diary->getMorphClass())

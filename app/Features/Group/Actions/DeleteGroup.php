@@ -43,8 +43,10 @@ class DeleteGroup
 
             $topicIds = GroupTopic::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
             $eventIds = GroupEvent::query()->where('group_id', $locked->getKey())->orderBy('id')->lockForUpdate()->pluck('id')->all();
-            $topicCommentIds = GroupTopicComment::query()->whereIn('group_topic_id', $topicIds)->sharedLock()->pluck('id')->all();
-            $eventCommentIds = GroupEventComment::query()->whereIn('group_event_id', $eventIds)->sharedLock()->pluck('id')->all();
+            // Plain reads: the parent rows' locks already exclude a new comment, and a shared lock here
+            // would only be upgraded by the cascade, against a withdrawal setting the same rows' author null.
+            $topicCommentIds = GroupTopicComment::query()->whereIn('group_topic_id', $topicIds)->pluck('id')->all();
+            $eventCommentIds = GroupEventComment::query()->whereIn('group_event_id', $eventIds)->pluck('id')->all();
 
             $files = File::query()
                 ->whereIn('id', DB::table('group_message_images')
