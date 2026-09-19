@@ -9,6 +9,7 @@ use App\Mail\Template\MailTemplateService;
 use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceLocale;
+use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
 use Illuminate\Support\Facades\DB;
 
@@ -155,6 +156,7 @@ final class MailTemplatePreflight
         return DB::select(
             'select `id` as `mail_template_id`, `lang`, '.SourceLocale::foldExpr().' as `folded_locale`,'
             .' `title`, `template` from '.InsertSelectCompiler::qualify($database, $prefix, 'notification_mail_translation')
+            .' where '.MailTemplateTranslationUpgrade::templateCarriedExpr()
             .' order by `id` asc, `lang` asc',
         );
     }
