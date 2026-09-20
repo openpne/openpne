@@ -409,7 +409,10 @@ class BoardTeardownTest extends BoardReactionTestCase
             'created_at' => $earlier,
             'updated_at' => $earlier,
         ], range(1, 1002)));
-        $ordered = DB::table('group_topics')->where('group_id', $group->getKey())->orderBy('bumped_at')->orderBy('id')->pluck('id')->all();
+        $bumpedAt = DB::table('group_topics')->where('group_id', $group->getKey())->orderBy('bumped_at')->orderBy('id')->pluck('bumped_at', 'id')->all();
+        $ordered = array_keys($bumpedAt);
+        $this->assertSame($bumpedAt[$ordered[999]], $bumpedAt[$ordered[1000]], 'the boundary rows share an instant');
+        $this->assertGreaterThan($ordered[999], max(array_slice($ordered, 0, 1000)), 'the page holds an id above its last row');
         DB::table('reactions')->insert(array_map(fn (int $id): array => [
             'reactable_type' => 'groupTopic', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $earlier, 'updated_at' => $earlier,
         ], $ordered));
