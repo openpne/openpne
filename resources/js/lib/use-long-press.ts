@@ -1,4 +1,5 @@
 import { useEffect, useRef, type DOMAttributes } from 'react';
+import { useCoarsePointer } from './use-coarse-pointer';
 
 /** How long a finger stays down before the press is a press rather than a tap. */
 const LONG_PRESS_MS = 500;
@@ -74,15 +75,19 @@ export function pressReducer(state: PressState, event: PressEvent): PressResult 
     }
 }
 
+const OWN_ATTRIBUTE = 'data-press-own';
+
 /**
- * `enabled: false` attaches nothing at all, so an element with nothing to offer costs no listeners
- * and keeps its own context menu. Where it is enabled the menu is held off for the length of a press,
- * and the element's `user-select` / `-webkit-touch-callout` classes are the other half of that.
+ * Offered only where `(pointer: coarse)` holds, the same query the row's `select-none` and
+ * `-webkit-touch-callout` classes key on, so a hybrid machine keeps the OS selection lens. A press
+ * starting inside an `own` hook's element is that element's: an outer hook lets it pass, since a
+ * pointerdown bubbles and every hook on the way up would otherwise arm its own timer.
  */
-export function useLongPress(onLongPress: () => void, { enabled = true }: { enabled?: boolean } = {}): DOMAttributes<HTMLElement> {
+export function useLongPress(onLongPress: () => void, { enabled = true, own = false }: { enabled?: boolean; own?: boolean } = {}): DOMAttributes<HTMLElement> & Record<string, unknown> {
     const press = useRef<PressState>(IDLE);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const firedAt = useRef(0);
+    const coarse = useCoarsePointer();
 
     useEffect(
         () => () => {
@@ -93,7 +98,7 @@ export function useLongPress(onLongPress: () => void, { enabled = true }: { enab
         [],
     );
 
-    if (!enabled) {
+    if (!enabled || !coarse) {
         return {};
     }
 
@@ -119,7 +124,11 @@ export function useLongPress(onLongPress: () => void, { enabled = true }: { enab
     };
 
     return {
+        ...(own ? { [OWN_ATTRIBUTE]: '' } : {}),
         onPointerDown: (e) => {
+            if (!own && e.target instanceof Element && e.target.closest(`[${OWN_ATTRIBUTE}]`) !== null) {
+                return;
+            }
             advance({ type: 'down', pointerType: e.pointerType, x: e.clientX, y: e.clientY, primary: e.isPrimary });
             if (press.current.phase === 'pending') {
                 timer.current = setTimeout(() => advance({ type: 'timer' }), LONG_PRESS_MS);

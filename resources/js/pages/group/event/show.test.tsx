@@ -74,13 +74,12 @@ function renderShow(canComment: boolean, reactions = event.reactions) {
     return renderWithProviders(<GroupEventShow />);
 }
 
-test('a member reacts to the body on its own endpoint and may list its reactors', () => {
+test('a member reacts to the body on its own endpoint', () => {
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetch);
     renderShow(true);
 
     expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: 'See who reacted' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: '\u{1F44D} 2' }));
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith('/events/12/reactions', expect.objectContaining({ method: 'POST' }));

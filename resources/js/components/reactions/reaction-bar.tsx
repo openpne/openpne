@@ -1,9 +1,10 @@
-import { SmilePlus, Users } from 'lucide-react';
-import { useState } from 'react';
+import { SmilePlus } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tip } from '@/components/ui/tooltip';
-import type { ReactionChip } from '@/lib/reactions/types';
+import { Tip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { ReactionChip, ReactorGroup } from '@/lib/reactions/types';
 import { useT } from '@/lib/i18n';
+import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 
 /**
@@ -22,19 +23,28 @@ export interface RowReactions {
     vocabulary: string[];
     /** Both absent for a reader who may not react here: the chips stay as counts. */
     onToggle?: (emoji: string, mine: boolean) => void;
-    onShowReactors?: () => void;
+    /** With an emoji when asked from that emoji's chip, so the list can lead with it. */
+    onShowReactors?: (emoji?: string) => void;
+    /** Where the names behind the chips are read; absent where they are not offered. */
+    reactorsUrl?: string;
 }
 
-/** A feed row's chips: the add button sits at the end of the chips whenever the reader may react. */
+/** A list row's chips: nothing at all until someone has reacted, and then the add button at the end. */
 export function RowReactionChips({ reactions }: { reactions: RowReactions }) {
-    return (
-        <ReactionChips
-            chips={reactions.chips}
-            onToggle={reactions.onToggle}
-            onShowReactors={reactions.onShowReactors}
-            add={reactions.onToggle === undefined ? undefined : { vocabulary: reactions.vocabulary, onPick: reactions.onToggle }}
-        />
-    );
+    return <ReactionChips {...chipProps(reactions)} add={reactions.chips.length > 0 ? addProps(reactions) : undefined} />;
+}
+
+/** A detail page's one item: the add button stands with or without chips, since nothing else on the page offers it. */
+export function DetailReactionChips({ reactions }: { reactions: RowReactions }) {
+    return <ReactionChips {...chipProps(reactions)} add={addProps(reactions)} />;
+}
+
+function chipProps(reactions: RowReactions) {
+    return { chips: reactions.chips, onToggle: reactions.onToggle, onShowReactors: reactions.onShowReactors, reactorsUrl: reactions.reactorsUrl };
+}
+
+function addProps(reactions: RowReactions) {
+    return reactions.onToggle === undefined ? undefined : { vocabulary: reactions.vocabulary, onPick: reactions.onToggle };
 }
 
 export const ICON_BUTTON =
@@ -44,18 +54,18 @@ export function ReactionChips({
     chips,
     onToggle,
     onShowReactors,
+    reactorsUrl,
     add,
 }: {
     chips: ReactionChip[];
     /** Absent for a reader who may not post here: the chips stay, the way to change them does not. */
     onToggle?: (emoji: string, mine: boolean) => void;
     /** Absent for a reader the names are not offered to. */
-    onShowReactors?: () => void;
-    /** A feed row keeps its add button here, at the end of the chips, and so draws the row even with none; a chat row offers it elsewhere. */
+    onShowReactors?: (emoji?: string) => void;
+    reactorsUrl?: string;
+    /** Given, the add button closes the row and the row is drawn even with no chips. */
     add?: { vocabulary: string[]; onPick: (emoji: string, mine: boolean) => void };
 }) {
-    const t = useT();
-
     if (chips.length === 0 && add === undefined) {
         return null;
     }
@@ -70,29 +80,89 @@ export function ReactionChips({
                         <span className="tabular-nums">{chip.count}</span>
                     </span>
                 ) : (
-                    <button
-                        key={chip.emoji}
-                        type="button"
-                        aria-pressed={chip.mine}
-                        onClick={() => onToggle(chip.emoji, chip.mine)}
-                        className={cn(CHIP_BASE, chip.mine ? CHIP_MINE : `${CHIP_THEIRS} hover:bg-accent hover:text-accent-foreground`)}
-                    >
-                        <span>{chip.emoji}</span>
-                        <span className="tabular-nums">{chip.count}</span>
-                    </button>
+                    <Chip key={chip.emoji} chip={chip} onToggle={onToggle} onShowReactors={onShowReactors} reactorsUrl={reactorsUrl} />
                 ),
             )}
             {add !== undefined && <ReactionAdd chips={chips} vocabulary={add.vocabulary} onPick={add.onPick} />}
-            {/* Only ever offered beside chips: with none there is nobody to name. */}
-            {chips.length > 0 && onShowReactors !== undefined && (
-                <Tip label={t('See who reacted')}>
-                    <button type="button" onClick={onShowReactors} className={ICON_BUTTON}>
-                        <Users className="size-4" aria-hidden />
-                    </button>
-                </Tip>
-            )}
         </div>
     );
+}
+
+/**
+ * The names are read each time the tip opens rather than kept: a toggle of one's own moves the count
+ * at once, and a kept list would still name the room as it was.
+ */
+function Chip({
+    chip,
+    onToggle,
+    onShowReactors,
+    reactorsUrl,
+}: {
+    chip: ReactionChip;
+    onToggle: (emoji: string, mine: boolean) => void;
+    onShowReactors?: (emoji?: string) => void;
+    reactorsUrl?: string;
+}) {
+    const t = useT();
+    const [names, setNames] = useState<string | null>(null);
+    const self = useRef<HTMLButtonElement>(null);
+    // Focused before the list opens: a held finger never focused the chip, and the list gives focus back to whatever held it.
+    const press = useLongPress(
+        () => {
+            self.current?.focus({ preventScroll: true });
+            onShowReactors?.(chip.emoji);
+        },
+        { enabled: onShowReactors !== undefined, own: true },
+    );
+
+    const button = (
+        <button
+            ref={self}
+            type="button"
+            aria-pressed={chip.mine}
+            onClick={() => onToggle(chip.emoji, chip.mine)}
+            className={cn(CHIP_BASE, chip.mine ? CHIP_MINE : `${CHIP_THEIRS} hover:bg-accent hover:text-accent-foreground`)}
+            {...press}
+        >
+            <span>{chip.emoji}</span>
+            <span className="tabular-nums">{chip.count}</span>
+        </button>
+    );
+
+    if (reactorsUrl === undefined) {
+        return button;
+    }
+
+    const read = () => {
+        setNames(null);
+        void fetch(reactorsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : null))
+            .then((payload) => {
+                const group = payload?.groups?.find((candidate) => candidate.emoji === chip.emoji);
+                if (group !== undefined) {
+                    setNames(reactorNames(group, t));
+                }
+            })
+            .catch(() => undefined);
+    };
+
+    return (
+        <Tooltip onOpenChange={(open) => open && read()}>
+            {/* No `aria-describedby`: the names are a tip for a hover, and the button's own name already says what it counts. */}
+            <TooltipTrigger asChild aria-describedby={undefined}>
+                {button}
+            </TooltipTrigger>
+            {names !== null && <TooltipContent>{names}</TooltipContent>}
+        </Tooltip>
+    );
+}
+
+/** "Rin, Aoi and 3 more": as many names as the group carries, then the rest as a count. */
+export function reactorNames(group: ReactorGroup, t: (key: string, replacements?: Record<string, string | number>) => string): string {
+    const listed = group.members.map((member) => member.name).join(', ');
+    const rest = group.count - group.members.length;
+
+    return rest > 0 ? `${listed} ${t('and :count more', { count: rest })}` : listed;
 }
 
 // The transparent border is the held state's canvas: mine recolours it the way a held chip does,

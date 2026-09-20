@@ -5,7 +5,9 @@ import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { ImagesField } from '@/components/images-field';
-import { RowReactionChips } from '@/components/reactions/reaction-bar';
+import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { RowSheetHost } from '@/components/row/row-sheet-host';
+import { useRowSheet } from '@/components/row/use-row-sheet';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
@@ -43,6 +45,7 @@ export default function GroupTopicShow() {
     const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
     const reactions = useReactions(topicCommentReactionEndpoints, renderGeneration);
     const bodyReactions = rowReactions(topic.id, topic.reactions, reactionVocabulary, canComment ? topicReactions : null);
+    const sheet = useRowSheet();
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -99,7 +102,7 @@ export default function GroupTopicShow() {
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />
                 <ImageGrid images={topic.images} variant="post" className="mt-2" />
-                <RowReactionChips reactions={bodyReactions} />
+                <DetailReactionChips reactions={bodyReactions} />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
@@ -146,6 +149,7 @@ export default function GroupTopicShow() {
                                 comment={comment}
                                 onDelete={deleteComment}
                                 reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canComment ? reactions : null)}
+                                onOpenActions={(row) => sheet.open(comment.id, row)}
                             />
                         ))}
                     </List>
@@ -165,8 +169,27 @@ export default function GroupTopicShow() {
                     </form>
                 </Panel>
             )}
-            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} onClose={topicReactions.closeReactors} />}
-            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
+            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} emoji={topicReactions.reactorsEmoji} onClose={topicReactions.closeReactors} />}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} onClose={reactions.closeReactors} />}
+            <RowSheetHost
+                sheet={sheet}
+                spec={(id) => {
+                    const comment = thread.comments.find((candidate) => candidate.id === id);
+                    if (comment === undefined) {
+                        return null;
+                    }
+
+                    return {
+                        body: comment.body,
+                        chips: canComment ? reactions.chips(comment.id, comment.reactions) : comment.reactions,
+                        vocabulary: reactionVocabulary,
+                        canReact: canComment,
+                        onToggle: (emoji, mine) => reactions.toggle(comment.id, emoji, mine),
+                        onShowReactors: () => reactions.showReactors(comment.id),
+                        onDelete: comment.deletable ? () => void deleteComment(comment.id) : undefined,
+                    };
+                }}
+            />
         </>
     );
 }

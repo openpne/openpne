@@ -1,39 +1,83 @@
-import { cleanup, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { RowReactionChips } from './reaction-bar';
+import { DetailReactionChips, RowReactionChips } from './reaction-bar';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});
 
 const chips = [{ emoji: '\u{1F44D}', count: 2, mine: false }];
+const vocabulary = ['\u{1F44D}'];
+const url = '/timeline/7/reactions';
 
-test('a reader who may react gets the chips as toggles, the add button and the reactor list', () => {
-    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary: ['\u{1F44D}'], onToggle: vi.fn(), onShowReactors: vi.fn() }} />);
+test('a list row with chips gives a reader who may react the toggles and the add button, and no reactor button', () => {
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
 
     expect(screen.getByRole('button', { name: /2/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'See who reacted' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+});
+
+test('a list row with no chips draws nothing, whoever reads it', () => {
+    const { container } = renderWithProviders(<RowReactionChips reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+
+    expect(container.querySelector('[data-reactions]')).toBeNull();
+});
+
+test('a detail item keeps its add button with no chips at all', () => {
+    renderWithProviders(<DetailReactionChips reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+
+    expect(screen.getByRole('button', { name: 'Add a reaction' })).toBeTruthy();
 });
 
 test('a reader who may not react gets counts and nothing to press', () => {
-    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary: ['\u{1F44D}'] }} />);
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary }} />);
 
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
 
-test('the reactor list is offered only where a handler for it is given, whatever the chips can do', () => {
-    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary: ['\u{1F44D}'], onToggle: vi.fn() }} />);
+test('a finger held on a chip asks for that emoji\'s reactors; a tap is the toggle alone', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const onToggle = vi.fn();
+    const onShowReactors = vi.fn();
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle, onShowReactors, reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
 
-    expect(screen.getByRole('button', { name: /2/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+    fireEvent.pointerDown(chip, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(chip);
+    fireEvent.click(chip);
+    expect(onToggle).toHaveBeenCalledWith('\u{1F44D}', false);
+    expect(onShowReactors).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(chip, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    expect(onShowReactors).toHaveBeenCalledWith('\u{1F44D}');
 });
 
-test('a row with nothing on it and no reader who may react draws nothing', () => {
-    const { container } = renderWithProviders(<RowReactionChips reactions={{ chips: [], vocabulary: ['\u{1F44D}'] }} />);
+test('a chip reached by keyboard names its reactors in a tip, read fresh each time', async () => {
+    const fetch = vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 3, members: [{ id: 1, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, { id: 2, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetch);
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
 
-    expect(container.querySelector('[data-reactions]')).toBeNull();
+    fireEvent.focus(chip);
+    expect((await screen.findAllByText('Rin, Aoi and 1 more')).length).toBeGreaterThan(0);
+    expect(fetch).toHaveBeenCalledWith(url, expect.objectContaining({ credentials: 'same-origin' }));
+
+    fireEvent.blur(chip);
+    fireEvent.focus(chip);
+    expect(fetch).toHaveBeenCalledTimes(2);
 });

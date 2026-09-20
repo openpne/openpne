@@ -712,35 +712,10 @@ The reverse of the polymorphic column: nothing cascades a reaction away with the
 
 ## The row's action bar
 
-`ROW_ACTIONS` ([`pages/group/talk/message-row.tsx`](../../resources/js/pages/group/talk/message-row.tsx))
-is one class string reaching a row's controls by two lanes.
-
-Where a cursor can point, the bar floats over the row's top-right and is revealed by hovering the row
-or by a keyboard reaching into it: a row at rest is what was said, not what can be done about it, and
-standing the controls in the flow would hold their width open on every row for controls nobody is
-looking at. The keyboard half is `:focus-visible`, never `:focus-within` — a click leaves focus on
-what was clicked, so a reader who follows a link or opens a picture in the body takes the pointer away
-and leaves the bar revealed over a row nobody is on. The browser withholds `:focus-visible` from a
-mouse click for exactly that reason, and Tab still brings the bar out where it is the only way to
-reach it.
-
-Where there is no cursor the controls are `sr-only` rather than hidden: a long press opens the sheet,
-a screen reader on a touch screen cannot hold one, and these buttons are that reader's only way to
-what the sheet offers.
-
-`pointer-events` is what keeps an invisible Delete from answering a finger on a hybrid machine — a
-laptop with a touch screen answers `pointer: fine`, so the controls stay drawn there, and
-`opacity: 0` alone does not stop a tap. The revealing states beat the default by selector specificity
-(0,2,0 against 0,1,0), not by source order, since Tailwind emits `pointer-fine` after them:
-simplifying the reveal to a bare `pointer-events-auto` would tie the specificity, hand the cascade
-back to source order, and leave the controls dead to every click. Nothing in the coarse lane writes
-`pointer-events` at all, so a touch screen reader's activation path is untouched.
-
-One class wins differently. The trailing `pointer-coarse:focus-within:absolute` re-floats the bar when
-a hardware keyboard tabs into the coarse lane, where `not-sr-only`'s `position: static` would
-otherwise drop it into the flow and shove the row taller on every Tab; it ties that rule's specificity
-and wins on emission order alone. If it ever loses, the bar goes back to standing in the flow, wider —
-a look, not a lockout.
+The bar and the press are the shared row's ([reactions.md](reactions.md#the-row), "The row"); a talk
+row adds the first three of the vocabulary to the bar for a cursor, a copy of the message's link, and
+names its delete for the message it removes. The sheet's link item copies this conversation's own
+address with `?m=<id>`, so a sub-directory install needs no telling.
 
 **The bar is taller than the row it belongs to**, and is meant to be: 38px of controls over a
 follow-up row that is one line of text. It overhangs both edges, so the row lifts above its siblings

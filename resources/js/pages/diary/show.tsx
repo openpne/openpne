@@ -7,7 +7,9 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
-import { RowReactionChips } from '@/components/reactions/reaction-bar';
+import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { RowSheetHost } from '@/components/row/row-sheet-host';
+import { useRowSheet } from '@/components/row/use-row-sheet';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
@@ -46,6 +48,7 @@ export default function DiaryShow() {
     const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
     const commentReactions = useReactions(diaryCommentReactionEndpoints, renderGeneration);
     const canReact = auth.user !== null;
+    const sheet = useRowSheet();
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -90,7 +93,7 @@ export default function DiaryShow() {
 
                 <ImageGrid images={diary.images} variant="post" className="mt-1" />
 
-                <RowReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
+                <DetailReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
 
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
@@ -161,6 +164,7 @@ export default function DiaryShow() {
                                 comment={comment}
                                 onDelete={deleteComment}
                                 reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canReact ? commentReactions : null)}
+                                onOpenActions={(row) => sheet.open(comment.id, row)}
                             />
                         ))}
                     </List>
@@ -185,8 +189,27 @@ export default function DiaryShow() {
             </Panel>
             )}
 
-            {diaryReactions.reactorsFor !== null && <ReactorsDialog url={diaryReactions.reactorsUrl(diaryReactions.reactorsFor)} onClose={diaryReactions.closeReactors} />}
-            {commentReactions.reactorsFor !== null && <ReactorsDialog url={commentReactions.reactorsUrl(commentReactions.reactorsFor)} onClose={commentReactions.closeReactors} />}
+            {diaryReactions.reactorsFor !== null && <ReactorsDialog url={diaryReactions.reactorsUrl(diaryReactions.reactorsFor)} emoji={diaryReactions.reactorsEmoji} onClose={diaryReactions.closeReactors} />}
+            {commentReactions.reactorsFor !== null && <ReactorsDialog url={commentReactions.reactorsUrl(commentReactions.reactorsFor)} emoji={commentReactions.reactorsEmoji} onClose={commentReactions.closeReactors} />}
+            <RowSheetHost
+                sheet={sheet}
+                spec={(id) => {
+                    const comment = thread.comments.find((candidate) => candidate.id === id);
+                    if (comment === undefined) {
+                        return null;
+                    }
+
+                    return {
+                        body: comment.body,
+                        chips: canReact ? commentReactions.chips(comment.id, comment.reactions) : comment.reactions,
+                        vocabulary: reactionVocabulary,
+                        canReact,
+                        onToggle: (emoji, mine) => commentReactions.toggle(comment.id, emoji, mine),
+                        onShowReactors: () => commentReactions.showReactors(comment.id),
+                        onDelete: comment.deletable ? () => void deleteComment(comment.id) : undefined,
+                    };
+                }}
+            />
         </>
     );
 }
