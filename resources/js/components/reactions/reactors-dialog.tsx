@@ -9,11 +9,23 @@ import { useT } from '@/lib/i18n';
 import type { ReactorGroup } from '@/lib/reactions/types';
 
 /** A refusal closes the dialog without a word (docs/internals/reactions.md, "Reading"). */
-export function ReactorsDialog({ url, emoji, onClose }: { url: string; /** The chip it was asked from, listed first. */ emoji?: string; onClose: () => void }) {
+export function ReactorsDialog({
+    url,
+    emoji,
+    returnFocusTo,
+    onClose,
+}: {
+    url: string;
+    /** The chip it was asked from, listed first. */
+    emoji?: string;
+    /** Given when what asked is gone by the time this mounts, as a sheet's item is; a chip that asked holds focus itself. */
+    returnFocusTo?: HTMLElement | null;
+    onClose: () => void;
+}) {
     const t = useT();
     const [groups, setGroups] = useState<ReactorGroup[] | null>(null);
     // Opened from a menu rather than a trigger of its own, so the dialog names its own way back: what held focus as it mounted.
-    const [opener] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
+    const [opener] = useState(() => returnFocusTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null));
 
     useEffect(() => {
         const controller = new AbortController();

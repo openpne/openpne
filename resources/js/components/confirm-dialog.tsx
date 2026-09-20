@@ -9,6 +9,8 @@ export type ConfirmOptions = {
     confirmLabel?: string;
     cancelLabel?: string;
     danger?: boolean;
+    /** Where focus returns when what asked is gone by then, as a sheet's item is. */
+    opener?: HTMLElement | null;
 };
 
 type ResolvedOptions = ConfirmOptions & { resolve: (ok: boolean) => void; opener: HTMLElement | null };
@@ -25,8 +27,8 @@ const EVENT_NAME = 'modern:confirm-request';
 export function useConfirm() {
     return (options: ConfirmOptions): Promise<boolean> =>
         new Promise<boolean>((resolve) => {
-            // Asked from a menu rather than a trigger of its own, so the question names its own way back: what holds focus as it is asked.
-            const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            // Asked without a trigger of its own, so the question names its own way back: what holds focus as it is asked.
+            const opener = options.opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
             window.dispatchEvent(new CustomEvent<ResolvedOptions>(EVENT_NAME, { detail: { ...options, resolve, opener } }));
         });
 }
