@@ -164,8 +164,8 @@ function Chip({
         >
             {/* Described by the tip: the names are the only way a keyboard or a screen reader has to them. */}
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            {/* Drawn from the moment the tip opens, so the id the trigger is described by exists while the names are still on their way. */}
-            <TooltipContent className="max-w-xs whitespace-normal break-words">{names ?? t('Loading…')}</TooltipContent>
+            {/* In the document from the moment the tip opens, so the id the trigger is described by exists while the names are on their way, but unseen until they arrive: a pointer passing over a chip opens the tip too. */}
+            <TooltipContent className={cn('max-w-xs whitespace-normal break-words', names === null && 'invisible')}>{names ?? t('Loading…')}</TooltipContent>
         </Tooltip>
     );
 }

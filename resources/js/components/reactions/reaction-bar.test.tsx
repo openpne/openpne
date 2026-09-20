@@ -75,6 +75,7 @@ test('a chip reached by keyboard names its reactors in a tip, read fresh each ti
 
     fireEvent.focus(chip);
     expect((await screen.findAllByText('Rin, Aoi and 1 more')).length).toBeGreaterThan(0);
+    expect(document.getElementById(chip.getAttribute('aria-describedby')!)?.className).not.toContain('invisible');
     expect(fetch).toHaveBeenCalledWith(url, expect.objectContaining({ credentials: 'same-origin' }));
 
     fireEvent.blur(chip);
@@ -82,7 +83,7 @@ test('a chip reached by keyboard names its reactors in a tip, read fresh each ti
     expect(fetch).toHaveBeenCalledTimes(2);
 });
 
-test('the tip describes the chip from the moment it opens, before the names arrive', async () => {
+test('the tip describes the chip from the moment it opens, before the names arrive, and is unseen until they do', async () => {
     vi.stubGlobal('fetch', () => new Promise<Response>(() => {}));
     renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
     const chip = screen.getByRole('button', { name: /2/ });
@@ -95,6 +96,7 @@ test('the tip describes the chip from the moment it opens, before the names arri
         return document.getElementById(id!);
     });
     expect(described?.textContent).toBe('Loading…');
+    expect(described?.className).toContain('invisible');
 });
 
 test('a tip lists twenty names and counts the rest, whatever the server sent', () => {
