@@ -387,7 +387,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         return ['topic' => ['topicBody'], 'event' => ['eventBody']];
     }
 
-    /** Past a chunk the body sweep re-runs its subquery for the next page and still reaches every row: the delete statements read [1000, remainder]. */
+    /** Past a page of the group's rows the body sweep goes on to the next and still reaches every row: the delete statements read [1000, remainder]. */
     public function test_the_body_sweep_pages_the_reactions_past_the_chunk_size(): void
     {
         $group = $this->group();

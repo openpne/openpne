@@ -46,7 +46,7 @@ final class BoardSweep
 
     /**
      * The reactions on the parent rows themselves, a page of the group's rows at a time by id: a
-     * subquery re-run per page of reactions cost chunks times the rows left (measured superlinear at 100k).
+     * subquery re-run per page of reactions costs chunks times the rows left (measured superlinear at 100k).
      * Call before the rows are deleted, or a page finds nothing to reach.
      */
     public static function rows(string $alias, string $table, int $groupId): void

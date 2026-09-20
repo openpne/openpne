@@ -59,7 +59,7 @@ touches — File bytes and reactions — across four kinds of content, in one tr
    the group id. The reactions are found a page at a time — a thousand of one topic's or event's
    comments, or a thousand messages in the room index's own order — and then a thousand of their
    reactions, and deleted by primary key in chunks: PHP holds a page, no statement grows with the
-   group, no page sorts more than it returns, and the sweep locks only the rows it deletes. The group's own top-image
+   group, no page sorts more than its thousand parents' reactions, and the sweep locks only the rows it deletes. The group's own top-image
    File id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
 3. The group is deleted, the cascade taking memberships, join requests, messages, topics, events,
