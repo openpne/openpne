@@ -72,6 +72,7 @@ test('a finger gets the same choices in a sheet; a chosen one closes it before i
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(remove).not.toHaveBeenCalled();
     await tick();
     expect(remove).toHaveBeenCalled();
     expect(remove.mock.results[0]?.value).toBe(screen.getByRole('button', { name: 'More actions' }));

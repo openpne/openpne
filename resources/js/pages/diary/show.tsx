@@ -83,7 +83,7 @@ export default function DiaryShow() {
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} isAi={diary.author.isAi} size="md" decorative />
-                    <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
+                    <Link href={`/member/${diary.author.id}`} className="min-w-0 truncate text-link hover:underline">
                         {diary.author.name}
                     </Link>
                     <AiChip isAi={diary.author.isAi} />

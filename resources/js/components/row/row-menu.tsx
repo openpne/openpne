@@ -9,6 +9,9 @@ import { useT } from '@/lib/i18n';
 import { useCoarsePointer } from '@/lib/use-coarse-pointer';
 import { cn } from '@/lib/utils';
 
+/** A finger's target past the 44px floor, as the compose menus give theirs; a cursor keeps the row's icon size. */
+const KEBAB = cn(ICON_BUTTON, 'pointer-coarse:size-11');
+
 export type RowMenuItem = {
     label: string;
     icon: LucideIcon;
@@ -57,7 +60,7 @@ export function RowMenu({ items }: { items: (RowMenuItem | null)[] }) {
         return (
             <>
                 <Tip label={t('More actions')}>
-                    <button ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={ICON_BUTTON}>
+                    <button ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={KEBAB}>
                         <Ellipsis className="size-4" aria-hidden />
                     </button>
                 </Tip>
@@ -73,7 +76,7 @@ export function RowMenu({ items }: { items: (RowMenuItem | null)[] }) {
         <DropdownMenu>
             <Tip label={t('More actions')}>
                 <DropdownMenuTrigger asChild>
-                    <button ref={trigger} type="button" className={ICON_BUTTON}>
+                    <button ref={trigger} type="button" className={KEBAB}>
                         <Ellipsis className="size-4" aria-hidden />
                     </button>
                 </DropdownMenuTrigger>

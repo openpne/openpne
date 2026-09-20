@@ -99,7 +99,7 @@ export default function GroupEventShow() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} isAi={event.author?.isAi ?? false} size="md" decorative />
                     {event.author ? (
-                        <Link href={`/member/${event.author.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${event.author.id}`} className="min-w-0 truncate text-link hover:underline">
                             {event.author.name}
                         </Link>
                     ) : (
