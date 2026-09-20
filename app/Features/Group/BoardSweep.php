@@ -45,13 +45,21 @@ final class BoardSweep
     }
 
     /**
-     * The reactions on the parent rows themselves, reached by the caller's subquery: a group holds
-     * far fewer topics and events than comments, so the subquery is re-run per page of reactions without paging the rows.
-     * Call before the rows are deleted, or the subquery finds nothing to reach.
+     * The reactions on the parent rows themselves, a page of the group's rows at a time by id: a
+     * subquery re-run per page of reactions cost chunks times the rows left (measured superlinear at 100k).
+     * Call before the rows are deleted, or a page finds nothing to reach.
      */
-    public static function rows(string $alias, Builder $ids): void
+    public static function rows(string $alias, string $table, int $groupId): void
     {
-        self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $ids));
+        $after = 0;
+        do {
+            $ids = DB::table($table)->where('group_id', $groupId)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
+            if ($ids === []) {
+                break;
+            }
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $ids));
+            $after = (int) end($ids);
+        } while (count($ids) === self::CHUNK);
     }
 
     /**

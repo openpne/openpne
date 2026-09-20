@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import GroupEventShow from './show';
@@ -93,4 +93,18 @@ test('a non-member reading an open board sees the counts and has nothing to pres
     expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
+});
+
+/** The body and its comments are reacted to on different URLs, and nothing else ties the page's add button to the body's. */
+test('reacting to the body posts to the body route, not a comment', async () => {
+    const fetched = vi.fn((url: string) => Promise.resolve(new Response(JSON.stringify({ reactions: [], url }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+    vi.stubGlobal('fetch', fetched);
+    renderShow(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a reaction' }));
+    fireEvent.click(screen.getByRole('button', { name: '\u{1F44D}' }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(fetched.mock.calls[0]?.[0]).toBe('/events/12/reactions');
+    vi.unstubAllGlobals();
 });
