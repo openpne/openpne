@@ -84,7 +84,6 @@ test('a reader who may not react and did not write the post has no bar at all', 
     expect(container.querySelectorAll('button')).toHaveLength(0);
 });
 
-
 test('a row with nothing the sheet could offer is not pressed, even with a page ready to open one', () => {
     vi.useFakeTimers();
     stubCoarsePointer();

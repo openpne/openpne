@@ -82,7 +82,6 @@ test('a chip reached by keyboard names its reactors in a tip, read fresh each ti
     expect(fetch).toHaveBeenCalledTimes(2);
 });
 
-
 test('the tip describes the chip from the moment it opens, before the names arrive', async () => {
     vi.stubGlobal('fetch', () => new Promise<Response>(() => {}));
     renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
