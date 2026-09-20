@@ -10,8 +10,10 @@ import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -45,6 +47,7 @@ export default function TimelineShow() {
     const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
     const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -100,6 +103,8 @@ export default function TimelineShow() {
             </Panel>
 
             {replies.length > 0 && (
+                <>
+                <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
@@ -109,11 +114,15 @@ export default function TimelineShow() {
                                 viewerId={viewerId}
                                 onDelete={deleteReply}
                                 reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, reactions)}
-                                onOpenActions={(row) => sheet.open(reply.id, row)}
+                                onOpenActions={(row) => {
+                                    hint.dismiss();
+                                    sheet.open(reply.id, row);
+                                }}
                             />
                         ))}
                     </List>
                 </Panel>
+                </>
             )}
 
             {canPost && (

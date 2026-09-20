@@ -34,6 +34,8 @@ default applies to every member who has not made an explicit choice. The default
 - A **Visibility** key has a concrete default (e.g. `DiaryDefaultVisibility` → Members), so a
   read always yields a value. A corrupted / non-digit stored value falls back to that default,
   never to the least-restrictive `Open` (the `ctype_digit` guard against PHP's `(int) 'foo' === 0`).
+- `RowActionsHint` is written only as `dismissed`, by a bodyless POST the row sheet fires once
+  (`member.config.row_actions_hint`); a corrupt row shows the hint once more.
 - `PreferredSurface` is **tri-state**: its default is `null`, meaning "no member choice — defer
   to the [surface fallback](feature-modules.md#surface-selection)". So it has a distinct read,
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going

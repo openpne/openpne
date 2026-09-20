@@ -28,8 +28,10 @@ import { TalkMessageRow } from './message-row';
 import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { SelectTextSheet } from '@/components/row/select-text-sheet';
 import { useRowSheet } from '@/components/row/use-row-sheet';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { TalkUnreadDigestCard } from './unread-digest';
 import type { TalkMessage, TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
@@ -369,6 +371,7 @@ export default function GroupTalkIndex() {
     const closeReactors = useCallback(() => setReactorsFor(null), []);
 
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
     const sheetMessage = sheet.press === null ? undefined : messages.find((message) => message.id === sheet.press!.id);
 
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
@@ -417,6 +420,7 @@ export default function GroupTalkIndex() {
 
             {/* The composer under this list is not a Card and imports the same edge constant, so the
                 two cannot end on different lines (components/card.tsx). */}
+            <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
             <Panel flush variant="bleed" className="mb-0 lg:mb-4">
                 {stream.hasOlder && (
                     <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
@@ -474,7 +478,10 @@ export default function GroupTalkIndex() {
                                 <TalkMessageRow
                                     message={message}
                                     onDelete={remove}
-                                    onOpenActions={(row) => sheet.open(message.id, row)}
+                                    onOpenActions={(row) => {
+                                        hint.dismiss();
+                                        sheet.open(message.id, row);
+                                    }}
                                     onReply={() => setReplyTo(message)}
                                     onJumpToReply={jumpToReply}
                                     canReply={canPost}

@@ -31,6 +31,9 @@ enum PreferenceKey: string
     /** Whether pictures that animate play on their own in Modern feeds (App\Support\Autoplay); default On. */
     case AutoplayAnimations = 'autoplay_animations';
 
+    /** Whether the first-use hint for a row's actions is still to be shown (App\Support\RowActionsHint); default Shown. */
+    case RowActionsHint = 'row_actions_hint';
+
     /** The OpenPNE 3 `member_config.name` this preference upgrades from, or null if it is OpenPNE 4-native. */
     public function op3SourceName(): ?string
     {
@@ -42,6 +45,7 @@ enum PreferenceKey: string
             self::ComposeEditor => null,
             self::PushDelivery => null,
             self::AutoplayAnimations => null,
+            self::RowActionsHint => null,
         };
     }
 
@@ -62,7 +66,7 @@ enum PreferenceKey: string
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
      * null — "no member choice, defer to SurfaceResolver's mode default".
      */
-    public function default(): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|null
+    public function default(): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|RowActionsHint|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility => Visibility::Members,
@@ -74,11 +78,12 @@ enum PreferenceKey: string
             // Subscribing a device is the consent; this key only pauses it afterwards.
             self::PushDelivery => PushDelivery::Enabled,
             self::AutoplayAnimations => Autoplay::On,
+            self::RowActionsHint => RowActionsHint::Shown,
         };
     }
 
     /** Decode the stored string `value` to the typed value; an absent/invalid value is the default. */
-    public function decode(?string $value): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|null
+    public function decode(?string $value): Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|RowActionsHint|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility, self::AgeVisibility => $this->decodeVisibility($value),
@@ -91,11 +96,13 @@ enum PreferenceKey: string
             self::PushDelivery => $value === null ? PushDelivery::Enabled : (PushDelivery::tryFrom($value) ?? PushDelivery::Enabled),
             // A corrupt row reads Off, not the default: motion nobody chose is the side to fail to.
             self::AutoplayAnimations => $value === null ? Autoplay::On : (Autoplay::tryFrom($value) ?? Autoplay::Off),
+            // A corrupt row shows the hint once more: the only value ever written is Dismissed.
+            self::RowActionsHint => $value === null ? RowActionsHint::Shown : (RowActionsHint::tryFrom($value) ?? RowActionsHint::Shown),
         };
     }
 
     /** Encode a typed value to the stored string `value`. */
-    public function encode(Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay $value): string
+    public function encode(Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|RowActionsHint $value): string
     {
         return (string) $value->value;
     }

@@ -65,7 +65,7 @@ function renderShow(user: { id: number } | null) {
     inertia.page = {
         component: 'diary/show',
         url: '/diary/5',
-        props: { diary, thread, older: null, newer: null, auth: { user }, reactionVocabulary: ['\u{1F44D}'], renderGeneration: 'g1', locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png' } },
+        props: { diary, thread, older: null, newer: null, auth: { user }, rowActionsHint: user === null ? null : 'shown', reactionVocabulary: ['\u{1F44D}'], renderGeneration: 'g1', locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png' } },
     };
 
     return renderWithProviders(<DiaryShow />);
@@ -101,4 +101,25 @@ test('a guest is offered no way to the names: the chips are counts and the held 
     expect(screen.getByRole('dialog', { name: 'Post actions' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Select text' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+});
+
+test('the hint stands above the comments until a comment is held, and is written off then', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    renderShow({ id: 9 });
+    expect(screen.getByText('Hold a post to react, reply or copy it.')).toBeTruthy();
+
+    fireEvent.pointerDown(screen.getByRole('listitem'), { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+
+    expect(screen.queryByText('Hold a post to react, reply or copy it.')).toBeNull();
+    expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
+
+    cleanup();
+    renderShow(null);
+    expect(screen.queryByText('Hold a post to react, reply or copy it.')).toBeNull();
 });

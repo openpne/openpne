@@ -6,8 +6,10 @@ import { UserText } from '@/components/user-text';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
@@ -49,6 +51,7 @@ export default function GroupEventShow() {
     const reactions = useReactions(eventCommentReactionEndpoints, renderGeneration);
     const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -153,6 +156,7 @@ export default function GroupEventShow() {
                 )}
             </Panel>
 
+            <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
             <Panel title={commentsPhrase(t, thread.total)} flush>
                 {thread.lastPage > 1 && (
                     <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
@@ -186,7 +190,10 @@ export default function GroupEventShow() {
                                 comment={comment}
                                 onDelete={deleteComment}
                                 reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canComment ? reactions : null)}
-                                onOpenActions={(row) => sheet.open(comment.id, row)}
+                                onOpenActions={(row) => {
+                                    hint.dismiss();
+                                    sheet.open(comment.id, row);
+                                }}
                             />
                         ))}
                     </List>
