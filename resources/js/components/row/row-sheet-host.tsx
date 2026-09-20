@@ -11,7 +11,7 @@ export function RowSheetHost({ sheet, spec }: { sheet: ReturnType<typeof useRowS
     return (
         <>
             {sheet.press !== null && pressed !== null && <RowSheet {...pressed} returnFocusTo={sheet.press.row} onSelectText={sheet.selectText} onClose={sheet.close} />}
-            {sheet.selecting !== null && <SelectTextSheet body={sheet.selecting.body} returnFocusTo={sheet.selecting.row} onClose={sheet.closeSelect} />}
+            {sheet.selecting !== null && <SelectTextSheet text={sheet.selecting.text} returnFocusTo={sheet.selecting.row} onClose={sheet.closeSelect} />}
         </>
     );
 }

@@ -153,6 +153,8 @@ export default function TimelineShow() {
 
                     return {
                         body: reply.body,
+                        author: reply.author,
+                        createdAt: reply.createdAt,
                         chips: reactions.chips(reply.id, reply.reactions),
                         vocabulary: reactionVocabulary,
                         canReact: true,

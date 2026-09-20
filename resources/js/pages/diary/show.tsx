@@ -201,6 +201,8 @@ export default function DiaryShow() {
 
                     return {
                         body: comment.body,
+                        author: comment.author,
+                        createdAt: comment.createdAt,
                         chips: canReact ? commentReactions.chips(comment.id, comment.reactions) : comment.reactions,
                         vocabulary: reactionVocabulary,
                         canReact,

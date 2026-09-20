@@ -539,7 +539,7 @@ export default function GroupTalkIndex() {
                     onClose={sheet.close}
                 />
             )}
-            {sheet.selecting !== null && <SelectTextSheet body={sheet.selecting.body} returnFocusTo={sheet.selecting.row} onClose={sheet.closeSelect} />}
+            {sheet.selecting !== null && <SelectTextSheet text={sheet.selecting.text} returnFocusTo={sheet.selecting.row} onClose={sheet.closeSelect} />}
 
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />

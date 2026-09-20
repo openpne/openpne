@@ -1,4 +1,5 @@
 import { RowSheet, canCopyLink, canCopyText } from '@/components/row/row-sheet';
+import type { SelectableText } from '@/components/row/select-text-sheet';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import type { TalkMessage } from './types';
@@ -45,7 +46,7 @@ export function TalkMessageSheet({
     onReply: () => void;
     onDelete: (returnFocusTo: HTMLElement | null) => void;
     returnFocusTo: HTMLElement | null;
-    onSelectText: (body: string) => void;
+    onSelectText: (text: SelectableText) => void;
     onClose: () => void;
 }) {
     const t = useT();
@@ -53,6 +54,8 @@ export function TalkMessageSheet({
     return (
         <RowSheet
             body={message.body}
+            author={message.author}
+            createdAt={message.createdAt}
             chips={chips}
             vocabulary={vocabulary}
             canReact={canReact}

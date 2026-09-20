@@ -1,5 +1,6 @@
 import { Copy, Link, Reply, TextSelect, Trash2, Users } from 'lucide-react';
 import { ActionSheet, SHEET_GROUP, SHEET_ITEM } from './action-sheet';
+import type { SelectableText } from './select-text-sheet';
 import type { ReactionChip } from '@/lib/reactions/types';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,9 @@ export function rowLink(path: string): string {
 
 export interface RowSheetProps {
     body: string;
+    /** Who wrote the row and when, drawn again beside the body when it is offered for selection. */
+    author?: SelectableText['author'];
+    createdAt?: string;
     /** The row's chips as it draws them — taps still on the wire included. */
     chips: ReactionChip[];
     vocabulary: string[];
@@ -44,8 +48,8 @@ export interface RowSheetProps {
     link?: () => string;
     /** Where focus goes when the sheet closes: the row that was pressed. */
     returnFocusTo: HTMLElement | null;
-    /** Asked to show the body on its own, selectable, once the sheet has left. */
-    onSelectText: (body: string) => void;
+    /** Asked to show the row's words on their own, selectable, once the sheet has left. */
+    onSelectText: (text: SelectableText) => void;
     onClose: () => void;
     /** The sheet's name for a screen reader; the default names a post. */
     title?: string;
@@ -70,7 +74,7 @@ export function rowSheetOpens(props: { body: string; chips: ReactionChip[]; canR
  * suppresses the selection lens. Every choice closes the sheet before what it opens arrives: two
  * modals over each other would fight over the focus.
  */
-export function RowSheet({ body, chips, vocabulary, canReact, onToggle, onShowReactors, onReply, onDelete, link, returnFocusTo, onSelectText, onClose, title, deleteLabel }: RowSheetProps) {
+export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact, onToggle, onShowReactors, onReply, onDelete, link, returnFocusTo, onSelectText, onClose, title, deleteLabel }: RowSheetProps) {
     const t = useT();
     const canCopy = canCopyText(body);
     const canLink = link !== undefined && canCopyLink();
@@ -132,7 +136,7 @@ export function RowSheet({ body, chips, vocabulary, canReact, onToggle, onShowRe
                             className={SHEET_ITEM}
                             onClick={() => {
                                 onClose();
-                                onSelectText(body);
+                                onSelectText({ body, author, createdAt });
                             }}
                         >
                             <TextSelect className="size-5 shrink-0" aria-hidden />

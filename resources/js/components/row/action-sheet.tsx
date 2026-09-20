@@ -17,6 +17,8 @@ export function ActionSheet({
     onOpenChange,
     title,
     returnFocusTo,
+    titleVisible = false,
+    onOpened,
     openedByPress = false,
     children,
 }: {
@@ -24,6 +26,10 @@ export function ActionSheet({
     onOpenChange: (open: boolean) => void;
     title: string;
     returnFocusTo: RefObject<HTMLElement | null>;
+    /** Shown as a heading rather than read only to a screen reader. */
+    titleVisible?: boolean;
+    /** Run once the sheet holds focus, for what needs its content in the document. */
+    onOpened?: () => void;
     /** True when a finger still on the screen opened it: its lifting lands a click on whatever the sheet now covers. */
     openedByPress?: boolean;
     children: ReactNode;
@@ -88,10 +94,11 @@ export function ActionSheet({
                 onOpenAutoFocus={(event) => {
                     event.preventDefault();
                     contentRef.current?.focus({ preventScroll: true });
+                    onOpened?.();
                 }}
             >
-                <DialogTitle className="sr-only">{title}</DialogTitle>
                 <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
+                <DialogTitle className={titleVisible ? 'mb-4 text-center text-lg font-semibold' : 'sr-only'}>{title}</DialogTitle>
                 {children}
             </SheetContent>
         </Dialog>

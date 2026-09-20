@@ -181,6 +181,8 @@ export default function GroupTopicShow() {
 
                     return {
                         body: comment.body,
+                        author: comment.author,
+                        createdAt: comment.createdAt,
                         chips: canComment ? reactions.chips(comment.id, comment.reactions) : comment.reactions,
                         vocabulary: reactionVocabulary,
                         canReact: canComment,

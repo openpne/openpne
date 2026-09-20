@@ -218,7 +218,7 @@ test('selecting text closes the sheet and hands the body on, and a message of pi
     fireEvent.click(screen.getByRole('button', { name: 'Select text' }));
 
     expect(spies.onClose).toHaveBeenCalled();
-    expect(spies.onSelectText).toHaveBeenCalledWith('Bring the good rope');
+    expect(spies.onSelectText).toHaveBeenCalledWith({ body: 'Bring the good rope', author: message().author, createdAt: message().createdAt });
 
     cleanup();
     open({ body: '   ' });

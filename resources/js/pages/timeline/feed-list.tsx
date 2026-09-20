@@ -47,6 +47,8 @@ export function TimelineFeedList({
 
                     return {
                         body: post.body,
+                        author: post.author,
+                        createdAt: post.createdAt,
                         chips: reactions.chips(post.id, post.reactions),
                         vocabulary: reactionVocabulary,
                         canReact: true,
