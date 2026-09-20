@@ -50,7 +50,7 @@ const SHEET_SIDE = {
     bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]',
 };
 
-const SHEET_ENTRANCE = {
+const SHEET_MOTION = {
     left: '',
     right: 'motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right',
     bottom: 'motion-safe:data-[state=open]:animate-sheet-from-bottom',
@@ -66,9 +66,9 @@ export function SheetContent({
     children,
     closeLabel = 'Close',
     side = 'left',
-    entrance = true,
+    animated = true,
     ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom'; entrance?: boolean }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom'; animated?: boolean }) {
     return (
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -78,7 +78,7 @@ export function SheetContent({
                     // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
                     'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
                     SHEET_SIDE[side],
-                    entrance && SHEET_ENTRANCE[side],
+                    animated && SHEET_MOTION[side],
                     className,
                 )}
                 {...props}

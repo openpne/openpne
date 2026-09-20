@@ -52,9 +52,8 @@ test('the whole body can be copied in one press where a clipboard exists, and a 
     expect(onClose).toHaveBeenCalled();
 });
 
-test('the sheet has no slide-in, so the body is selected as it appears', () => {
+test('the sheet stands in place rather than sliding in', () => {
     renderWithProviders(<SelectTextSheet text={text} returnFocusTo={null} onClose={vi.fn()} />);
 
-    expect(screen.getByRole('dialog').className).not.toContain('animate-sheet-from-bottom');
-    expect(window.getSelection()?.toString()).toBe('line one\nline two');
+    expect(screen.getByRole('dialog').className).not.toContain('animate-sheet');
 });

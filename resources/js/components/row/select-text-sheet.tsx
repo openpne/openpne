@@ -16,7 +16,7 @@ export interface SelectableText {
 
 /**
  * A row suppresses the selection lens, so this is the one place a finger can select part of its body: the row drawn again, its body selected as it appears.
- * No slide-in: iOS paints a selection made during one where the content stood then, and one made after it comes late.
+ * Drawn in place: iOS paints a selection made during a slide-in where the content stood at that instant, and one made after it comes late.
  */
 export function SelectTextSheet({ text, returnFocusTo, onClose }: { text: SelectableText; returnFocusTo: HTMLElement | null; onClose: () => void }) {
     const t = useT();
@@ -29,7 +29,7 @@ export function SelectTextSheet({ text, returnFocusTo, onClose }: { text: Select
     };
 
     return (
-        <ActionSheet open titleVisible entrance={false} onOpened={selectAll} onOpenChange={(next) => !next && onClose()} title={t('Select text')} returnFocusTo={{ current: returnFocusTo }}>
+        <ActionSheet open titleVisible animated={false} onOpened={selectAll} onOpenChange={(next) => !next && onClose()} title={t('Select text')} returnFocusTo={{ current: returnFocusTo }}>
             <div className="min-h-[40vh] space-y-3">
                 {text.author !== undefined && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
