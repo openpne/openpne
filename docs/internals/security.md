@@ -271,8 +271,8 @@ window.
 
 ## Write rate limits
 
-Content-posting and mail-triggering member writes, and the keystroke-driven endpoints a compose
-form calls, carry named per-minute limiters
+Content-posting and mail-triggering member writes, the keystroke-driven endpoints a compose form
+calls, and the one read that amplifies, the reactor list, carry named per-minute limiters
 ([`AppServiceProvider`](../../app/Providers/AppServiceProvider.php)), attached per route in
 `routes/web.php` and pinned by `WriteThrottleRoutesTest`, which also sweeps the route inventory so
 a route carrying one of these limiters cannot go unlisted. Each has two limbs: a per-member cap
@@ -287,6 +287,7 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (friend page and notification center) |
 | `group-join` | 15 / 40 | member id / client IP | group join, member approve, member decline, AI account group join |
 | `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary, group boards) |
+| `reaction-read` | 120 / 240 | member id / client IP | reactor list (who reacted) on the same four surfaces; read on every open of a chip's tip, and each answer lists members with avatars |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
