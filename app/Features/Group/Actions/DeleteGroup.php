@@ -62,8 +62,8 @@ class DeleteGroup
                 ->all();
 
             BoardSweep::messages((new GroupMessage)->getMorphClass(), $groupId);
-            BoardSweep::rows((new GroupTopic)->getMorphClass(), clone $topics);
-            BoardSweep::rows((new GroupEvent)->getMorphClass(), clone $events);
+            BoardSweep::rows((new GroupTopic)->getMorphClass(), 'group_topics', $groupId);
+            BoardSweep::rows((new GroupEvent)->getMorphClass(), 'group_events', $groupId);
             BoardSweep::comments((new GroupTopicComment)->getMorphClass(), 'group_topic_comments', 'group_topic_id', (clone $topics)->orderBy('id')->pluck('id'));
             BoardSweep::comments((new GroupEventComment)->getMorphClass(), 'group_event_comments', 'group_event_id', (clone $events)->orderBy('id')->pluck('id'));
 
