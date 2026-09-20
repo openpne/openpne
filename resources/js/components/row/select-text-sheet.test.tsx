@@ -11,7 +11,6 @@ afterEach(() => {
     cleanup();
     window.getSelection()?.removeAllRanges();
     delete (navigator as { clipboard?: unknown }).clipboard;
-    delete (HTMLElement.prototype as { getAnimations?: unknown }).getAnimations;
 });
 
 const text = { body: 'line one\nline two', author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:00:00+09:00' };
@@ -53,16 +52,9 @@ test('the whole body can be copied in one press where a clipboard exists, and a 
     expect(onClose).toHaveBeenCalled();
 });
 
-test('while the sheet is still sliding in the body is not yet selected; it is once the slide has ended', async () => {
-    let finish: (() => void) | undefined;
-    const finished = new Promise<void>((resolve) => {
-        finish = resolve;
-    });
-    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { value: () => [{ finished }], configurable: true });
+test('the sheet has no slide-in, so the body is selected as it appears', () => {
     renderWithProviders(<SelectTextSheet text={text} returnFocusTo={null} onClose={vi.fn()} />);
 
-    expect(window.getSelection()?.toString()).toBe('');
-    finish?.();
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(screen.getByRole('dialog').className).not.toContain('animate-sheet-from-bottom');
     expect(window.getSelection()?.toString()).toBe('line one\nline two');
 });

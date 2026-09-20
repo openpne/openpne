@@ -31,6 +31,7 @@ export function ActionSheet({
     titleVisible = false,
     onOpened,
     openedByPress = false,
+    entrance = true,
     children,
 }: {
     open: boolean;
@@ -43,6 +44,8 @@ export function ActionSheet({
     onOpened?: () => void;
     /** True when a finger still on the screen opened it: its lifting lands a click on whatever the sheet now covers. */
     openedByPress?: boolean;
+    /** False for a sheet that must stand where it is drawn from its first frame. */
+    entrance?: boolean;
     children: ReactNode;
 }) {
     const t = useT();
@@ -81,6 +84,7 @@ export function ActionSheet({
                 ref={contentRef}
                 tabIndex={-1}
                 side="bottom"
+                entrance={entrance}
                 closeLabel={t('Close')}
                 aria-describedby={undefined}
                 onInteractOutside={(event) => {
