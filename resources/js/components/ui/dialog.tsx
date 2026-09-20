@@ -42,7 +42,7 @@ export function DialogContent({
 
 /**
  * Each entry overrides the base sheet, which is written for a full-height side drawer. The bottom
- * one restates the top padding because it has no top edge to inset from.
+ * one has no closing animation: a row's spoken answer to a choice made in it is written once the sheet has unmounted and the page is no longer aria-hidden.
  */
 const SHEET_SIDE = {
     left: 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',

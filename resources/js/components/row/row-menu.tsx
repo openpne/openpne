@@ -15,9 +15,15 @@ export type RowMenuItem = {
     disabled?: boolean;
     /** Drawn apart from the rest, after a divider: the one choice that cannot be taken back. */
     destructive?: boolean;
-    /** Runs inside the choosing gesture rather than after the overlay has closed: for a clipboard write, which a browser may allow only there; not for a choice that opens a dialog. */
-    immediate?: boolean;
-} & ({ onSelect: () => void; href?: never } | { href: string; onSelect?: never });
+} & (
+    | {
+          onSelect: () => void;
+          href?: never;
+          /** Runs inside the choosing gesture rather than after the overlay has closed: for a clipboard write, which a browser may allow only there; not for a choice that opens a dialog. */
+          immediate?: boolean;
+      }
+    | { href: string; onSelect?: never; immediate?: never }
+);
 
 /** Null for a reader the names are not offered to; disabled, not absent, while nobody has reacted, so the menu keeps its shape. */
 export function reactorsItem(t: (key: string) => string, reactions: RowReactions): RowMenuItem | null {

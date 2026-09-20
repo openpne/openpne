@@ -74,6 +74,16 @@ test('who reacted is listed for a reader who may see it, disabled while nobody h
     expect(screen.getByRole('menuitem', { name: 'See who reacted' }).getAttribute('aria-disabled')).toBe('true');
 });
 
+test('a finger gets an immediate choice run inside the tap, before the sheet has gone', () => {
+    coarse.value = true;
+    const copy = vi.fn();
+    renderWithProviders(<RowMenu items={[{ label: 'Copy', icon: Pencil, immediate: true, onSelect: copy }]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(copy).toHaveBeenCalled();
+});
+
 test('a finger gets the same choices in a sheet; a chosen one closes it before it runs, and focus comes back to the kebab either way', async () => {
     coarse.value = true;
     const remove = vi.fn(() => document.activeElement);
