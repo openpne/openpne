@@ -32,7 +32,7 @@ export function ActionSheet({
     const contentRef = useRef<HTMLDivElement>(null);
     // The press that opened the sheet is still down until its first pointerup; the click that release synthesises is not a choice, a later finger's is.
     const press = useRef<{ down: boolean; releasedAt: number }>({ down: false, releasedAt: 0 });
-    // A layout effect: the finger can lift between the commit that mounts the sheet and a passive effect (not reproducible under act(), which flushes both).
+    // A layout effect: a passive effect ran 15ms after the sheet's node on a phone, and a finger lifts in that frame (not reproducible under act(), which flushes both).
     useLayoutEffect(() => {
         if (!open || !openedByPress) {
             return;

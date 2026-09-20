@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import GroupEventShow from './show';
 import type { EventDetail, EventThread } from '@/pages/community/types';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -24,6 +25,7 @@ vi.mock('@inertiajs/react', () => ({
 
 afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
 });
 
@@ -47,16 +49,18 @@ const event: EventDetail = {
     reactions: [{ emoji: '\u{1F44D}', count: 2, mine: false }],
 };
 
+const comment = { id: 22, number: 1, body: 'a comment', images: [], linkCard: null, author: { id: 4, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:05:00+09:00', deletable: false, reactions: [{ emoji: '\u{1F44D}', count: 1, mine: false }] };
+
 const thread: EventThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = event.reactions) {
+function renderShow(canComment: boolean, reactions = event.reactions, comments: EventThread['comments'] = []) {
     inertia.page = {
         component: 'group/event/show',
         url: '/events/12',
         props: {
             group: { id: 2, name: 'A group', description: '', memberCount: 1, imageUrl: null, category: null },
             event: { ...event, reactions },
-            thread,
+            thread: { ...thread, comments, total: comments.length },
             canComment,
             canEdit: false,
             isParticipant: false,
@@ -108,4 +112,17 @@ test('the names behind the body\'s chip are read from the body route', () => {
     fireEvent.focus(screen.getByRole('button', { name: '\u{1F44D} 2' }));
     expect(fetch).toHaveBeenCalledWith('/events/12/reactions', expect.objectContaining({ credentials: 'same-origin' }));
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/comments/'), expect.anything());
+});
+
+test('a non-member\'s held comment raises a sheet without the reactor item', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    renderShow(false, event.reactions, [comment]);
+
+    fireEvent.pointerDown(screen.getByRole('listitem'), { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    expect(screen.getByRole('button', { name: 'Select text' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });

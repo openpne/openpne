@@ -82,3 +82,27 @@ test('a finger held on the row hands the row to the page; a press on a chip does
     });
     expect(onOpenActions).toHaveBeenCalledWith(row);
 });
+
+test('a chip tapped right after the row\'s press keeps its toggle: the row swallows only its own release', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const onToggle = vi.fn();
+    renderWithProviders(<DiaryCommentRow comment={comment} onDelete={vi.fn()} reactions={{ chips: comment.reactions, vocabulary: ['\u{1F44D}'], onToggle, onShowReactors: vi.fn(), reactorsUrl: '/x' }} onOpenActions={vi.fn()} />);
+    const row = screen.getByRole('listitem');
+    const chip = screen.getByRole('button', { name: /1/ });
+
+    fireEvent.pointerDown(row, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    fireEvent.pointerUp(row);
+    expect(fireEvent.click(row)).toBe(false);
+
+    clock.mockReturnValue(1200);
+    fireEvent.pointerDown(chip, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(chip);
+    fireEvent.click(chip);
+    expect(onToggle).toHaveBeenCalledWith('\u{1F44D}', false);
+    clock.mockRestore();
+});

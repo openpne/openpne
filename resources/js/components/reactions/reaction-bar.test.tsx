@@ -104,7 +104,7 @@ test('a tip lists twenty names and counts the rest, whatever the server sent', (
     expect(reactorNames({ emoji: '\u{1F44D}', count: 2, members: members.slice(0, 2) }, fakeT)).toBe('m1, m2');
 });
 
-test('a finger on a chip opens no tip and reads nothing: the names are the hold\'s, in the list', () => {
+test('a finger on a chip opens no tip and reads nothing (Radix leaves a pointerdown-born focus closed; this pins that upstream behaviour)', () => {
     vi.useFakeTimers();
     stubCoarsePointer();
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
