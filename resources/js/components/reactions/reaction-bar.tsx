@@ -112,6 +112,9 @@ function Chip({
     const reading = useRef<AbortController | null>(null);
     const kept = useRef<{ key: string; names: string } | null>(null);
     const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const key = `${chip.count}|${chip.mine}`;
+    const keyNow = useRef(key);
+    keyNow.current = key;
     const stop = () => {
         if (pending.current !== null) {
             clearTimeout(pending.current);
@@ -147,9 +150,6 @@ function Chip({
         return button;
     }
 
-    const key = `${chip.count}|${chip.mine}`;
-    const keyNow = useRef(key);
-    keyNow.current = key;
     // Each open aborts the last read, so a slow answer cannot land on a later open; only names are kept, so a refused or empty read is tried again.
     const read = () => {
         reading.current?.abort();
