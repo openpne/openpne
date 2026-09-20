@@ -99,11 +99,37 @@ test('the tip describes the chip from the moment it opens, before the names arri
     expect(described?.className).toContain('invisible');
 });
 
+test('a read that fails, or finds the chip gone, leaves the tip unseen and the chip undescribed', async () => {
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 404 })));
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.focus(chip);
+    await vi.waitFor(() => {
+        const described = document.getElementById(chip.getAttribute('aria-describedby') ?? '');
+        expect(described?.textContent).toBe('');
+        expect(described?.className).toContain('invisible');
+    });
+
+    cleanup();
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(JSON.stringify({ groups: [] }), { status: 200 })));
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const gone = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.focus(gone);
+    await vi.waitFor(() => {
+        const described = document.getElementById(gone.getAttribute('aria-describedby') ?? '');
+        expect(described?.textContent).toBe('');
+        expect(described?.className).toContain('invisible');
+    });
+});
+
 test('a tip lists twenty names and counts the rest, whatever the server sent', () => {
     const members = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `m${i + 1}`, imageUrl: null, avatarColor: null, isAi: false }));
 
     expect(reactorNames({ emoji: '\u{1F44D}', count: 60, members }, fakeT)).toBe(`${members.slice(0, 20).map((m) => m.name).join(', ')} and 40 more`);
     expect(reactorNames({ emoji: '\u{1F44D}', count: 2, members: members.slice(0, 2) }, fakeT)).toBe('m1, m2');
+    expect(reactorNames({ emoji: '\u{1F44D}', count: 3, members: [] }, fakeT)).toBe('');
 });
 
 test('a finger on a chip opens no tip and reads nothing (Radix leaves a pointerdown-born focus closed; this pins that upstream behaviour)', () => {

@@ -135,7 +135,7 @@ function Chip({
         return button;
     }
 
-    // Each open aborts the last read, so a slow answer cannot land on a later open.
+    // Each open aborts the last read, so a slow answer cannot land on a later open; a read that fails or finds the chip gone ends as no names.
     const read = () => {
         reading.current?.abort();
         const controller = new AbortController();
@@ -143,13 +143,19 @@ function Chip({
         setNames(null);
         void fetch(reactorsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
             .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : null))
-            .then((payload) => {
-                const group = payload?.groups?.find((candidate) => candidate.emoji === chip.emoji);
-                if (group !== undefined && !controller.signal.aborted) {
-                    setNames(reactorNames(group, t));
-                }
-            })
-            .catch(() => undefined);
+            .then((payload) => payload?.groups?.find((candidate) => candidate.emoji === chip.emoji))
+            .then(
+                (group) => {
+                    if (!controller.signal.aborted) {
+                        setNames(group === undefined ? '' : reactorNames(group, t));
+                    }
+                },
+                () => {
+                    if (!controller.signal.aborted) {
+                        setNames('');
+                    }
+                },
+            );
     };
 
     return (
@@ -164,8 +170,8 @@ function Chip({
         >
             {/* Described by the tip: the names are the only way a keyboard or a screen reader has to them. */}
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            {/* In the document from the moment the tip opens, so the id the trigger is described by exists while the names are on their way, but unseen until they arrive: a pointer passing over a chip opens the tip too. */}
-            <TooltipContent className={cn('max-w-xs whitespace-normal break-words', names === null && 'invisible')}>{names ?? t('Loading…')}</TooltipContent>
+            {/* In the document from the moment the tip opens, so a screen reader's description exists while the names are on their way, but unseen until they arrive since a passing pointer opens the tip too. */}
+            <TooltipContent className={cn('max-w-xs whitespace-normal break-words', !names && 'invisible')}>{names ?? t('Loading…')}</TooltipContent>
         </Tooltip>
     );
 }
@@ -173,12 +179,12 @@ function Chip({
 /** How many names a tip lists before the rest becomes a count; the dialog lists what the server sends. */
 const TIP_NAMES = 20;
 
-/** "Rin, Aoi and 3 more": names up to the cap, then the rest as a count. */
+/** "Rin, Aoi and 3 more": names up to the cap, then the rest as a count; nothing when every member is gone. */
 export function reactorNames(group: ReactorGroup, t: (key: string, replacements?: Record<string, string | number>) => string, cap = TIP_NAMES): string {
     const listed = group.members.slice(0, cap).map((member) => member.name).join(', ');
     const rest = group.count - Math.min(group.members.length, cap);
 
-    return rest > 0 ? `${listed} ${t('and :count more', { count: rest })}` : listed;
+    return listed === '' ? '' : rest > 0 ? `${listed} ${t('and :count more', { count: rest })}` : listed;
 }
 
 // The transparent border is the held state's canvas: mine recolours it the way a held chip does,
