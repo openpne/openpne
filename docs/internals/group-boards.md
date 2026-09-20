@@ -54,12 +54,16 @@ touches — File bytes and reactions — across four kinds of content, in one tr
 1. The group row is X-locked, then every topic and event row under it (teardowns of one group are
    already serialised by its row, so no order among them is needed).
 2. Under those locks the image Files of the talk, the topics, the events and their comments are
-   collected and the reactions on the talk messages and on the board comments are deleted
-   (`reactable_id` is polymorphic and carries no foreign key). Every row is reached by subquery from
-   the group id. The reactions are found a page at a time — a thousand of one topic's or event's
-   comments, or a thousand messages in the room index's own order — and then a thousand of their
-   reactions, and deleted by primary key in chunks: PHP holds a page, no statement grows with the
-   group, no page sorts more than it returns, and the sweep locks only the rows it deletes. The group's own top-image
+   collected and the reactions on the talk messages, the topics, the events and the board comments are deleted
+   (`reactable_id` is polymorphic and carries no foreign key). Every row is reached from the group
+   id: the messages by the group id, the topics and events by a keyset in their `(group_id,
+   bumped_at)` index's order, and the comments by the parent ids those two lists hand over. The
+   reactions are found a page at a time — a thousand of one topic's or event's comments, a thousand
+   messages in the room index's own order, or a thousand of the group's topics or events — and then a thousand of their
+   reactions, and deleted by primary key in chunks: PHP holds a page of rows and the group's topic
+   and event ids, no statement grows with the group, every page of rows is read in an index's own
+   order without a sort, no page of reactions sorts more than its thousand parents' reactions, and
+   the sweep locks only the rows it deletes. The group's own top-image
    File id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
 3. The group is deleted, the cascade taking memberships, join requests, messages, topics, events,
@@ -71,10 +75,10 @@ The group row alone does not stabilise the boards: a talk writer takes the group
 ([group-talk.md](group-talk.md), "One lock order"), and a new topic or event waits on it too through
 its foreign key, but a comment or reaction writer takes the topic or event row and never the
 group's, so a reaction arriving between the sweep and the cascade would take a free topic and
-outlive its comment. Holding every topic and event exclusively is what makes such a writer
-wait and then find its comment gone. A single topic or event goes the same way on its own
+outlive its comment, or the topic itself. Holding every topic and event exclusively is what makes
+such a writer wait and then find its target gone. A single topic or event goes the same way on its own
 (`DeleteTopic::purge`, `DeleteEvent::purge`): its row X-locked, its comments read under it, their
-reactions swept, its Files purged after the commit.
+reactions swept, its own with them, its Files purged after the commit.
 
 ## Comment threads page by id
 
@@ -126,25 +130,25 @@ code writing: the old comment path bumped `updated_at` only, and the new one nee
 
 ## Reactions
 
-A topic's or an event's comment takes the emoji reactions of [reactions.md](reactions.md), on
-`group.topics.reactions.*` / `group.events.reactions.*`
+A topic, an event and each of their comments take the emoji reactions of [reactions.md](reactions.md),
+on `group.topics.reactions.*` / `group.topics.comment.reactions.*` and the event pair
 ([`GroupTopicReactionController`](../../app/Features/GroupTopic/GroupTopicReactionController.php),
 [`GroupEventReactionController`](../../app/Features/GroupEvent/GroupEventReactionController.php)).
-The topic and event bodies themselves take none. Two things are the boards' own:
+Two things are the boards' own:
 
 - **Reacting is the group's write permission** (`canComment`: membership), as commenting is; the
   reactor list is the board's read permission on the route, though the page offers it to members
   only. A non-member reading an open board sees the chips as counts, with no way to change them.
 - **The lock is the topic or event row**
-  ([`BoardCommentLock`](../../app/Features/Group/BoardCommentLock.php)): the parent exclusively,
-  then the comment re-read under it, the order a comment delete already took. A withdrawing
-  member's comments stay with a null author, and so do the reactions on them; the group teardown
-  above is what sweeps a board.
+  ([`BoardLock`](../../app/Features/Group/BoardLock.php)): the parent exclusively, then the comment
+  re-read under it when the target is one, the order a comment delete already took. A withdrawing
+  member's topics, events and comments stay with a null author, and so do the reactions on them;
+  the group teardown above is what sweeps a board.
 
 ## Key invariants
 
-1. A board comment's reaction is gated by the group's membership and locked at its topic or event:
-   the parent row before the comment row.
+1. A board reaction is gated by the group's membership and locked at its topic or event: the
+   parent row, then the comment row when the target is a comment.
 2. A comment's delete, a topic's or event's delete and the group teardown take the parent rows
    before they sweep reactions, inside the transaction that deletes the rows; File bytes are purged
    after it. The teardown holds every topic and event, since a board writer never takes the group

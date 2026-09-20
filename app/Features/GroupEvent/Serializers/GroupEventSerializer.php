@@ -47,9 +47,10 @@ class GroupEventSerializer
     /**
      * openDate and applicationDeadline are date-only Y-m-d strings; createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the event's chips, passed rather than read off the model
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, layout: string, imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, fitSources: list<array{url: string, box: int}>}|null, createdAt: string, editedAt: string|null, reactions: list<array{emoji: string, count: int, mine: bool}>, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
-    public static function detail(GroupEvent $event, Member $viewer): array
+    public static function detail(GroupEvent $event, Member $viewer, array $reactions): array
     {
         return [
             'id' => $event->getKey(),
@@ -64,6 +65,7 @@ class GroupEventSerializer
             'linkCard' => LinkCardSerializer::card($event, $viewer),
             'createdAt' => $event->created_at->toIso8601String(),
             'editedAt' => $event->edited_at?->toIso8601String(),
+            'reactions' => $reactions,
             'openDate' => $event->open_date->format('Y-m-d'),
             'openDateComment' => $event->open_date_comment ?? '',
             'area' => $event->area ?? '',

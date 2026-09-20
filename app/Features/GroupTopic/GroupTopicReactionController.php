@@ -2,7 +2,7 @@
 
 namespace App\Features\GroupTopic;
 
-use App\Features\Group\BoardCommentReactionSurface;
+use App\Features\Group\BoardReactionSurface;
 use App\Features\Reactions\Actions\AddReaction;
 use App\Features\Reactions\Actions\RemoveReaction;
 use App\Features\Reactions\Exceptions\ReactionRefused;
@@ -10,42 +10,83 @@ use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Features\Reactions\Queries\Reactors;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reactions\StoreReactionRequest;
+use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Reacting takes the board's write permission, as commenting does; the reactor list its read permission. */
+/**
+ * Reacting takes the board's write permission, as commenting does; the reactor list its read permission.
+ * The gate runs before the emoji is validated, so an invalid payload gets the same 404 as a valid one.
+ */
 class GroupTopicReactionController extends Controller
 {
-    public function store(Request $request, GroupTopicComment $comment, AddReaction $action, ReactionAggregates $reactions): JsonResponse
+    public function store(Request $request, GroupTopic $topic, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $comment, $action, (new StoreReactionRequest)->rules(), $reactions);
+        return $this->add($request, $topic, $topic, $action, $reactions);
     }
 
-    public function delete(Request $request, GroupTopicComment $comment, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    public function delete(Request $request, GroupTopic $topic, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        return $this->write($request, $comment, $action, StoreReactionRequest::removeRules(), $reactions);
+        return $this->remove($request, $topic, $topic, $action, $reactions);
     }
 
-    public function index(GroupTopicComment $comment, Reactors $reactors): JsonResponse
+    public function index(GroupTopic $topic, Reactors $reactors): JsonResponse
     {
-        abort_unless(GroupTopicAccess::canViewTopic($comment->topic, $this->viewer()), 404);
+        abort_unless(GroupTopicAccess::canViewTopic($this->board($topic), $this->viewer()), 404);
+
+        return response()->json(['groups' => $reactors($topic)]);
+    }
+
+    public function storeComment(Request $request, GroupTopicComment $comment, AddReaction $action, ReactionAggregates $reactions): JsonResponse
+    {
+        return $this->add($request, $comment->topic, $comment, $action, $reactions);
+    }
+
+    public function deleteComment(Request $request, GroupTopicComment $comment, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    {
+        return $this->remove($request, $comment->topic, $comment, $action, $reactions);
+    }
+
+    public function indexComment(GroupTopicComment $comment, Reactors $reactors): JsonResponse
+    {
+        abort_unless(GroupTopicAccess::canViewTopic($this->board($comment->topic), $this->viewer()), 404);
 
         return response()->json(['groups' => $reactors($comment)]);
     }
 
-    /** @param  array<string, mixed>  $rules  validated only after the gate, so a refused request reads the same for any payload */
-    private function write(Request $request, GroupTopicComment $comment, AddReaction|RemoveReaction $action, array $rules, ReactionAggregates $reactions): JsonResponse
+    private function add(Request $request, ?GroupTopic $topic, GroupTopic|GroupTopicComment $reactable, AddReaction $action, ReactionAggregates $reactions): JsonResponse
     {
-        abort_unless(GroupTopicAccess::canComment($comment->topic, $this->viewer()), 404);
-        $emoji = (string) $request->validate($rules)['emoji'];
+        abort_unless(GroupTopicAccess::canComment($this->board($topic), $this->viewer()), 404);
+        $emoji = (string) $request->validate((new StoreReactionRequest)->rules())['emoji'];
 
+        return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new BoardReactionSurface), $reactable, $reactions);
+    }
+
+    private function remove(Request $request, ?GroupTopic $topic, GroupTopic|GroupTopicComment $reactable, RemoveReaction $action, ReactionAggregates $reactions): JsonResponse
+    {
+        abort_unless(GroupTopicAccess::canComment($this->board($topic), $this->viewer()), 404);
+        $emoji = (string) $request->validate(StoreReactionRequest::removeRules())['emoji'];
+
+        return $this->answer(fn () => $action($this->viewer(), $reactable, $emoji, new BoardReactionSurface), $reactable, $reactions);
+    }
+
+    private function answer(callable $write, GroupTopic|GroupTopicComment $reactable, ReactionAggregates $reactions): JsonResponse
+    {
         try {
-            $action($this->viewer(), $comment, $emoji, new BoardCommentReactionSurface);
+            $write();
         } catch (ReactionRefused) {
             abort(404);
         }
 
-        return response()->json(['reactions' => $reactions->of($this->viewer(), $comment)]);
+        return response()->json(['reactions' => $reactions->of($this->viewer(), $reactable)]);
+    }
+
+    /** Null, or a topic whose group went, is a board deleted between the route binding and this read: gone, so not found. */
+    private function board(?GroupTopic $topic): GroupTopic
+    {
+        abort_unless($topic !== null && $topic->group !== null, 404);
+
+        return $topic;
     }
 }

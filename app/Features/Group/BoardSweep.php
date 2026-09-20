@@ -45,6 +45,30 @@ final class BoardSweep
     }
 
     /**
+     * The reactions on the parent rows themselves, paged in the (group_id, bumped_at) index's order:
+     * paged by id alone, MySQL 8.4 reads and sorts the whole group per page. Call inside the teardown's
+     * transaction with the parent rows locked before its first consistent read, since bumped_at
+     * settles both ways and a row moved behind the cursor would never be reached.
+     */
+    public static function rows(string $alias, string $table, int $groupId): void
+    {
+        $cursor = null;
+        do {
+            $query = DB::table($table)->where('group_id', $groupId);
+            if ($cursor !== null) {
+                [$at, $id] = $cursor;
+                $query->where(fn (Builder $after) => $after->where('bumped_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('bumped_at', $at)->where('id', '>', $id)));
+            }
+            $page = $query->orderBy('bumped_at')->orderBy('id')->limit(self::CHUNK)->get(['id', 'bumped_at']);
+            if ($page->isEmpty()) {
+                break;
+            }
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->map(fn ($id): int => (int) $id)->all()));
+            $cursor = [$page->last()->bumped_at, (int) $page->last()->id];
+        } while ($page->count() === self::CHUNK);
+    }
+
+    /**
      * Paged in the index's own order, (number, id) under the parent; `number` repeats, so the id breaks the
      * tie, and is NOT NULL, so no null arm is needed. Spelled as the OR of the two arms: MySQL 8.4 plans
      * a row constructor here as a filter over the whole parent, not a range from the cursor.
