@@ -101,3 +101,15 @@ test('a reaction on the post itself is not the hint followed; one on a reply is'
     expect(screen.queryByText('Hover to react and more.')).toBeNull();
     expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
 });
+
+test('the author deletes the post from the kebab in its header, with nothing to edit; a reader has no kebab', () => {
+    renderShow(true, { viewerId: post.author.id });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
+
+    cleanup();
+    renderShow(true, { viewerId: post.author.id + 1 });
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+});

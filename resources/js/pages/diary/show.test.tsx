@@ -123,3 +123,16 @@ test('the hint stands above the comments until a comment is held, and is written
     renderShow(null);
     expect(screen.queryByText('Press and hold to react and more.')).toBeNull();
 });
+
+test('the owner edits and deletes the entry from the kebab in its header; a reader has no kebab', () => {
+    renderShow({ id: 3 });
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Edit' }).getAttribute('href')).toBe('/diary/edit/5');
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+
+    cleanup();
+    renderShow({ id: 9 });
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+});

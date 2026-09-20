@@ -4,9 +4,11 @@ import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { ImagesField } from '@/components/images-field';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
 import { FirstUseHint } from '@/components/row/first-use-hint';
+import { RowMenu } from '@/components/row/row-menu';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
 import { useRowActionsHint } from '@/lib/use-row-actions-hint';
@@ -17,7 +19,6 @@ import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { commentsPhrase } from '@/lib/count-phrase';
@@ -100,6 +101,9 @@ export default function GroupTopicShow() {
                     <AiChip isAi={topic.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
                     {topic.editedAt && <span className="text-xs">({t('Edited')})</span>}
+                    <span className="ml-auto shrink-0">
+                        <RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteTopic() }] : []} />
+                    </span>
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
@@ -107,16 +111,6 @@ export default function GroupTopicShow() {
                 <ImageGrid images={topic.images} variant="post" className="mt-2" />
                 <DetailReactionChips reactions={bodyReactions} />
 
-                {canEdit && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/topics/${topic.id}/edit`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <button type="button" onClick={deleteTopic} className={dangerActionClass}>
-                            {t('Delete')}
-                        </button>
-                    </div>
-                )}
             </Panel>
 
             {canComment && thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}

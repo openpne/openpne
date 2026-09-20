@@ -99,7 +99,9 @@ Every surface draws a reacted-to thing one of two ways
   when a keyboard reaches into the row; where the primary pointer is a finger, a long press raises
   the row's sheet ([`components/row/row-sheet.tsx`](../../resources/js/components/row/row-sheet.tsx)).
 - **A detail item** — the diary, topic, event or post a page is about — keeps its add button with or
-  without chips, since nothing else on the page offers it.
+  without chips, since nothing else on the page offers it. What its owner may do to it (edit, delete)
+  sits behind a kebab at the header's right end ([`components/row/row-menu.tsx`](../../resources/js/components/row/row-menu.tsx)):
+  a menu for a cursor, a sheet for a finger, nothing at all for a reader who may do neither.
 
 The press is offered only where `(pointer: coarse)` holds
 ([`lib/use-long-press.ts`](../../resources/js/lib/use-long-press.ts)), the same query the row's
