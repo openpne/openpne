@@ -109,17 +109,17 @@ test('the hint stands above the comments until a comment is held, and is written
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetch);
     renderShow({ id: 9 });
-    expect(screen.getByText('Hold a post to react, reply or copy it.')).toBeTruthy();
+    expect(screen.getByText('Hold a row to react and more.')).toBeTruthy();
 
     fireEvent.pointerDown(screen.getByRole('listitem'), { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
     act(() => {
         vi.advanceTimersByTime(600);
     });
 
-    expect(screen.queryByText('Hold a post to react, reply or copy it.')).toBeNull();
+    expect(screen.queryByText('Hold a row to react and more.')).toBeNull();
     expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
 
     cleanup();
     renderShow(null);
-    expect(screen.queryByText('Hold a post to react, reply or copy it.')).toBeNull();
+    expect(screen.queryByText('Hold a row to react and more.')).toBeNull();
 });

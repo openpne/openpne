@@ -25,6 +25,20 @@ test('shown until dismissed; the dismissal is written once, without a body, and 
     expect((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body).toBeUndefined();
 });
 
+test('a reaction made through the page\'s reactions is the hint followed', () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal('fetch', fetch);
+    inertia.page.props.rowActionsHint = 'shown';
+    const toggle = vi.fn();
+    const { result } = renderHook(() => useRowActionsHint());
+
+    act(() => result.current.learnedFrom({ toggle }).toggle(7, '\u{1F44D}', false));
+
+    expect(toggle).toHaveBeenCalledWith(7, '\u{1F44D}', false);
+    expect(result.current.visible).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+});
+
 test.each([['dismissed'], [null]] as const)('with %s from the page there is nothing to show and nothing to write', (state) => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);

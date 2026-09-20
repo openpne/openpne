@@ -17,14 +17,14 @@ test('the hint speaks to the pointer in hand and its close button asks the page 
     const onDismiss = vi.fn();
     renderWithProviders(<FirstUseHint visible onDismiss={onDismiss} />);
 
-    expect(screen.getByText('Hold a post to react, reply or copy it.')).toBeTruthy();
+    expect(screen.getByText('Hold a row to react and more.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
 
     cleanup();
     stubCoarsePointer(false);
     renderWithProviders(<FirstUseHint visible onDismiss={onDismiss} />);
-    expect(screen.getByText('Hover a post to react to it.')).toBeTruthy();
+    expect(screen.getByText('Hover a row to react and more.')).toBeTruthy();
 });
 
 test('nothing is drawn once the page says the hint is gone', () => {

@@ -47,11 +47,11 @@ export default function DiaryShow() {
     const { diary, thread, older, newer, auth, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
     // Two rows of state, one per endpoint set: the entry and its comments are reacted to on different URLs.
-    const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
-    const commentReactions = useReactions(diaryCommentReactionEndpoints, renderGeneration);
-    const canReact = auth.user !== null;
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
+    const diaryReactions = hint.learnedFrom(useReactions(diaryReactionEndpoints, renderGeneration));
+    const commentReactions = hint.learnedFrom(useReactions(diaryCommentReactionEndpoints, renderGeneration));
+    const canReact = auth.user !== null;
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });

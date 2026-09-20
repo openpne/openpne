@@ -13,7 +13,7 @@ import type { TimelinePostEntry } from './types';
 export function TimelineFeedList({
     posts,
     viewerId,
-    reactions,
+    reactions: pageReactions,
     reactionVocabulary,
 }: {
     posts: TimelinePostEntry[];
@@ -23,6 +23,7 @@ export function TimelineFeedList({
 }) {
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
+    const reactions = hint.learnedFrom(pageReactions);
     const deletePost = useDeleteTimelinePost();
 
     return (

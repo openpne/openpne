@@ -47,7 +47,7 @@ const comment = { id: 21, number: 1, body: 'a comment', images: [], linkCard: nu
 
 const thread: TopicThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = []) {
+function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = [], hint: 'shown' | 'dismissed' = 'dismissed') {
     inertia.page = {
         component: 'group/topic/show',
         url: '/topics/11',
@@ -60,6 +60,7 @@ function renderShow(canComment: boolean, reactions = topic.reactions, comments: 
             reactionVocabulary: ['\u{1F44D}'],
             renderGeneration: 'g1',
             auth: { user: { id: 3 } },
+            rowActionsHint: hint,
             locale: 'en',
             timezone: 'Asia/Tokyo',
             imageUpload: { accept: 'image/png' },
@@ -116,4 +117,19 @@ test('the names behind the body\'s chip are read from the body route', () => {
     fireEvent.focus(screen.getByRole('button', { name: '\u{1F44D} 2' }));
     expect(fetch).toHaveBeenCalledWith('/topics/11/reactions', expect.objectContaining({ credentials: 'same-origin' }));
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/comments/'), expect.anything());
+});
+
+test('the hint stands only above comments, and goes once a reaction is made from a chip', () => {
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    renderShow(true, topic.reactions, [], 'shown');
+    expect(screen.queryByText('Hover a row to react and more.')).toBeNull();
+
+    cleanup();
+    renderShow(true, topic.reactions, [comment], 'shown');
+    expect(screen.getByText('Hover a row to react and more.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '\u{1F44D} 1' }));
+
+    expect(screen.queryByText('Hover a row to react and more.')).toBeNull();
+    expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
 });

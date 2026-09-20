@@ -375,6 +375,7 @@ export default function GroupTalkIndex() {
     const sheetMessage = sheet.press === null ? undefined : messages.find((message) => message.id === sheet.press!.id);
 
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
+        hint.dismiss();
         if (isPending(pendingReactions, messageId, emoji)) {
             return;
         }
@@ -418,9 +419,9 @@ export default function GroupTalkIndex() {
                 </div>
             )}
 
+            {messages.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
             {/* The composer under this list is not a Card and imports the same edge constant, so the
                 two cannot end on different lines (components/card.tsx). */}
-            <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
             <Panel flush variant="bleed" className="mb-0 lg:mb-4">
                 {stream.hasOlder && (
                     <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">

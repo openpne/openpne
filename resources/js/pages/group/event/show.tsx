@@ -47,11 +47,11 @@ export default function GroupEventShow() {
     const t = useT();
     const confirm = useConfirm();
     const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
-    const eventReactions = useReactions(eventReactionEndpoints, renderGeneration);
-    const reactions = useReactions(eventCommentReactionEndpoints, renderGeneration);
-    const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
+    const eventReactions = hint.learnedFrom(useReactions(eventReactionEndpoints, renderGeneration));
+    const reactions = hint.learnedFrom(useReactions(eventCommentReactionEndpoints, renderGeneration));
+    const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -156,7 +156,7 @@ export default function GroupEventShow() {
                 )}
             </Panel>
 
-            <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
+            {thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
             <Panel title={commentsPhrase(t, thread.total)} flush>
                 {thread.lastPage > 1 && (
                     <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">

@@ -44,10 +44,10 @@ export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
     const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
-    const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
-    const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
+    const reactions = hint.learnedFrom(useReactions(timelineReactionEndpoints, renderGeneration));
+    const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
