@@ -199,6 +199,66 @@ mints a fresh secret.
 There is no site-wide enforcement setting ("this site requires MFA"): enabling
 two-factor is always the member's own choice.
 
+## Member passkeys
+
+Members can register WebAuthn passkeys as a sign-in method beside the
+password. The engine is `laravel/passkeys` (shipped with Fortify) on
+`web-auth/webauthn-lib`; this app adds no WebAuthn parsing of its own. The
+package defaults are kept: discoverable credentials (sign-in needs no
+username), **user verification required**, attestation `none`. Fortify's
+provider points the package at `App\Models\Member` and suppresses its routes;
+the app declares its own (`routes/web.php`), as with two-factor. The package
+names the owner column `passkeys.user_id` in its model, actions and requests,
+while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
+
+- **A passkey is both factors.** The relying party requires user verification
+  and webauthn-lib rejects an assertion whose UV flag is unset, so a passkey
+  proves possession of the authenticator plus its local unlock (biometric or
+  PIN) — the AAL2 shape NIST's syncable-authenticator supplement describes.
+  Signing in with one therefore skips the TOTP challenge, the posture of
+  GitHub, Google and Microsoft; it is a sign-in method, not a second factor,
+  and lives as its own settings row above the password.
+- **Adding one is a step-up.** Registration opens a 15-minute window
+  (`App\Features\Member\PasskeyReauth`, distinct from the MFA window) with the
+  account password **and**, when a confirmed TOTP factor exists, a current code
+  or an unused recovery code — the same proof as disabling the factor, because
+  a new passkey bypasses it. The password rule runs first, so a wrong password
+  never marks a code used nor spends a recovery code; the factor state is
+  re-read under the member row lock and fails closed if it changed. The window
+  is spent by one successful registration; a cancelled browser prompt keeps it.
+  Accepted residual: a walked-up session inside the window can complete one
+  registration without the password.
+- **Removing one revokes.** Deletion demands the password inline and revokes
+  the member's other sessions and the remember token (a lost device is the
+  usual reason). Adding one revokes nothing — the proof was just given in this
+  session and the new credential does not invalidate what other sessions were
+  opened with; this is a deliberate difference from confirming TOTP.
+- **Every registration and removal is mailed** to the registered address
+  (`passkey-registered` / `passkey-removed`, always sent) and logged
+  (`passkey.registered` / `passkey.removed`).
+- **Throttling** keys the mutating routes (re-auth, store, delete) on the
+  member (`passkey-manage`, 5/min); the page render and the challenge GET are
+  exempt so a refresh or a cancelled prompt never spends the budget.
+- **The last passkey may be removed**: the password remains, so there is no
+  lockout and no new recovery path. The list marks synced passkeys (backup
+  state flag) so a member holding only device-bound ones is nudged to add a
+  second device.
+- **Relying party = `APP_URL`'s host**, the host `trustHosts` already pins.
+  Moving a site to another domain orphans its passkeys (authenticators stop
+  offering them; the rows stay and the password still works). The opaque user
+  handle is an HMAC under `fortify.passkeys.user_handle_secret`, which Fortify
+  defaults to `APP_KEY` (the package's own env is overridden); rotating the key
+  leaves existing passkeys valid and only changes the handle new ones carry.
+- `credential_id` is stored at 512 characters under a binary collation on
+  MySQL (base64url is case-sensitive). The WebAuthn maximum of 1023 bytes would
+  not fit; real authenticators emit far shorter IDs. Synced passkeys report a
+  zero signature counter, so clone detection is nominal for them, and their
+  security is that of the platform account they sync through — accepted, as
+  every major service does.
+
+There is no site-wide enforcement or password removal: a passkey is always an
+addition the member chooses.
+
 ## AI account access tokens
 
 An owner minting or revoking one of their AI account's MCP tokens

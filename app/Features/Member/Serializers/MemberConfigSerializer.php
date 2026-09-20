@@ -32,6 +32,9 @@ class MemberConfigSerializer
             'mfa' => [
                 'enabled' => $member->hasEnabledTwoFactorAuthentication(),
             ],
+            'passkeys' => [
+                'count' => $member->passkeys()->count(),
+            ],
             'locale' => [
                 'value' => app()->getLocale(),
                 'options' => [

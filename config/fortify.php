@@ -161,8 +161,9 @@ return [
             'confirm' => true,
             'window' => 1,
         ]),
-        // update password, profile update, email verification and passkeys stay off: re-enable the
-        // matching Features::*() when a later PR actually needs one.
+        // update password, profile update and email verification stay off: re-enable the matching
+        // Features::*() when a later PR actually needs one. Passkeys are on without the flag: it only
+        // gates Fortify's own route block, which Fortify::ignoreRoutes() drops; routes/web.php has ours.
     ],
 
 ];

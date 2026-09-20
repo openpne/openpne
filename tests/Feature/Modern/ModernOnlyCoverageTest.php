@@ -50,6 +50,7 @@ class ModernOnlyCoverageTest extends TestCase
         'group.talk.mention_candidates',
         'message.chat.recipients',
         'message.chat.withdrawn.messages',
+        'member.config.passkeys.options',
     ];
 
     /**
@@ -87,7 +88,7 @@ class ModernOnlyCoverageTest extends TestCase
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
-        'member.config.mfa.edit', 'member.config.notifications.edit', 'member.config.ai',
+        'member.config.mfa.edit', 'member.config.passkeys.edit', 'member.config.notifications.edit', 'member.config.ai',
         'member.config.look.edit',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent',
@@ -134,6 +135,7 @@ class ModernOnlyCoverageTest extends TestCase
             'member profile edit' => ['/member/edit/profile'],
             'member avatar' => ['/member/avatar'],
             'ai accounts' => ['/member/config/ai'],
+            'passkeys' => ['/member/config/passkeys'],
             // A site offering one look sends this to the settings page, which renders Modern too.
             'layout picker' => ['/member/config/look'],
             'community search' => ['/groups'],

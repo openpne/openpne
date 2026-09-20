@@ -2,6 +2,8 @@
 
 @use('App\Support\Surface')
 @use('App\Features\Member\MemberConfigCategory')
+@use('App\Support\LocalizedDate')
+@use('Illuminate\Support\Carbon')
 
 @section('title', __('Settings'))
 
@@ -259,6 +261,151 @@
                     <div class="body">{{ __('You already have as many AI accounts as this site allows.') }}</div>
                 </x-classic.parts>
             @endif
+            @break
+
+        @case(MemberConfigCategory::Passkey)
+            @php($passkeyMessages = json_encode([
+                'The passkey prompt was cancelled.' => __('The passkey prompt was cancelled.'),
+                'This device already holds a passkey for your account.' => __('This device already holds a passkey for your account.'),
+                'This browser does not support passkeys.' => __('This browser does not support passkeys.'),
+                'Too many attempts. Please wait a moment and try again.' => __('Too many attempts. Please wait a moment and try again.'),
+                'Some time has passed since you confirmed your password. Please confirm it again.' => __('Some time has passed since you confirmed your password. Please confirm it again.'),
+                'The passkey could not be used. Please try again.' => __('The passkey could not be used. Please try again.'),
+            ]))
+            <x-classic.parts id="member_config_passkeys" name="box" :title="__('Passkeys')">
+                <div class="body">
+                    <p>
+                        {{ __('A passkey signs you in instead of your password.') }}<br>
+                        {{ __('You unlock it with your device\'s face, fingerprint or PIN.') }}<br>
+                        {{ __('Your biometric data never leaves your device; this site only stores a public key.') }}
+                    </p>
+                    <h4>{{ __('Your passkeys') }}</h4>
+                    @if (empty($passkeys['passkeys']))
+                        <p>{{ __('No passkeys yet.') }}</p>
+                    @else
+                        <ul>
+                            @foreach ($passkeys['passkeys'] as $passkey)
+                                <li>
+                                    <p>
+                                        <strong>{{ $passkey['name'] }}</strong>
+                                        — {{ $passkey['authenticator'] ?? __('Unknown authenticator') }}
+                                        · {{ $passkey['synced'] ? __('Synced') : __('This device only') }}
+                                        <br>
+                                        @if ($passkey['createdAt'])
+                                            {{ __('Added :date', ['date' => LocalizedDate::dateTime(Carbon::parse($passkey['createdAt']))]) }} ·
+                                        @endif
+                                        {{ $passkey['lastUsedAt'] ? __('Last used :date', ['date' => LocalizedDate::dateTime(Carbon::parse($passkey['lastUsedAt']))]) : __('Never used') }}
+                                    </p>
+                                    <form method="POST" action="{{ route('member.config.passkeys.destroy', ['id' => $passkey['id']]) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="_passkey_form" value="destroy-{{ $passkey['id'] }}">
+                                        <details @if (old('_passkey_form') === 'destroy-'.$passkey['id'] && $errors->has('current_password')) open @endif>
+                                            <summary>{{ __('Remove') }}</summary>
+                                            <p>
+                                                {{ count($passkeys['passkeys']) === 1
+                                                    ? __('Remove this passkey? You will sign in with your password from now on.')
+                                                    : __('Remove this passkey? It will no longer sign you in; your other passkeys and your password still will.') }}
+                                            </p>
+                                            <label for="passkey_delete_password_{{ $passkey['id'] }}">{{ __('Current password') }}</label>
+                                            <input type="password" id="passkey_delete_password_{{ $passkey['id'] }}" name="current_password" autocomplete="current-password">
+                                            @if (old('_passkey_form') === 'destroy-'.$passkey['id'])
+                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                            @endif
+                                            <div class="operation">
+                                                <ul class="moreInfo button">
+                                                    <li><input type="submit" class="input_submit" value="{{ __('Remove') }}"></li>
+                                                </ul>
+                                            </div>
+                                        </details>
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    @if ($passkeys['deviceBoundOnly'])
+                        <p>{{ __('Your passkeys live on one device each. Adding one from another device keeps you signed in if it is lost.') }}</p>
+                    @endif
+                </div>
+            </x-classic.parts>
+            <x-classic.parts id="member_config_passkeys_add" name="form" :title="__('Add a passkey')">
+                @if ($passkeys['requiresPassword'])
+                    <p>{{ __('To add a passkey, first confirm it is you.') }}</p>
+                    <form method="POST" action="{{ route('member.config.passkeys.reauth') }}">
+                        @csrf
+                        <input type="hidden" name="_passkey_form" value="reauth">
+                        <table>
+                            <tr>
+                                <th><label for="passkey_current_password">{{ __('Current password') }}</label></th>
+                                <td>
+                                    <input type="password" id="passkey_current_password" name="current_password" autocomplete="current-password">
+                                    @if (old('_passkey_form', 'reauth') === 'reauth')
+                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    @endif
+                                </td>
+                            </tr>
+                            @if ($passkeys['requiresSecondFactor'])
+                                <tr>
+                                    <th><label for="passkey_code">{{ __('Authentication code') }}</label></th>
+                                    <td>
+                                        <input type="text" id="passkey_code" name="code" class="input_text" inputmode="numeric" autocomplete="one-time-code">
+                                        <p>{{ __('A passkey signs you in without this code, so adding one needs it once.') }}</p>
+                                        @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    </td>
+                                </tr>
+                            @endif
+                        </table>
+                        @if ($passkeys['requiresSecondFactor'])
+                            <details @if ($errors->has('recovery_code')) open @endif>
+                                <summary>{{ __('Use a recovery code instead') }}</summary>
+                                <table>
+                                    <tr>
+                                        <th><label for="passkey_recovery_code">{{ __('Recovery code') }}</label></th>
+                                        <td>
+                                            <input type="text" id="passkey_recovery_code" name="recovery_code" class="input_text" autocomplete="off">
+                                            <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
+                                            @error('recovery_code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        </td>
+                                    </tr>
+                                </table>
+                            </details>
+                        @endif
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Continue') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                @else
+                    <table>
+                        <tr>
+                            <th><label for="passkey_name">{{ __('Name') }}</label></th>
+                            <td>
+                                <input type="text" id="passkey_name" name="name" class="input_text" maxlength="255" autocomplete="off">
+                                <p>{{ __('A label for the list, like "Phone" or "Laptop".') }}</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="operation">
+                        <ul class="moreInfo button">
+                            <li>
+                                <button type="button" class="input_submit"
+                                        data-passkey-register
+                                        data-options-url="{{ route('member.config.passkeys.options') }}"
+                                        data-submit-url="{{ route('member.config.passkeys.store') }}"
+                                        data-name-input="passkey_name"
+                                        data-default-name="{{ __('Passkey') }}"
+                                        data-messages="{{ $passkeyMessages }}">{{ __('Create passkey') }}</button>
+                                <p class="error" role="alert" data-passkey-error hidden></p>
+                            </li>
+                        </ul>
+                    </div>
+                    <p data-passkey-unsupported hidden>{{ __('This browser does not support passkeys.') }}</p>
+                @endif
+            </x-classic.parts>
+            {{-- Kept outside the form table so the production build's modulepreload <link> is not
+                 foster-parented out of the table by the HTML parser. --}}
+            @vite('resources/js/passkeys-classic.ts')
             @break
 
         @case(MemberConfigCategory::Password)
