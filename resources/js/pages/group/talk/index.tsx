@@ -515,7 +515,6 @@ export default function GroupTalkIndex() {
                 <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
             )}
 
-
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
             ) : (

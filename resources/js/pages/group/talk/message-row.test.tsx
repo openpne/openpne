@@ -238,17 +238,42 @@ async function chooseCopy(name: 'Copy link' | 'Copy text') {
     });
 }
 
-test('the menu copies the message link and the body', async () => {
+test('the menu copies the message link and the body, writing inside the choosing gesture', () => {
     const writeText = vi.fn(() => Promise.resolve());
     clipboard(writeText);
-    window.history.replaceState(null, '', '/groups/3/talk');
+    window.history.replaceState(null, '', '/groups/3/talk?context=abc#foo');
     renderRow();
 
-    await chooseCopy('Copy link');
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    // Asserted before any turn passes: a browser may allow the clipboard only inside the gesture.
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/groups/3/talk?m=7`);
-    await chooseCopy('Copy text');
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy text' }));
     expect(writeText).toHaveBeenLastCalledWith('Bring the good rope');
     window.history.replaceState(null, '', '/');
+});
+
+test('a sub-directory install keeps its prefix in the copied link', () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    clipboard(writeText);
+    window.history.replaceState(null, '', '/sns/groups/3/talk');
+    renderRow();
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/sns/groups/3/talk?m=7`);
+    window.history.replaceState(null, '', '/');
+});
+
+test('a message that is nothing but pictures has no text to copy, and still offers its link', () => {
+    clipboard(vi.fn(() => Promise.resolve()));
+    renderRow({ body: '   ' });
+    openMenu();
+
+    expect(screen.queryByRole('menuitem', { name: 'Copy text' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Copy link' })).toBeTruthy();
 });
 
 test('no clipboard leaves the menu without either copy', () => {
@@ -268,10 +293,10 @@ test('a completed copy is answered on the row, spoken and shown, then the answer
 
     await chooseCopy('Copy link');
 
-    // Spoken on completion, not on the choice: the acknowledgement claims the write happened, and it
-    // lives on the row because the menu it was chosen from is gone by then.
+    // Spoken on completion rather than on the choice, since the acknowledgement claims the write happened.
     expect(screen.getAllByText('Link copied.')).toHaveLength(2);
-    expect(screen.getByText('Link copied.', { selector: '[aria-live] *, [aria-live]' })).toBeTruthy();
+    expect(screen.getByText('Link copied.', { selector: '[aria-hidden]' })).toBeTruthy();
+    expect(screen.getByText('Link copied.', { selector: '[aria-live]' })).toBeTruthy();
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 1600)));
     expect(screen.queryByText('Link copied.')).toBeNull();

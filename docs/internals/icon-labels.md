@@ -59,8 +59,8 @@ and not after a tap — the keyboard's tooltip stays, the tap's goes. The trigge
 ## What is deliberately not covered
 
 - **Touch.** No tooltip is raised by a finger, on any platform. This is why `label` lands on the
-  element regardless: the control must be usable knowing only what it paints, and a long-press sheet
-  is where a phone puts the words.
+  element regardless: the control must be usable knowing only what it paints, and a bottom sheet
+  opened from a standing control is where a phone puts the words.
 - **Disabled controls.** A `disabled` element takes no pointer events and no focus, so nothing is
   raised over one. Moving them to `aria-disabled` plus a click guard was considered and dropped: the
   behavior change is real and the reward is a control's own name, when what a disabled control needs

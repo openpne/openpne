@@ -15,6 +15,8 @@ export type RowMenuItem = {
     disabled?: boolean;
     /** Drawn apart from the rest, after a divider: the one choice that cannot be taken back. */
     destructive?: boolean;
+    /** Runs inside the choosing gesture rather than after the overlay has closed: for a clipboard write, which a browser may allow only there; not for a choice that opens a dialog. */
+    immediate?: boolean;
 } & ({ onSelect: () => void; href?: never } | { href: string; onSelect?: never });
 
 /** Null for a reader the names are not offered to; disabled, not absent, while nobody has reacted, so the menu keeps its shape. */
@@ -114,7 +116,7 @@ function menuItem(item: RowMenuItem, choose: (run: () => void) => void) {
     }
 
     return (
-        <DropdownMenuItem key={item.label} disabled={item.disabled} onSelect={() => choose(item.onSelect)} className={className}>
+        <DropdownMenuItem key={item.label} disabled={item.disabled} onSelect={() => (item.immediate ? item.onSelect() : choose(item.onSelect))} className={className}>
             {body}
         </DropdownMenuItem>
     );
@@ -145,7 +147,11 @@ function sheetItem(item: RowMenuItem, choose: (run: () => void) => void, close: 
             disabled={item.disabled}
             className={className}
             onClick={() => {
-                choose(item.onSelect);
+                if (item.immediate) {
+                    item.onSelect();
+                } else {
+                    choose(item.onSelect);
+                }
                 close();
             }}
         >

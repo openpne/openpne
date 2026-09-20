@@ -179,8 +179,8 @@ export function TalkMessageRow({
     const items: (RowMenuItem | null)[] = [
         reactorsItem(t, rowReactions),
         canReply ? { label: t('Reply'), icon: Reply, onSelect: onReply } : null,
-        canCopyText(message.body) ? { label: t('Copy text'), icon: Copy, onSelect: () => copy('text', message.body) } : null,
-        canCopyLink() ? { label: t('Copy link'), icon: LinkIcon, onSelect: () => copy('link', messageLink(message.id)) } : null,
+        canCopyText(message.body) ? { label: t('Copy text'), icon: Copy, immediate: true, onSelect: () => copy('text', message.body) } : null,
+        canCopyLink() ? { label: t('Copy link'), icon: LinkIcon, immediate: true, onSelect: () => copy('link', messageLink(message.id)) } : null,
         // The menu names no message, so the action must say what it acts on.
         message.canDelete ? { label: t('Delete message'), icon: Trash2, destructive: true, onSelect: () => onDelete(message.id) } : null,
     ];
@@ -286,7 +286,11 @@ export function TalkMessageRow({
                         </>
                     )}
                     {/* Beside the row's controls rather than inside a menu item: the item is gone once chosen. */}
-                    {ackLine !== null && <p className={cn('mt-1 text-xs', ack?.outcome === 'copied' ? 'text-success' : 'text-destructive')}>{ackLine}</p>}
+                    {ackLine !== null && (
+                        <p aria-hidden className={cn('mt-1 text-xs', ack?.outcome === 'copied' ? 'text-success' : 'text-destructive')}>
+                            {ackLine}
+                        </p>
+                    )}
                     <span aria-live="polite" className="sr-only">
                         {ackLine}
                     </span>

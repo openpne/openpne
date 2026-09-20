@@ -718,8 +718,9 @@ add button beside the body; the chips under it once there are any. The kebab hol
 reply, copy text, copy link and delete. Copying is offered to everyone who may read the message, a
 non-member of an Everyone room included — an address is takeable by anyone who may read it — and is
 answered on the row, spoken and shown, since the menu it was chosen from is gone by the time the
-write settles. Nothing here opens on a hover or a long press, and no row carries a control that
-holds its width open for nobody.
+write settles. Nothing here opens on a hover or a long press. The kebab stands on every row, since
+who reacted is offered to every reader; on a plain-http install with no clipboard, a reader who may
+not post finds only that entry in it, disabled until someone reacts.
 
 ## Access
 
