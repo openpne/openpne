@@ -100,7 +100,7 @@ Every surface draws a reacted-to thing one of two ways
   the row's sheet ([`components/row/row-sheet.tsx`](../../resources/js/components/row/row-sheet.tsx)).
 - **A detail item** — the diary, topic, event or post a page is about — keeps its add button with or
   without chips, since nothing else on the page offers it. What a viewer may do to it — edit and
-  delete where the surface's `canEdit` holds (a board's admin as well as the author), delete alone
+  delete where the surface says the viewer may (a board's admin as well as the author), delete alone
   on a post — sits behind a kebab at the header's right end
   ([`components/row/row-menu.tsx`](../../resources/js/components/row/row-menu.tsx)): a menu for a
   cursor, a sheet for a finger, nothing at all for a reader who may do neither.
