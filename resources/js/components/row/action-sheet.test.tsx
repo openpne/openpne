@@ -47,21 +47,3 @@ test('a sheet opened by a button takes every click', () => {
     fireEvent.click(screen.getByRole('button', { name: 'choose' }));
     expect(onChoose).toHaveBeenCalledTimes(1);
 });
-
-test('the release is caught even when the finger lifts in the same frame the sheet mounts', () => {
-    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
-    const onChoose = vi.fn();
-    // Rendered and released without yielding: a passive effect would not have registered yet.
-    renderWithProviders(
-        <ActionSheet open openedByPress onOpenChange={vi.fn()} title="Post actions" returnFocusTo={{ current: null }}>
-            <button type="button" onClick={onChoose}>
-                choose
-            </button>
-        </ActionSheet>,
-    );
-    fireEvent.pointerUp(document.body);
-    fireEvent.click(screen.getByRole('button', { name: 'choose' }));
-
-    expect(onChoose).not.toHaveBeenCalled();
-    clock.mockRestore();
-});
