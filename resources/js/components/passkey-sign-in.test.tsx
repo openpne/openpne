@@ -68,6 +68,16 @@ test('a refusal that follows the member picking a passkey is shown', () => {
     expect(screen.getByRole('alert').textContent).toBe('Unable to sign in with this account.');
 });
 
+test('a refusal after a click alone is shown, without a pointer or a key', async () => {
+    renderWithProviders(<PasskeySignIn remember={() => false} />);
+
+    screen.getByRole('button', { name: 'Sign in with a passkey' }).click();
+    await act(() => Promise.resolve());
+    act(() => hook.options?.onError?.(new Error('Unable to sign in with this account.')));
+
+    expect(screen.getByRole('alert').textContent).toBe('Unable to sign in with this account.');
+});
+
 test('a failure while arming the picker stays quiet', () => {
     renderWithProviders(<PasskeySignIn remember={() => false} />);
 

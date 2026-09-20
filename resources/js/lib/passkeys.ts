@@ -13,6 +13,12 @@ const THROTTLED = 'Too Many Attempts.';
 const UNKNOWN = 'An unknown error occurred.';
 
 /**
+ * What a browser puts on the TypeError a failed fetch rejects with, plus the parser's complaint when
+ * a signed-in tab is redirected to HTML: the client forwards both as a message, and neither is one.
+ */
+const NOT_A_MESSAGE = /^(Failed to fetch|Load failed|NetworkError|network error)|JSON|Unexpected token/i;
+
+/**
  * Ceremony errors map to an i18n key; a server message (already `__()`-translated, re-wrapped by
  * the client as a bare PasskeyError) passes through as-is.
  */
@@ -29,8 +35,7 @@ export function passkeyErrorKey(error: unknown): string {
     if (error instanceof Error && error.message === THROTTLED) {
         return 'Too many attempts. Please wait a moment and try again.';
     }
-    // A signed-in tab is redirected to HTML the client cannot parse; the parser's text is no message.
-    if (error instanceof Error && error.message !== '' && error.message !== UNKNOWN && !/JSON|Unexpected token/.test(error.message)) {
+    if (error instanceof Error && error.message !== '' && error.message !== UNKNOWN && !NOT_A_MESSAGE.test(error.message)) {
         return error.message;
     }
 

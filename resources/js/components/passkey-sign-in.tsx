@@ -12,9 +12,7 @@ import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
 export function PasskeySignIn({ remember }: { remember: () => boolean }) {
     const t = useT();
     const [failure, setFailure] = useState<string | null>(null);
-    // Arming the picker fetches its options at mount, and the client reports a failure there through
-    // the same callback as a refused ceremony; only what follows something the member did is theirs
-    // to see.
+    // Arming the picker reports its own failure through the callback a refused ceremony uses.
     const acted = useRef(false);
     useEffect(() => {
         const mark = () => {
@@ -56,6 +54,8 @@ export function PasskeySignIn({ remember }: { remember: () => boolean }) {
                 loading={busy}
                 className="w-full"
                 onClick={() => {
+                    // Set here too: a click can arrive from a voice command with no pointer or key.
+                    acted.current = true;
                     setFailure(null);
                     setBusy(true);
                     void passkey.verify().finally(() => setBusy(false));
