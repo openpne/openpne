@@ -142,7 +142,7 @@ class PasskeyLoginTest extends TestCase
         $this->assertSame($stranger->credentialId(), $this->assertOneSecurityEvent('passkey.failed')['credential_id']);
     }
 
-    public function test_a_refused_ceremony_is_logged_once_whatever_the_reason(): void
+    public function test_an_assertion_the_ceremony_refused_is_logged_once(): void
     {
         $member = Member::factory()->create();
         $authenticator = $this->registeredPasskey($member);
@@ -150,8 +150,25 @@ class PasskeyLoginTest extends TestCase
 
         $this->postJson('/passkeys/login', ['credential' => $authenticator->assert($this->loginOptions())])->assertUnprocessable();
 
-        $this->assertOneSecurityEvent('passkey.failed');
+        $event = $this->assertOneSecurityEvent('passkey.failed');
+        $this->assertSame((string) $member->getKey(), $event['member_id']);
         $this->assertSame([], $this->securityRecords('login.success'));
+    }
+
+    public function test_a_body_too_malformed_to_deserialise_is_a_validation_error(): void
+    {
+        $this->postJson('/passkeys/login', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
+            ->assertUnprocessable();
+
+        $this->assertSame([], $this->securityRecords('passkey.failed'));
+    }
+
+    public function test_the_login_page_keeps_the_field_the_browser_picker_anchors_to(): void
+    {
+        // The attribute is what arms conditional mediation; without it the client refuses to arm.
+        $page = file_get_contents(resource_path('js/pages/auth/login.tsx'));
+
+        $this->assertStringContainsString('autoComplete="email webauthn"', (string) $page);
     }
 
     public function test_a_banned_member_is_refused_after_a_valid_assertion(): void

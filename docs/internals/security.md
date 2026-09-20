@@ -226,8 +226,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   (`FortifyServiceProvider`). The package verifies before it asks, so a
   refused member's attempt still records `passkey.verified` and advances the
   passkey's `last_used_at`, and the refusal is logged (`passkey.refused`);
-  any other refused assertion logs `passkey.failed`, the counterpart of the
-  password path's `login.failed`. Unlike that path, a row with no password is
+  an assertion the ceremony itself refused logs `passkey.failed`, the
+  counterpart of the password path's `login.failed` (a body too malformed to
+  deserialise is a validation error, and logs nothing, as a malformed login
+  post does). Unlike that path, a row with no password is
   not refused here — a passkey is a credential of its own, the shape a
   credential-less member will need. There is no username step, hence no
   enumeration surface; the login POST is throttled per IP (`passkey-login`,

@@ -21,6 +21,7 @@ vi.mock('@laravel/passkeys/react', () => ({
 
 afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
     hook.isSupported = true;
     hook.verify.mockClear();
 });
@@ -43,6 +44,18 @@ test('arms autofill with the remember box and runs the ceremony from the button'
     await act(() => Promise.resolve());
 
     expect(hook.verify).toHaveBeenCalledTimes(1);
+});
+
+test('a verified passkey sends the member where the server said', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign });
+    renderWithProviders(<PasskeySignIn remember={() => false} />);
+
+    act(() => hook.options?.onSuccess?.({ redirect: 'https://example.test/home' }));
+    expect(assign).toHaveBeenCalledWith('https://example.test/home');
+
+    act(() => hook.options?.onSuccess?.({}));
+    expect(assign).toHaveBeenLastCalledWith('/');
 });
 
 test('a refusal that follows the member picking a passkey is shown', () => {

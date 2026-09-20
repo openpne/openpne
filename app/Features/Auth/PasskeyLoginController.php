@@ -8,12 +8,14 @@ use Laravel\Passkeys\Actions\VerifyPasskey;
 use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
 use Laravel\Passkeys\Http\Controllers\PasskeyLoginController as VendorController;
 use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
+use Laravel\Passkeys\Passkeys;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Webauthn\Exception\WebauthnException;
 
 /**
- * The package logs the guard in without firing `Failed`, so a refused sign-in is recorded here the
- * way `LogFailedLogin` records a wrong password; the gate marks its own refusal to avoid a double row.
+ * The package logs the guard in without firing `Failed`, so an assertion the ceremony refused is
+ * recorded here the way `LogFailedLogin` records a wrong password; the gate marks its own refusal to
+ * avoid a double row.
  */
 class PasskeyLoginController extends VendorController
 {
@@ -28,9 +30,11 @@ class PasskeyLoginController extends VendorController
                 // The id the assertion claims, which is the stored `credential_id`: a counter that
                 // went backwards (a cloned authenticator) is otherwise indistinguishable here from
                 // an unknown credential.
+                $credentialId = Base64UrlSafe::encodeUnpadded($request->credential()->rawId);
                 SecurityLog::event('passkey.failed', [
                     'guard' => 'member',
-                    'credential_id' => Base64UrlSafe::encodeUnpadded($request->credential()->rawId),
+                    'credential_id' => $credentialId,
+                    'member_id' => Passkeys::passkeyModel()::where('credential_id', $credentialId)->value('user_id'),
                 ]);
             }
 
