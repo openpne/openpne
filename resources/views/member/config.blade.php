@@ -389,13 +389,15 @@
                     <div class="operation">
                         <ul class="moreInfo button">
                             <li>
+                                {{-- Hidden until the lane below confirms WebAuthn support. --}}
                                 <button type="button" class="input_submit"
                                         data-passkey-register
                                         data-options-url="{{ route('member.config.passkeys.options') }}"
                                         data-submit-url="{{ route('member.config.passkeys.store') }}"
                                         data-name-input="passkey_name"
                                         data-default-name="{{ __('Passkey') }}"
-                                        data-messages="{{ $passkeyMessages }}">{{ __('Create passkey') }}</button>
+                                        data-messages="{{ $passkeyMessages }}"
+                                        hidden>{{ __('Create passkey') }}</button>
                                 <p class="error" role="alert" data-passkey-error hidden></p>
                             </li>
                         </ul>

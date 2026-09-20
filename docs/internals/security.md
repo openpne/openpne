@@ -224,8 +224,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   or an unused recovery code — the same proof as disabling the factor, because
   a new passkey bypasses it. The password rule runs first, so a wrong password
   never marks a code used nor spends a recovery code; the factor state is
-  re-read under the member row lock and fails closed if it changed. The window
-  is spent by one successful registration; a cancelled browser prompt keeps it.
+  re-read under the member row lock and fails closed if it changed. A
+  successful registration clears the window (two stores racing inside it
+  before either clears is bounded by the per-member throttle, not prevented);
+  a cancelled browser prompt keeps it.
   Accepted residual: a walked-up session inside the window can complete one
   registration without the password.
 - **Removing one revokes.** Deletion demands the password inline and revokes

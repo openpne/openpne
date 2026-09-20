@@ -40,7 +40,8 @@ function bindRegister(button: HTMLButtonElement): void {
 
 function bindLogin(button: HTMLButtonElement): void {
     const routes = { options: button.dataset.optionsUrl ?? '', submit: button.dataset.submitUrl ?? '' };
-    const remember = document.getElementById(button.dataset.rememberInput ?? '') as HTMLInputElement | null;
+    // The button's own form, not a document-wide id: a site may place the login gadget twice.
+    const remember = button.closest('form')?.querySelector<HTMLInputElement>('input[name="remember"]') ?? null;
 
     button.addEventListener('click', async () => {
         report(button, '');
@@ -57,19 +58,18 @@ function bindLogin(button: HTMLButtonElement): void {
 
 function boot(): void {
     const supported = Passkeys.isSupported();
+    // Both buttons render hidden, since a no-JS or unsupported browser must never show a dead one.
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-passkey-register]')) {
-        if (!supported) {
-            button.hidden = true;
-            continue;
+        button.hidden = !supported;
+        if (supported) {
+            bindRegister(button);
         }
-        bindRegister(button);
     }
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-passkey-login]')) {
-        if (!supported) {
-            button.hidden = true;
-            continue;
+        button.hidden = !supported;
+        if (supported) {
+            bindLogin(button);
         }
-        bindLogin(button);
     }
     if (!supported) {
         for (const note of document.querySelectorAll<HTMLElement>('[data-passkey-unsupported]')) {

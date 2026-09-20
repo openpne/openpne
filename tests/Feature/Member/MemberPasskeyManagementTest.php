@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Member;
 
+use App\Features\Member\Actions\DeleteMemberPasskey;
 use App\Features\Member\Actions\OpenPasskeyReauth;
 use App\Features\Member\Actions\RegisterMemberPasskey;
 use App\Features\Member\PasskeyReauth;
@@ -370,6 +371,20 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertNotSame($before, $member->fresh()->remember_token);
         Notification::assertSentTo($member, PasskeyRemovedNotification::class);
         $this->assertSame((string) $passkey->getKey(), $this->assertOneSecurityEvent('passkey.removed')['passkey_id']);
+    }
+
+    public function test_deleting_keeps_the_session_that_asked(): void
+    {
+        $member = Member::factory()->create();
+        $passkey = $this->register($member);
+        config(['session.driver' => 'database']);
+        foreach (['this-device', 'other-device'] as $id) {
+            DB::table('sessions')->insert(['id' => $id, 'user_id' => $member->getKey(), 'payload' => base64_encode('{}'), 'last_activity' => time()]);
+        }
+
+        app(DeleteMemberPasskey::class)($member, $passkey->getKey(), 'this-device');
+
+        $this->assertSame(['this-device'], DB::table('sessions')->pluck('id')->all());
     }
 
     public function test_deleting_someone_elses_or_a_missing_passkey_is_a_uniform_404(): void
