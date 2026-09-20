@@ -103,7 +103,7 @@ class GroupTopicController extends Controller
 
                 return Inertia::render('group/topic/show', [
                     'group' => GroupSerializer::summary($found->group),
-                    'topic' => GroupTopicSerializer::detail($found, $viewer),
+                    'topic' => GroupTopicSerializer::detail($found, $viewer, $reactions->of($viewer, $found)),
                     'thread' => GroupTopicSerializer::thread($thread, $viewer, $reactions($viewer, GroupTopicComment::class, $thread->comments->modelKeys())),
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),
                     'reactionVocabulary' => ReactionVocabulary::all(),
@@ -156,7 +156,7 @@ class GroupTopicController extends Controller
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('group/topic/edit', [
                 'group' => GroupSerializer::summary($topic->group),
-                'topic' => GroupTopicSerializer::detail($topic, $this->viewer()),
+                'topic' => GroupTopicSerializer::detail($topic, $this->viewer(), []),
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);

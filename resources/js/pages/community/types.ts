@@ -100,6 +100,7 @@ export interface TopicDetail {
     author: TopicAuthor | null;
     createdAt: string;
     editedAt: string | null; // set by a name or body edit
+    reactions: ReactionChip[];
 }
 
 export interface TopicComment {
@@ -158,6 +159,7 @@ export interface EventDetail {
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime
     editedAt: string | null; // set by a name or body edit
+    reactions: ReactionChip[];
     openDate: string; // Y-m-d (date only)
     openDateComment: string;
     area: string;

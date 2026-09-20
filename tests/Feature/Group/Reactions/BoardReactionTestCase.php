@@ -70,20 +70,35 @@ abstract class BoardReactionTestCase extends TestCase
         ]);
     }
 
-    protected function path(GroupTopicComment|GroupEventComment $comment): string
+    protected function topicBody(Group $group, ?Member $author = null): GroupTopic
     {
-        $board = $comment instanceof GroupTopicComment ? 'topics' : 'events';
+        $author ??= $this->joined($group);
 
-        return "/{$board}/comments/{$comment->getKey()}/reactions";
+        return GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
     }
 
-    protected function react(Member $member, GroupTopicComment|GroupEventComment $comment, ?string $emoji = null): TestResponse
+    protected function eventBody(Group $group, ?Member $author = null): GroupEvent
     {
-        return $this->actingAs($member)->postJson($this->path($comment), ['emoji' => $emoji ?? $this->emoji(0)]);
+        $author ??= $this->joined($group);
+
+        return GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
     }
 
-    protected function unreact(Member $member, GroupTopicComment|GroupEventComment $comment, ?string $emoji = null): TestResponse
+    protected function path(GroupTopic|GroupEvent|GroupTopicComment|GroupEventComment $target): string
     {
-        return $this->actingAs($member)->postJson($this->path($comment).'/delete', ['emoji' => $emoji ?? $this->emoji(0)]);
+        $board = $target instanceof GroupTopic || $target instanceof GroupTopicComment ? 'topics' : 'events';
+        $comments = $target instanceof GroupTopicComment || $target instanceof GroupEventComment ? '/comments' : '';
+
+        return "/{$board}{$comments}/{$target->getKey()}/reactions";
+    }
+
+    protected function react(Member $member, GroupTopic|GroupEvent|GroupTopicComment|GroupEventComment $target, ?string $emoji = null): TestResponse
+    {
+        return $this->actingAs($member)->postJson($this->path($target), ['emoji' => $emoji ?? $this->emoji(0)]);
+    }
+
+    protected function unreact(Member $member, GroupTopic|GroupEvent|GroupTopicComment|GroupEventComment $target, ?string $emoji = null): TestResponse
+    {
+        return $this->actingAs($member)->postJson($this->path($target).'/delete', ['emoji' => $emoji ?? $this->emoji(0)]);
     }
 }

@@ -3,7 +3,7 @@
 namespace Tests\Feature\Group\Reactions;
 
 use App\Features\Group\Actions\DeleteGroup;
-use App\Features\Group\BoardCommentReactionSurface;
+use App\Features\Group\BoardReactionSurface;
 use App\Features\GroupEvent\Actions\CreateEvent;
 use App\Features\GroupEvent\Actions\CreateEventComment;
 use App\Features\GroupEvent\Actions\DeleteEvent;
@@ -24,6 +24,7 @@ use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /**
@@ -60,33 +61,39 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertDatabaseCount('reactions', 0);
     }
 
-    public function test_deleting_a_topic_sweeps_its_comments_reactions_and_purges_the_bytes(): void
+    public function test_deleting_a_topic_sweeps_its_own_and_its_comments_reactions_and_purges_the_bytes(): void
     {
         $group = $this->group();
         $author = $this->joined($group);
         $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
         $comment = app(CreateTopicComment::class)($author, $topic, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $topic)->assertOk();
         $files = [$topic->images()->with('file')->firstOrFail()->file, $comment->images()->with('file')->firstOrFail()->file];
         $levels = $this->sweepLevels();
 
         app(DeleteTopic::class)->purge($topic->fresh());
 
-        $this->assertSame([DB::transactionLevel() + 1], $levels());
+        // The topic's own reactions and its comments' go in two deletes, both inside the one transaction.
+        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
         $this->assertDatabaseCount('reactions', 0);
         $this->assertBytesGone($files);
     }
 
-    public function test_deleting_an_event_sweeps_its_comments_reactions_and_purges_the_bytes(): void
+    public function test_deleting_an_event_sweeps_its_own_and_its_comments_reactions_and_purges_the_bytes(): void
     {
         $group = $this->group();
         $author = $this->joined($group);
         $event = app(CreateEvent::class)($author, $group, $this->eventForm(), [UploadedFile::fake()->image('e.png', 20, 20)]);
         $comment = app(CreateEventComment::class)($author, $event, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $event)->assertOk();
         $files = [$event->images()->with('file')->firstOrFail()->file, $comment->images()->with('file')->firstOrFail()->file];
+        $levels = $this->sweepLevels();
 
         app(DeleteEvent::class)->purge($event->fresh());
+
+        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
 
         $this->assertDatabaseCount('reactions', 0);
         $this->assertBytesGone($files);
@@ -103,6 +110,8 @@ class BoardTeardownTest extends BoardReactionTestCase
         $eventComment = app(CreateEventComment::class)($author, $event, 'reply', [UploadedFile::fake()->image('ec.png', 20, 20)]);
         $this->react($author, $topicComment)->assertOk();
         $this->react($author, $eventComment)->assertOk();
+        $this->react($author, $topic)->assertOk();
+        $this->react($author, $event)->assertOk();
         $otherGroup = $this->group();
         $otherGroupsComment = $this->topicComment($otherGroup);
         $this->react($this->joined($otherGroup), $otherGroupsComment)->assertOk();
@@ -117,7 +126,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         app(DeleteGroup::class)->purge($group);
 
         // One delete per alias that had rows (the talk had none), each inside the one transaction.
-        $this->assertSame([DB::transactionLevel() + 1, DB::transactionLevel() + 1], $levels());
+        $this->assertSame(array_fill(0, 4, DB::transactionLevel() + 1), $levels());
         $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
         $this->assertDatabaseCount('group_topics', 1);
         $this->assertDatabaseCount('reactions', 1);
@@ -126,7 +135,7 @@ class BoardTeardownTest extends BoardReactionTestCase
     }
 
     /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, and a decade-old board's comments pass that. */
-    public function test_the_teardown_reaches_every_row_by_subquery_and_binds_nothing_but_the_group_id(): void
+    public function test_the_teardown_binds_nothing_but_the_group_id_for_the_files_and_the_reactions_own_ids_for_the_deletes(): void
     {
         $this->group(); // so the group's id differs from its first topic's and event's
         $group = $this->group();
@@ -137,6 +146,8 @@ class BoardTeardownTest extends BoardReactionTestCase
             $this->react($author, app(CreateTopicComment::class)($author, $topic, "reply {$i}", []))->assertOk();
         }
         $this->react($author, app(CreateEventComment::class)($author, $event, 'reply', []))->assertOk();
+        $this->react($author, $topic)->assertOk();
+        $this->react($author, $event)->assertOk();
         $bindings = [];
         DB::listen(function ($query) use (&$bindings): void {
             if (preg_match('/^select .* from [`"]files[`"] where [`"]id[`"] in \(select|^delete from [`"]reactions[`"]/', $query->sql)) {
@@ -146,10 +157,12 @@ class BoardTeardownTest extends BoardReactionTestCase
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertCount(3, $bindings, 'one File collection and one chunked reaction delete per board');
+        $this->assertCount(5, $bindings, 'one File collection and one chunked reaction delete per board arm: the two bodies, then the two comment sets');
         $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
-        $this->assertCount(3, $bindings[1], 'the topic reaction delete binds the reactions\' own ids');
-        $this->assertCount(1, $bindings[2], 'the event reaction delete binds the reactions\' own ids');
+        $this->assertCount(1, $bindings[1], 'the topic body delete binds the reaction\'s own id');
+        $this->assertCount(1, $bindings[2], 'the event body delete binds the reaction\'s own id');
+        $this->assertCount(3, $bindings[3], 'the topic comment delete binds the reactions\' own ids');
+        $this->assertCount(1, $bindings[4], 'the event comment delete binds the reactions\' own ids');
         $this->assertDatabaseCount('reactions', 0);
     }
 
@@ -303,6 +316,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Topic', 'Body'), [UploadedFile::fake()->image('t.png', 20, 20)]);
         $comment = app(CreateTopicComment::class)($author, $topic, 'reply', []);
         $this->react($author, $comment)->assertOk();
+        $this->react($author, $topic)->assertOk();
         $file = $topic->images()->with('file')->firstOrFail()->file;
 
         Group::deleting(function (): void {
@@ -317,9 +331,148 @@ class BoardTeardownTest extends BoardReactionTestCase
         }
 
         $this->assertDatabaseHas('groups', ['id' => $group->getKey()]);
-        $this->assertDatabaseCount('reactions', 1);
+        $this->assertDatabaseCount('reactions', 2);
         $this->assertModelExists($file);
         $this->assertTrue(app(FileStorage::class)->exists($file));
+    }
+
+    /** The parent goes between the route binding and the gate's own read of it, where a typed relation would answer 500. */
+    #[DataProvider('comments')]
+    public function test_a_comment_whose_parent_went_after_the_binding_is_not_found(string $make): void
+    {
+        $group = $this->group();
+        $member = $this->joined($group);
+        $comment = $this->{$make}($group);
+        [$table, $column] = $comment instanceof GroupTopicComment ? ['group_topics', 'group_topic_id'] : ['group_events', 'group_event_id'];
+        $comment::retrieved(function ($retrieved) use ($comment, $table, $column): void {
+            if ($retrieved->is($comment)) {
+                DB::table($table)->where('id', $comment->{$column})->delete();
+            }
+        });
+
+        $this->react($member, $comment)->assertNotFound();
+        $this->unreact($member, $comment)->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($comment))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** The group goes between the binding of a body and the gate, which reads the group off it. */
+    #[DataProvider('bodies')]
+    public function test_a_body_whose_group_went_after_the_binding_is_not_found(string $make): void
+    {
+        $group = $this->group();
+        $member = $this->joined($group);
+        $body = $this->{$make}($group);
+        $body::retrieved(function ($retrieved) use ($body): void {
+            if ($retrieved->is($body)) {
+                DB::table('groups')->where('id', $body->group_id)->delete();
+            }
+        });
+
+        $this->react($member, $body)->assertNotFound();
+        $this->unreact($member, $body)->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($body))->assertNotFound();
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** @return array<string, list<string>> */
+    public static function comments(): array
+    {
+        return ['topic' => ['topicComment'], 'event' => ['eventComment']];
+    }
+
+    /** @return array<string, list<string>> */
+    public static function bodies(): array
+    {
+        return ['topic' => ['topicBody'], 'event' => ['eventBody']];
+    }
+
+    /** The group's rows are paged in the (group_id, bumped_at) index's order with the id breaking ties, so no page sorts the group. */
+    public function test_the_body_sweep_pages_the_rows_in_the_index_order(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        // Rows 999 and 1000 share the instant on the page boundary, so the cursor has to carry the id; row 1002 is early with the highest id, so the cursor must be the page's last row, not its highest id.
+        $earlier = now()->subDay();
+        $seconds = fn (int $i): int => match (true) {
+            $i === 1000 => 999,
+            $i === 1001 => 1000,
+            $i === 1002 => 1,
+            default => $i,
+        };
+        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'name' => "Topic {$i}",
+            'body' => 'Body',
+            'bumped_at' => $earlier->copy()->addSeconds($seconds($i)),
+            'created_at' => $earlier,
+            'updated_at' => $earlier,
+        ], range(1, 1002)));
+        $bumpedAt = DB::table('group_topics')->where('group_id', $group->getKey())->orderBy('bumped_at')->orderBy('id')->pluck('bumped_at', 'id')->all();
+        $ordered = array_keys($bumpedAt);
+        $this->assertSame($bumpedAt[$ordered[999]], $bumpedAt[$ordered[1000]], 'the boundary rows share an instant');
+        $this->assertGreaterThan($ordered[999], max(array_slice($ordered, 0, 1000)), 'the page holds an id above its last row');
+        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+            'reactable_type' => 'groupTopic', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $earlier, 'updated_at' => $earlier,
+        ], $ordered));
+        $pages = [];
+        $deletes = [];
+        DB::listen(function ($query) use (&$pages, &$deletes): void {
+            if (preg_match('/from [`"]group_topics[`"] where .*order by [`"]bumped_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
+                $pages[] = $query->bindings;
+            }
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $deletes[] = $query->bindings;
+            }
+        });
+        $secondPage = DB::table('reactions')->whereIn('reactable_id', array_slice($ordered, 1000))->orderBy('id')->pluck('id')->all();
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertCount(2, $pages, 'a thousand and two topics are two pages');
+        // The second page's cursor is the OR of two arms, time above or time equal with id above, so four bindings with the group.
+        $this->assertCount(4, $pages[1]);
+        $this->assertSame($ordered[999], $pages[1][3], 'the cursor is the last row of the page in the index order, not the highest id');
+        $this->assertSame([1000, 2], array_map('count', $deletes));
+        $this->assertSame($secondPage, $deletes[1], 'the row sharing the boundary instant and the one after it are reached by the second page');
+        $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** Past a page of the group's rows the body sweep goes on to the next and still reaches every row: the delete statements read [1000, remainder]. */
+    public function test_the_body_sweep_pages_the_reactions_past_the_chunk_size(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        $first = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'name' => "Topic {$i}",
+            'body' => 'Body',
+            'bumped_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], range(2, 1001)));
+        DB::table('reactions')->insert(DB::table('group_topics')->where('group_id', $group->getKey())->pluck('id')->map(fn (int $id): array => [
+            'reactable_type' => $first->getMorphClass(),
+            'reactable_id' => $id,
+            'member_id' => $author->getKey(),
+            'emoji' => $this->emoji(0),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->all());
+        $sizes = [];
+        DB::listen(function ($query) use (&$sizes): void {
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $sizes[] = count($query->bindings);
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertSame([1000, 1], $sizes);
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_reacting_to_a_comment_whose_topic_is_gone_writes_nothing(): void
@@ -329,7 +482,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         DB::table('group_topic_comments')->where('id', $comment->getKey())->delete();
 
         try {
-            app(AddReaction::class)($this->joined($group), $comment, $this->emoji(0), new BoardCommentReactionSurface);
+            app(AddReaction::class)($this->joined($group), $comment, $this->emoji(0), new BoardReactionSurface);
             $this->fail('the write was not refused');
         } catch (ReactionRefused) {
             $this->addToAssertionCount(1);

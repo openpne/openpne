@@ -9,6 +9,7 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
 use App\Models\Member;
+use App\Models\Reaction;
 use Illuminate\Support\Facades\DB;
 
 class DeleteEvent
@@ -25,8 +26,8 @@ class DeleteEvent
     /**
      * No authorization: the `purge()` half of the Action split (docs/internals/feature-modules.md, "Surface responsibilities").
      * The cascade drops the comments and the `*_image` link rows but never the File bytes nor the
-     * comments' reactions, so both are collected under the event lock; the reactions go inside the
-     * transaction and the Files after it.
+     * reactions, the event's own included, so both are collected under the event lock; the reactions go
+     * inside the transaction and the Files after it.
      */
     public function purge(GroupEvent $event): void
     {
@@ -36,6 +37,7 @@ class DeleteEvent
                 return [];
             }
 
+            Reaction::query()->where('reactable_type', $locked->getMorphClass())->where('reactable_id', $locked->getKey())->delete();
             $comments = DB::table('group_event_comments')->where('group_event_id', $locked->getKey())->select('id');
 
             // The transaction's first consistent read, so its snapshot is taken under the lock above.

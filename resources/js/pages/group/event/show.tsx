@@ -5,6 +5,7 @@ import { LinkCard } from '@/components/link-card';
 import { UserText } from '@/components/user-text';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
+import { RowReactionChips } from '@/components/reactions/reaction-bar';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
@@ -21,7 +22,7 @@ import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import type { PageProps } from '@/types';
 import { BoardCommentRow } from '@/pages/group/board-comment-row';
-import { eventCommentReactionEndpoints } from '@/pages/group/reactions';
+import { eventCommentReactionEndpoints, eventReactionEndpoints } from '@/pages/group/reactions';
 import type { CommunitySummary, EventDetail, EventThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
@@ -42,7 +43,9 @@ export default function GroupEventShow() {
     const t = useT();
     const confirm = useConfirm();
     const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const eventReactions = useReactions(eventReactionEndpoints, renderGeneration);
     const reactions = useReactions(eventCommentReactionEndpoints, renderGeneration);
+    const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -133,6 +136,7 @@ export default function GroupEventShow() {
                 <RichBody body={event.body} bodyHtml={event.bodyHtml} />
                 <LinkCard card={event.linkCard} />
                 <ImageGrid images={event.images} variant="post" className="mt-2" />
+                <RowReactionChips reactions={bodyReactions} />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
@@ -212,6 +216,7 @@ export default function GroupEventShow() {
                     </form>
                 </Panel>
             )}
+            {eventReactions.reactorsFor !== null && <ReactorsDialog url={eventReactions.reactorsUrl(eventReactions.reactorsFor)} onClose={eventReactions.closeReactors} />}
             {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
         </>
     );

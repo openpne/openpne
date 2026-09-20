@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLinkCard;
+use App\Models\Concerns\HasReactions;
 use App\Support\BodyFormat;
 use Database\Factories\GroupEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +20,7 @@ class GroupEvent extends Model
     use HasFactory;
 
     use HasLinkCard;
+    use HasReactions;
 
     protected function casts(): array
     {
