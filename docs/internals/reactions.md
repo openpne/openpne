@@ -111,8 +111,8 @@ focus returns to the row that was pressed.
 
 A chip is its own toggle. Held, it opens the reactor list led by its own emoji; reached by a keyboard
 or hovered, it names its reactors in a tip read fresh on every open, so a toggle of one's own is never
-answered with the room as it was; the tip describes the chip, so a screen reader hears the names on
-focus. The names are offered only to a reader the reactor route admits — a guest on a web-public
+answered with the room as it was; the tip describes the chip from the moment it opens, a loading word
+until the names arrive. The names are offered only to a reader the reactor route admits — a guest on a web-public
 diary is not. A press starting on a chip belongs to the chip: the row's own hook
 lets a press that began inside a `data-press-own` element pass, since a pointerdown bubbles and every
 hook on the way up would otherwise arm its own timer.

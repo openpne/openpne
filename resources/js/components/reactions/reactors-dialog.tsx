@@ -24,7 +24,6 @@ export function ReactorsDialog({
 }) {
     const t = useT();
     const [groups, setGroups] = useState<ReactorGroup[] | null>(null);
-    // Opened from a menu rather than a trigger of its own, so the dialog names its own way back: what held focus as it mounted.
     const [opener] = useState(() => returnFocusTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null));
 
     useEffect(() => {

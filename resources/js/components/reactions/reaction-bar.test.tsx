@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { DetailReactionChips, RowReactionChips } from './reaction-bar';
+import { DetailReactionChips, RowReactionChips, reactorNames } from './reaction-bar';
 import { fakeT } from '@/lib/test-i18n';
 import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
@@ -80,4 +80,27 @@ test('a chip reached by keyboard names its reactors in a tip, read fresh each ti
     fireEvent.blur(chip);
     fireEvent.focus(chip);
     expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+
+test('the tip describes the chip from the moment it opens, before the names arrive', async () => {
+    vi.stubGlobal('fetch', () => new Promise<Response>(() => {}));
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.focus(chip);
+    const described = await vi.waitFor(() => {
+        const id = chip.getAttribute('aria-describedby');
+        expect(id).toBeTruthy();
+
+        return document.getElementById(id!);
+    });
+    expect(described?.textContent).toBe('Loading…');
+});
+
+test('a tip lists twenty names and counts the rest, whatever the server sent', () => {
+    const members = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `m${i + 1}`, imageUrl: null, avatarColor: null, isAi: false }));
+
+    expect(reactorNames({ emoji: '\u{1F44D}', count: 60, members }, fakeT)).toBe(`${members.slice(0, 20).map((m) => m.name).join(', ')} and 40 more`);
+    expect(reactorNames({ emoji: '\u{1F44D}', count: 2, members: members.slice(0, 2) }, fakeT)).toBe('m1, m2');
 });

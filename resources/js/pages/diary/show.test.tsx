@@ -82,3 +82,11 @@ test('a guest on a web-public entry reads the counts and has nothing to press', 
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
 });
+
+
+test('a guest is offered no way to the names: the chips are counts and the sheet spec carries no reactor handler', () => {
+    const { container } = renderShow(null);
+
+    expect(container.querySelectorAll('[data-reactions] button')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+});
