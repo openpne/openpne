@@ -129,6 +129,8 @@ export function useLongPress(onLongPress: () => void, { enabled = true, own = fa
             if (!own && e.target instanceof Element && e.target.closest(`[${OWN_ATTRIBUTE}]`) !== null) {
                 return;
             }
+            // A new press is a new gesture: only the release of the press that landed loses its click.
+            firedAt.current = 0;
             advance({ type: 'down', pointerType: e.pointerType, x: e.clientX, y: e.clientY, primary: e.isPrimary });
             if (press.current.phase === 'pending') {
                 timer.current = setTimeout(() => advance({ type: 'timer' }), LONG_PRESS_MS);

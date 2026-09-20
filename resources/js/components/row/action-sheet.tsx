@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
 
@@ -32,7 +32,8 @@ export function ActionSheet({
     const contentRef = useRef<HTMLDivElement>(null);
     // The press that opened the sheet is still down until its first pointerup; the click that release synthesises is not a choice, a later finger's is.
     const press = useRef<{ down: boolean; releasedAt: number }>({ down: false, releasedAt: 0 });
-    useEffect(() => {
+    // A layout effect: the finger can lift between the commit that mounts the sheet and a passive effect.
+    useLayoutEffect(() => {
         if (!open || !openedByPress) {
             return;
         }

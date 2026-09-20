@@ -103,3 +103,21 @@ test('a tip lists twenty names and counts the rest, whatever the server sent', (
     expect(reactorNames({ emoji: '\u{1F44D}', count: 60, members }, fakeT)).toBe(`${members.slice(0, 20).map((m) => m.name).join(', ')} and 40 more`);
     expect(reactorNames({ emoji: '\u{1F44D}', count: 2, members: members.slice(0, 2) }, fakeT)).toBe('m1, m2');
 });
+
+test('a finger on a chip opens no tip and reads nothing: the names are the hold\'s, in the list', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.pointerDown(chip, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    fireEvent.focus(chip);
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(chip.getAttribute('aria-describedby')).toBeNull();
+});

@@ -367,3 +367,23 @@ test('a write that completes after the row left schedules nothing', async () => 
     expect(vi.getTimerCount()).toBe(0);
     window.history.replaceState(null, '', '/');
 });
+
+test('only the release of the press that landed loses its click; a tap that follows keeps its own', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const onOpenActions = vi.fn();
+    renderRow({}, { onOpenActions });
+    const row = document.querySelector('[data-talk-message-id]')!;
+    const link = screen.getByRole('link', { name: 'Rin' });
+
+    press(row);
+    expect(onOpenActions).toHaveBeenCalledTimes(1);
+    expect(fireEvent.click(link)).toBe(false);
+
+    clock.mockReturnValue(1200);
+    fireEvent.pointerDown(link, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(link);
+    expect(fireEvent.click(link)).toBe(true);
+    clock.mockRestore();
+});
