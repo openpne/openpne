@@ -225,9 +225,9 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   a new passkey bypasses it. The password rule runs first, so a wrong password
   never marks a code used nor spends a recovery code; the factor state is
   re-read under the member row lock and fails closed if it changed. A
-  successful registration clears the window (two stores racing inside it
-  before either clears is bounded by the per-member throttle, not prevented);
-  a cancelled browser prompt keeps it.
+  successful registration clears the window, and the single challenge slot in
+  the session serialises two stores racing inside it; a cancelled browser
+  prompt keeps it.
   Accepted residual: a walked-up session inside the window can complete one
   registration without the password.
 - **Removing one revokes.** Deletion demands the password inline and revokes
@@ -253,8 +253,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   leaves existing passkeys valid and only changes the handle new ones carry.
 - `credential_id` is stored at 512 characters under a binary collation on
   MySQL (base64url is case-sensitive). The WebAuthn maximum of 1023 bytes would
-  not fit, so the store request refuses longer IDs at validation (422); real
-  authenticators emit far shorter ones. Synced passkeys report a
+  not fit, so `RegisterMemberPasskey` refuses a longer attested id (422) before
+  the insert; real authenticators emit far shorter ones. A refused WebAuthn
+  ceremony renders as 422 app-wide (`bootstrap/app.php`), the only WebAuthn
+  user being the member realm. Synced passkeys report a
   zero signature counter, so clone detection is nominal for them, and their
   security is that of the platform account they sync through — accepted, as
   every major service does.

@@ -33,6 +33,9 @@ final class FakeAuthenticator
 
     public bool $backedUp = true;
 
+    /** The id inside the attestation object, which a browser always makes equal to `rawId`. */
+    public ?string $attestedCredentialId = null;
+
     public function __construct(private readonly string $origin, int $credentialIdBytes = 32)
     {
         $key = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
@@ -138,7 +141,8 @@ final class FakeAuthenticator
         $authData = hash('sha256', $rpId, true).chr($flags).pack('N', $this->counter);
 
         if ($attested) {
-            $authData .= self::AAGUID.pack('n', strlen($this->credentialId)).$this->credentialId.$this->coseKey();
+            $id = $this->attestedCredentialId ?? $this->credentialId;
+            $authData .= self::AAGUID.pack('n', strlen($id)).$id.$this->coseKey();
         }
 
         return $authData;

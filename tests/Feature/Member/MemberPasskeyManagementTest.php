@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
+use Laravel\Passkeys\Actions\DeletePasskey;
 use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Support\WebAuthn;
 use PragmaRX\Google2FA\Google2FA;
@@ -272,16 +273,27 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertSame(0, Passkey::count());
     }
 
-    public function test_a_credential_id_longer_than_the_column_is_refused_at_validation(): void
+    public function test_a_credential_id_longer_than_the_column_is_refused_before_the_insert(): void
     {
         $member = Member::factory()->create();
-        $authenticator = FakeAuthenticator::forApp(credentialIdBytes: 400);
-        $this->reauth($member);
 
+        // A browser keeps rawId and the attested id equal; a hand-made body need not, and the
+        // stored value is the attested one, so the short rawId must not get it past the check.
+        $authenticator = FakeAuthenticator::forApp();
+        $authenticator->attestedCredentialId = random_bytes(400);
+        $this->reauth($member);
         $this->actingAs($member)
             ->postJson('/member/config/passkeys', ['name' => 'long', 'credential' => $authenticator->attest($this->registrationOptions($member))])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('credential.rawId');
+            ->assertJsonValidationErrors('credential');
+        $this->assertSame(0, Passkey::count());
+
+        $honest = FakeAuthenticator::forApp(credentialIdBytes: 400);
+        $this->reauth($member);
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['name' => 'long', 'credential' => $honest->attest($this->registrationOptions($member))])
+            ->assertUnprocessable();
+        $this->assertSame(0, Passkey::count());
     }
 
     public function test_a_lapsed_window_answers_with_the_translated_reason(): void
@@ -387,6 +399,28 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertSame(['this-device'], DB::table('sessions')->pluck('id')->all());
     }
 
+    public function test_the_delete_request_passes_its_own_session_as_the_one_to_keep(): void
+    {
+        $member = Member::factory()->create();
+        $passkey = $this->register($member);
+        $spy = new class(app(DeletePasskey::class)) extends DeleteMemberPasskey
+        {
+            public ?string $except = 'unset';
+
+            public function __invoke(Member $viewer, int $passkeyId, ?string $exceptSessionId): ?Passkey
+            {
+                $this->except = $exceptSessionId;
+
+                return parent::__invoke($viewer, $passkeyId, $exceptSessionId);
+            }
+        };
+        $this->app->instance(DeleteMemberPasskey::class, $spy);
+
+        $this->actingAs($member)->delete("/member/config/passkeys/{$passkey->getKey()}", ['current_password' => 'password'])->assertRedirect();
+
+        $this->assertSame($this->app['session.store']->getId(), $spy->except);
+    }
+
     public function test_deleting_someone_elses_or_a_missing_passkey_is_a_uniform_404(): void
     {
         $owner = Member::factory()->create();
@@ -439,9 +473,11 @@ class MemberPasskeyManagementTest extends TestCase
                 ->post('/member/config/passkeys/reauth', ['current_password' => 'wrong-password'])
                 ->assertSessionHasErrors('current_password');
         }
+        // The client maps this literal, so it is pinned here as well as in resources/js/lib/passkeys.test.ts.
         $this->actingAs($member)
-            ->post('/member/config/passkeys/reauth', ['current_password' => 'wrong-password'])
-            ->assertStatus(429);
+            ->postJson('/member/config/passkeys/reauth', ['current_password' => 'wrong-password'])
+            ->assertStatus(429)
+            ->assertJsonPath('message', 'Too Many Attempts.');
 
         $this->actingAs($member)->get('/member/config/passkeys')->assertOk();
     }
