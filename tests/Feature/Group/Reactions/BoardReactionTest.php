@@ -275,7 +275,7 @@ class BoardReactionTest extends BoardReactionTestCase
 
         $author->delete();
 
-        $this->assertDatabaseHas('reactions', ['reactable_id' => $comment->getKey()]);
+        $this->assertDatabaseHas('reactions', ['reactable_type' => $comment->getMorphClass(), 'reactable_id' => $comment->getKey()]);
         $this->assertDatabaseHas($comment->getTable(), ['id' => $comment->getKey(), 'member_id' => null]);
     }
 }

@@ -44,7 +44,6 @@ export default function GroupEventShow() {
     const t = useT();
     const confirm = useConfirm();
     const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
-    // Two rows of state, one per endpoint set: the event and its comments are reacted to on different URLs.
     const eventReactions = useReactions(eventReactionEndpoints, renderGeneration);
     const reactions = useReactions(eventCommentReactionEndpoints, renderGeneration);
     const bodyReactions = rowReactions(event.id, event.reactions, reactionVocabulary, canComment ? eventReactions : null);

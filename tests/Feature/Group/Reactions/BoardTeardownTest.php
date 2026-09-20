@@ -20,11 +20,11 @@ use App\Features\Reactions\ReactionVocabulary;
 use App\Files\FileStorage;
 use App\Models\File;
 use App\Models\Group;
-use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /**
@@ -336,15 +336,17 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertTrue(app(FileStorage::class)->exists($file));
     }
 
-    /** The topic goes between the route binding and the gate's own read of it, where a typed relation would answer 500. */
-    public function test_a_comment_whose_topic_went_after_the_binding_is_not_found(): void
+    /** The parent goes between the route binding and the gate's own read of it, where a typed relation would answer 500. */
+    #[DataProvider('comments')]
+    public function test_a_comment_whose_parent_went_after_the_binding_is_not_found(string $make): void
     {
         $group = $this->group();
         $member = $this->joined($group);
-        $comment = $this->topicComment($group);
-        GroupTopicComment::retrieved(function (GroupTopicComment $retrieved) use ($comment): void {
+        $comment = $this->{$make}($group);
+        [$table, $column] = $comment instanceof GroupTopicComment ? ['group_topics', 'group_topic_id'] : ['group_events', 'group_event_id'];
+        $comment::retrieved(function ($retrieved) use ($comment, $table, $column): void {
             if ($retrieved->is($comment)) {
-                DB::table('group_topics')->where('id', $comment->group_topic_id)->delete();
+                DB::table($table)->where('id', $comment->{$column})->delete();
             }
         });
 
@@ -355,20 +357,34 @@ class BoardTeardownTest extends BoardReactionTestCase
     }
 
     /** The group goes between the binding of a body and the gate, which reads the group off it. */
-    public function test_a_body_whose_group_went_after_the_binding_is_not_found(): void
+    #[DataProvider('bodies')]
+    public function test_a_body_whose_group_went_after_the_binding_is_not_found(string $make): void
     {
         $group = $this->group();
         $member = $this->joined($group);
-        $event = $this->eventBody($group);
-        GroupEvent::retrieved(function (GroupEvent $retrieved) use ($event): void {
-            if ($retrieved->is($event)) {
-                DB::table('groups')->where('id', $event->group_id)->delete();
+        $body = $this->{$make}($group);
+        $body::retrieved(function ($retrieved) use ($body): void {
+            if ($retrieved->is($body)) {
+                DB::table('groups')->where('id', $body->group_id)->delete();
             }
         });
 
-        $this->react($member, $event)->assertNotFound();
-        $this->actingAs($member)->getJson($this->path($event))->assertNotFound();
+        $this->react($member, $body)->assertNotFound();
+        $this->unreact($member, $body)->assertNotFound();
+        $this->actingAs($member)->getJson($this->path($body))->assertNotFound();
         $this->assertDatabaseCount('reactions', 0);
+    }
+
+    /** @return array<string, list<string>> */
+    public static function comments(): array
+    {
+        return ['topic' => ['topicComment'], 'event' => ['eventComment']];
+    }
+
+    /** @return array<string, list<string>> */
+    public static function bodies(): array
+    {
+        return ['topic' => ['topicBody'], 'event' => ['eventBody']];
     }
 
     /** Past a chunk the body sweep re-runs its subquery for the next page and still reaches every row: the delete statements read [1000, remainder]. */
@@ -376,10 +392,19 @@ class BoardTeardownTest extends BoardReactionTestCase
     {
         $group = $this->group();
         $author = $this->joined($group);
-        $topics = GroupTopic::factory()->count(1001)->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
-        DB::table('reactions')->insert($topics->map(fn (GroupTopic $topic): array => [
-            'reactable_type' => $topic->getMorphClass(),
-            'reactable_id' => $topic->getKey(),
+        $first = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'name' => "Topic {$i}",
+            'body' => 'Body',
+            'bumped_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], range(2, 1001)));
+        DB::table('reactions')->insert(DB::table('group_topics')->where('group_id', $group->getKey())->pluck('id')->map(fn (int $id): array => [
+            'reactable_type' => $first->getMorphClass(),
+            'reactable_id' => $id,
             'member_id' => $author->getKey(),
             'emoji' => $this->emoji(0),
             'created_at' => now(),

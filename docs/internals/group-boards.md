@@ -71,8 +71,8 @@ The group row alone does not stabilise the boards: a talk writer takes the group
 ([group-talk.md](group-talk.md), "One lock order"), and a new topic or event waits on it too through
 its foreign key, but a comment or reaction writer takes the topic or event row and never the
 group's, so a reaction arriving between the sweep and the cascade would take a free topic and
-outlive its comment. Holding every topic and event exclusively is what makes such a writer
-wait and then find its comment gone. A single topic or event goes the same way on its own
+outlive its comment, or the topic itself. Holding every topic and event exclusively is what makes
+such a writer wait and then find its target gone. A single topic or event goes the same way on its own
 (`DeleteTopic::purge`, `DeleteEvent::purge`): its row X-locked, its comments read under it, their
 reactions swept, its own with them, its Files purged after the commit.
 

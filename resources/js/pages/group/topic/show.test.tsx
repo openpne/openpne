@@ -22,7 +22,10 @@ vi.mock('@inertiajs/react', () => ({
     useForm: () => ({ data: { body: '', images: [] }, errors: {}, processing: false, setData: () => {}, post: () => {}, reset: () => {} }),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    over = {};
+});
 
 const topic: TopicDetail = {
     id: 11,
@@ -38,17 +41,22 @@ const topic: TopicDetail = {
     reactions: [],
 };
 
+let over: Partial<typeof topic> = {};
+const inertiaWith = (fields: Partial<typeof topic>) => {
+    over = fields;
+};
+
 const thread: TopicThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canEdit: boolean) {
+function renderShow(canEdit: boolean, canComment = true) {
     inertia.page = {
         component: 'group/topic/show',
         url: '/topics/11',
         props: {
             group: { id: 2, name: 'A group', description: '', memberCount: 1, imageUrl: null, category: null },
-            topic,
+            topic: { ...topic, ...over },
             thread,
-            canComment: true,
+            canComment,
             canEdit,
             reactionVocabulary: ['\u{1F44D}'],
             renderGeneration: 'g1',
@@ -75,4 +83,15 @@ test('an editor edits and deletes the topic from its menu; every member reacts t
     fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
     expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'See who reacted' })).toBeTruthy();
+});
+
+/** The page offers a non-member the counts and nothing else: no add button, no menu, the chips as text. */
+test('a reader who is not a member sees the topic as counts alone', () => {
+    inertiaWith({ reactions: [{ emoji: '\u{1F44D}', count: 2, mine: false }] });
+    renderShow(false, false);
+
+    expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.queryByRole('button', { pressed: false })).toBeNull();
 });
