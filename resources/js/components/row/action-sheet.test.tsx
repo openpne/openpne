@@ -57,7 +57,8 @@ test('what the sheet runs on opening waits for its slide-in to end, and is dropp
     const finished = new Promise<void>((resolve) => {
         finish = resolve;
     });
-    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { value: () => [{ finished }], configurable: true });
+    const getAnimations = vi.fn(() => [{ finished }]);
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { value: getAnimations, configurable: true });
     const onOpened = vi.fn();
     renderWithProviders(
         <ActionSheet open onOpened={onOpened} onOpenChange={vi.fn()} title="Post actions" returnFocusTo={{ current: null }}>
@@ -66,6 +67,7 @@ test('what the sheet runs on opening waits for its slide-in to end, and is dropp
     );
 
     expect(onOpened).not.toHaveBeenCalled();
+    expect(getAnimations.mock.contexts).toEqual([screen.getByRole('dialog')]);
     finish?.();
     await settle();
     expect(onOpened).toHaveBeenCalledTimes(1);

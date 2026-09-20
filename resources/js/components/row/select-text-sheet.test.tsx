@@ -9,7 +9,9 @@ vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: { locale: 'en', ti
 
 afterEach(() => {
     cleanup();
+    window.getSelection()?.removeAllRanges();
     delete (navigator as { clipboard?: unknown }).clipboard;
+    delete (HTMLElement.prototype as { getAnimations?: unknown }).getAnimations;
 });
 
 const text = { body: 'line one\nline two', author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:00:00+09:00' };
@@ -49,4 +51,18 @@ test('the whole body can be copied in one press where a clipboard exists, and a 
     fireEvent.click(screen.getByRole('button', { name: 'Copy all text' }));
     expect(writeText).toHaveBeenCalledWith('line one\nline two');
     expect(onClose).toHaveBeenCalled();
+});
+
+test('while the sheet is still sliding in the body is not yet selected; it is once the slide has ended', async () => {
+    let finish: (() => void) | undefined;
+    const finished = new Promise<void>((resolve) => {
+        finish = resolve;
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { value: () => [{ finished }], configurable: true });
+    renderWithProviders(<SelectTextSheet text={text} returnFocusTo={null} onClose={vi.fn()} />);
+
+    expect(window.getSelection()?.toString()).toBe('');
+    finish?.();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(window.getSelection()?.toString()).toBe('line one\nline two');
 });

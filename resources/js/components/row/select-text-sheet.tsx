@@ -16,7 +16,7 @@ export interface SelectableText {
 
 /**
  * A row suppresses the selection lens, so this is the one place a finger can select part of its body:
- * the row drawn again as it was, its body already selected, so what the choice did is on the screen.
+ * the row drawn again as it was, its body selected once the sheet has slid in, so what the choice did is on the screen.
  */
 export function SelectTextSheet({ text, returnFocusTo, onClose }: { text: SelectableText; returnFocusTo: HTMLElement | null; onClose: () => void }) {
     const t = useT();
