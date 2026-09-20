@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { DetailReactionChips, RowReactionChips, reactorNames } from './reaction-bar';
 import { fakeT } from '@/lib/test-i18n';
@@ -99,29 +99,31 @@ test('the tip describes the chip from the moment it opens, before the names arri
     expect(described?.className).toContain('invisible');
 });
 
-test('a read that fails, or finds the chip gone, leaves the tip unseen and the chip undescribed', async () => {
-    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 404 })));
+async function undescribedAfterFocus(fetch: () => Promise<Response>) {
+    vi.stubGlobal('fetch', fetch);
     renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
     const chip = screen.getByRole('button', { name: /2/ });
 
     fireEvent.focus(chip);
-    await vi.waitFor(() => {
+    await waitFor(() => {
         const described = document.getElementById(chip.getAttribute('aria-describedby') ?? '');
         expect(described?.textContent).toBe('');
         expect(described?.className).toContain('invisible');
     });
+}
 
+test('a read the route refuses leaves the tip unseen and the chip undescribed', async () => {
+    await undescribedAfterFocus(() => Promise.resolve(new Response('', { status: 404 })));
+});
+
+test('a read that never answers, or answers with a login page, leaves the tip unseen and the chip undescribed', async () => {
+    await undescribedAfterFocus(() => Promise.reject(new Error('offline')));
     cleanup();
-    vi.stubGlobal('fetch', () => Promise.resolve(new Response(JSON.stringify({ groups: [] }), { status: 200 })));
-    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
-    const gone = screen.getByRole('button', { name: /2/ });
+    await undescribedAfterFocus(() => Promise.resolve(new Response('<!doctype html>', { status: 200 })));
+});
 
-    fireEvent.focus(gone);
-    await vi.waitFor(() => {
-        const described = document.getElementById(gone.getAttribute('aria-describedby') ?? '');
-        expect(described?.textContent).toBe('');
-        expect(described?.className).toContain('invisible');
-    });
+test('a read that finds the reaction gone leaves the tip unseen and the chip undescribed', async () => {
+    await undescribedAfterFocus(() => Promise.resolve(new Response(JSON.stringify({ groups: [] }), { status: 200 })));
 });
 
 test('a tip lists twenty names and counts the rest, whatever the server sent', () => {

@@ -117,11 +117,12 @@ A chip is its own toggle. Held, it opens the reactor list led by its own emoji; 
 or hovered, it names its reactors in a tip read fresh on every open, so a toggle of one's own is never
 answered with the room as it was. The tip is in the document from the moment it opens, so a screen
 reader's description of the chip says the names are loading, but nothing is drawn until they arrive,
-since a pointer passing over a chip opens it too; a read that fails, or finds the chip's reaction gone
-or its members withdrawn, leaves the tip undrawn and the description empty. The names are offered
-only to a reader the reactor route admits — a guest on a web-public diary is not. A press starting on a chip belongs to the chip: the row's own hook
-lets a press that began inside a `data-press-own` element pass, since a pointerdown bubbles and every
-hook on the way up would otherwise arm its own timer.
+since a pointer passing over a chip opens it too; a read that fails, or finds the chip's reaction
+gone or its members withdrawn, leaves the tip undrawn and the description empty. The names are
+offered only to a reader the reactor route admits — a guest on a web-public diary is not. A press
+starting on a chip belongs to the chip: the row's own hook lets a press that began inside a
+`data-press-own` element pass, since a pointerdown bubbles and every hook on the way up would
+otherwise arm its own timer.
 
 The bar is one class string reaching the controls by two lanes. Where a cursor can point it is
 revealed by `:hover` and by `:focus-visible` — never `:focus-within`, since a click leaves focus on
