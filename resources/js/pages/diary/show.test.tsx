@@ -140,12 +140,15 @@ test('the owner edits and deletes the entry from the kebab in its header; a read
 test('the kebab\'s delete asks the page\'s own question', async () => {
     const asked = vi.fn();
     window.addEventListener('modern:confirm-request', asked);
-    renderShow({ id: 3 });
-    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    try {
+        renderShow({ id: 3 });
+        fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+        await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-    expect(asked).toHaveBeenCalledTimes(1);
-    expect((asked.mock.calls[0] as unknown as [CustomEvent<{ title: string }>])[0].detail.title).toBe('Delete this %diary%?');
-    window.removeEventListener('modern:confirm-request', asked);
+        expect(asked).toHaveBeenCalledTimes(1);
+        expect((asked.mock.calls[0] as unknown as [CustomEvent<{ title: string }>])[0].detail.title).toBe('Delete this %diary%?');
+    } finally {
+        window.removeEventListener('modern:confirm-request', asked);
+    }
 });
