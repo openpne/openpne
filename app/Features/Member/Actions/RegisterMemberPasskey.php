@@ -15,7 +15,7 @@ use Webauthn\PublicKeyCredentialCreationOptions;
 class RegisterMemberPasskey
 {
     /** The `passkeys.credential_id` column width; webauthn-lib itself allows ids up to 1023 bytes. */
-    public const CREDENTIAL_ID_MAX = 512;
+    private const CREDENTIAL_ID_MAX = 512;
 
     public function __construct(private readonly StorePasskey $store) {}
 

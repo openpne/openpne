@@ -225,9 +225,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   a new passkey bypasses it. The password rule runs first, so a wrong password
   never marks a code used nor spends a recovery code; the factor state is
   re-read under the member row lock and fails closed if it changed. A
-  successful registration clears the window, and the single challenge slot in
-  the session serialises two stores racing inside it; a cancelled browser
-  prompt keeps it.
+  successful registration clears the window; two stores racing inside it before
+  either clears are bounded by the per-member throttle, not prevented (the
+  session's single challenge slot serialises sequential retries, not
+  concurrent ones). A cancelled browser prompt keeps the window.
   Accepted residual: a walked-up session inside the window can complete one
   registration without the password.
 - **Removing one revokes.** Deletion demands the password inline and revokes
