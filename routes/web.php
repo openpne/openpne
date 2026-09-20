@@ -428,13 +428,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/diary/{diary}/reactions/delete', 'delete')
             ->whereNumber('diary')->middleware('throttle:reaction')->name('diary.reactions.delete');
         Route::get('/diary/{diary}/reactions', 'index')
-            ->whereNumber('diary')->name('diary.reactions.index');
+            ->whereNumber('diary')->middleware('throttle:reaction-read')->name('diary.reactions.index');
         Route::post('/diary/comment/{comment}/reactions', 'storeComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('diary.comment.reactions.store');
         Route::post('/diary/comment/{comment}/reactions/delete', 'deleteComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('diary.comment.reactions.delete');
         Route::get('/diary/comment/{comment}/reactions', 'indexComment')
-            ->whereNumber('comment')->name('diary.comment.reactions.index');
+            ->whereNumber('comment')->middleware('throttle:reaction-read')->name('diary.comment.reactions.index');
     });
 
     Route::controller(DiaryCommentController::class)->group(function () {
@@ -470,7 +470,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/timeline/{timelinePost}/reactions/delete', 'delete')
             ->whereNumber('timelinePost')->middleware('throttle:reaction')->name('timeline.reactions.delete');
         Route::get('/timeline/{timelinePost}/reactions', 'index')
-            ->whereNumber('timelinePost')->name('timeline.reactions.index');
+            ->whereNumber('timelinePost')->middleware('throttle:reaction-read')->name('timeline.reactions.index');
     });
 
     Route::controller(TimelineController::class)->group(function () {
@@ -709,13 +709,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/topics/{topic}/reactions/delete', 'delete')
             ->whereNumber('topic')->middleware('throttle:reaction')->name('group.topics.reactions.delete');
         Route::get('/topics/{topic}/reactions', 'index')
-            ->whereNumber('topic')->name('group.topics.reactions.index');
+            ->whereNumber('topic')->middleware('throttle:reaction-read')->name('group.topics.reactions.index');
         Route::post('/topics/comments/{comment}/reactions', 'storeComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('group.topics.comment.reactions.store');
         Route::post('/topics/comments/{comment}/reactions/delete', 'deleteComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('group.topics.comment.reactions.delete');
         Route::get('/topics/comments/{comment}/reactions', 'indexComment')
-            ->whereNumber('comment')->name('group.topics.comment.reactions.index');
+            ->whereNumber('comment')->middleware('throttle:reaction-read')->name('group.topics.comment.reactions.index');
     });
 
     // OpenPNE 3 /communityTopic/* redirects, GET only; the query rides along so a ?page=N bookmark
@@ -762,7 +762,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/groups/{group}/talk/messages/{message}/reactions/delete', 'delete')
             ->whereNumber(['group', 'message'])->middleware('throttle:reaction')->name('group.talk.reactions.delete');
         Route::get('/groups/{group}/talk/messages/{message}/reactions', 'index')
-            ->whereNumber(['group', 'message'])->name('group.talk.reactions.index');
+            ->whereNumber(['group', 'message'])->middleware('throttle:reaction-read')->name('group.talk.reactions.index');
     });
 
     Route::middleware(EnsureFeatureEnabled::class.':groupEvent')->controller(GroupEventController::class)->group(function () {
@@ -791,13 +791,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/events/{event}/reactions/delete', 'delete')
             ->whereNumber('event')->middleware('throttle:reaction')->name('group.events.reactions.delete');
         Route::get('/events/{event}/reactions', 'index')
-            ->whereNumber('event')->name('group.events.reactions.index');
+            ->whereNumber('event')->middleware('throttle:reaction-read')->name('group.events.reactions.index');
         Route::post('/events/comments/{comment}/reactions', 'storeComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('group.events.comment.reactions.store');
         Route::post('/events/comments/{comment}/reactions/delete', 'deleteComment')
             ->whereNumber('comment')->middleware('throttle:reaction')->name('group.events.comment.reactions.delete');
         Route::get('/events/comments/{comment}/reactions', 'indexComment')
-            ->whereNumber('comment')->name('group.events.comment.reactions.index');
+            ->whereNumber('comment')->middleware('throttle:reaction-read')->name('group.events.comment.reactions.index');
     });
 
     // OpenPNE 3 /communityEvent/* redirects, GET only; the query rides along so a ?page=N bookmark

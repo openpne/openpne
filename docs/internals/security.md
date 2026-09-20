@@ -269,10 +269,11 @@ ambiguous (unknown account, or one already on the default cost). The signal
 disappears on the account's first login and is accepted for the migration
 window.
 
-## Write rate limits
+## Rate limits on member requests
 
-Content-posting and mail-triggering member writes, and the keystroke-driven endpoints a compose
-form calls, carry named per-minute limiters
+Content-posting and mail-triggering member writes, the keystroke-driven endpoints a compose form
+calls, and the reactor list, the one read a pointer or a keyboard fires without navigating, carry
+named per-minute limiters
 ([`AppServiceProvider`](../../app/Providers/AppServiceProvider.php)), attached per route in
 `routes/web.php` and pinned by `WriteThrottleRoutesTest`, which also sweeps the route inventory so
 a route carrying one of these limiters cannot go unlisted. Each has two limbs: a per-member cap
@@ -287,12 +288,15 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (friend page and notification center) |
 | `group-join` | 15 / 40 | member id / client IP | group join, member approve, member decline, AI account group join |
 | `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary, group boards) |
+| `reaction-read` | 120 / 240 | member id / client IP | reactor list (who reacted) on the same four surfaces; read once a chip's tip has stayed open, and each answer lists members with avatars |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
-proxy deployments where the per-IP limb should be relaxed or turned off. A throttled request renders
-the framework default 429 page.
+proxy deployments where the per-IP limb should be relaxed or turned off; the read limb counts a
+tip each time it is held open without names still good for it, so behind a shared address it is
+the first to relax. A throttled request
+renders the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)
 are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,
