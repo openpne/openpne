@@ -106,7 +106,8 @@ The press is offered only where `(pointer: coarse)` holds
 `select-none` and `-webkit-touch-callout: none` key on: a laptop with a touch screen keeps the OS
 selection lens and the cursor's bar. A held row cannot be part-selected, so the sheet offers
 **Select text**: the row drawn again under that heading, its body already selected, in a sheet of its
-own where the lens works. Every choice on the sheet
+own where the lens works. The body is capped at 40vh so the copy item under it stays on the screen; a
+unit test cannot see that height, so the UX drive measures it. Every choice on the sheet
 closes it before what it opens arrives — the reactor list, the confirmation, the selectable body — and
 focus returns to the row that was pressed.
 

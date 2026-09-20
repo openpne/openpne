@@ -28,6 +28,7 @@ test('the row is drawn again under a heading with its body already selected, and
     expect(screen.getByText('Rin')).toBeTruthy();
     const body = screen.getByText((_, node) => node?.textContent === 'line one\nline two' && node.tagName === 'P');
     expect(body.className).toContain('select-text');
+    expect(body.tabIndex).toBe(0);
     expect(window.getSelection()?.toString()).toBe('line one\nline two');
 
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
