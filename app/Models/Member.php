@@ -12,6 +12,7 @@ use App\Support\ComposeEditor;
 use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
+use App\Support\RowActionsHint;
 use App\Support\Surface;
 use App\Support\ViewerRelations;
 use App\Support\Visibility;
@@ -254,12 +255,25 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::AutoplayAnimations, $autoplay);
     }
 
+    public function rowActionsHint(): RowActionsHint
+    {
+        $value = PreferenceKey::RowActionsHint->decode($this->storedPreference(PreferenceKey::RowActionsHint));
+        assert($value instanceof RowActionsHint);
+
+        return $value;
+    }
+
+    public function dismissRowActionsHint(): void
+    {
+        $this->writePreference(PreferenceKey::RowActionsHint, RowActionsHint::Dismissed);
+    }
+
     private function storedPreference(PreferenceKey $key): ?string
     {
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|RowActionsHint $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],

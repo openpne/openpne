@@ -3,7 +3,8 @@
 Per-member preferences (OpenPNE 3's `member_config` grab-bag, retyped): a closed registry of
 keys, each stored at most once per member, surfaced for editing on the member config page
 (OpenPNE 3 `member/config`) — except `ComposeEditor`, which the Modern compose forms save in
-place via `compose.editor`. The page is a dual-surface [feature module](feature-modules.md)
+place via `compose.editor`, and `RowActionsHint`, which the row sheet dismisses via
+`member.config.row_actions_hint`. The page is a dual-surface [feature module](feature-modules.md)
 under [`app/Features/Member/`](../../app/Features/Member); the store is
 [`member_preferences`](../../database/migrations/2026_06_04_000000_create_member_preferences_table.php).
 
@@ -34,6 +35,8 @@ default applies to every member who has not made an explicit choice. The default
 - A **Visibility** key has a concrete default (e.g. `DiaryDefaultVisibility` → Members), so a
   read always yields a value. A corrupted / non-digit stored value falls back to that default,
   never to the least-restrictive `Open` (the `ctype_digit` guard against PHP's `(int) 'foo' === 0`).
+- `RowActionsHint` is written only as `dismissed`, by a bodyless POST the row sheet fires once
+  (`member.config.row_actions_hint`); a corrupt row shows the hint once more.
 - `PreferredSurface` is **tri-state**: its default is `null`, meaning "no member choice — defer
   to the [surface fallback](feature-modules.md#surface-selection)". So it has a distinct read,
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going
@@ -55,7 +58,7 @@ default applies to every member who has not made an explicit choice. The default
   it switches is [images.md](images.md#which-placements-animate).
 
 Writes go through `Member::setPreference()` / `setPreferredSurface()` / `setPreferredLook()` /
-`setComposeEditor()` / `setAutoplayAnimations()` (store an explicit value, even one equal to the default) and
+`setComposeEditor()` / `setAutoplayAnimations()` / `dismissRowActionsHint()` (store an explicit value, even one equal to the default) and
 `resetPreference()` / `resetPreferredSurface()` / `resetPreferredLook()` (delete the row, back to
 default-following). `setPreference($default)` is **not** the same as a reset.
 
@@ -137,8 +140,8 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
 
 1. `PreferenceKey` is the only list of preferences; the case value is the stored `key`, and the
    codec branches on the case so keys may carry different value types.
-2. An absent row means "follow the default". Visibility keys, `ComposeEditor`, `PushDelivery` and
-   `AutoplayAnimations` have concrete defaults; `PreferredSurface` and `PreferredLook` default to
+2. An absent row means "follow the default". Visibility keys, `ComposeEditor`, `PushDelivery`,
+   `AutoplayAnimations` and `RowActionsHint` have concrete defaults; `PreferredSurface` and `PreferredLook` default to
    `null` (defer to the surface fallback / the site default). Reset deletes the row; it is not
    `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is

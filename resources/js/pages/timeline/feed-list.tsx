@@ -1,9 +1,11 @@
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { rowLink } from '@/components/row/row-sheet';
 import { useRowSheet } from '@/components/row/use-row-sheet';
 import { List, Panel } from '@/components/ui/surface';
 import { rowReactions } from '@/lib/reactions/row';
 import type { useReactions } from '@/lib/reactions/use-reactions';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { TimelinePostCard, useDeleteTimelinePost } from './post-card';
 import type { TimelinePostEntry } from './types';
 
@@ -11,7 +13,7 @@ import type { TimelinePostEntry } from './types';
 export function TimelineFeedList({
     posts,
     viewerId,
-    reactions,
+    reactions: pageReactions,
     reactionVocabulary,
 }: {
     posts: TimelinePostEntry[];
@@ -20,10 +22,13 @@ export function TimelineFeedList({
     reactionVocabulary: string[];
 }) {
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
+    const reactions = hint.learnedFrom(pageReactions);
     const deletePost = useDeleteTimelinePost();
 
     return (
         <>
+            <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
             <Panel flush>
                 <List>
                     {posts.map((post) => (
@@ -32,7 +37,10 @@ export function TimelineFeedList({
                             post={post}
                             viewerId={viewerId}
                             reactions={rowReactions(post.id, post.reactions, reactionVocabulary, reactions)}
-                            onOpenActions={(row) => sheet.open(post.id, row)}
+                            onOpenActions={(row) => {
+                                hint.dismiss();
+                                sheet.open(post.id, row);
+                            }}
                         />
                     ))}
                 </List>

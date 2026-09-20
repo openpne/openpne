@@ -75,6 +75,8 @@ export interface PageProps {
     look: LookId;
     /** The member's autoplay switch; false for a guest. The OS reduced-motion preference is read on the client and wins. */
     autoplayAnimations: boolean;
+    /** Whether the member is still to be told how a row's actions are reached; null for a guest. */
+    rowActionsHint: 'shown' | 'dismissed' | null;
     /** The `<input accept>` list for a picture upload: what the server's image processor reads. */
     imageUpload: { accept: string };
     unread: UnreadCounts | null;
