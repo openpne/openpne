@@ -36,7 +36,9 @@ class CommentLinkCardCoverageTest extends TestCase
 
         foreach ($this->sources('js/pages', '.tsx') as $path => $source) {
             foreach (self::ROWS as $row) {
-                if (str_contains($source, "{$row}.body") && ! str_contains($source, "{$row}.linkCard")) {
+                // A page hands the row's words to its sheet as `body: row.body`; the words drawn on screen are the row component's.
+                $drawn = str_replace("body: {$row}.body", '', $source);
+                if (str_contains($drawn, "{$row}.body") && ! str_contains($drawn, "{$row}.linkCard")) {
                     $missing[] = "{$path} ({$row})";
                 }
             }

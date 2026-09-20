@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkMessageRow } from './message-row';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 import type { TalkMessage } from './types';
 
@@ -43,7 +44,7 @@ const message: TalkMessage = {
 
 function renderRow(
     over: Partial<TalkMessage> = {},
-    props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void; onOpenActions?: () => void } = {},
+    props: { canReply?: boolean; onReply?: () => void; onJumpToReply?: (parent: { id: number; cursor: string }) => void; onOpenActions?: (row: HTMLElement) => void } = {},
 ) {
     return renderWithProviders(
         <ul>
@@ -54,24 +55,24 @@ function renderRow(
                 onReply={props.onReply ?? vi.fn()}
                 onJumpToReply={props.onJumpToReply ?? vi.fn()}
                 canReply={props.canReply ?? true}
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: '/groups/1/talk/messages/7/reactions' }}
             />
         </ul>,
     );
 }
 
-/** A row with nothing a press could open — no react, reply, delete, chip, or clipboard. */
-function renderInertRow(onOpenActions: () => void = vi.fn()) {
+/** A row with nothing a press could open — no react, reply, delete, chip, clipboard, or words to select. */
+function renderInertRow(onOpenActions: (row: HTMLElement) => void = vi.fn()) {
     return renderWithProviders(
         <ul>
             <TalkMessageRow
-                message={{ ...message, canDelete: false }}
+                message={{ ...message, body: '', canDelete: false }}
                 onDelete={vi.fn()}
                 onOpenActions={onOpenActions}
                 onReply={vi.fn()}
                 onJumpToReply={vi.fn()}
                 canReply={false}
-                reactions={{ chips: [], vocabulary: ['\u{1F44D}'], canReact: false, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+                reactions={{ chips: [], vocabulary: ['\u{1F44D}'], canReact: false, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: '/groups/1/talk/messages/7/reactions' }}
             />
         </ul>,
     );
@@ -79,6 +80,7 @@ function renderInertRow(onOpenActions: () => void = vi.fn()) {
 
 test('a press on a row with nothing to open raises no sheet', () => {
     vi.useFakeTimers();
+    stubCoarsePointer();
     clipboard(null);
     const onOpenActions = vi.fn();
     renderInertRow(onOpenActions);
@@ -88,14 +90,27 @@ test('a press on a row with nothing to open raises no sheet', () => {
     expect(onOpenActions).not.toHaveBeenCalled();
 });
 
-test('a press on a row with something to open raises the sheet', () => {
+test('a press on a row with something to open raises the sheet and hands over the row', () => {
     vi.useFakeTimers();
+    stubCoarsePointer();
+    const onOpenActions = vi.fn();
+    renderRow({}, { onOpenActions });
+
+    const row = document.querySelector('[data-talk-message-id]')!;
+    press(row);
+
+    expect(onOpenActions).toHaveBeenCalledWith(row);
+});
+
+test('where the primary pointer is a cursor, a finger on the row presses nothing', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer(false);
     const onOpenActions = vi.fn();
     renderRow({}, { onOpenActions });
 
     press(document.querySelector('[data-talk-message-id]')!);
 
-    expect(onOpenActions).toHaveBeenCalled();
+    expect(onOpenActions).not.toHaveBeenCalled();
 });
 
 /** A finger held still for longer than the hold — the whole of what makes a press a press. */
@@ -129,7 +144,7 @@ test.each([false, true])('a row (grouped: %s) offers reacting, replying and dele
                 onJumpToReply={vi.fn()}
                 canReply={true}
                 grouped={grouped}
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: '/groups/1/talk/messages/7/reactions' }}
             />
         </ul>,
     );
@@ -209,7 +224,7 @@ test('a folded row keeps its time in the gutter, spoken as well as drawn', () =>
                 onJumpToReply={vi.fn()}
                 canReply={true}
                 grouped
-                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+                reactions={{ chips: [], vocabulary: ['👍'], canReact: true, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: '/groups/1/talk/messages/7/reactions' }}
             />
         </ul>,
     );
@@ -351,4 +366,24 @@ test('a write that completes after the row left schedules nothing', async () => 
     // The guard's observable half: without it the late settle schedules the clear-timer anyway.
     expect(vi.getTimerCount()).toBe(0);
     window.history.replaceState(null, '', '/');
+});
+
+test('only the release of the press that landed loses its click; a tap that follows keeps its own', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const onOpenActions = vi.fn();
+    renderRow({}, { onOpenActions });
+    const row = document.querySelector('[data-talk-message-id]')!;
+    const link = screen.getByRole('link', { name: 'Rin' });
+
+    press(row);
+    expect(onOpenActions).toHaveBeenCalledTimes(1);
+    expect(fireEvent.click(link)).toBe(false);
+
+    clock.mockReturnValue(1200);
+    fireEvent.pointerDown(link, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(link);
+    expect(fireEvent.click(link)).toBe(true);
+    clock.mockRestore();
 });

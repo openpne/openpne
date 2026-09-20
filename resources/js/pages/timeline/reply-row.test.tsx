@@ -1,8 +1,9 @@
-import { cleanup, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TimelineReplyRow } from './reply-row';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 import type { TimelinePostEntry } from './types';
 
@@ -17,7 +18,11 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});
 
 const reply: TimelinePostEntry = {
     id: 7,
@@ -65,11 +70,27 @@ test('a reply with no card draws only its words', () => {
     expect(screen.getByText('The good one is the second link')).toBeTruthy();
 });
 
-test('only the reply author is offered the delete control', () => {
+test('only the reply author is offered the delete control, as an icon in the bar', () => {
     renderWithProviders(<TimelineReplyRow reply={reply} viewerId={3} onDelete={vi.fn()} reactions={reactions} />);
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    const remove = screen.getByRole('button', { name: 'Delete' });
+    expect(remove.textContent).toBe('');
+    expect(remove.closest('.absolute')).not.toBeNull();
 
     cleanup();
     renderWithProviders(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} reactions={reactions} />);
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+});
+
+test('a finger held on the reply hands the row to the page', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const onOpenActions = vi.fn();
+    renderWithProviders(<TimelineReplyRow reply={reply} viewerId={1} onDelete={vi.fn()} reactions={reactions} onOpenActions={onOpenActions} />);
+    const row = screen.getByRole('listitem');
+
+    fireEvent.pointerDown(row, { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    expect(onOpenActions).toHaveBeenCalledWith(row);
 });

@@ -18,6 +18,8 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
     const [pending, setPending] = useState<PendingReactions>(noPending);
     const [answered, setAnswered] = useState<ReadonlyMap<number, ReactionChip[]>>(() => new Map());
     const [reactorsFor, setReactorsFor] = useState<number | null>(null);
+    const [reactorsEmoji, setReactorsEmoji] = useState<string | undefined>(undefined);
+    const [reactorsOpener, setReactorsOpener] = useState<HTMLElement | null>(null);
     // An answer is drawn only past the last one drawn on its row, and neither count resets with the page.
     const sent = useRef(new Map<number, number>());
     const drawn = useRef(new Map<number, number>());
@@ -69,6 +71,11 @@ export function useReactions(endpoints: ReactionEndpoints, resetKey: unknown) {
 
     // Memoized so the dialog's fetch effect does not rerun on every render.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
+    const showReactors = useCallback((id: number, emoji?: string, opener: HTMLElement | null = null) => {
+        setReactorsEmoji(emoji);
+        setReactorsOpener(opener);
+        setReactorsFor(id);
+    }, []);
 
-    return { chips, toggle, reactorsFor, showReactors: setReactorsFor, closeReactors, reactorsUrl: endpoints.reactors };
+    return { chips, toggle, reactorsFor, reactorsEmoji, reactorsOpener, showReactors, closeReactors, reactorsUrl: endpoints.reactors };
 }

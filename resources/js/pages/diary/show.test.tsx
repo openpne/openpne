@@ -1,9 +1,10 @@
-import { cleanup, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import DiaryShow from './show';
 import type { DiaryComment, DiaryDetail, DiaryThread } from './types';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -22,7 +23,11 @@ vi.mock('@inertiajs/react', () => ({
     useForm: () => ({ data: { body: '', images: [] }, errors: {}, processing: false, setData: () => {}, post: () => {}, reset: () => {} }),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+});
 
 const diary: DiaryDetail = {
     id: 5,
@@ -69,8 +74,9 @@ function renderShow(user: { id: number } | null) {
 test('a signed-in reader may react to the entry and to each comment', () => {
     renderShow({ id: 9 });
 
+    // The entry's own, and the end of the comment's chips; the comment's bar offers none once it has chips.
     expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'See who reacted' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });
 
 test('a guest on a web-public entry reads the counts and has nothing to press', () => {
@@ -80,4 +86,19 @@ test('a guest on a web-public entry reads the counts and has nothing to press', 
     expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
+});
+
+test('a guest is offered no way to the names: the chips are counts and the held comment\'s sheet carries no reactor item', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    const { container } = renderShow(null);
+    expect(container.querySelectorAll('[data-reactions] button')).toHaveLength(0);
+
+    fireEvent.pointerDown(screen.getByRole('listitem'), { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    expect(screen.getByRole('dialog', { name: 'Post actions' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select text' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });

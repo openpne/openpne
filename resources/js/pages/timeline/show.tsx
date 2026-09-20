@@ -9,7 +9,9 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
-import { RowReactionChips } from '@/components/reactions/reaction-bar';
+import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { RowSheetHost } from '@/components/row/row-sheet-host';
+import { useRowSheet } from '@/components/row/use-row-sheet';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -42,6 +44,7 @@ export default function TimelineShow() {
     const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
     const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
+    const sheet = useRowSheet();
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -61,8 +64,8 @@ export default function TimelineShow() {
         }
     };
 
-    const deleteReply = async (replyId: number) => {
-        if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true })) {
+    const deleteReply = async (replyId: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true, opener })) {
             router.post(`/timeline/delete/${replyId}`, {}, { preserveScroll: true });
         }
     };
@@ -88,7 +91,7 @@ export default function TimelineShow() {
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
-                <RowReactionChips reactions={rootReactions} />
+                <DetailReactionChips reactions={rootReactions} />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}
@@ -100,7 +103,14 @@ export default function TimelineShow() {
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
-                            <TimelineReplyRow key={reply.id} reply={reply} viewerId={viewerId} onDelete={deleteReply} reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, reactions)} />
+                            <TimelineReplyRow
+                                key={reply.id}
+                                reply={reply}
+                                viewerId={viewerId}
+                                onDelete={deleteReply}
+                                reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, reactions)}
+                                onOpenActions={(row) => sheet.open(reply.id, row)}
+                            />
                         ))}
                     </List>
                 </Panel>
@@ -132,7 +142,28 @@ export default function TimelineShow() {
                 </form>
             </Panel>
             )}
-            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} onClose={reactions.closeReactors} />}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} returnFocusTo={reactions.reactorsOpener} onClose={reactions.closeReactors} />}
+            <RowSheetHost
+                sheet={sheet}
+                spec={(id) => {
+                    const reply = replies.find((candidate) => candidate.id === id);
+                    if (reply === undefined) {
+                        return null;
+                    }
+
+                    return {
+                        body: reply.body,
+                        author: reply.author,
+                        createdAt: reply.createdAt,
+                        chips: reactions.chips(reply.id, reply.reactions),
+                        vocabulary: reactionVocabulary,
+                        canReact: true,
+                        onToggle: (emoji, mine) => reactions.toggle(reply.id, emoji, mine),
+                        onShowReactors: (opener) => reactions.showReactors(reply.id, undefined, opener),
+                        onDelete: reply.author.id === viewerId ? (opener) => void deleteReply(reply.id, opener) : undefined,
+                    };
+                }}
+            />
         </>
     );
 }

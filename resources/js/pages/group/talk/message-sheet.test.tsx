@@ -43,6 +43,7 @@ function open({ chips = [], canReact = true, canReply = true, ...over }: { chips
         onShowReactors: vi.fn(),
         onReply: vi.fn(),
         onDelete: vi.fn(),
+        onSelectText: vi.fn(),
         onClose: vi.fn(),
     };
 
@@ -57,6 +58,8 @@ function open({ chips = [], canReact = true, canReply = true, ...over }: { chips
             onShowReactors={spies.onShowReactors}
             onReply={spies.onReply}
             onDelete={spies.onDelete}
+            returnFocusTo={null}
+            onSelectText={spies.onSelectText}
             onClose={spies.onClose}
         />,
     );
@@ -206,4 +209,18 @@ test('copying is not offered where the platform has no clipboard', () => {
     open();
 
     expect(screen.queryByRole('button', { name: 'Copy text' })).toBeNull();
+});
+
+test('selecting text closes the sheet and hands the body on, and a message of pictures alone offers none', () => {
+    clipboard(null);
+    const spies = open();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select text' }));
+
+    expect(spies.onClose).toHaveBeenCalled();
+    expect(spies.onSelectText).toHaveBeenCalledWith({ body: 'Bring the good rope', author: message().author, createdAt: message().createdAt });
+
+    cleanup();
+    open({ body: '   ' });
+    expect(screen.queryByRole('button', { name: 'Select text' })).toBeNull();
 });

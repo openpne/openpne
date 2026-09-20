@@ -1,9 +1,14 @@
+import { Trash2 } from 'lucide-react';
+import { useRef } from 'react';
 import { EntityText } from '@/components/entity-text';
 import { LinkCard } from '@/components/link-card';
-import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import { PRESS_ROW, REVEAL_ROW, RevealBar } from '@/components/row/reveal-bar';
+import { rowSheetOpens } from '@/components/row/row-sheet';
 import { Timestamp } from '@/components/timestamp';
-import { dangerActionClass } from '@/components/ui/danger-link';
+import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
+import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 import type { TimelinePostEntry } from './types';
@@ -12,11 +17,43 @@ import type { TimelinePostEntry } from './types';
  * A row of its own rather than markup inside the page, so a test can render it: a payload assertion
  * cannot see whether a reply's link card is drawn.
  */
-export function TimelineReplyRow({ reply, viewerId, onDelete, reactions }: { reply: TimelinePostEntry; viewerId: number; onDelete: (id: number) => void; reactions: RowReactions }) {
+export function TimelineReplyRow({
+    reply,
+    viewerId,
+    onDelete,
+    reactions,
+    onOpenActions,
+}: {
+    reply: TimelinePostEntry;
+    viewerId: number;
+    onDelete: (id: number) => void;
+    reactions: RowReactions;
+    onOpenActions?: (row: HTMLElement) => void;
+}) {
     const t = useT();
+    const row = useRef<HTMLLIElement>(null);
+    const isOwn = reply.author.id === viewerId;
+    const press = useLongPress(() => onOpenActions?.(row.current!), {
+        enabled:
+            onOpenActions !== undefined &&
+            rowSheetOpens({ body: reply.body, chips: reactions.chips, canReact: reactions.onToggle !== undefined, onShowReactors: reactions.onShowReactors, onDelete: isOwn ? () => {} : undefined, link: undefined }),
+    });
 
     return (
-        <li className="space-y-1 px-4 py-3 sm:px-5">
+        <li ref={row} tabIndex={-1} {...press} className={cn(REVEAL_ROW, PRESS_ROW, 'space-y-1 px-4 py-3 outline-none sm:px-5')}>
+            {((reactions.onToggle !== undefined && reactions.chips.length === 0) || isOwn) && (
+                <RevealBar>
+                    {/* With chips the add button stands at their end; two of the same name on one row would be one too many. */}
+                    {reactions.onToggle !== undefined && reactions.chips.length === 0 && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+                    {isOwn && (
+                        <Tip label={t('Delete')}>
+                            <button type="button" onClick={() => onDelete(reply.id)} className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}>
+                                <Trash2 className="size-4" aria-hidden />
+                            </button>
+                        </Tip>
+                    )}
+                </RevealBar>
+            )}
             <div className="flex items-center justify-between text-sm">
                 <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
                     {reply.author.name}
@@ -28,11 +65,6 @@ export function TimelineReplyRow({ reply, viewerId, onDelete, reactions }: { rep
             </p>
             <LinkCard card={reply.linkCard} />
             <RowReactionChips reactions={reactions} />
-            {reply.author.id === viewerId && (
-                <button type="button" onClick={() => onDelete(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
-                    {t('Delete')}
-                </button>
-            )}
         </li>
     );
 }

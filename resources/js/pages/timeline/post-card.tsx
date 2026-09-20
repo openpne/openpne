@@ -1,17 +1,21 @@
 import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Link, router } from '@inertiajs/react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
-import { RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
-import { dangerActionClass } from '@/components/ui/danger-link';
+import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
+import { PRESS_ROW, REVEAL_ROW, RevealBar } from '@/components/row/reveal-bar';
+import { rowSheetOpens } from '@/components/row/row-sheet';
+import { Tip } from '@/components/ui/tooltip';
 import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
 import type { TimelinePostEntry } from './types';
 
@@ -19,21 +23,48 @@ interface TimelinePostCardProps {
     post: TimelinePostEntry;
     viewerId: number;
     reactions: RowReactions;
+    /** Absent where the page raises no sheet; given, a press hands over the row for focus to return to. */
+    onOpenActions?: (row: HTMLElement) => void;
 }
 
-export function TimelinePostCard({ post, viewerId, reactions }: TimelinePostCardProps) {
+/** One question and one route for a post, whether asked from the card's bar or the page's sheet. */
+export function useDeleteTimelinePost() {
     const t = useT();
     const confirm = useConfirm();
-    const isOwn = post.author.id === viewerId;
 
-    const deletePost = async () => {
-        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/timeline/delete/${post.id}`);
+    return async (id: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true, opener })) {
+            router.post(`/timeline/delete/${id}`);
         }
     };
+}
+
+export function TimelinePostCard({ post, viewerId, reactions, onOpenActions }: TimelinePostCardProps) {
+    const t = useT();
+    const row = useRef<HTMLLIElement>(null);
+    const isOwn = post.author.id === viewerId;
+    const press = useLongPress(() => onOpenActions?.(row.current!), {
+        enabled:
+            onOpenActions !== undefined &&
+            rowSheetOpens({ body: post.body, chips: reactions.chips, canReact: reactions.onToggle !== undefined, onShowReactors: reactions.onShowReactors, onDelete: isOwn ? () => {} : undefined, link: () => '' }),
+    });
+    const deletePost = useDeleteTimelinePost();
 
     return (
-        <li className="space-y-2 px-4 py-4 text-foreground sm:px-5">
+        <li ref={row} tabIndex={-1} {...press} className={cn(REVEAL_ROW, PRESS_ROW, 'space-y-2 px-4 py-4 text-foreground outline-none sm:px-5')}>
+            {((reactions.onToggle !== undefined && reactions.chips.length === 0) || isOwn) && (
+                <RevealBar>
+                    {/* With chips the add button stands at their end; two of the same name on one row would be one too many. */}
+                    {reactions.onToggle !== undefined && reactions.chips.length === 0 && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+                    {isOwn && (
+                        <Tip label={t('Delete')}>
+                            <button type="button" onClick={() => void deletePost(post.id)} className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}>
+                                <Trash2 className="size-4" aria-hidden />
+                            </button>
+                        </Tip>
+                    )}
+                </RevealBar>
+            )}
             <div className="flex items-center justify-between gap-3 text-sm">
                 <div className="flex min-w-0 items-center gap-2">
                     <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
@@ -54,13 +85,7 @@ export function TimelinePostCard({ post, viewerId, reactions }: TimelinePostCard
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} variant="post" />
-            {/* Under the body, where the eye is after reading: a feed row has no hover lane or long-press sheet. */}
             <RowReactionChips reactions={reactions} />
-            {isOwn && (
-                <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
-                    {t('Delete')}
-                </button>
-            )}
         </li>
     );
 }

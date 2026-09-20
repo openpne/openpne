@@ -12,8 +12,10 @@ import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
-import { canCopyLink, canCopyText, messageLink } from './message-sheet';
+import { messageLink } from './message-sheet';
+import { canCopyLink, rowSheetOpens } from '@/components/row/row-sheet';
 import { ICON_BUTTON, QUICK_REACTIONS, ReactionAdd, ReactionChips, ReactionPickerGrid } from '@/components/reactions/reaction-bar';
+import { PRESS_ROW, REVEAL_BAR, REVEAL_ROW } from '@/components/row/reveal-bar';
 import type { TalkMessage, TalkReplyReference } from './types';
 
 /**
@@ -74,23 +76,16 @@ export interface TalkRowReactions {
     /** Reacting is speaking in the room: a reader who may not post sees the chips and cannot move them. */
     canReact: boolean;
     onToggle: (emoji: string, mine: boolean) => void;
-    onShowReactors: () => void;
+    onShowReactors: (emoji?: string) => void;
+    reactorsUrl: string;
 }
-
-/**
- * The revealing states beat `pointer-fine:pointer-events-none` by selector specificity, so a bare
- * `pointer-events-auto` would tie it and leave the controls dead to every click
- * (docs/internals/group-talk.md, "The row's action bar").
- */
-const ROW_ACTIONS =
-    'absolute right-2 -top-1 z-10 flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 text-sm text-muted-foreground shadow-sm opacity-0 transition-opacity motion-reduce:transition-none pointer-fine:pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto has-[[data-ack]]:opacity-100 has-[[data-ack]]:pointer-events-auto pointer-coarse:sr-only pointer-coarse:focus-within:not-sr-only pointer-coarse:focus-within:absolute';
 
 const COPIED_MS = 1500;
 
 /**
  * A refusal is answered as well as a success: silence would leave the clipboard's previous contents
  * to read as a copy that worked. `data-ack` also holds the bar out while an answer is showing
- * ({@see ROW_ACTIONS}), so a click that leaves the row does not fade the check it earned.
+ * ({@see REVEAL_BAR}), so a click that leaves the row does not fade the check it earned.
  */
 function CopyLinkButton({ messageId }: { messageId: number }) {
     const t = useT();
@@ -171,7 +166,7 @@ export function TalkMessageRow({
 }: {
     message: TalkMessage;
     onDelete: (id: number) => void;
-    onOpenActions: () => void;
+    onOpenActions: (row: HTMLElement) => void;
     onReply: () => void;
     onJumpToReply: (parent: { id: number; cursor: string }) => void;
     /** Whether the viewer may post, and so start a reply. Not the message's own fact like canDelete. */
@@ -187,9 +182,17 @@ export function TalkMessageRow({
     const t = useT();
     const author = message.author;
     const hasBody = message.body.trim() !== '';
-    const pressOpens =
-        reactions.canReact || canReply || message.canDelete || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
-    const press = useLongPress(onOpenActions, { enabled: pressOpens });
+    const row = useRef<HTMLLIElement>(null);
+    const pressOpens = rowSheetOpens({
+        body: message.body,
+        chips: reactions.chips,
+        canReact: reactions.canReact,
+        onShowReactors: reactions.onShowReactors,
+        onReply: canReply ? () => {} : undefined,
+        onDelete: message.canDelete ? () => {} : undefined,
+        link: () => '',
+    });
+    const press = useLongPress(() => onOpenActions(row.current!), { enabled: pressOpens });
 
     const content = (
         <>
@@ -206,6 +209,7 @@ export function TalkMessageRow({
                 chips={reactions.chips}
                 onToggle={reactions.canReact ? reactions.onToggle : undefined}
                 onShowReactors={reactions.onShowReactors}
+                reactorsUrl={reactions.reactorsUrl}
             />
         </>
     );
@@ -213,7 +217,7 @@ export function TalkMessageRow({
     // canCopyLink puts the bar on rows whose reader has no other power — an Everyone room's
     // non-member — deliberately: an address is takeable by anyone who may read the message.
     const actions = (reactions.canReact || canReply || message.canDelete || canCopyLink()) && (
-        <div className={ROW_ACTIONS}>
+        <div className={REVEAL_BAR}>
             {reactions.canReact && (
                 <>
                     {/* Gone entirely on coarse pointers rather than invisible: a screen reader would
@@ -260,23 +264,20 @@ export function TalkMessageRow({
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
         <li
+            ref={row}
+            tabIndex={-1}
             data-talk-message-id={message.id}
             {...press}
             className={cn(
+                REVEAL_ROW,
+                PRESS_ROW,
                 // `isolate` keeps the highlight layer's negative depth inside the row: it is meant to
                 // sit under the words and over whatever the row itself paints, not under the list.
-                'group relative isolate px-4 sm:px-5',
-                // Deliberately not gated on `pressOpens`, since the lens and the image menu a held
-                // finger raises would land on the sheet; on a no-clipboard install a touch reader
-                // can then neither select nor copy a body, which is accepted.
-                'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]',
+                'isolate px-4 outline-none sm:px-5',
                 // The space between turns is a margin rather than padding, so the tint under the
                 // pointer wraps the words evenly and the gap between two turns stays untinted.
                 'py-1',
                 !grouped && !separatorAbove && 'mt-3',
-                // Above its siblings for as long as its controls are out, so a bar taller than its
-                // own row keeps the hits it draws over the rows either side (see ROW_ACTIONS).
-                'hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10 has-[[data-ack]]:z-10',
                 // `hover:` is a hover-capable query, so a finger leaves no tint stuck behind it.
                 'transition-colors duration-100 hover:bg-muted',
             )}

@@ -46,8 +46,14 @@ export function DialogContent({
  */
 const SHEET_SIDE = {
     left: 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
-    right: 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right',
-    bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] motion-safe:data-[state=open]:animate-sheet-from-bottom',
+    right: 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))]',
+    bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]',
+};
+
+const SHEET_MOTION = {
+    left: '',
+    right: 'motion-safe:data-[state=open]:animate-sheet-from-right motion-safe:data-[state=closed]:animate-sheet-to-right',
+    bottom: 'motion-safe:data-[state=open]:animate-sheet-from-bottom',
 };
 
 /**
@@ -60,8 +66,9 @@ export function SheetContent({
     children,
     closeLabel = 'Close',
     side = 'left',
+    animated = true,
     ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom' }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom'; animated?: boolean }) {
     return (
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -71,6 +78,7 @@ export function SheetContent({
                     // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
                     'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
                     SHEET_SIDE[side],
+                    animated && SHEET_MOTION[side],
                     className,
                 )}
                 {...props}
