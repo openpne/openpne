@@ -84,14 +84,35 @@ test('a chip reached by keyboard names its reactors in a tip once it has stayed 
 
     fireEvent.blur(chip);
     fireEvent.focus(chip);
-    await settle(300);
+    await settle(500);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(document.getElementById(chip.getAttribute('aria-describedby')!)?.textContent).toBe('Rin, Aoi and 1 more');
 
     fireEvent.blur(chip);
-    rerender(<RowReactionChips reactions={{ ...reactions, chips: [{ emoji: '\u{1F44D}', count: 3, mine: false }] }} />);
+    rerender(<RowReactionChips reactions={{ ...reactions, chips: [{ emoji: '\u{1F44D}', count: 2, mine: true }] }} />);
+    fireEvent.focus(screen.getByRole('button', { name: /2/ }));
+    await settle(500);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    fireEvent.blur(chip);
+    rerender(<RowReactionChips reactions={{ ...reactions, chips: [{ emoji: '\u{1F44D}', count: 3, mine: true }] }} />);
     fireEvent.focus(screen.getByRole('button', { name: /3/ }));
-    await settle(300);
+    await settle(500);
+    expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+test('a read that brought no names is tried again on the next open', async () => {
+    const answers = [Promise.resolve(new Response('', { status: 429 })), Promise.resolve(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 1, members: [{ id: 1, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 }))];
+    const fetch = vi.fn(() => answers.shift() ?? new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.focus(chip);
+    await waitFor(() => expect(document.getElementById(chip.getAttribute('aria-describedby') ?? '')?.textContent).toBe(''));
+    fireEvent.blur(chip);
+    fireEvent.focus(chip);
+    expect((await screen.findAllByText('Rin')).length).toBeGreaterThan(0);
     expect(fetch).toHaveBeenCalledTimes(2);
 });
 
@@ -102,9 +123,9 @@ test('a tip closed before it has stayed open a moment reads nothing', async () =
     const chip = screen.getByRole('button', { name: /2/ });
 
     fireEvent.focus(chip);
-    await settle(100);
+    await settle(50);
     fireEvent.blur(chip);
-    await settle(300);
+    await settle(400);
     expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -161,7 +182,7 @@ test('a slow answer to an earlier open cannot land on a later one', async () => 
     const chip = screen.getByRole('button', { name: /2/ });
 
     fireEvent.focus(chip);
-    await settle(300);
+    await settle(400);
     fireEvent.blur(chip);
     fireEvent.focus(chip);
     expect((await screen.findAllByText('Aoi')).length).toBeGreaterThan(0);

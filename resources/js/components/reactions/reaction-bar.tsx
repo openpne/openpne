@@ -148,7 +148,9 @@ function Chip({
     }
 
     const key = `${chip.count}|${chip.mine}`;
-    // Each open aborts the last read, so a slow answer cannot land on a later open.
+    const keyNow = useRef(key);
+    keyNow.current = key;
+    // Each open aborts the last read, so a slow answer cannot land on a later open; only names are kept, so a refused or empty read is tried again.
     const read = () => {
         reading.current?.abort();
         const controller = new AbortController();
@@ -158,9 +160,11 @@ function Chip({
             .then((payload) => payload?.groups?.find((candidate) => candidate.emoji === chip.emoji))
             .then((group) => {
                 if (!controller.signal.aborted) {
-                    const read = group === undefined ? '' : reactorNames(group, t);
-                    kept.current = { key, names: read };
-                    setNames(read);
+                    const found = group === undefined ? '' : reactorNames(group, t);
+                    if (found !== '') {
+                        kept.current = { key: keyNow.current, names: found };
+                    }
+                    setNames(found);
                 }
             })
             .catch(() => {

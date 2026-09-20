@@ -294,7 +294,8 @@ The defaults are deliberately loose: tuning draws on the 429 observability the s
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
 proxy deployments where the per-IP limb should be relaxed or turned off; the read limb counts every
-tip a member holds open, so behind a shared address it is the first to relax. A throttled request
+tip held open past a moment whose names are not still good, so behind a shared address it is the
+first to relax. A throttled request
 renders the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)

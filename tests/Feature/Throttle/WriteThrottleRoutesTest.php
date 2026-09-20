@@ -93,7 +93,10 @@ class WriteThrottleRoutesTest extends TestCase
             }
         }
 
-        $this->assertCount(8, $listed);
+        sort($listed);
+        $expected = array_keys(array_filter(self::throttledRoutes(), static fn (array $row): bool => $row[1] === 'throttle:reaction-read'));
+        sort($expected);
+        $this->assertSame($expected, $listed);
     }
 
     public function test_every_route_carrying_a_named_limiter_is_listed(): void
