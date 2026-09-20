@@ -63,9 +63,13 @@ test('the add button lives in the bar, joins the chips only once there are some,
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 
     rerender(<TimelinePostCard post={post} viewerId={3} reactions={{ chips: [{ emoji: '\u{1F44D}', count: 1, mine: false }], vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: '/x' }} />);
-    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(2);
+    const adds = screen.getAllByRole('button', { name: 'Add a reaction' });
+    expect(adds).toHaveLength(1);
+    expect(adds[0]?.closest('[data-reactions]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    const remove = screen.getByRole('button', { name: 'Delete' });
+    expect(remove.textContent).toBe('');
+    expect(remove.closest('.absolute')).not.toBeNull();
 });
 
 test('a reader who may not react and did not write the post has no bar at all', () => {

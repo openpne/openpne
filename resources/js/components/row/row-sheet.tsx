@@ -22,7 +22,7 @@ export function canCopyLink(): boolean {
     return typeof navigator.clipboard?.writeText === 'function';
 }
 
-/** Built from the page itself, so a sub-directory install needs no telling. */
+/** Absolute from the page's origin, as every href the pages carry is. */
 export function rowLink(path: string): string {
     return new URL(path, window.location.href).toString();
 }
@@ -34,11 +34,12 @@ export interface RowSheetProps {
     vocabulary: string[];
     canReact: boolean;
     onToggle: (emoji: string, mine: boolean) => void;
-    onShowReactors: () => void;
+    /** Absent for a reader the names are not offered to; given, called with the row for focus to return to. */
+    onShowReactors?: (returnFocusTo: HTMLElement | null) => void;
     /** Absent where the row cannot be answered in place. */
     onReply?: () => void;
-    /** Absent where the reader may not delete the row. */
-    onDelete?: () => void;
+    /** Absent where the reader may not delete the row; called with the row for the confirmation to return focus to. */
+    onDelete?: (returnFocusTo: HTMLElement | null) => void;
     /** Absent where the row has no address of its own. */
     link?: () => string;
     /** Where focus goes when the sheet closes: the row that was pressed. */
@@ -53,8 +54,15 @@ export interface RowSheetProps {
 }
 
 /** Whether a press on a row has anything to open: the sheet's own gate, so a press never raises an empty one. */
-export function rowSheetOpens(props: Pick<RowSheetProps, 'body' | 'chips' | 'canReact' | 'onReply' | 'onDelete' | 'link'>): boolean {
-    return props.canReact || props.onReply !== undefined || props.onDelete !== undefined || props.chips.length > 0 || props.body.trim() !== '' || (props.link !== undefined && canCopyLink());
+export function rowSheetOpens(props: { body: string; chips: ReactionChip[]; canReact: boolean; onShowReactors?: unknown; onReply?: unknown; onDelete?: unknown; link?: unknown }): boolean {
+    return (
+        props.canReact ||
+        props.onReply !== undefined ||
+        props.onDelete !== undefined ||
+        (props.onShowReactors !== undefined && props.chips.length > 0) ||
+        props.body.trim() !== '' ||
+        (props.link !== undefined && canCopyLink())
+    );
 }
 
 /**
@@ -88,7 +96,7 @@ export function RowSheet({ body, chips, vocabulary, canReact, onToggle, onShowRe
                 </div>
             )}
 
-            {(onReply !== undefined || chips.length > 0 || hasBody || canCopy || canLink) && (
+            {(onReply !== undefined || (onShowReactors !== undefined && chips.length > 0) || hasBody || canCopy || canLink) && (
                 <div className={SHEET_GROUP}>
                     {onReply !== undefined && (
                         <button
@@ -104,13 +112,13 @@ export function RowSheet({ body, chips, vocabulary, canReact, onToggle, onShowRe
                         </button>
                     )}
 
-                    {chips.length > 0 && (
+                    {onShowReactors !== undefined && chips.length > 0 && (
                         <button
                             type="button"
                             className={SHEET_ITEM}
                             onClick={() => {
                                 onClose();
-                                onShowReactors();
+                                onShowReactors(returnFocusTo);
                             }}
                         >
                             <Users className="size-5 shrink-0" aria-hidden />
@@ -173,7 +181,7 @@ export function RowSheet({ body, chips, vocabulary, canReact, onToggle, onShowRe
                         className={cn(SHEET_ITEM, 'text-destructive')}
                         onClick={() => {
                             onClose();
-                            onDelete();
+                            onDelete(returnFocusTo);
                         }}
                     >
                         <Trash2 className="size-5 shrink-0" aria-hidden />

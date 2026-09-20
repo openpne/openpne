@@ -41,9 +41,9 @@ export function TalkMessageSheet({
     /** Whether the viewer may post, and so answer this message. */
     canReply: boolean;
     onToggle: (emoji: string, mine: boolean) => void;
-    onShowReactors: () => void;
+    onShowReactors: (returnFocusTo: HTMLElement | null) => void;
     onReply: () => void;
-    onDelete: () => void;
+    onDelete: (returnFocusTo: HTMLElement | null) => void;
     returnFocusTo: HTMLElement | null;
     onSelectText: (body: string) => void;
     onClose: () => void;

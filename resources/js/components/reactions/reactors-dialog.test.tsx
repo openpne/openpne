@@ -40,3 +40,24 @@ test('the group the chip was pressed on leads, and closing gives focus back to w
     expect(document.activeElement).toBe(opener);
     opener.remove();
 });
+
+test('told where to return, the dialog goes there even when what held focus at open is gone by the close', async () => {
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(JSON.stringify({ groups: [] }), { status: 200 })));
+    const row = document.createElement('li');
+    row.tabIndex = -1;
+    const item = document.createElement('button');
+    document.body.append(row, item);
+    item.focus();
+
+    function Host({ open }: { open: boolean }) {
+        return open ? <ReactorsDialog url="/x" returnFocusTo={row} onClose={vi.fn()} /> : null;
+    }
+    const { rerender } = renderWithProviders(<Host open />);
+    await screen.findByRole('dialog');
+    item.remove();
+
+    rerender(<Host open={false} />);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(document.activeElement).toBe(row);
+    row.remove();
+});

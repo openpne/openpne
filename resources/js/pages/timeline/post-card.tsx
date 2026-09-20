@@ -11,6 +11,7 @@ import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
 import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { PRESS_ROW, REVEAL_ROW, RevealBar } from '@/components/row/reveal-bar';
+import { rowSheetOpens } from '@/components/row/row-sheet';
 import { Tip } from '@/components/ui/tooltip';
 import { repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
@@ -31,8 +32,8 @@ export function useDeleteTimelinePost() {
     const t = useT();
     const confirm = useConfirm();
 
-    return async (id: number) => {
-        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
+    return async (id: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true, opener })) {
             router.post(`/timeline/delete/${id}`);
         }
     };
@@ -42,14 +43,19 @@ export function TimelinePostCard({ post, viewerId, reactions, onOpenActions }: T
     const t = useT();
     const row = useRef<HTMLLIElement>(null);
     const isOwn = post.author.id === viewerId;
-    const press = useLongPress(() => onOpenActions?.(row.current!), { enabled: onOpenActions !== undefined });
+    const press = useLongPress(() => onOpenActions?.(row.current!), {
+        enabled:
+            onOpenActions !== undefined &&
+            rowSheetOpens({ body: post.body, chips: reactions.chips, canReact: reactions.onToggle !== undefined, onShowReactors: reactions.onShowReactors, onDelete: isOwn ? () => {} : undefined, link: () => '' }),
+    });
     const deletePost = useDeleteTimelinePost();
 
     return (
         <li ref={row} tabIndex={-1} {...press} className={cn(REVEAL_ROW, PRESS_ROW, 'space-y-2 px-4 py-4 text-foreground outline-none sm:px-5')}>
-            {(reactions.onToggle !== undefined || isOwn) && (
+            {((reactions.onToggle !== undefined && reactions.chips.length === 0) || isOwn) && (
                 <RevealBar>
-                    {reactions.onToggle !== undefined && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+                    {/* With chips the add button stands at their end; two of the same name on one row would be one too many. */}
+                    {reactions.onToggle !== undefined && reactions.chips.length === 0 && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
                     {isOwn && (
                         <Tip label={t('Delete')}>
                             <button type="button" onClick={() => void deletePost(post.id)} className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}>

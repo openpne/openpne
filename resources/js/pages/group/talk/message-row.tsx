@@ -12,7 +12,8 @@ import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { useLongPress } from '@/lib/use-long-press';
 import { cn } from '@/lib/utils';
-import { canCopyLink, canCopyText, messageLink } from './message-sheet';
+import { messageLink } from './message-sheet';
+import { canCopyLink, rowSheetOpens } from '@/components/row/row-sheet';
 import { ICON_BUTTON, QUICK_REACTIONS, ReactionAdd, ReactionChips, ReactionPickerGrid } from '@/components/reactions/reaction-bar';
 import { PRESS_ROW, REVEAL_BAR, REVEAL_ROW } from '@/components/row/reveal-bar';
 import type { TalkMessage, TalkReplyReference } from './types';
@@ -182,8 +183,15 @@ export function TalkMessageRow({
     const author = message.author;
     const hasBody = message.body.trim() !== '';
     const row = useRef<HTMLLIElement>(null);
-    const pressOpens =
-        reactions.canReact || canReply || message.canDelete || hasBody || canCopyText(message.body) || canCopyLink() || reactions.chips.length > 0;
+    const pressOpens = rowSheetOpens({
+        body: message.body,
+        chips: reactions.chips,
+        canReact: reactions.canReact,
+        onShowReactors: reactions.onShowReactors,
+        onReply: canReply ? () => {} : undefined,
+        onDelete: message.canDelete ? () => {} : undefined,
+        link: () => '',
+    });
     const press = useLongPress(() => onOpenActions(row.current!), { enabled: pressOpens });
 
     const content = (

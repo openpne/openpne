@@ -1,5 +1,5 @@
 import { useEffect, useRef, type DOMAttributes } from 'react';
-import { useCoarsePointer } from './use-coarse-pointer';
+import { useCoarsePointer } from './use-coarse-pointer.ts';
 
 /** How long a finger stays down before the press is a press rather than a tap. */
 const LONG_PRESS_MS = 500;

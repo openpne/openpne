@@ -39,8 +39,8 @@ const comment: DiaryComment = {
 test('a member sees the chips under the body with a way to add one', () => {
     renderWithProviders(<DiaryCommentRow comment={comment} onDelete={vi.fn()} reactions={{ chips: comment.reactions, vocabulary: ['\u{1F44D}'], onToggle: vi.fn(), onShowReactors: vi.fn() }} />);
 
-    // Once in the bar a cursor reveals, once at the end of the chips.
-    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(2);
+    // At the end of the chips alone; the bar offers it only on a row with none.
+    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: /1/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });
@@ -52,10 +52,13 @@ test('a guest on a web-public entry sees the counts and nothing to press', () =>
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
 
-test('only a deletable comment offers the delete control', () => {
-    renderWithProviders(<DiaryCommentRow comment={{ ...comment, deletable: true }} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: [] }} />);
+test('only a deletable comment offers the delete control, as an icon in the bar rather than a link in the flow', () => {
+    renderWithProviders(<DiaryCommentRow comment={{ ...comment, deletable: true }} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: ['\u{1F44D}'], onToggle: vi.fn() }} />);
 
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    const remove = screen.getByRole('button', { name: 'Delete' });
+    expect(remove.textContent).toBe('');
+    expect(remove.closest('.absolute')).not.toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
 });
 
 test('a finger held on the row hands the row to the page; a press on a chip does not', () => {

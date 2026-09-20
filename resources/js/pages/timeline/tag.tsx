@@ -38,7 +38,7 @@ export default function TimelineTag() {
                     </LoadOlder>
                 </>
             )}
-            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} onClose={reactions.closeReactors} />}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} returnFocusTo={reactions.reactorsOpener} onClose={reactions.closeReactors} />}
         </>
     );
 }

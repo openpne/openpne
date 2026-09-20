@@ -64,8 +64,8 @@ export default function TimelineShow() {
         }
     };
 
-    const deleteReply = async (replyId: number) => {
-        if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true })) {
+    const deleteReply = async (replyId: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true, opener })) {
             router.post(`/timeline/delete/${replyId}`, {}, { preserveScroll: true });
         }
     };
@@ -142,7 +142,7 @@ export default function TimelineShow() {
                 </form>
             </Panel>
             )}
-            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} onClose={reactions.closeReactors} />}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} returnFocusTo={reactions.reactorsOpener} onClose={reactions.closeReactors} />}
             <RowSheetHost
                 sheet={sheet}
                 spec={(id) => {
@@ -157,8 +157,8 @@ export default function TimelineShow() {
                         vocabulary: reactionVocabulary,
                         canReact: true,
                         onToggle: (emoji, mine) => reactions.toggle(reply.id, emoji, mine),
-                        onShowReactors: () => reactions.showReactors(reply.id),
-                        onDelete: reply.author.id === viewerId ? () => void deleteReply(reply.id) : undefined,
+                        onShowReactors: (opener) => reactions.showReactors(reply.id, undefined, opener),
+                        onDelete: reply.author.id === viewerId ? (opener) => void deleteReply(reply.id, opener) : undefined,
                     };
                 }}
             />

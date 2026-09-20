@@ -355,15 +355,15 @@ export default function GroupTalkIndex() {
         }
     };
 
-    const remove = async (id: number) => {
-        if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true })) {
+    const remove = async (id: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true, opener })) {
             void stream.remove(id);
         }
     };
 
     // Which row has its picker open is the row's own state, not this page's.
     const [pendingReactions, setPendingReactions] = useState<PendingReactions>(noPending);
-    const [reactorsFor, setReactorsFor] = useState<{ id: number; emoji?: string } | null>(null);
+    const [reactorsFor, setReactorsFor] = useState<{ id: number; emoji?: string; opener?: HTMLElement | null } | null>(null);
     // Stable, because the dialog reads its list once per URL: a fresh closure every render would be
     // a fresh read every poll tick.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
@@ -520,7 +520,7 @@ export default function GroupTalkIndex() {
             )}
 
             {reactorsFor !== null && (
-                <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor.id}/reactions`} emoji={reactorsFor.emoji} onClose={closeReactors} />
+                <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor.id}/reactions`} emoji={reactorsFor.emoji} returnFocusTo={reactorsFor.opener} onClose={closeReactors} />
             )}
 
             {sheetMessage !== undefined && (
@@ -531,9 +531,9 @@ export default function GroupTalkIndex() {
                     canReact={canPost}
                     canReply={canPost}
                     onToggle={(emoji, mine) => toggleReaction(sheetMessage.id, emoji, mine)}
-                    onShowReactors={() => setReactorsFor({ id: sheetMessage.id })}
+                    onShowReactors={(opener) => setReactorsFor({ id: sheetMessage.id, opener })}
                     onReply={() => setReplyTo(sheetMessage)}
-                    onDelete={() => void remove(sheetMessage.id)}
+                    onDelete={(opener) => void remove(sheetMessage.id, opener)}
                     returnFocusTo={sheet.press?.row ?? null}
                     onSelectText={sheet.selectText}
                     onClose={sheet.close}

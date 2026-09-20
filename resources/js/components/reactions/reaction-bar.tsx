@@ -1,5 +1,5 @@
 import { SmilePlus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ReactionChip, ReactorGroup } from '@/lib/reactions/types';
@@ -106,6 +106,8 @@ function Chip({
     const t = useT();
     const [names, setNames] = useState<string | null>(null);
     const self = useRef<HTMLButtonElement>(null);
+    const reading = useRef<AbortController | null>(null);
+    useEffect(() => () => reading.current?.abort(), []);
     // Focused before the list opens: a held finger never focused the chip, and the list gives focus back to whatever held it.
     const press = useLongPress(
         () => {
@@ -133,13 +135,17 @@ function Chip({
         return button;
     }
 
+    // Each open aborts the last read, so a slow answer cannot land on a later open.
     const read = () => {
+        reading.current?.abort();
+        const controller = new AbortController();
+        reading.current = controller;
         setNames(null);
-        void fetch(reactorsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+        void fetch(reactorsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
             .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : null))
             .then((payload) => {
                 const group = payload?.groups?.find((candidate) => candidate.emoji === chip.emoji);
-                if (group !== undefined) {
+                if (group !== undefined && !controller.signal.aborted) {
                     setNames(reactorNames(group, t));
                 }
             })
@@ -147,20 +153,29 @@ function Chip({
     };
 
     return (
-        <Tooltip onOpenChange={(open) => open && read()}>
-            {/* No `aria-describedby`: the names are a tip for a hover, and the button's own name already says what it counts. */}
-            <TooltipTrigger asChild aria-describedby={undefined}>
-                {button}
-            </TooltipTrigger>
-            {names !== null && <TooltipContent>{names}</TooltipContent>}
+        <Tooltip
+            onOpenChange={(open) => {
+                if (open) {
+                    read();
+                } else {
+                    reading.current?.abort();
+                }
+            }}
+        >
+            {/* Described by the tip: the names are the only way a keyboard or a screen reader has to them. */}
+            <TooltipTrigger asChild>{button}</TooltipTrigger>
+            {names !== null && <TooltipContent className="max-w-xs whitespace-normal break-words">{names}</TooltipContent>}
         </Tooltip>
     );
 }
 
-/** "Rin, Aoi and 3 more": as many names as the group carries, then the rest as a count. */
-export function reactorNames(group: ReactorGroup, t: (key: string, replacements?: Record<string, string | number>) => string): string {
-    const listed = group.members.map((member) => member.name).join(', ');
-    const rest = group.count - group.members.length;
+/** How many names a tip lists before the rest becomes a count; the dialog lists what the server sends. */
+const TIP_NAMES = 20;
+
+/** "Rin, Aoi and 3 more": names up to the cap, then the rest as a count. */
+export function reactorNames(group: ReactorGroup, t: (key: string, replacements?: Record<string, string | number>) => string, cap = TIP_NAMES): string {
+    const listed = group.members.slice(0, cap).map((member) => member.name).join(', ');
+    const rest = group.count - Math.min(group.members.length, cap);
 
     return rest > 0 ? `${listed} ${t('and :count more', { count: rest })}` : listed;
 }

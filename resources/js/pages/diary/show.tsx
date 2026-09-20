@@ -66,8 +66,8 @@ export default function DiaryShow() {
         }
     };
 
-    const deleteComment = async (commentId: number) => {
-        if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
+    const deleteComment = async (commentId: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true, opener })) {
             router.post(`/diary/comment/delete/${commentId}`, {}, { preserveScroll: true });
         }
     };
@@ -189,8 +189,8 @@ export default function DiaryShow() {
             </Panel>
             )}
 
-            {diaryReactions.reactorsFor !== null && <ReactorsDialog url={diaryReactions.reactorsUrl(diaryReactions.reactorsFor)} emoji={diaryReactions.reactorsEmoji} onClose={diaryReactions.closeReactors} />}
-            {commentReactions.reactorsFor !== null && <ReactorsDialog url={commentReactions.reactorsUrl(commentReactions.reactorsFor)} emoji={commentReactions.reactorsEmoji} onClose={commentReactions.closeReactors} />}
+            {diaryReactions.reactorsFor !== null && <ReactorsDialog url={diaryReactions.reactorsUrl(diaryReactions.reactorsFor)} emoji={diaryReactions.reactorsEmoji} returnFocusTo={diaryReactions.reactorsOpener} onClose={diaryReactions.closeReactors} />}
+            {commentReactions.reactorsFor !== null && <ReactorsDialog url={commentReactions.reactorsUrl(commentReactions.reactorsFor)} emoji={commentReactions.reactorsEmoji} returnFocusTo={commentReactions.reactorsOpener} onClose={commentReactions.closeReactors} />}
             <RowSheetHost
                 sheet={sheet}
                 spec={(id) => {
@@ -205,8 +205,9 @@ export default function DiaryShow() {
                         vocabulary: reactionVocabulary,
                         canReact,
                         onToggle: (emoji, mine) => commentReactions.toggle(comment.id, emoji, mine),
-                        onShowReactors: () => commentReactions.showReactors(comment.id),
-                        onDelete: comment.deletable ? () => void deleteComment(comment.id) : undefined,
+                        // The names are read on a route a guest cannot reach, so a guest is not offered them.
+                        onShowReactors: canReact ? (opener) => commentReactions.showReactors(comment.id, undefined, opener) : undefined,
+                        onDelete: comment.deletable ? (opener) => void deleteComment(comment.id, opener) : undefined,
                     };
                 }}
             />

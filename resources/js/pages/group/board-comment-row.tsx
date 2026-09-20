@@ -6,6 +6,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { PRESS_ROW, REVEAL_ROW, RevealBar } from '@/components/row/reveal-bar';
+import { rowSheetOpens } from '@/components/row/row-sheet';
 import { Timestamp } from '@/components/timestamp';
 import { Tip } from '@/components/ui/tooltip';
 import { UserText } from '@/components/user-text';
@@ -29,13 +30,18 @@ export function BoardCommentRow({
 }) {
     const t = useT();
     const row = useRef<HTMLLIElement>(null);
-    const press = useLongPress(() => onOpenActions?.(row.current!), { enabled: onOpenActions !== undefined });
+    const press = useLongPress(() => onOpenActions?.(row.current!), {
+        enabled:
+            onOpenActions !== undefined &&
+            rowSheetOpens({ body: comment.body, chips: reactions.chips, canReact: reactions.onToggle !== undefined, onShowReactors: reactions.onShowReactors, onDelete: comment.deletable ? () => {} : undefined, link: undefined }),
+    });
 
     return (
         <li ref={row} tabIndex={-1} {...press} className={cn(REVEAL_ROW, PRESS_ROW, 'px-4 py-4 outline-none sm:px-5')}>
-            {(reactions.onToggle !== undefined || comment.deletable) && (
+            {((reactions.onToggle !== undefined && reactions.chips.length === 0) || comment.deletable) && (
                 <RevealBar>
-                    {reactions.onToggle !== undefined && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+                    {/* With chips the add button stands at their end; two of the same name on one row would be one too many. */}
+                    {reactions.onToggle !== undefined && reactions.chips.length === 0 && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
                     {comment.deletable && (
                         <Tip label={t('Delete')}>
                             <button type="button" onClick={() => onDelete(comment.id)} className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}>

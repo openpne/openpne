@@ -72,8 +72,8 @@ export default function GroupTopicShow() {
         }
     };
 
-    const deleteComment = async (commentId: number) => {
-        if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
+    const deleteComment = async (commentId: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true, opener })) {
             router.post(`/topics/comments/${commentId}/delete`, {}, { preserveScroll: true });
         }
     };
@@ -169,8 +169,8 @@ export default function GroupTopicShow() {
                     </form>
                 </Panel>
             )}
-            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} emoji={topicReactions.reactorsEmoji} onClose={topicReactions.closeReactors} />}
-            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} onClose={reactions.closeReactors} />}
+            {topicReactions.reactorsFor !== null && <ReactorsDialog url={topicReactions.reactorsUrl(topicReactions.reactorsFor)} emoji={topicReactions.reactorsEmoji} returnFocusTo={topicReactions.reactorsOpener} onClose={topicReactions.closeReactors} />}
+            {reactions.reactorsFor !== null && <ReactorsDialog url={reactions.reactorsUrl(reactions.reactorsFor)} emoji={reactions.reactorsEmoji} returnFocusTo={reactions.reactorsOpener} onClose={reactions.closeReactors} />}
             <RowSheetHost
                 sheet={sheet}
                 spec={(id) => {
@@ -185,8 +185,8 @@ export default function GroupTopicShow() {
                         vocabulary: reactionVocabulary,
                         canReact: canComment,
                         onToggle: (emoji, mine) => reactions.toggle(comment.id, emoji, mine),
-                        onShowReactors: () => reactions.showReactors(comment.id),
-                        onDelete: comment.deletable ? () => void deleteComment(comment.id) : undefined,
+                        onShowReactors: canComment ? (opener) => reactions.showReactors(comment.id, undefined, opener) : undefined,
+                        onDelete: comment.deletable ? (opener) => void deleteComment(comment.id, opener) : undefined,
                     };
                 }}
             />

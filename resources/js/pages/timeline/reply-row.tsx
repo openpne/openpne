@@ -4,6 +4,7 @@ import { EntityText } from '@/components/entity-text';
 import { LinkCard } from '@/components/link-card';
 import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
 import { PRESS_ROW, REVEAL_ROW, RevealBar } from '@/components/row/reveal-bar';
+import { rowSheetOpens } from '@/components/row/row-sheet';
 import { Timestamp } from '@/components/timestamp';
 import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
@@ -32,13 +33,18 @@ export function TimelineReplyRow({
     const t = useT();
     const row = useRef<HTMLLIElement>(null);
     const isOwn = reply.author.id === viewerId;
-    const press = useLongPress(() => onOpenActions?.(row.current!), { enabled: onOpenActions !== undefined });
+    const press = useLongPress(() => onOpenActions?.(row.current!), {
+        enabled:
+            onOpenActions !== undefined &&
+            rowSheetOpens({ body: reply.body, chips: reactions.chips, canReact: reactions.onToggle !== undefined, onShowReactors: reactions.onShowReactors, onDelete: isOwn ? () => {} : undefined, link: undefined }),
+    });
 
     return (
         <li ref={row} tabIndex={-1} {...press} className={cn(REVEAL_ROW, PRESS_ROW, 'space-y-1 px-4 py-3 outline-none sm:px-5')}>
-            {(reactions.onToggle !== undefined || isOwn) && (
+            {((reactions.onToggle !== undefined && reactions.chips.length === 0) || isOwn) && (
                 <RevealBar>
-                    {reactions.onToggle !== undefined && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
+                    {/* With chips the add button stands at their end; two of the same name on one row would be one too many. */}
+                    {reactions.onToggle !== undefined && reactions.chips.length === 0 && <ReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />}
                     {isOwn && (
                         <Tip label={t('Delete')}>
                             <button type="button" onClick={() => onDelete(reply.id)} className={cn(ICON_BUTTON, 'hover:bg-destructive/10 hover:text-destructive')}>

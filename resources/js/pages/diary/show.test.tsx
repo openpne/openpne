@@ -69,8 +69,8 @@ function renderShow(user: { id: number } | null) {
 test('a signed-in reader may react to the entry and to each comment', () => {
     renderShow({ id: 9 });
 
-    // The entry's own, the comment's bar, and the end of the comment's chips.
-    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(3);
+    // The entry's own, and the end of the comment's chips; the comment's bar offers none once it has chips.
+    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });
 

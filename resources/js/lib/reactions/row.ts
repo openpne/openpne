@@ -4,7 +4,7 @@ import type { ReactionChip } from './types';
 export interface ReactionsOnPage {
     chips: (id: number, rendered: ReactionChip[]) => ReactionChip[];
     toggle: (id: number, emoji: string, mine: boolean) => void;
-    showReactors: (id: number, emoji?: string) => void;
+    showReactors: (id: number, emoji?: string, opener?: HTMLElement | null) => void;
     reactorsUrl: (id: number) => string;
 }
 

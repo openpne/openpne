@@ -51,8 +51,8 @@ export function TimelineFeedList({
                         vocabulary: reactionVocabulary,
                         canReact: true,
                         onToggle: (emoji, mine) => reactions.toggle(post.id, emoji, mine),
-                        onShowReactors: () => reactions.showReactors(post.id),
-                        onDelete: post.author.id === viewerId ? () => void deletePost(post.id) : undefined,
+                        onShowReactors: (opener) => reactions.showReactors(post.id, undefined, opener),
+                        onDelete: post.author.id === viewerId ? (opener) => void deletePost(post.id, opener) : undefined,
                         link: () => rowLink(`/timeline/${post.id}`),
                     };
                 }}
