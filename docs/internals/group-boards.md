@@ -61,8 +61,9 @@ touches — File bytes and reactions — across four kinds of content, in one tr
    reactions are found a page at a time — a thousand of one topic's or event's comments, a thousand
    messages in the room index's own order, or a thousand of the group's topics or events — and then a thousand of their
    reactions, and deleted by primary key in chunks: PHP holds a page of rows and the group's topic
-   and event ids, no statement grows with the group, every page is read in an index's own order
-   without a sort, and the sweep locks only the rows it deletes. The group's own top-image
+   and event ids, no statement grows with the group, every page of rows is read in an index's own
+   order without a sort, no page of reactions sorts more than its thousand parents' reactions, and
+   the sweep locks only the rows it deletes. The group's own top-image
    File id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
 3. The group is deleted, the cascade taking memberships, join requests, messages, topics, events,

@@ -45,9 +45,10 @@ final class BoardSweep
     }
 
     /**
-     * The reactions on the parent rows themselves, a page of the group's rows at a time in the
-     * (group_id, bumped_at) index's own order: paged by id alone, MySQL 8.4 reads and sorts the whole
-     * group for every page. Call before the rows are deleted, or a page finds nothing to reach.
+     * The reactions on the parent rows themselves, paged in the (group_id, bumped_at) index's order:
+     * paged by id alone, MySQL 8.4 reads and sorts the whole group per page. Call inside the teardown's
+     * transaction with the parent rows locked before its first consistent read, since bumped_at
+     * settles both ways and a row moved behind the cursor would never be reached.
      */
     public static function rows(string $alias, string $table, int $groupId): void
     {

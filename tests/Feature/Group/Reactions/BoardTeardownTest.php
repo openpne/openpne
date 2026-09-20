@@ -392,14 +392,14 @@ class BoardTeardownTest extends BoardReactionTestCase
     {
         $group = $this->group();
         $author = $this->joined($group);
-        // Half the rows share one instant, so the second page's cursor has to carry the id as well as the time.
+        // The last two rows share one instant across the page boundary, so the second page's cursor has to carry the id as well as the time.
         $earlier = now()->subDay();
         DB::table('group_topics')->insert(array_map(fn (int $i): array => [
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'name' => "Topic {$i}",
             'body' => 'Body',
-            'bumped_at' => $i % 2 === 0 ? $earlier : $earlier->copy()->addSeconds($i),
+            'bumped_at' => $earlier->copy()->addSeconds(min($i, 1000)),
             'created_at' => $earlier,
             'updated_at' => $earlier,
         ], range(1, 1001)));
@@ -408,11 +408,16 @@ class BoardTeardownTest extends BoardReactionTestCase
             'reactable_type' => 'groupTopic', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $earlier, 'updated_at' => $earlier,
         ], $ordered));
         $pages = [];
-        DB::listen(function ($query) use (&$pages): void {
+        $deletes = [];
+        DB::listen(function ($query) use (&$pages, &$deletes): void {
             if (preg_match('/from [`"]group_topics[`"] where .*order by [`"]bumped_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
                 $pages[] = $query->bindings;
             }
+            if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
+                $deletes[] = $query->bindings;
+            }
         });
+        $boundaryReaction = DB::table('reactions')->where('reactable_id', $ordered[1000])->value('id');
 
         app(DeleteGroup::class)->purge($group);
 
@@ -420,6 +425,8 @@ class BoardTeardownTest extends BoardReactionTestCase
         // The second page's cursor is the OR of two arms, time above or time equal with id above, so four bindings with the group.
         $this->assertCount(4, $pages[1]);
         $this->assertSame($ordered[999], $pages[1][3], 'the cursor is the last row of the page in the index order, not the highest id');
+        $this->assertSame([1000, 1], array_map('count', $deletes));
+        $this->assertSame([$boundaryReaction], $deletes[1], 'the row that shares the boundary instant is reached by the second page');
         $this->assertDatabaseCount('reactions', 0);
     }
 
