@@ -28,6 +28,8 @@ import { TalkMessageRow } from './message-row';
 import { TalkMessageSheet } from './message-sheet';
 import { TalkMuteToggle } from './mute-toggle';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
+import { SelectTextSheet } from '@/components/row/select-text-sheet';
+import { useRowSheet } from '@/components/row/use-row-sheet';
 import { TalkUnreadDigestCard } from './unread-digest';
 import type { TalkMessage, TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
@@ -353,24 +355,21 @@ export default function GroupTalkIndex() {
         }
     };
 
-    const remove = async (id: number) => {
-        if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true })) {
+    const remove = async (id: number, opener: HTMLElement | null = null) => {
+        if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true, opener })) {
             void stream.remove(id);
         }
     };
 
     // Which row has its picker open is the row's own state, not this page's.
     const [pendingReactions, setPendingReactions] = useState<PendingReactions>(noPending);
-    const [reactorsFor, setReactorsFor] = useState<number | null>(null);
+    const [reactorsFor, setReactorsFor] = useState<{ id: number; emoji?: string; opener?: HTMLElement | null } | null>(null);
     // Stable, because the dialog reads its list once per URL: a fresh closure every render would be
     // a fresh read every poll tick.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
 
-    // Held as an id and resolved against the stream, so a message deleted under the reader takes its
-    // sheet with it.
-    const [sheetFor, setSheetFor] = useState<number | null>(null);
-    const closeSheet = useCallback(() => setSheetFor(null), []);
-    const sheetMessage = sheetFor === null ? undefined : messages.find((message) => message.id === sheetFor);
+    const sheet = useRowSheet();
+    const sheetMessage = sheet.press === null ? undefined : messages.find((message) => message.id === sheet.press!.id);
 
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
         if (isPending(pendingReactions, messageId, emoji)) {
@@ -475,7 +474,7 @@ export default function GroupTalkIndex() {
                                 <TalkMessageRow
                                     message={message}
                                     onDelete={remove}
-                                    onOpenActions={() => setSheetFor(message.id)}
+                                    onOpenActions={(row) => sheet.open(message.id, row)}
                                     onReply={() => setReplyTo(message)}
                                     onJumpToReply={jumpToReply}
                                     canReply={canPost}
@@ -487,7 +486,8 @@ export default function GroupTalkIndex() {
                                         vocabulary: reactionVocabulary,
                                         canReact: canPost,
                                         onToggle: (emoji, mine) => toggleReaction(message.id, emoji, mine),
-                                        onShowReactors: () => setReactorsFor(message.id),
+                                        onShowReactors: (emoji) => setReactorsFor({ id: message.id, emoji }),
+                                        reactorsUrl: `/groups/${group.id}/talk/messages/${message.id}/reactions`,
                                     }}
                                 />
                             </Fragment>
@@ -520,7 +520,7 @@ export default function GroupTalkIndex() {
             )}
 
             {reactorsFor !== null && (
-                <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
+                <ReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor.id}/reactions`} emoji={reactorsFor.emoji} returnFocusTo={reactorsFor.opener} onClose={closeReactors} />
             )}
 
             {sheetMessage !== undefined && (
@@ -531,12 +531,15 @@ export default function GroupTalkIndex() {
                     canReact={canPost}
                     canReply={canPost}
                     onToggle={(emoji, mine) => toggleReaction(sheetMessage.id, emoji, mine)}
-                    onShowReactors={() => setReactorsFor(sheetMessage.id)}
+                    onShowReactors={(opener) => setReactorsFor({ id: sheetMessage.id, opener })}
                     onReply={() => setReplyTo(sheetMessage)}
-                    onDelete={() => void remove(sheetMessage.id)}
-                    onClose={closeSheet}
+                    onDelete={(opener) => void remove(sheetMessage.id, opener)}
+                    returnFocusTo={sheet.press?.row ?? null}
+                    onSelectText={sheet.selectText}
+                    onClose={sheet.close}
                 />
             )}
+            {sheet.selecting !== null && <SelectTextSheet text={sheet.selecting.text} returnFocusTo={sheet.selecting.row} onClose={sheet.closeSelect} />}
 
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />

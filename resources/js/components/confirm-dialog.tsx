@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertDialog } from 'radix-ui';
 import { headingVariants } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
@@ -9,9 +9,11 @@ export type ConfirmOptions = {
     confirmLabel?: string;
     cancelLabel?: string;
     danger?: boolean;
+    /** Where focus returns when what asked is gone by then, as a sheet's item is. */
+    opener?: HTMLElement | null;
 };
 
-type ResolvedOptions = ConfirmOptions & { resolve: (ok: boolean) => void };
+type ResolvedOptions = ConfirmOptions & { resolve: (ok: boolean) => void; opener: HTMLElement | null };
 
 const EVENT_NAME = 'modern:confirm-request';
 
@@ -25,7 +27,9 @@ const EVENT_NAME = 'modern:confirm-request';
 export function useConfirm() {
     return (options: ConfirmOptions): Promise<boolean> =>
         new Promise<boolean>((resolve) => {
-            window.dispatchEvent(new CustomEvent<ResolvedOptions>(EVENT_NAME, { detail: { ...options, resolve } }));
+            // Asked without a trigger of its own, so the question names its own way back: what holds focus as it is asked.
+            const opener = options.opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+            window.dispatchEvent(new CustomEvent<ResolvedOptions>(EVENT_NAME, { detail: { ...options, resolve, opener } }));
         });
 }
 
@@ -35,9 +39,15 @@ export function useConfirm() {
 export function ConfirmDialogHost() {
     const t = useT();
     const [opts, setOpts] = useState<ResolvedOptions | null>(null);
+    // Held apart from `opts`: the content is drawn once more after `opts` is cleared, and that render's handler is the one the close runs.
+    const opener = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
-        const handler = (e: Event) => setOpts((e as CustomEvent<ResolvedOptions>).detail);
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<ResolvedOptions>).detail;
+            opener.current = detail.opener;
+            setOpts(detail);
+        };
         window.addEventListener(EVENT_NAME, handler);
         return () => window.removeEventListener(EVENT_NAME, handler);
     }, []);
@@ -57,7 +67,13 @@ export function ConfirmDialogHost() {
         >
             <AlertDialog.Portal>
                 <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-                <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-card-foreground shadow-xl">
+                <AlertDialog.Content
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        opener.current?.focus({ preventScroll: true });
+                    }}
+                    className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-card-foreground shadow-xl"
+                >
                     {opts && (
                         <>
                             <div className="space-y-2 px-5 pb-4 pt-5">

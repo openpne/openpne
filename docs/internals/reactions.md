@@ -85,6 +85,59 @@ and nowhere else. That read is bounded too
 first hundred reactors travel with it, in the order they reacted. Past that the dialog has the number
 and no more — the list is read by a person.
 
+## The row
+
+Every surface draws a reacted-to thing one of two ways
+([`components/reactions/reaction-bar.tsx`](../../resources/js/components/reactions/reaction-bar.tsx)).
+
+- **A list row** — a feed post, a reply, a diary or board comment, a talk message — stands at rest
+  with no control on it: the chips are drawn only once someone has reacted, so a row nobody has
+  reacted to costs the list no height. A feed or comment row then keeps its add button at the end of
+  the chips and out of the bar; a talk row offers it in its bar and sheet instead. What can be done about the row
+  is reached by pointer: where a cursor can point, a bar floats over the row's top-right
+  ([`components/row/reveal-bar.tsx`](../../resources/js/components/row/reveal-bar.tsx)) on hover or
+  when a keyboard reaches into the row; where the primary pointer is a finger, a long press raises
+  the row's sheet ([`components/row/row-sheet.tsx`](../../resources/js/components/row/row-sheet.tsx)).
+- **A detail item** — the diary, topic, event or post a page is about — keeps its add button with or
+  without chips, since nothing else on the page offers it.
+
+The press is offered only where `(pointer: coarse)` holds
+([`lib/use-long-press.ts`](../../resources/js/lib/use-long-press.ts)), the same query the row's
+`select-none` and `-webkit-touch-callout: none` key on: a laptop with a touch screen keeps the OS
+selection lens and the cursor's bar. A held row cannot be part-selected, so the sheet offers
+**Select text**: the row drawn again under that heading, its body selected as it appears, in a sheet
+of its own where the lens works. That sheet does not slide in: iOS paints a selection made during
+the slide where the content stood at that instant, and one made after it comes late. The body is
+capped at 40vh so the copy item under it stays on the screen; a unit test cannot see that height, so
+the UX drive measures it. Every choice on the sheet
+closes it before what it opens arrives — the reactor list, the confirmation, the selectable body — and
+focus returns to the row that was pressed.
+
+A chip is its own toggle. Held, it opens the reactor list led by its own emoji; reached by a keyboard
+or hovered, it names its reactors in a tip read fresh on every open, so a toggle of one's own is never
+answered with the room as it was. The tip is in the document from the moment it opens, so a screen
+reader's description of the chip says the names are loading, but nothing is drawn until they arrive,
+since a pointer passing over a chip opens it too; a read that fails, or finds the chip's reaction
+gone or its members withdrawn, leaves the tip undrawn and the description empty. The names are
+offered only to a reader the reactor route admits — a guest on a web-public diary is not. A press
+starting on a chip belongs to the chip: the row's own hook lets a press that began inside a
+`data-press-own` element pass, since a pointerdown bubbles and every hook on the way up would
+otherwise arm its own timer.
+
+The bar is one class string reaching the controls by two lanes. Where a cursor can point it is
+revealed by `:hover` and by `:focus-visible` — never `:focus-within`, since a click leaves focus on
+what was clicked and would keep the bar out over a row nobody is on. Where there is no cursor the
+controls are `sr-only` rather than hidden: a screen reader on a touch screen cannot hold a press, and
+these buttons are that reader's only way to what the sheet offers. `pointer-events` is what keeps an
+invisible control from answering a finger on a hybrid machine, and the revealing states beat
+`pointer-fine:pointer-events-none` by selector specificity (0,2,0 against 0,1,0), not by source
+order: a bare `pointer-events-auto` would tie it and leave the controls dead to every click. Nothing
+in the coarse lane writes `pointer-events` at all, so a touch screen reader's activation path is
+untouched. The trailing `pointer-coarse:focus-within:absolute` re-floats the bar when a hardware keyboard tabs into
+the coarse lane, where `not-sr-only`'s `position: static` would otherwise drop it into the flow. The
+row lifts above its siblings (`z-10`) for as long as the bar is out, since the bar overhangs the row's
+edges and the next row would otherwise take its hits.
+
 ## Reclaiming the rows
 
 Three paths take reactions away, and only the last is a cascade:

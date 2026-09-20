@@ -9,16 +9,29 @@ import { useT } from '@/lib/i18n';
 import type { ReactorGroup } from '@/lib/reactions/types';
 
 /** A refusal closes the dialog without a word (docs/internals/reactions.md, "Reading"). */
-export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => void }) {
+export function ReactorsDialog({
+    url,
+    emoji,
+    returnFocusTo,
+    onClose,
+}: {
+    url: string;
+    /** The chip it was asked from, listed first. */
+    emoji?: string;
+    /** Given when what asked is gone by the time this mounts, as a sheet's item is; a chip that asked holds focus itself. */
+    returnFocusTo?: HTMLElement | null;
+    onClose: () => void;
+}) {
     const t = useT();
     const [groups, setGroups] = useState<ReactorGroup[] | null>(null);
+    const [opener] = useState(() => returnFocusTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null));
 
     useEffect(() => {
         const controller = new AbortController();
 
         fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
             .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : Promise.reject(new Error(String(response.status)))))
-            .then((payload) => setGroups(payload.groups ?? []))
+            .then((payload) => setGroups(leadWith(payload.groups ?? [], emoji)))
             .catch(() => {
                 if (!controller.signal.aborted) {
                     onClose();
@@ -26,11 +39,19 @@ export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => v
             });
 
         return () => controller.abort();
-    }, [url, onClose]);
+    }, [url, emoji, onClose]);
 
     return (
         <Dialog open onOpenChange={(next) => !next && onClose()}>
-            <DialogContent closeLabel={t('Close')} aria-describedby={undefined} className="max-h-[70vh] overflow-y-auto">
+            <DialogContent
+                closeLabel={t('Close')}
+                aria-describedby={undefined}
+                className="max-h-[70vh] overflow-y-auto"
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    opener?.focus({ preventScroll: true });
+                }}
+            >
                 <DialogTitle className={headingVariants({ variant: 'section' })}>{t('Reactions')}</DialogTitle>
                 {groups === null ? (
                     <p className="flex justify-center py-6 text-muted-foreground">
@@ -65,4 +86,10 @@ export function ReactorsDialog({ url, onClose }: { url: string; onClose: () => v
             </DialogContent>
         </Dialog>
     );
+}
+
+function leadWith(groups: ReactorGroup[], emoji: string | undefined): ReactorGroup[] {
+    const lead = groups.find((group) => group.emoji === emoji);
+
+    return lead === undefined ? groups : [lead, ...groups.filter((group) => group !== lead)];
 }
