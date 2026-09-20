@@ -14,7 +14,12 @@ export function PasskeySignIn({ remember }: { remember: () => boolean }) {
     const [failure, setFailure] = useState<string | null>(null);
     // Arming the picker reports its own failure through the callback a refused ceremony uses.
     const acted = useRef(false);
+    // The client refuses to arm without a field whose autocomplete ends in `webauthn`, and says so in
+    // a message meant for whoever wrote the page.
+    const [anchored, setAnchored] = useState(false);
     useEffect(() => {
+        setAnchored(document.querySelector('input[autocomplete$="webauthn"]') !== null);
+
         const mark = () => {
             acted.current = true;
         };
@@ -29,7 +34,7 @@ export function PasskeySignIn({ remember }: { remember: () => boolean }) {
     // The hook's isLoading also covers the armed autofill wait, so the button keeps its own flag.
     const [busy, setBusy] = useState(false);
     const passkey = usePasskeyVerify({
-        autofill: true,
+        autofill: anchored,
         routes: PASSKEY_ROUTES.login,
         remember,
         onSuccess: (response) => window.location.assign(response.redirect ?? '/'),

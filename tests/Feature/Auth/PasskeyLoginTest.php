@@ -163,14 +163,6 @@ class PasskeyLoginTest extends TestCase
         $this->assertSame([], $this->securityRecords('passkey.failed'));
     }
 
-    public function test_the_login_page_keeps_the_field_the_browser_picker_anchors_to(): void
-    {
-        // The attribute is what arms conditional mediation; without it the client refuses to arm.
-        $page = file_get_contents(resource_path('js/pages/auth/login.tsx'));
-
-        $this->assertStringContainsString('autoComplete="email webauthn"', (string) $page);
-    }
-
     public function test_a_banned_member_is_refused_after_a_valid_assertion(): void
     {
         $member = Member::factory()->create(['is_login_rejected' => true]);

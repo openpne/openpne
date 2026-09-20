@@ -21,6 +21,7 @@ vi.mock('@laravel/passkeys/react', () => ({
 
 afterEach(() => {
     cleanup();
+    document.body.replaceChildren();
     vi.unstubAllGlobals();
     hook.isSupported = true;
     hook.verify.mockClear();
@@ -33,8 +34,18 @@ test('renders nothing where WebAuthn is unsupported', () => {
     expect(screen.queryByRole('button')).toBeNull();
 });
 
+test('leaves the picker unarmed when the page has no field to anchor it to', () => {
+    renderWithProviders(<PasskeySignIn remember={() => false} />);
+
+    expect(hook.options?.autofill).toBe(false);
+    expect(screen.getByRole('button', { name: 'Sign in with a passkey' })).toBeTruthy();
+});
+
 test('arms autofill with the remember box and runs the ceremony from the button', async () => {
     const remember = () => true;
+    const anchor = document.createElement('input');
+    anchor.setAttribute('autocomplete', 'email webauthn');
+    document.body.append(anchor);
     renderWithProviders(<PasskeySignIn remember={remember} />);
 
     expect(hook.options?.autofill).toBe(true);
