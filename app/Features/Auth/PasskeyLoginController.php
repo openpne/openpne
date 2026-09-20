@@ -8,6 +8,7 @@ use Laravel\Passkeys\Actions\VerifyPasskey;
 use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
 use Laravel\Passkeys\Http\Controllers\PasskeyLoginController as VendorController;
 use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 use Webauthn\Exception\WebauthnException;
 
 /**
@@ -24,7 +25,13 @@ class PasskeyLoginController extends VendorController
             return parent::store($request, $verify);
         } catch (ValidationException|WebauthnException $e) {
             if (! $request->attributes->get(self::REFUSED_BY_GATE, false)) {
-                SecurityLog::event('passkey.failed', ['guard' => 'member']);
+                // The id the assertion claims, which is the stored `credential_id`: a counter that
+                // went backwards (a cloned authenticator) is otherwise indistinguishable here from
+                // an unknown credential.
+                SecurityLog::event('passkey.failed', [
+                    'guard' => 'member',
+                    'credential_id' => Base64UrlSafe::encodeUnpadded($request->credential()->rawId),
+                ]);
             }
 
             throw $e;

@@ -1,6 +1,6 @@
 import { usePasskeyVerify } from '@laravel/passkeys/react';
 import { KeyRound } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
@@ -12,6 +12,22 @@ import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
 export function PasskeySignIn({ remember }: { remember: () => boolean }) {
     const t = useT();
     const [failure, setFailure] = useState<string | null>(null);
+    // Arming the picker fetches its options at mount, and the client reports a failure there through
+    // the same callback as a refused ceremony; only what follows something the member did is theirs
+    // to see.
+    const acted = useRef(false);
+    useEffect(() => {
+        const mark = () => {
+            acted.current = true;
+        };
+        document.addEventListener('pointerdown', mark, true);
+        document.addEventListener('keydown', mark, true);
+
+        return () => {
+            document.removeEventListener('pointerdown', mark, true);
+            document.removeEventListener('keydown', mark, true);
+        };
+    }, []);
     // The hook's isLoading also covers the armed autofill wait, so the button keeps its own flag.
     const [busy, setBusy] = useState(false);
     const passkey = usePasskeyVerify({
@@ -20,8 +36,12 @@ export function PasskeySignIn({ remember }: { remember: () => boolean }) {
         remember,
         onSuccess: (response) => window.location.assign(response.redirect ?? '/'),
         // Reached from the button and from the armed autofill alike; the client already swallows an
-        // unsupported or dismissed picker, so what arrives here is a server refusal worth showing.
-        onError: (error) => setFailure(t(passkeyErrorKey(error))),
+        // unsupported or dismissed picker, so what arrives here is a refusal worth showing.
+        onError: (error) => {
+            if (acted.current) {
+                setFailure(t(passkeyErrorKey(error)));
+            }
+        },
     });
 
     if (!passkey.isSupported) {

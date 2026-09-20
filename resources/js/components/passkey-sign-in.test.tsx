@@ -45,16 +45,27 @@ test('arms autofill with the remember box and runs the ceremony from the button'
     expect(hook.verify).toHaveBeenCalledTimes(1);
 });
 
-test('a server refusal is shown, whichever path reported it', () => {
+test('a refusal that follows the member picking a passkey is shown', () => {
     renderWithProviders(<PasskeySignIn remember={() => false} />);
+    // Opening the browser's picker starts with a gesture on the page.
+    fireEvent.pointerDown(document.body);
 
     act(() => hook.options?.onError?.(new Error('Unable to sign in with this account.')));
 
     expect(screen.getByRole('alert').textContent).toBe('Unable to sign in with this account.');
 });
 
+test('a failure while arming the picker stays quiet', () => {
+    renderWithProviders(<PasskeySignIn remember={() => false} />);
+
+    act(() => hook.options?.onError?.(new Error('Failed to fetch')));
+
+    expect(screen.queryByRole('alert')).toBeNull();
+});
+
 test('a refusal message clears when the button is tried again', async () => {
     renderWithProviders(<PasskeySignIn remember={() => false} />);
+    fireEvent.pointerDown(document.body);
     act(() => hook.options?.onError?.(new Error('Too Many Attempts.')));
     expect(screen.getByRole('alert').textContent).toBe('Too many attempts. Please wait a moment and try again.');
 

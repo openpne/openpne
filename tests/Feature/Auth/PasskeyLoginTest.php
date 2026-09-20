@@ -139,7 +139,7 @@ class PasskeyLoginTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('credential');
         $this->assertGuest();
-        $this->assertOneSecurityEvent('passkey.failed');
+        $this->assertSame($stranger->credentialId(), $this->assertOneSecurityEvent('passkey.failed')['credential_id']);
     }
 
     public function test_a_refused_ceremony_is_logged_once_whatever_the_reason(): void
