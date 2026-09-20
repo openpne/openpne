@@ -91,12 +91,12 @@ test('the body keeps its add button with no reactions at all', () => {
     expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
 });
 
-test('the reactor list of the body is read from the body route', () => {
+test('the names behind the body\'s chip are read from the body route', () => {
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetch);
     renderShow(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'See who reacted' }));
+    fireEvent.focus(screen.getByRole('button', { name: '\u{1F44D} 2' }));
     expect(fetch).toHaveBeenCalledWith('/topics/11/reactions', expect.objectContaining({ credentials: 'same-origin' }));
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/comments/'), expect.anything());
 });
