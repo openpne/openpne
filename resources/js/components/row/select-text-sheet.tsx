@@ -39,7 +39,8 @@ export function SelectTextSheet({ text, returnFocusTo, onClose }: { text: Select
                         {text.createdAt !== undefined && <Timestamp at={text.createdAt} preset="relative" className="shrink-0" />}
                     </div>
                 )}
-                <p ref={body} className="max-h-[50vh] select-text overflow-y-auto whitespace-pre-wrap break-words text-base [-webkit-touch-callout:default] [-webkit-user-select:text]">
+                {/* Focusable because a long body scrolls inside the sheet, and a keyboard must be able to reach what it scrolls. */}
+                <p ref={body} tabIndex={0} className="max-h-[40vh] select-text overflow-y-auto whitespace-pre-wrap break-words text-base [-webkit-touch-callout:default] [-webkit-user-select:text]">
                     {text.body}
                 </p>
                 {canCopyText(text.body) && (
