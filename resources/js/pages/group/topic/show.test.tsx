@@ -47,7 +47,7 @@ const comment = { id: 21, number: 1, body: 'a comment', images: [], linkCard: nu
 
 const thread: TopicThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = [], hint: 'shown' | 'dismissed' = 'dismissed') {
+function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = [], hint: 'shown' | 'dismissed' = 'dismissed', canEdit = false) {
     inertia.page = {
         component: 'group/topic/show',
         url: '/topics/11',
@@ -56,7 +56,7 @@ function renderShow(canComment: boolean, reactions = topic.reactions, comments: 
             topic: { ...topic, reactions },
             thread: { ...thread, comments, total: comments.length },
             canComment,
-            canEdit: false,
+            canEdit,
             reactionVocabulary: ['\u{1F44D}'],
             renderGeneration: 'g1',
             auth: { user: { id: 3 } },
@@ -138,4 +138,16 @@ test('a member who may not react here is told nothing, however many comments the
     renderShow(false, topic.reactions, [comment], 'shown');
 
     expect(screen.queryByText('Hover to react and more.')).toBeNull();
+});
+
+test('an editor edits and deletes the topic from the kebab in its header; a member who may not has no kebab', () => {
+    renderShow(true, topic.reactions, [], 'dismissed', true);
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Edit' }).getAttribute('href')).toBe('/topics/11/edit');
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+
+    cleanup();
+    renderShow(true);
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
 });

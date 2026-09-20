@@ -1,7 +1,7 @@
 import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -9,6 +9,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
 import { FirstUseHint } from '@/components/row/first-use-hint';
+import { RowMenu } from '@/components/row/row-menu';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
 import { useRowActionsHint } from '@/lib/use-row-actions-hint';
@@ -17,7 +18,6 @@ import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -83,11 +83,14 @@ export default function DiaryShow() {
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} isAi={diary.author.isAi} size="md" decorative />
-                    <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
+                    <Link href={`/member/${diary.author.id}`} className="min-w-0 truncate text-link hover:underline">
                         {diary.author.name}
                     </Link>
                     <AiChip isAi={diary.author.isAi} />
                     <span>&mdash; <Timestamp at={diary.createdAt} preset="absolute" /></span>
+                    <span className="ml-auto shrink-0">
+                        <RowMenu items={isOwner ? [{ label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteDiary() }] : []} />
+                    </span>
                 </div>
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
@@ -98,16 +101,6 @@ export default function DiaryShow() {
 
                 <DetailReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
 
-                {isOwner && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/diary/edit/${diary.id}`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <button type="button" onClick={deleteDiary} className={dangerActionClass}>
-                            {t('Delete')}
-                        </button>
-                    </div>
-                )}
             </Panel>
 
             {(older || newer) && (

@@ -20,6 +20,7 @@ export function ActionSheet({
     returnFocusTo,
     titleVisible = false,
     onOpened,
+    onClosed,
     openedByPress = false,
     animated = true,
     children,
@@ -32,6 +33,8 @@ export function ActionSheet({
     titleVisible?: boolean;
     /** Run once the sheet holds focus, for what needs its content in the document. */
     onOpened?: () => void;
+    /** Run once the sheet has closed and focus is back where `returnFocusTo` points. */
+    onClosed?: () => void;
     /** True when a finger still on the screen opened it: its lifting lands a click on whatever the sheet now covers. */
     openedByPress?: boolean;
     /** False for a sheet drawn in place, with no slide in or out. */
@@ -93,6 +96,7 @@ export function ActionSheet({
                 onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     returnFocusTo.current?.focus({ preventScroll: true });
+                    onClosed?.();
                 }}
                 // The trap's default first stop is the first control, and a focus ring drawn there
                 // reads as "you hold this one" on a tile nobody pressed.

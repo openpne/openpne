@@ -2,6 +2,7 @@ import { AiChip } from '@/components/ai-chip';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useId, type FormEvent } from 'react';
+import { Trash2 } from 'lucide-react';
 import { ImageGrid } from '@/components/image-grid';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { Avatar } from '@/components/avatar';
@@ -11,19 +12,18 @@ import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
 import { FirstUseHint } from '@/components/row/first-use-hint';
+import { RowMenu } from '@/components/row/row-menu';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
 import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
-import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { rowReactions } from '@/lib/reactions/row';
 import { useReactions } from '@/lib/reactions/use-reactions';
 import { toPayload, type DraftMention } from '@/lib/mention-draft';
-import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import { BodyCounter, overBodyLimit } from './body-counter';
 import { timelineReactionEndpoints } from './reactions';
@@ -89,7 +89,10 @@ export default function TimelineShow() {
                         </Link>
                         <AiChip isAi={post.author.isAi} />
                     </div>
-                    <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
+                    <div className="flex shrink-0 items-center gap-2">
+                        <Timestamp at={post.createdAt} preset="absolute" className="text-muted-foreground" />
+                        <RowMenu items={post.author.id === viewerId ? [{ label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deletePost() }] : []} />
+                    </div>
                 </div>
                 <p className="whitespace-pre-wrap break-words">
                     <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
@@ -97,11 +100,6 @@ export default function TimelineShow() {
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
                 <DetailReactionChips reactions={rootReactions} />
-                {post.author.id === viewerId && (
-                    <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
-                        {t('Delete')}
-                    </button>
-                )}
             </Panel>
 
             {replies.length > 0 && (
