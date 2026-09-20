@@ -151,8 +151,8 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
     Route::post('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
         ->middleware(['guest:member', 'throttle:two-factor'])->name('two-factor.login.store');
 
-    // The options GET is deliberately unthrottled: the login page's passkey autofill fetches it on
-    // every view, and a refresh must not spend the sign-in budget.
+    // The options GET carries no passkey limiter (the group's password-reset limiter is name-filtered
+    // to the reset routes): the login page's autofill fetches it on every view.
     Route::get('/passkeys/login/options', [PasskeyLoginController::class, 'index'])
         ->middleware('guest:member')->name('passkey.login-options');
     Route::post('/passkeys/login', [PasskeyLoginController::class, 'store'])

@@ -78,6 +78,10 @@ class PasskeyLoginTest extends TestCase
         $member->forceFill(['two_factor_confirmed_at' => now()])->save();
         $authenticator = $this->registeredPasskey($member->fresh());
 
+        // A password login left the TOTP challenge pending in this very session.
+        $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect('/two-factor-challenge');
+        $this->assertSame($member->getKey(), session('login.id'));
+
         $this->postJson('/passkeys/login', ['credential' => $authenticator->assert($this->loginOptions())])
             ->assertOk()
             ->assertJsonPath('redirect', url('/'));
@@ -149,6 +153,7 @@ class PasskeyLoginTest extends TestCase
         $this->assertGuest();
         // The assertion was verified before the gate: the audit row and last_used_at both move.
         $this->assertOneSecurityEvent('passkey.verified');
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('passkey.refused')['member_id']);
         $this->assertSame([], $this->securityRecords('login.success'));
         $this->assertNotNull(Passkey::where('credential_id', $authenticator->credentialId())->value('last_used_at'));
     }

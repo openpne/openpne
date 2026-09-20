@@ -115,7 +115,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $exceptions->map(CanonicalUnavailableException::class, fn (CanonicalUnavailableException $e) => new NotFoundHttpException('', $e));
         $exceptions->map(ImageProcessorUnavailableException::class, fn (ImageProcessorUnavailableException $e) => new HttpException(503, '', $e, ['Retry-After' => '30']));
 
-
         // A render callback rather than errors/4xx.blade.php overrides, which would apply to every
         // realm and surface.
         $exceptions->render(fn (HttpExceptionInterface $e, Request $request) => ClassicErrorPage::render($request, $e));

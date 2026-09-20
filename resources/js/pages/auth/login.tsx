@@ -65,19 +65,14 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
     const [passkeyFailure, setPasskeyFailure] = useState<string | null>(null);
     // The hook's isLoading also covers the armed autofill wait, so the button keeps its own flag.
     const [passkeyBusy, setPasskeyBusy] = useState(false);
-    const passkeyClicked = useRef(false);
     const passkey = usePasskeyVerify({
         autofill: true,
         routes: PASSKEY_ROUTES.login,
         remember: () => data.remember,
         onSuccess: (response) => window.location.assign(response.redirect ?? '/'),
-        // The armed autofill reports its own failures (a browser without conditional UI, a cancelled
-        // picker) through the same callback; only the button's attempt is worth a message.
-        onError: (error) => {
-            if (passkeyClicked.current) {
-                setPasskeyFailure(t(passkeyErrorKey(error)));
-            }
-        },
+        // Reached from the button and from the armed autofill alike; the client already swallows an
+        // unsupported or dismissed picker, so what arrives here is a server refusal worth showing.
+        onError: (error) => setPasskeyFailure(t(passkeyErrorKey(error))),
     });
 
     const signIn = t('Sign in');
@@ -138,11 +133,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                             onClick={() => {
                                 setPasskeyFailure(null);
                                 setPasskeyBusy(true);
-                                passkeyClicked.current = true;
-                                void passkey.verify().finally(() => {
-                                    passkeyClicked.current = false;
-                                    setPasskeyBusy(false);
-                                });
+                                void passkey.verify().finally(() => setPasskeyBusy(false));
                             }}
                         >
                             <KeyRound className="size-4" aria-hidden />

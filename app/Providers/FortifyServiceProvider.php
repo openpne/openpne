@@ -14,6 +14,7 @@ use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
 use App\Support\MarkdownText;
+use App\Support\SecurityLog;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Closure;
@@ -140,7 +141,17 @@ class FortifyServiceProvider extends ServiceProvider
         // The package logs a verified passkey in directly, without AuthenticateMember's gates
         // (docs/internals/security.md, "Member passkeys").
         Passkeys::authorizeLoginUsing(function (Request $request, Member $member): bool {
-            return ! $member->is_login_rejected && ! $member->isAiAccount();
+            if ($member->is_login_rejected || $member->isAiAccount()) {
+                SecurityLog::event('passkey.refused', ['guard' => 'member', 'member_id' => $member->getKey()]);
+
+                return false;
+            }
+
+            // A half-finished password login (TOTP challenge pending) must not outlive the session it
+            // started in.
+            $request->session()->forget('login.id');
+
+            return true;
         });
 
         // Keyed by the owning member, not the IP: each call adds or removes a member row, so the
