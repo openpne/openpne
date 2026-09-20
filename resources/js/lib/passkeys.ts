@@ -29,7 +29,8 @@ export function passkeyErrorKey(error: unknown): string {
     if (error instanceof Error && error.message === THROTTLED) {
         return 'Too many attempts. Please wait a moment and try again.';
     }
-    if (error instanceof Error && error.message !== '' && error.message !== UNKNOWN) {
+    // A signed-in tab is redirected to HTML the client cannot parse; the parser's text is no message.
+    if (error instanceof Error && error.message !== '' && error.message !== UNKNOWN && !/JSON|Unexpected token/.test(error.message)) {
         return error.message;
     }
 

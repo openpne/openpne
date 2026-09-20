@@ -10,6 +10,7 @@ use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
 use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
+use App\Features\Auth\PasskeyLoginController;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
@@ -143,6 +144,7 @@ class FortifyServiceProvider extends ServiceProvider
         Passkeys::authorizeLoginUsing(function (Request $request, Member $member): bool {
             if ($member->is_login_rejected || $member->isAiAccount()) {
                 SecurityLog::event('passkey.refused', ['guard' => 'member', 'member_id' => $member->getKey()]);
+                $request->attributes->set(PasskeyLoginController::REFUSED_BY_GATE, true);
 
                 return false;
             }

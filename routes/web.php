@@ -2,6 +2,7 @@
 
 use App\Captcha\Captcha;
 use App\Features\AiAccount\AiAccountController;
+use App\Features\Auth\PasskeyLoginController;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Compose\EditorPreferenceController;
@@ -70,7 +71,6 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
-use Laravel\Passkeys\Http\Controllers\PasskeyLoginController;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // OpenPNE 3 member/home, guest-reachable, so it carries auth.session itself: a session whose

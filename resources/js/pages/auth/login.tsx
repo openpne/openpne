@@ -1,9 +1,8 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { usePasskeyVerify } from '@laravel/passkeys/react';
-import { KeyRound } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
 import { FlashMessage } from '@/components/flash-message';
+import { PasskeySignIn } from '@/components/passkey-sign-in';
 import { RichBody } from '@/components/rich-body';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,7 +10,6 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
-import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
 import type { PageProps } from '@/types';
 
 type Props = {
@@ -59,21 +57,6 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
             onFinish: () => reset('password'),
         });
     }
-
-    // Autofill arms the browser's passkey picker on the email field; the button is the explicit
-    // path (the client aborts the pending autofill request before starting it).
-    const [passkeyFailure, setPasskeyFailure] = useState<string | null>(null);
-    // The hook's isLoading also covers the armed autofill wait, so the button keeps its own flag.
-    const [passkeyBusy, setPasskeyBusy] = useState(false);
-    const passkey = usePasskeyVerify({
-        autofill: true,
-        routes: PASSKEY_ROUTES.login,
-        remember: () => data.remember,
-        onSuccess: (response) => window.location.assign(response.redirect ?? '/'),
-        // Reached from the button and from the armed autofill alike; the client already swallows an
-        // unsupported or dismissed picker, so what arrives here is a server refusal worth showing.
-        onError: (error) => setPasskeyFailure(t(passkeyErrorKey(error))),
-    });
 
     const signIn = t('Sign in');
 
@@ -123,29 +106,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                     {signIn}
                 </Button>
 
-                {passkey.isSupported && (
-                    <div className="space-y-1">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            loading={passkeyBusy}
-                            className="w-full"
-                            onClick={() => {
-                                setPasskeyFailure(null);
-                                setPasskeyBusy(true);
-                                void passkey.verify().finally(() => setPasskeyBusy(false));
-                            }}
-                        >
-                            <KeyRound className="size-4" aria-hidden />
-                            {t('Sign in with a passkey')}
-                        </Button>
-                        {passkeyFailure && (
-                            <p className="text-sm text-destructive" role="alert">
-                                {passkeyFailure}
-                            </p>
-                        )}
-                    </div>
-                )}
+                <PasskeySignIn remember={() => data.remember} />
 
                 {registrationOpen && (
                     <p className="text-center text-sm text-muted-foreground">

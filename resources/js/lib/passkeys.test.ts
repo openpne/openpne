@@ -22,4 +22,5 @@ test('an empty or unknown error falls back to the generic key', () => {
     assert.equal(passkeyErrorKey(new Error('')), 'The passkey could not be used. Please try again.');
     assert.equal(passkeyErrorKey(new PasskeyError('An unknown error occurred.')), 'The passkey could not be used. Please try again.');
     assert.equal(passkeyErrorKey('nope'), 'The passkey could not be used. Please try again.');
+    assert.equal(passkeyErrorKey(new Error("Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON")), 'The passkey could not be used. Please try again.');
 });

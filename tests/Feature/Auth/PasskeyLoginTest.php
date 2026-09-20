@@ -139,6 +139,19 @@ class PasskeyLoginTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('credential');
         $this->assertGuest();
+        $this->assertOneSecurityEvent('passkey.failed');
+    }
+
+    public function test_a_refused_ceremony_is_logged_once_whatever_the_reason(): void
+    {
+        $member = Member::factory()->create();
+        $authenticator = $this->registeredPasskey($member);
+        $authenticator->userVerified = false;
+
+        $this->postJson('/passkeys/login', ['credential' => $authenticator->assert($this->loginOptions())])->assertUnprocessable();
+
+        $this->assertOneSecurityEvent('passkey.failed');
+        $this->assertSame([], $this->securityRecords('login.success'));
     }
 
     public function test_a_banned_member_is_refused_after_a_valid_assertion(): void
@@ -154,6 +167,7 @@ class PasskeyLoginTest extends TestCase
         // The assertion was verified before the gate: the audit row and last_used_at both move.
         $this->assertOneSecurityEvent('passkey.verified');
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('passkey.refused')['member_id']);
+        $this->assertSame([], $this->securityRecords('passkey.failed'));
         $this->assertSame([], $this->securityRecords('login.success'));
         $this->assertNotNull(Passkey::where('credential_id', $authenticator->credentialId())->value('last_used_at'));
     }
