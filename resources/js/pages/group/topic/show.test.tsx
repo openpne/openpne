@@ -123,13 +123,19 @@ test('the hint stands only above comments, and goes once a reaction is made from
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetch);
     renderShow(true, topic.reactions, [], 'shown');
-    expect(screen.queryByText('Hover a row to react and more.')).toBeNull();
+    expect(screen.queryByText('Hover to react and more.')).toBeNull();
 
     cleanup();
     renderShow(true, topic.reactions, [comment], 'shown');
-    expect(screen.getByText('Hover a row to react and more.')).toBeTruthy();
+    expect(screen.getByText('Hover to react and more.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '\u{1F44D} 1' }));
 
-    expect(screen.queryByText('Hover a row to react and more.')).toBeNull();
+    expect(screen.queryByText('Hover to react and more.')).toBeNull();
     expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
+});
+
+test('a member who may not react here is told nothing, however many comments there are', () => {
+    renderShow(false, topic.reactions, [comment], 'shown');
+
+    expect(screen.queryByText('Hover to react and more.')).toBeNull();
 });

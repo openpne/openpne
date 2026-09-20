@@ -113,10 +113,10 @@ the UX drive measures it. Every choice on the sheet
 closes it before what it opens arrives — the reactor list, the confirmation, the selectable body — and
 focus returns to the row that was pressed.
 
-A member is told once how a row is reached: one line above a list with rows in it
+A member is told once how a row is reached: one line above a list with rows the member may act on
 ([`components/row/first-use-hint.tsx`](../../resources/js/components/row/first-use-hint.tsx)),
-worded for the pointer in hand, gone for every page and device once closed, once a sheet has been
-opened or once a reaction has been made (`PreferenceKey::RowActionsHint`,
+worded for the pointer in hand, gone for every page and device once closed, once a row's sheet has been
+opened or once a row has been reacted to (`PreferenceKey::RowActionsHint`,
 [member-preferences.md](member-preferences.md)).
 
 A chip is its own toggle. Held, it opens the reactor list led by its own emoji; reached by a keyboard

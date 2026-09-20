@@ -419,7 +419,7 @@ export default function GroupTalkIndex() {
                 </div>
             )}
 
-            {messages.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
+            {canPost && messages.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
             {/* The composer under this list is not a Card and imports the same edge constant, so the
                 two cannot end on different lines (components/card.tsx). */}
             <Panel flush variant="bleed" className="mb-0 lg:mb-4">

@@ -46,7 +46,7 @@ export default function GroupTopicShow() {
     const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
-    const topicReactions = hint.learnedFrom(useReactions(topicReactionEndpoints, renderGeneration));
+    const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
     const reactions = hint.learnedFrom(useReactions(topicCommentReactionEndpoints, renderGeneration));
     const bodyReactions = rowReactions(topic.id, topic.reactions, reactionVocabulary, canComment ? topicReactions : null);
 
@@ -119,7 +119,7 @@ export default function GroupTopicShow() {
                 )}
             </Panel>
 
-            {thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
+            {canComment && thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
             <Panel title={commentsPhrase(t, thread.total)} flush>
                 {thread.lastPage > 1 && (
                     <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">

@@ -49,7 +49,7 @@ export default function DiaryShow() {
     // Two rows of state, one per endpoint set: the entry and its comments are reacted to on different URLs.
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
-    const diaryReactions = hint.learnedFrom(useReactions(diaryReactionEndpoints, renderGeneration));
+    const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
     const commentReactions = hint.learnedFrom(useReactions(diaryCommentReactionEndpoints, renderGeneration));
     const canReact = auth.user !== null;
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
@@ -139,7 +139,7 @@ export default function DiaryShow() {
 
             {thread.total > 0 && (
                 <>
-                <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
+                {thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
                 <Panel title={commentsPhrase(t, thread.total)} flush>
                     {thread.lastPage > 1 && (
                         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
