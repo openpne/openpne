@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import GroupTopicShow from './show';
 import type { TopicDetail, TopicThread } from '@/pages/community/types';
 import { fakeT } from '@/lib/test-i18n';
+import { stubCoarsePointer } from '@/lib/test-pointer';
 import { renderWithProviders } from '@/lib/test-render';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -24,6 +25,7 @@ vi.mock('@inertiajs/react', () => ({
 
 afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
 });
 
@@ -41,16 +43,18 @@ const topic: TopicDetail = {
     reactions: [{ emoji: '\u{1F44D}', count: 2, mine: false }],
 };
 
+const comment = { id: 21, number: 1, body: 'a comment', images: [], linkCard: null, author: { id: 4, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:05:00+09:00', deletable: false, reactions: [{ emoji: '\u{1F44D}', count: 1, mine: false }] };
+
 const thread: TopicThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = topic.reactions) {
+function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = []) {
     inertia.page = {
         component: 'group/topic/show',
         url: '/topics/11',
         props: {
             group: { id: 2, name: 'A group', description: '', memberCount: 1, imageUrl: null, category: null },
             topic: { ...topic, reactions },
-            thread,
+            thread: { ...thread, comments, total: comments.length },
             canComment,
             canEdit: false,
             reactionVocabulary: ['\u{1F44D}'],
@@ -83,6 +87,19 @@ test('a non-member reading an open board sees the counts and has nothing to pres
     expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
+});
+
+test('a non-member\'s held comment raises a sheet without the reactor item', () => {
+    vi.useFakeTimers();
+    stubCoarsePointer();
+    renderShow(false, topic.reactions, [comment]);
+
+    fireEvent.pointerDown(screen.getByRole('listitem'), { pointerType: 'touch', isPrimary: true, clientX: 10, clientY: 10 });
+    act(() => {
+        vi.advanceTimersByTime(600);
+    });
+    expect(screen.getByRole('button', { name: 'Select text' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });
 
 test('the body keeps its add button with no reactions at all', () => {
