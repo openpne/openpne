@@ -12,6 +12,16 @@ export const SHEET_GROUP = 'overflow-hidden rounded-xl border border-border bg-c
 /** How long after the finger lifts the click it synthesises can still arrive. */
 const RELEASE_MS = 400;
 
+/** iOS paints a selection made during the slide-in where the content stood at that instant and repaints only once the animation ends. */
+function afterEntering(content: HTMLElement | null, run: () => void) {
+    const animations = content?.getAnimations?.() ?? [];
+    if (animations.length === 0) {
+        run();
+        return;
+    }
+    void Promise.all(animations.map((animation) => animation.finished)).then(run, () => {});
+}
+
 /** Opened by a press rather than a Radix trigger, so it is told where focus goes back to; `returnFocusTo` must still be in the document when the sheet closes. */
 export function ActionSheet({
     open,
@@ -29,7 +39,7 @@ export function ActionSheet({
     returnFocusTo: RefObject<HTMLElement | null>;
     /** Shown as a heading rather than read only to a screen reader. */
     titleVisible?: boolean;
-    /** Run once the sheet holds focus, for what needs its content in the document. */
+    /** Run once the sheet holds focus and has finished sliding in, for what needs its content where it will stand. */
     onOpened?: () => void;
     /** True when a finger still on the screen opened it: its lifting lands a click on whatever the sheet now covers. */
     openedByPress?: boolean;
@@ -95,7 +105,9 @@ export function ActionSheet({
                 onOpenAutoFocus={(event) => {
                     event.preventDefault();
                     contentRef.current?.focus({ preventScroll: true });
-                    onOpened?.();
+                    if (onOpened !== undefined) {
+                        afterEntering(contentRef.current, onOpened);
+                    }
                 }}
             >
                 <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
