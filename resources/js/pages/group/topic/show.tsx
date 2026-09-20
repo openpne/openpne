@@ -40,7 +40,6 @@ export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
-    // Two rows of state, one per endpoint set: the topic and its comments are reacted to on different URLs.
     const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
     const reactions = useReactions(topicCommentReactionEndpoints, renderGeneration);
     const bodyReactions = rowReactions(topic.id, topic.reactions, reactionVocabulary, canComment ? topicReactions : null);
