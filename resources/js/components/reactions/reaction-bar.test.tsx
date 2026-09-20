@@ -102,6 +102,7 @@ test('a tip closed before it has stayed open a moment reads nothing', async () =
     const chip = screen.getByRole('button', { name: /2/ });
 
     fireEvent.focus(chip);
+    await settle(100);
     fireEvent.blur(chip);
     await settle(300);
     expect(fetch).not.toHaveBeenCalled();
