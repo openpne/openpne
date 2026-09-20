@@ -83,6 +83,19 @@ class WriteThrottleRoutesTest extends TestCase
         $this->assertContains($throttle, $route->gatherMiddleware(), "route [{$name}] lost [{$throttle}]");
     }
 
+    public function test_every_reactor_list_route_carries_the_read_limiter(): void
+    {
+        $listed = [];
+        foreach (Route::getRoutes() as $route) {
+            if (preg_match('/ReactionController@(index|indexComment)$/', $route->getActionName()) === 1) {
+                $listed[] = $route->getName();
+                $this->assertContains('throttle:reaction-read', $route->gatherMiddleware(), "reactor list route [{$route->getName()}] carries no read limiter");
+            }
+        }
+
+        $this->assertCount(8, $listed);
+    }
+
     public function test_every_route_carrying_a_named_limiter_is_listed(): void
     {
         $limiters = array_map(static fn (string $limiter): string => "throttle:{$limiter}", self::LIMITERS);

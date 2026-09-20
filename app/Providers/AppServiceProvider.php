@@ -197,8 +197,9 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Named limiters for the content-posting and mail-triggering member writes, the keystroke-driven
-     * endpoints a compose form calls and the one read that amplifies, the reactor list (auth-flow
-     * limiters live in FortifyServiceProvider). Attached per route in routes/web.php.
+     * endpoints a compose form calls and the reactor list, the one read a pointer or a keyboard fires
+     * without navigating (auth-flow limiters live in FortifyServiceProvider). Attached per route in
+     * routes/web.php.
      */
     private function configureRateLimiting(): void
     {

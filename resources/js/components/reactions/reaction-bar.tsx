@@ -88,9 +88,12 @@ export function ReactionChips({
     );
 }
 
+/** How long a tip must stay open before its names are read: focus and a passing pointer open it too. */
+const READ_AFTER_MS = 250;
+
 /**
- * The names are read each time the tip opens rather than kept: a toggle of one's own moves the count
- * at once, and a kept list would still name the room as it was.
+ * The names are kept only while the chip's count and the viewer's own mark stand: a toggle moves one
+ * of them at once, and a list kept past that would still name the room as it was.
  */
 function Chip({
     chip,
@@ -107,7 +110,16 @@ function Chip({
     const [names, setNames] = useState<string | null>(null);
     const self = useRef<HTMLButtonElement>(null);
     const reading = useRef<AbortController | null>(null);
-    useEffect(() => () => reading.current?.abort(), []);
+    const kept = useRef<{ key: string; names: string } | null>(null);
+    const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const stop = () => {
+        if (pending.current !== null) {
+            clearTimeout(pending.current);
+            pending.current = null;
+        }
+        reading.current?.abort();
+    };
+    useEffect(() => stop, []);
     // Focused before the list opens: a held finger never focused the chip, and the list gives focus back to whatever held it.
     const press = useLongPress(
         () => {
@@ -135,18 +147,20 @@ function Chip({
         return button;
     }
 
+    const key = `${chip.count}|${chip.mine}`;
     // Each open aborts the last read, so a slow answer cannot land on a later open.
     const read = () => {
         reading.current?.abort();
         const controller = new AbortController();
         reading.current = controller;
-        setNames(null);
         void fetch(reactorsUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
             .then((response) => (response.ok ? (response.json() as Promise<{ groups?: ReactorGroup[] }>) : null))
             .then((payload) => payload?.groups?.find((candidate) => candidate.emoji === chip.emoji))
             .then((group) => {
                 if (!controller.signal.aborted) {
-                    setNames(group === undefined ? '' : reactorNames(group, t));
+                    const read = group === undefined ? '' : reactorNames(group, t);
+                    kept.current = { key, names: read };
+                    setNames(read);
                 }
             })
             .catch(() => {
@@ -155,14 +169,27 @@ function Chip({
                 }
             });
     };
+    const open = () => {
+        stop();
+        if (kept.current?.key === key) {
+            setNames(kept.current.names);
+
+            return;
+        }
+        setNames(null);
+        pending.current = setTimeout(() => {
+            pending.current = null;
+            read();
+        }, READ_AFTER_MS);
+    };
 
     return (
         <Tooltip
-            onOpenChange={(open) => {
-                if (open) {
-                    read();
+            onOpenChange={(next) => {
+                if (next) {
+                    open();
                 } else {
-                    reading.current?.abort();
+                    stop();
                 }
             }}
         >

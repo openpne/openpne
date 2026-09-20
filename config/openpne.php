@@ -219,8 +219,8 @@ return [
         // than a post — it writes one small row and notifies nobody.
         'reaction' => (int) env('OPENPNE_THROTTLE_REACTION', 60),
         'reaction_ip' => (int) env('OPENPNE_THROTTLE_REACTION_IP', 120),
-        // The reactor list is read on every open of a chip's tip, a hover included, so it is capped
-        // looser than the write it answers for.
+        // The reactor list is read whenever a chip's tip has stayed open a moment, so a member reads
+        // it more often than they react.
         'reaction_read' => (int) env('OPENPNE_THROTTLE_REACTION_READ', 120),
         'reaction_read_ip' => (int) env('OPENPNE_THROTTLE_REACTION_READ_IP', 240),
         // The MCP endpoint, in two layers that answer different questions: `mcp` is what one token
