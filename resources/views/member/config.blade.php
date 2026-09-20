@@ -400,8 +400,8 @@
                             </li>
                         </ul>
                     </div>
-                    <p data-passkey-unsupported hidden>{{ __('This browser does not support passkeys.') }}</p>
                 @endif
+                <p data-passkey-unsupported hidden>{{ __('This browser does not support passkeys.') }}</p>
             </x-classic.parts>
             {{-- Kept outside the form table so the production build's modulepreload <link> is not
                  foster-parented out of the table by the HTML parser. --}}

@@ -46,7 +46,7 @@ class MemberPasskeyController extends Controller
 
     public function options(Request $request, GenerateRegistrationOptions $generate): JsonResponse
     {
-        abort_unless(PasskeyReauth::isFresh($request->session()), 403);
+        abort_unless(PasskeyReauth::isFresh($request->session()), 403, __('Some time has passed since you confirmed your password. Please confirm it again.'));
 
         $options = $generate($this->viewer());
 

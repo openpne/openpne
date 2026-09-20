@@ -33,17 +33,17 @@ final class FakeAuthenticator
 
     public bool $backedUp = true;
 
-    public function __construct(private readonly string $origin)
+    public function __construct(private readonly string $origin, int $credentialIdBytes = 32)
     {
         $key = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
         assert($key !== false);
         $this->key = $key;
-        $this->credentialId = random_bytes(32);
+        $this->credentialId = random_bytes($credentialIdBytes);
     }
 
-    public static function forApp(): self
+    public static function forApp(int $credentialIdBytes = 32): self
     {
-        return new self((string) config('app.url'));
+        return new self((string) config('app.url'), $credentialIdBytes);
     }
 
     public function credentialId(): string

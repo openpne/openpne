@@ -115,10 +115,19 @@ function Register() {
     const t = useT();
     const [name, setName] = useState('');
     const [failure, setFailure] = useState<string | null>(null);
+    const lapsed = t('Some time has passed since you confirmed your password. Please confirm it again.');
     const { register, isLoading, isSupported } = usePasskeyRegister({
         routes: PASSKEY_ROUTES.register,
         onSuccess: () => router.reload(),
-        onError: (error) => setFailure(t(passkeyErrorKey(error))),
+        onError: (error) => {
+            const message = t(passkeyErrorKey(error));
+            // A lapsed window is the server's 403: re-render so the password form comes back.
+            if (message === lapsed) {
+                router.reload();
+                return;
+            }
+            setFailure(message);
+        },
     });
 
     if (!isSupported) {

@@ -251,7 +251,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   leaves existing passkeys valid and only changes the handle new ones carry.
 - `credential_id` is stored at 512 characters under a binary collation on
   MySQL (base64url is case-sensitive). The WebAuthn maximum of 1023 bytes would
-  not fit; real authenticators emit far shorter IDs. Synced passkeys report a
+  not fit, so the store request refuses longer IDs at validation (422); real
+  authenticators emit far shorter ones. Synced passkeys report a
   zero signature counter, so clone detection is nominal for them, and their
   security is that of the platform account they sync through — accepted, as
   every major service does.

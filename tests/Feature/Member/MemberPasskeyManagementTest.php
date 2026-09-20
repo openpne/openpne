@@ -246,7 +246,7 @@ class MemberPasskeyManagementTest extends TestCase
         $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertForbidden();
     }
 
-    public function test_an_assertion_without_user_verification_is_not_a_registration(): void
+    public function test_an_attestation_without_user_verification_is_refused(): void
     {
         $member = Member::factory()->create();
         $authenticator = FakeAuthenticator::forApp();
@@ -257,6 +257,43 @@ class MemberPasskeyManagementTest extends TestCase
             ->postJson('/member/config/passkeys', ['name' => 'no-uv', 'credential' => $authenticator->attest($this->registrationOptions($member))])
             ->assertUnprocessable();
         $this->assertSame(0, Passkey::count());
+    }
+
+    public function test_an_attestation_from_another_origin_is_refused(): void
+    {
+        $member = Member::factory()->create();
+        $authenticator = new FakeAuthenticator('https://evil.example');
+        $this->reauth($member);
+
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['name' => 'phish', 'credential' => $authenticator->attest($this->registrationOptions($member))])
+            ->assertUnprocessable();
+        $this->assertSame(0, Passkey::count());
+    }
+
+    public function test_a_credential_id_longer_than_the_column_is_refused_at_validation(): void
+    {
+        $member = Member::factory()->create();
+        $authenticator = FakeAuthenticator::forApp(credentialIdBytes: 400);
+        $this->reauth($member);
+
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['name' => 'long', 'credential' => $authenticator->attest($this->registrationOptions($member))])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('credential.rawId');
+    }
+
+    public function test_a_lapsed_window_answers_with_the_translated_reason(): void
+    {
+        $member = Member::factory()->create();
+        $this->reauth($member);
+        $this->travel(16)->minutes();
+
+        $reason = __('Some time has passed since you confirmed your password. Please confirm it again.');
+        $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertForbidden()->assertJsonPath('message', $reason);
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['name' => 'x', 'credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
+            ->assertForbidden()->assertJsonPath('message', $reason);
     }
 
     public function test_the_same_credential_cannot_be_registered_twice(): void
@@ -272,7 +309,7 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertSame(1, Passkey::count());
     }
 
-    public function test_credential_ids_differing_only_in_case_are_distinct_on_every_engine(): void
+    public function test_credential_ids_differing_only_in_case_are_distinct(): void
     {
         $member = Member::factory()->create();
         $member->passkeys()->create(['name' => 'a', 'credential_id' => 'AbC', 'credential' => []]);
