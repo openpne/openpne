@@ -45,21 +45,26 @@ final class BoardSweep
     }
 
     /**
-     * The reactions on the parent rows themselves, a page of the group's rows at a time by id: a
-     * subquery re-run per page of reactions costs chunks times the rows left (measured superlinear at 100k).
-     * Call before the rows are deleted, or a page finds nothing to reach.
+     * The reactions on the parent rows themselves, a page of the group's rows at a time in the
+     * (group_id, bumped_at) index's own order: paged by id alone, MySQL 8.4 reads and sorts the whole
+     * group for every page. Call before the rows are deleted, or a page finds nothing to reach.
      */
     public static function rows(string $alias, string $table, int $groupId): void
     {
-        $after = 0;
+        $cursor = null;
         do {
-            $ids = DB::table($table)->where('group_id', $groupId)->where('id', '>', $after)->orderBy('id')->limit(self::CHUNK)->pluck('id')->all();
-            if ($ids === []) {
+            $query = DB::table($table)->where('group_id', $groupId);
+            if ($cursor !== null) {
+                [$at, $id] = $cursor;
+                $query->where(fn (Builder $after) => $after->where('bumped_at', '>', $at)->orWhere(fn (Builder $tie) => $tie->where('bumped_at', $at)->where('id', '>', $id)));
+            }
+            $page = $query->orderBy('bumped_at')->orderBy('id')->limit(self::CHUNK)->get(['id', 'bumped_at']);
+            if ($page->isEmpty()) {
                 break;
             }
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $ids));
-            $after = (int) end($ids);
-        } while (count($ids) === self::CHUNK);
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->map(fn ($id): int => (int) $id)->all()));
+            $cursor = [$page->last()->bumped_at, (int) $page->last()->id];
+        } while ($page->count() === self::CHUNK);
     }
 
     /**

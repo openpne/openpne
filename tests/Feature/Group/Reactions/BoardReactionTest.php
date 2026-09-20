@@ -46,6 +46,7 @@ class BoardReactionTest extends BoardReactionTestCase
             'reactable_id' => $comment->getKey(),
             'member_id' => $member->getKey(),
         ]);
+        $this->assertContains($comment->getMorphClass(), ['groupTopic', 'groupEvent', 'groupTopicComment', 'groupEventComment'], 'the alias, never the class name');
     }
 
     /** The board is readable to any member, but reacting is the group's write permission, as commenting is. */

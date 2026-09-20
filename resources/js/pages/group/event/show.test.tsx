@@ -49,13 +49,13 @@ const event: EventDetail = {
 
 const thread: EventThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean) {
+function renderShow(canComment: boolean, reactions = event.reactions) {
     inertia.page = {
         component: 'group/event/show',
         url: '/events/12',
         props: {
             group: { id: 2, name: 'A group', description: '', memberCount: 1, imageUrl: null, category: null },
-            event,
+            event: { ...event, reactions },
             thread,
             canComment,
             canEdit: false,
@@ -93,4 +93,20 @@ test('a non-member reading an open board sees the counts and has nothing to pres
     expect(screen.queryByRole('button', { name: 'Add a reaction' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
     expect(screen.getByText('2')).toBeTruthy();
+});
+
+test('the body keeps its add button with no reactions at all', () => {
+    renderShow(true, []);
+
+    expect(screen.getAllByRole('button', { name: 'Add a reaction' })).toHaveLength(1);
+});
+
+test('the reactor list of the body is read from the body route', () => {
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    renderShow(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'See who reacted' }));
+    expect(fetch).toHaveBeenCalledWith('/events/12/reactions', expect.objectContaining({ credentials: 'same-origin' }));
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/comments/'), expect.anything());
 });

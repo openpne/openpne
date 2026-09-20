@@ -135,7 +135,7 @@ class BoardTeardownTest extends BoardReactionTestCase
     }
 
     /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, and a decade-old board's comments pass that. */
-    public function test_the_teardown_reaches_every_row_by_subquery_and_binds_nothing_but_the_group_id(): void
+    public function test_the_teardown_binds_nothing_but_the_group_id_for_the_files_and_the_reactions_own_ids_for_the_deletes(): void
     {
         $this->group(); // so the group's id differs from its first topic's and event's
         $group = $this->group();
@@ -385,6 +385,42 @@ class BoardTeardownTest extends BoardReactionTestCase
     public static function bodies(): array
     {
         return ['topic' => ['topicBody'], 'event' => ['eventBody']];
+    }
+
+    /** The group's rows are paged in the (group_id, bumped_at) index's order with the id breaking ties, so no page sorts the group. */
+    public function test_the_body_sweep_pages_the_rows_in_the_index_order(): void
+    {
+        $group = $this->group();
+        $author = $this->joined($group);
+        // Half the rows share one instant, so the second page's cursor has to carry the id as well as the time.
+        $earlier = now()->subDay();
+        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'name' => "Topic {$i}",
+            'body' => 'Body',
+            'bumped_at' => $i % 2 === 0 ? $earlier : $earlier->copy()->addSeconds($i),
+            'created_at' => $earlier,
+            'updated_at' => $earlier,
+        ], range(1, 1001)));
+        $ordered = DB::table('group_topics')->where('group_id', $group->getKey())->orderBy('bumped_at')->orderBy('id')->pluck('id')->all();
+        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+            'reactable_type' => 'groupTopic', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $earlier, 'updated_at' => $earlier,
+        ], $ordered));
+        $pages = [];
+        DB::listen(function ($query) use (&$pages): void {
+            if (preg_match('/from [`"]group_topics[`"] where .*order by [`"]bumped_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
+                $pages[] = $query->bindings;
+            }
+        });
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertCount(2, $pages, 'a thousand and one topics are two pages');
+        // The second page's cursor is the OR of two arms, time above or time equal with id above, so four bindings with the group.
+        $this->assertCount(4, $pages[1]);
+        $this->assertSame($ordered[999], $pages[1][3], 'the cursor is the last row of the page in the index order, not the highest id');
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     /** Past a page of the group's rows the body sweep goes on to the next and still reaches every row: the delete statements read [1000, remainder]. */

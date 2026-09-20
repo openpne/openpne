@@ -56,11 +56,13 @@ touches — File bytes and reactions — across four kinds of content, in one tr
 2. Under those locks the image Files of the talk, the topics, the events and their comments are
    collected and the reactions on the talk messages, the topics, the events and the board comments are deleted
    (`reactable_id` is polymorphic and carries no foreign key). Every row is reached from the group
-   id: the comments and messages by subquery, the topics and events by a keyset over their ids. The
+   id: the messages by the group id, the topics and events by a keyset in their `(group_id,
+   bumped_at)` index's order, and the comments by the parent ids those two lists hand over. The
    reactions are found a page at a time — a thousand of one topic's or event's comments, a thousand
    messages in the room index's own order, or a thousand of the group's topics or events — and then a thousand of their
-   reactions, and deleted by primary key in chunks: PHP holds a page, no statement grows with the
-   group, no page sorts more than its thousand parents' reactions, and the sweep locks only the rows it deletes. The group's own top-image
+   reactions, and deleted by primary key in chunks: PHP holds a page of rows and the group's topic
+   and event ids, no statement grows with the group, every page is read in an index's own order
+   without a sort, and the sweep locks only the rows it deletes. The group's own top-image
    File id is read — `groups.file_id` is a mutable self-column, so a stale
    read would miss an edit that just replaced the image and orphan the new File.
 3. The group is deleted, the cascade taking memberships, join requests, messages, topics, events,
