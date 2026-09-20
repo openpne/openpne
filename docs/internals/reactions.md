@@ -125,12 +125,13 @@ opened or once a row has been reacted to (`PreferenceKey::RowActionsHint`,
 
 A chip is its own toggle. Held, it opens the reactor list led by its own emoji; reached by a keyboard
 or hovered, it names its reactors in a tip. The tip is read once it has stayed open a moment, since
-focus and a passing pointer open it too, and read again only once the chip's count or the viewer's
-own mark has changed, so a toggle of one's own is never answered with the room as it was. The tip is
-in the document from the moment it opens, so a screen reader's description of the chip says the
-names are loading, but nothing is drawn until they arrive; a read that fails (the site's read cap
+focus and a passing pointer open it too; names once read are kept for the chip's count and the
+viewer's own mark as they stood when the read was asked, and the tip reads again only when either
+has moved since, so a toggle of one's own is never answered with the room as it was. The tip is in
+the document from the moment it opens, so a screen reader's description of the chip says the names
+are loading, but nothing is drawn until they arrive; a read that fails (the site's read cap
 included), or finds the chip's reaction gone or its members withdrawn, leaves the tip undrawn and
-the description empty, and only names are kept, so the next open reads again. The names are offered
+the description empty, keeps nothing, and so is tried again on the next open. The names are offered
 only to a reader the reactor route admits — a guest on a web-public diary is not. A press
 starting on a chip belongs to the chip: the row's own hook lets a press that began inside a
 `data-press-own` element pass, since a pointerdown bubbles and every hook on the way up would

@@ -113,8 +113,6 @@ function Chip({
     const kept = useRef<{ key: string; names: string } | null>(null);
     const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
     const key = `${chip.count}|${chip.mine}`;
-    const keyNow = useRef(key);
-    keyNow.current = key;
     const stop = () => {
         if (pending.current !== null) {
             clearTimeout(pending.current);
@@ -162,7 +160,7 @@ function Chip({
                 if (!controller.signal.aborted) {
                     const found = group === undefined ? '' : reactorNames(group, t);
                     if (found !== '') {
-                        kept.current = { key: keyNow.current, names: found };
+                        kept.current = { key, names: found };
                     }
                     setNames(found);
                 }

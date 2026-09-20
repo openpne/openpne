@@ -94,7 +94,7 @@ class WriteThrottleRoutesTest extends TestCase
         }
 
         sort($listed);
-        $expected = array_keys(array_filter(self::throttledRoutes(), static fn (array $row): bool => $row[1] === 'throttle:reaction-read'));
+        $expected = array_column(array_filter(self::throttledRoutes(), static fn (array $row): bool => $row[1] === 'throttle:reaction-read'), 0);
         sort($expected);
         $this->assertSame($expected, $listed);
     }

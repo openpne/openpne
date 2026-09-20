@@ -101,6 +101,27 @@ test('a chip reached by keyboard names its reactors in a tip once it has stayed 
     expect(fetch).toHaveBeenCalledTimes(3);
 });
 
+test('names that landed after the count moved are not kept for the moved chip', async () => {
+    let answer: ((response: Response) => void) | undefined;
+    const fetch = vi.fn(() => new Promise<Response>((resolve) => { answer = resolve; }));
+    vi.stubGlobal('fetch', fetch);
+    const reactions = { chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url };
+    const { rerender } = renderWithProviders(<RowReactionChips reactions={reactions} />);
+
+    fireEvent.focus(screen.getByRole('button', { name: /2/ }));
+    await settle(400);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    rerender(<RowReactionChips reactions={{ ...reactions, chips: [{ emoji: '\u{1F44D}', count: 3, mine: false }] }} />);
+    answer?.(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 2, members: [{ id: 1, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, { id: 2, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 }));
+    await settle(0);
+
+    const chip = screen.getByRole('button', { name: /3/ });
+    fireEvent.blur(chip);
+    fireEvent.focus(chip);
+    await settle(400);
+    expect(fetch).toHaveBeenCalledTimes(2);
+});
+
 test('a read that brought no names is tried again on the next open', async () => {
     const answers = [Promise.resolve(new Response('', { status: 429 })), Promise.resolve(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 1, members: [{ id: 1, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 }))];
     const fetch = vi.fn(() => answers.shift() ?? new Promise<Response>(() => {}));
