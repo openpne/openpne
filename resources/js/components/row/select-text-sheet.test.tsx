@@ -24,7 +24,7 @@ test('the row is drawn again under a heading with its body already selected, and
     }
     const { rerender } = renderWithProviders(<Host open />);
 
-    expect(screen.getByRole('heading', { name: 'Select text' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Select text' }).className).not.toContain('sr-only');
     expect(screen.getByText('Rin')).toBeTruthy();
     const body = screen.getByText((_, node) => node?.textContent === 'line one\nline two' && node.tagName === 'P');
     expect(body.className).toContain('select-text');

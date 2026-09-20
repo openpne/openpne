@@ -105,7 +105,8 @@ The press is offered only where `(pointer: coarse)` holds
 ([`lib/use-long-press.ts`](../../resources/js/lib/use-long-press.ts)), the same query the row's
 `select-none` and `-webkit-touch-callout: none` key on: a laptop with a touch screen keeps the OS
 selection lens and the cursor's bar. A held row cannot be part-selected, so the sheet offers
-**Select text**, the body alone in a sheet of its own where the lens works. Every choice on the sheet
+**Select text**: the row drawn again under that heading, its body already selected, in a sheet of its
+own where the lens works. Every choice on the sheet
 closes it before what it opens arrives — the reactor list, the confirmation, the selectable body — and
 focus returns to the row that was pressed.
 
