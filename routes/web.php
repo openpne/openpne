@@ -70,6 +70,7 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
+use Laravel\Passkeys\Http\Controllers\PasskeyLoginController;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // OpenPNE 3 member/home, guest-reachable, so it carries auth.session itself: a session whose
@@ -149,6 +150,13 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
         ->middleware('guest:member')->name('two-factor.login');
     Route::post('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
         ->middleware(['guest:member', 'throttle:two-factor'])->name('two-factor.login.store');
+
+    // The options GET is deliberately unthrottled: the login page's passkey autofill fetches it on
+    // every view, and a refresh must not spend the sign-in budget.
+    Route::get('/passkeys/login/options', [PasskeyLoginController::class, 'index'])
+        ->middleware('guest:member')->name('passkey.login-options');
+    Route::post('/passkeys/login', [PasskeyLoginController::class, 'store'])
+        ->middleware(['guest:member', 'throttle:passkey-login'])->name('passkey.login');
 });
 
 // OpenPNE 3 member/login.

@@ -29,6 +29,7 @@ use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -129,6 +130,17 @@ class FortifyServiceProvider extends ServiceProvider
 
         RateLimiter::for('passkey-manage', function (Request $request) {
             return Limit::perMinute(5)->by('passkey-manage|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
+        // An assertion cannot be guessed, so this is abuse hygiene per IP rather than a guess budget.
+        RateLimiter::for('passkey-login', function (Request $request) {
+            return Limit::perMinute(10)->by('passkey-login|'.$request->ip());
+        });
+
+        // The package logs a verified passkey in directly, without AuthenticateMember's gates
+        // (docs/internals/security.md, "Member passkeys").
+        Passkeys::authorizeLoginUsing(function (Request $request, Member $member): bool {
+            return ! $member->is_login_rejected && ! $member->isAiAccount();
         });
 
         // Keyed by the owning member, not the IP: each call adds or removes a member row, so the

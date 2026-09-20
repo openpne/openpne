@@ -42,6 +42,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `mfa.recovery_code_used` | listener `LogRecoveryCodeReplaced` (member); seam `AdminAppAuthentication::verifyRecoveryCode` (admin) | `guard`, `member_id`\|`username` |
 | `passkey.registered` | seam: `MemberPasskeyController::store` | `guard`, `member_id`, `passkey_id` |
 | `passkey.removed` | seam: `MemberPasskeyController::destroy` | `guard`, `member_id`, `passkey_id` |
+| `passkey.verified` | listener `LogPasskeyVerified` (`PasskeyVerified`) — the assertion verified, before the login gate; a refused (banned) member logs this with no `login.success` | `guard`, `member_id`, `passkey_id` |
 | `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
 | `email.change_requested` | seam: `RequestEmailChange` (action) | `guard`, `member_id`, `new_email` |
 | `email.changed` | seam: `EmailChangeLinkController::confirmEmail` | `guard`, `member_id`, `old_email`, `new_email` |

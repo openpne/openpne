@@ -1,4 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { usePasskeyVerify } from '@laravel/passkeys/react';
+import { KeyRound } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
 import { FlashMessage } from '@/components/flash-message';
@@ -9,6 +11,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
+import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
 import type { PageProps } from '@/types';
 
 type Props = {
@@ -57,6 +60,26 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
         });
     }
 
+    // Autofill arms the browser's passkey picker on the email field; the button is the explicit
+    // path (the client aborts the pending autofill request before starting it).
+    const [passkeyFailure, setPasskeyFailure] = useState<string | null>(null);
+    // The hook's isLoading also covers the armed autofill wait, so the button keeps its own flag.
+    const [passkeyBusy, setPasskeyBusy] = useState(false);
+    const passkeyClicked = useRef(false);
+    const passkey = usePasskeyVerify({
+        autofill: true,
+        routes: PASSKEY_ROUTES.login,
+        remember: () => data.remember,
+        onSuccess: (response) => window.location.assign(response.redirect ?? '/'),
+        // The armed autofill reports its own failures (a browser without conditional UI, a cancelled
+        // picker) through the same callback; only the button's attempt is worth a message.
+        onError: (error) => {
+            if (passkeyClicked.current) {
+                setPasskeyFailure(t(passkeyErrorKey(error)));
+            }
+        },
+    });
+
     const signIn = t('Sign in');
 
     return (
@@ -67,7 +90,16 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
 
             <form onSubmit={submit} className="space-y-4">
                 <Field label={t('Email')} htmlFor="email" error={errors.email}>
-                    <Input id="email" type="email" name="email" autoComplete="email" autoFocus required value={data.email} onChange={(e) => setData('email', e.target.value)} />
+                    <Input
+                        id="email"
+                        type="email"
+                        name="email"
+                        autoComplete="email webauthn"
+                        autoFocus
+                        required
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
+                    />
                 </Field>
 
                 <Field label={t('Password')} htmlFor="password" error={errors.password}>
@@ -95,6 +127,34 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                 <Button type="submit" loading={processing} className="w-full">
                     {signIn}
                 </Button>
+
+                {passkey.isSupported && (
+                    <div className="space-y-1">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            loading={passkeyBusy}
+                            className="w-full"
+                            onClick={() => {
+                                setPasskeyFailure(null);
+                                setPasskeyBusy(true);
+                                passkeyClicked.current = true;
+                                void passkey.verify().finally(() => {
+                                    passkeyClicked.current = false;
+                                    setPasskeyBusy(false);
+                                });
+                            }}
+                        >
+                            <KeyRound className="size-4" aria-hidden />
+                            {t('Sign in with a passkey')}
+                        </Button>
+                        {passkeyFailure && (
+                            <p className="text-sm text-destructive" role="alert">
+                                {passkeyFailure}
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {registrationOpen && (
                     <p className="text-center text-sm text-muted-foreground">

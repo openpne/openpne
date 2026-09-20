@@ -218,6 +218,19 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   Signing in with one therefore skips the TOTP challenge, the posture of
   GitHub, Google and Microsoft; it is a sign-in method, not a second factor,
   and lives as its own settings row above the password.
+- **Sign-in is the package's own route pair** (`/passkeys/login/options`,
+  `/passkeys/login`, `guest:member`), which verifies the assertion and calls
+  the guard directly — it never enters Fortify's login pipeline, so the ban
+  (`is_login_rejected`) and AI-account refusals that `AuthenticateMember`
+  applies are re-applied in `Passkeys::authorizeLoginUsing()`
+  (`FortifyServiceProvider`). The package verifies before it asks, so a
+  refused member's attempt still records `passkey.verified` and advances the
+  passkey's `last_used_at`; only `login.success` is absent. There is no
+  username step, hence no enumeration surface; the login POST is throttled
+  per IP (`passkey-login`, 10/min) as abuse hygiene, and the options GET is
+  not, since the login page's autofill fetches it on every view. The
+  challenge is one session slot pulled on submit, so a second options fetch
+  (another tab) invalidates the first ceremony — the member retries.
 - **Adding one is a step-up.** Registration opens a 15-minute window
   (`App\Features\Member\PasskeyReauth`, distinct from the MFA window) with the
   account password **and**, when a confirmed TOTP factor exists, a current code
