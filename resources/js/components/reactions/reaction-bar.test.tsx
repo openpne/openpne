@@ -89,7 +89,7 @@ test('the tip describes the chip from the moment it opens, before the names arri
     const chip = screen.getByRole('button', { name: /2/ });
 
     fireEvent.focus(chip);
-    const described = await vi.waitFor(() => {
+    const described = await waitFor(() => {
         const id = chip.getAttribute('aria-describedby');
         expect(id).toBeTruthy();
 
@@ -116,10 +116,34 @@ test('a read the route refuses leaves the tip unseen and the chip undescribed', 
     await undescribedAfterFocus(() => Promise.resolve(new Response('', { status: 404 })));
 });
 
-test('a read that never answers, or answers with a login page, leaves the tip unseen and the chip undescribed', async () => {
+test('a read that fails leaves the tip unseen and the chip undescribed', async () => {
     await undescribedAfterFocus(() => Promise.reject(new Error('offline')));
-    cleanup();
+});
+
+test('a read answered with a login page leaves the tip unseen and the chip undescribed', async () => {
     await undescribedAfterFocus(() => Promise.resolve(new Response('<!doctype html>', { status: 200 })));
+});
+
+test('a read whose group carries no member list leaves the tip unseen and the chip undescribed', async () => {
+    await undescribedAfterFocus(() => Promise.resolve(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 2, members: null }] }), { status: 200 })));
+});
+
+test('a slow answer to an earlier open cannot land on a later one', async () => {
+    let answerFirst: ((response: Response) => void) | undefined;
+    const answers = [new Promise<Response>((resolve) => { answerFirst = resolve; }), Promise.resolve(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 1, members: [{ id: 2, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 }))];
+    vi.stubGlobal('fetch', () => answers.shift());
+    renderWithProviders(<RowReactionChips reactions={{ chips, vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn(), reactorsUrl: url }} />);
+    const chip = screen.getByRole('button', { name: /2/ });
+
+    fireEvent.focus(chip);
+    fireEvent.blur(chip);
+    fireEvent.focus(chip);
+    expect((await screen.findAllByText('Aoi')).length).toBeGreaterThan(0);
+
+    answerFirst?.(new Response(JSON.stringify({ groups: [{ emoji: '\u{1F44D}', count: 1, members: [{ id: 1, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }] }] }), { status: 200 }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(screen.queryByText('Rin')).toBeNull();
+    expect(screen.getAllByText('Aoi').length).toBeGreaterThan(0);
 });
 
 test('a read that finds the reaction gone leaves the tip unseen and the chip undescribed', async () => {
