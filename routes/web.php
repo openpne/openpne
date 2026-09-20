@@ -32,6 +32,7 @@ use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Member\MfaResetLinkController;
+use App\Features\Member\RowActionsHintController;
 use App\Features\Notifications\NotificationCenterController;
 use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
@@ -508,6 +509,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/profile-visibility', [MemberConfigController::class, 'updateProfileVisibility'])->name('member.config.profile_visibility');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     Route::post('/member/config/autoplay', [MemberConfigController::class, 'updateAutoplayAnimations'])->name('member.config.autoplay');
+    // Unthrottled and bodyless, like /compose/editor: the first-use hint, dismissed once per member.
+    Route::post('/member/config/row-actions-hint', [RowActionsHintController::class, 'dismiss'])->name('member.config.row_actions_hint');
     // The layout choice (docs/internals/looks.md); its picker is the GET detail page below.
     Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');

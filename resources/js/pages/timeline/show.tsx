@@ -10,8 +10,10 @@ import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -42,9 +44,12 @@ export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
     const { post, replies, viewerId, canPost, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
-    const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
-    const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
+    const reactions = useReactions(timelineReactionEndpoints, renderGeneration);
+    // The replies are rows the hint speaks of; the post itself is not.
+    const rowsReactions = hint.learnedFrom(reactions);
+    const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -100,6 +105,8 @@ export default function TimelineShow() {
             </Panel>
 
             {replies.length > 0 && (
+                <>
+                <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
@@ -108,12 +115,16 @@ export default function TimelineShow() {
                                 reply={reply}
                                 viewerId={viewerId}
                                 onDelete={deleteReply}
-                                reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, reactions)}
-                                onOpenActions={(row) => sheet.open(reply.id, row)}
+                                reactions={rowReactions(reply.id, reply.reactions, reactionVocabulary, rowsReactions)}
+                                onOpenActions={(row) => {
+                                    hint.dismiss();
+                                    sheet.open(reply.id, row);
+                                }}
                             />
                         ))}
                     </List>
                 </Panel>
+                </>
             )}
 
             {canPost && (
@@ -155,10 +166,10 @@ export default function TimelineShow() {
                         body: reply.body,
                         author: reply.author,
                         createdAt: reply.createdAt,
-                        chips: reactions.chips(reply.id, reply.reactions),
+                        chips: rowsReactions.chips(reply.id, reply.reactions),
                         vocabulary: reactionVocabulary,
                         canReact: true,
-                        onToggle: (emoji, mine) => reactions.toggle(reply.id, emoji, mine),
+                        onToggle: (emoji, mine) => rowsReactions.toggle(reply.id, emoji, mine),
                         onShowReactors: (opener) => reactions.showReactors(reply.id, undefined, opener),
                         onDelete: reply.author.id === viewerId ? (opener) => void deleteReply(reply.id, opener) : undefined,
                     };

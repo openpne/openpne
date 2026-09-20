@@ -57,6 +57,8 @@ class HandleInertiaRequests extends Middleware
             // False for a guest, who cannot reach the switch that stops it (docs/internals/images.md,
             // "Which placements animate"); a closure, so a partial reload that leaves it out reads no row.
             'autoplayAnimations' => fn () => $user?->autoplayAnimations() === Autoplay::On,
+            // Null for a guest, who has no hint to dismiss and no row to keep it in.
+            'rowActionsHint' => fn () => $user?->rowActionsHint()->value,
             'imageUpload' => fn () => ['accept' => image_upload_accept()],
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
             // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must

@@ -7,6 +7,7 @@ use App\Support\ComposeEditor;
 use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
+use App\Support\RowActionsHint;
 use App\Support\Surface;
 use App\Support\Visibility;
 use InvalidArgumentException;
@@ -40,6 +41,8 @@ class PreferenceKeyTest extends TestCase
 
         $this->assertNull(PreferenceKey::AutoplayAnimations->op3SourceName());
         $this->assertNotContains(PreferenceKey::AutoplayAnimations, PreferenceKey::upgradableCases());
+        $this->assertNull(PreferenceKey::RowActionsHint->op3SourceName());
+        $this->assertNotContains(PreferenceKey::RowActionsHint, PreferenceKey::upgradableCases());
 
         // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over either.
         $this->assertNull(PreferenceKey::PreferredLook->op3SourceName());
@@ -112,6 +115,14 @@ class PreferenceKeyTest extends TestCase
         foreach (Autoplay::cases() as $choice) {
             $this->assertSame($choice, PreferenceKey::AutoplayAnimations->decode(PreferenceKey::AutoplayAnimations->encode($choice)));
         }
+    }
+
+    public function test_row_actions_hint_is_shown_until_dismissed_and_a_corrupt_row_shows_it_again(): void
+    {
+        $this->assertSame(RowActionsHint::Shown, PreferenceKey::RowActionsHint->default());
+        $this->assertSame(RowActionsHint::Shown, PreferenceKey::RowActionsHint->decode(null));
+        $this->assertSame(RowActionsHint::Shown, PreferenceKey::RowActionsHint->decode('nonsense'));
+        $this->assertSame(RowActionsHint::Dismissed, PreferenceKey::RowActionsHint->decode(PreferenceKey::RowActionsHint->encode(RowActionsHint::Dismissed)));
     }
 
     public function test_encode_decode_round_trips_every_push_delivery(): void

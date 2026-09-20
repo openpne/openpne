@@ -8,8 +8,10 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
+import { FirstUseHint } from '@/components/row/first-use-hint';
 import { RowSheetHost } from '@/components/row/row-sheet-host';
 import { useRowSheet } from '@/components/row/use-row-sheet';
+import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { RichBody } from '@/components/rich-body';
 import { Timestamp } from '@/components/timestamp';
@@ -45,10 +47,11 @@ export default function DiaryShow() {
     const { diary, thread, older, newer, auth, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
     // Two rows of state, one per endpoint set: the entry and its comments are reacted to on different URLs.
-    const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
-    const commentReactions = useReactions(diaryCommentReactionEndpoints, renderGeneration);
-    const canReact = auth.user !== null;
     const sheet = useRowSheet();
+    const hint = useRowActionsHint();
+    const diaryReactions = useReactions(diaryReactionEndpoints, renderGeneration);
+    const commentReactions = hint.learnedFrom(useReactions(diaryCommentReactionEndpoints, renderGeneration));
+    const canReact = auth.user !== null;
     const threadLink = (page: number, ascending: boolean) => diaryThreadLink(diary.id, thread.size, page, ascending);
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -135,6 +138,8 @@ export default function DiaryShow() {
             )}
 
             {thread.total > 0 && (
+                <>
+                {thread.comments.length > 0 && <FirstUseHint visible={hint.visible} onDismiss={hint.dismiss} />}
                 <Panel title={commentsPhrase(t, thread.total)} flush>
                     {thread.lastPage > 1 && (
                         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
@@ -164,11 +169,15 @@ export default function DiaryShow() {
                                 comment={comment}
                                 onDelete={deleteComment}
                                 reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canReact ? commentReactions : null)}
-                                onOpenActions={(row) => sheet.open(comment.id, row)}
+                                onOpenActions={(row) => {
+                                    hint.dismiss();
+                                    sheet.open(comment.id, row);
+                                }}
                             />
                         ))}
                     </List>
                 </Panel>
+                </>
             )}
 
             {/* The thread is readable on a web-public entry; commenting needs an account. */}

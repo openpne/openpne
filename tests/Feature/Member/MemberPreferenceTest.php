@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Support\Autoplay;
 use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
+use App\Support\RowActionsHint;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,6 +115,16 @@ class MemberPreferenceTest extends TestCase
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'compose_editor', 'value' => 'markdown',
         ]);
+    }
+
+    public function test_the_row_actions_hint_is_shown_until_dismissed(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->assertSame(RowActionsHint::Shown, $member->rowActionsHint());
+        $member->dismissRowActionsHint();
+        $this->assertSame(RowActionsHint::Dismissed, $member->fresh()->rowActionsHint());
+        $this->assertSame(1, $member->preferences()->where('key', 'row_actions_hint')->count());
     }
 
     public function test_autoplay_animations_reads_on_until_set_then_persists(): void

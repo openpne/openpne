@@ -85,3 +85,19 @@ test('a fresh render of the same thread shows the rows it was rendered with, not
 
     expect(screen.getByRole('button', { pressed: true }).textContent).toContain('2');
 });
+
+test('a reaction on the post itself is not the hint followed; one on a reply is', () => {
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetch);
+    const reply = { ...post, id: 8, reactions: [{ emoji: '\u{1F44D}', count: 1, mine: false }] };
+    renderShow(true, { replies: [reply], rowActionsHint: 'shown', post: { ...post, reactions: [{ emoji: '\u{1F44D}', count: 2, mine: false }] } });
+    expect(screen.getByText('Hover to react and more.')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '\u{1F44D} 2' }));
+    expect(screen.getByText('Hover to react and more.')).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalledWith('/member/config/row-actions-hint', expect.anything());
+
+    fireEvent.click(screen.getByRole('button', { name: '\u{1F44D} 1' }));
+    expect(screen.queryByText('Hover to react and more.')).toBeNull();
+    expect(fetch).toHaveBeenCalledWith('/member/config/row-actions-hint', expect.objectContaining({ method: 'POST' }));
+});
