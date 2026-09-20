@@ -46,6 +46,23 @@ class WriteThrottleBehaviorTest extends TestCase
         $this->assertNotSame(429, $this->postAs($b, $uri)->status());
     }
 
+    public function test_the_reactor_list_read_has_its_own_per_member_budget(): void
+    {
+        config(['openpne.throttle.reaction_read' => 2, 'openpne.throttle.reaction_read_ip' => 1000, 'openpne.throttle.reaction' => 1000]);
+
+        $a = Member::factory()->create();
+        $uri = '/groups/1/talk/messages/1/reactions';
+        $this->assertNotSame(429, $this->getAs($a, $uri)->status());
+        $this->assertNotSame(429, $this->getAs($a, $uri)->status());
+        $this->getAs($a, $uri)->assertStatus(429);
+
+        // The read and the write are budgeted apart: a member out of reads can still react.
+        $this->assertNotSame(429, $this->postAs($a, $uri)->status());
+
+        $b = Member::factory()->create();
+        $this->assertNotSame(429, $this->getAs($b, $uri)->status());
+    }
+
     public function test_per_ip_limb_caps_across_members_sharing_an_address(): void
     {
         // Member limb off, IP limb tight: two members on one address (127.0.0.1 in tests) share it.
@@ -82,5 +99,12 @@ class WriteThrottleBehaviorTest extends TestCase
         $this->flushSession();
 
         return $this->actingAs($member)->post($uri);
+    }
+
+    private function getAs(Member $member, string $uri): TestResponse
+    {
+        $this->flushSession();
+
+        return $this->actingAs($member)->getJson($uri);
     }
 }

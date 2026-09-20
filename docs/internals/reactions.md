@@ -79,8 +79,8 @@ row, so the chips read in the order the emoji first appeared. Chips are **passed
 never read off the model, so a page cannot cost a query per row by accident. The viewer may be
 absent — a guest on a web-public diary — and then no chip is `mine`.
 
-Who reacted is exactly that part, so the names come from `GET .../reactions` when a dialog is opened,
-and nowhere else. That read is bounded too
+Who reacted is exactly that part, so the names come from `GET .../reactions` when a dialog is opened
+or a chip's tip has stayed open a moment, and nowhere else. That read is bounded too
 ([`Reactors`](../../app/Features/Reactions/Queries/Reactors.php)): an emoji's count is exact and the
 first hundred reactors travel with it, in the order they reacted. Past that the dialog has the number
 and no more — the list is read by a person.
@@ -124,12 +124,15 @@ opened or once a row has been reacted to (`PreferenceKey::RowActionsHint`,
 [member-preferences.md](member-preferences.md)).
 
 A chip is its own toggle. Held, it opens the reactor list led by its own emoji; reached by a keyboard
-or hovered, it names its reactors in a tip read fresh on every open, so a toggle of one's own is never
-answered with the room as it was. The tip is in the document from the moment it opens, so a screen
-reader's description of the chip says the names are loading, but nothing is drawn until they arrive,
-since a pointer passing over a chip opens it too; a read that fails, or finds the chip's reaction
-gone or its members withdrawn, leaves the tip undrawn and the description empty. The names are
-offered only to a reader the reactor route admits — a guest on a web-public diary is not. A press
+or hovered, it names its reactors in a tip. The tip is read once it has stayed open a moment, since
+focus and a passing pointer open it too; names once read are kept for the chip's count and the
+viewer's own mark as they stood when the read was asked, and the tip reads again only when either
+has moved since, so a toggle of one's own is never answered with the room as it was. The tip is in
+the document from the moment it opens, so a screen reader's description of the chip says the names
+are loading, but nothing is drawn until they arrive; a read that fails (the site's read cap
+included), or finds the chip's reaction gone or its members withdrawn, leaves the tip undrawn and
+the description empty, keeps nothing, and so is tried again on the next open. The names are offered
+only to a reader the reactor route admits — a guest on a web-public diary is not. A press
 starting on a chip belongs to the chip: the row's own hook lets a press that began inside a
 `data-press-own` element pass, since a pointerdown bubbles and every hook on the way up would
 otherwise arm its own timer.

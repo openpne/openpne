@@ -14,7 +14,7 @@ use Tests\TestCase;
 class WriteThrottleRoutesTest extends TestCase
 {
     /** The limiters AppServiceProvider::configureRateLimiting() builds with writeLimiter(). */
-    private const LIMITERS = ['posting', 'preview', 'mention-search', 'direct-message-send', 'friend-request', 'group-join', 'reaction'];
+    private const LIMITERS = ['posting', 'preview', 'mention-search', 'direct-message-send', 'friend-request', 'group-join', 'reaction', 'reaction-read'];
 
     /** @return array<string, array{string, string}> */
     public static function throttledRoutes(): array
@@ -63,11 +63,19 @@ class WriteThrottleRoutesTest extends TestCase
             'group.events.reactions.delete' => ['group.events.reactions.delete', 'throttle:reaction'],
             'group.events.comment.reactions.store' => ['group.events.comment.reactions.store', 'throttle:reaction'],
             'group.events.comment.reactions.delete' => ['group.events.comment.reactions.delete', 'throttle:reaction'],
+            'diary.reactions.index' => ['diary.reactions.index', 'throttle:reaction-read'],
+            'diary.comment.reactions.index' => ['diary.comment.reactions.index', 'throttle:reaction-read'],
+            'timeline.reactions.index' => ['timeline.reactions.index', 'throttle:reaction-read'],
+            'group.topics.reactions.index' => ['group.topics.reactions.index', 'throttle:reaction-read'],
+            'group.topics.comment.reactions.index' => ['group.topics.comment.reactions.index', 'throttle:reaction-read'],
+            'group.talk.reactions.index' => ['group.talk.reactions.index', 'throttle:reaction-read'],
+            'group.events.reactions.index' => ['group.events.reactions.index', 'throttle:reaction-read'],
+            'group.events.comment.reactions.index' => ['group.events.comment.reactions.index', 'throttle:reaction-read'],
         ];
     }
 
     #[DataProvider('throttledRoutes')]
-    public function test_write_route_carries_its_named_throttle(string $name, string $throttle): void
+    public function test_route_carries_its_named_throttle(string $name, string $throttle): void
     {
         $route = Route::getRoutes()->getByName($name);
         $this->assertInstanceOf(RoutingRoute::class, $route, "route [{$name}] is not registered");
@@ -75,7 +83,23 @@ class WriteThrottleRoutesTest extends TestCase
         $this->assertContains($throttle, $route->gatherMiddleware(), "route [{$name}] lost [{$throttle}]");
     }
 
-    public function test_every_route_carrying_a_write_limiter_is_listed(): void
+    public function test_every_reactor_list_route_carries_the_read_limiter(): void
+    {
+        $listed = [];
+        foreach (Route::getRoutes() as $route) {
+            if (preg_match('/ReactionController@(index|indexComment)$/', $route->getActionName()) === 1) {
+                $listed[] = $route->getName();
+                $this->assertContains('throttle:reaction-read', $route->gatherMiddleware(), "reactor list route [{$route->getName()}] carries no read limiter");
+            }
+        }
+
+        sort($listed);
+        $expected = array_column(array_filter(self::throttledRoutes(), static fn (array $row): bool => $row[1] === 'throttle:reaction-read'), 0);
+        sort($expected);
+        $this->assertSame($expected, $listed);
+    }
+
+    public function test_every_route_carrying_a_named_limiter_is_listed(): void
     {
         $limiters = array_map(static fn (string $limiter): string => "throttle:{$limiter}", self::LIMITERS);
         $carrying = [];
