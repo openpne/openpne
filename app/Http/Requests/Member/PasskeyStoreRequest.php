@@ -3,12 +3,15 @@
 namespace App\Http\Requests\Member;
 
 use App\Features\Member\PasskeyReauth;
+use App\Http\Requests\Concerns\RewordsUnreadableCredential;
 use App\Models\Member;
 use Illuminate\Auth\Access\AuthorizationException;
 use Laravel\Passkeys\Http\Requests\PasskeyRegistrationRequest;
 
 class PasskeyStoreRequest extends PasskeyRegistrationRequest
 {
+    use RewordsUnreadableCredential;
+
     public function authorize(): bool
     {
         return $this->user() instanceof Member && PasskeyReauth::isFresh($this->session());
