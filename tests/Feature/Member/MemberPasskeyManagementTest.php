@@ -66,7 +66,7 @@ class MemberPasskeyManagementTest extends TestCase
         return $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertOk()->json('options');
     }
 
-    /** Google Password Manager, as the bundled AAGUID table knows it. */
+    /** An AAGUID the bundled table names, so the stored row takes that name. */
     private function namedAuthenticator(): FakeAuthenticator
     {
         $authenticator = FakeAuthenticator::forApp();
@@ -318,6 +318,18 @@ class MemberPasskeyManagementTest extends TestCase
         $this->actingAs($member)
             ->postJson('/member/config/passkeys', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
             ->assertForbidden()->assertJsonPath('message', $reason);
+    }
+
+    public function test_an_unreadable_credential_is_refused_in_the_apps_own_words(): void
+    {
+        $member = Member::factory()->create();
+        $this->reauth($member);
+
+        // A non-empty response passes the field rules, so the refusal is the deserialiser's, not a required-rule's.
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => ['clientDataJSON' => 'x']]])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.credential.0', __('The passkey could not be read.'));
     }
 
     public function test_the_same_credential_cannot_be_registered_twice(): void
