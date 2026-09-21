@@ -274,11 +274,14 @@
             ]))
             <x-classic.parts id="member_config_passkeys" name="box" :title="__('Passkeys')">
                 <div class="body">
-                    <p>
-                        {{ __('A passkey signs you in instead of your password.') }}<br>
-                        {{ __('You unlock it with your device\'s face, fingerprint or PIN.') }}<br>
-                        {{ __('Your biometric data never leaves your device; this site only stores a public key.') }}
-                    </p>
+                    <p>{{ __('A passkey is a simple, safe way to sign in without your password.') }}</p>
+                    <ul>
+                        <li>{{ __('Nothing to remember, nothing to type.') }}</li>
+                        <li>{{ __('You sign in the way you unlock your device: fingerprint, face or PIN.') }}</li>
+                        <li>{{ __('The check happens on your device, so your fingerprint and face never reach this site.') }}</li>
+                    </ul>
+                    <p>{{ __('Registering a passkey leaves your password working as before.') }}</p>
+                    <p>{{ __('Do not register one on a device you share: anyone who can unlock it can sign in as you.') }}</p>
                     <h4>{{ __('Your passkeys') }}</h4>
                     @if (empty($passkeys['passkeys']))
                         <p>{{ __('No passkeys yet.') }}</p>
@@ -288,8 +291,8 @@
                                 <li>
                                     <p>
                                         <strong>{{ $passkey['name'] }}</strong>
-                                        — {{ $passkey['authenticator'] ?? __('Unknown authenticator') }}
-                                        · {{ $passkey['synced'] ? __('Synced') : __('This device only') }}
+                                        — {{ $passkey['authenticator'] ? __('Saved in :place', ['place' => $passkey['authenticator']]) : __('Saved place unknown') }}
+                                        · {{ $passkey['synced'] ? __('Works on your other devices too') : __('Works on this device only') }}
                                         <br>
                                         @if ($passkey['createdAt'])
                                             {{ __('Added :date', ['date' => LocalizedDate::dateTime(Carbon::parse($passkey['createdAt']))]) }} ·

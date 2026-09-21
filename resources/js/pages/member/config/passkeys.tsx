@@ -32,11 +32,16 @@ function Explanation() {
     const t = useT();
 
     return (
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            <li>{t('A passkey signs you in instead of your password.')}</li>
-            <li>{t('You unlock it with your device\'s face, fingerprint or PIN.')}</li>
-            <li>{t('Your biometric data never leaves your device; this site only stores a public key.')}</li>
-        </ul>
+        <div className="space-y-3">
+            <p className="text-sm text-foreground">{t('A passkey is a simple, safe way to sign in without your password.')}</p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                <li>{t('Nothing to remember, nothing to type.')}</li>
+                <li>{t('You sign in the way you unlock your device: fingerprint, face or PIN.')}</li>
+                <li>{t('The check happens on your device, so your fingerprint and face never reach this site.')}</li>
+            </ul>
+            <p className="text-sm text-muted-foreground">{t('Registering a passkey leaves your password working as before.')}</p>
+            <p className="text-sm text-muted-foreground">{t('Do not register one on a device you share: anyone who can unlock it can sign in as you.')}</p>
+        </div>
     );
 }
 
@@ -168,9 +173,9 @@ function PasskeyCard({ passkey, last }: { passkey: PasskeyRow; last: boolean }) 
                 <div className="space-y-0.5">
                     <h3 className="text-base text-foreground">{passkey.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                        {passkey.authenticator ?? t('Unknown authenticator')}
+                        {passkey.authenticator ? t('Saved in :place', { place: passkey.authenticator }) : t('Saved place unknown')}
                         {' · '}
-                        {passkey.synced ? t('Synced') : t('This device only')}
+                        {passkey.synced ? t('Works on your other devices too') : t('Works on this device only')}
                     </p>
                     <p className="text-sm text-muted-foreground">
                         {passkey.createdAt ? t('Added :date', { date: absolute(passkey.createdAt) }) : null}
