@@ -127,6 +127,10 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
+        RateLimiter::for('passkey-manage', function (Request $request) {
+            return Limit::perMinute(5)->by('passkey-manage|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
         // Keyed by the owning member, not the IP: each call adds or removes a member row, so the
         // budget belongs to whoever spends it.
         RateLimiter::for('ai-manage', function (Request $request) {

@@ -8,12 +8,16 @@ use App\Actions\Fortify\ResetMemberPassword;
 use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
+use App\Notifications\Member\PasskeyRegisteredNotification;
+use App\Notifications\Member\PasskeyRemovedNotification;
 use App\Notifications\Member\PasswordChangedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Laravel\Passkeys\Passkey;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\Concerns\CapturesSecurityLog;
+use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
 
 class SecurityChangeNotificationTest extends TestCase
@@ -114,6 +118,28 @@ class SecurityChangeNotificationTest extends TestCase
         Notification::assertSentTo($member, MfaDisabledNotification::class);
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.recovery_code_used')['member_id']);
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.disabled')['member_id']);
+    }
+
+    public function test_registering_and_removing_a_passkey_notify_the_member(): void
+    {
+        Notification::fake();
+        $member = Member::factory()->create();
+        $authenticator = FakeAuthenticator::forApp();
+
+        $this->actingAs($member)->post('/member/config/passkeys/reauth', ['current_password' => 'password']);
+        $options = $this->actingAs($member)->getJson('/member/config/passkeys/options')->json('options');
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['name' => 'phone', 'credential' => $authenticator->attest($options)])
+            ->assertOk();
+
+        Notification::assertSentTo($member, PasskeyRegisteredNotification::class, fn ($n, array $channels) => $channels === ['mail']);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('passkey.registered')['member_id']);
+
+        $passkey = Passkey::where('credential_id', $authenticator->credentialId())->firstOrFail();
+        $this->actingAs($member)->delete("/member/config/passkeys/{$passkey->getKey()}", ['current_password' => 'password']);
+
+        Notification::assertSentTo($member, PasskeyRemovedNotification::class, fn ($n, array $channels) => $channels === ['mail']);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('passkey.removed')['member_id']);
     }
 
     public function test_cancelling_a_pending_setup_sends_no_disable_alert(): void

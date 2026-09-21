@@ -101,6 +101,14 @@ final class MailTemplateDefaults
             'en' => 'Two-factor authentication was disabled',
             'ja' => '2要素認証が無効になりました',
         ],
+        'passkey-registered' => [
+            'en' => 'A passkey was added to your account',
+            'ja' => 'パスキーが登録されました',
+        ],
+        'passkey-removed' => [
+            'en' => 'A passkey was removed from your account',
+            'ja' => 'パスキーが削除されました',
+        ],
         'mfa-reset-link' => [
             'en' => 'Reset your two-factor authentication',
             'ja' => '2要素認証のリセット',

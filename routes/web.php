@@ -30,6 +30,7 @@ use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberMfaController;
+use App\Features\Member\MemberPasskeyController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Member\MfaResetLinkController;
 use App\Features\Member\RowActionsHintController;
@@ -578,6 +579,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         });
         // Modern-only detail page, like the email/password/withdrawal ones above.
         Route::get('/member/config/mfa', 'edit')->name('member.config.mfa.edit');
+    });
+
+    Route::controller(MemberPasskeyController::class)->group(function () {
+        // The mutating routes share one per-member budget; the render and the challenge GET are left
+        // out so a refresh or a cancelled browser prompt never spends it.
+        Route::middleware('throttle:passkey-manage')->group(function () {
+            Route::post('/member/config/passkeys/reauth', 'reauth')->name('member.config.passkeys.reauth');
+            Route::post('/member/config/passkeys', 'store')->name('member.config.passkeys.store');
+            Route::delete('/member/config/passkeys/{id}', 'destroy')->whereNumber('id')->name('member.config.passkeys.destroy');
+        });
+        Route::get('/member/config/passkeys/options', 'options')->name('member.config.passkeys.options');
+        Route::get('/member/config/passkeys', 'edit')->name('member.config.passkeys.edit');
     });
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {

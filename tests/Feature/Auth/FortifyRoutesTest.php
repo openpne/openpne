@@ -109,6 +109,49 @@ class FortifyRoutesTest extends TestCase
         $this->assertNotContains('throttle:mfa-manage', $edit->gatherMiddleware(), 'the GET render must not be throttled');
     }
 
+    public function test_the_passkey_mutations_are_throttled_but_the_render_and_challenge_are_not(): void
+    {
+        foreach ([
+            'member.config.passkeys.reauth',
+            'member.config.passkeys.store',
+            'member.config.passkeys.destroy',
+        ] as $name) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertInstanceOf(RoutingRoute::class, $route, "route [{$name}] is not registered");
+            $this->assertContains('throttle:passkey-manage', $route->gatherMiddleware(), "route [{$name}] lost throttle:passkey-manage");
+        }
+
+        // The challenge GET is exempt too: a cancelled browser prompt refetches it.
+        foreach (['member.config.passkeys.edit', 'member.config.passkeys.options'] as $name) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertInstanceOf(RoutingRoute::class, $route, "route [{$name}] is not registered");
+            $this->assertNotContains('throttle:passkey-manage', $route->gatherMiddleware(), "route [{$name}] must not be throttled");
+        }
+    }
+
+    public function test_the_packages_passkey_management_endpoints_are_not_registered(): void
+    {
+        // The login pair is deliberately absent from this list.
+        foreach (['passkey.registration-options', 'passkey.store', 'passkey.destroy', 'passkey.confirm', 'passkey.confirm-options'] as $name) {
+            $this->assertNull(Route::getRoutes()->getByName($name), "route [{$name}] must not exist");
+        }
+
+        foreach ([
+            ['GET', '/user/passkeys/options'],
+            ['POST', '/user/passkeys'],
+            ['DELETE', '/user/passkeys/1'],
+            ['GET', '/passkeys/confirm/options'],
+            ['POST', '/passkeys/confirm'],
+        ] as [$method, $path]) {
+            $request = Request::create($path, $method);
+            $matched = collect(Route::getRoutes()->getRoutesByMethod()[$method] ?? [])
+                ->reject(fn (RoutingRoute $route): bool => $route->isFallback)
+                ->first(fn (RoutingRoute $route): bool => $route->matches($request));
+
+            $this->assertNull($matched, "[{$method} {$path}] must not be routed");
+        }
+    }
+
     public function test_fortifys_unused_password_confirmation_routes_are_not_carried_over(): void
     {
         foreach (['password.confirm', 'password.confirm.store', 'password.confirmation'] as $name) {

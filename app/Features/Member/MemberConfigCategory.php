@@ -3,8 +3,8 @@
 namespace App\Features\Member;
 
 /**
- * Keys mirror the OpenPNE 3 `member_config.yml` category keys, which the URLs carry. `Ai`, `Mfa`,
- * `Email` and `Withdrawal` are OpenPNE 4-native, with no OpenPNE 3 category.
+ * Keys mirror the OpenPNE 3 `member_config.yml` category keys, which the URLs carry. `Ai`, `Passkey`,
+ * `Mfa`, `Email` and `Withdrawal` are OpenPNE 4-native, with no OpenPNE 3 category.
  */
 enum MemberConfigCategory: string
 {
@@ -15,6 +15,7 @@ enum MemberConfigCategory: string
     // OpenPNE 3's member/configNotification, on sites that carried the notification extension.
     case Notification = 'notification';
     case Ai = 'ai';
+    case Passkey = 'passkey';
     case Password = 'password';
     case Mfa = 'mfa';
     case Email = 'email';
@@ -29,6 +30,7 @@ enum MemberConfigCategory: string
             self::General => __('General'),
             self::Notification => __('Notifications'),
             self::Ai => __('AI accounts'),
+            self::Passkey => __('Passkeys'),
             self::Password => __('Password'),
             self::Mfa => __('Two-factor authentication'),
             self::Email => __('Email address'),

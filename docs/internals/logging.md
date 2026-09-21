@@ -40,6 +40,8 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `mfa.disabled` | seam: `MemberMfaController::disable` (live), `AdminAppAuthentication` disable, `DisableMemberMfaCommand`, `DisableAdminMfaCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
 | `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate`, `AdminAppAuthentication` regenerate | `guard`, `member_id`\|`username` |
 | `mfa.recovery_code_used` | listener `LogRecoveryCodeReplaced` (member); seam `AdminAppAuthentication::verifyRecoveryCode` (admin) | `guard`, `member_id`\|`username` |
+| `passkey.registered` | seam: `MemberPasskeyController::store` | `guard`, `member_id`, `passkey_id` |
+| `passkey.removed` | seam: `MemberPasskeyController::destroy` | `guard`, `member_id`, `passkey_id` |
 | `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
 | `email.change_requested` | seam: `RequestEmailChange` (action) | `guard`, `member_id`, `new_email` |
 | `email.changed` | seam: `EmailChangeLinkController::confirmEmail` | `guard`, `member_id`, `old_email`, `new_email` |

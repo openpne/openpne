@@ -662,6 +662,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/passkeys': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/notifications': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
