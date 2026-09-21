@@ -11,6 +11,7 @@ use App\Compat\RouteParityRegistry;
 use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
 use App\Features\Auth\PasskeyLoginController;
+use App\Http\Requests\Auth\PasskeyLoginRequest;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
@@ -31,6 +32,7 @@ use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
 use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -45,6 +47,8 @@ class FortifyServiceProvider extends ServiceProvider
         // endpoint cannot be used to enumerate which addresses have an account.
         $this->app->singleton(SuccessfulPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
         $this->app->singleton(FailedPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
+
+        $this->app->bind(PasskeyVerificationRequest::class, PasskeyLoginRequest::class);
     }
 
     public function boot(): void

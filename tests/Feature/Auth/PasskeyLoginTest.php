@@ -157,8 +157,10 @@ class PasskeyLoginTest extends TestCase
 
     public function test_a_body_too_malformed_to_deserialise_is_a_validation_error(): void
     {
-        $this->postJson('/passkeys/login', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
-            ->assertUnprocessable();
+        // A non-empty response passes the field rules, so the refusal is the deserialiser's, in the app's own words.
+        $this->postJson('/passkeys/login', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => ['clientDataJSON' => 'x']]])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.credential.0', __('The passkey could not be read.'));
 
         $this->assertSame([], $this->securityRecords('passkey.failed'));
     }
