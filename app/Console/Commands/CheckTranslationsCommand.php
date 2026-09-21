@@ -1332,26 +1332,81 @@ class CheckTranslationsCommand extends Command
             return;
         }
 
+        $vendor = self::vendorReferencedKeys("{$base}/vendor", array_unique([...$unused['ja'], ...$unused['en']]));
+
         $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
         $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
-        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) that');
-        $this->line('this scan cannot see — removing them breaks framework output. See docs/internals/i18n.md.');
+        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) —');
+        $this->line('removing them breaks framework output. See docs/internals/i18n.md.');
         $this->line('');
 
         foreach (['ja', 'en'] as $lang) {
             if ($unused[$lang] === []) {
                 continue;
             }
-            $this->warn(sprintf('Not referenced in app code — lang/%s.json (%d):', $lang, count($unused[$lang])));
-            sort($unused[$lang]);
-            foreach (array_slice($unused[$lang], 0, 50) as $k) {
+            $shared = array_values(array_filter($unused[$lang], fn (string $k): bool => isset($vendor[$k])));
+            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k])));
+
+            if ($shared !== []) {
+                $this->warn(sprintf('Rendered by vendor code, not the app — lang/%s.json (%d): keep the value literal, a caller outside this repo shares it.', $lang, count($shared)));
+                sort($shared);
+                foreach ($shared as $k) {
+                    $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'  ('.implode(', ', $vendor[$k]).')');
+                }
+                $this->line('');
+            }
+            if ($orphan === []) {
+                continue;
+            }
+            $this->warn(sprintf('Not referenced in app or vendor code — lang/%s.json (%d):', $lang, count($orphan)));
+            sort($orphan);
+            foreach (array_slice($orphan, 0, 50) as $k) {
                 $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
-            if (count($unused[$lang]) > 50) {
-                $this->line(sprintf('  ... and %d more', count($unused[$lang]) - 50));
+            if (count($orphan) > 50) {
+                $this->line(sprintf('  ... and %d more', count($orphan) - 50));
             }
             $this->line('');
         }
+    }
+
+    /**
+     * Only a translation call counts: the same English text as a bare literal (an HTTP header
+     * name, an array key) is not a caller of the dictionary.
+     *
+     * @param  list<string>  $keys
+     * @return array<string, list<string>> key => packages (`vendor-name/package`) that call it
+     */
+    public static function vendorReferencedKeys(string $vendorDir, array $keys): array
+    {
+        if ($keys === [] || ! is_dir($vendorDir)) {
+            return [];
+        }
+        $wanted = array_fill_keys($keys, true);
+        $pattern = '/(?:(?<![A-Za-z_])(?:__|trans|trans_choice)|@lang|Lang::get)\(\s*([\'"])((?:\\.|(?!\1).)+)\1\s*[,)]/';
+        $files = (new Finder)
+            ->files()
+            ->in($vendorDir)
+            ->exclude(['laravel-lang'])
+            ->name('*.php');
+
+        $hits = [];
+        foreach ($files as $file) {
+            /** @var SplFileInfo $file */
+            $contents = (string) file_get_contents($file->getPathname());
+            if (! preg_match_all($pattern, $contents, $m)) {
+                continue;
+            }
+            $package = implode('/', array_slice(explode('/', str_replace('\\', '/', $file->getRelativePathname())), 0, 2));
+            foreach ($m[2] as $raw) {
+                $key = stripcslashes($raw);
+                if (isset($wanted[$key]) && ! in_array($package, $hits[$key] ?? [], true)) {
+                    $hits[$key][] = $package;
+                }
+            }
+        }
+
+        return $hits;
     }
 
     private function relativePath(string $base, string $abs): string
