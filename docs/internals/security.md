@@ -223,10 +223,8 @@ At the CLI, `openpne:admin:create` and `openpne:admin:reset-password` prompt twi
 `OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no `--password`
 option, which would leak the secret into shell history and the process list.
 
-- **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1) and matches
-  the de-facto floor of large consumer services (large-scale measurement:
-  S. Alroomi & F. Li, *Measuring Website Password Creation Policies At Scale*,
-  ACM CCS 2023). NIST SP 800-63B-4 §3.1.1.2 requires 15 characters for
+- **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1).
+  NIST SP 800-63B-4 §3.1.1.2 requires 15 characters for
   single-factor password authentication; this application deviates knowingly —
   for an SNS whose members are invited casual users, a 15-character floor
   drives lockouts and support load out of proportion to its benefit.
