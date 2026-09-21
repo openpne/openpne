@@ -1412,7 +1412,7 @@ class CheckTranslationsCommand extends Command
             return [];
         }
         $wanted = array_fill_keys($keys, true);
-        $pattern = '/(?:(?<![A-Za-z0-9_$>:\\\\])(?:__|trans|trans_choice|Lang::get)|@lang)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
+        $pattern = '/(?<![A-Za-z0-9_$@])(?<!->)(?<!::)(?:\\\\?(?:__|trans|trans_choice|Lang::get)|@lang)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
         $files = (new Finder)
             ->files()
             ->in($vendorDir)
