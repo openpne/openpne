@@ -233,7 +233,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   registration without the password.
 - **Nothing asks the member to name one.** `RegisterMemberPasskey` titles the row after where the
   passkey is kept, read from the credential's AAGUID, and drops a name the client posted; an
-  authenticator that withholds it leaves the name empty and the screen calls that one "passkey".
+  authenticator that withholds its AAGUID, or one the bundled table does not list, leaves the name
+  empty and the screen calls that one "passkey".
 - **Removing one revokes.** Deletion demands the password inline and revokes
   the member's other sessions and the remember token (a lost device is the
   usual reason). Adding one revokes nothing — the proof was just given in this
