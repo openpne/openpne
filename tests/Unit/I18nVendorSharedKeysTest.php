@@ -17,7 +17,7 @@ class I18nVendorSharedKeysTest extends TestCase
         $this->dir = sys_get_temp_dir().'/i18n-vendor-'.bin2hex(random_bytes(4));
         mkdir($this->dir.'/vendor/acme/widgets/src', 0777, true);
         mkdir($this->dir.'/vendor/acme/widgets/stubs', 0777, true);
-        mkdir($this->dir.'/vendor/acme/widgets/src/Fixtures', 0777, true);
+        mkdir($this->dir.'/vendor/acme/widgets/src/fixtures', 0777, true);
         mkdir($this->dir.'/vendor/acme/devtool/src', 0777, true);
         file_put_contents($this->dir.'/vendor/acme/widgets/src/View.php', <<<'PHP'
             <?php
@@ -41,10 +41,10 @@ class I18nVendorSharedKeysTest extends TestCase
         file_put_contents($this->dir.'/vendor/acme/widgets/src/mail.blade.php', "@lang('Regards,')");
         file_put_contents($this->dir.'/vendor/acme/widgets/src/escaped.blade.php', "@@lang('Shown verbatim')");
         file_put_contents($this->dir.'/vendor/acme/widgets/stubs/Stub.php', "<?php __('Stub only');");
-        file_put_contents($this->dir.'/vendor/acme/widgets/src/Fixtures/F.php', "<?php __('Fixture only');");
+        file_put_contents($this->dir.'/vendor/acme/widgets/src/fixtures/F.php', "<?php __('Fixture only');");
         file_put_contents($this->dir.'/vendor/acme/devtool/src/Tool.php', "<?php __('Dev only');");
         file_put_contents($this->dir.'/composer.lock', json_encode([
-            'packages' => [['name' => 'acme/widgets'], ['name' => 'acme/gone']],
+            'packages' => [['name' => 'acme/widgets'], ['name' => 'acme/gone'], ['name' => 'acme/meta', 'type' => 'metapackage']],
             'packages-dev' => [['name' => 'acme/devtool']],
         ]));
     }

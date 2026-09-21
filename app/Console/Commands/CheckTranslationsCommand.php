@@ -91,7 +91,7 @@ class CheckTranslationsCommand extends Command
     private const VENDOR_IDENTITY_ALLOWLIST_FILE = 'lang/.i18n-vendor-identity-allowlist.json';
 
     /** Directories under a vendor package that ship code the app never runs (publish stubs, the package's own tests). */
-    private const VENDOR_DEAD_DIRS = ['test', 'tests', 'Test', 'Tests', 'stub', 'stubs', 'Stub', 'Stubs', 'example', 'examples', 'Example', 'Examples', 'fixture', 'fixtures', 'Fixture', 'Fixtures'];
+    private const VENDOR_DEAD_DIRS = ['tests', 'Tests', 'stubs', 'examples', 'fixtures'];
 
     /** @var array<string, list<string>>|null */
     private ?array $vendorLiterals = null;
@@ -1409,6 +1409,7 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
+     * @param  list<string>|null  $packages
      * @return array<string, list<string>>
      */
     private function vendorLiterals(string $base, ?array $packages = null): array
@@ -1435,7 +1436,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Production packages only: `packages-dev` ships nothing the app renders.
+     * Production packages only: `packages-dev` ships nothing the app renders, and a metapackage
+     * has no directory to scan.
      *
      * @return list<string> package names (`vendor-name/package`), empty when the lock is unreadable
      */
@@ -1447,7 +1449,7 @@ class CheckTranslationsCommand extends Command
         $lock = json_decode((string) file_get_contents($lockPath), true);
         $names = [];
         foreach ((array) (is_array($lock) ? ($lock['packages'] ?? []) : []) as $package) {
-            if (is_array($package) && is_string($package['name'] ?? null) && $package['name'] !== '') {
+            if (is_array($package) && is_string($package['name'] ?? null) && $package['name'] !== '' && ($package['type'] ?? '') !== 'metapackage') {
                 $names[] = $package['name'];
             }
         }
