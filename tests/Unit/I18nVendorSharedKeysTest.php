@@ -31,6 +31,7 @@ class I18nVendorSharedKeysTest extends TestCase
             echo __("Tab\there");
             echo \__('Qualified');
             echo Facades\Lang::get('Facade');
+            echo Str::trans('Static method');
             PHP);
         file_put_contents($this->dir.'/acme/widgets/src/escaped.blade.php', "@@lang('Shown verbatim')");
         file_put_contents($this->dir.'/acme/widgets/src/mail.blade.php', "@lang('Regards,')");
@@ -45,7 +46,7 @@ class I18nVendorSharedKeysTest extends TestCase
 
     public function test_only_calls_into_the_laravel_translator_count(): void
     {
-        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated', "It's gone", 'Shared key', 'Other key', 'Line\\nbreak', "Line\nbreak", "Tab\there", 'Qualified', 'Facade', 'Shown verbatim'];
+        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated', "It's gone", 'Shared key', 'Other key', 'Line\\nbreak', "Line\nbreak", "Tab\there", 'Qualified', 'Facade', 'Shown verbatim', 'Static method'];
 
         $hits = CheckTranslationsCommand::vendorReferencedKeys($this->dir, $keys);
         ksort($hits);
