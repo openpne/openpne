@@ -1400,8 +1400,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Only a translation call counts: the same English text as a bare literal (an HTTP header
-     * name, an array key) is not a caller of the dictionary.
+     * Only a call into Laravel's translator counts: a bare literal (an HTTP header name, an array
+     * key) or another object's `->trans()` is not a caller of the dictionary.
      *
      * @param  list<string>  $keys
      * @return array<string, list<string>> key => packages (`vendor-name/package`) that call it
@@ -1412,7 +1412,7 @@ class CheckTranslationsCommand extends Command
             return [];
         }
         $wanted = array_fill_keys($keys, true);
-        $pattern = '/(?:(?<![A-Za-z_])(?:__|trans|trans_choice)|@lang|Lang::get)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
+        $pattern = '/(?:(?<![A-Za-z0-9_$>:\\\\])(?:__|trans|trans_choice|Lang::get)|@lang)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
         $files = (new Finder)
             ->files()
             ->in($vendorDir)
@@ -1427,8 +1427,8 @@ class CheckTranslationsCommand extends Command
                 continue;
             }
             $package = implode('/', array_slice(explode('/', str_replace('\\', '/', $file->getRelativePathname())), 0, 2));
-            foreach ($m[2] as $raw) {
-                $key = stripcslashes($raw);
+            foreach ($m[2] as $i => $raw) {
+                $key = $m[1][$i] === "'" ? str_replace(["\\'", '\\\\'], ["'", '\\'], $raw) : stripcslashes($raw);
                 if (isset($wanted[$key]) && ! in_array($package, $hits[$key] ?? [], true)) {
                     $hits[$key][] = $package;
                 }

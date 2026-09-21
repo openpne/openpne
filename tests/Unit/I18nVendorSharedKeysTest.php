@@ -25,6 +25,10 @@ class I18nVendorSharedKeysTest extends TestCase
             $headers->get('Location');
             $label = 'Forbidden';
             echo __('It\'s gone');
+            echo $translator->trans('Shared key');
+            echo OtherLang::get('Other key');
+            echo __('Line\nbreak');
+            echo __("Tab\there");
             PHP);
         file_put_contents($this->dir.'/acme/widgets/src/mail.blade.php', "@lang('Regards,')");
         file_put_contents($this->dir.'/laravel-lang/lang/catalog.php', "<?php __('Not Found');");
@@ -36,9 +40,9 @@ class I18nVendorSharedKeysTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_only_translation_calls_in_vendor_count(): void
+    public function test_only_calls_into_the_laravel_translator_count(): void
     {
-        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated', "It's gone"];
+        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated', "It's gone", 'Shared key', 'Other key', 'Line\\nbreak', "Line\nbreak", "Tab\there"];
 
         $hits = CheckTranslationsCommand::vendorReferencedKeys($this->dir, $keys);
         ksort($hits);
@@ -46,7 +50,9 @@ class I18nVendorSharedKeysTest extends TestCase
         $this->assertSame([
             'Go to page :page' => ['acme/widgets'],
             "It's gone" => ['acme/widgets'],
+            'Line\\nbreak' => ['acme/widgets'],
             'Regards,' => ['acme/widgets'],
+            "Tab\there" => ['acme/widgets'],
             'Whoops!' => ['acme/widgets'],
             'results' => ['acme/widgets'],
         ], $hits);

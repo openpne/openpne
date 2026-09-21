@@ -69,7 +69,7 @@ enum Visibility: int
             self::Open => 'Anyone on the web',
             self::Members => 'All members',
             self::Friends => '%Friends% only',
-            self::Private => 'Only me',
+            self::Private => 'Owner only',
         };
     }
 
