@@ -231,7 +231,13 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   concurrent ones). A cancelled browser prompt keeps the window.
   Accepted residual: a walked-up session inside the window can complete one
   registration without the password.
-- **Removing one revokes.** Deletion demands the password inline and revokes
+- **Nothing asks the member to name one.** The row is titled by where the passkey is kept, which
+  `RegisterMemberPasskey` reads from the credential's AAGUID against the package's bundled table;
+  a name posted by the client is dropped. An authenticator that withholds its AAGUID, or one the
+  table does not know, leaves the name empty and the screen calls it "passkey" — the registration
+  date, the last use and the sync label still tell the rows apart. Two passkeys from one provider
+  account cannot both exist: the registration options carry `excludeCredentials`, and the provider
+  refuses the second (`worklog/current/passkey-naming-survey.md` has the survey this follows). Deletion demands the password inline and revokes
   the member's other sessions and the remember token (a lost device is the
   usual reason). Adding one revokes nothing — the proof was just given in this
   session and the new credential does not invalidate what other sessions were

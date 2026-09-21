@@ -21,15 +21,13 @@ function translate(button: HTMLElement, error: unknown): string {
 
 function bindRegister(button: HTMLButtonElement): void {
     const routes = { options: button.dataset.optionsUrl ?? '', submit: button.dataset.submitUrl ?? '' };
-    const nameInput = document.getElementById(button.dataset.nameInput ?? '') as HTMLInputElement | null;
-    const fallbackName = button.dataset.defaultName ?? 'Passkey';
 
     button.addEventListener('click', async () => {
         report(button, '');
         button.disabled = true;
         try {
-            const name = nameInput?.value.trim() || fallbackName;
-            await Passkeys.register({ name, routes });
+            // The server names it after where it is kept, so nothing is asked for here.
+            await Passkeys.register({ name: '', routes });
             window.location.reload();
         } catch (error) {
             report(button, translate(button, error));

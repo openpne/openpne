@@ -17,8 +17,7 @@ class MemberPasskeySerializer
         return [
             'passkeys' => $passkeys->map(fn (Passkey $passkey): array => [
                 'id' => $passkey->getKey(),
-                'name' => $passkey->name,
-                'authenticator' => $passkey->authenticator,
+                'name' => $passkey->name === '' ? null : $passkey->name,
                 'synced' => self::isSynced($passkey),
                 'deviceBound' => ! self::canSync($passkey),
                 'createdAt' => $passkey->created_at?->toIso8601String(),

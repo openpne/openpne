@@ -289,9 +289,8 @@
                             @foreach ($passkeys['passkeys'] as $passkey)
                                 <li>
                                     <p>
-                                        <strong>{{ $passkey['name'] }}</strong>
-                                        — {{ $passkey['authenticator'] ? __('Saved in :place', ['place' => $passkey['authenticator']]) : __('Saved place unknown') }}
-                                        @if ($passkey['synced'])· {{ __('Works on your other devices too') }}@elseif ($passkey['deviceBound'])· {{ __('Works on this device only') }}@endif
+                                        <strong>{{ $passkey['name'] ?? __('Passkey') }}</strong>
+                                        @if ($passkey['synced'])— {{ __('Works on your other devices too') }}@elseif ($passkey['deviceBound'])— {{ __('Works on this device only') }}@endif
                                         <br>
                                         @if ($passkey['createdAt'])
                                             {{ __('Added :date', ['date' => LocalizedDate::dateTime(Carbon::parse($passkey['createdAt']))]) }} ·
@@ -379,15 +378,6 @@
                         </div>
                     </form>
                 @else
-                    <table>
-                        <tr>
-                            <th><label for="passkey_name">{{ __('Name') }}</label></th>
-                            <td>
-                                <input type="text" id="passkey_name" name="name" class="input_text" maxlength="255" autocomplete="off">
-                                <p>{{ __('A label for the list, like "Phone" or "Laptop".') }}</p>
-                            </td>
-                        </tr>
-                    </table>
                     <div class="operation">
                         <ul class="moreInfo button">
                             <li>
@@ -396,8 +386,6 @@
                                         data-passkey-register
                                         data-options-url="{{ route('member.config.passkeys.options') }}"
                                         data-submit-url="{{ route('member.config.passkeys.store') }}"
-                                        data-name-input="passkey_name"
-                                        data-default-name="{{ __('Passkey') }}"
                                         data-messages="{{ $passkeyMessages }}"
                                         hidden>{{ __('Create passkey') }}</button>
                                 <p class="error" role="alert" data-passkey-error hidden></p>

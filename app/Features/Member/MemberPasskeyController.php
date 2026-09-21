@@ -60,7 +60,7 @@ class MemberPasskeyController extends Controller
     {
         $viewer = $this->viewer();
 
-        $passkey = $register($viewer, $request->string('name')->toString(), $request->credential(), $request->registrationOptions());
+        $passkey = $register($viewer, $request->credential(), $request->registrationOptions());
 
         PasskeyReauth::clear($request->session());
 

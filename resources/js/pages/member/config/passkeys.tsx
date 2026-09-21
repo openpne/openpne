@@ -14,8 +14,8 @@ import { useDateFormat } from '@/lib/use-date-format';
 
 interface PasskeyRow {
     id: number;
-    name: string;
-    authenticator: string | null;
+    /** The provider the passkey is kept in; null when the authenticator did not say. */
+    name: string | null;
     synced: boolean;
     deviceBound: boolean;
     createdAt: string | null;
@@ -122,7 +122,6 @@ function Reauth({ requiresSecondFactor }: { requiresSecondFactor: boolean }) {
 
 function Register() {
     const t = useT();
-    const [name, setName] = useState('');
     const [failure, setFailure] = useState<string | null>(null);
     const lapsed = t('Some time has passed since you confirmed your password. Please confirm it again.');
     const { register, isLoading, isSupported } = usePasskeyRegister({
@@ -144,24 +143,27 @@ function Register() {
     }
 
     return (
-        <form
-            onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                e.preventDefault();
-                setFailure(null);
-                void register(name.trim() === '' ? t('Passkey') : name.trim());
-            }}
-            className="space-y-4"
-        >
-            <Field label={t('Name')} htmlFor="passkey_name" help={t('A label for the list, like "Phone" or "Laptop".')} error={failure ?? undefined}>
-                <Input id="passkey_name" type="text" autoComplete="off" maxLength={255} value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
+        <div className="space-y-3">
             <FormActions>
-                <Button type="submit" loading={isLoading}>
+                <Button
+                    type="button"
+                    loading={isLoading}
+                    onClick={() => {
+                        setFailure(null);
+                        // The server names it after where it is kept, so nothing is asked for here.
+                        void register('');
+                    }}
+                >
                     <KeyRound className="size-4" aria-hidden />
                     {t('Create passkey')}
                 </Button>
             </FormActions>
-        </form>
+            {failure && (
+                <p className="text-sm text-destructive" role="alert">
+                    {failure}
+                </p>
+            )}
+        </div>
     );
 }
 
@@ -175,12 +177,12 @@ function PasskeyCard({ passkey, last }: { passkey: PasskeyRow; last: boolean }) 
         <li className="space-y-3 py-4 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div className="space-y-0.5">
-                    <h3 className="text-base text-foreground">{passkey.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {passkey.authenticator ? t('Saved in :place', { place: passkey.authenticator }) : t('Saved place unknown')}
-                        {passkey.synced && ` · ${t('Works on your other devices too')}`}
-                        {passkey.deviceBound && ` · ${t('Works on this device only')}`}
-                    </p>
+                    <h3 className="text-base text-foreground">{passkey.name ?? t('Passkey')}</h3>
+                    {(passkey.synced || passkey.deviceBound) && (
+                        <p className="text-sm text-muted-foreground">
+                            {passkey.synced ? t('Works on your other devices too') : t('Works on this device only')}
+                        </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
                         {passkey.createdAt ? t('Added :date', { date: absolute(passkey.createdAt) }) : null}
                         {' · '}

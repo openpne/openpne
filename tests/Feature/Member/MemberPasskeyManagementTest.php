@@ -20,6 +20,7 @@ use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Support\WebAuthn;
 use PragmaRX\Google2FA\Google2FA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Uid\Uuid;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
@@ -65,14 +66,14 @@ class MemberPasskeyManagementTest extends TestCase
         return $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertOk()->json('options');
     }
 
-    private function register(Member $member, ?FakeAuthenticator $authenticator = null, string $name = 'My phone'): Passkey
+    private function register(Member $member, ?FakeAuthenticator $authenticator = null): Passkey
     {
         $authenticator ??= FakeAuthenticator::forApp();
         $this->reauth($member);
         $credential = $authenticator->attest($this->registrationOptions($member));
 
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => $name, 'credential' => $credential])
+            ->postJson('/member/config/passkeys', ['credential' => $credential])
             ->assertOk();
 
         return Passkey::where('credential_id', $authenticator->credentialId())->firstOrFail();
@@ -95,7 +96,8 @@ class MemberPasskeyManagementTest extends TestCase
         $passkey = $this->register($member, $authenticator);
 
         $this->assertSame($member->getKey(), $passkey->user_id);
-        $this->assertSame('My phone', $passkey->name);
+        // The fake's AAGUID is in no table, so the row carries no name and the screen supplies one.
+        $this->assertSame('', $passkey->name);
         $this->assertTrue($passkey->credential['backupEligible']);
         $this->assertTrue($passkey->credential['backupStatus']);
         // The relation is what every reader goes through; the vendor trait alone would query member_id.
@@ -112,7 +114,7 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertForbidden();
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'x', 'credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
+            ->postJson('/member/config/passkeys', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
             ->assertForbidden();
         $this->assertSame(0, Passkey::count());
     }
@@ -226,13 +228,13 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertTrue(PasskeyReauth::isFresh(app('session.store')));
 
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'stale', 'credential' => $authenticator->attest($first)])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($first)])
             ->assertUnprocessable();
         $this->assertSame(0, Passkey::count());
 
         // The challenge was pulled by the failed attempt, so even the fresh one needs a new fetch.
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'fresh', 'credential' => $authenticator->attest($second)])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($second)])
             ->assertUnprocessable();
     }
 
@@ -256,7 +258,7 @@ class MemberPasskeyManagementTest extends TestCase
         $this->reauth($member);
 
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'no-uv', 'credential' => $authenticator->attest($this->registrationOptions($member))])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($this->registrationOptions($member))])
             ->assertUnprocessable();
         $this->assertSame(0, Passkey::count());
     }
@@ -268,7 +270,7 @@ class MemberPasskeyManagementTest extends TestCase
         $this->reauth($member);
 
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'phish', 'credential' => $authenticator->attest($this->registrationOptions($member))])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($this->registrationOptions($member))])
             ->assertUnprocessable();
         $this->assertSame(0, Passkey::count());
     }
@@ -283,7 +285,7 @@ class MemberPasskeyManagementTest extends TestCase
         $authenticator->attestedCredentialId = random_bytes(400);
         $this->reauth($member);
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'long', 'credential' => $authenticator->attest($this->registrationOptions($member))])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($this->registrationOptions($member))])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('credential');
         $this->assertSame(0, Passkey::count());
@@ -291,7 +293,7 @@ class MemberPasskeyManagementTest extends TestCase
         $honest = FakeAuthenticator::forApp(credentialIdBytes: 400);
         $this->reauth($member);
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'long', 'credential' => $honest->attest($this->registrationOptions($member))])
+            ->postJson('/member/config/passkeys', ['credential' => $honest->attest($this->registrationOptions($member))])
             ->assertUnprocessable();
         $this->assertSame(0, Passkey::count());
     }
@@ -305,7 +307,7 @@ class MemberPasskeyManagementTest extends TestCase
         $reason = __('Some time has passed since you confirmed your password. Please confirm it again.');
         $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertForbidden()->assertJsonPath('message', $reason);
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => 'x', 'credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
+            ->postJson('/member/config/passkeys', ['credential' => ['id' => 'a', 'rawId' => 'a', 'type' => 'public-key', 'response' => []]])
             ->assertForbidden()->assertJsonPath('message', $reason);
     }
 
@@ -317,7 +319,7 @@ class MemberPasskeyManagementTest extends TestCase
         $other = Member::factory()->create();
         $this->reauth($other);
         $this->actingAs($other)
-            ->postJson('/member/config/passkeys', ['name' => 'dup', 'credential' => $authenticator->attest($this->registrationOptions($other))])
+            ->postJson('/member/config/passkeys', ['credential' => $authenticator->attest($this->registrationOptions($other))])
             ->assertUnprocessable();
         $this->assertSame(1, Passkey::count());
     }
@@ -332,15 +334,34 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertSame(1, Passkey::where('credential_id', 'abc')->count());
     }
 
-    public function test_the_name_is_capped_at_255_characters(): void
+    public function test_the_name_comes_from_the_authenticator_not_from_the_client(): void
     {
         $member = Member::factory()->create();
+        // Google Password Manager, as the bundled AAGUID table knows it.
+        $authenticator = FakeAuthenticator::forApp();
+        $authenticator->aaguid = Uuid::fromString('ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4')->toBinary();
         $this->reauth($member);
 
         $this->actingAs($member)
-            ->postJson('/member/config/passkeys', ['name' => str_repeat('x', 256), 'credential' => FakeAuthenticator::forApp()->attest($this->registrationOptions($member))])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('name');
+            ->postJson('/member/config/passkeys', [
+                'name' => str_repeat('x', 500),
+                'credential' => $authenticator->attest($this->registrationOptions($member)),
+            ])
+            ->assertOk();
+
+        $this->assertSame('Google Password Manager', Passkey::firstOrFail()->name);
+    }
+
+    public function test_the_options_exclude_the_credentials_already_registered(): void
+    {
+        // What stops a second passkey from the same provider: the browser refuses an excluded one.
+        $member = Member::factory()->create();
+        $passkey = $this->register($member);
+        $this->reauth($member);
+
+        $excluded = collect($this->registrationOptions($member)['excludeCredentials'] ?? [])->pluck('id');
+
+        $this->assertContains($passkey->credential_id, $excluded);
     }
 
     public function test_an_ai_account_row_never_gains_a_passkey(): void
@@ -355,7 +376,6 @@ class MemberPasskeyManagementTest extends TestCase
         $this->expectException(HttpException::class);
         app(RegisterMemberPasskey::class)(
             $ai,
-            'ai',
             WebAuthn::fromJson(json_encode($authenticator->attest($options)), PublicKeyCredential::class),
             WebAuthn::fromJson(session('passkey.registration_options'), PublicKeyCredentialCreationOptions::class),
         );
@@ -493,7 +513,7 @@ class MemberPasskeyManagementTest extends TestCase
             ->component('member/config/passkeys')
             ->has('passkeys', 1)
             ->where('passkeys.0.id', $passkey->getKey())
-            ->where('passkeys.0.name', 'My phone')
+            ->where('passkeys.0.name', null)
             ->where('passkeys.0.synced', true)
             ->where('passkeys.0.deviceBound', false)
             ->where('requiresPassword', true)
@@ -545,7 +565,7 @@ class MemberPasskeyManagementTest extends TestCase
         $this->actingAs($member)->get('/member/config?category=passkey')
             ->assertOk()
             ->assertSee('id="member_config_passkeys"', false)
-            ->assertSee('My phone')
+            ->assertSee(__('Passkey'))
             ->assertSee(route('member.config.passkeys.reauth'), false)
             ->assertSee(route('member.config.passkeys.destroy', ['id' => $passkey->getKey()]), false)
             ->assertDontSee($passkey->credential_id, false);
