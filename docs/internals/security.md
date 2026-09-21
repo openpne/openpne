@@ -214,10 +214,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
 - **A passkey is both factors.** The relying party requires user verification
   and webauthn-lib rejects an assertion whose UV flag is unset, so a passkey
   proves possession of the authenticator plus its local unlock (biometric or
-  PIN) — the AAL2 shape NIST's syncable-authenticator supplement describes.
-  Signing in with one therefore skips the TOTP challenge, the posture of
-  GitHub, Google and Microsoft; it is a sign-in method, not a second factor,
-  and lives as its own settings row above the password.
+  PIN), a multi-factor cryptographic authenticator in NIST SP 800-63B's terms.
+  Signing in with one therefore skips the TOTP challenge; it is a sign-in
+  method, not a second factor, and lives as its own settings row above the
+  password.
 - **Adding one is a step-up.** Registration opens a 15-minute window
   (`App\Features\Member\PasskeyReauth`, distinct from the MFA window) with the
   account password **and**, when a confirmed TOTP factor exists, a current code
@@ -263,8 +263,9 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   ceremony renders as 422 app-wide (`bootstrap/app.php`), the only WebAuthn
   user being the member realm. Synced passkeys report a
   zero signature counter, so clone detection is nominal for them, and their
-  security is that of the platform account they sync through — accepted, as
-  every major service does.
+  security is that of the platform account they sync through — accepted;
+  sign-in does not tell a synced passkey from a device-bound one, only the
+  list does.
 
 There is no site-wide enforcement or password removal: a passkey is always an
 addition the member chooses.
