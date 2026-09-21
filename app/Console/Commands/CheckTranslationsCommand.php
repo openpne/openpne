@@ -88,6 +88,14 @@ class CheckTranslationsCommand extends Command
         'app/Console/Commands/CheckTranslationsCommand.php',
     ];
 
+    private const VENDOR_IDENTITY_ALLOWLIST_FILE = 'lang/.i18n-vendor-identity-allowlist.json';
+
+    /** Directories under a vendor package that ship code the app never runs (publish stubs, the package's own tests). */
+    private const VENDOR_DEAD_DIRS = ['tests', 'Tests', 'stubs', 'examples', 'fixtures'];
+
+    /** @var array<string, list<string>>|null */
+    private ?array $vendorLiterals = null;
+
     private const SCAN_DIRS = [
         'resources/js',
         'resources/views',
@@ -133,7 +141,8 @@ class CheckTranslationsCommand extends Command
             + $this->reportUnknownGroups($base)
             + $this->reportAppUiCoverage($base)
             + $this->reportReactPhpGroupKeys($base)
-            + $this->reportLiteralTerms($base, $found);
+            + $this->reportLiteralTerms($base, $found)
+            + $this->reportVendorGaps($base);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
 
@@ -1298,8 +1307,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Never a deletion list: lang/*.json also holds publisher keys the framework renders at
-     * runtime, which this scan cannot see (docs/internals/i18n.md, "Ownership: publisher-managed vs app-authored").
+     * Never a deletion list: the vendor scan sees only translation-call literals, so a key can be
+     * rendered by a path it misses (docs/internals/i18n.md, "Vendor-rendered keys").
      *
      * @param  array<string, list<string>>  $found
      */
@@ -1332,16 +1341,12 @@ class CheckTranslationsCommand extends Command
             return;
         }
 
-        $vendor = self::vendorReferencedKeys("{$base}/vendor", array_unique([...$unused['ja'], ...$unused['en']]));
-        $publisher = self::publisherJsonKeys("{$base}/vendor");
-        if ($publisher === []) {
-            $this->warn('laravel-lang catalog not installed (require-dev): published keys cannot be told from orphans.');
-        }
+        $vendor = $this->vendorLiterals($base);
 
         $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
-        $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
-        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) —');
-        $this->line('removing them breaks framework output. See docs/internals/i18n.md.');
+        $this->line('NOT a deletion list: the vendor scan below sees only translation-call literals, and');
+        $this->line('a key rendered through a variable is invisible to it — removing such a key breaks');
+        $this->line('framework output. See docs/internals/i18n.md.');
         $this->line('');
 
         foreach (['ja', 'en'] as $lang) {
@@ -1349,8 +1354,7 @@ class CheckTranslationsCommand extends Command
                 continue;
             }
             $shared = array_values(array_filter($unused[$lang], fn (string $k): bool => isset($vendor[$k])));
-            $published = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && isset($publisher[$k])));
-            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && ! isset($publisher[$k])));
+            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k])));
 
             if ($shared !== []) {
                 $this->warn(sprintf('Rendered by vendor code, not the app — lang/%s.json (%d): keep the value literal, a caller outside this repo shares it.', $lang, count($shared)));
@@ -1360,18 +1364,10 @@ class CheckTranslationsCommand extends Command
                 }
                 $this->line('');
             }
-            if ($published !== []) {
-                $this->warn(sprintf('Published by laravel-lang, no translation call found — lang/%s.json (%d): lang:update re-adds them with the publisher value.', $lang, count($published)));
-                sort($published);
-                foreach ($published as $k) {
-                    $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                }
-                $this->line('');
-            }
             if ($orphan === []) {
                 continue;
             }
-            $this->warn(sprintf('Not referenced in app or vendor code, not published — lang/%s.json (%d):', $lang, count($orphan)));
+            $this->warn(sprintf('No translation call found in app or vendor code — lang/%s.json (%d):', $lang, count($orphan)));
             sort($orphan);
             foreach (array_slice($orphan, 0, 50) as $k) {
                 $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -1384,39 +1380,162 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
+     * See docs/internals/i18n.md, "Vendor-rendered keys".
+     *
+     * @return int number of vendor-rendered keys lang/ja.json fails to translate
+     */
+    private function reportVendorGaps(string $base): int
+    {
+        $packages = self::scannablePackages("{$base}/composer.lock");
+        $literals = $this->vendorLiterals($base, $packages);
+        $absent = array_values(array_filter($packages, fn (string $name): bool => ! is_dir("{$base}/vendor/{$name}")));
+        if (($floor = self::scanFloorError($packages, $absent, $literals)) !== null) {
+            $this->error($floor);
+
+            return 1;
+        }
+
+        $gaps = self::vendorGaps($literals, $this->loadJsonDictionary("{$base}/lang/ja.json"), $this->phpGroupNames($base), $this->loadVendorIdentityAllowlist($base));
+        foreach ($gaps as $key => $reason) {
+            $this->error(sprintf(
+                '%s (%s) — %s lang/ja.json; vendor code renders it, so it needs a Japanese value. See docs/internals/i18n.md, "Vendor-rendered keys".',
+                json_encode($key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                implode(', ', $literals[$key]),
+                $reason,
+            ));
+        }
+
+        return count($gaps);
+    }
+
+    /**
+     * @param  list<string>|null  $packages
+     * @return array<string, list<string>>
+     */
+    private function vendorLiterals(string $base, ?array $packages = null): array
+    {
+        return $this->vendorLiterals ??= self::vendorTranslatorLiterals("{$base}/vendor", $packages ?? self::scannablePackages("{$base}/composer.lock"));
+    }
+
+    /**
      * @return array<string, true>
      */
-    public static function publisherJsonKeys(string $vendorDir): array
+    private function loadVendorIdentityAllowlist(string $base): array
     {
-        $keys = [];
-        foreach (glob("{$vendorDir}/laravel-lang/lang/locales/en/json*.json") ?: [] as $file) {
-            $json = json_decode((string) file_get_contents($file), true);
-            foreach (array_keys(is_array($json) ? $json : []) as $k) {
-                $keys[(string) $k] = true;
+        $path = "{$base}/".self::VENDOR_IDENTITY_ALLOWLIST_FILE;
+        if (! is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        $out = [];
+        foreach ((array) (is_array($data) ? ($data['allow'] ?? []) : []) as $string) {
+            $out[(string) $string] = true;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Production packages only: `packages-dev` ships nothing the app renders, and a metapackage
+     * has no directory to scan.
+     *
+     * @return list<string> package names (`vendor-name/package`), empty when the lock is unreadable
+     */
+    public static function scannablePackages(string $lockPath): array
+    {
+        if (! is_file($lockPath)) {
+            return [];
+        }
+        $lock = json_decode((string) file_get_contents($lockPath), true);
+        $names = [];
+        foreach ((array) (is_array($lock) ? ($lock['packages'] ?? []) : []) as $package) {
+            if (is_array($package) && is_string($package['name'] ?? null) && $package['name'] !== '' && ($package['type'] ?? '') !== 'metapackage') {
+                $names[] = $package['name'];
             }
         }
 
-        return $keys;
+        return $names;
+    }
+
+    /**
+     * An incomplete scan is a broken scan, never a clean one: the gate must fail instead of passing
+     * a checkout whose lock or vendor tree it could not read in full.
+     *
+     * @param  list<string>  $packages
+     * @param  list<string>  $absent  packages in the lock with no vendor directory
+     * @param  array<string, list<string>>  $literals
+     */
+    public static function scanFloorError(array $packages, array $absent, array $literals): ?string
+    {
+        if ($packages === []) {
+            return 'composer.lock lists no production packages (unreadable or empty): the vendor-rendered key gate cannot run.';
+        }
+        if ($absent !== []) {
+            return sprintf('%d production package(s) in composer.lock have no vendor directory (%s): run composer install, the vendor-rendered key gate cannot run.', count($absent), implode(', ', array_slice($absent, 0, 5)));
+        }
+        if ($literals === []) {
+            return 'No translation-call literal found in any production package: the vendor-rendered key gate cannot run.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Laravel's translator resolves a dotted literal from the JSON dictionary too, so only a
+     * literal whose first segment names an existing PHP group is left to the publisher's side.
+     *
+     * @param  array<string, list<string>>  $literals
+     * @param  array<string, mixed>  $ja  lang/ja.json as key => value
+     * @param  list<string>  $phpGroups
+     * @param  array<string, true>  $identityAllowlist
+     * @return array<string, string> key => reason, one of `missing from` / `empty in` / `still English in`
+     */
+    public static function vendorGaps(array $literals, array $ja, array $phpGroups, array $identityAllowlist): array
+    {
+        $groups = array_fill_keys($phpGroups, true);
+        $gaps = [];
+        foreach (array_keys($literals) as $key) {
+            $key = (string) $key;
+            if (str_contains($key, '::')) {
+                continue;
+            }
+            if (str_contains($key, '.') && isset($groups[strstr($key, '.', true)])) {
+                continue;
+            }
+            if (! array_key_exists($key, $ja)) {
+                $gaps[$key] = 'missing from';
+            } elseif ($ja[$key] === '' || $ja[$key] === null) {
+                $gaps[$key] = 'empty in';
+            } elseif ($ja[$key] === $key && ! isset($identityAllowlist[$key])) {
+                $gaps[$key] = 'still English in';
+            }
+        }
+        ksort($gaps, SORT_STRING);
+
+        return $gaps;
     }
 
     /**
      * Only a call into Laravel's translator counts: a bare literal (an HTTP header name, an array
      * key) or another object's `->trans()` is not a caller of the dictionary.
      *
-     * @param  list<string>  $keys
-     * @return array<string, list<string>> key => packages (`vendor-name/package`) that call it
+     * @param  list<string>  $packages  `vendor-name/package` directories to scan
+     * @return array<string, list<string>> key => packages that call it
      */
-    public static function vendorReferencedKeys(string $vendorDir, array $keys): array
+    public static function vendorTranslatorLiterals(string $vendorDir, array $packages): array
     {
-        if ($keys === [] || ! is_dir($vendorDir)) {
+        $dirs = array_values(array_filter(
+            array_map(fn (string $name): string => "{$vendorDir}/{$name}", $packages),
+            fn (string $dir): bool => is_dir($dir),
+        ));
+        if ($dirs === []) {
             return [];
         }
-        $wanted = array_fill_keys($keys, true);
         $pattern = '/(?<![A-Za-z0-9_$@])(?<!->)(?<!::)(?:__|trans|trans_choice|Lang::get|@lang)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
         $files = (new Finder)
             ->files()
-            ->in($vendorDir)
-            ->exclude(['laravel-lang'])
+            ->in($dirs)
+            ->exclude(self::VENDOR_DEAD_DIRS)
             ->name('*.php');
 
         $hits = [];
@@ -1426,10 +1545,10 @@ class CheckTranslationsCommand extends Command
             if (! preg_match_all($pattern, $contents, $m)) {
                 continue;
             }
-            $package = implode('/', array_slice(explode('/', str_replace('\\', '/', $file->getRelativePathname())), 0, 2));
+            $package = implode('/', array_slice(explode('/', str_replace('\\', '/', substr($file->getPathname(), strlen(rtrim($vendorDir, '/')) + 1))), 0, 2));
             foreach ($m[2] as $i => $raw) {
                 $key = $m[1][$i] === "'" ? str_replace(["\\'", '\\\\'], ["'", '\\'], $raw) : stripcslashes($raw);
-                if (isset($wanted[$key]) && ! in_array($package, $hits[$key] ?? [], true)) {
+                if (! in_array($package, $hits[$key] ?? [], true)) {
                     $hits[$key][] = $package;
                 }
             }
