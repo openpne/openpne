@@ -11,8 +11,9 @@ set -e
 
 code_staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(tsx|ts|php|blade\.php)$' || true)
 json_staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^lang/(ja|en)\.json$' || true)
+gate_staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(lang/\.i18n-[a-z-]+\.json|composer\.lock)$' || true)
 
-if [ -z "$code_staged" ] && [ -z "$json_staged" ]; then
+if [ -z "$code_staged" ] && [ -z "$json_staged" ] && [ -z "$gate_staged" ]; then
     exit 0
 fi
 

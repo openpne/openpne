@@ -1,0 +1,6 @@
+{
+    "_note": "Vendor-rendered keys whose Japanese is legitimately the English text. Checked by `php artisan i18n:check` (reportVendorGaps).",
+    "allow": [
+        "All rights reserved."
+    ]
+}
