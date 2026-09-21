@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
 import { FlashMessage } from '@/components/flash-message';
+import { PasskeySignIn } from '@/components/passkey-sign-in';
 import { RichBody } from '@/components/rich-body';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,7 +68,16 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
 
             <form onSubmit={submit} className="space-y-4">
                 <Field label={t('Email')} htmlFor="email" error={errors.email}>
-                    <Input id="email" type="email" name="email" autoComplete="email" autoFocus required value={data.email} onChange={(e) => setData('email', e.target.value)} />
+                    <Input
+                        id="email"
+                        type="email"
+                        name="email"
+                        autoComplete="email webauthn"
+                        autoFocus
+                        required
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
+                    />
                 </Field>
 
                 <Field label={t('Password')} htmlFor="password" error={errors.password}>
@@ -95,6 +105,8 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                 <Button type="submit" loading={processing} className="w-full">
                     {signIn}
                 </Button>
+
+                <PasskeySignIn remember={() => data.remember} />
 
                 {registrationOpen && (
                     <p className="text-center text-sm text-muted-foreground">

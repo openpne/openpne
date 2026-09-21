@@ -10,10 +10,13 @@ use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
 use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
+use App\Features\Auth\PasskeyLoginController;
+use App\Http\Requests\Auth\PasskeyLoginRequest;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
 use App\Support\MarkdownText;
+use App\Support\SecurityLog;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Closure;
@@ -29,6 +32,8 @@ use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -42,6 +47,8 @@ class FortifyServiceProvider extends ServiceProvider
         // endpoint cannot be used to enumerate which addresses have an account.
         $this->app->singleton(SuccessfulPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
         $this->app->singleton(FailedPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
+
+        $this->app->bind(PasskeyVerificationRequest::class, PasskeyLoginRequest::class);
     }
 
     public function boot(): void
@@ -129,6 +136,28 @@ class FortifyServiceProvider extends ServiceProvider
 
         RateLimiter::for('passkey-manage', function (Request $request) {
             return Limit::perMinute(5)->by('passkey-manage|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
+        // An assertion cannot be guessed, so this is abuse hygiene per IP rather than a guess budget.
+        RateLimiter::for('passkey-login', function (Request $request) {
+            return Limit::perMinute(10)->by('passkey-login|'.$request->ip());
+        });
+
+        // The package logs a verified passkey in directly, without AuthenticateMember's gates
+        // (docs/internals/security.md, "Member passkeys").
+        Passkeys::authorizeLoginUsing(function (Request $request, Member $member): bool {
+            if ($member->is_login_rejected || $member->isAiAccount()) {
+                SecurityLog::event('passkey.refused', ['guard' => 'member', 'member_id' => $member->getKey()]);
+                $request->attributes->set(PasskeyLoginController::REFUSED_BY_GATE, true);
+
+                return false;
+            }
+
+            // A half-finished password login (TOTP challenge pending) must not outlive the session it
+            // started in.
+            $request->session()->forget('login.id');
+
+            return true;
         });
 
         // Keyed by the owning member, not the IP: each call adds or removes a member row, so the
