@@ -58,7 +58,7 @@ export default function UnifiedGroup() {
 
     const join = () => router.post(`/groups/${group.id}/join`);
     const leave = async () => {
-        if (await confirm({ title: t('Leave this %community%?'), confirmLabel: t('Leave'), danger: true })) {
+        if (await confirm({ title: t('Leave this %community%?'), confirmLabel: t('Leave this %community%'), danger: true })) {
             router.post(`/groups/${group.id}/quit`);
         }
     };
@@ -113,7 +113,7 @@ export default function UnifiedGroup() {
                                     )}
                                     {canLeave && (
                                         <Button type="button" variant="secondary" onClick={leave}>
-                                            {t('Leave')}
+                                            {t('Leave this %community%')}
                                         </Button>
                                     )}
                                 </div>

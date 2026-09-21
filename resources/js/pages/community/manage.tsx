@@ -44,7 +44,7 @@ export default function CommunityManage() {
         }
     };
     const drop = async (member: CommunityMemberRow) => {
-        if (await confirm({ title: t('Drop :name from this %community%?', { name: member.name }), confirmLabel: t('Drop'), danger: true })) {
+        if (await confirm({ title: t('Drop :name from this %community%?', { name: member.name }), confirmLabel: t('Drop this member'), danger: true })) {
             post('drop', member.id);
         }
     };
@@ -78,7 +78,7 @@ export default function CommunityManage() {
                                     {!isMember && <RoleBadge role={member.role} />}
                                     {isMember && (
                                         <Button type="button" size="sm" variant="secondary" onClick={() => drop(member)}>
-                                            {t('Drop')}
+                                            {t('Drop this member')}
                                         </Button>
                                     )}
                                     {viewerRole === 'admin' && isMember && member.id !== pendingAdminId && (

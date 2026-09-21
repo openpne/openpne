@@ -47,7 +47,7 @@ export default function ConfigEmail({ email }: Props) {
                     </Field>
                     <FormActions>
                         <Button type="submit" loading={form.processing}>
-                            {t('Send confirmation')}
+                            {t('Send a confirmation email')}
                         </Button>
                     </FormActions>
                 </div>

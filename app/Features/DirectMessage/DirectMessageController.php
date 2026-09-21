@@ -290,7 +290,7 @@ class DirectMessageController extends Controller
     private function afterWrite(bool $isDraft): RedirectResponse
     {
         return $isDraft
-            ? $this->redirectAfterSubmit('message.draft', status: __('The message was saved successfully.'))
+            ? $this->redirectAfterSubmit('message.draft', status: __('The message was saved as a draft.'))
             : $this->redirectAfterSubmit('message.send', status: __('The message was sent successfully.'));
     }
 

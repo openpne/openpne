@@ -407,7 +407,7 @@ export default function AiAccountShow() {
                                                 loading={busy === `quit-${group.id}`}
                                                 onClick={() => post(`/member/config/ai/${account.id}/groups/${group.id}/quit`, `quit-${group.id}`)}
                                             >
-                                                {t('Leave')}
+                                                {t('Leave this %community%')}
                                             </Button>
                                         }
                                     />

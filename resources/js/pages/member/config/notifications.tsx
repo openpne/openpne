@@ -296,7 +296,7 @@ export default function NotificationSettings() {
                                         const options: { value: TriState; label: string }[] = [
                                             { value: 'all', label: t('All members') },
                                             { value: 'friends', label: t('%Friends% only') },
-                                            { value: 'off', label: t('Off') },
+                                            { value: 'off', label: t('Do not notify') },
                                         ];
                                         return (
                                             <RadioCardGroup key={channel} legend={`${group.caption} — ${channelLabel[channel]}`}>

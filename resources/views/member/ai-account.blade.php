@@ -91,7 +91,7 @@
                                 <a href="{{ route('group.show', ['group' => $group->getKey()]) }}">{{ $group->name }}</a>
                                 <form method="POST" action="{{ route('member.config.ai.groups.quit', ['member' => $aiAccount->getKey(), 'group' => $group->getKey()]) }}">
                                     @csrf
-                                    <input type="submit" class="input_submit" value="{{ __('Leave') }}">
+                                    <input type="submit" class="input_submit" value="{{ __('Leave this %community%') }}">
                                 </form>
                             </li>
                         @endforeach

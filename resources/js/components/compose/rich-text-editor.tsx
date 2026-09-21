@@ -497,7 +497,7 @@ function LinkDialog({ editor }: { editor: Editor }) {
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <Button type="submit" size="sm">
-                            {t('Apply')}
+                            {t('Apply link')}
                         </Button>
                         {active && (
                             <Button type="button" variant="outline" size="sm" onClick={remove}>
