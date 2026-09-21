@@ -1332,26 +1332,110 @@ class CheckTranslationsCommand extends Command
             return;
         }
 
+        $vendor = self::vendorReferencedKeys("{$base}/vendor", array_unique([...$unused['ja'], ...$unused['en']]));
+        $publisher = self::publisherJsonKeys("{$base}/vendor");
+        if ($publisher === []) {
+            $this->warn('laravel-lang catalog not installed (require-dev): published keys cannot be told from orphans.');
+        }
+
         $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
         $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
-        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) that');
-        $this->line('this scan cannot see — removing them breaks framework output. See docs/internals/i18n.md.');
+        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) —');
+        $this->line('removing them breaks framework output. See docs/internals/i18n.md.');
         $this->line('');
 
         foreach (['ja', 'en'] as $lang) {
             if ($unused[$lang] === []) {
                 continue;
             }
-            $this->warn(sprintf('Not referenced in app code — lang/%s.json (%d):', $lang, count($unused[$lang])));
-            sort($unused[$lang]);
-            foreach (array_slice($unused[$lang], 0, 50) as $k) {
+            $shared = array_values(array_filter($unused[$lang], fn (string $k): bool => isset($vendor[$k])));
+            $published = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && isset($publisher[$k])));
+            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && ! isset($publisher[$k])));
+
+            if ($shared !== []) {
+                $this->warn(sprintf('Rendered by vendor code, not the app — lang/%s.json (%d): keep the value literal, a caller outside this repo shares it.', $lang, count($shared)));
+                sort($shared);
+                foreach ($shared as $k) {
+                    $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'  ('.implode(', ', $vendor[$k]).')');
+                }
+                $this->line('');
+            }
+            if ($published !== []) {
+                $this->warn(sprintf('Published by laravel-lang, no translation call found — lang/%s.json (%d): lang:update re-adds them with the publisher value.', $lang, count($published)));
+                sort($published);
+                foreach ($published as $k) {
+                    $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                }
+                $this->line('');
+            }
+            if ($orphan === []) {
+                continue;
+            }
+            $this->warn(sprintf('Not referenced in app or vendor code, not published — lang/%s.json (%d):', $lang, count($orphan)));
+            sort($orphan);
+            foreach (array_slice($orphan, 0, 50) as $k) {
                 $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
-            if (count($unused[$lang]) > 50) {
-                $this->line(sprintf('  ... and %d more', count($unused[$lang]) - 50));
+            if (count($orphan) > 50) {
+                $this->line(sprintf('  ... and %d more', count($orphan) - 50));
             }
             $this->line('');
         }
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    public static function publisherJsonKeys(string $vendorDir): array
+    {
+        $keys = [];
+        foreach (glob("{$vendorDir}/laravel-lang/lang/locales/en/json*.json") ?: [] as $file) {
+            $json = json_decode((string) file_get_contents($file), true);
+            foreach (array_keys(is_array($json) ? $json : []) as $k) {
+                $keys[(string) $k] = true;
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Only a call into Laravel's translator counts: a bare literal (an HTTP header name, an array
+     * key) or another object's `->trans()` is not a caller of the dictionary.
+     *
+     * @param  list<string>  $keys
+     * @return array<string, list<string>> key => packages (`vendor-name/package`) that call it
+     */
+    public static function vendorReferencedKeys(string $vendorDir, array $keys): array
+    {
+        if ($keys === [] || ! is_dir($vendorDir)) {
+            return [];
+        }
+        $wanted = array_fill_keys($keys, true);
+        $pattern = '/(?<![A-Za-z0-9_$@])(?<!->)(?<!::)(?:__|trans|trans_choice|Lang::get|@lang)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
+        $files = (new Finder)
+            ->files()
+            ->in($vendorDir)
+            ->exclude(['laravel-lang'])
+            ->name('*.php');
+
+        $hits = [];
+        foreach ($files as $file) {
+            /** @var SplFileInfo $file */
+            $contents = (string) file_get_contents($file->getPathname());
+            if (! preg_match_all($pattern, $contents, $m)) {
+                continue;
+            }
+            $package = implode('/', array_slice(explode('/', str_replace('\\', '/', $file->getRelativePathname())), 0, 2));
+            foreach ($m[2] as $i => $raw) {
+                $key = $m[1][$i] === "'" ? str_replace(["\\'", '\\\\'], ["'", '\\'], $raw) : stripcslashes($raw);
+                if (isset($wanted[$key]) && ! in_array($package, $hits[$key] ?? [], true)) {
+                    $hits[$key][] = $package;
+                }
+            }
+        }
+
+        return $hits;
     }
 
     private function relativePath(string $base, string $abs): string

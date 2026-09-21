@@ -646,7 +646,7 @@
                     <p>{{ __('A confirmation link will be sent to the new address. The change takes effect once you open it.') }}</p>
                     <div class="operation">
                         <ul class="moreInfo button">
-                            <li><input type="submit" class="input_submit" value="{{ __('Send confirmation') }}"></li>
+                            <li><input type="submit" class="input_submit" value="{{ __('Send a confirmation email') }}"></li>
                         </ul>
                     </div>
                 </form>
