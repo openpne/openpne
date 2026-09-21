@@ -66,6 +66,15 @@ class MemberPasskeyManagementTest extends TestCase
         return $this->actingAs($member)->getJson('/member/config/passkeys/options')->assertOk()->json('options');
     }
 
+    /** Google Password Manager, as the bundled AAGUID table knows it. */
+    private function namedAuthenticator(): FakeAuthenticator
+    {
+        $authenticator = FakeAuthenticator::forApp();
+        $authenticator->aaguid = Uuid::fromString('ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4')->toBinary();
+
+        return $authenticator;
+    }
+
     private function register(Member $member, ?FakeAuthenticator $authenticator = null): Passkey
     {
         $authenticator ??= FakeAuthenticator::forApp();
@@ -337,9 +346,7 @@ class MemberPasskeyManagementTest extends TestCase
     public function test_the_name_comes_from_the_authenticator_not_from_the_client(): void
     {
         $member = Member::factory()->create();
-        // Google Password Manager, as the bundled AAGUID table knows it.
-        $authenticator = FakeAuthenticator::forApp();
-        $authenticator->aaguid = Uuid::fromString('ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4')->toBinary();
+        $authenticator = $this->namedAuthenticator();
         $this->reauth($member);
 
         $this->actingAs($member)
@@ -506,14 +513,14 @@ class MemberPasskeyManagementTest extends TestCase
     {
         config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
-        $passkey = $this->register($member);
+        $passkey = $this->register($member, $this->namedAuthenticator());
 
         $response = $this->actingAs($member)->get('/member/config/passkeys');
         $response->assertInertia(fn (Assert $page) => $page
             ->component('member/config/passkeys')
             ->has('passkeys', 1)
             ->where('passkeys.0.id', $passkey->getKey())
-            ->where('passkeys.0.name', null)
+            ->where('passkeys.0.name', 'Google Password Manager')
             ->where('passkeys.0.synced', true)
             ->where('passkeys.0.deviceBound', false)
             ->where('requiresPassword', true)
@@ -524,6 +531,15 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->actingAs($member)->get('/member/config')
             ->assertInertia(fn (Assert $page) => $page->component('member/config')->where('form.passkeys.count', 1));
+    }
+
+    public function test_an_unnamed_passkey_reaches_the_screen_as_one_the_page_can_name(): void
+    {
+        $member = Member::factory()->create();
+        $this->register($member);
+
+        $this->actingAs($member)->get('/member/config/passkeys')
+            ->assertInertia(fn (Assert $page) => $page->where('passkeys.0.name', null));
     }
 
     public function test_a_member_holding_only_device_bound_passkeys_is_flagged(): void
@@ -560,12 +576,12 @@ class MemberPasskeyManagementTest extends TestCase
     public function test_the_classic_category_renders_the_list_and_the_forms(): void
     {
         $member = Member::factory()->create();
-        $passkey = $this->register($member);
+        $passkey = $this->register($member, $this->namedAuthenticator());
 
         $this->actingAs($member)->get('/member/config?category=passkey')
             ->assertOk()
             ->assertSee('id="member_config_passkeys"', false)
-            ->assertSee(__('Passkey'))
+            ->assertSee('<strong>Google Password Manager</strong>', false)
             ->assertSee(route('member.config.passkeys.reauth'), false)
             ->assertSee(route('member.config.passkeys.destroy', ['id' => $passkey->getKey()]), false)
             ->assertDontSee($passkey->credential_id, false);

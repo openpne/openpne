@@ -44,9 +44,9 @@ class RegisterMemberPasskey
      */
     private function deriveName(PublicKeyCredential $credential): string
     {
-        $aaguid = $this->attestedCredentialData($credential)?->aaguid;
+        $aaguid = (string) ($this->attestedCredentialData($credential)?->aaguid ?? '');
 
-        return $aaguid === null ? '' : (Aaguids::labelFor((string) $aaguid) ?? '');
+        return $aaguid === '' || $aaguid === Aaguids::unknown() ? '' : (Aaguids::labelFor($aaguid) ?? '');
     }
 
     /** The stored id is the attested one inside the attestation object, not the JSON `rawId`. */
