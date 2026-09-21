@@ -84,17 +84,17 @@ class CheckTranslationsCommand extends Command
      * Files that mention `__('...')` / `t('...')` without intending a real reference, skipped when
      * extracting.
      */
-    private const VENDOR_IDENTITY_ALLOWLIST_FILE = 'lang/.i18n-vendor-identity-allowlist.json';
-
-    /** Directories under a vendor package that ship code the app never runs (publish stubs, the package's own tests). */
-    private const VENDOR_DEAD_DIRS = ['tests', 'Tests', 'stubs', 'examples', 'fixtures'];
-
-    /** @var array<string, list<string>>|null */
-    private ?array $vendorLiterals = null;
-
     private const SELF_REFERENCE_FILES = [
         'app/Console/Commands/CheckTranslationsCommand.php',
     ];
+
+    private const VENDOR_IDENTITY_ALLOWLIST_FILE = 'lang/.i18n-vendor-identity-allowlist.json';
+
+    /** Directories under a vendor package that ship code the app never runs (publish stubs, the package's own tests). */
+    private const VENDOR_DEAD_DIRS = ['test', 'tests', 'Test', 'Tests', 'stub', 'stubs', 'Stub', 'Stubs', 'example', 'examples', 'Example', 'Examples', 'fixture', 'fixtures', 'Fixture', 'Fixtures'];
+
+    /** @var array<string, list<string>>|null */
+    private ?array $vendorLiterals = null;
 
     private const SCAN_DIRS = [
         'resources/js',
@@ -1387,19 +1387,15 @@ class CheckTranslationsCommand extends Command
     private function reportVendorGaps(string $base): int
     {
         $packages = self::scannablePackages("{$base}/composer.lock");
-        $literals = $this->vendorLiterals($base);
-        if (($floor = self::scanFloorError($packages, $literals)) !== null) {
+        $literals = $this->vendorLiterals($base, $packages);
+        $absent = array_values(array_filter($packages, fn (string $name): bool => ! is_dir("{$base}/vendor/{$name}")));
+        if (($floor = self::scanFloorError($packages, $absent, $literals)) !== null) {
             $this->error($floor);
 
             return 1;
         }
-        $absent = array_filter($packages, fn (string $name): bool => ! is_dir("{$base}/vendor/{$name}"));
-        if ($absent !== []) {
-            $this->warn(sprintf('%d package(s) in composer.lock have no vendor directory and were not scanned.', count($absent)));
-        }
 
-        $ja = json_decode((string) file_get_contents("{$base}/lang/ja.json"), true);
-        $gaps = self::vendorGaps($literals, is_array($ja) ? $ja : [], $this->phpGroupNames($base), $this->loadVendorIdentityAllowlist($base));
+        $gaps = self::vendorGaps($literals, $this->loadJsonDictionary("{$base}/lang/ja.json"), $this->phpGroupNames($base), $this->loadVendorIdentityAllowlist($base));
         foreach ($gaps as $key => $reason) {
             $this->error(sprintf(
                 '%s (%s) — %s lang/ja.json; vendor code renders it, so it needs a Japanese value. See docs/internals/i18n.md, "Vendor-rendered keys".',
@@ -1415,9 +1411,9 @@ class CheckTranslationsCommand extends Command
     /**
      * @return array<string, list<string>>
      */
-    private function vendorLiterals(string $base): array
+    private function vendorLiterals(string $base, ?array $packages = null): array
     {
-        return $this->vendorLiterals ??= self::vendorTranslatorLiterals("{$base}/vendor", self::scannablePackages("{$base}/composer.lock"));
+        return $this->vendorLiterals ??= self::vendorTranslatorLiterals("{$base}/vendor", $packages ?? self::scannablePackages("{$base}/composer.lock"));
     }
 
     /**
@@ -1460,16 +1456,20 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * An empty scan is a broken scan, never a clean one: the gate must fail instead of passing
-     * a checkout whose lock or vendor directory it could not read.
+     * An incomplete scan is a broken scan, never a clean one: the gate must fail instead of passing
+     * a checkout whose lock or vendor tree it could not read in full.
      *
      * @param  list<string>  $packages
+     * @param  list<string>  $absent  packages in the lock with no vendor directory
      * @param  array<string, list<string>>  $literals
      */
-    public static function scanFloorError(array $packages, array $literals): ?string
+    public static function scanFloorError(array $packages, array $absent, array $literals): ?string
     {
         if ($packages === []) {
             return 'composer.lock lists no production packages (unreadable or empty): the vendor-rendered key gate cannot run.';
+        }
+        if ($absent !== []) {
+            return sprintf('%d production package(s) in composer.lock have no vendor directory (%s): run composer install, the vendor-rendered key gate cannot run.', count($absent), implode(', ', array_slice($absent, 0, 5)));
         }
         if ($literals === []) {
             return 'No translation-call literal found in any production package: the vendor-rendered key gate cannot run.';
@@ -1479,8 +1479,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Laravel's translator tries the JSON dictionary before it parses `group.key`, so a dotted
-     * literal is a plain-text key unless its first segment names an existing PHP group.
+     * Laravel's translator resolves a dotted literal from the JSON dictionary too, so only a
+     * literal whose first segment names an existing PHP group is left to the publisher's side.
      *
      * @param  array<string, list<string>>  $literals
      * @param  array<string, mixed>  $ja  lang/ja.json as key => value

@@ -17,6 +17,7 @@ class I18nVendorSharedKeysTest extends TestCase
         $this->dir = sys_get_temp_dir().'/i18n-vendor-'.bin2hex(random_bytes(4));
         mkdir($this->dir.'/vendor/acme/widgets/src', 0777, true);
         mkdir($this->dir.'/vendor/acme/widgets/stubs', 0777, true);
+        mkdir($this->dir.'/vendor/acme/widgets/src/Fixtures', 0777, true);
         mkdir($this->dir.'/vendor/acme/devtool/src', 0777, true);
         file_put_contents($this->dir.'/vendor/acme/widgets/src/View.php', <<<'PHP'
             <?php
@@ -40,6 +41,7 @@ class I18nVendorSharedKeysTest extends TestCase
         file_put_contents($this->dir.'/vendor/acme/widgets/src/mail.blade.php', "@lang('Regards,')");
         file_put_contents($this->dir.'/vendor/acme/widgets/src/escaped.blade.php', "@@lang('Shown verbatim')");
         file_put_contents($this->dir.'/vendor/acme/widgets/stubs/Stub.php', "<?php __('Stub only');");
+        file_put_contents($this->dir.'/vendor/acme/widgets/src/Fixtures/F.php', "<?php __('Fixture only');");
         file_put_contents($this->dir.'/vendor/acme/devtool/src/Tool.php', "<?php __('Dev only');");
         file_put_contents($this->dir.'/composer.lock', json_encode([
             'packages' => [['name' => 'acme/widgets'], ['name' => 'acme/gone']],
@@ -93,9 +95,10 @@ class I18nVendorSharedKeysTest extends TestCase
 
     public function test_an_empty_scan_is_an_error(): void
     {
-        $this->assertNotNull(CheckTranslationsCommand::scanFloorError([], ['Whoops!' => ['acme/widgets']]));
-        $this->assertNotNull(CheckTranslationsCommand::scanFloorError(['acme/widgets'], []));
-        $this->assertNull(CheckTranslationsCommand::scanFloorError(['acme/widgets'], ['Whoops!' => ['acme/widgets']]));
+        $this->assertNotNull(CheckTranslationsCommand::scanFloorError([], [], ['Whoops!' => ['acme/widgets']]));
+        $this->assertNotNull(CheckTranslationsCommand::scanFloorError(['acme/widgets', 'acme/gone'], ['acme/gone'], ['Whoops!' => ['acme/widgets']]));
+        $this->assertNotNull(CheckTranslationsCommand::scanFloorError(['acme/widgets'], [], []));
+        $this->assertNull(CheckTranslationsCommand::scanFloorError(['acme/widgets'], [], ['Whoops!' => ['acme/widgets']]));
     }
 
     public function test_gaps_are_plain_text_keys_without_a_japanese_value(): void
