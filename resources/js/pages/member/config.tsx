@@ -10,6 +10,7 @@ import { Heading } from '@/components/ui/heading';
 import { RadioCard } from '@/components/ui/radio-card';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
+import { passkeysPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -31,6 +32,7 @@ interface ConfigForm {
     // Absent unless the site policy lets each member choose their profile page's audience.
     profileVisibility?: { value: string; options: Option[] };
     email: { value: string };
+    passkeys: { count: number };
     mfa: { enabled: boolean };
     locale: { value: string; options: Option[] };
     // Absent for a member the site neither offers AI accounts to nor has given one already.
@@ -402,6 +404,17 @@ export default function MemberConfig() {
                         action={
                             <ActionLink href="/member/config/email" variant="outline" size="sm">
                                 {t('Change')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Passkeys')}
+                        value={form.passkeys.count > 0 ? passkeysPhrase(t, form.passkeys.count) : t('Not set up')}
+                        action={
+                            <ActionLink href="/member/config/passkeys" variant="outline" size="sm">
+                                {t('Manage')}
                             </ActionLink>
                         }
                     />

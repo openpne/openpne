@@ -12,6 +12,7 @@ use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Member\Serializers\MemberMfaSerializer;
+use App\Features\Member\Serializers\MemberPasskeySerializer;
 use App\Features\Notifications\Serializers\NotificationSettingsSerializer;
 use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\ProfilePageVisibility;
@@ -120,6 +121,9 @@ class MemberConfigController extends Controller
                     // which no other page needs in scope.
                     'mfa' => $category === MemberConfigCategory::Mfa
                         ? MemberMfaSerializer::state($viewer, $request->session())
+                        : null,
+                    'passkeys' => $category === MemberConfigCategory::Passkey
+                        ? MemberPasskeySerializer::state($viewer, $request->session())
                         : null,
                     'notificationGroups' => $category === MemberConfigCategory::Notification
                         ? NotificationSettingsSerializer::form($viewer)['groups']

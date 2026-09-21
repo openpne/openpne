@@ -35,6 +35,8 @@ enum MailTemplate: string
     case MfaEnabled = 'mfa-enabled';
     case MfaDisabled = 'mfa-disabled';
     case MfaResetLink = 'mfa-reset-link';
+    case PasskeyRegistered = 'passkey-registered';
+    case PasskeyRemoved = 'passkey-removed';
 
     case Signature = 'signature';
 
@@ -260,6 +262,18 @@ enum MailTemplate: string
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Two-factor authentication disabled',
+                variables: [],
+            ),
+            self::PasskeyRegistered => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Passkey registered',
+                variables: [],
+            ),
+            self::PasskeyRemoved => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Passkey removed',
                 variables: [],
             ),
             self::MfaResetLink => new MailTemplateDefinition(

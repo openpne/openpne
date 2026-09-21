@@ -29,19 +29,43 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Passkey;
+use Laravel\Passkeys\PasskeyAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'tokens'])]
-class Member extends Authenticatable
+class Member extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<MemberFactory> */
-    use ClearsPasswordScheme, HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable;
+    use ClearsPasswordScheme, HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable, PasskeyAuthenticatable;
 
     // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
     // load-bearing, not decorative.
     use TwoFactorAuthenticatable;
+
+    /**
+     * laravel/passkeys reads the owner from `passkeys.user_id` (its model, actions and controller), but
+     * its trait's hasMany would infer `member_id` from this class.
+     *
+     * @return HasMany<Passkey, $this>
+     */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(Passkey::class, 'user_id');
+    }
+
+    public function getPasskeyUsername(): string
+    {
+        return $this->email ?? $this->name;
+    }
+
+    public function getPasskeyDisplayName(): string
+    {
+        return $this->name;
+    }
 
     /**
      * A used code is deleted rather than swapped for a fresh one as Fortify does by default

@@ -8,6 +8,7 @@ import {
     membersPhrase,
     messagesPhrase,
     participantsPhrase,
+    passkeysPhrase,
     repliesPhrase,
     unreadMessagesPhrase,
 } from './count-phrase.ts';
@@ -45,4 +46,9 @@ test('each counted noun has its singular at one', () => {
 test('zero is not one', () => {
     assert.equal(badgePhrase(t, badge, 0), '0 unread notifications');
     assert.equal(unreadMessagesPhrase(t, 0), '0 unread messages');
+});
+
+test('passkeysPhrase picks the singular at one', () => {
+    assert.equal(passkeysPhrase(t, 1), '1 registered');
+    assert.equal(passkeysPhrase(t, 3), '3 registered');
 });

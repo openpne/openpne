@@ -41,3 +41,7 @@ export function entriesPhrase(t: Translate, count: number): string {
 export function messagesPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 message') : t(':count messages', { count });
 }
+
+export function passkeysPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 registered') : t(':count registered', { count });
+}

@@ -31,6 +31,8 @@ use App\Notifications\Member\EmailChangeNoticeNotification;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
 use App\Notifications\Member\MfaResetLinkNotification;
+use App\Notifications\Member\PasskeyRegisteredNotification;
+use App\Notifications\Member\PasskeyRemovedNotification;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Notifications\Member\RegistrationCompletedNotification;
 use App\Notifications\Member\WithdrawalAdminNotification;
@@ -109,6 +111,8 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaEnabledNotification('en'), $recipient],
             [new MfaDisabledNotification('en'), $recipient],
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
+            [new PasskeyRegisteredNotification('en'), $recipient],
+            [new PasskeyRemovedNotification('en'), $recipient],
             [new GroupTalkMentionedNotification($sender, $talkMessage), $recipient],
             [new GroupTalkMessagePostedNotification($sender, $talkMessage, ['mail']), $recipient],
             [new TimelineMentionedNotification($sender, $post), $recipient],

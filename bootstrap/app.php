@@ -14,6 +14,7 @@ use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
 use App\Support\SecurityLog;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,10 +22,13 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Passkeys\Exceptions\InvalidPasskeyException;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use Psr\Log\LogLevel;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Webauthn\Exception\WebauthnException;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -114,6 +118,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // A render callback rather than errors/4xx.blade.php overrides, which would apply to every
         // realm and surface.
         $exceptions->render(fn (HttpExceptionInterface $e, Request $request) => ClassicErrorPage::render($request, $e));
+
+        // Rendered as the member's input (422) but still reported: the same class covers a corrupt
+        // stored credential or a moved domain, which must not vanish behind a retry message.
+        $exceptions->level(WebauthnException::class, LogLevel::WARNING);
+        $exceptions->render(fn (WebauthnException $e, Request $request) => app(ExceptionHandler::class)
+            ->render($request, InvalidPasskeyException::make('The passkey could not be used. Please try again.')));
     })->create();
 
 // Deployer-chosen env and storage paths; unset means the in-project locations (docs/internals/runtime.md).

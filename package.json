@@ -35,6 +35,7 @@
     },
     "dependencies": {
         "@inertiajs/react": "^3.7.1",
+        "@laravel/passkeys": "^0.4.0",
         "@tiptap/core": "3.31.3",
         "@tiptap/extension-table": "3.31.3",
         "@tiptap/markdown": "3.31.3",
