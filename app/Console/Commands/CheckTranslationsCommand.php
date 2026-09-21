@@ -1334,6 +1334,9 @@ class CheckTranslationsCommand extends Command
 
         $vendor = self::vendorReferencedKeys("{$base}/vendor", array_unique([...$unused['ja'], ...$unused['en']]));
         $publisher = self::publisherJsonKeys("{$base}/vendor");
+        if ($publisher === []) {
+            $this->warn('laravel-lang catalog not installed (require-dev): published keys cannot be told from orphans.');
+        }
 
         $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
         $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
@@ -1358,7 +1361,7 @@ class CheckTranslationsCommand extends Command
                 $this->line('');
             }
             if ($published !== []) {
-                $this->warn(sprintf('Published by laravel-lang, no translation call found — lang/%s.json (%d): lang:update restores them.', $lang, count($published)));
+                $this->warn(sprintf('Published by laravel-lang, no translation call found — lang/%s.json (%d): lang:update re-adds them with the publisher value.', $lang, count($published)));
                 sort($published);
                 foreach ($published as $k) {
                     $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
