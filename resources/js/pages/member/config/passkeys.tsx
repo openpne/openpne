@@ -1,6 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { usePasskeyRegister } from '@laravel/passkeys/react';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ interface PasskeyRow {
     name: string;
     authenticator: string | null;
     synced: boolean;
+    deviceBound: boolean;
     createdAt: string | null;
     lastUsedAt: string | null;
 }
@@ -40,7 +41,10 @@ function Explanation() {
                 <li>{t('The check happens on your device, so your fingerprint and face never reach this site.')}</li>
             </ul>
             <p className="text-sm text-muted-foreground">{t('Registering a passkey leaves your password working as before.')}</p>
-            <p className="text-sm text-muted-foreground">{t('Do not register one on a device you share: anyone who can unlock it can sign in as you.')}</p>
+            <p className="flex items-start gap-1.5 text-sm text-foreground">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {t('Do not register one on a device you share: anyone who can unlock it can sign in as you.')}
+            </p>
         </div>
     );
 }
@@ -174,8 +178,8 @@ function PasskeyCard({ passkey, last }: { passkey: PasskeyRow; last: boolean }) 
                     <h3 className="text-base text-foreground">{passkey.name}</h3>
                     <p className="text-sm text-muted-foreground">
                         {passkey.authenticator ? t('Saved in :place', { place: passkey.authenticator }) : t('Saved place unknown')}
-                        {' · '}
-                        {passkey.synced ? t('Works on your other devices too') : t('Works on this device only')}
+                        {passkey.synced && ` · ${t('Works on your other devices too')}`}
+                        {passkey.deviceBound && ` · ${t('Works on this device only')}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
                         {passkey.createdAt ? t('Added :date', { date: absolute(passkey.createdAt) }) : null}

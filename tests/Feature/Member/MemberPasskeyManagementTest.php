@@ -495,6 +495,7 @@ class MemberPasskeyManagementTest extends TestCase
             ->where('passkeys.0.id', $passkey->getKey())
             ->where('passkeys.0.name', 'My phone')
             ->where('passkeys.0.synced', true)
+            ->where('passkeys.0.deviceBound', false)
             ->where('requiresPassword', true)
             ->where('requiresSecondFactor', false)
             ->where('deviceBoundOnly', false));
@@ -514,7 +515,26 @@ class MemberPasskeyManagementTest extends TestCase
         $this->register($member, $authenticator);
 
         $this->actingAs($member)->get('/member/config/passkeys')
-            ->assertInertia(fn (Assert $page) => $page->where('passkeys.0.synced', false)->where('deviceBoundOnly', true));
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('passkeys.0.synced', false)
+                ->where('passkeys.0.deviceBound', true)
+                ->where('deviceBoundOnly', true));
+    }
+
+    public function test_a_key_that_may_sync_but_has_not_yet_is_neither_synced_nor_device_bound(): void
+    {
+        // What the credential may do, not what it has done: the screen says nothing rather than
+        // promising one device forever.
+        $member = Member::factory()->create();
+        $authenticator = FakeAuthenticator::forApp();
+        $authenticator->backedUp = false;
+        $this->register($member, $authenticator);
+
+        $this->actingAs($member)->get('/member/config/passkeys')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('passkeys.0.synced', false)
+                ->where('passkeys.0.deviceBound', false)
+                ->where('deviceBoundOnly', false));
     }
 
     public function test_the_classic_category_renders_the_list_and_the_forms(): void

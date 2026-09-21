@@ -269,7 +269,6 @@
                 'This device already holds a passkey for your account.' => __('This device already holds a passkey for your account.'),
                 'This browser does not support passkeys.' => __('This browser does not support passkeys.'),
                 'Too many attempts. Please wait a moment and try again.' => __('Too many attempts. Please wait a moment and try again.'),
-                'Some time has passed since you confirmed your password. Please confirm it again.' => __('Some time has passed since you confirmed your password. Please confirm it again.'),
                 'The passkey could not be used. Please try again.' => __('The passkey could not be used. Please try again.'),
             ]))
             <x-classic.parts id="member_config_passkeys" name="box" :title="__('Passkeys')">
@@ -281,7 +280,7 @@
                         <li>{{ __('The check happens on your device, so your fingerprint and face never reach this site.') }}</li>
                     </ul>
                     <p>{{ __('Registering a passkey leaves your password working as before.') }}</p>
-                    <p>{{ __('Do not register one on a device you share: anyone who can unlock it can sign in as you.') }}</p>
+                    <p class="error">{{ __('Do not register one on a device you share: anyone who can unlock it can sign in as you.') }}</p>
                     <h4>{{ __('Your passkeys') }}</h4>
                     @if (empty($passkeys['passkeys']))
                         <p>{{ __('No passkeys yet.') }}</p>
@@ -292,7 +291,7 @@
                                     <p>
                                         <strong>{{ $passkey['name'] }}</strong>
                                         — {{ $passkey['authenticator'] ? __('Saved in :place', ['place' => $passkey['authenticator']]) : __('Saved place unknown') }}
-                                        · {{ $passkey['synced'] ? __('Works on your other devices too') : __('Works on this device only') }}
+                                        @if ($passkey['synced'])· {{ __('Works on your other devices too') }}@elseif ($passkey['deviceBound'])· {{ __('Works on this device only') }}@endif
                                         <br>
                                         @if ($passkey['createdAt'])
                                             {{ __('Added :date', ['date' => LocalizedDate::dateTime(Carbon::parse($passkey['createdAt']))]) }} ·
