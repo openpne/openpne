@@ -2,6 +2,7 @@
 
 use App\Captcha\Captcha;
 use App\Features\AiAccount\AiAccountController;
+use App\Features\Auth\PasskeyLoginController;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Compose\EditorPreferenceController;
@@ -149,6 +150,13 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
         ->middleware('guest:member')->name('two-factor.login');
     Route::post('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
         ->middleware(['guest:member', 'throttle:two-factor'])->name('two-factor.login.store');
+
+    // The options GET carries no passkey limiter (the group's password-reset limiter is name-filtered
+    // to the reset routes): the login page's autofill fetches it on every view.
+    Route::get('/passkeys/login/options', [PasskeyLoginController::class, 'index'])
+        ->middleware('guest:member')->name('passkey.login-options');
+    Route::post('/passkeys/login', [PasskeyLoginController::class, 'store'])
+        ->middleware(['guest:member', 'throttle:passkey-login'])->name('passkey.login');
 });
 
 // OpenPNE 3 member/login.

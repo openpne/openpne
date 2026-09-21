@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
+use Laravel\Passkeys\Events\PasskeyVerified;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
@@ -50,6 +51,7 @@ class AuthEventLoggingTest extends TestCase
             'mfa.failed' => [fn (Member $m) => new TwoFactorAuthenticationFailed($m), 'mfa.failed'],
             'mfa.recovery_code_used' => [fn (Member $m) => new RecoveryCodeReplaced($m, 'plain-recovery-code'), 'mfa.recovery_code_used'],
             'member.registered' => [fn (Member $m) => new MemberRegistered($m), 'member.registered'],
+            'passkey.verified' => [fn (Member $m) => new PasskeyVerified($m, $m->passkeys()->create(['name' => 'k', 'credential_id' => 'k', 'credential' => []])), 'passkey.verified'],
         ];
     }
 

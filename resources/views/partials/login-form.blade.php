@@ -40,6 +40,20 @@
                             <a href="{{ route('password.request') }}">{{ __('Can not access your account?') }}</a>
                         </p>
                         <input type="submit" class="input_submit" value="{{ __('Login') }}">
+                        {{-- Hidden until the lane below confirms WebAuthn support. --}}
+                        <button type="button" class="input_submit"
+                                data-passkey-login
+                                data-options-url="{{ route('passkey.login-options') }}"
+                                data-submit-url="{{ route('passkey.login') }}"
+                                data-remember-input="login_remember"
+                                data-messages="{{ json_encode([
+                                    'The passkey prompt was cancelled.' => __('The passkey prompt was cancelled.'),
+                                    'This browser does not support passkeys.' => __('This browser does not support passkeys.'),
+                                    'Too many attempts. Please wait a moment and try again.' => __('Too many attempts. Please wait a moment and try again.'),
+                                    'The passkey could not be used. Please try again.' => __('The passkey could not be used. Please try again.'),
+                                ]) }}"
+                                hidden>{{ __('Sign in with a passkey') }}</button>
+                        <p class="error" role="alert" data-passkey-error hidden></p>
                     </td>
                 </tr>
             </table>
@@ -49,8 +63,10 @@
         @endif
 </div>
 
+{{-- Kept outside the form table so the production build's modulepreload <link> is not
+     foster-parented out of the table by the HTML parser. --}}
+@vite('resources/js/passkeys-classic.ts')
 @if ($captchaRequired ?? false)
-    {{-- Registers <altcha-widget>. Kept outside the form table so the production build's
-         modulepreload <link> is not foster-parented out of the table by the HTML parser. --}}
+    {{-- Registers <altcha-widget>. --}}
     @vite('resources/js/altcha.ts')
 @endif

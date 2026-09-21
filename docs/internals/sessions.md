@@ -8,7 +8,7 @@ the member realm's Classic/Modern presentation.)
 
 | Realm | Guard | Cookie (`config/session.php`) | DB table | Login |
 |-------|-------|------------------------------|----------|-------|
-| Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.table` (`sessions`) | `/login` (Fortify) |
+| Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.table` (`sessions`) | `/login` (Fortify), `/passkeys/login` |
 | Admin (`/admin*`, Livewire + Filament system routes) | `admin` | `session.admin_cookie` (`SESSION_ADMIN_COOKIE`) | `session.admin_table` (`admin_sessions`) | `/admin/login` (Filament) |
 
 `/mcp` is a third realm and holds no session at all: it is mounted outside the `web` group, accepts a
