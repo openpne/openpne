@@ -22,7 +22,7 @@ class DiaryFormParityTest extends TestCase
             ->assertOk()
             ->assertSee('name="visibility"', false) // the Ported visibility choice
             ->assertSee('All members')              // Visibility::Members
-            ->assertSee('Private');                 // Visibility::Private
+            ->assertSee('Only me');                 // Visibility::Private
     }
 
     public function test_new_form_offers_web_public_when_the_gate_is_enabled(): void

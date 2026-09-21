@@ -24,6 +24,7 @@ class I18nVendorSharedKeysTest extends TestCase
             echo trans_choice('results', 2);
             $headers->get('Location');
             $label = 'Forbidden';
+            echo __('It\'s gone');
             PHP);
         file_put_contents($this->dir.'/acme/widgets/src/mail.blade.php', "@lang('Regards,')");
         file_put_contents($this->dir.'/laravel-lang/lang/catalog.php', "<?php __('Not Found');");
@@ -37,13 +38,14 @@ class I18nVendorSharedKeysTest extends TestCase
 
     public function test_only_translation_calls_in_vendor_count(): void
     {
-        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated'];
+        $keys = ['Whoops!', 'Go to page :page', 'results', 'Location', 'Forbidden', 'Regards,', 'Not Found', 'Unrelated', "It's gone"];
 
         $hits = CheckTranslationsCommand::vendorReferencedKeys($this->dir, $keys);
         ksort($hits);
 
         $this->assertSame([
             'Go to page :page' => ['acme/widgets'],
+            "It's gone" => ['acme/widgets'],
             'Regards,' => ['acme/widgets'],
             'Whoops!' => ['acme/widgets'],
             'results' => ['acme/widgets'],

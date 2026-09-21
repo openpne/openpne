@@ -1333,6 +1333,7 @@ class CheckTranslationsCommand extends Command
         }
 
         $vendor = self::vendorReferencedKeys("{$base}/vendor", array_unique([...$unused['ja'], ...$unused['en']]));
+        $publisher = self::publisherJsonKeys("{$base}/vendor");
 
         $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
         $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
@@ -1345,7 +1346,8 @@ class CheckTranslationsCommand extends Command
                 continue;
             }
             $shared = array_values(array_filter($unused[$lang], fn (string $k): bool => isset($vendor[$k])));
-            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k])));
+            $published = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && isset($publisher[$k])));
+            $orphan = array_values(array_filter($unused[$lang], fn (string $k): bool => ! isset($vendor[$k]) && ! isset($publisher[$k])));
 
             if ($shared !== []) {
                 $this->warn(sprintf('Rendered by vendor code, not the app — lang/%s.json (%d): keep the value literal, a caller outside this repo shares it.', $lang, count($shared)));
@@ -1355,10 +1357,18 @@ class CheckTranslationsCommand extends Command
                 }
                 $this->line('');
             }
+            if ($published !== []) {
+                $this->warn(sprintf('Published by laravel-lang, no translation call found — lang/%s.json (%d): lang:update restores them.', $lang, count($published)));
+                sort($published);
+                foreach ($published as $k) {
+                    $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                }
+                $this->line('');
+            }
             if ($orphan === []) {
                 continue;
             }
-            $this->warn(sprintf('Not referenced in app or vendor code — lang/%s.json (%d):', $lang, count($orphan)));
+            $this->warn(sprintf('Not referenced in app or vendor code, not published — lang/%s.json (%d):', $lang, count($orphan)));
             sort($orphan);
             foreach (array_slice($orphan, 0, 50) as $k) {
                 $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -1368,6 +1378,22 @@ class CheckTranslationsCommand extends Command
             }
             $this->line('');
         }
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    public static function publisherJsonKeys(string $vendorDir): array
+    {
+        $keys = [];
+        foreach (glob("{$vendorDir}/laravel-lang/lang/locales/en/json*.json") ?: [] as $file) {
+            $json = json_decode((string) file_get_contents($file), true);
+            foreach (array_keys(is_array($json) ? $json : []) as $k) {
+                $keys[(string) $k] = true;
+            }
+        }
+
+        return $keys;
     }
 
     /**
@@ -1383,7 +1409,7 @@ class CheckTranslationsCommand extends Command
             return [];
         }
         $wanted = array_fill_keys($keys, true);
-        $pattern = '/(?:(?<![A-Za-z_])(?:__|trans|trans_choice)|@lang|Lang::get)\(\s*([\'"])((?:\\.|(?!\1).)+)\1\s*[,)]/';
+        $pattern = '/(?:(?<![A-Za-z_])(?:__|trans|trans_choice)|@lang|Lang::get)\(\s*([\'"])((?:\\\\.|(?!\1).)+)\1\s*[,)]/';
         $files = (new Finder)
             ->files()
             ->in($vendorDir)

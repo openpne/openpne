@@ -66,7 +66,7 @@ class MembersTable
                 // The panel guard authorizes, so the author-less WithdrawMember runs directly; the truthy
                 // return is required because DeleteAction reports failure on a falsy using() result.
                 DeleteAction::make()
-                    ->label(__('Withdraw'))
+                    ->label(__('Withdraw this member'))
                     ->hidden(fn (Member $record): bool => ! MemberResource::canDelete($record))
                     ->using(function (Member $record): bool {
                         app(WithdrawMember::class)($record);
