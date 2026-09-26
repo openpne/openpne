@@ -214,9 +214,10 @@ test('a tabbed conversation holds its chrome still through a scroll', async () =
     room('tabbed');
 
     await act(async () => {
+        window.dispatchEvent(new Event('wheel'));
         (window as { scrollY: number }).scrollY = 400;
         window.dispatchEvent(new Event('scroll'));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     });
 
     expect(header()?.className).not.toContain('-translate-y-full');
@@ -228,9 +229,10 @@ test('a conversation under the shipped look holds its chrome still', async () =>
     room('standard');
 
     await act(async () => {
+        window.dispatchEvent(new Event('wheel'));
         (window as { scrollY: number }).scrollY = 400;
         window.dispatchEvent(new Event('scroll'));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     });
 
     expect(header()?.className).not.toContain('-translate-y-full');
