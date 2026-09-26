@@ -51,6 +51,9 @@ test('a sheet opened by a button takes every click', () => {
 test('a sheet rises from the foot of the screen unless told to stand in place', () => {
     open(false);
     expect(screen.getByRole('dialog').className).toContain('animate-sheet-from-bottom');
+    // Standing on the foot of the screen, the sheet has no status bar over its top edge.
+    expect(screen.getByRole('dialog').className).toContain('pt-4');
+    expect(screen.getByRole('dialog').className).not.toContain('pt-safe-4');
 
     cleanup();
     renderWithProviders(

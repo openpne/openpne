@@ -52,7 +52,7 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
             // Side insets for landscape: the bar spans inset-x-0, so the outer tabs would otherwise
             // fall under the display cutout / corner radius.
             className={cn(
-                'fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
+                'fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pr-safe pb-safe pl-safe backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
                 hidden && 'translate-y-full',
             )}
         >
@@ -93,7 +93,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                                 {mark === 'count' && badge && <CountPill count={count} className="absolute -top-2 -right-2.5" />}
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
-                            <span className="max-w-full truncate text-[11px] leading-none">{t(label.key, label.replacements)}</span>
+                            <span className="max-w-full truncate text-2xs leading-none">{t(label.key, label.replacements)}</span>
                             {/* After the word: the name must read word first. */}
                             {badge && count > 0 && (mark === 'count' || dotted) && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
                         </Link>

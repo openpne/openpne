@@ -49,7 +49,7 @@ function Fab({ action, extended }: { action: ChromeAction; extended: boolean }) 
     return (
         <nav
             aria-label={label}
-            className="fixed right-[calc(1.25rem+env(safe-area-inset-right))] bottom-[calc(1.25rem+var(--modern-bottom-offset))] z-30 lg:hidden"
+            className="fixed right-safe-5 bottom-[calc(1.25rem+var(--modern-bottom-offset))] z-30 lg:hidden"
         >
             {/* The name in both states, the floated word only while the pill has no room to print
                 one: collapsing is a visual economy, and the control's name must not travel with it. */}

@@ -42,7 +42,7 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                 // above it — announced or floated — would replace what the reader can see.
                 <DialogTrigger className={BAR_CONTROL_LABELED}>
                     <Menu className="size-6" aria-hidden />
-                    <span className="text-[11px] leading-none">{t('Menu')}</span>
+                    <span className="text-2xs leading-none">{t('Menu')}</span>
                 </DialogTrigger>
             ) : (
                 <Tip label={t('Menu')}>
@@ -55,12 +55,12 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                 side={labeled ? 'right' : 'left'}
                 closeLabel={t('Close')}
                 // The full-bleed drawer keeps the bar's top rhythm: 4px of line, then the row.
-                className={labeled ? 'pt-[calc(0.25rem+env(safe-area-inset-top))]' : undefined}
+                className={labeled ? 'pt-safe-1' : undefined}
             >
                 {labeled && (
                     // The bar's line continues across the drawer: opening it swaps the page under
                     // the site's colors, not the site.
-                    <span aria-hidden className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-1" style={{ backgroundColor: props.snsLogo.color }} />
+                    <span aria-hidden className="absolute inset-x-0 top-safe h-1" style={{ backgroundColor: props.snsLogo.color }} />
                 )}
                 <DialogTitle asChild>
                     <Link

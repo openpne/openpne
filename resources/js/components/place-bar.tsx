@@ -32,7 +32,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     // on a form, which the registry pins to no scope.
     let face: ReactNode = null;
     if (scope?.kind === 'group') {
-        face = <CommunityImage name={scope.name} src={scope.imageUrl} className="size-6" textClassName="text-[10px]" decorative />;
+        face = <CommunityImage name={scope.name} src={scope.imageUrl} className="size-6" textClassName="text-3xs" decorative />;
     } else if (scope?.kind === 'member') {
         face = <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="xs" decorative />;
     }
@@ -53,7 +53,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         <div
             data-testid="place-bar"
             className={cn(
-                'sticky top-[var(--modern-top-offset)] z-20 -mx-4 hidden min-w-0 border-b bg-background px-4 pt-2 pb-1 lg:flex',
+                'sticky top-(--modern-top-offset) z-20 -mx-4 hidden min-w-0 border-b bg-background px-4 pt-2 pb-1 lg:flex',
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >

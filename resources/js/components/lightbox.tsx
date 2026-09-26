@@ -99,7 +99,7 @@ export function Lightbox({
 
                     {/* pointer-events-none so the gaps between the two controls stay part of the
                         scrim and still dismiss; each control opts back in. */}
-                    <div className="lightbox-chrome pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[var(--lb-chrome-top)] items-center justify-between pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
+                    <div className="lightbox-chrome pointer-events-none absolute inset-x-0 top-0 z-10 flex h-(--lb-chrome-top) items-center justify-between pl-safe-2 pr-safe-2 pt-safe">
                         <Tip label={t('Close')}>
                             <DialogPrimitive.Close className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                 <X className="size-5" aria-hidden />
@@ -142,7 +142,7 @@ export function Lightbox({
                                         // From sm up the wide padding is the chevrons' own lane, so
                                         // the image never runs under them; below sm they overlap, a
                                         // cursor having no swipe to fall back on.
-                                        className="lightbox-slide flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
+                                        className="lightbox-slide flex h-full w-full shrink-0 items-center justify-center pb-(--lb-chrome-bottom) pt-(--lb-chrome-top) pl-safe pr-safe sm:pointer-fine:pl-safe-16 sm:pointer-fine:pr-safe-16"
                                     >
                                         <img
                                             src={image.url}
@@ -163,7 +163,7 @@ export function Lightbox({
                     {/* Dots stop scaling past a handful of images — swap them back for the number;
                         the screen-reader readout is the sr-only text beside them. */}
                     {many && index !== null && (
-                        <div className="lightbox-chrome pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-[var(--lb-chrome-bottom)] items-center justify-center pb-[env(safe-area-inset-bottom)]">
+                        <div className="lightbox-chrome pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-(--lb-chrome-bottom) items-center justify-center pb-safe">
                             <span aria-live="polite" aria-atomic="true" className="sr-only">
                                 {index + 1} / {images.length}
                             </span>
@@ -192,7 +192,7 @@ export function Lightbox({
                                     type="button"
                                     onClick={goPrev}
                                     aria-disabled={!hasPrev}
-                                    className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                    className="left-safe-2 pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                                 >
                                     <ChevronLeft className="size-6" aria-hidden />
                                 </button>
@@ -202,7 +202,7 @@ export function Lightbox({
                                     type="button"
                                     onClick={goNext}
                                     aria-disabled={!hasNext}
-                                    className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                    className="right-safe-2 pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                                 >
                                     <ChevronRight className="size-6" aria-hidden />
                                 </button>

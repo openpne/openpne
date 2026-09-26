@@ -45,9 +45,9 @@ export function DialogContent({
  * one restates the top padding because it has no top edge to inset from.
  */
 const SHEET_SIDE = {
-    left: 'left-0 pl-[calc(1rem+env(safe-area-inset-left))]',
-    right: 'right-0 w-full max-w-none pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))]',
-    bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]',
+    left: 'left-0 pl-safe-4',
+    right: 'right-0 w-full max-w-none pr-safe-3 pl-safe-3',
+    bottom: 'inset-x-0 top-auto bottom-0 w-full max-w-none max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border pt-4 pb-safe-4',
 };
 
 const SHEET_MOTION = {
@@ -76,7 +76,7 @@ export function SheetContent({
                 className={cn(
                     // Edge-to-edge by construction (inset-y-0), so it pads for all three insets it can
                     // meet: status bar, home indicator, and the landscape cutout on the edge it hugs.
-                    'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl outline-none',
+                    'fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-safe-4 pb-safe-4 shadow-xl outline-none',
                     SHEET_SIDE[side],
                     animated && SHEET_MOTION[side],
                     className,
@@ -87,9 +87,9 @@ export function SheetContent({
                     read after the whole nav would put the tab order at odds with the visual one. */}
                 {side === 'right' && (
                     // Wordful, so no Tip: the control is named by the word it shows.
-                    <DialogPrimitive.Close className="absolute top-[calc(0.25rem+env(safe-area-inset-top))] right-[calc(0.5rem+env(safe-area-inset-right))] inline-flex size-12 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent">
+                    <DialogPrimitive.Close className="absolute top-safe-1 right-safe-2 inline-flex size-12 flex-col items-center justify-center gap-0.5 rounded-full text-muted-foreground transition hover:bg-accent">
                         <X className="size-6" aria-hidden />
-                        <span className="text-[11px] leading-none">{closeLabel}</span>
+                        <span className="text-2xs leading-none">{closeLabel}</span>
                     </DialogPrimitive.Close>
                 )}
                 {children}
@@ -101,7 +101,7 @@ export function SheetContent({
                                 'absolute right-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent',
                                 // A sheet standing on the foot of the screen has no status bar over its top
                                 // corner, so its close sits at the plain gutter.
-                                side === 'bottom' ? 'top-3' : 'top-[calc(0.75rem+env(safe-area-inset-top))]',
+                                side === 'bottom' ? 'top-3' : 'top-safe-3',
                             )}
                         >
                             <X className="size-5" />

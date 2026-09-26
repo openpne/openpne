@@ -170,7 +170,7 @@ export function TalkComposer({
                 BLEED_EDGES,
                 // The transition is for the look whose bottom bar leaves when someone writes: the var
                 // jumps, but the length it computes to is what animates.
-                'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
+                'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-offset-2 transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
             )}
         >
             {error !== null && (
@@ -261,7 +261,7 @@ export function TalkComposer({
                         // The line-height and padding add up to the 44px the buttons beside it stand
                         // at, and the radius needs its `!` because the base rounded-field outranks it
                         // by source order.
-                        className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-[9px] leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+                        className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-2.25 leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>
                 <Tip label={t('Send')}>

@@ -339,7 +339,7 @@ function MoreMenu({ editor }: { editor: Editor }) {
                             tabIndex={-1}
                             data-testid="compose-more-panel"
                             // The grid flows left→right, so the order below pairs related commands by row.
-                            className="fixed inset-x-0 bottom-0 z-50 grid max-h-[70dvh] grid-cols-2 gap-x-1 overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
+                            className="fixed inset-x-0 bottom-0 z-50 grid max-h-[70dvh] grid-cols-2 gap-x-1 overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-safe-1 shadow-lg outline-none"
                         >
                             <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
                             <MoreItem
@@ -581,7 +581,7 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
 
             // The host Panel has to pass `overflow="visible"`, or the sticky resolves against the
             // clipped card instead of the page.
-            className="sticky top-[var(--modern-top-offset)] z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
+            className="sticky top-(--modern-top-offset) z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (
                 <>

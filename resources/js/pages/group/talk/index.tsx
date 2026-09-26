@@ -554,7 +554,7 @@ export default function GroupTalkIndex() {
             ) : (
                 // With no composer standing on the screen's foot, this line takes back both the
                 // padding the frame gives it and the home-indicator strip.
-                <p className="text-sm text-muted-foreground max-lg:pb-[calc(2rem+var(--modern-bottom-offset))]">
+                <p className="text-sm text-muted-foreground max-lg:pb-offset-8">
                     {t('Join this %community% to post.')}
                 </p>
             )}

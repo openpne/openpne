@@ -79,7 +79,7 @@ function TalkRooms({ rooms: { rooms, hasMore }, url }: { rooms: TalkNavRooms; ur
                             aria-current={active ? 'page' : undefined}
                             className={cn(ROOM_ROW, 'pl-2', active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent')}
                         >
-                            <CommunityImage name={room.name} src={room.imageUrl} className="size-6" textClassName="text-[10px]" decorative />
+                            <CommunityImage name={room.name} src={room.imageUrl} className="size-6" textClassName="text-3xs" decorative />
                             <span className="min-w-0 flex-1 truncate">{room.name}</span>
                             {room.muted && <BellOff className="size-3 shrink-0" aria-label={t('Muted')} />}
                             {/* The row is one link, so the pill's phrase joins its name; a muted room

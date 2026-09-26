@@ -41,6 +41,7 @@
     /* Foreground for chrome sitting on a translucent dark scrim over image content (lightbox
        nav buttons). The scrim is dark in both themes, so this stays white in both. */
     --color-scrim-foreground: var(--scrim-foreground);
+    --color-scrim: var(--scrim);
     /* Chosen-state accent for selection controls (checked pill/card, radio dot). Chromatic on
        purpose: with a neutral primary a gray tint reads as disabled, and a primary fill makes a
        selected control shout like a primary action. Follows the link blue (declared once in :root;
@@ -56,6 +57,10 @@
     /* Named radius scale (additive — leaves the raw rounded-md the rest of the app uses untouched). */
     --radius-field: 0.5rem;
     --radius-card: 0.875rem;
+    --radius-tile: 1.25rem;
+    /* Two steps under text-xs; neither sets a line-height, so a site keeps the one it inherits. */
+    --text-2xs: 0.6875rem;
+    --text-3xs: 0.625rem;
     /* Mode-aware elevation via the var() indirection (values live in :root / .dark). */
     --shadow-card: var(--card-shadow);
     --shadow-elevated: var(--elevated-shadow);
@@ -133,6 +138,61 @@
     }
 }
 
+/* Inset-aware spacing on the four screen edges: pb-safe-4 is 1rem plus env(safe-area-inset-bottom).
+   Registered in lib/utils.ts so cn() merges them like the built-in spacing utilities. */
+@utility pt-safe {
+    padding-top: env(safe-area-inset-top);
+}
+@utility pt-safe-* {
+    padding-top: calc(--spacing(--value(number)) + env(safe-area-inset-top));
+}
+@utility pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+@utility pb-safe-* {
+    padding-bottom: calc(--spacing(--value(number)) + env(safe-area-inset-bottom));
+}
+@utility pl-safe {
+    padding-left: env(safe-area-inset-left);
+}
+@utility pl-safe-* {
+    padding-left: calc(--spacing(--value(number)) + env(safe-area-inset-left));
+}
+@utility pr-safe {
+    padding-right: env(safe-area-inset-right);
+}
+@utility pr-safe-* {
+    padding-right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
+}
+@utility top-safe {
+    top: env(safe-area-inset-top);
+}
+@utility top-safe-* {
+    top: calc(--spacing(--value(number)) + env(safe-area-inset-top));
+}
+@utility bottom-safe {
+    bottom: env(safe-area-inset-bottom);
+}
+@utility bottom-safe-* {
+    bottom: calc(--spacing(--value(number)) + env(safe-area-inset-bottom));
+}
+@utility left-safe {
+    left: env(safe-area-inset-left);
+}
+@utility left-safe-* {
+    left: calc(--spacing(--value(number)) + env(safe-area-inset-left));
+}
+@utility right-safe {
+    right: env(safe-area-inset-right);
+}
+@utility right-safe-* {
+    right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
+}
+/* The bottom bar's reserved strip (--modern-bottom-offset, set by AppShell) plus spacing. */
+@utility pb-offset-* {
+    padding-bottom: calc(--spacing(--value(number)) + var(--modern-bottom-offset));
+}
+
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */
@@ -171,6 +231,7 @@
     --selected: var(--link);
     /* Theme-invariant on purpose (not redefined in .dark): it sits on a dark image scrim. */
     --scrim-foreground: oklch(1 0 0);
+    --scrim: oklch(0 0 0 / 0.72);
     /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
     --field: oklch(0.995 0.002 83);
     --field-border: oklch(0.845 0.01 83);
