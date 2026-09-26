@@ -77,7 +77,7 @@ export default function MemberSearch() {
                         placeholder={t('Search by %nickname%')}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="rounded-full pr-11 pl-5"
+                        variant="search"
                     />
                     <SearchSubmitButton loading={searching} />
                 </div>

@@ -57,7 +57,7 @@ export default function DiaryFeed() {
                             placeholder={t('Search by keyword')}
                             value={form.data.keyword}
                             onChange={(e) => form.setData('keyword', e.target.value)}
-                            className="rounded-full pr-11 pl-5"
+                            variant="search"
                         />
                         <SearchSubmitButton loading={form.processing} />
                     </div>
