@@ -143,8 +143,9 @@ test('the desktop line is the site color, and only desktop draws it', () => {
     renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
     const line = screen.getByTestId('site-color-line');
 
-    // Inline, because the color is per-site data — no palette class can carry it.
-    expect(line.style.backgroundColor).toBe('#336699');
+    // The color is per-site data, so it travels as a custom property the class reads.
+    expect(line.style.getPropertyValue('--site-color')).toBe('#336699');
+    expect(line.className).toContain('bg-(--site-color)');
     // The phone's copy is the breadcrumb bar's own foot, which is why this one is hidden below lg.
     expect(line.className).toContain('hidden');
     expect(line.className).toContain('lg:block');

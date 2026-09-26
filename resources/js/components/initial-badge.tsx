@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, CSSProperties } from 'react';
 import { computeInitial, pickReadableTextColor } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
 
@@ -18,10 +18,10 @@ export function InitialBadge({ name, color = null, className, style, ...props }:
         <span
             className={cn(
                 'inline-flex items-center justify-center font-bold leading-none',
-                color ? pickReadableTextColor(color) : 'bg-muted-foreground/20 text-foreground/75',
+                color ? `bg-(--badge-color) ${pickReadableTextColor(color)}` : 'bg-muted-foreground/20 text-foreground/75',
                 className,
             )}
-            style={color ? { ...style, backgroundColor: color } : style}
+            style={color ? ({ ...style, '--badge-color': color } as CSSProperties) : style}
             {...props}
         >
             {computeInitial(name)}

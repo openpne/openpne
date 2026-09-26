@@ -76,9 +76,10 @@ test('a lone boxed picture is held to its box by the width formula the link card
         const { container } = render(<ImageGrid images={[hero(w, h)]} variant="boxed" />);
         const box = container.querySelector('button');
 
-        expect(box?.style.maxWidth).toBe(`min(100%, 24rem, ${w}px, calc(20rem * (${w} / ${h})))`);
-        expect(box?.style.maxWidth).toBe(boxedPictureMaxWidth(w, `${w} / ${h}`));
-        expect(box?.style.aspectRatio).toBe(`${w} / ${h}`);
+        expect(box?.style.getPropertyValue('--picture-max-w')).toBe(`min(100%, 24rem, ${w}px, calc(20rem * (${w} / ${h})))`);
+        expect(box?.style.getPropertyValue('--picture-max-w')).toBe(boxedPictureMaxWidth(w, `${w} / ${h}`));
+        expect(box?.style.getPropertyValue('--picture-ratio')).toBe(`${w} / ${h}`);
+        expect(box?.className).toContain('aspect-(--picture-ratio) max-w-(--picture-max-w)');
         expect(container.querySelector('img')?.getAttribute('sizes')).toBe(HERO_SIZES.boxed);
     }
 });
@@ -86,7 +87,7 @@ test('a lone boxed picture is held to its box by the width formula the link card
 test('a lone post picture is capped by the viewport, not by the box', () => {
     const { container } = render(<ImageGrid images={[hero(1200, 630)]} variant="post" />);
 
-    expect(container.querySelector('button')?.style.maxWidth).toBe('min(100%, 1200px, calc(min(70vh, 32rem) * (1200 / 630)))');
+    expect(container.querySelector('button')?.style.getPropertyValue('--picture-max-w')).toBe('min(100%, 1200px, calc(min(70vh, 32rem) * (1200 / 630)))');
     expect(container.querySelector('img')?.getAttribute('sizes')).toBe(HERO_SIZES.post);
 });
 

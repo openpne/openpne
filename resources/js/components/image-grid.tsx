@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type CSSProperties, useRef, useState } from 'react';
 import { Lightbox } from '@/components/lightbox';
 import { useAnimatedPictures } from '@/lib/animated-pictures';
 import { useT } from '@/lib/i18n';
@@ -95,20 +95,20 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                     // only to auto widths, and a button resolves as shrink-to-fit.
                     className={cn(
                         'block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        sized ? 'w-full' : 'w-fit max-w-full',
+                        sized ? 'w-full aspect-(--picture-ratio) max-w-(--picture-max-w)' : 'w-fit max-w-full',
                         !sized && (variant === 'boxed' ? 'max-h-[20rem]' : 'max-h-[min(70vh,32rem)]'),
                         !sized && variant === 'boxed' && 'max-w-[24rem]',
                         className,
                     )}
                     style={
                         sized
-                            ? {
-                                  aspectRatio: `${hero.width} / ${hero.height}`,
-                                  maxWidth:
+                            ? ({
+                                  '--picture-ratio': `${hero.width} / ${hero.height}`,
+                                  '--picture-max-w':
                                       variant === 'boxed'
                                           ? boxedPictureMaxWidth(hero.width, `${hero.width} / ${hero.height}`)
                                           : `min(100%, ${hero.width}px, calc(min(70vh, 32rem) * (${hero.width} / ${hero.height})))`,
-                              }
+                              } as CSSProperties)
                             : undefined
                     }
                 >

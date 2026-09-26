@@ -84,7 +84,7 @@ one element for the stylesheet's order to resolve.
   sign-in link. Waving the file through would let any later weight in it stay green.
 - The guard reads Tailwind classes in `.ts` and `.tsx` — `.ts` because `compose/editor-extensions.ts`
   holds the class string the editable is rendered with — and covers every weight utility except
-  `font-normal`, plus both arbitrary forms (`font-[550]`, `[font-weight:700]`). Plain CSS, inline
-  styles and semantic `<strong>` are outside it by construction, so they stay a review question.
+  `font-normal`, plus both arbitrary forms (`font-[550]`, `[font-weight:700]`). Plain CSS and semantic
+  `<strong>` are outside it by construction, so they stay a review question.
 - The budgets are counts, which cannot see a removal and an addition inside one owner file cancelling
   out. Occurrence fingerprints would; move to those if that ever actually happens.

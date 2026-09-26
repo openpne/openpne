@@ -82,7 +82,8 @@ test("a wide picture is held to the box a member's own picture gets in a comment
     const { container } = render(<LinkCard card={{ ...wide, imageWidth: 300, imageHeight: 200 }} />);
     const image = container.querySelector('img');
 
-    expect(image?.style.maxWidth).toBe('min(100%, 24rem, 300px, calc(20rem * (1.91)))');
+    expect(image?.style.getPropertyValue('--picture-max-w')).toBe('min(100%, 24rem, 300px, calc(20rem * (1.91)))');
+    expect(image?.className).toContain('aspect-(--picture-ratio) max-w-(--picture-max-w)');
     expect(image?.getAttribute('sizes')).toBe(HERO_SIZES.boxed);
 });
 

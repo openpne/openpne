@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/react';
+import type { CSSProperties } from 'react';
 import { computeInitial, pickReadableTextColor } from '@/lib/identity-mark';
 import type { PageProps } from '@/types';
 
@@ -21,8 +22,8 @@ export function BrandMark({ size = 'md', className = '' }: { size?: 'sm' | 'md' 
 
     return (
         <span
-            className={`inline-flex shrink-0 items-center justify-center font-bold leading-none ${pickReadableTextColor(snsLogo.color)} ${sizeClass} ${className}`}
-            style={{ backgroundColor: snsLogo.color }}
+            className={`inline-flex shrink-0 items-center justify-center bg-(--site-color) font-bold leading-none ${pickReadableTextColor(snsLogo.color)} ${sizeClass} ${className}`}
+            style={{ '--site-color': snsLogo.color } as CSSProperties}
             aria-hidden
         >
             {computeInitial(name)}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Menu, UserRound } from 'lucide-react';
 import { useT } from '@/lib/i18n';
@@ -60,7 +60,7 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                 {labeled && (
                     // The bar's line continues across the drawer: opening it swaps the page under
                     // the site's colors, not the site.
-                    <span aria-hidden className="absolute inset-x-0 top-safe h-1" style={{ backgroundColor: props.snsLogo.color }} />
+                    <span aria-hidden className="absolute inset-x-0 top-safe h-1 bg-(--site-color)" style={{ '--site-color': props.snsLogo.color } as CSSProperties} />
                 )}
                 <DialogTitle asChild>
                     <Link

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { BodyLink } from '@/components/body-link';
 import { boxedPictureMaxWidth, HERO_SIZES } from '@/components/image-grid';
 import { type FitSource, fitFallbackUrl, fitSrcSet } from '@/lib/image-sources';
@@ -54,8 +55,8 @@ export function LinkCard({ card, className }: { card: LinkCardData | null; class
                         alt=""
                         aria-hidden
                         loading="lazy"
-                        className="mt-2 block w-full rounded-md bg-muted object-cover"
-                        style={{ aspectRatio: `${BANNER_RATIO}`, maxWidth: boxedPictureMaxWidth(card.imageWidth, `${BANNER_RATIO}`) }}
+                        className="mt-2 block w-full rounded-md bg-muted object-cover aspect-(--picture-ratio) max-w-(--picture-max-w)"
+                        style={{ '--picture-ratio': `${BANNER_RATIO}`, '--picture-max-w': boxedPictureMaxWidth(card.imageWidth, `${BANNER_RATIO}`) } as CSSProperties}
                     />
                 </div>
             </BodyLink>

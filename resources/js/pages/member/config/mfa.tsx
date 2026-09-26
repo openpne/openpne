@@ -89,15 +89,13 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
                 {t('You need an authenticator app that generates a one-time code at login. Search your device\'s app store for "authenticator" and install one.')}
             </p>
             <p className="text-sm text-foreground">{t('Scan the following QR code with your authenticator app:')}</p>
-            {/* The padding is the QR quiet zone: it must stay the QR's own background color in both
-                themes (functional, not thematic — an inline style like BrandMark's configured color). */}
+            {/* The padding is the QR quiet zone, on paper that stays white in both themes. */}
             <img
                 src={qrCode}
                 alt={t('QR code for your authenticator app')}
                 width={192}
                 height={192}
-                className="rounded-md border border-border p-2"
-                style={{ backgroundColor: '#fff' }}
+                className="rounded-md border border-border bg-paper p-2"
             />
             <p className="text-sm text-muted-foreground">
                 {t('Or enter the following code manually:')} <code className="select-all">{secret}</code>

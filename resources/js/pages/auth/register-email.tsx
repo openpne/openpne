@@ -60,7 +60,7 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
                     tabIndex={-1}
                     autoComplete="off"
                     aria-hidden="true"
-                    style={{ position: 'absolute', left: '-9999px' }}
+                    className="absolute -left-[9999px]"
                 />
 
                 <Field label={t('Email')} htmlFor="email" error={errors.email}>

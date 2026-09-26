@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { type CSSProperties, lazy, Suspense, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { Field } from '@/components/ui/field';
@@ -19,6 +19,7 @@ import {
 } from './editor-mode';
 import { InputMethodBadge, InputMethodMenu } from './input-method-menu';
 import { saveComposeEditor } from './save-compose-editor';
+import { cn } from '@/lib/utils';
 
 // Module scope + lazy: tiptap and its extensions ship in a separate chunk, loaded the first time any
 // compose form opens the rich editor and shared across all of them.
@@ -147,8 +148,11 @@ export function BodyField({
                         // Same height the editable will open at, off the same line-height, so the lazy
                         // chunk lands without the field jumping.
                         <div
-                            style={rows ? { minHeight: composeEditorRowsMinHeight(rows) } : undefined}
-                            className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-base text-muted-foreground md:text-sm"
+                            style={rows ? ({ '--rows-min-h': composeEditorRowsMinHeight(rows) } as CSSProperties) : undefined}
+                            className={cn(
+                                'flex w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-base text-muted-foreground md:text-sm',
+                                rows ? 'min-h-(--rows-min-h)' : 'min-h-24',
+                            )}
                         >
                             {t('Loading editor…')}
                         </div>
