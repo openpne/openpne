@@ -241,7 +241,7 @@
     /* Theme-invariant on purpose (not redefined in .dark): it sits on a dark image scrim. */
     --scrim-foreground: oklch(1 0 0);
     --scrim: oklch(0 0 0 / 0.72);
-    /* Theme-invariant too: a printed surface, such as a QR code's quiet zone. */
+    /* Theme-invariant too: a printed surface. */
     --paper: oklch(1 0 0);
     /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
     --field: oklch(0.995 0.002 83);
