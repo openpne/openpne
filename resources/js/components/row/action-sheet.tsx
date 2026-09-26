@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 
 /** The ring is inset because the frame below clips: drawn outside, a full-width item's own would be cut away. */
@@ -107,7 +107,11 @@ export function ActionSheet({
                 }}
             >
                 <span aria-hidden className="mx-auto mb-6 h-1 w-10 shrink-0 rounded-full bg-border" />
-                <DialogTitle className={titleVisible ? `${headingVariants({ variant: 'section' })} mb-4 text-center` : 'sr-only'}>{title}</DialogTitle>
+                <DialogTitle asChild>
+                    <Heading as="h2" variant="section" className={titleVisible ? 'mb-4 text-center' : 'sr-only'}>
+                        {title}
+                    </Heading>
+                </DialogTitle>
                 {children}
             </SheetContent>
         </Dialog>

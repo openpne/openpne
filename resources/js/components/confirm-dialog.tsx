@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertDialog } from 'radix-ui';
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 
 export type ConfirmOptions = {
@@ -77,8 +77,10 @@ export function ConfirmDialogHost() {
                     {opts && (
                         <>
                             <div className="space-y-2 px-5 pb-4 pt-5">
-                                <AlertDialog.Title className={headingVariants({ variant: 'section' })}>
-                                    {opts.title}
+                                <AlertDialog.Title asChild>
+                                    <Heading as="h2" variant="section">
+                                        {opts.title}
+                                    </Heading>
                                 </AlertDialog.Title>
                                 {opts.description && (
                                     <AlertDialog.Description asChild>

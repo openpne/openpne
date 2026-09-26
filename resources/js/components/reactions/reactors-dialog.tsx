@@ -4,7 +4,7 @@ import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Spinner } from '@/components/spinner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import type { ReactorGroup } from '@/lib/reactions/types';
 
@@ -52,7 +52,11 @@ export function ReactorsDialog({
                     opener?.focus({ preventScroll: true });
                 }}
             >
-                <DialogTitle className={headingVariants({ variant: 'section' })}>{t('Reactions')}</DialogTitle>
+                <DialogTitle asChild>
+                    <Heading as="h2" variant="section">
+                        {t('Reactions')}
+                    </Heading>
+                </DialogTitle>
                 {groups === null ? (
                     <p className="flex justify-center py-6 text-muted-foreground">
                         <Spinner size={6} />

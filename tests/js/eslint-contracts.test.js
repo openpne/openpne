@@ -80,3 +80,25 @@ test('the entry keeps every restriction its block restates', async () => {
     assert.ok(found.some((m) => m.startsWith('Format dates through')));
     assert.ok(found.some((m) => m.startsWith('This is a JSX text node')));
 });
+
+/**
+ * The misspelled token is the teeth of the theme: with no declared colors the rule lets an undeclared
+ * name through. `rounded-field` exists only through the theme's `--radius-field`.
+ */
+test('a Modern module is refused a palette color, an undeclared token, a class Tailwind cannot generate, and a class it cannot read', async () => {
+    const found = await messages(
+        "import { Button } from '@/components/ui/button';\nimport { headingVariants } from '@/components/ui/heading';\nexport const a = <div className=\"bg-pink-500 bg-primry rounded-huge\" />;\nexport const b = <Button className={headingVariants({ variant: 'section' })}>x</Button>;\n",
+        'resources/js/components/x.tsx',
+    );
+
+    assert.ok(found.some((m) => m.startsWith('"bg-pink-500" uses the raw Tailwind palette')));
+    assert.ok(found.some((m) => m.startsWith('"bg-primry" is not a declared theme color. Did you mean "bg-primary"?')));
+    assert.ok(found.some((m) => m.startsWith('"rounded-huge" is not a class this project\'s Tailwind knows')));
+    assert.ok(found.some((m) => m.startsWith('Dynamically built className on <Button>')));
+
+    const allowed = await messages(
+        "import { Button } from '@/components/ui/button';\nexport const a = <div className=\"bg-primary rounded-field\" />;\nexport const b = <Button className=\"w-full\">x</Button>;\n",
+        'resources/js/components/x.tsx',
+    );
+    assert.deepEqual(allowed, []);
+});

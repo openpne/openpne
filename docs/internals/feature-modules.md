@@ -229,8 +229,9 @@ deviations are registry entries, or
 Modern pages build on the shared primitives in
 [`components/ui/`](../../resources/js/components/ui) (Button, Input, Field, …) and the
 semantic design tokens in [`app.css`](../../resources/css/app.css), not bare controls or
-raw Tailwind palette — `RawPaletteGuardTest` enforces the no-raw-palette rule, so a page is
-dark-correct and re-themeable by construction.
+raw Tailwind palette, so a page is dark-correct and re-themeable by construction. Two guards
+enforce it: `RawPaletteGuardTest`, a regex over every `.tsx` that also refuses bare white and black,
+and `shadcn/no-raw-colors`, which reads the class sites it can resolve and names the declared tokens.
 
 **Admin** (Filament) may use plain CRUD for simple, non-behavioral master data
 (labels, categories, basic config). For SNS-meaningful operations — anything with
