@@ -30,7 +30,7 @@ export function LeftNav() {
                     </nav>
                     {/* The desktop counterpart of the dashboard's action FAB — it follows the same unit. */}
                     {enabledFeatures.diary && (
-                        <ActionLink href="/diary/new" className="rounded-full">
+                        <ActionLink href="/diary/new" shape="pill">
                             <Pencil className="size-5" strokeWidth={2.25} />
                             {t('Post %diary%')}
                         </ActionLink>

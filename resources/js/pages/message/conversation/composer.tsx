@@ -185,9 +185,10 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                     <Button
                         variant="ghost"
                         size="icon"
+                        tone="muted"
                         onClick={() => fileInput.current?.click()}
                         disabled={sending || images.length >= MAX_POST_IMAGES}
-                        className="shrink-0 text-muted-foreground"
+                        className="shrink-0"
                     >
                         <ImagePlus className="size-5" aria-hidden />
                     </Button>

@@ -1,9 +1,4 @@
 {
-  "resources/js/components/left-nav.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
   "resources/js/components/right-rail.tsx": {
     "shadcn/no-restyle": {
       "count": 3
@@ -41,12 +36,7 @@
   },
   "resources/js/pages/group/talk/composer.tsx": {
     "shadcn/no-restyle": {
-      "count": 5
-    }
-  },
-  "resources/js/pages/group/talk/index.tsx": {
-    "shadcn/no-restyle": {
-      "count": 18
+      "count": 4
     }
   },
   "resources/js/pages/member/config.tsx": {
@@ -76,22 +66,17 @@
   },
   "resources/js/pages/message/conversation/composer.tsx": {
     "shadcn/no-restyle": {
-      "count": 5
+      "count": 4
     }
   },
   "resources/js/pages/message/conversation/index.tsx": {
     "shadcn/no-restyle": {
-      "count": 19
+      "count": 1
     }
   },
   "resources/js/pages/message/new.tsx": {
     "shadcn/no-restyle": {
       "count": 2
-    }
-  },
-  "resources/js/pages/unified/member-actions.tsx": {
-    "shadcn/no-restyle": {
-      "count": 6
     }
   }
 }
