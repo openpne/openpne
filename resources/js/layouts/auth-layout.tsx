@@ -42,7 +42,7 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
     // dvh, not vh: 100vh is the URL-bar-hidden height on a phone, so centering against it drops the
     // card below the fold.
     return (
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1rem+env(safe-area-inset-right))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] sm:pt-[calc(3rem+env(safe-area-inset-top))] sm:pb-[calc(3rem+env(safe-area-inset-bottom))]">
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-safe-6 pr-safe-4 pb-safe-6 pl-safe-4 sm:pt-safe-12 sm:pb-safe-12">
             <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
                 <BrandMark size="lg" />
                 <BrandName size="lg" className="max-w-full text-center break-words" />

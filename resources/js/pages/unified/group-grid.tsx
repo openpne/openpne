@@ -40,7 +40,7 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                         )}
                         <span
                             aria-hidden
-                            className="absolute inset-x-0 bottom-0 block h-2/3 bg-[linear-gradient(to_top,oklch(0_0_0/0.72),transparent)]"
+                            className="absolute inset-x-0 bottom-0 block h-2/3 bg-linear-to-t from-scrim to-transparent"
                         />
                         <span className="absolute inset-x-0 bottom-0 block px-2 py-1.5 text-xs text-scrim-foreground">
                             {/* The name gives up its second line to a caption rather than growing the

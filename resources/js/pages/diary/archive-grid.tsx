@@ -64,7 +64,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
                                         {/* The count line is always reserved (nbsp on empty months) so month labels sit
                                             at the same height, and it inherits the cell foreground because muted text
                                             fails contrast on the heavier fills. */}
-                                        <span className="text-[0.625rem] leading-none">{cell.count > 0 ? cell.count : ' '}</span>
+                                        <span className="text-3xs leading-none">{cell.count > 0 ? cell.count : ' '}</span>
                                     </>
                                 );
                                 return cell.href ? (

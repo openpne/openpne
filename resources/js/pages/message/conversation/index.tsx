@@ -260,7 +260,7 @@ export default function MessageConversation() {
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot and the boundary this offers is a
                 // page or more above them.
-                <div className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 flex justify-center">
+                <div className="sticky top-offset-2 z-20 flex justify-center">
                     <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
                         <ArrowUp className="size-4" aria-hidden />
                         {jumpToUnreadPhrase(t, backlog.count)}
@@ -278,7 +278,7 @@ export default function MessageConversation() {
             <Panel
                 flush
                 variant="bleed"
-                className={cn('mb-0 lg:mb-4', composer === null && 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]')}
+                className={cn('mb-0 lg:mb-4', composer === null && 'max-lg:mb-offset-8')}
             >
                 {stream.hasOlder && (
                     <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
@@ -345,7 +345,7 @@ export default function MessageConversation() {
                         // `mb-0` because zero height still takes the margin the page puts under every
                         // child but the last.
                         'pointer-events-none sticky z-20 mb-0 flex h-0 items-end justify-center',
-                        composer === null ? 'bottom-[calc(var(--modern-bottom-offset)+1rem)]' : 'bottom-[calc(var(--modern-bottom-offset)+4.25rem)]',
+                        composer === null ? 'bottom-offset-4' : 'bottom-offset-17',
                     )}
                 >
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">

@@ -13,8 +13,7 @@ export interface MemberActionsProfile {
     friendStatus: 'friend' | 'sent' | 'received' | 'none' | null;
 }
 
-/** The pill shape this row is drawn in; `!` because rounded-field would otherwise win the cascade. */
-const PILL = 'rounded-full!';
+const PILL = 'rounded-full';
 
 /**
  * The two friend states are whole sentences, one of them carrying a member's name, so their pill has

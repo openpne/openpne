@@ -48,7 +48,7 @@ export function NineTable({ items, shape, columns = 3 }: { items: NineTableItem[
                                 )}
                                 <AiCornerMark isAi={item.isAi} size="lg" />
                             </span>
-                            <p className="mt-1 truncate text-[10px] text-muted-foreground transition group-hover:text-foreground">{item.name}</p>
+                            <p className="mt-1 truncate text-3xs text-muted-foreground transition group-hover:text-foreground">{item.name}</p>
                         </Link>
                     </li>
                 );

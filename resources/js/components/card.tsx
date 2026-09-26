@@ -29,9 +29,8 @@ export function Card({
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                // Three strings rather than classes layered over each other: `rounded-card` is a custom
-                // token and the borders differ per side, neither of which twMerge can resolve against
-                // a later override.
+                // Three strings rather than classes layered over each other: the borders differ per
+                // side, which twMerge cannot resolve against a later override.
                 variant === 'sheet'
                     ? 'text-card-foreground lg:rounded-card lg:border lg:border-border lg:bg-card lg:shadow-card'
                     : variant === 'bleed'
