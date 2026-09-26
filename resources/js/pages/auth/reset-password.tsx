@@ -35,7 +35,7 @@ export default function ResetPassword({ email, token }: ResetPasswordProps) {
 
             <form onSubmit={submit} className="space-y-4">
                 <Field label={t('Email')} htmlFor="email" error={errors.email}>
-                    <Input id="email" type="email" name="email" autoComplete="email" readOnly value={data.email} onChange={(e) => setData('email', e.target.value)} className="bg-muted text-muted-foreground" />
+                    <Input id="email" type="email" name="email" autoComplete="email" readOnly value={data.email} onChange={(e) => setData('email', e.target.value)} variant="readonly" />
                 </Field>
 
                 <Field label={t('Password')} htmlFor="password" error={errors.password}>
