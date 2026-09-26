@@ -6,18 +6,19 @@ import { Heading, headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { cn } from '@/lib/utils';
 
-// The class set each axis stands for, written as the recipe before the axis existed plus what a call
-// site used to add by hand, compared as a set since cn() may reorder.
+// Class sets before each axis existed plus what a call site added by hand, compared as sets without
+// the weight class, whose placement FontWeightGuardTest governs.
 const HEADING = {
-    display: 'font-semibold text-2xl break-words text-foreground',
-    page: 'font-semibold text-xl break-words text-foreground',
-    group: 'font-semibold text-lg text-foreground',
-    section: 'font-semibold text-base text-foreground',
-    label: 'font-semibold text-xs text-muted-foreground',
+    display: 'text-2xl break-words text-foreground',
+    page: 'text-xl break-words text-foreground',
+    group: 'text-lg text-foreground',
+    section: 'text-base text-foreground',
+    label: 'text-xs text-muted-foreground',
 };
 const ITEM = 'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm text-foreground outline-none transition focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50';
 const CARD = 'overflow-hidden rounded-card border border-border bg-card text-card-foreground shadow-card';
 const classes = (s: string) => new Set(s.split(/\s+/).filter(Boolean));
+const withoutWeight = (s: string) => new Set([...classes(s)].filter((c) => !c.startsWith('font-')));
 const COLORS = ['text-foreground', 'text-muted-foreground', 'text-destructive'];
 
 describe('each axis renders the class set its call sites used to add by hand', () => {
@@ -31,7 +32,7 @@ describe('each axis renders the class set its call sites used to add by hand', (
         ['a destructive item', cn(ITEM, 'text-destructive focus:bg-destructive/10 focus:text-destructive'), cn(dropdownMenuItemVariants({ variant: 'destructive' }))],
         ['the default item', ITEM, cn(dropdownMenuItemVariants())],
     ])('%s', (_name, before, after) => {
-        expect(classes(after)).toEqual(classes(before));
+        expect(withoutWeight(after)).toEqual(withoutWeight(before));
     });
 
     // Read off the raw recipe, not cn(): a consumer of the recipe has no twMerge to drop a second color.
