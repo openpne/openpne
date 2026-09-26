@@ -102,3 +102,21 @@ test('a Modern module is refused a palette color, an undeclared token, a class T
     );
     assert.deepEqual(allowed, []);
 });
+
+/**
+ * `pb-safe-4` and `text-2xs` in the refused snippet are the teeth of app.css: they exist only through
+ * its utilities and tokens, so a theme that lost them would report them as unknown classes.
+ */
+test('a Modern module is refused an off-scale value and an arbitrary transition outside the named two', async () => {
+    const found = await messages('export const a = <div className="p-[13px] transition-[height] pb-safe-4 text-2xs" />;\n', 'resources/js/components/x.tsx');
+
+    assert.ok(found.some((m) => m.startsWith('"p-[13px]" hardcodes an off-token value. Use "p-3.25" instead')));
+    assert.ok(found.some((m) => m.startsWith('"transition-[height]" hardcodes an off-token value')));
+    assert.deepEqual(
+        found.filter((m) => m.includes('pb-safe-4') || m.includes('text-2xs')),
+        [],
+    );
+
+    const allowed = await messages('export const a = <div className="w-[calc(100vw-2rem)] transition-[padding-bottom] pb-(--modern-bottom-offset)" />;\n', 'resources/js/components/x.tsx');
+    assert.deepEqual(allowed, []);
+});

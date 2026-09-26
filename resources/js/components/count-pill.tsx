@@ -13,7 +13,7 @@ export function CountPill({ count, label, className }: { count: number; label?: 
     return (
         <span
             className={cn(
-                'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] leading-none text-primary-foreground',
+                'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-2xs leading-none text-primary-foreground',
                 className,
             )}
         >

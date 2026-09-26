@@ -29,7 +29,7 @@ export function ChatScrollDay({ at, ref }: { at: string | null; ref: RefObject<H
                 // At lg the place strip pins itself at the same offset and stands 45px tall, and
                 // nothing publishes that height — so it is written here, and moves when the strip's
                 // padding does.
-                'top-[calc(var(--modern-top-offset)+0.5rem)] lg:top-[calc(var(--modern-top-offset)+3.5rem)]',
+                'top-offset-2 lg:top-offset-14',
             )}
         >
             {at !== null && (

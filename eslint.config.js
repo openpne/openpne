@@ -94,6 +94,14 @@ export default tseslint.config(
             'shadcn/no-raw-colors': 'error',
             'shadcn/no-unknown-classes': 'error',
             'shadcn/require-static-classes': 'error',
+            'shadcn/no-arbitrary-values': [
+                'error',
+                {
+                    // Named one by one: the transition property lists are not token material, the
+                    // dome's radius pair has no scale value, and the corner mark's 1.4 sits between steps.
+                    allow: ['layout', 'transition-[padding-bottom]', 'transition-[max-width,margin,opacity]', 'rounded-t-[50%_100%]', 'leading-[1.4]'],
+                },
+            ],
         },
     },
     {

@@ -68,19 +68,19 @@ function TopBar({
             ref={ref}
             inert={hidden || undefined}
             className={cn(
-                'sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur transition-transform duration-200 motion-reduce:transition-none',
+                'sticky top-0 z-20 flex h-(--modern-top-offset) items-center gap-2 border-b bg-background/90 pt-safe pr-safe-3 pl-safe-3 backdrop-blur transition-transform duration-200 motion-reduce:transition-none',
                 // The unified bar is the header at every width; the shipped bars are phone furniture.
                 !persistent && 'lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
                 // The padding restates the status-bar inset because it replaces the base padding
                 // rather than adding to it.
-                line !== undefined && 'pt-[calc(0.25rem+env(safe-area-inset-top))]',
+                line !== undefined && 'pt-safe-1',
                 hidden && '-translate-y-full',
             )}
         >
             {children}
             {line !== undefined && (
-                <span aria-hidden className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-1" style={{ backgroundColor: line }} />
+                <span aria-hidden className="absolute inset-x-0 top-safe h-1" style={{ backgroundColor: line }} />
             )}
         </header>
     );

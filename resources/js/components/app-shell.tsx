@@ -91,7 +91,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                         'min-w-0 flex-1',
                         // A conversation carries its own foot, so reserving the strip here as well
                         // would hold the bar that much higher.
-                        !chrome.conversation && 'pb-[var(--modern-bottom-offset)]',
+                        !chrome.conversation && 'pb-(--modern-bottom-offset)',
                         compose && (exiting ? 'max-lg:motion-safe:animate-modern-sheet-out' : 'max-lg:motion-safe:animate-modern-sheet'),
                     )}
                 >

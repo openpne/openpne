@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  * mock this page follows separates its blocks with background and radius alone. Scoped to this page —
  * the rest of the surface keeps its bordered card on purpose.
  */
-export const HOME_CARD = 'overflow-hidden rounded-[1.25rem] bg-card text-card-foreground';
+export const HOME_CARD = 'overflow-hidden rounded-tile bg-card text-card-foreground';
 
 export function HomeSection({
     title,

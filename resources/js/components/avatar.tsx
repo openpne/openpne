@@ -17,7 +17,7 @@ const sizeClass: Record<AvatarSize, string> = {
 };
 
 const textSizeClass: Record<AvatarSize, string> = {
-    xs: 'text-[10px]',
+    xs: 'text-3xs',
     sm: 'text-xs',
     md: 'text-sm',
     lg: 'text-base',

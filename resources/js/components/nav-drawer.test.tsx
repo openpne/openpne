@@ -95,8 +95,11 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
     // The close control is the trigger's twin: same box, same spot, the word visible under the glyph.
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close.className).toContain('size-12');
-    expect(close.className).toContain('right-[calc(0.5rem+env(safe-area-inset-right))]');
+    expect(close.className).toContain('right-safe-2');
     expect(close.textContent).toContain('Close');
+    // 4px of line, then the row: the drawer's own top inset gives way to the labeled one.
+    expect(sheet.className).toContain('pt-safe-1');
+    expect(sheet.className).not.toContain('pt-safe-4');
 });
 
 /**
