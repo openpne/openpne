@@ -1,5 +1,3 @@
-import type { CSSProperties } from 'react';
-
 /**
  * The white-text-safe half of the member avatar palette (app/Support/AvatarColor), picked by name
  * hash so an entity keeps its color between visits. Scoped to these surfaces on purpose: the shipped
@@ -17,6 +15,6 @@ export function derivedIdentityColor(name: string): string {
     return DEEP_PALETTE[hash % DEEP_PALETTE.length] ?? '#2563eb';
 }
 
-export function coverGradientStyle(hex: string): CSSProperties {
-    return { backgroundImage: `linear-gradient(135deg, ${hex}b8, ${hex})` };
+export function coverGradientStops(hex: string): { from: string; to: string } {
+    return { from: `${hex}b8`, to: hex };
 }

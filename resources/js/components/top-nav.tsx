@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ChevronRight, X } from 'lucide-react';
-import { type ComponentType, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
+import { type ComponentType, type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
@@ -80,7 +80,7 @@ function TopBar({
         >
             {children}
             {line !== undefined && (
-                <span aria-hidden className="absolute inset-x-0 top-safe h-1" style={{ backgroundColor: line }} />
+                <span aria-hidden className="absolute inset-x-0 top-safe h-1 bg-(--site-color)" style={{ '--site-color': line } as CSSProperties} />
             )}
         </header>
     );

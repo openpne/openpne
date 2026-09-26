@@ -42,6 +42,7 @@
        nav buttons). The scrim is dark in both themes, so this stays white in both. */
     --color-scrim-foreground: var(--scrim-foreground);
     --color-scrim: var(--scrim);
+    --color-paper: var(--paper);
     /* Chosen-state accent for selection controls (checked pill/card, radio dot). Chromatic on
        purpose: with a neutral primary a gray tint reads as disabled, and a primary fill makes a
        selected control shout like a primary action. Follows the link blue (declared once in :root;
@@ -240,6 +241,8 @@
     /* Theme-invariant on purpose (not redefined in .dark): it sits on a dark image scrim. */
     --scrim-foreground: oklch(1 0 0);
     --scrim: oklch(0 0 0 / 0.72);
+    /* Theme-invariant too: a printed surface, such as a QR code's quiet zone. */
+    --paper: oklch(1 0 0);
     /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
     --field: oklch(0.995 0.002 83);
     --field-border: oklch(0.845 0.01 83);

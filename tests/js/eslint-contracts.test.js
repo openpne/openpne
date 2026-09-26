@@ -120,3 +120,22 @@ test('a Modern module is refused an off-scale value and an arbitrary transition 
     const allowed = await messages('export const a = <div className="w-[calc(100vw-2rem)] transition-[padding-bottom] pb-(--modern-bottom-offset)" />;\n', 'resources/js/components/x.tsx');
     assert.deepEqual(allowed, []);
 });
+
+// A style object the linter cannot see into is refused as a whole, so a dynamic value travels as a
+// custom property in a literal object and a class reads it.
+test('a Modern module is refused an inline property and an opaque style object, and keeps custom properties', async () => {
+    const found = await messages(
+        "const style = () => ({});\nexport const a = <div style={{ color: 'red', '--x': 'blue' }} />;\nexport const b = <div style={style()} />;\n",
+        'resources/js/components/x.tsx',
+    );
+
+    assert.ok(found.some((m) => m.startsWith('Inline style sets color.')));
+    assert.ok(found.some((m) => m.startsWith('Dynamic style object cannot be checked.')));
+    assert.ok(found.some((m) => m.includes('--x')));
+
+    const allowed = await messages(
+        "import type { CSSProperties } from 'react';\nexport function A({ hex }: { hex: string }) {\n    return <div className=\"bg-(--x)\" style={{ '--x': hex } as CSSProperties} />;\n}\n",
+        'resources/js/components/x.tsx',
+    );
+    assert.deepEqual(allowed, []);
+});

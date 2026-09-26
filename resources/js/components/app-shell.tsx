@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { type ReactNode, useLayoutEffect, useState } from 'react';
+import { type CSSProperties, type ReactNode, useLayoutEffect, useState } from 'react';
 import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
@@ -109,8 +109,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     <div
                         aria-hidden
                         data-testid="site-color-line"
-                        className="fixed inset-x-0 top-0 z-30 hidden h-1 lg:block"
-                        style={{ backgroundColor: props.snsLogo.color }}
+                        className="fixed inset-x-0 top-0 z-30 hidden h-1 bg-(--site-color) lg:block"
+                        style={{ '--site-color': props.snsLogo.color } as CSSProperties}
                     />
                 )}
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
