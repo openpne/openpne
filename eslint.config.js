@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import { plugin as shadcn } from '@shadcn/lint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
@@ -84,6 +85,15 @@ export default tseslint.config(
         rules: {
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': 'error',
+        },
+    },
+    {
+        files: ['resources/js/**/*.{ts,tsx}'],
+        plugins: { shadcn },
+        rules: {
+            'shadcn/no-raw-colors': 'error',
+            'shadcn/no-unknown-classes': 'error',
+            'shadcn/require-static-classes': 'error',
         },
     },
     {

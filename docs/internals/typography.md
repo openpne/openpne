@@ -26,9 +26,10 @@ unavailable — on iOS 18 and Android 15 they are.
 ## Heading roles
 
 `headingVariants` is exported as a recipe as well as a `Heading` component, because a heading is not
-always an `h1`/`h2`/`h3`: the top bar's label is a `span` and dialog titles are Radix primitives.
-Those consume the recipe; document headings use the component, which keeps the heading level
-independent of the visual rank.
+always an `h1`/`h2`/`h3`: the top bar's label is a `span`, a fieldset's is a `legend`. Those consume
+the recipe; document headings use the component, which keeps the heading level independent of the
+visual rank. A class passed to a `components/ui` component must be a static string
+(`shadcn/require-static-classes`), so a dialog title takes the component through `asChild`.
 
 The independence runs the other way too: an element can be a heading in the document without taking a
 heading rank. A settings row's name is an `h3` — the page is worth navigating by heading — styled as

@@ -1,6 +1,6 @@
 import { cloneElement, type ComponentProps, isValidElement, type ReactElement, type ReactNode, useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -75,7 +75,7 @@ export function Field({ label, htmlFor, help, error, required, className, labelR
 export function FormSection({
     title,
     description,
-    headingLevel: Heading = 'h2',
+    headingLevel = 'h2',
     children,
 }: {
     title: ReactNode;
@@ -87,7 +87,9 @@ export function FormSection({
     return (
         <section className="space-y-4">
             <div className="space-y-0.5">
-                <Heading className={headingVariants({ variant: 'section' })}>{title}</Heading>
+                <Heading as={headingLevel} variant="section">
+                    {title}
+                </Heading>
                 {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
             {children}
