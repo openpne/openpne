@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { InitialBadge } from '@/components/initial-badge';
-import { coverGradientStyle, derivedIdentityColor } from './identity-visual';
+import { IdentityCover } from './identity-cover';
+import { derivedIdentityColor } from './identity-visual';
 
 export interface HomeGroup {
     id: number;
@@ -30,13 +31,9 @@ export function GroupGrid({ groups }: { groups: HomeGroup[] }) {
                             // Decorative: the name below is the link's own text.
                             <img src={group.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
-                            <span
-                                aria-hidden
-                                className="flex h-full w-full items-center justify-center"
-                                style={coverGradientStyle(derivedIdentityColor(group.name))}
-                            >
+                            <IdentityCover as="span" hex={derivedIdentityColor(group.name)} className="flex h-full w-full items-center justify-center">
                                 <InitialBadge aria-hidden name={group.name} className="size-9 rounded-full bg-scrim-foreground/25 text-base text-scrim-foreground" />
-                            </span>
+                            </IdentityCover>
                         )}
                         <span
                             aria-hidden

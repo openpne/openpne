@@ -94,6 +94,7 @@ export default tseslint.config(
             'shadcn/no-raw-colors': 'error',
             'shadcn/no-unknown-classes': 'error',
             'shadcn/require-static-classes': 'error',
+            'shadcn/no-inline-styles': 'error',
             'shadcn/no-arbitrary-values': [
                 'error',
                 {

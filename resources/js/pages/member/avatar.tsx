@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { InitialBadge } from '@/components/initial-badge';
@@ -162,11 +163,11 @@ function Swatch({ checked, onSelect, ariaLabel, hex }: { checked: boolean; onSel
         <label
             className={cn(
                 'relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full',
-                hex === null && 'bg-muted-foreground/20',
+                hex === null ? 'bg-muted-foreground/20' : 'bg-(--swatch-color)',
                 checked && 'ring-2 ring-selected ring-offset-2 ring-offset-card',
                 'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-card',
             )}
-            style={hex ? { backgroundColor: hex } : undefined}
+            style={hex ? ({ '--swatch-color': hex } as CSSProperties) : undefined}
         >
             <input type="radio" name="avatar_color" className="sr-only" checked={checked} onChange={onSelect} aria-label={ariaLabel} />
             {checked && <Check aria-hidden className={cn('size-5', hex ? pickReadableTextColor(hex) : 'text-foreground/75')} strokeWidth={3} />}

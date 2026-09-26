@@ -7,7 +7,8 @@ import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { HOME_CARD } from './home-section';
-import { coverGradientStyle, derivedIdentityColor } from './identity-visual';
+import { IdentityCover } from './identity-cover';
+import { derivedIdentityColor } from './identity-visual';
 
 export interface UnifiedProfile {
     id: number;
@@ -64,17 +65,16 @@ export function ProfileHeader({
                 ) : (
                     // The initial stands in the area the dome leaves visible, which is what the
                     // bottom padding reserves.
-                    <div
-                        aria-hidden
+                    <IdentityCover
+                        hex={profile.avatarColor ?? derivedIdentityColor(profile.name)}
                         className="flex aspect-[4/3] max-h-[16rem] w-full items-center justify-center pb-24 sm:max-h-60"
-                        style={coverGradientStyle(profile.avatarColor ?? derivedIdentityColor(profile.name))}
                     >
                         <InitialBadge
                             aria-hidden
                             name={profile.name}
                             className="size-20 rounded-full bg-scrim-foreground/25 text-3xl text-scrim-foreground"
                         />
-                    </div>
+                    </IdentityCover>
                 )}
                 {/* -bottom-px closes the seam a fractional height can open. */}
                 {/* rounded-t-full would clamp to quarter-circles with a flat middle (the radii scale by the
