@@ -1,6 +1,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { useMarkRead } from './use-mark-read';
+import { answer, visibility, wire } from '@/lib/test-fetch';
 import { UNREAD_REFRESH_EVENT } from '@/lib/unread-refresh';
 
 vi.mock('@/lib/csrf', () => ({ xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'token' }) }));
@@ -8,49 +9,8 @@ vi.mock('@/lib/csrf', () => ({ xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'token' }) }
 const DEBOUNCE_MS = 700;
 const RETRY_MS = 5_000;
 
-type Call = [string, RequestInit];
 
-function answer(status: number): Response {
-    return { ok: status >= 200 && status < 300, status } as Response;
-}
-
-/** A fetch whose answers are handed out in call order, each settled by the test. */
-function wire() {
-    const pending: Array<{ resolve: (value: Response) => void; reject: (reason: unknown) => void }> = [];
-    const fetch = vi.fn(() => new Promise<Response>((resolve, reject) => pending.push({ resolve, reject })));
-    vi.stubGlobal('fetch', fetch);
-    const request = (i: number): Call => {
-        const call = fetch.mock.calls[i] as unknown as Call | undefined;
-        if (call === undefined) throw new Error(`no request ${i}`);
-
-        return call;
-    };
-    const waiting = (i: number) => {
-        const entry = pending[i];
-        if (entry === undefined) throw new Error(`no request ${i}`);
-
-        return entry;
-    };
-
-    return {
-        fetch,
-        url: (i: number) => request(i)[0],
-        init: (i: number) => request(i)[1],
-        reported: (i: number) => JSON.parse(request(i)[1].body as string) as { messageId: number },
-        settle: (i: number, status: number) =>
-            act(async () => {
-                waiting(i).resolve(answer(status));
-            }),
-        drop: (i: number) =>
-            act(async () => {
-                waiting(i).reject(new TypeError('network'));
-            }),
-    };
-}
-
-function visibility(state: DocumentVisibilityState) {
-    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
-}
+const reported = (init: RequestInit) => JSON.parse(init.body as string) as { messageId: number };
 
 function refreshes() {
     const spy = vi.fn();
@@ -94,10 +54,10 @@ test('the newest rendered message is reported once the burst settles, and an acc
         credentials: 'same-origin',
         headers: { 'X-XSRF-TOKEN': 'token', 'Content-Type': 'application/json', Accept: 'application/json' },
     });
-    expect(net.reported(0)).toEqual({ messageId: 7 });
+    expect(reported(net.init(0))).toEqual({ messageId: 7 });
     expect(refreshed).not.toHaveBeenCalled();
 
-    await net.settle(0, 204);
+    await net.settle(0, answer(null, 204));
     expect(refreshed).toHaveBeenCalledTimes(1);
 });
 
@@ -120,7 +80,7 @@ test('nothing is reported with nothing rendered, while inactive, while hidden, o
         document.dispatchEvent(new Event('visibilitychange'));
     });
     expect(net.fetch).toHaveBeenCalledTimes(1);
-    await net.settle(0, 204);
+    await net.settle(0, answer(null, 204));
 
     rerender({ id: 7, active: false });
     rerender({ id: 7, active: true });
@@ -130,7 +90,7 @@ test('nothing is reported with nothing rendered, while inactive, while hidden, o
     rerender({ id: 8, active: true });
     await advance(DEBOUNCE_MS);
     expect(net.fetch).toHaveBeenCalledTimes(2);
-    expect(net.reported(1)).toEqual({ messageId: 8 });
+    expect(reported(net.init(1))).toEqual({ messageId: 8 });
 });
 
 test('a 5xx or a dropped request retries the same id; a terminal 4xx settles it without a refresh', async () => {
@@ -140,18 +100,18 @@ test('a 5xx or a dropped request retries the same id; a terminal 4xx settles it 
     const { rerender } = mount(7);
 
     await advance(DEBOUNCE_MS);
-    await net.settle(0, 503);
+    await net.settle(0, answer(null, 503));
     await advance(RETRY_MS - 1);
     expect(net.fetch).toHaveBeenCalledTimes(1);
     await advance(1);
     expect(net.fetch).toHaveBeenCalledTimes(2);
-    expect(net.reported(1)).toEqual({ messageId: 7 });
+    expect(reported(net.init(1))).toEqual({ messageId: 7 });
 
     await net.drop(1);
     await advance(RETRY_MS);
     expect(net.fetch).toHaveBeenCalledTimes(3);
 
-    await net.settle(2, 404);
+    await net.settle(2, answer(null, 404));
     await advance(RETRY_MS);
     expect(net.fetch).toHaveBeenCalledTimes(3);
     expect(refreshed).not.toHaveBeenCalled();
@@ -163,10 +123,10 @@ test('a 5xx or a dropped request retries the same id; a terminal 4xx settles it 
     expect(net.fetch).toHaveBeenCalledTimes(3);
     rerender({ id: 9, active: true });
     await advance(DEBOUNCE_MS);
-    expect(net.reported(3)).toEqual({ messageId: 9 });
+    expect(reported(net.init(3))).toEqual({ messageId: 9 });
 });
 
-test('a newer message rendered while a report is out is reported once that one settles', async () => {
+test('a newer message rendered while a report is out is reported after it, not alongside it', async () => {
     vi.useFakeTimers();
     const net = wire();
     const { rerender } = mount(7);
@@ -176,10 +136,10 @@ test('a newer message rendered while a report is out is reported once that one s
     await advance(DEBOUNCE_MS);
     expect(net.fetch).toHaveBeenCalledTimes(1);
 
-    await net.settle(0, 200);
+    await net.settle(0, answer(null, 200));
     await advance(DEBOUNCE_MS);
     expect(net.fetch).toHaveBeenCalledTimes(2);
-    expect(net.reported(1)).toEqual({ messageId: 8 });
+    expect(reported(net.init(1))).toEqual({ messageId: 8 });
 });
 
 test('unmounting cancels a report still waiting', async () => {

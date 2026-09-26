@@ -2,6 +2,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { type ChatReactions, type ChatStreamEndpoints, SendFailed, useChatStream } from './use-chat-stream';
 import type { ChatPage, ChatStreamRow } from './types';
+import { answer, visibility, wire } from '@/lib/test-fetch';
 
 vi.mock('@/lib/csrf', () => ({ xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'token' }) }));
 
@@ -27,49 +28,6 @@ const endpoints: ChatStreamEndpoints = { messages: (query) => `/talk${query}`, s
 const reactions: ChatReactions = { initialVersion: 4, add: (id) => `/talk/${id}/react`, remove: (id) => `/talk/${id}/unreact` };
 
 const POLL_MS = 8_000;
-
-type Call = [string, RequestInit];
-
-function answer(body: unknown, status = 200): Response {
-    return { ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response;
-}
-
-/** A fetch whose answers are handed out in call order, each settled by the test. */
-function wire() {
-    const pending: Array<{ resolve: (value: Response) => void; reject: (reason: unknown) => void }> = [];
-    const fetch = vi.fn(() => new Promise<Response>((resolve, reject) => pending.push({ resolve, reject })));
-    vi.stubGlobal('fetch', fetch);
-    const request = (i: number): Call => {
-        const call = fetch.mock.calls[i] as unknown as Call | undefined;
-        if (call === undefined) throw new Error(`no request ${i}`);
-
-        return call;
-    };
-    const waiting = (i: number) => {
-        const entry = pending[i];
-        if (entry === undefined) throw new Error(`no request ${i}`);
-
-        return entry;
-    };
-
-    return {
-        fetch,
-        url: (i: number) => request(i)[0],
-        init: (i: number) => request(i)[1],
-        settle: (i: number, value: Response) =>
-            act(async () => {
-                waiting(i).resolve(value);
-            }),
-        drop: (i: number) =>
-            act(async () => {
-                waiting(i).reject(new TypeError('network'));
-            }),
-    };
-}
-
-function visibility(state: DocumentVisibilityState) {
-    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
-}
 
 const tick = () =>
     act(() => {
@@ -182,9 +140,11 @@ test('a poll answered after the window moved is dropped', async () => {
     act(() => {
         opened = result.current.openContext(row(5, 4).cursor);
     });
+    expect(net.init(0).signal?.aborted).toBe(true);
     await net.settle(1, answer(page([row(5, 4)], true, true)));
     await opened;
 
+    // The stub answers an aborted read anyway, as a response already on the wire would.
     await net.settle(0, answer(page([row(2, 1)])));
     expect(bodies(result)).toEqual(['m5']);
 });
@@ -203,18 +163,20 @@ test('a refused or dropped poll leaves the list as it was', async () => {
     expect(bodies(result)).toEqual(['m1']);
 });
 
-test('unmounting stops the poll', async () => {
+test('unmounting stops the poll and lets the read out go', async () => {
     vi.useFakeTimers();
     const net = wire();
     const { unmount } = renderHook(() => useChatStream(endpoints, page([row(1, 0)])));
 
-    unmount();
     await tick();
+    unmount();
+    expect(net.init(0).signal?.aborted).toBe(true);
 
-    expect(net.fetch).not.toHaveBeenCalled();
+    await tick();
+    expect(net.fetch).toHaveBeenCalledTimes(1);
 });
 
-test('load older asks before the oldest cursor, once at a time, and reports while it is out', async () => {
+test('load older asks before the oldest cursor, reports while it is out, and is not asked again meanwhile', async () => {
     const net = wire();
     const { result } = renderHook(() => useChatStream(endpoints, page([row(2, 1), row(3, 2)], true)));
 
@@ -274,6 +236,7 @@ test('of two moves out at once the later wins, whichever answers first', async (
         second = result.current.returnToLatest();
     });
     expect(net.url(1)).toBe('/talk');
+    expect(net.init(0).signal?.aborted).toBe(true);
 
     await net.settle(0, answer(page([row(5, 4)], true, true)));
     await expect(first).resolves.toBe(false);
