@@ -24,8 +24,8 @@ const buttonVariants = cva(
                 icon: 'size-11',
                 row: 'min-h-9 w-full px-3 py-3 sm:px-5',
             },
-            // The radius lives here rather than in the base so that a variant swaps it instead of
-            // stacking a second radius class on top.
+            // The radius lives here so a shape swaps it; `row` layers `rounded-none` over the default
+            // and cn() keeps the later one.
             shape: {
                 field: 'rounded-field',
                 pill: 'rounded-full',
