@@ -73,6 +73,8 @@ const DATE_FORMATTING_RESTRICTIONS = [
     },
 ];
 
+const CLASS_CATEGORIES = ['layout', 'color', 'typography', 'spacing', 'shape', 'effects', 'motion'];
+
 export default tseslint.config(
     { ignores: ['public/build', 'public/js/filament'] },
     js.configs.recommended,
@@ -103,7 +105,27 @@ export default tseslint.config(
                     allow: ['layout', 'transition-[padding-bottom]', 'transition-[max-width,margin,opacity]', 'rounded-t-[50%_100%]', 'leading-[1.4]'],
                 },
             ],
+            'shadcn/no-restyle': [
+                'error',
+                {
+                    allow: ['layout'],
+                    contracts: [
+                        // An unstyled Radix slot the caller dresses; the radius pattern covers the
+                        // project's own tokens, which the grammar cannot place in a category.
+                        { pattern: '^(DialogTrigger|DropdownMenuTrigger|PopoverTrigger|DialogClose)$', allow: [...CLASS_CATEGORIES, 'rounded-*'] },
+                        // bodyClassName is the body's layout API.
+                        { pattern: '^Panel$', allow: ['layout', 'space-y-*'] },
+                        { pattern: '^(PopoverContent|DialogContent|SheetContent)$', allow: ['layout', 'gap-*', 'pt-safe-*'] },
+                        { pattern: '^Heading$', allow: ['layout', 'truncate', 'line-clamp-*'] },
+                    ],
+                },
+            ],
         },
+    },
+    {
+        // A ui component styles its own internals.
+        files: ['resources/js/components/ui/**'],
+        rules: { 'shadcn/no-restyle': 'off' },
     },
     {
         files: ['resources/js/**/*.{ts,tsx}'],

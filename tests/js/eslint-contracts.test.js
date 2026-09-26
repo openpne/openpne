@@ -139,3 +139,44 @@ test('a Modern module is refused an inline property, a colored custom property a
     );
     assert.deepEqual(allowed, []);
 });
+
+test('a Modern module is refused an appearance class on a styled ui component, and keeps layout, a slot and a body', async () => {
+    const found = await messages(
+        "import { Button } from '@/components/ui/button';\nexport const a = <Button className=\"mt-4 w-full bg-primary rounded-full\">x</Button>;\n",
+        'resources/js/components/x.tsx',
+    );
+
+    assert.ok(found.some((m) => m.startsWith('"bg-primary" is not allowed on <Button>')));
+    assert.ok(found.some((m) => m.startsWith('"rounded-full" is not allowed on <Button>')));
+    assert.deepEqual(found.filter((m) => m.includes('"mt-4"') || m.includes('"w-full"')), []);
+
+    const allowed = await messages(
+        [
+            "import { DialogTrigger } from '@/components/ui/dialog';",
+            "import { Heading } from '@/components/ui/heading';",
+            "import { Panel } from '@/components/ui/surface';",
+            'export const a = <DialogTrigger className="rounded-full rounded-field text-muted-foreground transition hover:bg-accent">x</DialogTrigger>;',
+            'export const b = <Panel bodyClassName="space-y-4">x</Panel>;',
+            'export const c = <Heading className="truncate line-clamp-2">x</Heading>;',
+            '',
+        ].join('\n'),
+        'resources/js/components/x.tsx',
+    );
+    assert.deepEqual(allowed, []);
+});
+
+// The default instance reads no suppressions file, so this one points at a fixture: a file may keep
+// as many findings as it had, and one more reports them all.
+test('a suppressed file keeps its count of restyles and is reported whole when it grows', async () => {
+    const suppressing = new ESLint({
+        cwd: fileURLToPath(new URL('../../', import.meta.url)),
+        applySuppressions: true,
+        suppressionsLocation: 'tests/js/fixtures/eslint-suppressions.json',
+    });
+    const restyle = (n) => `import { Button } from '@/components/ui/button';\n${Array.from({ length: n }, (_, i) => `export const a${i} = <Button className="bg-primary">x</Button>;`).join('\n')}\n`;
+    const lint = async (n) => (await suppressing.lintText(restyle(n), { filePath: 'resources/js/components/suppressed.tsx' }))[0].messages.filter((m) => m.ruleId === 'shadcn/no-restyle');
+
+    assert.equal((await lint(1)).length, 0);
+    assert.equal((await lint(2)).length, 2);
+    assert.equal((await lint(0)).length, 0);
+});
