@@ -4,23 +4,35 @@ import { cn } from '@/lib/utils';
 
 /**
  * The one place a heading's weight, size and color are decided (docs/internals/typography.md,
- * "Heading roles"). Color sits on each variant rather than the base, because a bare
+ * "Heading roles"). Color is a compound of rank and tone rather than part of either, because a bare
  * `headingVariants()` call has no twMerge to resolve two color utilities.
  */
 export const headingVariants = cva('font-semibold', {
     variants: {
         variant: {
-            display: 'text-2xl break-words text-foreground',
-            page: 'text-xl break-words text-foreground',
-            pageCompose: 'text-lg break-words text-foreground lg:text-xl',
-            group: 'text-lg text-foreground',
-            section: 'text-base text-foreground',
-            minor: 'text-sm text-foreground',
-            label: 'text-xs text-muted-foreground',
-            bar: 'text-base text-foreground',
+            display: 'text-2xl break-words',
+            page: 'text-xl break-words',
+            pageCompose: 'text-lg break-words lg:text-xl',
+            group: 'text-lg',
+            section: 'text-base',
+            minor: 'text-sm',
+            label: 'text-xs',
+            bar: 'text-base',
+        },
+        tone: {
+            default: '',
+            destructive: '',
+        },
+        divided: {
+            true: 'border-b border-border pb-2',
         },
     },
-    defaultVariants: { variant: 'page' },
+    compoundVariants: [
+        { variant: ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'bar'], tone: 'default', class: 'text-foreground' },
+        { variant: 'label', tone: 'default', class: 'text-muted-foreground' },
+        { tone: 'destructive', class: 'text-destructive' },
+    ],
+    defaultVariants: { variant: 'page', tone: 'default' },
 });
 
 type HeadingProps = ComponentProps<'h1'> &
@@ -28,6 +40,6 @@ type HeadingProps = ComponentProps<'h1'> &
         as?: 'h1' | 'h2' | 'h3';
     };
 
-export function Heading({ as: Tag = 'h1', variant, className, ...props }: HeadingProps) {
-    return <Tag className={cn(headingVariants({ variant }), className)} {...props} />;
+export function Heading({ as: Tag = 'h1', variant, tone, divided, className, ...props }: HeadingProps) {
+    return <Tag className={cn(headingVariants({ variant, tone, divided }), className)} {...props} />;
 }

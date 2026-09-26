@@ -73,7 +73,10 @@ const DATE_FORMATTING_RESTRICTIONS = [
     },
 ];
 
-const CLASS_CATEGORIES = ['layout', 'color', 'typography', 'spacing', 'shape', 'effects', 'motion'];
+const APPEARANCE = ['color', 'typography', 'spacing', 'shape', 'effects', 'motion'];
+// The margin and position utilities app.css declares are layout the grammar cannot place; a
+// contract that writes its own allow inherits nothing, so each one spreads this too.
+const LAYOUT = ['layout', 'mb-offset-*', 'top-offset-*', 'bottom-offset-*', 'top-safe', 'top-safe-*', 'right-safe', 'right-safe-*', 'bottom-safe', 'bottom-safe-*', 'left-safe', 'left-safe-*'];
 
 export default tseslint.config(
     { ignores: ['public/build', 'public/js/filament'] },
@@ -108,15 +111,15 @@ export default tseslint.config(
             'shadcn/no-restyle': [
                 'error',
                 {
-                    allow: ['layout'],
+                    allow: LAYOUT,
                     contracts: [
                         // An unstyled Radix slot the caller dresses; the radius pattern covers the
                         // project's own tokens, which the grammar cannot place in a category.
-                        { pattern: '^(DialogTrigger|DropdownMenuTrigger|PopoverTrigger|TooltipTrigger|DialogClose)$', allow: [...CLASS_CATEGORIES, 'rounded-*'] },
+                        { pattern: '^(DialogTrigger|DropdownMenuTrigger|PopoverTrigger|TooltipTrigger|DialogClose)$', allow: [...LAYOUT, ...APPEARANCE, 'rounded-*'] },
                         // bodyClassName is the body's layout API.
-                        { pattern: '^Panel$', allow: ['layout', 'space-y-*'] },
-                        { pattern: '^(PopoverContent|DialogContent|SheetContent)$', allow: ['layout', 'gap-*', 'pt-safe-*'] },
-                        { pattern: '^Heading$', allow: ['layout', 'truncate', 'line-clamp-*'] },
+                        { pattern: '^Panel$', allow: [...LAYOUT, 'space-y-*'] },
+                        { pattern: '^(PopoverContent|DialogContent|SheetContent)$', allow: [...LAYOUT, 'gap-*', 'pt-safe-*'] },
+                        { pattern: '^Heading$', allow: [...LAYOUT, 'truncate', 'line-clamp-*'] },
                     ],
                 },
             ],

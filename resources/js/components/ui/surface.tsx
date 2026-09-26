@@ -33,11 +33,12 @@ type PanelProps = {
      */
     overflow?: 'hidden' | 'visible';
     variant?: CardVariant;
+    tone?: 'destructive';
 };
 
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow, variant }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, variant, tone }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow} variant={variant}>
+        <Card className={className} overflow={overflow} variant={variant} tone={tone}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Swapped, not appended: twMerge cannot resolve `px-1 lg:px-5` against `px-4 sm:px-5`. */}
             <div className={cn(flush ? undefined : variant === 'sheet' ? 'px-1 py-4 lg:px-5' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
