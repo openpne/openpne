@@ -144,7 +144,7 @@ test('a poll answered after the window moved is dropped', async () => {
     await net.settle(1, answer(page([row(5, 4)], true, true)));
     await opened;
 
-    // The stub answers an aborted read anyway, as a response already on the wire would.
+    // The stub ignores the abort, so what reaches the fold is a read the generation guard must drop.
     await net.settle(0, answer(page([row(2, 1)])));
     expect(bodies(result)).toEqual(['m5']);
 });

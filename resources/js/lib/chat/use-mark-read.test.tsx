@@ -9,7 +9,6 @@ vi.mock('@/lib/csrf', () => ({ xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'token' }) }
 const DEBOUNCE_MS = 700;
 const RETRY_MS = 5_000;
 
-
 const reported = (init: RequestInit) => JSON.parse(init.body as string) as { messageId: number };
 
 function refreshes() {

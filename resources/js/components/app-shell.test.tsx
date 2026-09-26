@@ -214,7 +214,6 @@ test('a tabbed conversation holds its chrome still through a scroll', async () =
     room('tabbed');
 
     await act(async () => {
-        // A scroll counts only once the reader has taken it (use-scroll-direction.ts).
         window.dispatchEvent(new Event('wheel'));
         (window as { scrollY: number }).scrollY = 400;
         window.dispatchEvent(new Event('scroll'));
@@ -230,7 +229,6 @@ test('a conversation under the shipped look holds its chrome still', async () =>
     room('standard');
 
     await act(async () => {
-        // A scroll counts only once the reader has taken it (use-scroll-direction.ts).
         window.dispatchEvent(new Event('wheel'));
         (window as { scrollY: number }).scrollY = 400;
         window.dispatchEvent(new Event('scroll'));
