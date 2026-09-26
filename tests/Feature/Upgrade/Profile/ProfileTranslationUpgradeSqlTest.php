@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/** MySQL only, like every INSERT...SELECT step; the profile step runs first so the translation FK resolves. */
 class ProfileTranslationUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;
@@ -45,10 +44,11 @@ class ProfileTranslationUpgradeSqlTest extends TestCase
     {
         $this->seedProfile(1, 'custom_text');
         $this->seedProfile(2, 'op_preset_sex');
+        // OpenPNE 3 stores Doctrine I18n cultures (ja_JP), which the profile screens look up as written.
         DB::table('profile_translation')->insert([
-            ['id' => 1, 'lang' => 'ja', 'caption' => '自己紹介', 'info' => '自由に書いてください'],
+            ['id' => 1, 'lang' => 'ja_JP', 'caption' => '自己紹介', 'info' => '自由に書いてください'],
             ['id' => 1, 'lang' => 'en', 'caption' => 'About me', 'info' => null],
-            ['id' => 2, 'lang' => 'ja', 'caption' => '性別', 'info' => ''],
+            ['id' => 2, 'lang' => 'ja_JP', 'caption' => '性別', 'info' => ''],
         ]);
 
         $compiler = new InsertSelectCompiler;
@@ -56,9 +56,9 @@ class ProfileTranslationUpgradeSqlTest extends TestCase
         DB::statement($compiler->compile(new ProfileTranslationUpgrade));
 
         $this->assertDatabaseCount('profile_translations', 3);
-        $this->assertDatabaseHas('profile_translations', ['id' => 1, 'lang' => 'ja', 'caption' => '自己紹介', 'info' => '自由に書いてください']);
+        $this->assertDatabaseHas('profile_translations', ['id' => 1, 'lang' => 'ja_JP', 'caption' => '自己紹介', 'info' => '自由に書いてください']);
         $this->assertDatabaseHas('profile_translations', ['id' => 1, 'lang' => 'en', 'caption' => 'About me', 'info' => null]);
-        $this->assertDatabaseHas('profile_translations', ['id' => 2, 'lang' => 'ja', 'caption' => '性別', 'info' => '']);
+        $this->assertDatabaseHas('profile_translations', ['id' => 2, 'lang' => 'ja_JP', 'caption' => '性別', 'info' => '']);
     }
 
     private function seedProfile(int $id, string $name): void

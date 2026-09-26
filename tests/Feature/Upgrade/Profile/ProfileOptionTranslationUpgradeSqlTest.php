@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
-/** MySQL only, like every INSERT...SELECT step; the profile and option steps run first so the translation FK resolves. */
 class ProfileOptionTranslationUpgradeSqlTest extends TestCase
 {
     use MigratesUpgradeTargetsOnce;
@@ -58,10 +57,12 @@ class ProfileOptionTranslationUpgradeSqlTest extends TestCase
             ['id' => 50, 'profile_id' => 3, 'sort_order' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00'],
             ['id' => 51, 'profile_id' => 3, 'sort_order' => 1, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00'],
         ]);
+        // OpenPNE 3 stores Doctrine I18n cultures (ja_JP), which the profile screens look up as written.
         DB::table('profile_option_translation')->insert([
-            ['id' => 50, 'lang' => 'ja', 'value' => 'はい'],
+            ['id' => 50, 'lang' => 'ja_JP', 'value' => 'はい'],
             ['id' => 50, 'lang' => 'en', 'value' => 'Yes'],
-            ['id' => 51, 'lang' => 'ja', 'value' => null],
+            ['id' => 51, 'lang' => 'ja_JP', 'value' => null],
+            ['id' => 51, 'lang' => 'en', 'value' => ''],
         ]);
 
         $compiler = new InsertSelectCompiler;
@@ -69,9 +70,10 @@ class ProfileOptionTranslationUpgradeSqlTest extends TestCase
         DB::statement($compiler->compile(new ProfileOptionUpgrade));
         DB::statement($compiler->compile(new ProfileOptionTranslationUpgrade));
 
-        $this->assertDatabaseCount('profile_option_translations', 3);
-        $this->assertDatabaseHas('profile_option_translations', ['id' => 50, 'lang' => 'ja', 'value' => 'はい']);
+        $this->assertDatabaseCount('profile_option_translations', 4);
+        $this->assertDatabaseHas('profile_option_translations', ['id' => 50, 'lang' => 'ja_JP', 'value' => 'はい']);
         $this->assertDatabaseHas('profile_option_translations', ['id' => 50, 'lang' => 'en', 'value' => 'Yes']);
-        $this->assertDatabaseHas('profile_option_translations', ['id' => 51, 'lang' => 'ja', 'value' => null]);
+        $this->assertDatabaseHas('profile_option_translations', ['id' => 51, 'lang' => 'ja_JP', 'value' => null]);
+        $this->assertDatabaseHas('profile_option_translations', ['id' => 51, 'lang' => 'en', 'value' => '']);
     }
 }
