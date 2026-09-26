@@ -108,7 +108,8 @@ export default tseslint.config(
             'shadcn/no-restyle': [
                 'error',
                 {
-                    allow: ['layout'],
+                    // The project's margin and position utilities (app.css) are layout the grammar cannot place.
+                    allow: ['layout', 'mb-offset-*', 'top-offset-*', 'bottom-offset-*', 'top-safe', 'top-safe-*', 'right-safe', 'right-safe-*', 'bottom-safe', 'bottom-safe-*', 'left-safe', 'left-safe-*'],
                     contracts: [
                         // An unstyled Radix slot the caller dresses; the radius pattern covers the
                         // project's own tokens, which the grammar cannot place in a category.

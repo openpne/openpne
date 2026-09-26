@@ -8,6 +8,6 @@ import { cn } from '@/lib/utils';
 // buttonVariants size — drop it in favor of the variant prop.
 type Props = Omit<ComponentProps<typeof Link>, 'size'> & VariantProps<typeof buttonVariants>;
 
-export function ActionLink({ className, variant, size, ...props }: Props) {
-    return <Link className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+export function ActionLink({ className, variant, size, shape, tone, elevated, edge, ...props }: Props) {
+    return <Link className={cn(buttonVariants({ variant, size, shape, tone, elevated, edge }), className)} {...props} />;
 }
