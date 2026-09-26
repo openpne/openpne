@@ -22,7 +22,7 @@ import {
     Table as TableIcon,
     Trash2,
 } from 'lucide-react';
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -462,7 +462,11 @@ function LinkDialog({ editor }: { editor: Editor }) {
                     editor.commands.focus();
                 }}
             >
-                <DialogTitle className={headingVariants({ variant: 'section' })}>{t('Link')}</DialogTitle>
+                <DialogTitle asChild>
+                    <Heading as="h2" variant="section">
+                        {t('Link')}
+                    </Heading>
+                </DialogTitle>
                 <form
                     className="mt-4 space-y-3"
                     onSubmit={(event) => {
