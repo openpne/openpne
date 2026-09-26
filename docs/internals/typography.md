@@ -47,6 +47,9 @@ a missed migration.
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the top bar's centered label and its scope name (chrome, outside the content ranks) |
 
+Two axes cross the ranks: `tone="destructive"` colors a danger page's title and group, and
+`divided` underlines a section heading that opens a form block (`border-b border-border pb-2`).
+
 Six content ranks rather than three, because that is what the screens use: the notification settings
 page runs page title over section over nested heading, and collapsing the middle rank would leave two
 of them on the same size with only a rule between. Weight is 600 at every rank — it says "this names

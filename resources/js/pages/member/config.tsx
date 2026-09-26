@@ -53,10 +53,10 @@ interface ConfigProps extends PageProps {
 function SettingsGroup({ title, danger = false, children }: { title: string; danger?: boolean; children: ReactNode }) {
     return (
         <section className="space-y-3">
-            <Heading as="h2" variant="group" className={danger ? 'text-destructive' : undefined}>
+            <Heading as="h2" variant="group" tone={danger ? 'destructive' : undefined}>
                 {title}
             </Heading>
-            <Card className={danger ? 'border-destructive/40' : undefined}>
+            <Card tone={danger ? 'destructive' : undefined}>
                 <div className="divide-y divide-border px-4 sm:px-6">{children}</div>
             </Card>
         </section>
