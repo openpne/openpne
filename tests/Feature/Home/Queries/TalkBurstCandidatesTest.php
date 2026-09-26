@@ -69,7 +69,7 @@ class TalkBurstCandidatesTest extends TestCase
         $group = Group::factory()->create();
         $a = Member::factory()->create();
         $b = Member::factory()->create();
-        $this->said($group, $a, $window->start);
+        $this->reacted($this->said($group, $a, $window->start), $b);
         $first = $this->said($group, $a, $window->start->addSecond());
         $this->said($group, $a, $window->end->subHours(2));
         $last = $this->said($group, $b, $window->end->subHour());
@@ -112,10 +112,11 @@ class TalkBurstCandidatesTest extends TestCase
     {
         $window = $this->window();
         $member = Member::factory()->create();
-        $quietEarly = Group::factory()->create();
-        $this->said($quietEarly, $member, $window->end->subHours(5));
+        // Made in the wrong order on purpose: an id tiebreak alone would rank the earlier talk first.
         $quietLate = Group::factory()->create();
         $this->said($quietLate, $member, $window->end->subHour());
+        $quietEarly = Group::factory()->create();
+        $this->said($quietEarly, $member, $window->end->subHours(5));
         $wordy = Group::factory()->create();
         $this->said($wordy, $member, $window->end->subHours(8));
         $this->said($wordy, $member, $window->end->subHours(7));

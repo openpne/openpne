@@ -106,8 +106,9 @@ abstract class StoryCandidatesTestCase extends TestCase
     public function test_ranked_by_engagement_then_recency_and_cut_to_the_limit(): void
     {
         $window = $this->window();
-        $quietOld = $this->readable($window->end->subHours(3));
+        // Made in the wrong order on purpose: an id tiebreak alone would rank the older row first.
         $quietNew = $this->readable($window->end->subHour());
+        $quietOld = $this->readable($window->end->subHours(3));
         $busy = $this->readable($window->end->subHours(2), 2);
         $lively = $this->readable($window->end->subHours(4), 1);
 

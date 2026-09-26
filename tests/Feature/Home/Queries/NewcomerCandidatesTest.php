@@ -52,17 +52,18 @@ class NewcomerCandidatesTest extends TestCase
     public function test_members_who_joined_inside_the_window_are_offered_newest_first_and_cut_to_the_limit(): void
     {
         $window = $this->window();
-        $this->joinedAt($window->start);
-        $oldest = $this->joinedAt($window->start->addSecond());
-        $middle = $this->joinedAt($window->end->subHour());
-        $newest = $this->joinedAt($window->end);
+        // Made newest first on purpose: an id order alone would put them backwards.
         $this->joinedAt($window->end->addSecond());
+        $newest = $this->joinedAt($window->end);
+        $middle = $this->joinedAt($window->end->subHour());
+        $oldest = $this->joinedAt($window->start->addSecond());
+        $this->joinedAt($window->start);
 
-        $items = app(NewcomerCandidates::class)($window, 2);
+        $items = app(NewcomerCandidates::class)($window, 10);
 
-        $this->assertSame([$newest->getKey(), $middle->getKey()], $this->ids($items));
-        $this->assertNotContains($oldest->getKey(), $this->ids($items));
+        $this->assertSame([$newest->getKey(), $middle->getKey(), $oldest->getKey()], $this->ids($items));
         $this->assertTrue($window->end->equalTo($items->first()?->createdAt));
+        $this->assertSame([$newest->getKey(), $middle->getKey()], $this->ids(app(NewcomerCandidates::class)($window, 2)));
     }
 
     public function test_a_member_an_issue_already_welcomed_is_not_offered_again(): void

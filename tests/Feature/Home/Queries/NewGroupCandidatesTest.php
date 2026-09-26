@@ -56,18 +56,19 @@ class NewGroupCandidatesTest extends TestCase
     public function test_groups_founded_inside_the_window_are_offered_newest_first_with_their_size_and_cut_to_the_limit(): void
     {
         $window = $this->window();
-        $this->founded($window->start);
-        $oldest = $this->founded($window->start->addSecond());
-        $middle = $this->founded($window->end->subHour(), 2);
-        $newest = $this->founded($window->end);
+        // Made newest first on purpose: an id order alone would put them backwards.
         $this->founded($window->end->addSecond());
+        $newest = $this->founded($window->end);
+        $middle = $this->founded($window->end->subHour(), 2);
+        $oldest = $this->founded($window->start->addSecond());
+        $this->founded($window->start);
 
-        $items = app(NewGroupCandidates::class)($window, 2);
+        $items = app(NewGroupCandidates::class)($window, 10);
 
-        $this->assertSame([$newest->getKey(), $middle->getKey()], $this->ids($items));
-        $this->assertNotContains($oldest->getKey(), $this->ids($items));
-        $this->assertSame(['members' => 2], $items->last()?->stats);
+        $this->assertSame([$newest->getKey(), $middle->getKey(), $oldest->getKey()], $this->ids($items));
+        $this->assertSame(['members' => 2], $items->get(1)?->stats);
         $this->assertSame(0, $items->first()?->score);
+        $this->assertSame([$newest->getKey(), $middle->getKey()], $this->ids(app(NewGroupCandidates::class)($window, 2)));
     }
 
     public function test_a_group_an_issue_already_introduced_is_not_offered_again(): void

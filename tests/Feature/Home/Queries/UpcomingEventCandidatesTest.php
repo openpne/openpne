@@ -47,11 +47,12 @@ class UpcomingEventCandidatesTest extends TestCase
     public function test_the_calendar_runs_from_today_through_the_seventh_day_out_in_date_order(): void
     {
         $now = $this->now();
-        $this->on($now->subDay());
-        $today = $this->on($now);
+        // Made in reverse date order on purpose: an id order alone would put them backwards.
+        $this->on($now->addDays(8));
+        $edge = $this->on($now->addDays(7));
         $later = $this->on($now->addDays(3));
-        $edge = $this->on($now->addDays(UpcomingEventCandidates::DAYS));
-        $this->on($now->addDays(UpcomingEventCandidates::DAYS + 1));
+        $today = $this->on($now);
+        $this->on($now->subDay());
 
         $items = app(UpcomingEventCandidates::class)($now, 10);
 
