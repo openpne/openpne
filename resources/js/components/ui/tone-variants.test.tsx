@@ -7,7 +7,7 @@ import { Panel } from '@/components/ui/surface';
 import { cn } from '@/lib/utils';
 
 // Class sets before each axis existed plus what a call site added by hand, compared as sets without
-// the weight class, whose placement FontWeightGuardTest governs.
+// the weight class: a weight literal here would count against a budget this file does not have.
 const HEADING = {
     display: 'text-2xl break-words text-foreground',
     page: 'text-xl break-words text-foreground',
