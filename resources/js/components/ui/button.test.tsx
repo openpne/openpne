@@ -45,13 +45,13 @@ describe('each axis renders the class set its call sites used to add by hand', (
 describe('Button and ActionLink turn every axis into classes rather than attributes', () => {
     test('Button', () => {
         render(
-            <Button variant="row" size="row" edge="bottom" shape="pill" tone="muted" elevated>
+            <Button variant="secondary" size="sm" edge="bottom" shape="pill" tone="muted" elevated>
                 x
             </Button>,
         );
         const button = screen.getByRole('button');
 
-        expect(classes(button.className)).toEqual(classes(cn(buttonVariants({ variant: 'row', size: 'row', edge: 'bottom', shape: 'pill', tone: 'muted', elevated: true }))));
+        expect(classes(button.className)).toEqual(classes(cn(buttonVariants({ variant: 'secondary', size: 'sm', edge: 'bottom', shape: 'pill', tone: 'muted', elevated: true }))));
         for (const axis of ['variant', 'size', 'edge', 'shape', 'tone', 'elevated']) {
             expect(button.hasAttribute(axis)).toBe(false);
         }
