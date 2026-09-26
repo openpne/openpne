@@ -203,8 +203,8 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                         rows={1}
                         value={body}
                         onChange={(event) => setBody(event.target.value)}
-                        // The line-height and padding add up to the 44px the buttons beside it stand at.
-                        className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl py-2.25 leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+                        variant="chat"
+                        className="max-h-40 min-h-11 resize-none overflow-y-auto"
                     />
                 </div>
                 <Tip label={t('Send')}>

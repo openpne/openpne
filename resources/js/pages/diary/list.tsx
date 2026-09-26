@@ -75,7 +75,7 @@ export default function DiaryList() {
                         placeholder={t('Search by keyword')}
                         value={keywordInput}
                         onChange={(e) => setKeywordInput(e.target.value)}
-                        className="rounded-full pr-11 pl-5"
+                        variant="search"
                     />
                     <SearchSubmitButton loading={searching} />
                 </div>

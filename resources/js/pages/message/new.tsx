@@ -67,7 +67,7 @@ export default function MessageNew() {
                     placeholder={t('Search by %nickname%')}
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
-                    className="rounded-full px-5"
+                    variant="pill"
                 />
             </div>
 

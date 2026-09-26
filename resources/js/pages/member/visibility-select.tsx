@@ -10,11 +10,11 @@ import { useT } from '@/lib/i18n';
 export function VisibilitySelect({
     options,
     ...props
-}: Omit<ComponentProps<'select'>, 'children' | 'className'> & { options: Array<{ value: number; label: string }> }) {
+}: Omit<ComponentProps<'select'>, 'children' | 'className' | 'size'> & { options: Array<{ value: number; label: string }> }) {
     const t = useT();
 
     return (
-        <Select className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none" {...props}>
+        <Select size="compact" className="w-auto shrink-0" {...props}>
             {options.map((opt) => (
                 <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
             ))}

@@ -39,7 +39,7 @@ interface Candidate {
  */
 const SEARCH_DEBOUNCE_MS = 200;
 
-type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
+type Props = Omit<ComponentProps<typeof Textarea>, 'value' | 'onChange'> & {
     value: string;
     onChange: (value: string) => void;
     mentions: DraftMention[];

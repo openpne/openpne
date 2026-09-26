@@ -83,7 +83,7 @@ function SearchBox() {
                 placeholder={t('Search members')}
                 value={form.data.name}
                 onChange={(e) => form.setData('name', e.target.value)}
-                className="rounded-full pr-11 pl-5"
+                variant="search"
             />
             <SearchSubmitButton loading={form.processing} />
         </form>

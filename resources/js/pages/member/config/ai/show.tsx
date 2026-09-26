@@ -451,7 +451,7 @@ export default function AiAccountShow() {
                                 placeholder={t('Search by %community% name')}
                                 value={keyword}
                                 onChange={(e) => setKeyword(e.target.value)}
-                                className="rounded-full pr-11 pl-5"
+                                variant="search"
                             />
                             <SearchSubmitButton loading={searching} />
                         </form>
