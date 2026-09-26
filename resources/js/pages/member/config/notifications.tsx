@@ -114,7 +114,7 @@ function PushSection() {
 
     return (
         <section className="space-y-4">
-            <Heading as="h2" variant="section" className="border-b border-border pb-2">{t('Push notifications')}</Heading>
+            <Heading as="h2" variant="section" divided>{t('Push notifications')}</Heading>
             <label className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
                 <span className="text-sm text-foreground">{t('Send push notifications to my devices')}</span>
                 <Checkbox checked={pushSettings.enabled} disabled={saving} onChange={(e) => savePush(e.target.checked)} />
@@ -262,7 +262,7 @@ export default function NotificationSettings() {
 
                     return (
                         <section key={group.key} className="space-y-4">
-                            <Heading as="h2" variant="section" className="border-b border-border pb-2">{group.caption}</Heading>
+                            <Heading as="h2" variant="section" divided>{group.caption}</Heading>
                             {group.key === TALK_GROUP && (
                                 <p className="text-sm text-muted-foreground">
                                     {t('Applies to every %community% you belong to. To quiet one %community%, use Mute on its talk screen.')}

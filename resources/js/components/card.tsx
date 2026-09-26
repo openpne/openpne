@@ -24,7 +24,8 @@ export function Card({
     className,
     overflow = 'hidden',
     variant,
-}: Props & { overflow?: 'hidden' | 'visible'; variant?: CardVariant }) {
+    tone,
+}: Props & { overflow?: 'hidden' | 'visible'; variant?: CardVariant; tone?: 'destructive' }) {
     return (
         <div
             className={cn(
@@ -36,6 +37,7 @@ export function Card({
                     : variant === 'bleed'
                       ? `${BLEED_EDGES} border-t border-border bg-card text-card-foreground lg:rounded-card lg:border lg:shadow-card`
                       : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
+                tone === 'destructive' && 'border-destructive/40',
                 className,
             )}
         >

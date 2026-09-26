@@ -1,4 +1,4 @@
-import { headingVariants } from '@/components/ui/heading';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 
@@ -12,12 +12,12 @@ export function Masthead({ from, to }: { from: string; to: string }) {
     const { civilDate } = useDateFormat();
 
     return (
-        <h1 className={`${headingVariants({ variant: 'label' })} border-b border-border pb-2`}>
+        <Heading as="h1" variant="label" divided>
             {from === to ? (
                 <time dateTime={from}>{t('What happened on :date', { date: civilDate(from, true) })}</time>
             ) : (
                 t('What happened from :from to :to', { from: civilDate(from), to: civilDate(to) })
             )}
-        </h1>
+        </Heading>
     );
 }

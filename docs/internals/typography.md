@@ -47,14 +47,17 @@ a missed migration.
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the top bar's centered label and its scope name (chrome, outside the content ranks) |
 
+Two axes cross the ranks: `tone="destructive"` colors a danger page's title and group, and
+`divided` underlines a heading that opens a block — a settings section, the home masthead.
+
 Six content ranks rather than three, because that is what the screens use: the notification settings
 page runs page title over section over nested heading, and collapsing the middle rank would leave two
 of them on the same size with only a rule between. Weight is 600 at every rank — it says "this names
 a region" — and the rank is the size.
 
-`display` and `page` carry `break-words` so a long member or community name cannot clip. Color lives
-on each variant rather than the base, so `label` can be muted without leaving two color utilities on
-one element for the stylesheet's order to resolve.
+`display` and `page` carry `break-words` so a long member or community name cannot clip. Color is a
+compound of rank and tone rather than part of either, so `label` can be muted and a tone can turn a
+title red without leaving two color utilities on one element for the stylesheet's order to resolve.
 
 ## What the rule does not cover
 

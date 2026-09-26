@@ -273,7 +273,7 @@ export default function MessageConversation() {
                 the screen's edge. */}
             {/* The composer under this list is not a Card and imports the same edge constant, so the
                 two cannot end on different lines (components/card.tsx). */}
-            {/* `mb-0` and the composer-less `max-lg:mb-[…]` tie on specificity, so the conditional
+            {/* `mb-0` and the composer-less `max-lg:mb-offset-8` tie on specificity, so the conditional
                 wins only because Tailwind emits variants after the base. */}
             <Panel
                 flush

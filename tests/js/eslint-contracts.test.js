@@ -152,6 +152,7 @@ test('a Modern module is refused an appearance class on a styled ui component, a
 
     const allowed = await messages(
         [
+            "import { Button } from '@/components/ui/button';",
             "import { DialogTrigger } from '@/components/ui/dialog';",
             "import { Heading } from '@/components/ui/heading';",
             "import { PopoverContent } from '@/components/ui/popover';",
@@ -160,6 +161,11 @@ test('a Modern module is refused an appearance class on a styled ui component, a
             'export const b = <Panel bodyClassName="space-y-4">x</Panel>;',
             'export const c = <Heading className="truncate line-clamp-2">x</Heading>;',
             'export const d = <PopoverContent className="flex gap-1">x</PopoverContent>;',
+            'export const e = <Panel className="max-lg:mb-offset-8">x</Panel>;',
+            'export const f = <Button className="mb-offset-4 top-safe-1">x</Button>;',
+            'export const g = <Heading className="mb-offset-4">x</Heading>;',
+            'export const h = <PopoverContent className="bottom-safe-2">x</PopoverContent>;',
+            'export const i = <DialogTrigger className="top-safe-1 right-safe">x</DialogTrigger>;',
             '',
         ].join('\n'),
         'resources/js/components/x.tsx',

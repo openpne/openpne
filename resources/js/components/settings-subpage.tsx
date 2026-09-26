@@ -8,10 +8,10 @@ export function SettingsSubpage({ title, danger = false, children }: { title: st
     return (
         <>
             <Head title={title} />
-            <Heading variant="page" className={danger ? 'text-destructive' : undefined}>
+            <Heading variant="page" tone={danger ? 'destructive' : undefined}>
                 {title}
             </Heading>
-            <Card className={danger ? 'border-destructive/40' : undefined}>
+            <Card tone={danger ? 'destructive' : undefined}>
                 <CardBody>{children}</CardBody>
             </Card>
         </>

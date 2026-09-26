@@ -505,7 +505,7 @@ export default function AiAccountShow() {
 
             <TokenPanel account={account} tokens={tokens} />
 
-            <Panel className="border-destructive/40" title={t('Delete this AI account')}>
+            <Panel tone="destructive" title={t('Delete this AI account')}>
                 <form onSubmit={destroy} className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {t('Deleting is permanent. What it posted stays on the site, shown as by a withdrawn member.')}

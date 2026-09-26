@@ -1,3 +1,4 @@
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentProps } from 'react';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 import { headingVariants } from '@/components/ui/heading';
@@ -25,16 +26,21 @@ export function DropdownMenuContent({
     );
 }
 
-export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Item>) {
-    return (
-        <DropdownMenuPrimitive.Item
-            className={cn(
-                'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm text-foreground outline-none transition focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-                className,
-            )}
-            {...props}
-        />
-    );
+export const dropdownMenuItemVariants = cva(
+    'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm outline-none transition data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+    {
+        variants: {
+            variant: {
+                default: 'text-foreground focus:bg-accent focus:text-accent-foreground',
+                destructive: 'text-destructive focus:bg-destructive/10 focus:text-destructive',
+            },
+        },
+        defaultVariants: { variant: 'default' },
+    },
+);
+
+export function DropdownMenuItem({ className, variant, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Item> & VariantProps<typeof dropdownMenuItemVariants>) {
+    return <DropdownMenuPrimitive.Item className={cn(dropdownMenuItemVariants({ variant }), className)} {...props} />;
 }
 
 export function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {

@@ -43,6 +43,9 @@ test('the destructive choice stands last, past a divider, and a plain one runs i
     const items = screen.getAllByRole('menuitem');
     expect(items.map((item) => item.textContent)).toEqual(['Edit', 'Delete']);
     expect(screen.getByRole('separator')).toBeTruthy();
+    // The variant reaches the item as classes, not as an attribute the spread would leave behind.
+    expect(items[1]?.className).toContain('text-destructive');
+    expect(items[1]?.hasAttribute('variant')).toBe(false);
 
     fireEvent.click(items[0] as HTMLElement);
     expect(edit).not.toHaveBeenCalled();

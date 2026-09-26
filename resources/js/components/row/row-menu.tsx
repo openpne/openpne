@@ -98,11 +98,11 @@ function menuItem(item: RowMenuItem, choose: (run: () => void) => void) {
             <span className="flex-1">{item.label}</span>
         </>
     );
-    const className = item.destructive ? 'text-destructive focus:bg-destructive/10 focus:text-destructive' : undefined;
+    const variant = item.destructive ? 'destructive' : undefined;
 
     if (item.href !== undefined) {
         return (
-            <DropdownMenuItem key={item.label} asChild disabled={item.disabled} className={className}>
+            <DropdownMenuItem key={item.label} asChild disabled={item.disabled} variant={variant}>
                 <Link href={item.href} {...(item.disabled ? { 'aria-disabled': true, tabIndex: -1 } : {})}>
                     {body}
                 </Link>
@@ -111,7 +111,7 @@ function menuItem(item: RowMenuItem, choose: (run: () => void) => void) {
     }
 
     return (
-        <DropdownMenuItem key={item.label} disabled={item.disabled} onSelect={() => choose(item.onSelect)} className={className}>
+        <DropdownMenuItem key={item.label} disabled={item.disabled} onSelect={() => choose(item.onSelect)} variant={variant}>
             {body}
         </DropdownMenuItem>
     );
