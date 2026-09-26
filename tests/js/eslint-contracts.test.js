@@ -85,7 +85,7 @@ test('the entry keeps every restriction its block restates', async () => {
  * The misspelled token is the teeth of the theme: with no declared colors the rule lets an undeclared
  * name through. `rounded-field` exists only through the theme's `--radius-field`.
  */
-test('a Modern module is refused a palette color, a class Tailwind cannot generate, and a class it cannot read', async () => {
+test('a Modern module is refused a palette color, an undeclared token, a class Tailwind cannot generate, and a class it cannot read', async () => {
     const found = await messages(
         "import { Button } from '@/components/ui/button';\nimport { headingVariants } from '@/components/ui/heading';\nexport const a = <div className=\"bg-pink-500 bg-primry rounded-huge\" />;\nexport const b = <Button className={headingVariants({ variant: 'section' })}>x</Button>;\n",
         'resources/js/components/x.tsx',
