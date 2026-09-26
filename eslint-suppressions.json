@@ -1,0 +1,97 @@
+{
+  "resources/js/components/left-nav.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "resources/js/components/right-rail.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
+  "resources/js/components/row/row-menu.tsx": {
+    "shadcn/no-restyle": {
+      "count": 6
+    }
+  },
+  "resources/js/components/settings-subpage.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "resources/js/pages/auth/reset-password.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "resources/js/pages/community/search.tsx": {
+    "shadcn/no-restyle": {
+      "count": 5
+    }
+  },
+  "resources/js/pages/diary/feed.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
+  "resources/js/pages/diary/list.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
+  "resources/js/pages/group/talk/composer.tsx": {
+    "shadcn/no-restyle": {
+      "count": 5
+    }
+  },
+  "resources/js/pages/group/talk/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 18
+    }
+  },
+  "resources/js/pages/member/config.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "resources/js/pages/member/config/ai/show.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "resources/js/pages/member/config/notifications.tsx": {
+    "shadcn/no-restyle": {
+      "count": 6
+    }
+  },
+  "resources/js/pages/member/search.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
+  "resources/js/pages/member/visibility-select.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "resources/js/pages/message/conversation/composer.tsx": {
+    "shadcn/no-restyle": {
+      "count": 5
+    }
+  },
+  "resources/js/pages/message/conversation/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 19
+    }
+  },
+  "resources/js/pages/message/new.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "resources/js/pages/unified/member-actions.tsx": {
+    "shadcn/no-restyle": {
+      "count": 6
+    }
+  }
+}

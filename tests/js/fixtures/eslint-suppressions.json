@@ -1,0 +1,7 @@
+{
+    "resources/js/components/suppressed.tsx": {
+        "shadcn/no-restyle": {
+            "count": 1
+        }
+    }
+}
