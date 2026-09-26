@@ -258,10 +258,8 @@ export function TalkComposer({
                         onMentionsChange={setMentions}
                         // The room is the mentionable set, so the endpoint is the room's own.
                         candidatesUrl={`/groups/${groupId}/talk/mention-candidates`}
-                        // The line-height and padding add up to the 44px the buttons beside it stand
-                        // at, and the radius needs its `!` because the base rounded-field outranks it
-                        // by source order.
-                        className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl! py-2.25 leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+                        // The line-height and padding add up to the 44px the buttons beside it stand at.
+                        className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-2xl py-2.25 leading-6 placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                     />
                 </div>
                 <Tip label={t('Send')}>

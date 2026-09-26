@@ -138,8 +138,7 @@
     }
 }
 
-/* Inset-aware spacing on the four screen edges: pb-safe-4 is 1rem plus env(safe-area-inset-bottom).
-   Registered in lib/utils.ts so cn() merges them like the built-in spacing utilities. */
+/* Every utility below is registered in lib/utils.ts, so cn() merges it like the built-in one it extends. */
 @utility pt-safe {
     padding-top: env(safe-area-inset-top);
 }
@@ -188,7 +187,16 @@
 @utility right-safe-* {
     right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
 }
-/* The bottom bar's reserved strip (--modern-bottom-offset, set by AppShell) plus spacing. */
+/* The strip a bar reserves on its edge (--modern-top-offset / --modern-bottom-offset) plus spacing. */
+@utility top-offset-* {
+    top: calc(--spacing(--value(number)) + var(--modern-top-offset));
+}
+@utility bottom-offset-* {
+    bottom: calc(--spacing(--value(number)) + var(--modern-bottom-offset));
+}
+@utility mb-offset-* {
+    margin-bottom: calc(--spacing(--value(number)) + var(--modern-bottom-offset));
+}
 @utility pb-offset-* {
     padding-bottom: calc(--spacing(--value(number)) + var(--modern-bottom-offset));
 }

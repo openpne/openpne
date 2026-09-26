@@ -401,7 +401,7 @@ export default function GroupTalkIndex() {
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot and the boundary this offers is a
                 // page or more above them.
-                <div className="sticky top-[calc(var(--modern-top-offset)+0.5rem)] z-20 flex justify-center">
+                <div className="sticky top-offset-2 z-20 flex justify-center">
                     {digestAt === 'banner' && unreadDigest !== undefined ? (
                         <TalkUnreadDigestCard
                             digest={unreadDigest}
@@ -516,7 +516,7 @@ export default function GroupTalkIndex() {
             {!atBottom && (
                 // `mb-0` because zero height still takes the margin the page puts under every child
                 // but the last, which would cost the pill 16px of page each time it appears.
-                <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+4.25rem)] z-20 mb-0 flex h-0 items-end justify-center">
+                <div className="pointer-events-none sticky bottom-offset-17 z-20 mb-0 flex h-0 items-end justify-center">
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
                         <ArrowDown className="size-4" aria-hidden />
                         {/* A separate word from the banner's "unread" above: that one is the server's

@@ -104,8 +104,8 @@ test('a Modern module is refused a palette color, an undeclared token, a class T
 });
 
 /**
- * The allowed snippet is the teeth of app.css: `pb-safe-4` and `text-2xs` exist only through its
- * utilities and tokens, so a theme that lost them would be refused as unknown classes.
+ * `pb-safe-4` and `text-2xs` in the refused snippet are the teeth of app.css: they exist only through
+ * its utilities and tokens, so a theme that lost them would report them as unknown classes.
  */
 test('a Modern module is refused an off-scale value and an arbitrary transition outside the named two', async () => {
     const found = await messages('export const a = <div className="p-[13px] transition-[height] pb-safe-4 text-2xs" />;\n', 'resources/js/components/x.tsx');
