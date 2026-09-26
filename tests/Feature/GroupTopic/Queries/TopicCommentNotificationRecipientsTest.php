@@ -73,9 +73,29 @@ class TopicCommentNotificationRecipientsTest extends TestCase
         $blocking = $this->joined($group);
         $this->block($blocking, $commenter);
         $this->comment($topic, $blocking);
+        $shunned = $this->joined($group);
+        $this->comment($topic, $shunned);
+        $this->block($commenter, $shunned);
 
         $recipients = app(TopicCommentNotificationRecipients::class)($topic, $commenter);
 
         $this->assertSame([[$member->getKey(), CommentReason::Related]], $this->reasonsOf($recipients));
+    }
+
+    public function test_on_a_board_everyone_may_read_a_commenter_who_never_joined_is_still_told(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $commenter = $this->joined($group);
+        $passerby = Member::factory()->create();
+        $this->comment($topic, $passerby);
+
+        $recipients = app(TopicCommentNotificationRecipients::class)($topic, $commenter);
+
+        $this->assertSame(
+            [[$author->getKey(), CommentReason::Reply], [$passerby->getKey(), CommentReason::Related]],
+            $this->reasonsOf($recipients),
+        );
     }
 }

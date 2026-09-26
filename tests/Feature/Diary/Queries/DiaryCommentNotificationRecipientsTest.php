@@ -72,6 +72,10 @@ class DiaryCommentNotificationRecipientsTest extends TestCase
         $this->befriend($blocking, $owner);
         $this->block($blocking, $commenter);
         $this->comment($diary, $blocking);
+        $shunned = Member::factory()->create();
+        $this->befriend($shunned, $owner);
+        $this->comment($diary, $shunned);
+        $this->block($commenter, $shunned);
         $this->block($owner, $commenter);
 
         $recipients = app(DiaryCommentNotificationRecipients::class)($diary, $commenter);

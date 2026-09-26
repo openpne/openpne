@@ -52,6 +52,9 @@ class TimelineReplyNotificationRecipientsTest extends TestCase
         $blocking = Member::factory()->create();
         $this->block($blocking, $replier);
         $this->reply($root, $blocking);
+        $shunned = Member::factory()->create();
+        $this->reply($root, $shunned);
+        $this->block($replier, $shunned);
         $reply = $this->reply($root, $replier);
 
         $recipients = app(TimelineReplyNotificationRecipients::class)($reply, $replier, [$mentioned->getKey()]);
@@ -59,6 +62,27 @@ class TimelineReplyNotificationRecipientsTest extends TestCase
 
         $recipients = app(TimelineReplyNotificationRecipients::class)($reply, $replier, [$mentioned->getKey(), $owner->getKey()]);
         $this->assertSame([], $recipients);
+    }
+
+    public function test_a_co_replier_who_may_no_longer_read_the_root_is_left_out(): void
+    {
+        $owner = Member::factory()->create();
+        $root = TimelinePost::factory()->friends()->create(['member_id' => $owner->getKey()]);
+        $replier = Member::factory()->create();
+        $this->befriend($replier, $owner);
+        $friend = Member::factory()->create();
+        $this->befriend($friend, $owner);
+        $this->reply($root, $friend);
+        $unfriended = Member::factory()->create();
+        $this->reply($root, $unfriended);
+        $reply = $this->reply($root, $replier);
+
+        $recipients = app(TimelineReplyNotificationRecipients::class)($reply, $replier);
+
+        $this->assertSame(
+            [[$owner->getKey(), CommentReason::Reply], [$friend->getKey(), CommentReason::Related]],
+            $this->reasonsOf($recipients),
+        );
     }
 
     public function test_a_top_level_post_is_a_reply_to_nobody(): void

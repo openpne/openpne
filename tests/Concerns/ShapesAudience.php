@@ -9,7 +9,6 @@ use App\Models\Member;
 use App\Notifications\CommentReason;
 use Illuminate\Support\Facades\DB;
 
-/** Fixture verbs for a recipients query: the people a notification must leave out, one line each. */
 trait ShapesAudience
 {
     protected function banned(): Member
