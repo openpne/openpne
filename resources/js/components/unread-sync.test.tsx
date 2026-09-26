@@ -98,6 +98,9 @@ test('every minute on a visible tab the counts are re-read into the shared props
     expect(inertia.replaceProp).toHaveBeenCalledWith('unread', counts(7));
     expect(inertia.replaceProp).toHaveBeenCalledWith('talkNavRooms', null);
     expect(pushLib.setAppBadge).toHaveBeenLastCalledWith(7);
+
+    await advance(INTERVAL_MS);
+    expect(net.fetch).toHaveBeenCalledTimes(2);
 });
 
 test('a hidden tab is not refreshed; coming back to it is, and so is a page ringing the bell', async () => {
@@ -119,7 +122,6 @@ test('a hidden tab is not refreshed; coming back to it is, and so is a page ring
 
     ring();
     expect(net.fetch).toHaveBeenCalledTimes(2);
-    // The later read supersedes the one still out.
     expect(net.init(0).signal?.aborted).toBe(true);
     expect(net.init(1).signal?.aborted).toBe(false);
 });

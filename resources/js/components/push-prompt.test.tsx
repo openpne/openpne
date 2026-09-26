@@ -48,14 +48,16 @@ test('the prompt stands only while push is configured, permission is still to be
     expect(enable()).toBeTruthy();
     cleanup();
 
-    pushLib.permission = 'granted';
-    renderWithProviders(<PushPrompt />);
-    expect(enable()).toBeNull();
-    cleanup();
-
-    pushLib.permission = 'default';
     window.localStorage.setItem(STORAGE_KEY, '1');
     renderWithProviders(<PushPrompt />);
+    expect(enable()).toBeNull();
+});
+
+test.each([['granted'], ['denied'], ['unsupported']] as const)('once permission is %s there is nothing to ask', (state) => {
+    pushLib.permission = state;
+    configured();
+    renderWithProviders(<PushPrompt />);
+
     expect(enable()).toBeNull();
 });
 
@@ -84,9 +86,15 @@ test('a failed subscription says so and keeps the prompt for another try', async
     expect(screen.getByText('Something went wrong. Please try again.')).toBeTruthy();
     expect(enable()).toBeTruthy();
 
-    pushLib.subscribeThisDevice.mockResolvedValue('subscribed');
+    // The next try clears the message while it is still out.
+    let settle: (outcome: 'subscribed') => void = () => {};
+    pushLib.subscribeThisDevice.mockImplementation(() => new Promise((resolve) => (settle = resolve)));
+    fireEvent.click(enable()!);
+    expect(screen.queryByText('Something went wrong. Please try again.')).toBeNull();
+    expect(enable()).toBeTruthy();
+
     await act(async () => {
-        fireEvent.click(enable()!);
+        settle('subscribed');
     });
     expect(enable()).toBeNull();
 });

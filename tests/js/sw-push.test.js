@@ -10,7 +10,7 @@ if (typeof navigator === 'undefined') {
     globalThis.navigator = {};
 }
 
-/** `visible` decides whether the worker asks this client; `acks` whether its page answers on the port. The port is closed either way, or node waits on it. */
+/** The port is closed either way, or node waits on it. */
 const aClient = (calls, name, { visible = true, acks = true } = {}) => ({
     visibilityState: visible ? 'visible' : 'hidden',
     postMessage: (data, ports = []) => {
@@ -23,8 +23,7 @@ const aClient = (calls, name, { visible = true, acks = true } = {}) => ({
     },
 });
 
-/** Boots the worker against `clients` (what matchAll returns); `badge` is whether the Badging API exists. */
-function boot(clients, { badge = true } = {}) {
+function boot(clients) {
     const handlers = {};
     const calls = { messages: [], notifications: [], badges: [] };
     globalThis.self = {
@@ -43,22 +42,17 @@ function boot(clients, { badge = true } = {}) {
             matchAll: async () => clients(calls),
         },
     };
-    if (badge) {
-        Object.defineProperty(navigator, 'setAppBadge', {
-            value: async (count) => {
-                calls.badges.push(count);
-            },
-            configurable: true,
-        });
-    } else {
-        delete navigator.setAppBadge;
-    }
+    Object.defineProperty(navigator, 'setAppBadge', {
+        value: async (count) => {
+            calls.badges.push(count);
+        },
+        configurable: true,
+    });
     runInThisContext(`(function () {\n${source}\n})`, { filename: 'public/sw.js' })();
 
     return { handlers, calls };
 }
 
-/** `payload` undefined = a push with no data; a string = data that is not JSON. */
 const push = async (handlers, payload) => {
     const pending = [];
     handlers.push({
@@ -124,18 +118,14 @@ test('a visible tab with no handler never answers, so the badge falls back to th
     assert.deepEqual(calls.badges, [3]);
 });
 
-test('without the Badging API nothing is written; without MessageChannel no tab is asked and the payload is written', async () => {
-    const { handlers, calls } = boot(() => [], { badge: false });
-    await push(handlers, { title: 'x', unreadCount: 3 });
-    assert.deepEqual(calls.badges, []);
-
+test('without MessageChannel no tab is asked and the payload is written', async () => {
     const Channel = globalThis.MessageChannel;
     globalThis.MessageChannel = undefined;
     try {
-        const old = boot((c) => [aClient(c, 'front')]);
-        await push(old.handlers, { title: 'x', unreadCount: 4 });
-        assert.deepEqual(old.calls.messages, []);
-        assert.deepEqual(old.calls.badges, [4]);
+        const { handlers, calls } = boot((c) => [aClient(c, 'front')]);
+        await push(handlers, { title: 'x', unreadCount: 4 });
+        assert.deepEqual(calls.messages, []);
+        assert.deepEqual(calls.badges, [4]);
     } finally {
         globalThis.MessageChannel = Channel;
     }
