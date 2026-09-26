@@ -13,13 +13,11 @@ export interface MemberActionsProfile {
     friendStatus: 'friend' | 'sent' | 'received' | 'none' | null;
 }
 
-const PILL = 'rounded-full';
-
 /**
  * The two friend states are whole sentences, one of them carrying a member's name, so their pill has
  * to wrap — the button base would otherwise hold them on one line and push them off a phone.
  */
-const SENTENCE_PILL = `${PILL} whitespace-normal text-center`;
+const SENTENCE = 'whitespace-normal text-center';
 
 /**
  * The page renders for a signed-in member only, so the viewer is never a guest and the gate is the
@@ -32,11 +30,11 @@ export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
     if (profile.isSelf) {
         return (
             <Row>
-                <ActionLink href="/member/edit/profile" size="sm" className={PILL}>
+                <ActionLink href="/member/edit/profile" size="sm" shape="pill">
                     <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
                     {t('Edit Profile')}
                 </ActionLink>
-                <ActionLink href="/member/avatar" variant="outline" size="sm" className={PILL}>
+                <ActionLink href="/member/avatar" variant="outline" size="sm" shape="pill">
                     <Camera className="size-4" strokeWidth={2.25} aria-hidden />
                     {t('Edit profile image')}
                 </ActionLink>
@@ -58,7 +56,7 @@ export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
             {friendEntry && (
                 <>
                     {profile.friendStatus === 'none' && (
-                        <ActionLink href={`/friend/link?id=${profile.id}`} size="sm" className={PILL}>
+                        <ActionLink href={`/friend/link?id=${profile.id}`} size="sm" shape="pill">
                             <UserPlus className="size-4" strokeWidth={2.25} aria-hidden />
                             {t('Send a %friend% request')}
                         </ActionLink>
@@ -66,19 +64,19 @@ export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
                     {/* A request already sent is a state, not an errand; one received is the
                         errand. */}
                     {profile.friendStatus === 'sent' && (
-                        <ActionLink href="/friend/requests" variant="outline" size="sm" className={SENTENCE_PILL}>
+                        <ActionLink href="/friend/requests" variant="outline" size="sm" shape="pill" className={SENTENCE}>
                             {t('%Friend% request pending.')}
                         </ActionLink>
                     )}
                     {profile.friendStatus === 'received' && (
-                        <ActionLink href="/friend/requests" size="sm" className={SENTENCE_PILL}>
+                        <ActionLink href="/friend/requests" size="sm" shape="pill" className={SENTENCE}>
                             {t(':name sent you a %friend% request.', { name: profile.name })}
                         </ActionLink>
                     )}
                 </>
             )}
             {messageEntry && (
-                <ActionLink href={`/messages/${profile.id}`} variant="outline" size="sm" className={PILL}>
+                <ActionLink href={`/messages/${profile.id}`} variant="outline" size="sm" shape="pill">
                     <Mail className="size-4" strokeWidth={2.25} aria-hidden />
                     {t('Send a message')}
                 </ActionLink>

@@ -411,7 +411,7 @@ export default function GroupTalkIndex() {
                             className="w-full max-w-sm shadow-md"
                         />
                     ) : (
-                        <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
+                        <Button size="sm" variant="secondary" elevated onClick={() => jumpToContext(backlog.cursor)}>
                             <ArrowUp className="size-4" aria-hidden />
                             {jumpToUnreadPhrase(t, backlog.count)}
                         </Button>
@@ -424,7 +424,7 @@ export default function GroupTalkIndex() {
                 two cannot end on different lines (components/card.tsx). */}
             <Panel flush variant="bleed" className="mb-0 lg:mb-4">
                 {stream.hasOlder && (
-                    <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="row" size="row" edge="bottom" loading={stream.loadingOlder} onClick={loadOlder}>
                         {t('Load older messages')}
                     </Button>
                 )}
@@ -505,7 +505,7 @@ export default function GroupTalkIndex() {
                 )}
 
                 {!atLatest && (
-                    <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()} className="w-full rounded-none border-t border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="row" size="row" edge="top" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()}>
                         {t('Load newer messages')}
                     </Button>
                 )}
@@ -517,7 +517,7 @@ export default function GroupTalkIndex() {
                 // `mb-0` because zero height still takes the margin the page puts under every child
                 // but the last, which would cost the pill 16px of page each time it appears.
                 <div className="pointer-events-none sticky bottom-offset-17 z-20 mb-0 flex h-0 items-end justify-center">
-                    <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
+                    <Button size="sm" variant="secondary" elevated onClick={jumpToLatest} className="pointer-events-auto">
                         <ArrowDown className="size-4" aria-hidden />
                         {/* A separate word from the banner's "unread" above: that one is the server's
                             cursor, this one is what has landed since the reader was last at the

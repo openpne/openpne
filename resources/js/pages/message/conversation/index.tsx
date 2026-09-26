@@ -261,7 +261,7 @@ export default function MessageConversation() {
                 // Sticky, because the reader opens at the foot and the boundary this offers is a
                 // page or more above them.
                 <div className="sticky top-offset-2 z-20 flex justify-center">
-                    <Button size="sm" variant="secondary" onClick={() => jumpToContext(backlog.cursor)} className="shadow-md">
+                    <Button size="sm" variant="secondary" elevated onClick={() => jumpToContext(backlog.cursor)}>
                         <ArrowUp className="size-4" aria-hidden />
                         {jumpToUnreadPhrase(t, backlog.count)}
                     </Button>
@@ -281,7 +281,7 @@ export default function MessageConversation() {
                 className={cn('mb-0 lg:mb-4', composer === null && 'max-lg:mb-offset-8')}
             >
                 {stream.hasOlder && (
-                    <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder} className="w-full rounded-none border-b border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="row" size="row" edge="bottom" loading={stream.loadingOlder} onClick={loadOlder}>
                         {t('Load older messages')}
                     </Button>
                 )}
@@ -331,7 +331,7 @@ export default function MessageConversation() {
                 )}
 
                 {!atLatest && (
-                    <Button variant="ghost" size="sm" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()} className="w-full rounded-none border-t border-border py-3 text-link hover:bg-muted hover:text-link sm:px-5">
+                    <Button variant="row" size="row" edge="top" loading={stream.loadingNewer} onClick={() => void stream.loadNewer()}>
                         {t('Load newer messages')}
                     </Button>
                 )}
@@ -348,7 +348,7 @@ export default function MessageConversation() {
                         composer === null ? 'bottom-offset-4' : 'bottom-offset-17',
                     )}
                 >
-                    <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
+                    <Button size="sm" variant="secondary" elevated onClick={jumpToLatest} className="pointer-events-auto">
                         <ArrowDown className="size-4" aria-hidden />
                         {latestLabel}
                     </Button>
