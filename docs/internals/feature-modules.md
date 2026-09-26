@@ -232,8 +232,9 @@ semantic design tokens in [`app.css`](../../resources/css/app.css), not bare con
 raw Tailwind palette, so a page is dark-correct and re-themeable by construction. Two guards
 enforce it: `RawPaletteGuardTest`, a regex over every `.tsx` that also refuses bare white and black,
 and `shadcn/no-raw-colors`, which reads the class sites it can resolve and names the declared tokens.
-A styled ui component takes its look from its variants, and `className` on one carries layout only
-(`shadcn/no-restyle`); the unstyled Radix slots — a trigger, a close — are dressed by their caller.
+A styled ui component takes its look from its variants, and `className` on one carries layout, plus
+what its contract names (`shadcn/no-restyle`); the unstyled Radix slots — a trigger, a close — are
+dressed by their caller.
 
 **Admin** (Filament) may use plain CRUD for simple, non-behavioral master data
 (labels, categories, basic config). For SNS-meaningful operations — anything with

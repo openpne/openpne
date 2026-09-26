@@ -112,7 +112,7 @@ export default tseslint.config(
                     contracts: [
                         // An unstyled Radix slot the caller dresses; the radius pattern covers the
                         // project's own tokens, which the grammar cannot place in a category.
-                        { pattern: '^(DialogTrigger|DropdownMenuTrigger|PopoverTrigger|DialogClose)$', allow: [...CLASS_CATEGORIES, 'rounded-*'] },
+                        { pattern: '^(DialogTrigger|DropdownMenuTrigger|PopoverTrigger|TooltipTrigger|DialogClose)$', allow: [...CLASS_CATEGORIES, 'rounded-*'] },
                         // bodyClassName is the body's layout API.
                         { pattern: '^Panel$', allow: ['layout', 'space-y-*'] },
                         { pattern: '^(PopoverContent|DialogContent|SheetContent)$', allow: ['layout', 'gap-*', 'pt-safe-*'] },
