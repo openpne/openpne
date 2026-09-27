@@ -297,7 +297,8 @@ counted either.
 **The cost does not grow with the month.** The whole month takes one read per source table, one per
 relation the gate asks about, and one count per distinct burst window
 ([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —
-ordinarily one per issue. Pictures are read after the gate, for each day's top item only.
+ordinarily one per issue. Pictures are read after the gate, for each day's top item only: one read
+per kind of source that leads a day.
 
 ## Routes
 

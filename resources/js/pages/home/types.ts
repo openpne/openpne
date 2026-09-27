@@ -120,7 +120,7 @@ export interface DayCounts {
 
 export type DayTop =
     | { kind: 'story'; headline: string; image: GridImage | null }
-    | { kind: 'talk'; group: BoardScope; count: number }
+    | { kind: 'talk'; group: BoardScope }
     | { kind: 'newcomer'; member: MemberRef; others: number }
     | { kind: 'newGroup'; group: BoardScope };
 

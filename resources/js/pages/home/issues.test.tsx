@@ -107,7 +107,7 @@ test('a stretch of days is named as one', () => {
 test('a day with no story leads with what it does have', () => {
     arrive({
         days: [
-            day('2026-08-27', { kind: 'talk', group, count: 12 }, { talk: 12 }),
+            day('2026-08-27', { kind: 'talk', group }, { talk: 12 }),
             day('2026-08-26', { kind: 'newcomer', member, others: 0 }, { newcomers: 1 }),
             day('2026-08-25', { kind: 'newcomer', member, others: 1 }, { newcomers: 2 }),
             day('2026-08-24', { kind: 'newcomer', member, others: 3 }, { newcomers: 4 }),

@@ -126,7 +126,6 @@ final class HomeIssueSerializer
             $summary->bursts !== [] => [
                 'kind' => 'talk',
                 'group' => self::scope($top),
-                'count' => $summary->bursts[0]['count'],
             ],
             $summary->newcomers !== [] => [
                 'kind' => 'newcomer',

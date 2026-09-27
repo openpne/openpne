@@ -25,8 +25,8 @@ use Illuminate\Support\Facades\Gate;
 /**
  * Whether one ledger row still resolves for the member reading the issue: every row is asked again
  * through the source's own rule, and one that does not answer is dropped in silence
- * (docs/internals/home-issues.md, "Rendering"). It answers with the item rather than a boolean
- * because the talk arm has to read the room to know.
+ * (docs/internals/home-issues.md, "Rendering"). `resolve()` answers with the item rather than a
+ * boolean because the talk arm has to read the room to know.
  */
 final class HomeItemGate
 {

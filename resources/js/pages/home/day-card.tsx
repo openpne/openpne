@@ -70,10 +70,7 @@ function Picture({ top }: { top: DayTop }) {
     }
 }
 
-/**
- * The date is the link and the row is its target (docs/internals/home-issues.md, "The month page"):
- * a day is called by its date, whatever it happens to lead with.
- */
+/** The date is the link, not the headline: a day is called by its date, whatever it leads with. */
 export function DayCard({ day }: { day: DaySummary }) {
     const t = useT();
     const { civilDate } = useDateFormat();

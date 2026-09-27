@@ -579,9 +579,10 @@ class HomeIssueSerializerTest extends TestCase
         ]);
 
         $this->assertSame(
-            ['kind' => 'talk', 'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null], 'count' => 3],
+            ['kind' => 'talk', 'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null]],
             $this->month()['days'][0]['top'],
         );
+        $this->assertSame(3, $this->month()['days'][0]['counts']['talk']);
     }
 
     public function test_a_day_of_newcomers_leads_with_the_first_and_counts_the_rest(): void

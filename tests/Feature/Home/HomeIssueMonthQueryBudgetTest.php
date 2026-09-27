@@ -10,6 +10,7 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\Data\HomeIssueMonth;
 use App\Features\Home\HomeIssueSection;
+use App\Features\Home\Queries\AdjacentHomeIssueMonths;
 use App\Features\Home\Queries\ListHomeIssuesInMonth;
 use App\Features\Home\Queries\SummarizeHomeIssues;
 use App\Features\Home\Serializers\HomeIssueSerializer;
@@ -43,10 +44,10 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Measured at 53 for 31 issues: 24 reads and 29 talk counts. The margin stays below the smallest
+     * Measured at 55 for 31 issues: 26 reads and 29 talk counts. The margin stays below the smallest
      * per-row loop the fixture could hide, a read per issue, which would add 31.
      */
-    private const CEILING = 57;
+    private const CEILING = 59;
 
     public function test_a_month_costs_the_same_reads_however_many_issues_it_holds(): void
     {
@@ -88,7 +89,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         DB::enableQueryLog();
 
         $issues = app(ListHomeIssuesInMonth::class)($month);
-        $payload = HomeIssueSerializer::month($month, $issues, app(SummarizeHomeIssues::class)($viewer, $issues), null, null);
+        ['previous' => $previous, 'next' => $next] = app(AdjacentHomeIssueMonths::class)($month);
+        $payload = HomeIssueSerializer::month($month, $issues, app(SummarizeHomeIssues::class)($viewer, $issues), $previous, $next);
 
         $log = DB::getQueryLog();
         DB::disableQueryLog();
