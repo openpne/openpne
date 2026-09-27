@@ -266,8 +266,8 @@ Every optional section key is absent rather than empty, so nothing on the page h
 
 ## The month page
 
-`/home/{y}/{m}` draws one month of issues, newest first: each as its date, its top item and one line
-of counts.
+`/home/{y}/{m}` draws one month of issues, newest first: each day as its date and the first few
+things that happened on it, every one a link to the thing itself.
 
 **A day has an issue when an issue is dated that day, and only then.** An issue belongs to the month
 of its `issue_date`, whatever its window reaches back over — the rule `/home/{y}/{m}/{d}` already
@@ -275,10 +275,11 @@ answers by. A window grows for two reasons, and only the first leaves the days i
 on which nothing happened published no issue, while the first issue ever, and one that follows a
 stopped scheduler, carry what happened on the days before under the last day's date.
 
-**What a row says about its sources is read live and through their gates.** The headline, the picture
-and every count come from [`SummarizeHomeIssues`](../../app/Features/Home/Queries/SummarizeHomeIssues.php),
-which asks [`HomeItemGate::admits()`](../../app/Features/Home/HomeItemGate.php) — the rule the issue
-page asks — so a month never shows what the day's own page would drop. Frozen `score` and `stats` are
+**What a day says about its sources is read live and through their gates.** Headlines, pictures,
+what was last said in a room and every count come from
+[`SummarizeHomeIssues`](../../app/Features/Home/Queries/SummarizeHomeIssues.php), which asks
+[`HomeItemGate::admits()`](../../app/Features/Home/HomeItemGate.php) — the rule the issue page
+asks — so a month never shows what the day's own page would drop. Frozen `score` and `stats` are
 not read, a burst's window excepted.
 
 **That an issue exists is not gated.** A day whose rows have all been dropped is still listed, as its
@@ -286,33 +287,30 @@ date alone, and the grid of months under the rows counts issues, not what is lef
 ([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
 holds none is drawn there and is not a link.
 
-| Count | Of the rows that survive |
-|---|---|
-| stories | the rows themselves |
-| responses | replies to a post; comments on a diary, a topic or an event |
-| talk | messages in each burst's stretch |
-| newcomers, new groups | the rows themselves |
+**A day shows three items and says how many more there are.** The lead story, the busiest room, the
+second story; a kind that has run out gives its place to the other, so a day with talk in it always
+shows some. "More" counts the stories and rooms that survive and are not shown, and nothing else.
 
-Upcoming events are not counted, because the calendar is not news; RSVPs and reactions are not
-counted either.
+| Read from the ledger | How deep | Shown as |
+|---|---|---|
+| stories, talk | every rank | up to three items, and the count of the rest |
+| newcomers, new groups | the first three rows | the names of those that pass the gate, which may be fewer than three |
+| upcoming events | not read | — |
 
-**How dark a day is drawn compares it with the month's other days.** A day's activity is the sum of
-its five counts, and [`HeatScale`](../../app/Features/Home/HeatScale.php) ranks it among the issues of
-the displayed month that have any: `1 + floor(4 × issues strictly below it / issues ranked)`, which
-runs from 1 to 4, and 0 for a day with nothing left. It is a rank and not a share of the busiest, so
-one very busy day does not flatten the rest, and a tie takes the lower level, so a lone day and a
-month of equal days are drawn at 1. A level says nothing between months.
+**A room is drawn by what was last said in it**: who spoke, the line, how many messages the stretch
+holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
+and the first picture of that message. Whether the message has a picture is what its per-file gate
+answered, never that a row for one exists: a message of pictures only, all refused, is drawn as the
+room's name and its count and nothing more.
 
-On the month's calendar a day with an issue is a bordered link and a day without one is bare text, so
-the two are told apart without the fill. The fill itself is never the only way to read a day: its row
-below states the counts the level was ranked by, and the link is named by them.
+On the month's calendar a day with an issue is a bordered link and a day without one is bare text.
 
-**The cost does not grow with the month.** The whole month takes one read per source table, one per
-relation the gate asks about, and one count per distinct burst window
-([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —
-ordinarily one per issue. Pictures are read after the gate, for each day's top item only: one read
-per kind of source that leads a day. The grid of months is one read of every issue's date, a row
-per published day.
+**The cost does not grow with the ledger.** One read per source table, one per relation the gate
+asks about, and the units asked once per gate rather than per row. Two reads do grow, with the
+month and not with its rows: one per issue that holds talk, since each issue has a window of its
+own, and the gate of each talk picture shown, at most three a day. Pictures and faces are read after
+the gate, for the items shown and no others. The grid of months is one read of every issue's date,
+a row per published day.
 
 ## Routes
 

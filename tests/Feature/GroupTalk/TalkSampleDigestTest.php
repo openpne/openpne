@@ -364,16 +364,18 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame(1, GroupMessage::query()->where('group_id', $this->group->getKey())->count());
     }
 
-    public function test_rooms_counted_together_share_the_window_and_a_silent_one_is_absent(): void
+    // --- rooms read together ---
+
+    public function test_rooms_read_together_share_the_window_and_each_ends_on_its_own_last_message(): void
     {
         $author = $this->member();
         $this->said($author, $this->start);
         $this->said($author, $this->start->addSecond());
-        $this->said($author, $this->until);
+        $onUntil = $this->said($author, $this->until);
         $this->said($author, $this->until->addSecond());
 
         $other = Group::factory()->create();
-        GroupMessage::factory()->create([
+        $only = GroupMessage::factory()->create([
             'group_id' => $other->getKey(),
             'created_at' => $this->start->addMinutes(10),
             'updated_at' => $this->start->addMinutes(10),
@@ -381,13 +383,55 @@ class TalkSampleDigestTest extends TestCase
         $silent = Group::factory()->create();
 
         $this->assertEquals(
-            [$this->group->getKey() => 2, $other->getKey() => 1],
-            $this->digest->countsBetween(
+            [
+                $this->group->getKey() => ['count' => 2, 'last' => $onUntil->getKey()],
+                $other->getKey() => ['count' => 1, 'last' => $only->getKey()],
+                $silent->getKey() => ['count' => 0, 'last' => null],
+            ],
+            $this->digest->stretchesOf(
                 [$this->group->getKey(), $other->getKey(), $silent->getKey()],
                 $this->start,
                 $this->until,
             ),
         );
+    }
+
+    public function test_a_stretch_ends_on_the_later_instant_and_then_the_higher_id(): void
+    {
+        $author = $this->member();
+        // Written first, so the lowest id — and last in the window all the same.
+        $late = $this->said($author, $this->start->addMinutes(20));
+        $this->said($author, $this->start->addMinutes(10));
+        $tiedLater = $this->said($author, $this->start->addMinutes(10));
+
+        $last = fn (): ?int => $this->digest
+            ->stretchesOf([$this->group->getKey()], $this->start, $this->until)[$this->group->getKey()]['last'];
+
+        $this->assertSame($late->getKey(), $last());
+
+        $late->delete();
+
+        $this->assertSame($tiedLater->getKey(), $last());
+    }
+
+    /** SQLite answers a tie in id order unasked, so the `ORDER BY` itself is what is pinned. */
+    public function test_the_end_of_a_stretch_is_asked_of_the_database_not_left_to_it(): void
+    {
+        DB::enableQueryLog();
+
+        $this->digest->stretchesOf([$this->group->getKey()], $this->start, $this->until);
+
+        $sql = str_replace(['`', '"'], '', DB::getQueryLog()[0]['query']);
+        DB::disableQueryLog();
+
+        $this->assertStringContainsString(
+            'order by group_messages.created_at desc, group_messages.id desc limit 1',
+            $sql,
+        );
+        // Both subselects are bounded by the window, and by the room of the outer row.
+        $this->assertSame(2, substr_count($sql, 'group_messages.group_id = groups.id'));
+        $this->assertSame(2, substr_count($sql, 'group_messages.created_at > ?'));
+        $this->assertSame(2, substr_count($sql, 'group_messages.created_at <= ?'));
     }
 
     // --- who did the talking ---

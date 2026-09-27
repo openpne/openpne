@@ -30,6 +30,14 @@ use Illuminate\Support\Facades\Gate;
  */
 final class HomeItemGate
 {
+    /**
+     * A unit is asked once per gate: every ask is a settings read, and a month asks per ledger row
+     * (docs/internals/home-issues.md, "The month page").
+     *
+     * @var array<string, bool>
+     */
+    private array $units = [];
+
     public function __construct(private readonly TalkSampleDigest $talk) {}
 
     public function resolve(Member $viewer, HomeIssueItem $item, ?Model $source): ?HydratedItem
@@ -66,7 +74,7 @@ final class HomeItemGate
         // Read again here, not only at publication: an administrator switching a unit off hides its
         // rows without touching the ledger, and switching it back on brings them back.
         $unit = $section->unit($alias);
-        if ($unit !== null && ! $unit->enabled()) {
+        if ($unit !== null && ! ($this->units[$unit->value] ??= $unit->enabled())) {
             return false;
         }
 

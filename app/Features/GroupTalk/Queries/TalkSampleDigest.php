@@ -228,16 +228,38 @@ final class TalkSampleDigest
     }
 
     /**
+     * Read off `groups`, the messages left unaliased inside each subselect: {@see between()} names
+     * `group_messages.created_at`, and an alias would bind it to the outer row and lose the window.
+     *
      * @param  list<int>  $groupIds
-     * @return array<int, int> messages per group id, a group that said nothing being absent
+     * @return array<int, array{count: int, last: int|null}> per group id, `last` the newest message in the stretch
      */
-    public function countsBetween(array $groupIds, CarbonImmutable $since, CarbonImmutable $until): array
+    public function stretchesOf(array $groupIds, CarbonImmutable $since, CarbonImmutable $until): array
     {
-        return $this->between(GroupMessage::query()->whereIn('group_id', $groupIds), $since, $until)
-            ->groupBy('group_id')
-            ->selectRaw('group_id, count(*) as said')
-            ->pluck('said', 'group_id')
-            ->map(fn (mixed $said): int => (int) $said)
+        $inStretch = fn (): Builder => $this->between(
+            GroupMessage::query()->whereColumn('group_messages.group_id', 'groups.id'),
+            $since,
+            $until,
+        );
+
+        return Group::query()
+            ->whereKey($groupIds)
+            ->select('groups.id')
+            ->selectSub($inStretch()->selectRaw('count(*)'), 'said')
+            ->selectSub(
+                $inStretch()
+                    ->select('group_messages.id')
+                    ->orderByDesc('group_messages.created_at')
+                    ->orderByDesc('group_messages.id')
+                    ->limit(1),
+                'last_id',
+            )
+            ->toBase()
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [(int) $row->id => [
+                'count' => (int) $row->said,
+                'last' => $row->last_id === null ? null : (int) $row->last_id,
+            ]])
             ->all();
     }
 

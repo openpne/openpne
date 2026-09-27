@@ -46,24 +46,12 @@ export function happeningDaysPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 day of happenings') : t(':count days of happenings', { count });
 }
 
-export function storiesPhrase(t: Translate, count: number): string {
-    return count === 1 ? t('1 story') : t(':count stories', { count });
-}
-
 export function responsesPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 response') : t(':count responses', { count });
 }
 
-export function talkMessagesPhrase(t: Translate, count: number): string {
-    return count === 1 ? t('1 talk message') : t(':count talk messages', { count });
-}
-
-export function newMembersPhrase(t: Translate, count: number): string {
-    return count === 1 ? t('1 new member') : t(':count new members', { count });
-}
-
-export function newGroupsPhrase(t: Translate, count: number): string {
-    return count === 1 ? t('1 new %community%') : t(':count new %communities%', { count });
+export function morePhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 more') : t(':count more', { count });
 }
 
 export function passkeysPhrase(t: Translate, count: number): string {
