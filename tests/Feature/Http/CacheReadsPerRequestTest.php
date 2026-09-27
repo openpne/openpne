@@ -104,7 +104,7 @@ class CacheReadsPerRequestTest extends TestCase
 
         DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'My Group']);
 
-        // Read from memory until the keys are dropped: the row alone changes nothing.
+        // The cached map still answers: the row alone changes nothing until the keys are dropped.
         $this->assertSame((string) config('app.name'), $settings->get(SnsSettingKey::SnsName));
 
         $settings->clearCache();

@@ -122,17 +122,19 @@ once `TRUSTED_PROXIES` says the proxy may set them.
 Site settings, terms, navigation rows and gadget rows are cached under one key each, and a request
 asks for them many times over: every feature-unit check is a settings read. Those services read
 through Laravel's memoized store (`Cache::memo()`), so **a key is fetched from the cache store once
-per request or job** and answered from memory after that. With `CACHE_STORE=database`, the default,
-each fetch is a query.
+per request, queued job or console command** and answered from memory after that. With
+`CACHE_STORE=database`, the default, each fetch is a query.
 
 Key invariants:
 
 1. **A forget goes through the same memoized store.** `Cache::forget()` would empty the store and
-   leave the rest of the request answering from memory; each service's `clearCache()` is the one way
-   to drop its keys.
-2. **What another process writes is seen from the next request on.** A request that has read a key
-   keeps that answer until it ends, which is the consistency a single page wants and no different
-   from having read the key a moment earlier.
+   leave the rest of the request answering from memory. Application code drops a service's keys
+   through its `clearCache()`; a migration, which cannot lean on a service, calls
+   `Cache::memo()->forget()`.
+2. **What another process writes and clears is seen from the next request on.** A request that has
+   read a key keeps that answer until it ends, which is the consistency a single page wants and no
+   different from having read the key a moment earlier. A console command keeps it until it exits,
+   however long it runs.
 3. **A cold key is fetched twice.** The miss is memoized, the write that follows forgets it, and the
    next read fetches what was written; a warm key is fetched once.
 
