@@ -22,9 +22,9 @@ class ListHomeIssueMonthsTest extends TestCase
 
         $this->assertSame(
             [
-                ['year' => 2026, 'month' => 9, 'count' => 1],
-                ['year' => 2026, 'month' => 8, 'count' => 2],
-                ['year' => 2025, 'month' => 12, 'count' => 1],
+                ['year' => 2026, 'month' => 9, 'count' => 1, 'href' => '/home/2026/09'],
+                ['year' => 2026, 'month' => 8, 'count' => 2, 'href' => '/home/2026/08'],
+                ['year' => 2025, 'month' => 12, 'count' => 1, 'href' => '/home/2025/12'],
             ],
             app(ListHomeIssueMonths::class)(),
         );
@@ -38,7 +38,7 @@ class ListHomeIssueMonthsTest extends TestCase
             'published_at' => CarbonImmutable::parse('2026-08-04 06:00:00'),
         ]);
 
-        $this->assertSame([['year' => 2026, 'month' => 8, 'count' => 1]], app(ListHomeIssueMonths::class)());
+        $this->assertSame([['year' => 2026, 'month' => 8, 'count' => 1, 'href' => '/home/2026/08']], app(ListHomeIssueMonths::class)());
     }
 
     public function test_a_site_that_has_published_nothing_has_no_months(): void

@@ -637,6 +637,7 @@ class HomeIssueSerializerTest extends TestCase
             app(SummarizeHomeIssues::class)($this->viewer, $issues),
             null,
             null,
+            [],
         )['days'];
 
         $this->assertSame(['2026-08-27' => 1, '2026-08-26' => 3], array_column($days, 'level', 'date'));
@@ -717,6 +718,7 @@ class HomeIssueSerializerTest extends TestCase
             app(SummarizeHomeIssues::class)($this->viewer, $issues),
             null,
             null,
+            [],
         );
     }
 }

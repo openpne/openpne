@@ -41,7 +41,7 @@ class HomeIssueController extends Controller
         $latest = HomeIssue::query()->orderByDesc('issue_date')->first();
 
         return $latest === null
-            ? Inertia::render('home/issues', HomeIssueSerializer::month(null, collect(), [], null, null))
+            ? Inertia::render('home/issues', HomeIssueSerializer::month(null, collect(), [], null, null, []))
             : $this->render($request, HomeIssueMonth::of($latest->issue_date));
     }
 

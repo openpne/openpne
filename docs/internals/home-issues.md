@@ -311,7 +311,8 @@ below states the counts the level was ranked by, and the link is named by them.
 relation the gate asks about, and one count per distinct burst window
 ([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —
 ordinarily one per issue. Pictures are read after the gate, for each day's top item only: one read
-per kind of source that leads a day.
+per kind of source that leads a day. The grid of months is one read of every issue's date, a row
+per published day.
 
 ## Routes
 

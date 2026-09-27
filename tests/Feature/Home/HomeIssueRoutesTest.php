@@ -151,8 +151,8 @@ class HomeIssueRoutesTest extends TestCase
                 ->where('prev.href', '/home/2026/07')
                 ->where('next', null)
                 ->where('months', [
-                    ['year' => 2026, 'month' => 8, 'count' => 2],
-                    ['year' => 2026, 'month' => 7, 'count' => 1],
+                    ['year' => 2026, 'month' => 8, 'count' => 2, 'href' => '/home/2026/08'],
+                    ['year' => 2026, 'month' => 7, 'count' => 1, 'href' => '/home/2026/07'],
                 ]));
     }
 

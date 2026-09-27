@@ -1,6 +1,5 @@
 import { type Bucket, buildMonthRows, type MonthlyCount, type YearRow } from '../../lib/month-grid.ts';
 
-export { selectedBeyondRecentYears } from '../../lib/month-grid.ts';
 export type { MonthlyCount } from '../../lib/month-grid.ts';
 
 export function withKeyword(path: string, keyword?: string): string {

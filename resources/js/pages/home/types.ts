@@ -1,10 +1,10 @@
 import type { GridImage } from '@/components/image-grid';
 import type { MentionEntity } from '@/lib/entity-split';
-import type { MonthlyCount } from '@/lib/month-grid';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
 import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '../unified/group-grid';
+import type { IssueMonth } from './issue-months';
 
 export interface IssueRef {
     /** The site's calendar day the issue covers, `Y-m-d` — a civil date, never an instant. */
@@ -143,5 +143,5 @@ export interface IssuesPageProps extends PageProps {
     /** Newest first. */
     days: DaySummary[];
     /** Every month that holds an issue, with how many: what exists, not what this reader may see. */
-    months: MonthlyCount[];
+    months: IssueMonth[];
 }

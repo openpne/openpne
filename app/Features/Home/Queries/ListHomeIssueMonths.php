@@ -14,7 +14,7 @@ use Carbon\CarbonImmutable;
  */
 final class ListHomeIssueMonths
 {
-    /** @return list<array{year: int, month: int, count: int}> */
+    /** @return list<array{year: int, month: int, count: int, href: string}> */
     public function __invoke(): array
     {
         $months = [];
@@ -23,7 +23,7 @@ final class ListHomeIssueMonths
             $month = HomeIssueMonth::of(CarbonImmutable::parse((string) $date));
             $key = $month->href();
 
-            $months[$key] ??= ['year' => $month->year, 'month' => $month->month, 'count' => 0];
+            $months[$key] ??= ['year' => $month->year, 'month' => $month->month, 'count' => 0, 'href' => $key];
             $months[$key]['count']++;
         }
 
