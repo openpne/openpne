@@ -33,7 +33,8 @@ final class HeatScale
 
             $below = count(array_filter($ranked, fn (int $other): bool => $other < $amount));
 
-            $levels[$key] = min(self::LEVELS, 1 + intdiv(self::LEVELS * $below, count($ranked)));
+            // Never past LEVELS: a day is below itself in no count, so $below stops short of the ranked.
+            $levels[$key] = 1 + intdiv(self::LEVELS * $below, count($ranked));
         }
 
         return $levels;

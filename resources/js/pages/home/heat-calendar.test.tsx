@@ -120,7 +120,8 @@ test('a day with nothing left is still a link, named by its date and drawn with 
 test('an issue covering a stretch of days stands on the day it is dated', () => {
     renderWithProviders(<HeatCalendar month={august} days={[day('2026-08-27', 1, { stories: 1 }, '2026-08-21')]} />);
 
-    expect(within(cell(27)).getByRole('link')).toBeTruthy();
+    // Named as the row below names it, so the stretch is heard as one in both places.
+    expect(within(cell(27)).getByRole('link', { name: 'August 21, 2026 to August 27, 2026, 1 story' })).toBeTruthy();
     expect(within(cell(21)).queryByRole('link')).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(1);
 });
@@ -129,6 +130,6 @@ test('the legend says the shading compares the days of this month', () => {
     renderWithProviders(<HeatCalendar month={august} days={[]} />);
 
     expect(screen.getByText('How busy each day was, within this month')).toBeTruthy();
-    expect(screen.getByText('Quieter')).toBeTruthy();
-    expect(screen.getByText('Busier')).toBeTruthy();
+    expect(screen.getByText('Quieter days')).toBeTruthy();
+    expect(screen.getByText('Busier days')).toBeTruthy();
 });
