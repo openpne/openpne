@@ -309,10 +309,12 @@ show the next. Whether the message has a picture is what that gate answered, nev
 one exists, so a message of pictures only whose first is refused is drawn as the room's name and its
 count and nothing more.
 
-On the month's calendar a day with an issue is a bordered link and a day without one is bare text.
-**A cell shows what its day's block opens with**: the first item's picture under the date, or the
-date over the item's opening words, or the first name of a day that has names alone. It draws the
-picture the block draws, asked for the same way, so a cell costs no read and no request of its own.
+**The calendar is an index of the page under it.** A day with an issue is a link to its block
+further down, and a day without one is its date alone. A cell prints what the block lists, a line
+each and at most three — a story by its headline, a room by its group's name, then names while
+there is room — with the count of what the block does not list beside the date. A line is cut where
+the cell ends and never wrapped, and the link says every line in full. A cell draws no picture, so
+the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. Two reads do grow, with the

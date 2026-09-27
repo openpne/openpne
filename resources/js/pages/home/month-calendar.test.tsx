@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { MonthCalendar } from './month-calendar';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
-import type { DayItem, DaySummary, DayTalk } from './types';
+import type { DaySummary, DayStory, DayTalk } from './types';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
@@ -17,7 +17,10 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+});
 
 const picture = {
     id: 9,
@@ -30,7 +33,14 @@ const picture = {
     animatedSources: [],
 };
 
-const story: DayItem = { kind: 'story', href: '/diary/1', headline: 'Morning walk', responses: 2, image: null };
+const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayStory => ({
+    kind: 'story',
+    href: `/diary/${id}`,
+    headline,
+    responses: 0,
+    image: null,
+    ...rest,
+});
 
 const talk = (rest: Partial<DayTalk> = {}): DayTalk => ({
     kind: 'talk',
@@ -48,7 +58,7 @@ const day = (date: string, rest: Partial<DaySummary> = {}, from = date): DaySumm
     number: 1,
     href: `/home/${date.replaceAll('-', '/')}`,
     days: { from, to: date },
-    items: [story],
+    items: [story(1, 'Morning walk')],
     more: 0,
     newcomers: [],
     newGroups: [],
@@ -67,6 +77,13 @@ function cell(number: number): HTMLElement {
 
     return found;
 }
+
+/** What a cell prints under the line its date stands on, a line each. */
+const printed = (number: number): string[] =>
+    [...within(cell(number)).getByRole('link').children].slice(1).map((line) => line.textContent ?? '');
+
+/** The line a date stands on, and what shares it. */
+const top = (number: number): string => within(cell(number)).getByRole('link').children[0]?.textContent ?? '';
 
 test('the month is a table of weeks under the days of the week', () => {
     renderWithProviders(<MonthCalendar month={august} days={[]} />);
@@ -95,72 +112,98 @@ test('a day with no issue is a number and nothing to follow', () => {
     expect(screen.getAllByRole('link')).toHaveLength(1);
 });
 
-test('a day opens with its date and the words its block opens with', () => {
+test('a day prints what its block lists, a line each and in its order', () => {
+    renderWithProviders(
+        <MonthCalendar month={august} days={[day('2026-08-27', { items: [story(1, 'Morning walk'), talk(), story(2, 'Evening run')] })]} />,
+    );
+
+    expect(printed(27)).toEqual(['Morning walk', 'Hikers', 'Evening run']);
+
+    const link = within(cell(27)).getByRole('link', {
+        name: 'Thu, August 27, 2026, Morning walk, Hanako: Photos are up, Evening run',
+    });
+
+    // To the day's block in this page, which is where the day is read.
+    expect(link.getAttribute('href')).toBe('#day-2026-08-27');
+});
+
+test('a line is cut where the cell ends and never wrapped', () => {
     renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27')]} />);
 
-    const link = within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk' });
+    const [line] = [...within(cell(27)).getByRole('link').children].slice(1);
 
-    expect(link.getAttribute('href')).toBe('/home/2026/08/27');
-    expect(link.textContent).toBe('27Morning walk');
-    expect(link.querySelector('img')).toBeNull();
+    expect(line?.className).toContain('whitespace-nowrap');
+    expect(line?.className).toContain('overflow-hidden');
 });
 
-test('a day whose block opens with a picture is drawn as the picture under its date', () => {
-    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', { items: [{ ...story, image: picture }] })]} />);
-
-    const link = within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk' });
-
-    // The block's own picture, asked for the way the block asks for it, so it is fetched once.
-    expect(link.querySelector('img')?.getAttribute('src')).toBe('/cache/img/9-320.png');
-    expect(link.querySelector('img')?.getAttribute('sizes')).toBe('4rem');
-    expect(link.textContent).toBe('27');
-});
-
-test('a day that opens with a room says what was last said in it', () => {
+test('a room is printed by its name and said in full by the link', () => {
     renderWithProviders(
-        <MonthCalendar
-            month={august}
-            days={[
-                day('2026-08-27', { items: [talk({ image: picture }), story] }),
-                day('2026-08-26', { items: [talk()] }),
-                day('2026-08-25', { items: [talk({ line: '' })] }),
-            ]}
-        />,
+        <MonthCalendar month={august} days={[day('2026-08-27', { items: [talk()] }), day('2026-08-26', { items: [talk({ line: '' })] })]} />,
     );
 
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Hanako: Photos are up' }).querySelector('img')).not.toBeNull();
-    expect(within(cell(26)).getByRole('link').textContent).toBe('26Hanako: Photos are up');
-    // Never the group's image, which the block draws as a mark and not as a picture.
-    expect(within(cell(26)).getByRole('link').querySelector('img')).toBeNull();
-    expect(within(cell(25)).getByRole('link', { name: 'Tue, August 25, 2026, Hikers' }).textContent).toBe('25Hikers');
-});
-
-test('a day of names alone opens with the first of them', () => {
-    renderWithProviders(
-        <MonthCalendar
-            month={august}
-            days={[
-                day('2026-08-27', {
-                    items: [],
-                    newcomers: [{ id: 8, name: 'Robo', isAi: true, href: '/member/8' }],
-                    newGroups: [{ id: 3, name: 'Hikers', href: '/groups/3' }],
-                }),
-                day('2026-08-26', { items: [], newGroups: [{ id: 3, name: 'Hikers', href: '/groups/3' }] }),
-            ]}
-        />,
-    );
-
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Robo (AI)' })).toBeTruthy();
+    expect(printed(27)).toEqual(['Hikers']);
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Hanako: Photos are up' })).toBeTruthy();
     expect(within(cell(26)).getByRole('link', { name: 'Wed, August 26, 2026, Hikers' })).toBeTruthy();
+});
+
+test('a story and a room are told apart by how their lines are drawn', () => {
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', { items: [story(1, 'Morning walk'), talk()] })]} />);
+
+    const [first, second] = [...within(cell(27)).getByRole('link').children].slice(1);
+
+    expect(first?.className).not.toBe(second?.className);
+});
+
+test('what the block does not list is counted', () => {
+    renderWithProviders(
+        <MonthCalendar month={august} days={[day('2026-08-27', { more: 5 }), day('2026-08-26', { more: 1 }), day('2026-08-25')]} />,
+    );
+
+    expect(printed(27)).toEqual(['Morning walk']);
+    expect(top(27)).toBe('27+5');
+    expect(top(25)).toBe('25');
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk, 5 more' })).toBeTruthy();
+    expect(within(cell(26)).getByRole('link', { name: 'Wed, August 26, 2026, Morning walk, 1 more' })).toBeTruthy();
+    expect(printed(25)).toEqual(['Morning walk']);
+});
+
+test('names take the room the items leave, and none when there is none', () => {
+    const names = {
+        newcomers: [{ id: 8, name: 'Robo', isAi: true, href: '/member/8' }],
+        newGroups: [
+            { id: 3, name: 'Hikers', href: '/groups/3' },
+            { id: 4, name: 'Readers', href: '/groups/4' },
+        ],
+    };
+
+    renderWithProviders(
+        <MonthCalendar
+            month={august}
+            days={[
+                day('2026-08-27', { items: [], ...names }),
+                day('2026-08-26', { ...names }),
+                day('2026-08-25', { items: [story(1, 'One'), story(2, 'Two'), story(3, 'Three')], ...names }),
+            ]}
+        />,
+    );
+
+    expect(printed(27)).toEqual(['Robo (AI)', 'Hikers', 'Readers']);
+    expect(printed(26)).toEqual(['Morning walk', 'Robo (AI)', 'Hikers']);
+    expect(printed(25)).toEqual(['One', 'Two', 'Three']);
+});
+
+test('a cell draws no picture, whatever its day holds', () => {
+    renderWithProviders(
+        <MonthCalendar month={august} days={[day('2026-08-27', { items: [story(1, 'Morning walk', { image: picture }), talk({ image: picture })] })]} />,
+    );
+
+    expect(cell(27).querySelector('img')).toBeNull();
 });
 
 test('a day with nothing left is still a link, named by its date alone', () => {
     renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', { items: [] })]} />);
 
-    const link = within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026' });
-
-    expect(link.textContent).toBe('27');
-    expect(link.className).toContain('border');
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026' }).textContent).toBe('27');
 });
 
 test('an issue covering a stretch of days stands on the day it is dated', () => {
@@ -170,4 +213,48 @@ test('an issue covering a stretch of days stands on the day it is dated', () => 
     expect(within(cell(27)).getByRole('link', { name: 'August 21, 2026 to August 27, 2026, Morning walk' })).toBeTruthy();
     expect(within(cell(21)).queryByRole('link')).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(1);
+});
+
+test('today is marked on the site\'s calendar, whether or not it has an issue', () => {
+    // 00:30 on the 28th in Tokyo, which is still the 27th in UTC.
+    vi.useFakeTimers({ now: new Date('2026-08-27T15:30:00Z') });
+
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27')]} />);
+
+    expect(cell(28).textContent).toBe('28Today');
+    expect(within(cell(27)).queryByText('Today')).toBeNull();
+    expect(screen.getAllByText('Today')).toHaveLength(1);
+});
+
+test('the weekend is told apart from the week, in the heading and in the dates', () => {
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-02'), day('2026-08-08')]} />);
+
+    const tones = (element: Element | null | undefined): string[] =>
+        (element?.className ?? '').split(' ').filter((name) => name === 'text-sunday' || name === 'text-saturday');
+
+    expect(screen.getAllByRole('columnheader').map(tones)).toEqual([['text-sunday'], [], [], [], [], [], ['text-saturday']]);
+    // August 2026: the 2nd is a Sunday and the 8th a Saturday, the 3rd a Monday with no issue.
+    expect(tones(cell(2).querySelector('a > span > span'))).toEqual(['text-sunday']);
+    expect(tones(cell(8).querySelector('a > span > span'))).toEqual(['text-saturday']);
+    expect(tones(cell(3).querySelector('span > span > span'))).toEqual([]);
+    expect(tones(cell(9).querySelector('span > span > span'))).toEqual(['text-sunday']);
+});
+
+test('a week nothing happened in is drawn as a line of dates', () => {
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27')]} />);
+
+    const heights = (number: number): string[] => cell(number).className.split(' ').filter((name) => /^(sm:)?h-/.test(name));
+
+    // The 27th's week is as tall for the days beside it as for the day itself.
+    expect(heights(27)).toEqual(heights(23));
+    expect(heights(27)).not.toEqual(heights(10));
+    expect(heights(10)).toEqual(['h-8']);
+});
+
+test('another month marks no day as today', () => {
+    vi.useFakeTimers({ now: new Date('2026-09-10T03:00:00Z') });
+
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-10')]} />);
+
+    expect(screen.queryByText('Today')).toBeNull();
 });

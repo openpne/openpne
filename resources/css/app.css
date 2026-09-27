@@ -50,6 +50,8 @@
        overrides --primary / --primary-foreground only (inline on <html>), because an arbitrary admin
        color carries no AA guarantee as selection or text accent. */
     --color-selected: var(--selected);
+    --color-sunday: var(--sunday);
+    --color-saturday: var(--saturday);
     /* Form-field surface: bg-field is the recessed control fill (background-only — no text-field),
        border-field-border is one step darker than the card border so a control reads as a distinct
        well. Asymmetric by mode: light = near-white raised, dark = darker-than-card recessed. */
@@ -238,6 +240,9 @@
     --info-foreground: oklch(0.985 0 0);
     --link: oklch(0.52 0.19 256);
     --selected: var(--link);
+    /* A calendar's weekend, as small text on a card: dark enough to clear AA there. */
+    --sunday: oklch(0.52 0.2 27);
+    --saturday: oklch(0.5 0.17 256);
     /* Theme-invariant on purpose (not redefined in .dark): it sits on a dark image scrim. */
     --scrim-foreground: oklch(1 0 0);
     --scrim: oklch(0 0 0 / 0.72);
@@ -278,6 +283,8 @@
     --info: oklch(0.68 0.12 244);
     --info-foreground: oklch(0.205 0 0);
     --link: oklch(0.72 0.15 256);
+    --sunday: oklch(0.74 0.16 24);
+    --saturday: oklch(0.74 0.13 256);
     /* Recessed well: darker than the card (0.216) so a field looks inset in dark. */
     --field: oklch(0.185 0.004 83);
     --field-border: oklch(1 0 0 / 22%);

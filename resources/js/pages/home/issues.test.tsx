@@ -218,6 +218,25 @@ test('what is not shown is counted, and opens the day', () => {
     expect(within(block(2)).queryByText(/more/)).toBeNull();
 });
 
+test('a day on the calendar leads to its block in the page', () => {
+    arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }), day('2026-08-26', { items: [story(2, 'Evening run')] })] });
+
+    const calendar = screen.getByRole('table', { name: 'August 2026' });
+
+    for (const link of within(calendar).getAllByRole('link')) {
+        const target = document.getElementById((link.getAttribute('href') ?? '').slice(1));
+
+        // The block it lands on is headed by the date the link opens with.
+        const heading = target === null ? '' : (within(target).getByRole('heading', { level: 3 }).textContent ?? '');
+
+        expect(heading).not.toBe('');
+        expect(link.getAttribute('aria-label')?.startsWith(`${heading}, `)).toBe(true);
+    }
+
+    expect(within(calendar).getAllByRole('link')).toHaveLength(2);
+    expect(block(0).id).toBe('day-2026-08-27');
+});
+
 test('a stretch of days is named as one', () => {
     arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }, '2026-08-21')] });
 
