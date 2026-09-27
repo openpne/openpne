@@ -282,7 +282,9 @@ page asks — so a month never shows what the day's own page would drop. Frozen 
 not read, a burst's window excepted.
 
 **That an issue exists is not gated.** A day whose rows have all been dropped is still listed, as its
-date alone.
+date alone, and the grid of months under the rows counts issues, not what is left of them
+([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
+holds none is drawn there and is not a link.
 
 | Count | Of the rows that survive |
 |---|---|

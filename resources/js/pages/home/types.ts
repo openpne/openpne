@@ -1,5 +1,6 @@
 import type { GridImage } from '@/components/image-grid';
 import type { MentionEntity } from '@/lib/entity-split';
+import type { MonthlyCount } from '@/lib/month-grid';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
 import type { MemberRef } from '../community/types';
@@ -141,4 +142,6 @@ export interface IssuesPageProps extends PageProps {
     next: MonthRef | null;
     /** Newest first. */
     days: DaySummary[];
+    /** Every month that holds an issue, with how many: what exists, not what this reader may see. */
+    months: MonthlyCount[];
 }

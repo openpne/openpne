@@ -76,7 +76,8 @@ final class HomeIssueSerializer
      *
      * @param  Collection<int, HomeIssue>  $issues  newest first
      * @param  array<int, HomeIssueSummary>  $summaries  keyed by issue id
-     * @return array{month: array|null, prev: array|null, next: array|null, days: list<array>}
+     * @param  list<array{year: int, month: int, count: int}>  $months  every month that holds an issue
+     * @return array{month: array|null, prev: array|null, next: array|null, days: list<array>, months: list<array>}
      */
     public static function month(
         ?HomeIssueMonth $month,
@@ -84,6 +85,7 @@ final class HomeIssueSerializer
         array $summaries,
         ?HomeIssueMonth $previous,
         ?HomeIssueMonth $next,
+        array $months = [],
     ): array {
         $levels = HeatScale::levels(array_map(
             fn (HomeIssueSummary $summary): int => $summary->activity(),
@@ -102,6 +104,7 @@ final class HomeIssueSerializer
                 ))
                 ->values()
                 ->all(),
+            'months' => $months,
         ];
     }
 

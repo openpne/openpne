@@ -42,6 +42,10 @@ export function messagesPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 message') : t(':count messages', { count });
 }
 
+export function daysPhrase(t: Translate, count: number): string {
+    return count === 1 ? t('1 day') : t(':count days', { count });
+}
+
 export function storiesPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 story') : t(':count stories', { count });
 }
