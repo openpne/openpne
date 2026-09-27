@@ -1,40 +1,44 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Pagination } from '@/components/pagination';
-import { CivilDate } from '@/components/timestamp';
-import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
+import { Head, usePage } from '@inertiajs/react';
+import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { DayCard } from './day-card';
+import { MonthNav } from './month-nav';
 import type { IssuesPageProps } from './types';
 
-/** A day is called by its date, so the date is both the line and the link. */
+/** One month of days, newest first (docs/internals/home-issues.md, "The month page"). */
 export default function HomeIssues() {
     const t = useT();
-    const { issues } = usePage<IssuesPageProps>().props;
+    const { month, prev, next, days } = usePage<IssuesPageProps>().props;
+
+    if (month === null) {
+        return (
+            <>
+                <Head title={t('Past happenings')} />
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
+                </Panel>
+            </>
+        );
+    }
 
     return (
         <>
             <Head title={t('Past happenings')} />
+            <MonthNav month={month} prev={prev} next={next} />
 
-            {issues.data.length === 0 ? (
+            {days.length === 0 ? (
                 <Panel>
-                    <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('Nothing happened this month.')}</p>
                 </Panel>
             ) : (
                 <Panel flush>
                     <List>
-                        {issues.data.map((issue) => (
-                            <ListRow key={issue.date} rowLink chevron>
-                                <span className="min-w-0 flex-1 text-sm text-foreground">
-                                    <Link href={issue.href} className={stretchedLink}>
-                                        <CivilDate value={issue.date} weekday />
-                                    </Link>
-                                </span>
-                            </ListRow>
+                        {days.map((day) => (
+                            <DayCard key={day.date} day={day} />
                         ))}
                     </List>
                 </Panel>
             )}
-
-            <Pagination meta={issues.meta} />
         </>
     );
 }

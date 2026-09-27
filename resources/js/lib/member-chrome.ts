@@ -425,6 +425,16 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // Deliberately not a nav section: the run of issues is the front page's history, not a place in
     // the nav.
     'home/issues': () => ({ mode: 'contextual', title: PAST_HAPPENINGS, context: [{ href: '/', label: HOME_SECTION.label }] }),
+    // Embedded on purpose: the issue's own masthead is the page's h1, and a chrome title over it
+    // would name the screen twice.
+    'home/archive': (props) => ({
+        context: [
+            {
+                href: (props as { issue?: { monthHref?: string } }).issue?.monthHref ?? '/home/issues',
+                label: PAST_HAPPENINGS,
+            },
+        ],
+    }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -642,9 +652,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
 };
 
 const STATIC_CHROME: Record<string, Partial<Chrome>> = {
-    // Embedded on purpose: the issue's own masthead is the page's h1, and a chrome title over it
-    // would name the screen twice.
-    'home/archive': { context: [{ href: '/home/issues', label: PAST_HAPPENINGS }] },
     'block/add': { width: 'narrow', form: true },
     'block/remove': { width: 'narrow', form: true },
     'friend/link': { width: 'narrow', form: true },

@@ -76,6 +76,8 @@ export interface UpcomingEvent extends CommunityActivityEntry {
  * an empty list means on screen.
  */
 export interface Issue extends IssueRef {
+    /** The month page the issue is listed on. */
+    monthHref: string;
     /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
     days: { from: string; to: string };
     /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
@@ -101,14 +103,40 @@ export interface IssuePageProps extends PageProps {
     next: IssueRef | null;
 }
 
+export interface MonthRef {
+    year: number;
+    month: number;
+    href: string;
+}
+
+/** Counted live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
+export interface DayCounts {
+    stories: number;
+    responses: number;
+    talk: number;
+    newcomers: number;
+    newGroups: number;
+}
+
+export type DayTop =
+    | { kind: 'story'; headline: string; image: GridImage | null }
+    | { kind: 'talk'; group: BoardScope; count: number }
+    | { kind: 'newcomer'; member: MemberRef; others: number }
+    | { kind: 'newGroup'; group: BoardScope };
+
+export interface DaySummary extends IssueRef {
+    days: { from: string; to: string };
+    counts: DayCounts;
+    /** Null when nothing the day featured is left for this reader: the row is then its date alone. */
+    top: DayTop | null;
+}
+
 export interface IssuesPageProps extends PageProps {
-    issues: {
-        data: IssueRef[];
-        meta: {
-            currentPage: number;
-            lastPage: number;
-            perPage: number;
-            total: number;
-        };
-    };
+    /** Null only while no issue has ever been published. */
+    month: MonthRef | null;
+    /** The nearest months that have an issue, which need not be the adjacent ones. */
+    prev: MonthRef | null;
+    next: MonthRef | null;
+    /** Newest first. */
+    days: DaySummary[];
 }

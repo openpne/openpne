@@ -132,6 +132,126 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/issues'));
     }
 
+    // --- a month of issues ---
+
+    public function test_the_index_is_the_month_of_the_latest_issue(): void
+    {
+        $this->publishOn('2026-07-30');
+        $this->publishOn('2026-08-26');
+        $this->publishOn('2026-08-27');
+
+        $this->actingAs(Member::factory()->create())->get('/home/issues')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('home/issues')
+                ->where('month', ['year' => 2026, 'month' => 8, 'href' => '/home/2026/08'])
+                ->where('days.0.href', '/home/2026/08/27')
+                ->where('days.1.href', '/home/2026/08/26')
+                ->count('days', 2)
+                ->where('prev.href', '/home/2026/07')
+                ->where('next', null));
+    }
+
+    public function test_a_site_that_has_published_nothing_has_an_empty_index(): void
+    {
+        $this->actingAs(Member::factory()->create())->get('/home/issues')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('month', null)
+                ->where('days', []));
+    }
+
+    public function test_a_month_resolves_padded_or_not(): void
+    {
+        $this->publish();
+        $member = Member::factory()->create();
+
+        foreach (['/home/2026/08', '/home/2026/8'] as $uri) {
+            $this->actingAs($member)->get($uri)
+                ->assertOk()
+                ->assertInertia(fn (AssertableInertia $page) => $page
+                    ->component('home/issues')
+                    ->where('month.href', '/home/2026/08'));
+        }
+    }
+
+    public function test_a_guest_is_sent_to_the_login_page_from_a_month(): void
+    {
+        $this->publish();
+
+        $this->get('/home/2026/08')->assertRedirect('/login');
+    }
+
+    public function test_a_month_out_of_range_is_not_a_route_at_all(): void
+    {
+        $this->publish();
+        $member = Member::factory()->create();
+
+        foreach (['/home/2026/13', '/home/2026/00', '/home/0000/08'] as $uri) {
+            $this->actingAs($member)->get($uri)->assertNotFound();
+        }
+    }
+
+    public function test_a_month_before_the_first_issue_or_after_the_last_is_not_a_page(): void
+    {
+        $this->publishOn('2026-06-15');
+        $this->publishOn('2026-08-27');
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/2026/05')->assertNotFound();
+        $this->actingAs($member)->get('/home/2026/09')->assertNotFound();
+    }
+
+    /** The pager steps over an empty month; the month itself still answers to its URL. */
+    public function test_an_empty_month_between_two_that_are_not_still_renders(): void
+    {
+        $this->publishOn('2026-06-15');
+        $this->publishOn('2026-08-27');
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/2026/07')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('days', [])
+                ->where('prev.href', '/home/2026/06')
+                ->where('next.href', '/home/2026/08'));
+
+        $this->actingAs($member)->get('/home/2026/08')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('prev.href', '/home/2026/06'));
+    }
+
+    /**
+     * The first issue ever reaches back a week: it is listed under the month it is dated in, and the
+     * month its window opened in has no page.
+     */
+    public function test_an_issue_belongs_to_the_month_it_is_dated_in(): void
+    {
+        HomeIssue::factory()->create([
+            'issue_date' => '2026-08-03',
+            'window_start' => CarbonImmutable::parse('2026-07-28 06:00:00'),
+            'published_at' => CarbonImmutable::parse('2026-08-04 06:00:00'),
+        ]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/2026/08')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->count('days', 1)
+                ->where('days.0.days', ['from' => '2026-07-28', 'to' => '2026-08-03']));
+
+        $this->actingAs($member)->get('/home/2026/07')->assertNotFound();
+    }
+
+    public function test_a_day_page_names_the_month_it_belongs_to(): void
+    {
+        $this->publish();
+
+        $this->actingAs(Member::factory()->create())->get('/home/2026/08/27')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('issue.monthHref', '/home/2026/08'));
+    }
+
     /** Through the route rather than against the query: the neighbours are what the page is handed. */
     public function test_the_pager_points_at_the_issues_either_side(): void
     {

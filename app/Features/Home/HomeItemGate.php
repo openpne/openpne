@@ -34,35 +34,50 @@ final class HomeItemGate
 
     public function resolve(Member $viewer, HomeIssueItem $item, ?Model $source): ?HydratedItem
     {
+        if ($source === null || ! $this->admits($viewer, $item, $source)) {
+            return null;
+        }
+
+        return $item->section === HomeIssueSection::Talk
+            ? $this->burst($viewer, $item, $source)
+            : new HydratedItem($item, $source);
+    }
+
+    /**
+     * Every rule but one: whether a burst still has a message in its stretch is a read of the room,
+     * which each caller makes in its own shape (docs/internals/home-issues.md, "The month page").
+     */
+    public function admits(Member $viewer, HomeIssueItem $item, ?Model $source): bool
+    {
         $section = $item->section;
         $alias = (string) $item->source_type;
 
         // A section that does not hold this alias cannot be asked what gates it, and the front page
         // is not the place to raise whatever wrote such a row.
         if (! $section->allowsSource($alias)) {
-            return null;
+            return false;
         }
 
         // The row outlives its source by design, so a dangling reference is data rather than a fault.
         if ($source === null) {
-            return null;
+            return false;
         }
 
         // Read again here, not only at publication: an administrator switching a unit off hides its
         // rows without touching the ledger, and switching it back on brings them back.
         $unit = $section->unit($alias);
         if ($unit !== null && ! $unit->enabled()) {
-            return null;
+            return false;
         }
 
         return match ($section) {
-            HomeIssueSection::Stories => $this->story($viewer, $item, $source),
-            HomeIssueSection::Talk => $this->burst($viewer, $item, $source),
-            HomeIssueSection::Newcomers => $this->newcomer($viewer, $item, $source),
+            HomeIssueSection::Stories => $this->story($viewer, $source),
+            HomeIssueSection::Talk => $this->room($source) && $this->window($item) !== null,
+            HomeIssueSection::Newcomers => $this->newcomer($viewer, $source),
             // A new group is a door to knock on whatever its read access: this section shows none of
             // its contents, and the group page is open to any signed-in member.
-            HomeIssueSection::NewGroups => new HydratedItem($item, $source),
-            HomeIssueSection::UpcomingEvents => $this->calendarEntry($item, $source),
+            HomeIssueSection::NewGroups => true,
+            HomeIssueSection::UpcomingEvents => $this->calendarEntry($source),
         };
     }
 
@@ -71,9 +86,9 @@ final class HomeItemGate
      * checked again here because an author may have narrowed the record since, and the viewer half —
      * a block, and the clearance it would otherwise widen — for the first time.
      */
-    private function story(Member $viewer, HomeIssueItem $item, Model $source): ?HydratedItem
+    private function story(Member $viewer, Model $source): bool
     {
-        $allowed = match (true) {
+        return match (true) {
             // A reply is not a story: it inherits its root's audience, and an issue that led with one
             // would quote half a conversation.
             $source instanceof TimelinePost => $source->in_reply_to_id === null
@@ -88,26 +103,21 @@ final class HomeItemGate
             // an UnhandledMatchError, because nothing about a ledger row may reach the reader as a 500.
             default => false,
         };
-
-        return $allowed ? new HydratedItem($item, $source) : null;
     }
 
     /**
      * `topic_read_access` IS the gate here: an Everyone group's talk is readable by any member
      * (GroupTalkAccess), so asking that after this would be asking a question with one answer.
      */
+    private function room(Model $source): bool
+    {
+        return $source instanceof Group && $source->topic_read_access === TopicReadAccess::Everyone;
+    }
+
+    /** @param  Group  $source  admitted, so its room is open and its row names a window */
     private function burst(Member $viewer, HomeIssueItem $item, Model $source): ?HydratedItem
     {
-        if (! $source instanceof Group || $source->topic_read_access !== TopicReadAccess::Everyone) {
-            return null;
-        }
-
-        $window = $this->window($item);
-        if ($window === null) {
-            return null;
-        }
-
-        [$since, $until] = $window;
+        [$since, $until] = $this->window($item);
 
         // The stretch, not any message in it: the row stores no anchor, so a deleted message is
         // simply not there rather than a hole, and nothing left is nothing to report.
@@ -134,22 +144,18 @@ final class HomeItemGate
      * ({@see MemberPolicy::access}) — 404-shaped there, and a face that is simply not
      * in the grid here.
      */
-    private function newcomer(Member $viewer, HomeIssueItem $item, Model $source): ?HydratedItem
+    private function newcomer(Member $viewer, Model $source): bool
     {
-        return $source instanceof Member && Gate::forUser($viewer)->allows('access', $source)
-            ? new HydratedItem($item, $source)
-            : null;
+        return $source instanceof Member && Gate::forUser($viewer)->allows('access', $source);
     }
 
     /**
      * An event whose day has passed stays: an issue is a snapshot of the morning it went out, and a
      * back issue that quietly shed its calendar as the week went by would misreport that morning.
      */
-    private function calendarEntry(HomeIssueItem $item, Model $source): ?HydratedItem
+    private function calendarEntry(Model $source): bool
     {
-        return $source instanceof GroupEvent && $this->boardIsOpen($source)
-            ? new HydratedItem($item, $source)
-            : null;
+        return $source instanceof GroupEvent && $this->boardIsOpen($source);
     }
 
     /** Whether every signed-in member may read this group's boards — the group's own read column. */
@@ -164,7 +170,7 @@ final class HomeItemGate
      *
      * @return array{CarbonImmutable, CarbonImmutable}|null
      */
-    private function window(HomeIssueItem $item): ?array
+    public function window(HomeIssueItem $item): ?array
     {
         $stats = $item->stats ?? [];
         $since = $stats['since'] ?? null;

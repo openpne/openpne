@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Home;
 
 use App\Features\GroupTalk\Queries\TalkSampleDigest;
+use App\Features\Home\Data\HomeIssueMonth;
 use App\Features\Home\HomeIssueSection;
-use App\Features\Home\Queries\ListHomeIssues;
 use App\Features\Home\Queries\ShowHomeIssue;
+use App\Features\Home\Queries\SummarizeHomeIssues;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Diary;
@@ -529,25 +530,97 @@ class HomeIssueSerializerTest extends TestCase
         }
     }
 
-    // --- the archive index ---
+    // --- a month of issues ---
 
-    public function test_the_archive_lists_issues_newest_first_with_the_pager_state(): void
+    public function test_a_day_is_its_date_its_counts_and_its_top(): void
     {
-        HomeIssue::factory()->create([
-            'number' => 6,
-            'issue_date' => $this->now()->subDays(2)->toDateString(),
-            'window_start' => $this->now()->subDays(2),
-            'published_at' => $this->now()->subDay(),
+        $diary = Diary::factory()->create(['title' => 'Morning walk']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => File::factory(), 'number' => 1]);
+        DiaryComment::factory()->count(2)->create(['diary_id' => $diary->getKey()]);
+        $this->feature(HomeIssueSection::Stories, $diary);
+
+        $day = $this->month()['days'][0];
+
+        $this->assertSame(
+            ['date', 'number', 'href', 'days', 'counts', 'top'],
+            array_keys($day),
+        );
+        $this->assertSame('2026-08-27', $day['date']);
+        $this->assertSame('/home/2026/08/27', $day['href']);
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $day['days']);
+        $this->assertSame(
+            ['stories' => 1, 'responses' => 2, 'talk' => 0, 'newcomers' => 0, 'newGroups' => 0],
+            $day['counts'],
+        );
+        $this->assertSame(['kind', 'headline', 'image'], array_keys($day['top']));
+        $this->assertSame('story', $day['top']['kind']);
+        $this->assertSame('Morning walk', $day['top']['headline']);
+        $this->assertNotNull($day['top']['image']);
+    }
+
+    public function test_a_post_leads_a_day_with_its_opening_line(): void
+    {
+        $this->feature(HomeIssueSection::Stories, TimelinePost::factory()->create(['body' => "First line\nand the rest"]));
+
+        $this->assertSame('First line', $this->month()['days'][0]['top']['headline']);
+    }
+
+    public function test_a_day_with_no_story_leads_with_its_busiest_room(): void
+    {
+        $group = Group::factory()->create();
+        GroupMessage::factory()->count(3)->create([
+            'group_id' => $group->getKey(),
+            'created_at' => $this->now()->subHours(2),
+            'updated_at' => $this->now()->subHours(2),
+        ]);
+        $this->feature(HomeIssueSection::Talk, $group, stats: [
+            'since' => $this->now()->subDay()->toIso8601String(),
+            'until' => $this->now()->toIso8601String(),
         ]);
 
-        $archive = HomeIssueSerializer::archive(app(ListHomeIssues::class)());
-
-        $this->assertSame([7, 6], array_column($archive['issues']['data'], 'number'));
-        $this->assertSame(['2026-08-27', '2026-08-26'], array_column($archive['issues']['data'], 'date'));
         $this->assertSame(
-            ['currentPage' => 1, 'lastPage' => 1, 'perPage' => 30, 'total' => 2],
-            $archive['issues']['meta'],
+            ['kind' => 'talk', 'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null], 'count' => 3],
+            $this->month()['days'][0]['top'],
         );
+    }
+
+    public function test_a_day_of_newcomers_leads_with_the_first_and_counts_the_rest(): void
+    {
+        $first = Member::factory()->create();
+        $this->feature(HomeIssueSection::Newcomers, $first, rank: 1);
+        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(), rank: 2);
+        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(), rank: 3);
+
+        $top = $this->month()['days'][0]['top'];
+
+        $this->assertSame('newcomer', $top['kind']);
+        $this->assertSame($first->getKey(), $top['member']['id']);
+        $this->assertSame(2, $top['others']);
+    }
+
+    public function test_a_day_of_new_groups_leads_with_the_first(): void
+    {
+        $first = Group::factory()->create();
+        $this->feature(HomeIssueSection::NewGroups, $first, rank: 1);
+        $this->feature(HomeIssueSection::NewGroups, Group::factory()->create(), rank: 2);
+
+        $this->assertSame(
+            ['kind' => 'newGroup', 'group' => ['id' => $first->getKey(), 'name' => $first->name, 'imageUrl' => null]],
+            $this->month()['days'][0]['top'],
+        );
+    }
+
+    public function test_a_day_with_nothing_left_is_its_date_alone(): void
+    {
+        $diary = Diary::factory()->create();
+        $this->feature(HomeIssueSection::Stories, $diary);
+        $diary->delete();
+
+        $day = $this->month()['days'][0];
+
+        $this->assertSame('2026-08-27', $day['date']);
+        $this->assertNull($day['top']);
+        $this->assertSame(0, array_sum($day['counts']));
     }
 
     // --- the shell's props ---
@@ -566,7 +639,7 @@ class HomeIssueSerializerTest extends TestCase
 
         $this->assertNotEmpty($shared, 'share() answered no props — the guard has gone stale.');
 
-        foreach ([$this->page(), HomeIssueSerializer::archive(app(ListHomeIssues::class)())] as $payload) {
+        foreach ([$this->page(), $this->month()] as $payload) {
             $this->assertSame([], array_intersect(array_keys($payload), $shared));
         }
     }
@@ -598,6 +671,19 @@ class HomeIssueSerializerTest extends TestCase
             $previous,
             $next,
             $this->now(),
+        );
+    }
+
+    private function month(): array
+    {
+        $issues = collect([$this->issue->fresh()]);
+
+        return HomeIssueSerializer::month(
+            new HomeIssueMonth(2026, 8),
+            $issues,
+            app(SummarizeHomeIssues::class)($this->viewer, $issues),
+            null,
+            null,
         );
     }
 }

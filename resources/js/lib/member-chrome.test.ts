@@ -201,6 +201,15 @@ test('a dated issue crumbs back to the run of them, still without a chrome headi
     );
 });
 
+test('a dated issue crumbs back to the month it is listed in', () => {
+    const archive = resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } });
+
+    assert.deepEqual(
+        (archive.context ?? []).map((item) => item.href),
+        ['/home/2026/08'],
+    );
+});
+
 test('the run of issues is titled by the same words the crumb into it uses', () => {
     const list = resolveChrome('home/issues', {});
     const crumb = resolveChrome('home/archive', {}).context?.[0];
