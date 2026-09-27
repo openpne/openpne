@@ -136,7 +136,6 @@ function Day({ number, weekday, issue, today }: { number: number; weekday: numbe
     }
 
     const shown = chips(t, issue);
-    // The label stands in for everything inside the link, the word for today included.
     const name = [
         daysCovered(t, civilDate, issue),
         today && t('Today'),
