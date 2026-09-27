@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Member;
 
-use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -133,22 +132,5 @@ class MemberPasswordChangeTest extends TestCase
         $member->forceFill(['password' => Hash::make('changed-elsewhere')])->save();
 
         $this->get('/member/config')->assertRedirect('/login');
-    }
-
-    public function test_a_password_change_voids_a_pending_email_change(): void
-    {
-        $member = Member::factory()->create();
-        EmailChangeRequest::create([
-            'member_id' => $member->id, 'new_email' => 'pending@example.com',
-            'token' => hash('sha256', str_repeat('d', 40)), 'created_at' => now(),
-        ]);
-
-        $this->actingAs($member)->post('/member/config/password', [
-            'current_password' => 'password',
-            'password' => 'new-secret-pass',
-            'password_confirmation' => 'new-secret-pass',
-        ])->assertRedirect(route('member.config', ['category' => 'password']));
-
-        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
 }

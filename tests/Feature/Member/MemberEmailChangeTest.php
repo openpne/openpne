@@ -380,4 +380,21 @@ class MemberEmailChangeTest extends TestCase
 
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]);
     }
+
+    public function test_a_password_change_voids_a_pending_email_change(): void
+    {
+        $member = Member::factory()->create();
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'pending@example.com',
+            'token' => hash('sha256', str_repeat('d', 40)), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.config', ['category' => 'password']));
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+    }
 }

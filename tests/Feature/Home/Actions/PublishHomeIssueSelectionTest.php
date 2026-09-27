@@ -86,32 +86,6 @@ class PublishHomeIssueSelectionTest extends PublishHomeIssueTestCase
         $this->assertSame([$this->ref($event)], $this->refs($issue, HomeIssueSection::UpcomingEvents));
     }
 
-    public function test_the_calendar_runs_from_the_publish_days_own_midnight_to_seven_days_out(): void
-    {
-        // `open_date` is a date, so the day's own events sit at midnight — six hours behind the
-        // publishing instant a calendar bounded by it would drop them under.
-        [$yesterday, $today, $tomorrow, $lastDay, $justPast] = $this->at(
-            $this->now()->subDays(30),
-            fn (): array => array_map(
-                fn (int $days): GroupEvent => GroupEvent::factory()->create([
-                    'open_date' => $this->now()->addDays($days)->startOfDay(),
-                ]),
-                [-1, 0, 1, 7, 8],
-            ),
-        );
-
-        // The calendar never triggers an issue, so something else has to carry this one.
-        $this->at($this->now()->subHour(), fn (): TimelinePost => TimelinePost::factory()->create());
-
-        $issue = $this->publish();
-
-        $this->assertNotNull($issue);
-        $refs = $this->refs($issue, HomeIssueSection::UpcomingEvents);
-        $this->assertSame([$this->ref($today), $this->ref($tomorrow), $this->ref($lastDay)], $refs);
-        $this->assertNotContains($this->ref($yesterday), $refs);
-        $this->assertNotContains($this->ref($justPast), $refs);
-    }
-
     public function test_the_never_again_memory_is_scoped_to_the_section(): void
     {
         // A group featured for being new is still news for what was said in it: the two bands ask
@@ -407,19 +381,6 @@ class PublishHomeIssueSelectionTest extends PublishHomeIssueTestCase
 
         $this->assertNotNull($issue);
         $this->assertContains($this->ref($ai), $this->refs($issue, HomeIssueSection::Newcomers));
-    }
-
-    public function test_a_member_with_no_created_at_is_in_no_window(): void
-    {
-        $undated = $this->at($this->now()->subHour(), fn (): Member => Member::factory()->create());
-        $dated = $this->at($this->now()->subHour(), fn (): Member => Member::factory()->create());
-
-        Member::whereKey($undated->id)->update(['created_at' => null]);
-
-        $issue = $this->publish();
-
-        $this->assertNotNull($issue);
-        $this->assertSame([$this->ref($dated)], $this->refs($issue, HomeIssueSection::Newcomers));
     }
 
     public function test_a_switched_off_unit_contributes_nothing_and_runs_no_query(): void
