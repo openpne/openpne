@@ -313,8 +313,9 @@ count and nothing more.
 further down, and a day without one is its date alone. A cell prints what the block lists, a line
 each and at most three — a story by its headline, a room by its group's name, then names while
 there is room — with the count of what the block does not list beside the date. A line is cut where
-the cell ends and never wrapped, and the link says every line in full. A cell draws no picture, so
-the calendar costs no read and no request of its own.
+the cell ends and never wrapped. The link's name holds every word the cell prints and says the rest:
+the date in full, a room's name with what was last said in it, what a name is a name of, and that
+the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. Two reads do grow, with the

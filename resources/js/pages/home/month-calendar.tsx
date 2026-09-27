@@ -30,24 +30,28 @@ const TONE: Record<Chip['tone'], string> = {
 const weekend = (weekday: number): string | undefined => (weekday === 0 ? 'text-sunday' : weekday === 6 ? 'text-saturday' : undefined);
 
 /**
- * A day's items as its block lists them, then its names while there is room. A room is printed by
- * its group's name: a cell holds five characters or so, which is a name and not a sentence.
+ * A day's items as its block lists them, then its names while there is room. What a chip prints is
+ * part of what its link says of it, so the day is reached by the words on screen.
  */
 export function chips(t: Translate, day: DaySummary): Chip[] {
-    const items = day.items.map(
-        (item): Chip =>
-            item.kind === 'story'
-                ? { tone: 'story', text: item.headline, name: item.headline }
-                : { tone: 'talk', text: item.group.name, name: said(t, item) },
-    );
+    const items = day.items.map((item): Chip => {
+        if (item.kind === 'story') {
+            return { tone: 'story', text: item.headline, name: item.headline };
+        }
 
-    const names = [...day.newcomers, ...day.newGroups].map((named): Chip => {
-        const name = markedName(named.name, named.isAi ?? false, t);
+        const line = said(t, item);
 
-        return { tone: 'name', text: name, name };
+        return { tone: 'talk', text: item.group.name, name: line === item.group.name ? line : `${item.group.name}, ${line}` };
     });
 
-    return [...items, ...names].slice(0, CHIPS);
+    const named = (label: string, names: DaySummary['newcomers']): Chip[] =>
+        names.map((name): Chip => {
+            const text = markedName(name.name, name.isAi ?? false, t);
+
+            return { tone: 'name', text, name: `${label} ${text}` };
+        });
+
+    return [...items, ...named(t('New members'), day.newcomers), ...named(t('New %communities%'), day.newGroups)].slice(0, CHIPS);
 }
 
 /**
@@ -83,7 +87,6 @@ export function MonthCalendar({ month, days }: { month: MonthRef; days: DaySumma
                 {monthWeeks(month.year, month.month).map((week) => (
                     <tr key={week.find((day) => day !== null)} className="border-t border-border">
                         {week.map((number, weekday) => (
-                            // A week nothing happened in is a line of dates: the days are read below, not here.
                             <td
                                 key={weekday}
                                 className={cn('p-0 align-top', week.some((day) => day !== null && issues.has(day)) ? 'h-19 sm:h-24' : 'h-8')}
@@ -133,8 +136,15 @@ function Day({ number, weekday, issue, today }: { number: number; weekday: numbe
     }
 
     const shown = chips(t, issue);
-    const more = issue.more > 0 ? morePhrase(t, issue.more) : null;
-    const name = [daysCovered(t, civilDate, issue), ...shown.map((chip) => chip.name), more].filter(Boolean).join(', ');
+    // The label stands in for everything inside the link, the word for today included.
+    const name = [
+        daysCovered(t, civilDate, issue),
+        today && t('Today'),
+        ...shown.map((chip) => chip.name),
+        issue.more > 0 && morePhrase(t, issue.more),
+    ]
+        .filter(Boolean)
+        .join(', ');
 
     return (
         <a href={`#${dayAnchor(issue.date)}`} aria-label={name} className="block h-full px-px pb-1 transition-colors hover:bg-muted/60">

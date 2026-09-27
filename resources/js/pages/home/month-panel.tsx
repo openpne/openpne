@@ -68,7 +68,6 @@ export function MonthPanel({ month, prev, next, days, months }: Props) {
                 </div>
             )}
 
-            {/* Out to the panel's edges: a column is as wide as the page allows, and words are cut by it. */}
             <div className="-mx-3 mt-3 sm:-mx-4">
                 <MonthCalendar month={month} days={days} />
             </div>

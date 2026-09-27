@@ -120,7 +120,7 @@ test('a day prints what its block lists, a line each and in its order', () => {
     expect(printed(27)).toEqual(['Morning walk', 'Hikers', 'Evening run']);
 
     const link = within(cell(27)).getByRole('link', {
-        name: 'Thu, August 27, 2026, Morning walk, Hanako: Photos are up, Evening run',
+        name: 'Thu, August 27, 2026, Morning walk, Hikers, Hanako: Photos are up, Evening run',
     });
 
     // To the day's block in this page, which is where the day is read.
@@ -136,13 +136,14 @@ test('a line is cut where the cell ends and never wrapped', () => {
     expect(line?.className).toContain('overflow-hidden');
 });
 
-test('a room is printed by its name and said in full by the link', () => {
+test('a room is printed by its name, and the link says the name and what was last said', () => {
     renderWithProviders(
         <MonthCalendar month={august} days={[day('2026-08-27', { items: [talk()] }), day('2026-08-26', { items: [talk({ line: '' })] })]} />,
     );
 
     expect(printed(27)).toEqual(['Hikers']);
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Hanako: Photos are up' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Hikers, Hanako: Photos are up' })).toBeTruthy();
+    // A room called by its name alone is named once.
     expect(within(cell(26)).getByRole('link', { name: 'Wed, August 26, 2026, Hikers' })).toBeTruthy();
 });
 
@@ -190,6 +191,12 @@ test('names take the room the items leave, and none when there is none', () => {
     expect(printed(27)).toEqual(['Robo (AI)', 'Hikers', 'Readers']);
     expect(printed(26)).toEqual(['Morning walk', 'Robo (AI)', 'Hikers']);
     expect(printed(25)).toEqual(['One', 'Two', 'Three']);
+    // A name is said with what it is a name of.
+    expect(
+        within(cell(27)).getByRole('link', {
+            name: 'Thu, August 27, 2026, New members Robo (AI), New %communities% Hikers, New %communities% Readers',
+        }),
+    ).toBeTruthy();
 });
 
 test('a cell draws no picture, whatever its day holds', () => {
@@ -224,6 +231,41 @@ test('today is marked on the site\'s calendar, whether or not it has an issue', 
     expect(cell(28).textContent).toBe('28Today');
     expect(within(cell(27)).queryByText('Today')).toBeNull();
     expect(screen.getAllByText('Today')).toHaveLength(1);
+
+    cleanup();
+
+    // With an issue the label is all the link says, so the word is part of it.
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-28'), day('2026-08-27')]} />);
+
+    expect(within(cell(28)).getByRole('link', { name: 'Fri, August 28, 2026, Today, Morning walk' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk' })).toBeTruthy();
+});
+
+test('every word a cell prints is in what its link says', () => {
+    renderWithProviders(
+        <MonthCalendar
+            month={august}
+            days={[
+                day('2026-08-27', {
+                    items: [story(1, 'Morning walk'), talk()],
+                    more: 5,
+                    newcomers: [{ id: 8, name: 'Robo', isAi: true, href: '/member/8' }],
+                }),
+            ]}
+        />,
+    );
+
+    const link = within(cell(27)).getByRole('link');
+    const said = link.getAttribute('aria-label') ?? '';
+
+    expect(printed(27)).toEqual(['Morning walk', 'Hikers', 'Robo (AI)']);
+    for (const line of printed(27)) {
+        expect(said).toContain(line);
+    }
+    // The date is a number on screen and the count a sign and a number: both numbers are said.
+    expect(top(27)).toBe('27+5');
+    expect(said).toContain('27');
+    expect(said).toContain('5 more');
 });
 
 test('the weekend is told apart from the week, in the heading and in the dates', () => {
