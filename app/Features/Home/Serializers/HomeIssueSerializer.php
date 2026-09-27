@@ -13,6 +13,7 @@ use App\Features\Home\Data\HomeIssueSummary;
 use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
+use App\Features\Home\HeatScale;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
@@ -84,12 +85,21 @@ final class HomeIssueSerializer
         ?HomeIssueMonth $previous,
         ?HomeIssueMonth $next,
     ): array {
+        $levels = HeatScale::levels(array_map(
+            fn (HomeIssueSummary $summary): int => $summary->activity(),
+            $summaries,
+        ));
+
         return [
             'month' => self::monthRef($month),
             'prev' => self::monthRef($previous),
             'next' => self::monthRef($next),
             'days' => $issues
-                ->map(fn (HomeIssue $issue): array => self::day($issue, $summaries[(int) $issue->getKey()] ?? new HomeIssueSummary))
+                ->map(fn (HomeIssue $issue): array => self::day(
+                    $issue,
+                    $summaries[(int) $issue->getKey()] ?? new HomeIssueSummary,
+                    $levels[(int) $issue->getKey()] ?? 0,
+                ))
                 ->values()
                 ->all(),
         ];
@@ -102,12 +112,13 @@ final class HomeIssueSerializer
     }
 
     /** `top` is null when nothing survived, and the row is then its date alone. */
-    private static function day(HomeIssue $issue, HomeIssueSummary $summary): array
+    private static function day(HomeIssue $issue, HomeIssueSummary $summary, int $level): array
     {
         return [
             ...self::linkTo($issue),
             'days' => self::daysOf(self::windowOf($issue)),
             'counts' => $summary->counts(),
+            'level' => $level,
             'top' => self::top($summary),
         ];
     }

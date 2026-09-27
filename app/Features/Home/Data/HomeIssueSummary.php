@@ -46,6 +46,11 @@ final readonly class HomeIssueSummary
         ];
     }
 
+    public function activity(): int
+    {
+        return array_sum($this->counts());
+    }
+
     /** The source the row leads with, or null when nothing survived. */
     public function top(): ?Model
     {

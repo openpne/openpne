@@ -127,6 +127,8 @@ export type DayTop =
 export interface DaySummary extends IssueRef {
     days: { from: string; to: string };
     counts: DayCounts;
+    /** How dark the day is drawn beside the month's other days; 0 when nothing is left of it. */
+    level: 0 | 1 | 2 | 3 | 4;
     /** Null when nothing the day featured is left for this reader: the row is then its date alone. */
     top: DayTop | null;
 }

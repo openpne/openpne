@@ -37,7 +37,7 @@ function headline(t: Translate, top: DayTop): string {
 }
 
 /** Zero is left out rather than printed: the line says what happened, not what did not. */
-function breakdown(t: Translate, counts: DayCounts): string[] {
+export function breakdown(t: Translate, counts: DayCounts): string[] {
     return [
         counts.stories > 0 && storiesPhrase(t, counts.stories),
         counts.responses > 0 && responsesPhrase(t, counts.responses),
