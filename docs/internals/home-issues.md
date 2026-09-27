@@ -311,8 +311,8 @@ On the month's calendar a day with an issue is a bordered link and a day without
 asks about, and the units asked once per gate rather than per row. Two reads do grow, with the
 month and not with its rows: one per issue that holds talk, since each issue has a window of its
 own, and the gate of each room's picture, asked once for a room shown and so at most three times a
-day. Pictures and speakers are read after the gate, for the items shown and no others. The grid of months is one read of every issue's date,
-a row per published day.
+day. Pictures and speakers are read after the gate, for the items shown and no others. The grid of
+months is one read of every issue's date, a row per published day.
 
 ## Routes
 
