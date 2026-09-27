@@ -93,7 +93,7 @@ class GadgetService
     /** Drop the cached gadget rows. Call after persisting changes from the admin UI. */
     public function clearCache(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 
     /** The active layout: a selectable context reads its stored setting; a fixed context its default. */
@@ -112,7 +112,7 @@ class GadgetService
      */
     private function grouped(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
+        return Cache::memo()->remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
             if (! Schema::hasTable('gadgets')) {
                 return [];
             }

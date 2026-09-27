@@ -60,7 +60,7 @@ class TermService
             return [];
         }
 
-        return Cache::remember("terms.{$locale}", self::CACHE_TTL, function () use ($locale): array {
+        return Cache::memo()->remember("terms.{$locale}", self::CACHE_TTL, function () use ($locale): array {
             $defaults = self::defaults($locale);
             $overrides = DB::table('term_overrides')
                 ->where('locale', $locale)
@@ -107,7 +107,7 @@ class TermService
     public function clearCache(): void
     {
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
-            Cache::forget("terms.{$locale}");
+            Cache::memo()->forget("terms.{$locale}");
         }
     }
 }
