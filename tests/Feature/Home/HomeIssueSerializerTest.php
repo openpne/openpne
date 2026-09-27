@@ -617,6 +617,7 @@ class HomeIssueSerializerTest extends TestCase
         $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
 
         $busy = HomeIssue::factory()->create([
+            'number' => 6,
             'issue_date' => $this->now()->subDays(2)->toDateString(),
             'window_start' => $this->now()->subDays(2),
             'published_at' => $this->now()->subDay(),
