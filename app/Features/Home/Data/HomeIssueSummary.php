@@ -17,7 +17,6 @@ use App\Models\TimelinePost;
  */
 final readonly class HomeIssueSummary
 {
-    /** How many stories and rooms a day shows before it says how many more there are. */
     public const SHOWN = 3;
 
     /**

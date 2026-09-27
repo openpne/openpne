@@ -434,6 +434,77 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame(2, substr_count($sql, 'group_messages.created_at <= ?'));
     }
 
+    // --- the first picture of a message ---
+
+    public function test_the_first_picture_is_the_lowest_number_and_then_the_lowest_id(): void
+    {
+        $author = $this->member();
+        $numbered = $this->said($author, $this->start->addMinutes(5));
+        $this->attach($numbered, 2);
+        $first = $this->attach($numbered, 1);
+        $this->attach($numbered, 3);
+
+        $tied = $this->said($author, $this->start->addMinutes(6));
+        $earlier = $this->attach($tied, 1);
+        $this->attach($tied, 1);
+
+        $bare = $this->said($author, $this->start->addMinutes(7));
+
+        $pictures = $this->digest->firstPictures($author, collect([$numbered, $tied, $bare]));
+
+        $this->assertSame(
+            [$numbered->getKey() => $first->url(), $tied->getKey() => $earlier->url()],
+            array_map(fn (array $picture): string => $picture['url'], $pictures),
+        );
+    }
+
+    public function test_a_refused_first_picture_is_not_made_up_for_by_the_next(): void
+    {
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addMinutes(5));
+        $refused = $this->attach($message, 1);
+        $this->attach($message, 2);
+
+        $asked = [];
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($refused, &$asked): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            if ($ability !== 'view' || ! $subject instanceof File) {
+                return null;
+            }
+
+            $asked[] = $subject->getKey();
+
+            return $subject->is($refused) ? false : null;
+        });
+
+        $this->assertSame([], $this->digest->firstPictures($author, collect([$message])));
+        $this->assertSame([$refused->getKey()], $asked);
+    }
+
+    public function test_a_first_picture_owned_by_another_message_is_left_out(): void
+    {
+        $author = $this->member();
+        $other = $this->said($author, $this->start->addMinutes(1));
+        $message = $this->said($author, $this->start->addMinutes(5));
+        $this->attach($message, 1, owner: $other);
+        $this->attach($message, 2);
+
+        $this->assertSame([], $this->digest->firstPictures($author, collect([$message])));
+    }
+
+    public function test_no_message_is_no_read(): void
+    {
+        DB::enableQueryLog();
+
+        $this->assertSame([], $this->digest->firstPictures($this->member(), collect()));
+
+        $log = array_filter(DB::getQueryLog(), fn (array $query): bool => str_contains($query['query'], 'group_message_images'));
+        DB::disableQueryLog();
+
+        $this->assertSame([], $log);
+    }
+
     // --- who did the talking ---
 
     public function test_the_faces_are_the_authors_of_the_window_busiest_first(): void

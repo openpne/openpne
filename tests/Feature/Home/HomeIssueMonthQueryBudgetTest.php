@@ -48,8 +48,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     /** What the file policy reads to answer for one picture: its owner, the owner's room and the two settings its unit hangs on. */
     private const PER_PICTURE = 4;
 
-    /** The pictures of every message shown and their files, read once for the month. */
-    private const PICTURES = 2;
+    /** The files of the pictures asked about, read once for the month. */
+    private const PICTURES = 1;
 
     protected function setUp(): void
     {
@@ -86,7 +86,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->fill(new HomeIssueMonth(2026, 3), days: 31, talking: 0, pictured: 0);
         $this->fill(new HomeIssueMonth(2026, 5), days: 31, talking: 1, pictured: 0);
         $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 31, pictured: 0);
-        $this->fill(new HomeIssueMonth(2026, 8), days: 31, talking: 31, pictured: 31);
+        $this->fill(new HomeIssueMonth(2026, 8), days: 31, talking: 31, pictured: 31, attachments: 3);
 
         $this->warm($viewer);
 
@@ -106,6 +106,34 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
             self::PER_PICTURE * 31,
             $pictured - $talking - self::PICTURES,
             'a picture cost '.(($pictured - $talking) / 31).' reads',
+        );
+    }
+
+    /**
+     * The most a month can ask: no story on any day, so three rooms are drawn on each, every one
+     * ending on a message of three pictures, beside a fourth room that is not drawn.
+     */
+    public function test_a_month_of_rooms_alone_asks_about_one_picture_a_room_drawn(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 31, pictured: 0, stories: false, rooms: 4);
+        $this->fill(new HomeIssueMonth(2026, 8), days: 31, talking: 31, pictured: 31, stories: false, rooms: 4, attachments: 3);
+
+        $this->warm($viewer);
+
+        [$bare, $bareDays] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
+        [$pictured, $picturedDays] = $this->measure($viewer, new HomeIssueMonth(2026, 8));
+
+        $this->assertFilled($bareDays, days: 31, talking: 93, pictured: 0, stories: 0);
+        $this->assertFilled($picturedDays, days: 31, talking: 93, pictured: 93, stories: 0);
+        $this->assertSame(array_fill(0, 31, 1), array_column($picturedDays, 'more'));
+
+        $this->assertGreaterThan(0, $pictured - $bare);
+        $this->assertLessThanOrEqual(
+            self::PER_PICTURE * 93,
+            $pictured - $bare - self::PICTURES,
+            'a picture cost '.(($pictured - $bare) / 93).' reads',
         );
     }
 
@@ -145,18 +173,19 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
      *
      * @param  list<array>  $shown
      */
-    private function assertFilled(array $shown, int $days, int $talking, int $pictured): void
+    private function assertFilled(array $shown, int $days, int $talking, int $pictured, ?int $stories = null): void
     {
         $this->assertCount($days, $shown);
 
         $items = array_merge(...array_column($shown, 'items'));
         $rooms = array_filter($items, fn (array $item): bool => $item['kind'] === 'talk');
-        $stories = array_filter($items, fn (array $item): bool => $item['kind'] === 'story');
+        $told = array_filter($items, fn (array $item): bool => $item['kind'] === 'story');
 
         $this->assertCount($days * 3, $items);
         $this->assertCount($talking, $rooms);
+        $this->assertCount($stories ?? $days * 3 - $talking, $told);
         $this->assertCount($pictured, array_filter($rooms, fn (array $room): bool => $room['image'] !== null));
-        $this->assertSame([], array_filter($stories, fn (array $story): bool => $story['image'] === null));
+        $this->assertSame([], array_filter($told, fn (array $story): bool => $story['image'] === null));
         $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['group']['imageUrl'] === null));
 
         foreach ($shown as $day) {
@@ -166,11 +195,18 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     }
 
     /**
-     * Every day carries every band, two pictures on each story; the first $talking days hold two
-     * rooms, and on the first $pictured of those the room shown ended on a picture.
+     * Every day carries every band but the ones switched off here; the first $talking days hold
+     * $rooms rooms, and on the first $pictured of those every room ended on $attachments pictures.
      */
-    private function fill(HomeIssueMonth $month, int $days, int $talking, int $pictured): void
-    {
+    private function fill(
+        HomeIssueMonth $month,
+        int $days,
+        int $talking,
+        int $pictured,
+        bool $stories = true,
+        int $rooms = 2,
+        int $attachments = 1,
+    ): void {
         foreach (range(1, $days) as $number) {
             $day = $month->first()->addDays($number - 1);
             $window = HomeIssueDay::window($day);
@@ -181,10 +217,12 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
                 'published_at' => $window->end,
             ]);
 
-            $this->stories($issue);
+            if ($stories) {
+                $this->stories($issue);
+            }
 
             if ($number <= $talking) {
-                $this->talk($issue, $window->end, pictured: $number <= $pictured);
+                $this->talk($issue, $window->end, $rooms, $number <= $pictured ? $attachments : 0);
             }
 
             foreach (Member::factory()->count(3)->create() as $rank => $newcomer) {
@@ -235,27 +273,28 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         }
     }
 
-    private function talk(HomeIssue $issue, CarbonImmutable $until, bool $pictured): void
+    private function talk(HomeIssue $issue, CarbonImmutable $until, int $rooms, int $attachments): void
     {
-        foreach ([$this->group(), $this->group()] as $rank => $group) {
+        foreach (range(1, $rooms) as $rank) {
+            $group = $this->group();
             $said = GroupMessage::factory()->count(2)->create([
                 'group_id' => $group->getKey(),
                 'created_at' => $until->subHours(3),
                 'updated_at' => $until->subHours(3),
             ]);
 
-            if ($pictured) {
-                $this->attach($said->last());
+            foreach ($attachments === 0 ? [] : range(1, $attachments) as $number) {
+                $this->attach($said->last(), $number);
             }
 
-            $this->feature($issue, HomeIssueSection::Talk, $group, $rank + 1, [
+            $this->feature($issue, HomeIssueSection::Talk, $group, $rank, [
                 'since' => $until->subDay()->toIso8601String(),
                 'until' => $until->toIso8601String(),
             ]);
         }
     }
 
-    private function attach(GroupMessage $message): void
+    private function attach(GroupMessage $message, int $number): void
     {
         $file = File::factory()->create([
             'type' => 'image/png',
@@ -266,7 +305,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         GroupMessageImage::query()->create([
             'group_message_id' => $message->getKey(),
             'file_id' => $file->getKey(),
-            'number' => 1,
+            'number' => $number,
         ]);
     }
 

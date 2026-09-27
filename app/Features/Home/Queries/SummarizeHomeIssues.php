@@ -141,10 +141,12 @@ final class SummarizeHomeIssues
             }
         }
 
+        if ($read === []) {
+            return [];
+        }
+
         $last = GroupMessage::query()
             ->whereKey(array_values(array_unique(array_column($read, 2))))
-            ->with('author')
-            ->withExists('images')
             ->get()
             ->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
 
@@ -161,8 +163,8 @@ final class SummarizeHomeIssues
     }
 
     /**
-     * What is drawn is read for the items shown and no others, a relation at a time; a talk picture
-     * is the one its per-file gate let through.
+     * What is drawn is read for the items shown and no others, a relation at a time; a room's
+     * picture is its message's first, and only when the per-file gate let it through.
      *
      * @param  array<int, HomeIssueSummary>  $summaries
      * @return array<int, HomeIssueSummary>
@@ -172,24 +174,20 @@ final class SummarizeHomeIssues
         $shown = collect($summaries)->flatMap(fn (HomeIssueSummary $summary): array => $summary->items());
 
         $talk = $shown->whereInstanceOf(TalkStretch::class);
-        $said = $talk->map(fn (TalkStretch $stretch): GroupMessage => $stretch->last);
+        $said = $talk->map(fn (TalkStretch $stretch): GroupMessage => $stretch->last)->values();
 
         foreach ($shown->whereInstanceOf(Model::class)->groupBy(fn (Model $story): string => $story::class) as $stories) {
             EloquentCollection::make($stories->all())->load('images.file');
         }
 
         EloquentCollection::make($talk->map(fn (TalkStretch $stretch): Model => $stretch->group)->all())->unique()->load('image');
-        EloquentCollection::make($said->filter(fn (GroupMessage $message): bool => (bool) $message->images_exists)->all())->load('images.file');
+        EloquentCollection::make($said->all())->load('author');
 
-        // Read for nobody rather than left to load itself, a message at a time, when it is asked.
-        $said->reject(fn (GroupMessage $message): bool => $message->relationLoaded('images'))
-            ->each(fn (GroupMessage $message) => $message->setRelation('images', new EloquentCollection));
+        $pictures = $this->talk->firstPictures($viewer, $said);
 
         return array_map(
             fn (HomeIssueSummary $summary): HomeIssueSummary => $summary->withBursts(array_map(
-                fn (TalkStretch $stretch): TalkStretch => $talk->contains($stretch)
-                    ? $stretch->pictured($this->talk->imagesOf($viewer, $stretch->last)[0] ?? null)
-                    : $stretch,
+                fn (TalkStretch $stretch): TalkStretch => $stretch->pictured($pictures[(int) $stretch->last->getKey()] ?? null),
                 $summary->bursts,
             )),
             $summaries,

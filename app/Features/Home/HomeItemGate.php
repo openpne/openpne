@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\Gate;
 final class HomeItemGate
 {
     /**
-     * A unit is asked once per gate: every ask is a settings read, and a month asks per ledger row
+     * A unit is asked once per gate, where a month would ask per ledger row
      * (docs/internals/home-issues.md, "The month page").
      *
      * @var array<string, bool>

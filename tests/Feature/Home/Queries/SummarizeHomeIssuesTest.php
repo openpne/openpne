@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Home\Queries;
 
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Features\Home\Data\HomeIssueMonth;
 use App\Features\Home\Data\HomeIssueSummary;
 use App\Features\Home\Data\HydratedItem;
 use App\Features\Home\Data\SourceRef;
@@ -12,6 +13,7 @@ use App\Features\Home\Data\TalkStretch;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Queries\SummarizeHomeIssues;
+use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryImage;
@@ -33,6 +35,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
@@ -324,8 +327,32 @@ class SummarizeHomeIssuesTest extends TestCase
         $this->assertNull($this->summary()->bursts[0]->picture);
     }
 
-    /** A fourth room is never shown, so neither its picture nor the gate of it is read. */
-    public function test_pictures_are_read_for_what_is_shown_and_no_more(): void
+    /** Three attachments and the first of them refused: the second would pass, and is not asked. */
+    public function test_a_room_is_asked_about_its_first_picture_and_no_other(): void
+    {
+        $room = Group::factory()->create();
+        $said = $this->say($room, $this->now()->subHours(2));
+        // Attached out of order, so the first is the lowest number and not the lowest id.
+        $this->attach($said, number: 2);
+        $first = $this->attach($said, number: 1);
+        $this->attach($said, number: 3);
+        $this->feature(HomeIssueSection::Talk, $room, stats: $this->stretch($this->now()));
+
+        $asked = $this->filesAskedAbout();
+
+        $this->assertSame($first->url(), $this->summary()->bursts[0]->picture['url'] ?? null);
+        $this->assertSame([$first->getKey()], $asked->all());
+
+        $asked->splice(0);
+        Gate::before(fn (?Member $user, string $ability, array $arguments): ?bool => $ability === 'view'
+            && ($arguments[0] ?? null) instanceof File
+            && $arguments[0]->is($first) ? false : null);
+
+        $this->assertNull($this->summary()->bursts[0]->picture);
+        $this->assertSame([$first->getKey()], $asked->all());
+    }
+
+    public function test_pictures_are_read_for_the_stories_shown_and_no_more(): void
     {
         $stories = Diary::factory()->count(4)->create();
         foreach ($stories as $rank => $story) {
@@ -341,17 +368,48 @@ class SummarizeHomeIssuesTest extends TestCase
         );
     }
 
+    /** A day of rooms alone shows three of them, and the fourth is neither pictured nor asked about. */
+    public function test_pictures_are_asked_about_for_the_rooms_shown_and_no_more(): void
+    {
+        $files = [];
+        foreach (Group::factory()->count(4)->create() as $rank => $room) {
+            $files[] = $this->attach($this->say($room, $this->now()->subHours(2)));
+            $this->feature(HomeIssueSection::Talk, $room, rank: $rank + 1, stats: $this->stretch($this->now()));
+        }
+
+        $asked = $this->filesAskedAbout();
+        $summary = $this->summary();
+
+        $this->assertSame(
+            [$files[0]->getKey(), $files[1]->getKey(), $files[2]->getKey()],
+            $asked->sort()->values()->all(),
+        );
+        $this->assertSame(
+            [true, true, true, false],
+            array_map(fn (TalkStretch $stretch): bool => $stretch->picture !== null, $summary->bursts),
+        );
+        $this->assertSame([true, true, true, false], array_map(
+            fn (TalkStretch $stretch): bool => $stretch->last->relationLoaded('author'),
+            $summary->bursts,
+        ));
+        $this->assertSame(1, $summary->more());
+    }
+
     public function test_nothing_is_loaded_a_row_at_a_time(): void
     {
         $this->everyDropAndWhatIsLeft();
 
+        // A day of rooms alone, so a room that ended on a picture is among the ones drawn.
+        $rooms = $this->publish($this->now()->subDay());
         $pictured = Group::factory()->create(['file_id' => File::factory()]);
-        $this->attach($this->say($pictured, $this->now()->subHours(2)));
-        $this->feature(HomeIssueSection::Talk, $pictured, rank: 9, stats: $this->stretch($this->now()));
+        $this->attach($this->say($pictured, $this->now()->subDay()->subHours(2)));
+        $this->feature(HomeIssueSection::Talk, $pictured, stats: $this->stretch($this->now()->subDay()), issue: $rooms);
+
+        $issues = collect([$this->issue, $rooms]);
 
         Model::preventLazyLoading();
         Model::handleLazyLoadingViolationUsing(function (Model $model, string $relation): void {
-            // The file policy reads the owner of a picture it is asked about, one picture at a time.
+            // The file policy finds a picture's owner for itself and reads the owner's room from it.
             if ($model instanceof GroupMessage && $relation === 'group') {
                 return;
             }
@@ -360,12 +418,22 @@ class SummarizeHomeIssuesTest extends TestCase
         });
 
         try {
-            $this->summarize();
+            $days = HomeIssueSerializer::month(
+                new HomeIssueMonth(2026, 8),
+                $issues,
+                app(SummarizeHomeIssues::class)($this->viewer, $issues),
+                null,
+                null,
+                [],
+            )['days'];
         } finally {
             Model::preventLazyLoading(false);
         }
 
-        $this->addToAssertionCount(1);
+        // Both days were drawn, the room's picture and its group's image among what was.
+        $this->assertSame(['story', 'talk', 'story'], array_column($days[0]['items'], 'kind'));
+        $this->assertNotNull($days[1]['items'][0]['image']);
+        $this->assertNotNull($days[1]['items'][0]['group']['imageUrl']);
     }
 
     // --- helpers ---
@@ -478,8 +546,28 @@ class SummarizeHomeIssuesTest extends TestCase
         ]);
     }
 
+    /**
+     * Every file the policy is asked about from here on, in the order it is asked.
+     *
+     * @return Collection<int, int>
+     */
+    private function filesAskedAbout(): Collection
+    {
+        $asked = collect();
+
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($asked): ?bool {
+            if ($ability === 'view' && ($arguments[0] ?? null) instanceof File) {
+                $asked->push((int) $arguments[0]->getKey());
+            }
+
+            return null;
+        });
+
+        return $asked;
+    }
+
     /** Attach a picture to $message, owned by $owner as far as the `files` row is concerned. */
-    private function attach(GroupMessage $message, ?GroupMessage $owner = null): File
+    private function attach(GroupMessage $message, ?GroupMessage $owner = null, int $number = 1): File
     {
         $file = File::factory()->create([
             'type' => 'image/png',
@@ -490,7 +578,7 @@ class SummarizeHomeIssuesTest extends TestCase
         GroupMessageImage::query()->create([
             'group_message_id' => $message->getKey(),
             'file_id' => $file->getKey(),
-            'number' => 1,
+            'number' => $number,
         ]);
 
         return $file;

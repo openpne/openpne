@@ -8,8 +8,8 @@ use App\Models\Group;
 use App\Models\GroupMessage;
 
 /**
- * One room's stretch as a month draws it. `picture` is what the per-file gate let through and
- * nothing else says a picture is there (docs/internals/home-issues.md, "The month page").
+ * `picture` is what the per-file gate let through, and nothing else says a picture is there
+ * (docs/internals/home-issues.md, "The month page").
  */
 final readonly class TalkStretch
 {

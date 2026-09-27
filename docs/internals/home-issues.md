@@ -299,17 +299,19 @@ shows some. "More" counts the stories and rooms that survive and are not shown, 
 
 **A room is drawn by what was last said in it**: who spoke, the line, how many messages the stretch
 holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
-and the first picture of that message. Whether the message has a picture is what its per-file gate
-answered, never that a row for one exists: a message of pictures only, all refused, is drawn as the
-room's name and its count and nothing more.
+and the first picture of that message. One picture is read and one is asked of the per-file gate,
+however many the message carries: a refused first picture shows none, where the issue page would
+show the next. Whether the message has a picture is what that gate answered, never that a row for
+one exists, so a message of pictures only whose first is refused is drawn as the room's name and its
+count and nothing more.
 
 On the month's calendar a day with an issue is a bordered link and a day without one is bare text.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. Two reads do grow, with the
 month and not with its rows: one per issue that holds talk, since each issue has a window of its
-own, and the gate of each talk picture shown, at most three a day. Pictures and faces are read after
-the gate, for the items shown and no others. The grid of months is one read of every issue's date,
+own, and the gate of each room's picture, asked once for a room shown and so at most three times a
+day. Pictures and speakers are read after the gate, for the items shown and no others. The grid of months is one read of every issue's date,
 a row per published day.
 
 ## Routes

@@ -14,6 +14,7 @@ use App\Models\Member;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -110,6 +111,49 @@ final class TalkSampleDigest
             ->map(fn (GroupMessageImage $image): array => GroupMessageSerializer::image($image))
             ->values()
             ->all();
+    }
+
+    /**
+     * One slot a message and one gate a slot: a refused first picture shows none rather than
+     * reaching for the next, so neither the rows read nor the policy calls grow with the attachments.
+     *
+     * @param  Collection<int, GroupMessage>  $messages
+     * @return array<int, array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}> keyed by message id, a message with no first picture to show being absent
+     */
+    public function firstPictures(Member $viewer, Collection $messages): array
+    {
+        if ($messages->isEmpty()) {
+            return [];
+        }
+
+        $parents = $messages->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
+
+        // `(group_message_id, number)` is not unique, so a tie on the number is broken by the id.
+        $first = GroupMessageImage::query()
+            ->whereIn('group_message_images.group_message_id', $parents->keys())
+            ->whereNotExists(fn (QueryBuilder $earlier) => $earlier
+                ->from('group_message_images as earlier')
+                ->whereColumn('earlier.group_message_id', 'group_message_images.group_message_id')
+                ->where(fn (QueryBuilder $before) => $before
+                    ->whereColumn('earlier.number', '<', 'group_message_images.number')
+                    ->orWhere(fn (QueryBuilder $tied) => $tied
+                        ->whereColumn('earlier.number', 'group_message_images.number')
+                        ->whereColumn('earlier.id', '<', 'group_message_images.id'))))
+            ->with('file')
+            ->get();
+
+        $shown = [];
+
+        foreach ($first as $image) {
+            /** @var GroupMessage $message */
+            $message = $parents[(int) $image->group_message_id];
+
+            if ($this->shows($viewer, $message, $image)) {
+                $shown[(int) $message->getKey()] = GroupMessageSerializer::image($image);
+            }
+        }
+
+        return $shown;
     }
 
     public function countBetween(Group $group, CarbonImmutable $since, CarbonImmutable $until): int
