@@ -128,9 +128,8 @@ per request, queued job or console command** and answered from memory after that
 Key invariants:
 
 1. **A forget goes through the same memoized store.** `Cache::forget()` would empty the store and
-   leave the rest of the request answering from memory. Application code drops a service's keys
-   through its `clearCache()`; a migration, which cannot lean on a service, calls
-   `Cache::memo()->forget()`.
+   leave the rest of the request answering from memory. Each service's `clearCache()` forgets
+   through it, and so does the migration that rewrites a setting without going through the service.
 2. **What another process writes and clears is seen from the next request on.** A request that has
    read a key keeps that answer until it ends, which is the consistency a single page wants and no
    different from having read the key a moment earlier. A console command keeps it until it exits,

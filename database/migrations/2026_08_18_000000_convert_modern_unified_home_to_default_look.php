@@ -24,8 +24,8 @@ return new class extends Migration
 
         DB::table('sns_settings')->where('key', self::OLD_KEY)->delete();
 
-        // A migration is the one sns_settings writer that does not go through
-        // SnsSettingService::clearCache(), so it drops the core tier itself, from the store the service reads.
+        // This write does not go through SnsSettingService::clearCache(), so the core tier is
+        // dropped here, from the store the service reads.
         Cache::memo()->forget(self::CORE_CACHE_KEY);
     }
 
