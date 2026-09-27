@@ -1,20 +1,13 @@
 import { Head, usePage } from '@inertiajs/react';
-import { MonthGrid } from '@/components/month-grid';
 import { List, Panel } from '@/components/ui/surface';
-import { happeningDaysPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
-import { buildMonthRows } from '@/lib/month-grid';
-import { useDateFormat } from '@/lib/use-date-format';
 import { DayBlock } from './day-block';
-import { issueBucket, listedHref } from './issue-months';
-import { MonthCalendar } from './month-calendar';
-import { MonthNav } from './month-nav';
+import { MonthPanel } from './month-panel';
 import type { IssuesPageProps } from './types';
 
 /** One month of days, newest first (docs/internals/home-issues.md, "The month page"). */
 export default function HomeIssues() {
     const t = useT();
-    const date = useDateFormat();
     const { month, prev, next, days, months } = usePage<IssuesPageProps>().props;
 
     if (month === null) {
@@ -31,8 +24,7 @@ export default function HomeIssues() {
     return (
         <>
             <Head title={t('Past happenings')} />
-            <MonthNav month={month} prev={prev} next={next} />
-            <MonthCalendar month={month} days={days} />
+            <MonthPanel month={month} prev={prev} next={next} days={days} months={months} />
 
             {days.length === 0 ? (
                 <Panel>
@@ -47,14 +39,6 @@ export default function HomeIssues() {
                     </List>
                 </Panel>
             )}
-
-            <MonthGrid
-                title={t('Jump to a month')}
-                rows={buildMonthRows(months, date.currentYear(), listedHref(months), month)}
-                selected={month}
-                bucket={issueBucket}
-                countPhrase={(count) => happeningDaysPhrase(t, count)}
-            />
         </>
     );
 }

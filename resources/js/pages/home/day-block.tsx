@@ -24,7 +24,7 @@ export function daysCovered(t: Translate, civilDate: (value: string, weekday?: b
 }
 
 /** A message with nothing the reader may have of it is called by its room. */
-function said(t: Translate, talk: DayTalk): string {
+export function said(t: Translate, talk: DayTalk): string {
     if (talk.line === '') {
         return talk.group.name;
     }
