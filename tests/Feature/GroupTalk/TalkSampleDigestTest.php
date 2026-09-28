@@ -19,10 +19,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class TalkSampleDigestTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     private CarbonImmutable $start;
@@ -648,5 +650,19 @@ class TalkSampleDigestTest extends TestCase
 
         $this->assertCount(TalkSampleDigest::THUMBNAILS, $shown);
         $this->assertStringContainsString('limit '.TalkSampleDigest::THUMBNAIL_CANDIDATES, $log[0]['query']);
+    }
+
+    public function test_the_candidates_are_cut_in_a_total_order(): void
+    {
+        $viewer = $this->member();
+        $this->attach($this->said($this->member(), $this->start->addSecond()));
+        $sample = $this->digest->sampleBetween($this->group, $this->start, $this->until);
+
+        $orders = $this->orderClausesOn('group_message_images', fn () => $this->digest->thumbnails($viewer, $sample));
+
+        $this->assertSame(
+            ['order by group_messages.created_at asc, group_messages.id asc, group_message_images.number asc, group_message_images.id asc'],
+            $orders,
+        );
     }
 }
