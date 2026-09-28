@@ -40,6 +40,6 @@ class GroupTopicComment extends Model
     /** @return HasMany<GroupTopicCommentImage, $this> */
     public function images(): HasMany
     {
-        return $this->hasMany(GroupTopicCommentImage::class, 'post_id')->orderBy('number');
+        return $this->hasMany(GroupTopicCommentImage::class, 'post_id')->orderBy('number')->orderBy('id');
     }
 }

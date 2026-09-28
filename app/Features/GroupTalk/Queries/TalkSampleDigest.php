@@ -225,6 +225,7 @@ final class TalkSampleDigest
             ->orderBy('group_messages.created_at')
             ->orderBy('group_messages.id')
             ->orderBy('group_message_images.number')
+            ->orderBy('group_message_images.id')
             ->limit(self::THUMBNAIL_CANDIDATES)
             ->select('group_message_images.*')
             ->get();

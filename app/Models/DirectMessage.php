@@ -50,7 +50,7 @@ class DirectMessage extends Model
     /** @return HasMany<DirectMessageFile, $this> */
     public function files(): HasMany
     {
-        return $this->hasMany(DirectMessageFile::class)->orderBy('number');
+        return $this->hasMany(DirectMessageFile::class)->orderBy('number')->orderBy('id');
     }
 
     /** @return BelongsTo<DirectMessage, $this> */

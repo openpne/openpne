@@ -62,7 +62,7 @@ class TimelinePost extends Model
     /** @return HasMany<TimelinePostImage, $this> */
     public function images(): HasMany
     {
-        return $this->hasMany(TimelinePostImage::class)->orderBy('number');
+        return $this->hasMany(TimelinePostImage::class)->orderBy('number')->orderBy('id');
     }
 
     /**
