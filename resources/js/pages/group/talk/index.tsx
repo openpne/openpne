@@ -401,7 +401,7 @@ export default function GroupTalkIndex() {
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot and the boundary this offers is a
                 // page or more above them.
-                <div className="sticky top-offset-2 z-20 flex justify-center">
+                <div className="sticky top-below-place-2 z-20 flex justify-center">
                     {digestAt === 'banner' && unreadDigest !== undefined ? (
                         <TalkUnreadDigestCard
                             digest={unreadDigest}
