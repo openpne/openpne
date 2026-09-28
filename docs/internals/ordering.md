@@ -15,6 +15,9 @@ rule; the feature documents record how each list applies it.
 A list on the posting-time axis never orders by `id` alone: migrated rows carry OpenPNE 3 ids that
 are not monotonic in time, and an id stands in for time only until the first backdated row.
 
+An attachment's `number` is not unique within its parent on migrated data, so every attachment
+relation orders by `(number, id)`.
+
 ## The tuple
 
 A time column is second-precise, so it is not a total order on its own: two rows written in one

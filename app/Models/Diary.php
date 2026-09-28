@@ -46,6 +46,6 @@ class Diary extends Model
     /** @return HasMany<DiaryImage, $this> */
     public function images(): HasMany
     {
-        return $this->hasMany(DiaryImage::class)->orderBy('number');
+        return $this->hasMany(DiaryImage::class)->orderBy('number')->orderBy('id');
     }
 }

@@ -52,6 +52,6 @@ class GroupMessage extends Model
     /** @return HasMany<GroupMessageImage, $this> */
     public function images(): HasMany
     {
-        return $this->hasMany(GroupMessageImage::class)->orderBy('number');
+        return $this->hasMany(GroupMessageImage::class)->orderBy('number')->orderBy('id');
     }
 }
