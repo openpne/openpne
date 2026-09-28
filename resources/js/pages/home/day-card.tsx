@@ -36,8 +36,15 @@ function headline(t: Translate, top: DayTop): string {
     }
 }
 
+/** One wording for the row and for the calendar's link, so a stretch of days is heard as one in both. */
+export function daysCovered(t: Translate, civilDate: (value: string, weekday?: boolean) => string, day: DaySummary): string {
+    return day.days.from === day.days.to
+        ? civilDate(day.date, true)
+        : t(':from to :to', { from: civilDate(day.days.from), to: civilDate(day.days.to) });
+}
+
 /** Zero is left out rather than printed: the line says what happened, not what did not. */
-function breakdown(t: Translate, counts: DayCounts): string[] {
+export function breakdown(t: Translate, counts: DayCounts): string[] {
     return [
         counts.stories > 0 && storiesPhrase(t, counts.stories),
         counts.responses > 0 && responsesPhrase(t, counts.responses),
@@ -75,10 +82,7 @@ export function DayCard({ day }: { day: DaySummary }) {
     const t = useT();
     const { civilDate } = useDateFormat();
 
-    const date =
-        day.days.from === day.days.to
-            ? civilDate(day.date, true)
-            : t(':from to :to', { from: civilDate(day.days.from), to: civilDate(day.days.to) });
+    const date = daysCovered(t, civilDate, day);
     const counts = breakdown(t, day.counts);
 
     return (
