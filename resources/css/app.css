@@ -194,7 +194,6 @@
 @utility top-offset-* {
     top: calc(--spacing(--value(number)) + var(--modern-top-offset));
 }
-/* Under the place bar as well, where the look draws one (--modern-place-bar). */
 @utility top-below-place-* {
     top: calc(--spacing(--value(number)) + var(--modern-top-offset) + var(--modern-place-bar, 0px));
 }

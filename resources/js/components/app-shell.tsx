@@ -61,7 +61,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         : look.colorLine
           ? 'lg:[--modern-top-offset:4px]'
           : 'lg:[--modern-top-offset:0px]';
-    // The place bar's own height, its hairline included, for what sticks under it to clear.
+    // The height place-bar.tsx gives a crumb with a face, hairline included, so it moves when that bar's padding does.
     const placeBarOffset = look.placeBar ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
 
     return (
