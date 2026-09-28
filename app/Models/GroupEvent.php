@@ -56,7 +56,7 @@ class GroupEvent extends Model
     /** @return HasMany<GroupEventImage, $this> */
     public function images(): HasMany
     {
-        return $this->hasMany(GroupEventImage::class, 'post_id')->orderBy('number');
+        return $this->hasMany(GroupEventImage::class, 'post_id')->orderBy('number')->orderBy('id');
     }
 
     /** @return BelongsToMany<Member, $this> */
