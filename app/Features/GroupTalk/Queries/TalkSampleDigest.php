@@ -228,19 +228,39 @@ final class TalkSampleDigest
     }
 
     /**
-     * The window is `(since, until]`, so a message written exactly on the instant two consecutive
-     * windows share belongs to the one that closes on it. One place, so the sample, the count and
-     * the anchor can only describe the same stretch.
-     *
-     * @return Builder<GroupMessage>
+     * @param  list<int>  $groupIds
+     * @return array<int, int> messages per group id, a group that said nothing being absent
      */
+    public function countsBetween(array $groupIds, CarbonImmutable $since, CarbonImmutable $until): array
+    {
+        return $this->between(GroupMessage::query()->whereIn('group_id', $groupIds), $since, $until)
+            ->groupBy('group_id')
+            ->selectRaw('group_id, count(*) as said')
+            ->pluck('said', 'group_id')
+            ->map(fn (mixed $said): int => (int) $said)
+            ->all();
+    }
+
+    /** @return Builder<GroupMessage> */
     private function window(Group $group, CarbonImmutable $since, CarbonImmutable $until): Builder
     {
-        return GroupMessage::query()
-            ->where('group_id', $group->getKey())
-            ->where('group_messages.created_at', '>', $since)
-            ->where('group_messages.created_at', '<=', $until)
+        return $this->between(GroupMessage::query()->where('group_id', $group->getKey()), $since, $until)
             ->orderBy('created_at')
             ->orderBy('id');
+    }
+
+    /**
+     * The window is `(since, until]`, so a message written exactly on the instant two consecutive
+     * windows share belongs to the one that closes on it. One place, so the sample, the counts and
+     * the anchor can only describe the same stretch.
+     *
+     * @param  Builder<GroupMessage>  $query
+     * @return Builder<GroupMessage>
+     */
+    private function between(Builder $query, CarbonImmutable $since, CarbonImmutable $until): Builder
+    {
+        return $query
+            ->where('group_messages.created_at', '>', $since)
+            ->where('group_messages.created_at', '<=', $until);
     }
 }

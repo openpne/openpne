@@ -5,7 +5,7 @@ import { useT } from '@/lib/i18n';
 import type { IssueRef } from './types';
 
 /** Today has nothing after it, so its right half is empty rather than disabled. */
-export function IssueNav({ prev, next }: { prev: IssueRef | null; next: IssueRef | null }) {
+export function IssueNav({ prev, next, monthHref }: { prev: IssueRef | null; next: IssueRef | null; monthHref: string }) {
     const t = useT();
 
     return (
@@ -24,7 +24,7 @@ export function IssueNav({ prev, next }: { prev: IssueRef | null; next: IssueRef
                 <span className="flex-1" />
             )}
 
-            <Link href="/home/issues" className="flex min-h-11 shrink-0 items-center text-sm text-link hover:underline">
+            <Link href={monthHref} className="flex min-h-11 shrink-0 items-center text-sm text-link hover:underline">
                 {t('Past happenings')}
             </Link>
 

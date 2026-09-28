@@ -117,7 +117,7 @@ export default function HomeIssue() {
                 </Panel>
             )}
 
-            <IssueNav prev={prev} next={next} />
+            <IssueNav prev={prev} next={next} monthHref={issue.monthHref} />
             {/* Only the freshest page can be "nothing new yet": an archived day has a day after it. */}
             <Colophon window={issue.window} stale={next === null && !issue.isCurrent} />
         </>

@@ -264,13 +264,53 @@ since moved on. There is no separate row of faces and no picture grid — an exc
 Every optional section key is absent rather than empty, so nothing on the page has to decide what
 `[]` means, and an issue of eight stories that lost seven is simply an issue of one.
 
+## The month page
+
+`/home/{y}/{m}` draws one month of issues, newest first: each as its date, its top item and one line
+of counts.
+
+**A day has an issue when an issue is dated that day, and only then.** An issue belongs to the month
+of its `issue_date`, whatever its window reaches back over — the rule `/home/{y}/{m}/{d}` already
+answers by. A window grows for two reasons, and only the first leaves the days it covers empty: a day
+on which nothing happened published no issue, while the first issue ever, and one that follows a
+stopped scheduler, carry what happened on the days before under the last day's date.
+
+**What a row says about its sources is read live and through their gates.** The headline, the picture
+and every count come from [`SummarizeHomeIssues`](../../app/Features/Home/Queries/SummarizeHomeIssues.php),
+which asks [`HomeItemGate::admits()`](../../app/Features/Home/HomeItemGate.php) — the rule the issue
+page asks — so a month never shows what the day's own page would drop. Frozen `score` and `stats` are
+not read, a burst's window excepted.
+
+**That an issue exists is not gated.** A day whose rows have all been dropped is still listed, as its
+date alone.
+
+| Count | Of the rows that survive |
+|---|---|
+| stories | the rows themselves |
+| responses | replies to a post; comments on a diary, a topic or an event |
+| talk | messages in each burst's stretch |
+| newcomers, new groups | the rows themselves |
+
+Upcoming events are not counted, because the calendar is not news; RSVPs and reactions are not
+counted either.
+
+**The cost does not grow with the month.** The whole month takes one read per source table, one per
+relation the gate asks about, and one count per distinct burst window
+([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —
+ordinarily one per issue. Pictures are read after the gate, for each day's top item only: one read
+per kind of source that leads a day.
+
 ## Routes
 
 `/` is the latest issue under a Modern surface — the front page is the newest one, whatever day it
-covers, and its pager only goes back. `/home/issues` is the run of them and `/home/{y}/{m}/{d}` is
-one day's, both Modern-only: OpenPNE 3 had no such page, so they render Inertia whatever surface the
-reader is on. The day is validated before it is looked for — a route pattern admits `2026/02/30`,
-and a day that never happened must read as nothing rather than as a query.
+covers, and its pager only goes back. `/home/issues` is the month of the latest issue,
+`/home/{y}/{m}` any month's and `/home/{y}/{m}/{d}` one day's, all Modern-only: OpenPNE 3 had no such
+page, so they render Inertia whatever surface the reader is on. The day is validated before it is
+looked for — a route pattern admits `2026/02/30`, and a day that never happened must read as nothing
+rather than as a query.
+
+A month's pager moves to the nearest month that has an issue. A month with none still renders when it
+lies between two that do; before the first issue's month and after the last there is no page.
 
 ## Later
 

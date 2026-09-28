@@ -8,6 +8,8 @@ use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Home\Data\HomeIssueDay;
+use App\Features\Home\Data\HomeIssueMonth;
+use App\Features\Home\Data\HomeIssueSummary;
 use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
@@ -23,7 +25,6 @@ use App\Models\TimelinePost;
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -70,22 +71,72 @@ final class HomeIssueSerializer
     }
 
     /**
-     * @param  LengthAwarePaginator<int, HomeIssue>  $issues
-     * @return array{issues: array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}}
+     * A null month is a site that has published nothing, which has no month to be in.
+     *
+     * @param  Collection<int, HomeIssue>  $issues  newest first
+     * @param  array<int, HomeIssueSummary>  $summaries  keyed by issue id
+     * @return array{month: array|null, prev: array|null, next: array|null, days: list<array>}
      */
-    public static function archive(LengthAwarePaginator $issues): array
+    public static function month(
+        ?HomeIssueMonth $month,
+        Collection $issues,
+        array $summaries,
+        ?HomeIssueMonth $previous,
+        ?HomeIssueMonth $next,
+    ): array {
+        return [
+            'month' => self::monthRef($month),
+            'prev' => self::monthRef($previous),
+            'next' => self::monthRef($next),
+            'days' => $issues
+                ->map(fn (HomeIssue $issue): array => self::day($issue, $summaries[(int) $issue->getKey()] ?? new HomeIssueSummary))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /** @return array{year: int, month: int, href: string}|null */
+    private static function monthRef(?HomeIssueMonth $month): ?array
+    {
+        return $month === null ? null : ['year' => $month->year, 'month' => $month->month, 'href' => $month->href()];
+    }
+
+    /** `top` is null when nothing survived, and the row is then its date alone. */
+    private static function day(HomeIssue $issue, HomeIssueSummary $summary): array
     {
         return [
-            'issues' => [
-                'data' => array_map(self::linkTo(...), $issues->items()),
-                'meta' => [
-                    'currentPage' => $issues->currentPage(),
-                    'lastPage' => $issues->lastPage(),
-                    'perPage' => $issues->perPage(),
-                    'total' => $issues->total(),
-                ],
-            ],
+            ...self::linkTo($issue),
+            'days' => self::daysOf(self::windowOf($issue)),
+            'counts' => $summary->counts(),
+            'top' => self::top($summary),
         ];
+    }
+
+    private static function top(HomeIssueSummary $summary): ?array
+    {
+        $top = $summary->top();
+
+        return match (true) {
+            $top === null => null,
+            $summary->stories !== [] => [
+                'kind' => 'story',
+                'headline' => self::headline($top),
+                'image' => self::pictureOf($top),
+            ],
+            $summary->bursts !== [] => [
+                'kind' => 'talk',
+                'group' => self::scope($top),
+            ],
+            $summary->newcomers !== [] => [
+                'kind' => 'newcomer',
+                'member' => MemberRefSerializer::ref($top),
+                'others' => count($summary->newcomers) - 1,
+            ],
+            default => [
+                'kind' => 'newGroup',
+                'group' => self::scope($top),
+            ],
+        };
     }
 
     /** @return array{date: string, number: int, href: string} */
@@ -102,22 +153,37 @@ final class HomeIssueSerializer
         ];
     }
 
-    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, CarbonImmutable $now): array
+    private static function windowOf(HomeIssue $issue): HomeIssueWindow
     {
-        $window = new HomeIssueWindow(
+        return new HomeIssueWindow(
             CarbonImmutable::parse($issue->window_start),
             CarbonImmutable::parse($issue->published_at),
         );
+    }
+
+    /**
+     * Which days an issue is ABOUT, which is not the same as its stretch: a day of happenings runs
+     * 06:00 to 06:00 (HomeIssueDay).
+     *
+     * @return array{from: string, to: string}
+     */
+    private static function daysOf(HomeIssueWindow $window): array
+    {
+        return [
+            'from' => $window->firstDay()->format('Y-m-d'),
+            'to' => $window->lastDay()->format('Y-m-d'),
+        ];
+    }
+
+    private static function issue(HomeIssue $issue, HydratedIssue $hydrated, CarbonImmutable $now): array
+    {
+        $window = self::windowOf($issue);
 
         return [
             ...self::linkTo($issue),
-            // Which days the issue is ABOUT, which is not the same as its stretch: a day of
-            // happenings runs 06:00 to 06:00 (HomeIssueDay), so the masthead names days and the
-            // colophon names the instants they were drawn from.
-            'days' => [
-                'from' => $window->firstDay()->format('Y-m-d'),
-                'to' => $window->lastDay()->format('Y-m-d'),
-            ],
+            'monthHref' => HomeIssueMonth::of(CarbonImmutable::parse($issue->issue_date))->href(),
+            // The masthead names the days and the colophon the instants they were drawn from.
+            'days' => self::daysOf($window),
             'window' => [
                 'from' => $window->start->toIso8601String(),
                 'to' => $window->end->toIso8601String(),
@@ -145,27 +211,38 @@ final class HomeIssueSerializer
 
         return match (true) {
             $source instanceof Diary => self::card(
-                'diary', $source, "/diary/{$source->getKey()}", $source->title,
+                'diary', $source, "/diary/{$source->getKey()}",
                 self::dek($source->body, $source->format),
                 null,
                 self::countOf($source, 'comments'),
-                self::picture($source->images, DiarySerializer::image(...)),
             ),
-            $source instanceof TimelinePost => self::post($source),
+            $source instanceof TimelinePost => self::card(
+                'timeline', $source, "/timeline/{$source->getKey()}",
+                self::postLines($source)[1],
+                null,
+                self::countOf($source, 'replies'),
+            ),
             $source instanceof GroupTopic => self::card(
-                'topic', $source, "/topics/{$source->getKey()}", $source->name,
+                'topic', $source, "/topics/{$source->getKey()}",
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
-                self::picture($source->images, GroupTopicSerializer::image(...)),
             ),
             $source instanceof GroupEvent => self::card(
-                'event', $source, "/events/{$source->getKey()}", $source->name,
+                'event', $source, "/events/{$source->getKey()}",
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
-                self::picture($source->images, GroupEventSerializer::image(...)),
             ),
+        };
+    }
+
+    private static function headline(Diary|TimelinePost|GroupTopic|GroupEvent $source): string
+    {
+        return match (true) {
+            $source instanceof Diary => (string) $source->title,
+            $source instanceof TimelinePost => self::postLines($source)[0],
+            default => (string) $source->name,
         };
     }
 
@@ -173,20 +250,25 @@ final class HomeIssueSerializer
      * A post has no title, so its opening line stands in for one and the dek is what is left after
      * it. A post opening on a blank line is headlined by its words instead, since the block is one
      * link that cannot be named by nothing.
+     *
+     * @return array{string, string} the headline, then the dek
      */
-    private static function post(TimelinePost $post): array
+    private static function postLines(TimelinePost $post): array
     {
         $lead = trim(self::firstLine($post->body));
         $rest = self::dek(self::afterFirstLine($post->body), BodyFormat::Plain);
 
-        return self::card(
-            'timeline', $post, "/timeline/{$post->getKey()}",
-            $lead === '' ? $rest : $lead,
-            $lead === '' ? '' : $rest,
-            null,
-            self::countOf($post, 'replies'),
-            self::picture($post->images, TimelinePostSerializer::image(...)),
-        );
+        return $lead === '' ? [$rest, ''] : [$lead, $rest];
+    }
+
+    private static function pictureOf(Diary|TimelinePost|GroupTopic|GroupEvent $source): ?array
+    {
+        return self::picture($source->images, match (true) {
+            $source instanceof Diary => DiarySerializer::image(...),
+            $source instanceof TimelinePost => TimelinePostSerializer::image(...),
+            $source instanceof GroupTopic => GroupTopicSerializer::image(...),
+            $source instanceof GroupEvent => GroupEventSerializer::image(...),
+        });
     }
 
     /**
@@ -198,23 +280,21 @@ final class HomeIssueSerializer
         string $kind,
         Diary|TimelinePost|GroupTopic|GroupEvent $source,
         string $href,
-        string $headline,
         string $dek,
         ?array $group,
         int $commentCount,
-        ?array $image,
     ): array {
         return [
             'kind' => $kind,
             'id' => (int) $source->getKey(),
             'href' => $href,
-            'headline' => $headline,
+            'headline' => self::headline($source),
             'dek' => $dek,
             'author' => $source->member === null ? null : MemberRefSerializer::ref($source->member),
             'group' => $group,
             'createdAt' => $source->created_at->toIso8601String(),
             'commentCount' => $commentCount,
-            'image' => $image,
+            'image' => self::pictureOf($source),
         ];
     }
 

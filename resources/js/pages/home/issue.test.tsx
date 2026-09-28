@@ -69,6 +69,7 @@ const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     date: '2026-08-27',
     number: 12,
     href: '/home/2026/08/27',
+    monthHref: '/home/2026/08',
     days: { from: '2026-08-27', to: '2026-08-27' },
     window: { from: '2026-08-27T06:00:00+09:00', to: '2026-08-28T06:00:00+09:00' },
     isCurrent: true,
@@ -357,7 +358,7 @@ test('the pager offers only the directions there is an issue in', () => {
 
     expect(screen.getByText('Earlier day')).toBeTruthy();
     expect(screen.getByText('Later day')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Past happenings' }).getAttribute('href')).toBe('/home/issues');
+    expect(screen.getByRole('link', { name: 'Past happenings' }).getAttribute('href')).toBe('/home/2026/08');
 
     cleanup();
 

@@ -30,7 +30,7 @@ const THUMB_SIZES = '6rem';
  * shape would re-crop it (docs/internals/images.md, "The two ladders"). Decorative: the headline
  * beside it names the story.
  */
-function StoryPicture({ image, shape, sizes }: { image: GridImage; shape: string; sizes: string }) {
+export function StoryPicture({ image, shape, sizes }: { image: GridImage; shape: string; sizes: string }) {
     return (
         <img
             src={fitFallbackUrl(image.fitSources) ?? ''}
