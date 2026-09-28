@@ -110,28 +110,49 @@ export interface MonthRef {
     href: string;
 }
 
-/** Counted live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
-export interface DayCounts {
-    stories: number;
+/** A story of the day, as much of it as a line draws: the way in, never the body. */
+export interface DayStory {
+    kind: 'story';
+    href: string;
+    headline: string;
+    /** Comments, or replies on a post. */
     responses: number;
-    talk: number;
-    newcomers: number;
-    newGroups: number;
+    image: GridImage | null;
 }
 
-export type DayTop =
-    | { kind: 'story'; headline: string; image: GridImage | null }
-    | { kind: 'talk'; group: BoardScope }
-    | { kind: 'newcomer'; member: MemberRef; others: number }
-    | { kind: 'newGroup'; group: BoardScope };
+/** A room of the day, drawn by what was last said in it over the issue's stretch. */
+export interface DayTalk {
+    kind: 'talk';
+    /** The message the line was taken from, in its room. */
+    href: string;
+    group: BoardScope;
+    /** Null for a withdrawn member, drawn with the established label. */
+    speaker: { name: string; isAi: boolean } | null;
+    /** Empty when the message had no words and no picture the reader may have. */
+    line: string;
+    count: number;
+    /** The message's first picture that passed its gate; never the group's own image. */
+    image: GridImage | null;
+}
 
+export type DayItem = DayStory | DayTalk;
+
+export interface DayName {
+    id: number;
+    name: string;
+    href: string;
+    isAi?: boolean;
+}
+
+/** Read live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
 export interface DaySummary extends IssueRef {
     days: { from: string; to: string };
-    counts: DayCounts;
-    /** How dark the day is drawn beside the month's other days; 0 when nothing is left of it. */
-    level: 0 | 1 | 2 | 3 | 4;
-    /** Null when nothing the day featured is left for this reader: the row is then its date alone. */
-    top: DayTop | null;
+    /** Up to three; empty when nothing the day featured is left for this reader. */
+    items: DayItem[];
+    /** The stories and rooms that are left and not shown. */
+    more: number;
+    newcomers: DayName[];
+    newGroups: DayName[];
 }
 
 export interface IssuesPageProps extends PageProps {

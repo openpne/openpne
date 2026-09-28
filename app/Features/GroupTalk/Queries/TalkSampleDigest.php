@@ -14,6 +14,7 @@ use App\Models\Member;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -110,6 +111,49 @@ final class TalkSampleDigest
             ->map(fn (GroupMessageImage $image): array => GroupMessageSerializer::image($image))
             ->values()
             ->all();
+    }
+
+    /**
+     * One slot a message and one gate a slot: a refused first picture shows none rather than
+     * reaching for the next, so neither the rows read nor the policy calls grow with the attachments.
+     *
+     * @param  Collection<int, GroupMessage>  $messages
+     * @return array<int, array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null, animatedSources: list<array{url: string, box: int}>}> keyed by message id, a message with no first picture to show being absent
+     */
+    public function firstPictures(Member $viewer, Collection $messages): array
+    {
+        if ($messages->isEmpty()) {
+            return [];
+        }
+
+        $parents = $messages->keyBy(fn (GroupMessage $message): int => (int) $message->getKey());
+
+        // `(group_message_id, number)` is not unique, so a tie on the number is broken by the id.
+        $first = GroupMessageImage::query()
+            ->whereIn('group_message_images.group_message_id', $parents->keys())
+            ->whereNotExists(fn (QueryBuilder $earlier) => $earlier
+                ->from('group_message_images as earlier')
+                ->whereColumn('earlier.group_message_id', 'group_message_images.group_message_id')
+                ->where(fn (QueryBuilder $before) => $before
+                    ->whereColumn('earlier.number', '<', 'group_message_images.number')
+                    ->orWhere(fn (QueryBuilder $tied) => $tied
+                        ->whereColumn('earlier.number', 'group_message_images.number')
+                        ->whereColumn('earlier.id', '<', 'group_message_images.id'))))
+            ->with('file')
+            ->get();
+
+        $shown = [];
+
+        foreach ($first as $image) {
+            /** @var GroupMessage $message */
+            $message = $parents[(int) $image->group_message_id];
+
+            if ($this->shows($viewer, $message, $image)) {
+                $shown[(int) $message->getKey()] = GroupMessageSerializer::image($image);
+            }
+        }
+
+        return $shown;
     }
 
     public function countBetween(Group $group, CarbonImmutable $since, CarbonImmutable $until): int
@@ -228,16 +272,38 @@ final class TalkSampleDigest
     }
 
     /**
+     * Read off `groups`, the messages left unaliased inside each subselect: {@see between()} names
+     * `group_messages.created_at`, and an alias would bind it to the outer row and lose the window.
+     *
      * @param  list<int>  $groupIds
-     * @return array<int, int> messages per group id, a group that said nothing being absent
+     * @return array<int, array{count: int, last: int|null}> per group id, `last` the newest message in the stretch
      */
-    public function countsBetween(array $groupIds, CarbonImmutable $since, CarbonImmutable $until): array
+    public function stretchesOf(array $groupIds, CarbonImmutable $since, CarbonImmutable $until): array
     {
-        return $this->between(GroupMessage::query()->whereIn('group_id', $groupIds), $since, $until)
-            ->groupBy('group_id')
-            ->selectRaw('group_id, count(*) as said')
-            ->pluck('said', 'group_id')
-            ->map(fn (mixed $said): int => (int) $said)
+        $inStretch = fn (): Builder => $this->between(
+            GroupMessage::query()->whereColumn('group_messages.group_id', 'groups.id'),
+            $since,
+            $until,
+        );
+
+        return Group::query()
+            ->whereKey($groupIds)
+            ->select('groups.id')
+            ->selectSub($inStretch()->selectRaw('count(*)'), 'said')
+            ->selectSub(
+                $inStretch()
+                    ->select('group_messages.id')
+                    ->orderByDesc('group_messages.created_at')
+                    ->orderByDesc('group_messages.id')
+                    ->limit(1),
+                'last_id',
+            )
+            ->toBase()
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [(int) $row->id => [
+                'count' => (int) $row->said,
+                'last' => $row->last_id === null ? null : (int) $row->last_id,
+            ]])
             ->all();
     }
 

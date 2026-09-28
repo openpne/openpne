@@ -13,7 +13,7 @@ use App\Features\Home\Data\HomeIssueSummary;
 use App\Features\Home\Data\HomeIssueWindow;
 use App\Features\Home\Data\HydratedIssue;
 use App\Features\Home\Data\HydratedItem;
-use App\Features\Home\HeatScale;
+use App\Features\Home\Data\TalkStretch;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
@@ -22,9 +22,11 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\HomeIssue;
+use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
+use App\Support\ChatPreview;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -87,21 +89,12 @@ final class HomeIssueSerializer
         ?HomeIssueMonth $next,
         array $months,
     ): array {
-        $levels = HeatScale::levels(array_map(
-            fn (HomeIssueSummary $summary): int => $summary->activity(),
-            $summaries,
-        ));
-
         return [
             'month' => self::monthRef($month),
             'prev' => self::monthRef($previous),
             'next' => self::monthRef($next),
             'days' => $issues
-                ->map(fn (HomeIssue $issue): array => self::day(
-                    $issue,
-                    $summaries[(int) $issue->getKey()] ?? new HomeIssueSummary,
-                    $levels[(int) $issue->getKey()] ?? 0,
-                ))
+                ->map(fn (HomeIssue $issue): array => self::day($issue, $summaries[(int) $issue->getKey()] ?? new HomeIssueSummary))
                 ->values()
                 ->all(),
             'months' => $months,
@@ -114,42 +107,61 @@ final class HomeIssueSerializer
         return $month === null ? null : ['year' => $month->year, 'month' => $month->month, 'href' => $month->href()];
     }
 
-    /** `top` is null when nothing survived, and the row is then its date alone. */
-    private static function day(HomeIssue $issue, HomeIssueSummary $summary, int $level): array
+    /** Every list is present and may be empty: a day with nothing left is its date alone. */
+    private static function day(HomeIssue $issue, HomeIssueSummary $summary): array
     {
         return [
             ...self::linkTo($issue),
             'days' => self::daysOf(self::windowOf($issue)),
-            'counts' => $summary->counts(),
-            'level' => $level,
-            'top' => self::top($summary),
+            'items' => array_map(self::item(...), $summary->items()),
+            'more' => $summary->more(),
+            'newcomers' => array_map(fn (Member $member): array => [
+                'id' => (int) $member->getKey(),
+                'name' => $member->name,
+                'isAi' => $member->isAiAccount(),
+                'href' => "/member/{$member->getKey()}",
+            ], $summary->newcomers),
+            'newGroups' => array_map(fn (Group $group): array => [
+                'id' => (int) $group->getKey(),
+                'name' => $group->name,
+                'href' => "/groups/{$group->getKey()}",
+            ], $summary->newGroups),
         ];
     }
 
-    private static function top(HomeIssueSummary $summary): ?array
+    private static function item(Diary|TimelinePost|GroupTopic|GroupEvent|TalkStretch $item): array
     {
-        $top = $summary->top();
+        if ($item instanceof TalkStretch) {
+            $author = $item->last->author;
 
-        return match (true) {
-            $top === null => null,
-            $summary->stories !== [] => [
-                'kind' => 'story',
-                'headline' => self::headline($top),
-                'image' => self::pictureOf($top),
-            ],
-            $summary->bursts !== [] => [
+            return [
                 'kind' => 'talk',
-                'group' => self::scope($top),
-            ],
-            $summary->newcomers !== [] => [
-                'kind' => 'newcomer',
-                'member' => MemberRefSerializer::ref($top),
-                'others' => count($summary->newcomers) - 1,
-            ],
-            default => [
-                'kind' => 'newGroup',
-                'group' => self::scope($top),
-            ],
+                'href' => "/groups/{$item->group->getKey()}/talk?m={$item->last->getKey()}",
+                'group' => self::scope($item->group),
+                'speaker' => $author === null ? null : ['name' => $author->name, 'isAi' => $author->isAiAccount()],
+                // The picture that came through the gate, never the row's own word that it has one.
+                'line' => ChatPreview::lineOrImages([(string) $item->last->body], $item->picture !== null),
+                'count' => $item->count,
+                'image' => $item->picture,
+            ];
+        }
+
+        return [
+            'kind' => 'story',
+            'href' => self::hrefOf($item),
+            'headline' => self::headline($item),
+            'responses' => self::countOf($item, $item instanceof TimelinePost ? 'replies' : 'comments'),
+            'image' => self::pictureOf($item),
+        ];
+    }
+
+    private static function hrefOf(Diary|TimelinePost|GroupTopic|GroupEvent $source): string
+    {
+        return match (true) {
+            $source instanceof Diary => "/diary/{$source->getKey()}",
+            $source instanceof TimelinePost => "/timeline/{$source->getKey()}",
+            $source instanceof GroupTopic => "/topics/{$source->getKey()}",
+            $source instanceof GroupEvent => "/events/{$source->getKey()}",
         };
     }
 
@@ -225,25 +237,25 @@ final class HomeIssueSerializer
 
         return match (true) {
             $source instanceof Diary => self::card(
-                'diary', $source, "/diary/{$source->getKey()}",
+                'diary', $source,
                 self::dek($source->body, $source->format),
                 null,
                 self::countOf($source, 'comments'),
             ),
             $source instanceof TimelinePost => self::card(
-                'timeline', $source, "/timeline/{$source->getKey()}",
+                'timeline', $source,
                 self::postLines($source)[1],
                 null,
                 self::countOf($source, 'replies'),
             ),
             $source instanceof GroupTopic => self::card(
-                'topic', $source, "/topics/{$source->getKey()}",
+                'topic', $source,
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
             ),
             $source instanceof GroupEvent => self::card(
-                'event', $source, "/events/{$source->getKey()}",
+                'event', $source,
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
@@ -293,7 +305,6 @@ final class HomeIssueSerializer
     private static function card(
         string $kind,
         Diary|TimelinePost|GroupTopic|GroupEvent $source,
-        string $href,
         string $dek,
         ?array $group,
         int $commentCount,
@@ -301,7 +312,7 @@ final class HomeIssueSerializer
         return [
             'kind' => $kind,
             'id' => (int) $source->getKey(),
-            'href' => $href,
+            'href' => self::hrefOf($source),
             'headline' => self::headline($source),
             'dek' => $dek,
             'author' => $source->member === null ? null : MemberRefSerializer::ref($source->member),

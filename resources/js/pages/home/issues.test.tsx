@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import HomeIssues from './issues';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
-import type { DayCounts, DaySummary, DayTop, MonthRef } from './types';
+import type { DaySummary, DayStory, DayTalk, MonthRef } from './types';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
@@ -28,20 +28,48 @@ const month = (year: number, number: number): MonthRef => ({
     href: `/home/${year}/${String(number).padStart(2, '0')}`,
 });
 
-const NOTHING: DayCounts = { stories: 0, responses: 0, talk: 0, newcomers: 0, newGroups: 0 };
+const picture = {
+    id: 9,
+    url: '/cache/img/9.png',
+    thumbnailUrl: '/cache/img/9-t.png',
+    fitSources: [{ url: '/cache/img/9-320.png', box: 320 }],
+    cropSources: {},
+    width: 640,
+    height: 480,
+    animatedSources: [],
+};
 
-const day = (date: string, top: DayTop | null, counts: Partial<DayCounts> = {}, from = date): DaySummary => ({
+const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayStory => ({
+    kind: 'story',
+    href: `/diary/${id}`,
+    headline,
+    responses: 0,
+    image: null,
+    ...rest,
+});
+
+const talk = (rest: Partial<DayTalk> = {}): DayTalk => ({
+    kind: 'talk',
+    href: '/groups/3/talk?m=40',
+    group: { id: 3, name: 'Hikers', imageUrl: null },
+    speaker: { name: 'Hanako', isAi: false },
+    line: 'Photos are up',
+    count: 23,
+    image: null,
+    ...rest,
+});
+
+const day = (date: string, rest: Partial<DaySummary> = {}, from = date): DaySummary => ({
     date,
     number: 1,
     href: `/home/${date.replaceAll('-', '/')}`,
     days: { from, to: date },
-    counts: { ...NOTHING, ...counts },
-    level: top === null ? 0 : 1,
-    top,
+    items: [],
+    more: 0,
+    newcomers: [],
+    newGroups: [],
+    ...rest,
 });
-
-const member = { id: 7, name: 'Hanako', imageUrl: null, avatarColor: null, isAi: false };
-const group = { id: 3, name: 'Hikers', imageUrl: null };
 
 function arrive(props: Record<string, unknown>) {
     inertia.page = {
@@ -53,88 +81,154 @@ function arrive(props: Record<string, unknown>) {
     return renderWithProviders(<HomeIssues />);
 }
 
-/** A row of the month, not an entry of the counts list inside one. */
-function row(index: number): HTMLElement {
+/** A day of the month, not an item of the list inside one. */
+function block(index: number): HTMLElement {
     const found = screen.getAllByRole('list')[0]?.children[index];
 
     if (!(found instanceof HTMLElement)) {
-        throw new Error(`no row ${index}`);
+        throw new Error(`no day ${index}`);
     }
 
     return found;
 }
 
-test('a day is called by its date, which is the one link of its row', () => {
-    arrive({
-        days: [
-            day('2026-08-27', { kind: 'story', headline: 'Morning walk', image: null }, { stories: 2, responses: 5 }),
-            day('2026-08-26', { kind: 'story', headline: 'Evening run', image: null }, { stories: 1 }),
-        ],
-    });
+const links = (within_: HTMLElement): (string | null)[][] =>
+    within(within_)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]);
 
-    // getByRole, so a second link in the row would fail the query.
-    const latest = within(row(0)).getByRole('link');
-    expect(latest.textContent).toBe('Thu, August 27, 2026');
-    expect(latest.getAttribute('href')).toBe('/home/2026/08/27');
-    expect(within(row(0)).getByText('Morning walk')).toBeTruthy();
+test('a day is headed by its date, which opens the day', () => {
+    arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }), day('2026-08-26', { items: [story(2, 'Evening run')] })] });
 
-    expect(within(row(1)).getByRole('link').getAttribute('href')).toBe('/home/2026/08/26');
+    const heading = within(block(0)).getByRole('heading', { level: 3, name: 'Thu, August 27, 2026' });
+
+    expect(within(heading).getByRole('link').getAttribute('href')).toBe('/home/2026/08/27');
+    expect(within(block(1)).getByRole('heading', { level: 3, name: 'Wed, August 26, 2026' })).toBeTruthy();
 });
 
-test('the counts say what happened and leave out what did not', () => {
+test('each item opens itself, in the order the day gives them', () => {
+    arrive({
+        days: [day('2026-08-27', { items: [story(1, 'Morning walk'), talk(), story(2, 'Evening run')] })],
+    });
+
+    expect(links(block(0))).toEqual([
+        ['Thu, August 27, 2026', '/home/2026/08/27'],
+        ['Morning walk', '/diary/1'],
+        ['Hanako: Photos are up', '/groups/3/talk?m=40'],
+        ['Evening run', '/diary/2'],
+    ]);
+});
+
+test('a story says how much was said under it, and nothing when nothing was', () => {
+    arrive({
+        days: [day('2026-08-27', { items: [story(1, 'Morning walk', { responses: 8 }), story(2, 'Evening run'), story(3, 'Noon nap', { responses: 1 })] })],
+    });
+
+    const items = within(block(0)).getAllByRole('listitem');
+
+    expect(items.map((item) => item.textContent)).toEqual(['Morning walk8 responses', 'Evening run', 'Noon nap1 response']);
+});
+
+test('a room is drawn by what was last said in it, under its name and its count', () => {
+    arrive({ days: [day('2026-08-27', { items: [talk()] })] });
+
+    const [item] = within(block(0)).getAllByRole('listitem');
+
+    expect(within(item as HTMLElement).getByRole('link', { name: 'Hanako: Photos are up' })).toBeTruthy();
+    expect(within(item as HTMLElement).getByText('Hikers')).toBeTruthy();
+    expect(within(item as HTMLElement).getByText('23 messages')).toBeTruthy();
+    // The group's image is a mark beside its name and never the item's picture.
+    expect(item?.querySelector('img')).toBeNull();
+});
+
+test('a speaker is named as what they are', () => {
     arrive({
         days: [
-            day(
-                '2026-08-27',
-                { kind: 'story', headline: 'Morning walk', image: null },
-                { stories: 4, responses: 1, talk: 35, newcomers: 1 },
-            ),
+            day('2026-08-27', {
+                items: [
+                    talk({ href: '/groups/3/talk?m=1', speaker: { name: 'Robo', isAi: true } }),
+                    talk({ href: '/groups/3/talk?m=2', speaker: null }),
+                ],
+            }),
         ],
     });
 
-    expect(
-        within(row(0))
-            .getAllByRole('listitem')
-            .map((item) => item.textContent),
-    ).toEqual(['4 stories', '1 response', '35 talk messages', '1 new member']);
+    expect(screen.getByRole('link', { name: 'Robo (AI): Photos are up' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Withdrawn member: Photos are up' })).toBeTruthy();
+});
+
+test('a message with nothing to show of it is called by its room', () => {
+    arrive({ days: [day('2026-08-27', { items: [talk({ line: '', count: 1 })] })] });
+
+    const [item] = within(block(0)).getAllByRole('listitem');
+
+    expect(within(item as HTMLElement).getByRole('link', { name: 'Hikers' }).getAttribute('href')).toBe('/groups/3/talk?m=40');
+    // Said once: the name is the link, so the line under it is the count alone.
+    expect(within(item as HTMLElement).getAllByText('Hikers')).toHaveLength(1);
+    expect(within(item as HTMLElement).getByText('1 message')).toBeTruthy();
+});
+
+test('a picture is drawn for the item that has one', () => {
+    arrive({
+        days: [day('2026-08-27', { items: [story(1, 'Morning walk', { image: picture }), talk({ image: picture }), story(2, 'Evening run')] })],
+    });
+
+    const items = within(block(0)).getAllByRole('listitem');
+
+    expect(items.map((item) => item.querySelector('img')?.getAttribute('src') ?? null)).toEqual([
+        '/cache/img/9-320.png',
+        '/cache/img/9-320.png',
+        null,
+    ]);
+});
+
+test('the names of a day lead to who and what they name', () => {
+    arrive({
+        days: [
+            day('2026-08-27', {
+                newcomers: [
+                    { id: 7, name: 'Hanako', isAi: false, href: '/member/7' },
+                    { id: 8, name: 'Robo', isAi: true, href: '/member/8' },
+                ],
+                newGroups: [{ id: 3, name: 'Hikers', href: '/groups/3' }],
+            }),
+        ],
+    });
+
+    expect(within(block(0)).getByText('New members')).toBeTruthy();
+    expect(within(block(0)).getByText('New %communities%')).toBeTruthy();
+    expect(links(block(0)).slice(1)).toEqual([
+        ['Hanako', '/member/7'],
+        ['Robo (AI)', '/member/8'],
+        ['Hikers', '/groups/3'],
+    ]);
+});
+
+test('what is not shown is counted, and opens the day', () => {
+    arrive({
+        days: [
+            day('2026-08-27', { items: [story(1, 'Morning walk')], more: 5 }),
+            day('2026-08-26', { items: [story(2, 'Evening run')], more: 1 }),
+            day('2026-08-25', { items: [story(3, 'Noon nap')] }),
+        ],
+    });
+
+    expect(within(block(0)).getByRole('link', { name: '5 more' }).getAttribute('href')).toBe('/home/2026/08/27');
+    expect(within(block(1)).getByRole('link', { name: '1 more' }).getAttribute('href')).toBe('/home/2026/08/26');
+    expect(within(block(2)).queryByText(/more/)).toBeNull();
 });
 
 test('a stretch of days is named as one', () => {
-    arrive({ days: [day('2026-08-27', { kind: 'story', headline: 'Morning walk', image: null }, { stories: 1 }, '2026-08-21')] });
+    arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }, '2026-08-21')] });
 
-    expect(screen.getByRole('link', { name: 'August 21, 2026 to August 27, 2026' })).toBeTruthy();
-});
-
-test('a day with no story leads with what it does have', () => {
-    arrive({
-        days: [
-            day('2026-08-27', { kind: 'talk', group }, { talk: 12 }),
-            day('2026-08-26', { kind: 'newcomer', member, others: 0 }, { newcomers: 1 }),
-            day('2026-08-25', { kind: 'newcomer', member, others: 1 }, { newcomers: 2 }),
-            day('2026-08-24', { kind: 'newcomer', member, others: 3 }, { newcomers: 4 }),
-            day('2026-08-23', { kind: 'newGroup', group }, { newGroups: 1 }),
-        ],
-    });
-
-    expect(within(row(0)).getByText('Talk in Hikers')).toBeTruthy();
-    expect(within(row(1)).getByText('Hanako joined')).toBeTruthy();
-    expect(within(row(2)).getByText('Hanako and 1 other joined')).toBeTruthy();
-    expect(within(row(3)).getByText('Hanako and 3 others joined')).toBeTruthy();
-    expect(within(row(4)).getByText('New %community%: Hikers')).toBeTruthy();
-});
-
-test('an AI newcomer is named as one', () => {
-    arrive({ days: [day('2026-08-27', { kind: 'newcomer', member: { ...member, isAi: true }, others: 0 }, { newcomers: 1 })] });
-
-    expect(screen.getByText('Hanako (AI) joined')).toBeTruthy();
+    expect(within(block(0)).getByRole('heading', { level: 3, name: 'August 21, 2026 to August 27, 2026' })).toBeTruthy();
 });
 
 test('a day with nothing left is its date alone', () => {
-    arrive({ days: [day('2026-08-27', null)] });
+    arrive({ days: [day('2026-08-27')] });
 
-    expect(within(row(0)).getByRole('link', { name: 'Thu, August 27, 2026' })).toBeTruthy();
-    expect(within(row(0)).getByRole('heading', { level: 3, name: 'Thu, August 27, 2026' })).toBeTruthy();
-    expect(row(0).querySelector('p, ul, img')).toBeNull();
+    expect(links(block(0))).toEqual([['Thu, August 27, 2026', '/home/2026/08/27']]);
+    expect(block(0).querySelector('p, ul, img')).toBeNull();
 });
 
 test('the pager offers only the months there is one to go to', () => {
@@ -172,7 +266,7 @@ test('a site that has published nothing has no month to show', () => {
 
 test('every month that holds an issue can be jumped to, and the one on screen is marked', () => {
     arrive({
-        days: [day('2026-08-27', { kind: 'story', headline: 'Morning walk', image: null }, { stories: 1 })],
+        days: [day('2026-08-27', { items: [story(1, 'Morning walk')] })],
         months: [
             { year: 2026, month: 9, count: 22, href: '/home/2026/09' },
             { year: 2026, month: 8, count: 11, href: '/home/2026/08' },

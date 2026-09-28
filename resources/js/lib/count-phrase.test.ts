@@ -7,9 +7,11 @@ import {
     jumpToUnreadPhrase,
     membersPhrase,
     messagesPhrase,
+    morePhrase,
     participantsPhrase,
     passkeysPhrase,
     repliesPhrase,
+    responsesPhrase,
     unreadMessagesPhrase,
 } from './count-phrase.ts';
 
@@ -35,6 +37,8 @@ test('each counted noun has its singular at one', () => {
         [participantsPhrase, '1 participant', '2 participants'],
         [entriesPhrase, '1 entry', '2 entries'],
         [messagesPhrase, '1 message', '2 messages'],
+        [responsesPhrase, '1 response', '2 responses'],
+        [morePhrase, '1 more', '2 more'],
     ] as const;
     for (const [phrase, one, two] of phrases) {
         assert.equal(phrase(t, 1), one);

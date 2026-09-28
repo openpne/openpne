@@ -364,16 +364,18 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame(1, GroupMessage::query()->where('group_id', $this->group->getKey())->count());
     }
 
-    public function test_rooms_counted_together_share_the_window_and_a_silent_one_is_absent(): void
+    // --- rooms read together ---
+
+    public function test_rooms_read_together_share_the_window_and_each_ends_on_its_own_last_message(): void
     {
         $author = $this->member();
         $this->said($author, $this->start);
         $this->said($author, $this->start->addSecond());
-        $this->said($author, $this->until);
+        $onUntil = $this->said($author, $this->until);
         $this->said($author, $this->until->addSecond());
 
         $other = Group::factory()->create();
-        GroupMessage::factory()->create([
+        $only = GroupMessage::factory()->create([
             'group_id' => $other->getKey(),
             'created_at' => $this->start->addMinutes(10),
             'updated_at' => $this->start->addMinutes(10),
@@ -381,13 +383,126 @@ class TalkSampleDigestTest extends TestCase
         $silent = Group::factory()->create();
 
         $this->assertEquals(
-            [$this->group->getKey() => 2, $other->getKey() => 1],
-            $this->digest->countsBetween(
+            [
+                $this->group->getKey() => ['count' => 2, 'last' => $onUntil->getKey()],
+                $other->getKey() => ['count' => 1, 'last' => $only->getKey()],
+                $silent->getKey() => ['count' => 0, 'last' => null],
+            ],
+            $this->digest->stretchesOf(
                 [$this->group->getKey(), $other->getKey(), $silent->getKey()],
                 $this->start,
                 $this->until,
             ),
         );
+    }
+
+    public function test_a_stretch_ends_on_the_later_instant_and_then_the_higher_id(): void
+    {
+        $author = $this->member();
+        // Written first, so the lowest id — and last in the window all the same.
+        $late = $this->said($author, $this->start->addMinutes(20));
+        $this->said($author, $this->start->addMinutes(10));
+        $tiedLater = $this->said($author, $this->start->addMinutes(10));
+
+        $last = fn (): ?int => $this->digest
+            ->stretchesOf([$this->group->getKey()], $this->start, $this->until)[$this->group->getKey()]['last'];
+
+        $this->assertSame($late->getKey(), $last());
+
+        $late->delete();
+
+        $this->assertSame($tiedLater->getKey(), $last());
+    }
+
+    /** SQLite answers a tie in id order unasked, so the `ORDER BY` itself is what is pinned. */
+    public function test_the_end_of_a_stretch_is_asked_of_the_database_not_left_to_it(): void
+    {
+        DB::enableQueryLog();
+
+        $this->digest->stretchesOf([$this->group->getKey()], $this->start, $this->until);
+
+        $sql = str_replace(['`', '"'], '', DB::getQueryLog()[0]['query']);
+        DB::disableQueryLog();
+
+        $this->assertStringContainsString(
+            'order by group_messages.created_at desc, group_messages.id desc limit 1',
+            $sql,
+        );
+        // Both subselects are bounded by the window, and by the room of the outer row.
+        $this->assertSame(2, substr_count($sql, 'group_messages.group_id = groups.id'));
+        $this->assertSame(2, substr_count($sql, 'group_messages.created_at > ?'));
+        $this->assertSame(2, substr_count($sql, 'group_messages.created_at <= ?'));
+    }
+
+    // --- the first picture of a message ---
+
+    public function test_the_first_picture_is_the_lowest_number_and_then_the_lowest_id(): void
+    {
+        $author = $this->member();
+        $numbered = $this->said($author, $this->start->addMinutes(5));
+        $this->attach($numbered, 2);
+        $first = $this->attach($numbered, 1);
+        $this->attach($numbered, 3);
+
+        $tied = $this->said($author, $this->start->addMinutes(6));
+        $earlier = $this->attach($tied, 1);
+        $this->attach($tied, 1);
+
+        $bare = $this->said($author, $this->start->addMinutes(7));
+
+        $pictures = $this->digest->firstPictures($author, collect([$numbered, $tied, $bare]));
+
+        $this->assertSame(
+            [$numbered->getKey() => $first->url(), $tied->getKey() => $earlier->url()],
+            array_map(fn (array $picture): string => $picture['url'], $pictures),
+        );
+    }
+
+    public function test_a_refused_first_picture_is_not_made_up_for_by_the_next(): void
+    {
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addMinutes(5));
+        $refused = $this->attach($message, 1);
+        $this->attach($message, 2);
+
+        $asked = [];
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($refused, &$asked): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            if ($ability !== 'view' || ! $subject instanceof File) {
+                return null;
+            }
+
+            $asked[] = $subject->getKey();
+
+            return $subject->is($refused) ? false : null;
+        });
+
+        $this->assertSame([], $this->digest->firstPictures($author, collect([$message])));
+        $this->assertSame([$refused->getKey()], $asked);
+    }
+
+    public function test_a_first_picture_owned_by_another_message_is_left_out(): void
+    {
+        $author = $this->member();
+        $other = $this->said($author, $this->start->addMinutes(1));
+        $message = $this->said($author, $this->start->addMinutes(5));
+        $this->attach($message, 1, owner: $other);
+        $this->attach($message, 2);
+
+        $this->assertSame([], $this->digest->firstPictures($author, collect([$message])));
+    }
+
+    public function test_no_message_is_no_read(): void
+    {
+        DB::enableQueryLog();
+
+        $this->assertSame([], $this->digest->firstPictures($this->member(), collect()));
+
+        $log = array_filter(DB::getQueryLog(), fn (array $query): bool => str_contains($query['query'], 'group_message_images'));
+        DB::disableQueryLog();
+
+        $this->assertSame([], $log);
     }
 
     // --- who did the talking ---

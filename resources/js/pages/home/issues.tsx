@@ -5,9 +5,9 @@ import { happeningDaysPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { buildMonthRows } from '@/lib/month-grid';
 import { useDateFormat } from '@/lib/use-date-format';
-import { DayCard } from './day-card';
-import { HeatCalendar } from './heat-calendar';
+import { DayBlock } from './day-block';
 import { issueBucket, listedHref } from './issue-months';
+import { MonthCalendar } from './month-calendar';
 import { MonthNav } from './month-nav';
 import type { IssuesPageProps } from './types';
 
@@ -32,7 +32,7 @@ export default function HomeIssues() {
         <>
             <Head title={t('Past happenings')} />
             <MonthNav month={month} prev={prev} next={next} />
-            <HeatCalendar month={month} days={days} />
+            <MonthCalendar month={month} days={days} />
 
             {days.length === 0 ? (
                 <Panel>
@@ -42,7 +42,7 @@ export default function HomeIssues() {
                 <Panel flush>
                     <List>
                         {days.map((day) => (
-                            <DayCard key={day.date} day={day} />
+                            <DayBlock key={day.date} day={day} />
                         ))}
                     </List>
                 </Panel>
