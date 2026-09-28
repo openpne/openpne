@@ -110,6 +110,7 @@ test('a stored entry asks before its format changes, and a refusal changes nothi
     await choose('No formatting');
 
     expect(seams.confirm).toHaveBeenCalledTimes(1);
+    expect(seams.confirm).toHaveBeenCalledWith(expect.objectContaining({ description: 'Formatting symbols in this entry will be shown as characters, exactly as typed.' }));
     expect(seen.format).toBe('markdown');
     expect(badge()).toBe('Markdown');
     expect(seams.save).not.toHaveBeenCalled();
@@ -126,6 +127,15 @@ test('an accepted change moves the format and the preference and leaves the text
     expect(seams.save).toHaveBeenCalledWith('plain');
     expect(seen.value).toBe('a body');
     expect(seen.changes).toBe(0);
+});
+
+test('a stored plain entry is told what Markdown will start to read', async () => {
+    renderWithProviders(<Harness start="plain" recordFormat="plain" />);
+
+    await choose('Use Markdown');
+
+    expect(seams.confirm).toHaveBeenCalledWith(expect.objectContaining({ description: 'Symbols like # and * in this entry will start being treated as formatting.' }));
+    expect(seen.format).toBe('markdown');
 });
 
 test('a new entry changes format unasked', async () => {

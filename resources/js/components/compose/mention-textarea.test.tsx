@@ -138,7 +138,7 @@ test('Escape gives up on this trigger alone', async () => {
 });
 
 test.each([
-    ['refused', (net: ReturnType<typeof wire>) => net.settle(0, answer(null, 429))],
+    ['refused', (net: ReturnType<typeof wire>) => net.settle(0, answer({ candidates: [aoi] }, 429))],
     ['failed', (net: ReturnType<typeof wire>) => net.drop(0)],
 ])('a %s search closes the list and leaves the keys to the field', async (_, fail) => {
     const net = wire();
@@ -181,15 +181,31 @@ test('a converting IME searches nothing until it commits', () => {
     expect(net.url(0)).toBe(`/timeline/mention-candidates?q=${encodeURIComponent('あお')}`);
 });
 
-test('a draft at the cap is offered nobody', () => {
+test.each([
+    [MAX_MENTIONS - 1, 1],
+    [MAX_MENTIONS, 0],
+])('a draft of %i mentions is searched for %i times', (held, searches) => {
     const net = wire();
-    const full = Array.from({ length: MAX_MENTIONS }, (_, i) => ({ memberId: i + 1, label: 'x', start: 100 + i * 3 }));
-    render(<Harness mentions={full} />);
+    const draft = Array.from({ length: held }, (_, i) => ({ memberId: i + 1, label: 'x', start: 100 + i * 3 }));
+    render(<Harness mentions={draft} />);
 
     type('@ao');
     advance(DEBOUNCE_MS);
 
-    expect(net.fetch).not.toHaveBeenCalled();
+    expect(net.fetch).toHaveBeenCalledTimes(searches);
+});
+
+test('a key pressed while an IME converts over an open list is the field\'s', async () => {
+    const net = wire();
+    render(<Harness />);
+    type('@ao');
+    advance(DEBOUNCE_MS);
+    await net.settle(0, answer({ candidates: [aoi] }));
+
+    fireEvent.compositionStart(field());
+
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(true);
+    expect(seen.value).toBe('@ao');
 });
 
 test('leaving the field closes the list', async () => {
