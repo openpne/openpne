@@ -162,6 +162,7 @@ class GroupManageRoutesTest extends TestCase
 
     public function test_the_roster_links_and_the_confirm_carry_the_page(): void
     {
+        Event::fake([SubAdminAppointed::class]);
         $group = Group::factory()->create();
         $admin = $this->join($group, GroupRole::Admin);
         for ($i = 1; $i < ListGroupMembers::PER_PAGE; $i++) {

@@ -36,12 +36,12 @@ class GroupMemberManageController extends Controller
 
     public function __construct(private readonly ListGroupMembers $members) {}
 
-    public function manage(Request $request, int $group, ListGroupMembers $query): View|InertiaResponse
+    public function manage(Request $request, int $group): View|InertiaResponse
     {
         $found = Group::findOrFail($group);
         abort_unless(Gate::allows('moderateMembers', $found), 404);
         $role = GroupMembership::roleOf($found, $this->viewer());
-        $members = $query($found);
+        $members = ($this->members)($found);
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($found, $members, $role) {
@@ -230,7 +230,6 @@ class GroupMemberManageController extends Controller
             $error = $this->messageFor($e->reason);
         }
 
-        // Clamped so a page the action emptied is not the one the redirect lands on.
         $page = $page > 1 ? min($page, ($this->members)($group)->lastPage()) : 1;
         $redirect = $this->redirectToManage($group, $page);
 
