@@ -142,6 +142,7 @@ class CheckTranslationsCommand extends Command
             + $this->reportAppUiCoverage($base)
             + $this->reportReactPhpGroupKeys($base)
             + $this->reportLiteralTerms($base, $found)
+            + $this->reportUnknownPlaceholders($base, $found)
             + $this->reportVendorGaps($base);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
@@ -721,6 +722,73 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
+     * The runtime leaves a `%name%` no term answers to as it stands, so one inside a longer string
+     * reaches the page as typed; the pure-placeholder check never sees a string that has other words.
+     *
+     * @param  array<string, list<string>>  $found  extracted key => [file:line, ...]
+     * @return int number of offending strings
+     */
+    private function reportUnknownPlaceholders(string $base, array $found): int
+    {
+        $sources = [];
+        foreach ($found as $key => $locations) {
+            $sources[(string) $key] ??= $locations[0] ?? 'code';
+        }
+        foreach (self::dynamicSourceStrings() as $string => $registry) {
+            $sources[(string) $string] ??= $registry;
+        }
+        foreach (['ja', 'en'] as $lang) {
+            foreach ($this->loadJsonDictionary("{$base}/lang/{$lang}.json") as $key => $value) {
+                $quoted = json_encode((string) $key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $sources[(string) $key] ??= "lang/{$lang}.json (key)";
+                $sources[(string) $value] ??= "lang/{$lang}.json value of {$quoted}";
+            }
+        }
+
+        $violations = [];
+        foreach ($sources as $text => $origin) {
+            $unknown = self::unknownPlaceholders((string) $text, $this->termNames());
+            if ($unknown !== []) {
+                $violations[] = [(string) $text, $origin, $unknown];
+            }
+        }
+
+        if ($violations === []) {
+            return 0;
+        }
+
+        $this->error(sprintf('Placeholders no term answers to (%d) — the page would show them as typed; name a term from lang/ja/terms.php:', count($violations)));
+        foreach ($violations as [$text, $origin, $unknown]) {
+            $this->line(sprintf(
+                '  - %s  [%s]  ← %s',
+                json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                implode(', ', $unknown),
+                $origin,
+            ));
+        }
+
+        return count($violations);
+    }
+
+    /**
+     * @param  list<string>  $knownTermNames
+     * @return list<string> each `%name%` in $text that the term layer would leave as it stands
+     */
+    public static function unknownPlaceholders(string $text, array $knownTermNames): array
+    {
+        preg_match_all('/%([a-zA-Z_]+)%/', $text, $matches);
+
+        $unknown = [];
+        foreach ($matches[1] as $raw) {
+            if (! self::namesTerm($raw, $knownTermNames)) {
+                $unknown["%{$raw}%"] = true;
+            }
+        }
+
+        return array_keys($unknown);
+    }
+
+    /**
      * @return array<string, true> exact strings exempt from the term-literal gate
      */
     private function loadTermLiteralAllowlist(string $base): array
@@ -1019,20 +1087,30 @@ class CheckTranslationsCommand extends Command
         }
 
         foreach ($matches[1] as $raw) {
-            $name = ctype_upper($raw[0]) ? lcfirst($raw) : $raw;
-            if (in_array($name, $knownTermNames, true)) {
-                continue;
+            if (! self::namesTerm($raw, $knownTermNames)) {
+                return false;
             }
-
-            $singular = Str::singular($name);
-            if ($singular !== $name && in_array($singular, $knownTermNames, true)) {
-                continue;
-            }
-
-            return false;
         }
 
         return true;
+    }
+
+    /**
+     * The same reading TermService::replace gives a placeholder's name: a leading capital is dropped,
+     * and a plural answers to its singular.
+     *
+     * @param  list<string>  $knownTermNames
+     */
+    private static function namesTerm(string $raw, array $knownTermNames): bool
+    {
+        $name = ctype_upper($raw[0]) ? lcfirst($raw) : $raw;
+        if (in_array($name, $knownTermNames, true)) {
+            return true;
+        }
+
+        $singular = Str::singular($name);
+
+        return $singular !== $name && in_array($singular, $knownTermNames, true);
     }
 
     /**
