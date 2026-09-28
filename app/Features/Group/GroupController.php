@@ -54,9 +54,9 @@ use Inertia\Response as InertiaResponse;
 
 class GroupController extends Controller
 {
-    public function __construct(private readonly ListPendingMembers $pendingList) {}
-
     use RespondsWithSurface;
+
+    public function __construct(private readonly ListPendingMembers $pendingList) {}
 
     public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread, ConsumeNotificationRows $feedRows): View|InertiaResponse
     {
@@ -461,11 +461,11 @@ class GroupController extends Controller
             ->with('status', __('%Community% deleted.'));
     }
 
-    public function pendingMembers(Request $request, ListPendingMembers $query): View|InertiaResponse
+    public function pendingMembers(Request $request): View|InertiaResponse
     {
         $group = $this->groupFrom($request);
         abort_unless(Gate::allows('manageMembers', $group), 404);
-        $applicants = $query($group);
+        $applicants = ($this->pendingList)($group);
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($group, $applicants) {
@@ -507,7 +507,6 @@ class GroupController extends Controller
             $error = $this->messageFor($e->reason);
         }
 
-        // Clamped so a page the action emptied is not the one the redirect lands on.
         $page = $page > 1 ? min($page, ($this->pendingList)($group)->lastPage()) : 1;
         $redirect = $this->redirectToPending($group, $page);
 
