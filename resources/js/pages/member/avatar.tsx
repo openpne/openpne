@@ -68,7 +68,14 @@ export default function MemberAvatar() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        upload.post('/member/avatar', { onSuccess: () => upload.reset() });
+                        const form = e.currentTarget;
+                        upload.post('/member/avatar', {
+                            onSuccess: () => {
+                                upload.reset();
+                                // The browser owns a file input's value, so the name it shows outlives the form state.
+                                form.reset();
+                            },
+                        });
                     }}
                     className="space-y-3"
                 >
