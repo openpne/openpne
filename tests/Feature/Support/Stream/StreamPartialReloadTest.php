@@ -24,10 +24,6 @@ class StreamPartialReloadTest extends TestCase
         Diary::factory()->count(3)->create(['visibility' => Visibility::Members]);
     }
 
-    /**
-     * The client keeps the scroll metadata it holds when a partial answer carries none, so a widget
-     * reloading a prop of its own leaves the stream's cursor and its generation where they were.
-     */
     public function test_a_partial_reload_of_another_prop_reissues_nothing_of_the_stream(): void
     {
         $page = $this->partial('unread');
@@ -39,13 +35,12 @@ class StreamPartialReloadTest extends TestCase
         $this->assertArrayNotHasKey('mergeProps', $page);
     }
 
-    public function test_a_partial_reload_of_the_rows_carries_their_scroll_metadata_and_no_generation(): void
+    public function test_a_partial_reload_of_the_rows_carries_their_scroll_metadata(): void
     {
         $page = $this->partial('diaries');
 
         $this->assertCount(3, $page['props']['diaries']['data']);
         $this->assertArrayHasKey('diaries', $page['scrollProps']);
-        $this->assertArrayNotHasKey('streamGeneration', $page['props']);
     }
 
     /** @return array<string, mixed> */

@@ -94,7 +94,7 @@ would skip the rows the reload replaced. A Classic tab from before a list became
 holds a `?page=2` load-more URL; its rows route answers 400 rather than serve the head twice, and
 the no-JS pager takes over.
 
-A partial reload that names another prop of a stream's page touches none of this: the answer carries
+A partial reload that names another prop of a stream's page moves no cursor: the answer carries
 neither the rows, their scroll metadata nor a generation, and the client keeps the metadata it
 holds.
 
