@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildArchiveGrid, countBucket, selectedBeyondRecentYears } from './archive-months.ts';
+import { selectedBeyondRecentYears } from '../../lib/month-grid.ts';
+import { buildArchiveGrid, countBucket } from './archive-months.ts';
 
 test('zero-fills each year to twelve month cells', () => {
     const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7);

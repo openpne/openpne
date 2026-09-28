@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { buildMonthRows } from '../../lib/month-grid.ts';
+import { type IssueMonth, issueBucket, listedHref } from './issue-months.ts';
+
+const months: IssueMonth[] = [
+    { year: 2026, month: 9, count: 22, href: '/home/2026/09' },
+    { year: 2025, month: 12, count: 3, href: '/home/2025/12' },
+];
+
+test('a month of issues is bucketed by the week', () => {
+    assert.deepEqual(
+        [0, 1, 7, 8, 15, 16, 23, 24, 31].map(issueBucket),
+        [0, 1, 1, 2, 2, 3, 3, 4, 4],
+    );
+});
+
+test('a listed month links where the server said, and a month without issues is not a link', () => {
+    const rows = buildMonthRows(months, 2026, listedHref(months));
+
+    assert.deepEqual(
+        rows.map((row) => row.year),
+        [2026, 2025],
+    );
+    assert.deepEqual(rows[0]?.months[8], { month: 9, count: 22, href: '/home/2026/09' });
+    assert.deepEqual(rows[0]?.months[7], { month: 8, count: 0, href: null });
+    assert.deepEqual(rows[1]?.months[11], { month: 12, count: 3, href: '/home/2025/12' });
+});
+
+test('an empty month the reader is on keeps its year on the grid', () => {
+    const rows = buildMonthRows(months, 2026, listedHref(months), { year: 2024 });
+
+    assert.deepEqual(
+        rows.map((row) => row.year),
+        [2026, 2025, 2024],
+    );
+});

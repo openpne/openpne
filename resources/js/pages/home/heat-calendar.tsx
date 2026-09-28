@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { BUCKET_FILL } from '@/components/month-grid';
 import { Panel } from '@/components/ui/surface';
 import { monthWeeks } from '@/lib/date';
 import { useT } from '@/lib/i18n';
@@ -6,9 +7,6 @@ import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import { breakdown, daysCovered } from './day-card';
 import type { DaySummary, MonthRef } from './types';
-
-// Indexed by level, so level 0 takes no fill.
-const FILL = ['', 'bg-selected/10', 'bg-selected/20', 'bg-selected/30', 'bg-selected/45'] as const;
 
 const CELL = 'flex min-h-11 items-center justify-center rounded text-sm';
 
@@ -61,7 +59,7 @@ export function HeatCalendar({ month, days }: { month: MonthRef; days: DaySummar
                 <span>{t('How busy each day was, within this month')}</span>
                 <span className="flex items-center gap-1">
                     <span>{t('Quieter days')}</span>
-                    {FILL.slice(1).map((fill) => (
+                    {BUCKET_FILL.slice(1).map((fill) => (
                         <span key={fill} aria-hidden className={cn('size-3 rounded-sm border border-border', fill)} />
                     ))}
                     <span>{t('Busier days')}</span>
@@ -83,7 +81,7 @@ function Day({ number, issue }: { number: number; issue: DaySummary | undefined 
         <Link
             href={issue.href}
             aria-label={[daysCovered(t, civilDate, issue), ...breakdown(t, issue.counts)].join(', ')}
-            className={cn(CELL, 'border border-border text-foreground transition-colors hover:bg-selected/60', FILL[issue.level])}
+            className={cn(CELL, 'border border-border text-foreground transition-colors hover:bg-selected/60', BUCKET_FILL[issue.level])}
         >
             {number}
         </Link>
