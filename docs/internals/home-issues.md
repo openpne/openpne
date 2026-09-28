@@ -282,7 +282,9 @@ page asks — so a month never shows what the day's own page would drop. Frozen 
 not read, a burst's window excepted.
 
 **That an issue exists is not gated.** A day whose rows have all been dropped is still listed, as its
-date alone.
+date alone, and the grid of months under the rows counts issues, not what is left of them
+([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
+holds none is drawn there and is not a link.
 
 | Count | Of the rows that survive |
 |---|---|
@@ -309,7 +311,8 @@ below states the counts the level was ranked by, and the link is named by them.
 relation the gate asks about, and one count per distinct burst window
 ([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —
 ordinarily one per issue. Pictures are read after the gate, for each day's top item only: one read
-per kind of source that leads a day.
+per kind of source that leads a day. The grid of months is one read of every issue's date, a row
+per published day.
 
 ## Routes
 

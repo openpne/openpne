@@ -8,6 +8,7 @@ use App\Features\Home\Data\HomeIssueMonth;
 use App\Features\Home\Queries\AdjacentHomeIssueMonths;
 use App\Features\Home\Queries\AdjacentHomeIssues;
 use App\Features\Home\Queries\FindHomeIssueByDate;
+use App\Features\Home\Queries\ListHomeIssueMonths;
 use App\Features\Home\Queries\ListHomeIssuesInMonth;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Queries\SummarizeHomeIssues;
@@ -32,6 +33,7 @@ class HomeIssueController extends Controller
         private readonly ListHomeIssuesInMonth $inMonth,
         private readonly AdjacentHomeIssueMonths $adjacentMonths,
         private readonly SummarizeHomeIssues $summarize,
+        private readonly ListHomeIssueMonths $months,
     ) {}
 
     public function index(Request $request): Response
@@ -39,7 +41,7 @@ class HomeIssueController extends Controller
         $latest = HomeIssue::query()->orderByDesc('issue_date')->first();
 
         return $latest === null
-            ? Inertia::render('home/issues', HomeIssueSerializer::month(null, collect(), [], null, null))
+            ? Inertia::render('home/issues', HomeIssueSerializer::month(null, collect(), [], null, null, []))
             : $this->render($request, HomeIssueMonth::of($latest->issue_date));
     }
 
@@ -100,6 +102,7 @@ class HomeIssueController extends Controller
             ($this->summarize)($viewer, $issues),
             $previous,
             $next,
+            ($this->months)(),
         ));
     }
 }

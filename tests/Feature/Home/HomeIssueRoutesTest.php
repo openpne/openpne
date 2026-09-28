@@ -149,7 +149,11 @@ class HomeIssueRoutesTest extends TestCase
                 ->where('days.1.href', '/home/2026/08/26')
                 ->count('days', 2)
                 ->where('prev.href', '/home/2026/07')
-                ->where('next', null));
+                ->where('next', null)
+                ->where('months', [
+                    ['year' => 2026, 'month' => 8, 'count' => 2, 'href' => '/home/2026/08'],
+                    ['year' => 2026, 'month' => 7, 'count' => 1, 'href' => '/home/2026/07'],
+                ]));
     }
 
     public function test_a_site_that_has_published_nothing_has_an_empty_index(): void
@@ -158,7 +162,8 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('month', null)
-                ->where('days', []));
+                ->where('days', [])
+                ->where('months', []));
     }
 
     public function test_a_month_resolves_padded_or_not(): void

@@ -1,19 +1,6 @@
-export interface MonthlyCount {
-    year: number;
-    month: number; // 1-12
-    count: number;
-}
+import { type Bucket, buildMonthRows, type MonthlyCount, type YearRow } from '../../lib/month-grid.ts';
 
-export interface ArchiveMonthCell {
-    month: number; // 1-12
-    count: number;
-    href: string | null; // null for an empty month (a non-linked cell)
-}
-
-export interface ArchiveYearRow {
-    year: number;
-    months: ArchiveMonthCell[]; // always 12, January..December
-}
+export type { MonthlyCount } from '../../lib/month-grid.ts';
 
 export function withKeyword(path: string, keyword?: string): string {
     if (!keyword) {
@@ -23,7 +10,7 @@ export function withKeyword(path: string, keyword?: string): string {
     return `${path}?${new URLSearchParams({ keyword }).toString()}`;
 }
 
-export function countBucket(count: number): 0 | 1 | 2 | 3 | 4 {
+export function countBucket(count: number): Bucket {
     if (count <= 0) return 0;
     if (count <= 2) return 1;
     if (count <= 5) return 2;
@@ -31,52 +18,18 @@ export function countBucket(count: number): 0 | 1 | 2 | 3 | 4 {
     return 4;
 }
 
-/**
- * Whether the selected month sits in a year beyond the always-visible recent rows — the grid must
- * then start expanded, or a navigation to an older month would hide its own selection ring.
- */
-export function selectedBeyondRecentYears(rows: ArchiveYearRow[], selected: { year: number } | null, recentYears: number): boolean {
-    if (selected === null) {
-        return false;
-    }
-
-    return rows.slice(recentYears).some((row) => row.year === selected.year);
-}
-
-/**
- * Empty counts give `[]`, which hides the grid; a month with entries links to its archive and every
- * other cell is non-linked. `currentYear` is a parameter rather than read from `Date` here so the
- * expansion stays pure.
- */
-export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ownerId: number, keyword?: string, selected: { year: number } | null = null): ArchiveYearRow[] {
-    if (counts.length === 0) {
-        return [];
-    }
-
-    const byYearMonth = new Map<string, number>();
-    let minYear = currentYear;
-    let maxYear = currentYear;
-    for (const { year, month, count } of counts) {
-        byYearMonth.set(`${year}-${month}`, count);
-        if (year < minYear) minYear = year;
-        if (year > maxYear) maxYear = year;
-    }
-    // A keyword can leave the archive month the reader is on without matches; keep its year in
-    // range anyway so the selection ring (their current position) never drops off the map.
-    if (selected) {
-        if (selected.year < minYear) minYear = selected.year;
-        if (selected.year > maxYear) maxYear = selected.year;
-    }
-
-    const rows: ArchiveYearRow[] = [];
-    for (let year = maxYear; year >= minYear; year--) {
-        const months: ArchiveMonthCell[] = [];
-        for (let month = 1; month <= 12; month++) {
-            const count = byYearMonth.get(`${year}-${month}`) ?? 0;
-            months.push({ month, count, href: count > 0 ? withKeyword(`/diary/listMember/${ownerId}/${year}/${month}`, keyword) : null });
-        }
-        rows.push({ year, months });
-    }
-
-    return rows;
+/** A keyword can leave the month the reader is on without matches, which is what `selected` is for. */
+export function buildArchiveGrid(
+    counts: MonthlyCount[],
+    currentYear: number,
+    ownerId: number,
+    keyword?: string,
+    selected: { year: number } | null = null,
+): YearRow[] {
+    return buildMonthRows(
+        counts,
+        currentYear,
+        (year, month) => withKeyword(`/diary/listMember/${ownerId}/${year}/${month}`, keyword),
+        selected,
+    );
 }

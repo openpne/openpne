@@ -47,7 +47,7 @@ function arrive(props: Record<string, unknown>) {
     inertia.page = {
         component: 'home/issues',
         url: '/home/2026/08',
-        props: { locale: 'en', timezone: 'Asia/Tokyo', month: month(2026, 8), prev: null, next: null, days: [], ...props },
+        props: { locale: 'en', timezone: 'Asia/Tokyo', month: month(2026, 8), prev: null, next: null, days: [], months: [], ...props },
     };
 
     return renderWithProviders(<HomeIssues />);
@@ -168,4 +168,21 @@ test('a site that has published nothing has no month to show', () => {
     expect(screen.getByText('Nothing yet.')).toBeTruthy();
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
+});
+
+test('every month that holds an issue can be jumped to, and the one on screen is marked', () => {
+    arrive({
+        days: [day('2026-08-27', { kind: 'story', headline: 'Morning walk', image: null }, { stories: 1 })],
+        months: [
+            { year: 2026, month: 9, count: 22, href: '/home/2026/09' },
+            { year: 2026, month: 8, count: 11, href: '/home/2026/08' },
+            { year: 2025, month: 12, count: 1, href: '/home/2025/12' },
+        ],
+    });
+
+    expect(screen.getByRole('link', { name: 'September 2026, 22 days of happenings' }).getAttribute('href')).toBe('/home/2026/09');
+    expect(screen.getByRole('link', { name: 'December 2025, 1 day of happenings' }).getAttribute('href')).toBe('/home/2025/12');
+    expect(screen.getByRole('link', { name: 'August 2026, 11 days of happenings' }).getAttribute('aria-current')).toBe('true');
+    // A month that holds none is a label and nothing to follow.
+    expect(screen.getByLabelText('July 2026').tagName).toBe('SPAN');
 });
