@@ -36,20 +36,28 @@ class I18nUnknownPlaceholderTest extends TestCase
             'capitalized' => ['%Community% settings', []],
             'plural' => ['Your %communities%', []],
             'capitalized plural' => ['%Diaries% by %my_friends%', []],
+            'a plural only the server would read' => ['%diarys% and %Communitys%', ['%diarys%', '%Communitys%']],
             'a replacement parameter' => [':community has :count members', []],
             'a percent sign' => ['50% of 100%', []],
             'no placeholder' => ['Settings', []],
         ];
     }
 
-    public function test_the_gate_reads_a_name_as_the_term_layer_does(): void
+    public function test_the_names_that_pass_are_the_ones_the_client_is_shipped_and_the_server_replaces_each(): void
     {
-        $terms = app(TermService::class);
+        config()->set('openpne.surface_mode', 'modern_default');
+        $shipped = $this->get('/login')->assertOk()->viewData('page')['props']['terms'];
+        $known = array_keys(TermService::defaults('en'));
+        $this->assertNotEmpty($shipped);
 
-        foreach (['%Group% settings', '%Communities% near you', '%my_friend%', '%Firend%'] as $text) {
-            $left = $terms->replace($text, 'en') === $text;
+        foreach (array_keys($shipped) as $name) {
+            $this->assertSame([], Cmd::unknownPlaceholders("%{$name}%", $known), $name);
+            $this->assertNotSame("%{$name}%", app(TermService::class)->replace("%{$name}%", 'en'), $name);
+        }
 
-            $this->assertSame($left, Cmd::unknownPlaceholders($text, array_keys(TermService::defaults('en'))) !== [], $text);
+        foreach (['diarys', 'Communitys', 'Group', 'firend'] as $name) {
+            $this->assertArrayNotHasKey($name, $shipped);
+            $this->assertSame(["%{$name}%"], Cmd::unknownPlaceholders("%{$name}%", $known), $name);
         }
     }
 }

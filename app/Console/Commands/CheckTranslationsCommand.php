@@ -722,8 +722,8 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * The runtime leaves a `%name%` no term answers to as it stands, so one inside a longer string
-     * reaches the page as typed; the pure-placeholder check never sees a string that has other words.
+     * A `%name%` no term answers to is left as it stands, so one inside a longer string reaches the
+     * page as typed; the pure-placeholder check never sees a string that has other words.
      *
      * @param  array<string, list<string>>  $found  extracted key => [file:line, ...]
      * @return int number of offending strings
@@ -772,7 +772,7 @@ class CheckTranslationsCommand extends Command
 
     /**
      * @param  list<string>  $knownTermNames
-     * @return list<string> each `%name%` in $text that the term layer would leave as it stands
+     * @return list<string> each `%name%` in $text that a surface would leave as it stands
      */
     public static function unknownPlaceholders(string $text, array $knownTermNames): array
     {
@@ -1096,21 +1096,21 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * The same reading TermService::replace gives a placeholder's name: a leading capital is dropped,
-     * and a plural answers to its singular.
+     * Only the four forms the client is shipped count (HandleInertiaRequests::termsForClient): the
+     * server singularizes and so reads more, `%diarys%` for one, which a React page prints as typed.
      *
      * @param  list<string>  $knownTermNames
      */
     private static function namesTerm(string $raw, array $knownTermNames): bool
     {
-        $name = ctype_upper($raw[0]) ? lcfirst($raw) : $raw;
-        if (in_array($name, $knownTermNames, true)) {
-            return true;
+        foreach ($knownTermNames as $name) {
+            $plural = Str::plural($name);
+            if (in_array($raw, [$name, Str::ucfirst($name), $plural, Str::ucfirst($plural)], true)) {
+                return true;
+            }
         }
 
-        $singular = Str::singular($name);
-
-        return $singular !== $name && in_array($singular, $knownTermNames, true);
+        return false;
     }
 
     /**
