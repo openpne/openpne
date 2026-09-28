@@ -17,13 +17,14 @@ class LoginSessionFixationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_session_id_planted_before_a_members_login_holds_no_login_after_it(): void
+    public function test_a_session_id_planted_before_a_members_password_login_holds_no_login_after_it(): void
     {
         config(['session.driver' => 'database']);
         $cookie = config('session.cookie');
         $member = Member::factory()->create();
 
         $planted = $this->get('/login')->assertOk()->getCookie($cookie)->getValue();
+        $this->assertTrue(DB::table('sessions')->where('id', $planted)->exists());
 
         $this->freshRequestState();
         $issued = $this->withCookie($cookie, $planted)
@@ -40,7 +41,7 @@ class LoginSessionFixationTest extends TestCase
         $this->withCookie($cookie, $issued)->get('/dashboard')->assertOk();
     }
 
-    public function test_a_members_failed_login_keeps_the_guest_out_under_either_id(): void
+    public function test_a_members_failed_login_signs_in_no_session_it_touched(): void
     {
         config(['session.driver' => 'database']);
         $cookie = config('session.cookie');
@@ -49,16 +50,21 @@ class LoginSessionFixationTest extends TestCase
         $planted = $this->get('/login')->assertOk()->getCookie($cookie)->getValue();
 
         $this->freshRequestState();
-        $this->withCookie($cookie, $planted)
+        $answered = $this->withCookie($cookie, $planted)
             ->post('/login', ['email' => $member->email, 'password' => 'wrong-password'])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->getCookie($cookie)->getValue();
 
-        $this->assertSame(0, DB::table('sessions')->whereNotNull('user_id')->count());
+        foreach (array_unique([$planted, $answered]) as $id) {
+            $this->freshRequestState();
+            $this->withCookie($cookie, $id)->get('/dashboard')->assertRedirect('/login');
+        }
     }
 
     /**
-     * Filament's login is a Livewire component whose test harness emits no cookie, so the id is read
-     * off the store the component ran against.
+     * Filament's login is a Livewire component whose test harness emits no cookie and runs no
+     * middleware, so the id is read off the store the component ran against, which is not the
+     * administrators' own.
      */
     public function test_an_administrators_login_leaves_the_session_id_it_started_under(): void
     {

@@ -63,7 +63,7 @@ class AdminLoginThrottleTest extends TestCase
         $this->assertAuthenticatedAs($admin, 'admin');
     }
 
-    public function test_the_limit_is_counted_by_address_not_by_username(): void
+    public function test_another_username_from_the_same_address_is_refused_as_well(): void
     {
         AdminUser::factory()->create(['username' => 'opene']);
         AdminUser::factory()->create(['username' => 'other']);
@@ -80,5 +80,25 @@ class AdminLoginThrottleTest extends TestCase
             ->assertNotified();
 
         $this->assertGuest('admin');
+    }
+
+    public function test_another_address_is_counted_on_its_own(): void
+    {
+        $admin = AdminUser::factory()->create(['username' => 'opene']);
+
+        foreach (range(1, self::ATTEMPTS) as $attempt) {
+            Livewire::test(Login::class)
+                ->fillForm(['email' => 'opene', 'password' => 'wrong-password'])
+                ->call('authenticate');
+        }
+
+        // The component's requests are built by Livewire's own harness, which takes no address.
+        $this->app->rebinding('request', fn ($app, $request) => $request->server->set('REMOTE_ADDR', '203.0.113.9'));
+        Livewire::test(Login::class)
+            ->fillForm(['email' => 'opene', 'password' => 'password'])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($admin, 'admin');
     }
 }
