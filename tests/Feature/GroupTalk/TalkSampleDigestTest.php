@@ -364,6 +364,32 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame(1, GroupMessage::query()->where('group_id', $this->group->getKey())->count());
     }
 
+    public function test_rooms_counted_together_share_the_window_and_a_silent_one_is_absent(): void
+    {
+        $author = $this->member();
+        $this->said($author, $this->start);
+        $this->said($author, $this->start->addSecond());
+        $this->said($author, $this->until);
+        $this->said($author, $this->until->addSecond());
+
+        $other = Group::factory()->create();
+        GroupMessage::factory()->create([
+            'group_id' => $other->getKey(),
+            'created_at' => $this->start->addMinutes(10),
+            'updated_at' => $this->start->addMinutes(10),
+        ]);
+        $silent = Group::factory()->create();
+
+        $this->assertEquals(
+            [$this->group->getKey() => 2, $other->getKey() => 1],
+            $this->digest->countsBetween(
+                [$this->group->getKey(), $other->getKey(), $silent->getKey()],
+                $this->start,
+                $this->until,
+            ),
+        );
+    }
+
     // --- who did the talking ---
 
     public function test_the_faces_are_the_authors_of_the_window_busiest_first(): void
