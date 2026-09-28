@@ -155,7 +155,15 @@ function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; self
             <form
                 onSubmit={(e: FormEvent<HTMLFormElement>) => {
                     e.preventDefault();
-                    image.post(`/member/config/ai/${account.id}/avatar`, { preserveScroll: true, onSuccess: () => image.reset() });
+                    const form = e.currentTarget;
+                    image.post(`/member/config/ai/${account.id}/avatar`, {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            image.reset();
+                            // The browser owns a file input's value, so the name it shows outlives the form state.
+                            form.reset();
+                        },
+                    });
                 }}
                 className="space-y-3"
             >
